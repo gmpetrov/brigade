@@ -126,3 +126,14 @@ test('reasons name the lines they point at by their text, not their number', () 
   assert.equal(inWords('outdated since the rename', lines), 'outdated since the rename')
   assert.equal(inWords('replaced by line 9', lines), 'replaced by 9')
 })
+
+test('a layout is judged by what its result takes away, however it does it', () => {
+  const text = `# M\n\n${lines(40)}\n`
+  const run = tidyRun(file(text), now)
+  // Each line "reworded" as the first one: 40 lines would become 1.
+  const merge = Array.from({ length: 39 }, (_, i) => ({
+    lines: [i + 2],
+    text: 'Line 0 ' + 'x'.repeat(40),
+  }))
+  assert.equal(run.parse(JSON.stringify({ merge })), null)
+})

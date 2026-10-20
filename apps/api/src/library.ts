@@ -12,6 +12,7 @@ import {
   type LibraryFile,
   type LibraryManifest,
   changeMemoryFile,
+  tidyTakesTooMuch,
   type ArchivedMemoryLine,
   type MemoryEdit,
   type MemoryLayout,
@@ -393,7 +394,7 @@ export async function saveDocumentText(
     projectId?: string | null
   },
   text: string,
-  options: { fromCollab?: boolean } = {},
+  options: { fromCollab?: boolean; baseSha?: string } = {},
 ) {
   if (row.kind === 'library')
     return saveLibraryFile(
@@ -402,13 +403,20 @@ export async function saveDocumentText(
       actor,
       { path: row.path, bytes: new TextEncoder().encode(text), contentType: row.contentType },
       {},
-      options,
+      { fromCollab: options.fromCollab },
     )
   if (text.length > MEMORY_MAX)
     throw new HTTPException(413, {
       message: `Memory files can be up to ${MEMORY_MAX.toLocaleString('en')} characters`,
     })
   return writeMemory(db, scope, actor, memoryTarget(row), text, options)
+}
+
+/** A person's save built on a memory file's text that a thread or a tidy run changed since. */
+export class StaleMemory extends Error {
+  constructor() {
+    super('The memory changed since this edit started')
+  }
 }
 
 type MemoryChange = {
@@ -435,7 +443,9 @@ async function changeMemory(
   target: MemoryTarget & { name?: string },
   actor: Actor,
   sessionId: string | null,
-  change: (current: { text: string; memoryTidiedAt: Date | null } | null) => MemoryChange | null,
+  change: (
+    current: { text: string; sha256: string; memoryTidiedAt: Date | null } | null,
+  ) => MemoryChange | null,
 ) {
   // Only the workspace: a dashboard's scope also names its user and member, which no row has.
   const inWorkspace = { organizationId: scope.organizationId, workspaceId: scope.workspaceId }
@@ -505,13 +515,18 @@ export async function writeMemory(
   actor: Actor,
   target: MemoryTarget,
   text: string,
-  /** Set when the collab server saves what people edited: its room already has it. */
-  options: { fromCollab?: boolean } = {},
+  /**
+   * fromCollab: the collab server saves what people edited, and its room already has it.
+   * baseSha: the text the edit was made on; if a thread or a tidy run changed it since,
+   * nothing is written (StaleMemory) and the room reconciles first.
+   */
+  options: { fromCollab?: boolean; baseSha?: string } = {},
 ) {
-  const { row } = (await changeMemory(scope, target, actor, null, () => ({
-    text,
-    context: noLineContext(),
-  })))!
+  const { row } = (await changeMemory(scope, target, actor, null, (current) => {
+    // Checked under the file's lock: a thread's edit cannot land between the check and the write.
+    if (options.baseSha && current && current.sha256 !== options.baseSha) throw new StaleMemory()
+    return { text, context: noLineContext() }
+  }))!
   await audit({
     ...scope,
     actor,
@@ -596,6 +611,11 @@ export async function tidyMemory(
     if (!current) return null
     if ((current.memoryTidiedAt?.toISOString() ?? null) !== input.lastTidied) return null
     result = applyMemoryLayout(current.text, layout)
+    // Whatever the runner checked: a layout that takes most of the file away is not applied.
+    if (tidyTakesTooMuch(current.text, result.text)) {
+      console.warn(`memory ${memoryPath(target)}: a tidy run would take too much away; not applied`)
+      return null
+    }
     return {
       text: result.text,
       tidied: true,

@@ -6,10 +6,13 @@
 // thread, never in its queue.
 import {
   coreLength,
+  layOutMemoryFile,
   MEMORY_CORE_BUDGET,
   MEMORY_TIDY_AT,
   MemoryLayout,
+  memoryLineCount,
   parseMemoryFile,
+  tidyTakesTooMuch,
   type MemoryFileRef,
   type MemoryLineMeta,
   type MemoryScope,
@@ -38,9 +41,6 @@ const FIRST_TIDY_LINES = 30
 const RETIDY_MS = 7 * 24 * 3600_000
 /** Not twice in this long, whatever the file looks like: a run that could not fix it waits. */
 const TIDY_GAP_MS = 6 * 3600_000
-/** The most of a file one tidy may archive or merge away; more when the file is too long. */
-const MAX_GONE_SHARE = 0.4
-const MAX_GONE_SHARE_LONG = 0.6
 
 /** What the file is brought under when it is too long, so the next memory run does not tidy it again. */
 const TIDY_TARGET = Math.round(MEMORY_TIDY_AT * 0.9)
@@ -80,11 +80,6 @@ export const lenientList = <T extends z.ZodTypeAny>(item: T) =>
       }),
     )
 
-const lineCount = (text: string) => {
-  const layers = parseMemoryFile(text)
-  return layers.core.length + layers.topics.reduce((n, t) => n + t.lines.length, 0)
-}
-
 /**
  * Whether a file needs tidying: its core past its budget, the file past
  * MEMORY_TIDY_AT, never tidied with enough lines to sort, or not tidied for a
@@ -94,7 +89,7 @@ export function needsTidy(file: TidyFile, now: Date) {
   const last = file.lastTidied ? Date.parse(file.lastTidied) : NaN
   if (!Number.isNaN(last) && now.getTime() - last < TIDY_GAP_MS) return false
   const layers = parseMemoryFile(file.text)
-  const count = lineCount(file.text)
+  const count = memoryLineCount(file.text)
   if (count === 0) return false
   if (coreLength(layers) > MEMORY_CORE_BUDGET[file.scope]) return true
   if (file.text.length > MEMORY_TIDY_AT) return true
@@ -201,10 +196,7 @@ export function tidyRun(file: TidyFile, now = new Date()) {
     })
     if (!layout.success) return null
     // A run that would take most of the file away is not trusted with it.
-    const gone =
-      layout.data.archive.length + layout.data.merge.reduce((n, m) => n + m.from.length - 1, 0)
-    const share = over ? MAX_GONE_SHARE_LONG : MAX_GONE_SHARE
-    if (gone > Math.max(10, numbered.lines.length * share)) return null
+    if (tidyTakesTooMuch(file.text, layOutMemoryFile(file.text, layout.data).text)) return null
     return layout.data
   }
 

@@ -99,6 +99,23 @@ export function parseMemoryFile(text: string): MemoryLayers {
   return out
 }
 
+/** How many memory lines a file holds, core and topics. */
+export const memoryLineCount = (text: string) => {
+  const layers = parseMemoryFile(text)
+  return layers.core.length + layers.topics.reduce((n, t) => n + t.lines.length, 0)
+}
+
+/**
+ * Whether a tidy would take too much of a file away, counted on its result,
+ * however it does it (archived, merged, or said again as another line): more
+ * than 40 % of its lines, or 60 % of a file past MEMORY_TIDY_AT.
+ */
+export function tidyTakesTooMuch(before: string, after: string) {
+  const was = memoryLineCount(before)
+  const share = before.length > MEMORY_TIDY_AT ? 0.6 : 0.4
+  return was - memoryLineCount(after) > Math.max(10, was * share)
+}
+
 /** How long a memory's core is, as a thread loads it. */
 export const coreLength = (layers: MemoryLayers) =>
   layers.core.reduce((n, l) => n + l.text.length + 3, 0)
