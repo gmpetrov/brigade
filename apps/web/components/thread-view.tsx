@@ -35,6 +35,7 @@ import {
   type AgentEvent,
   type Ask,
   type AskReply,
+  type CredentialKind,
   type MessageAttachment,
   type Question,
   type QuestionAnswer,
@@ -2214,29 +2215,47 @@ function CredentialPicker({
 
 const mentionOf = (c: Credential) => ({ kind: 'credential' as const, id: c.id, label: c.name })
 
+/** What saving a credential of this kind is called on its button. */
+const ADD_CREDENTIAL: Record<CredentialKind, string> = {
+  api_key: 'Add the key',
+  website: 'Add the login',
+  database: 'Add the login',
+  other: 'Add it',
+}
+
 /**
- * A teammate lacks a credential: save it to the vault right here, filled in
- * with what the teammate knows, or grant one already there. Either way the
- * teammate gets its mention and carries on with it in this thread.
+ * A teammate lacks a credential: one row of choices, the form folded away until
+ * asked for. Save it to the vault right here, filled in with what the teammate
+ * knows, grant one already there, or say something else (onSomethingElse, when
+ * the card has nothing else to answer). Either way the teammate gets its mention
+ * and carries on with it in this thread.
  */
 function CredentialAccess({
   ask,
   askerName,
   onReply,
+  onSomethingElse,
 }: {
   ask: Extract<Ask, { type: 'access' }>
   askerName: string
   onReply: (reply: AskReply) => void
+  onSomethingElse?: (note: string) => void
 }) {
-  const [fromVault, setFromVault] = useState(false)
+  const [mode, setMode] = useState<'choose' | 'new' | 'saved' | 'else'>('choose')
   const [picked, setPicked] = useState('')
   const grant = (mention: string) => onReply({ type: 'access', granted: true, credential: mention })
-  const refuse = (
-    <Button size="sm" variant="ghost" onClick={() => onReply({ type: 'access', granted: false })}>
-      Decline
-    </Button>
-  )
-  if (fromVault)
+  const back = () => setMode('choose')
+  if (mode === 'new')
+    return (
+      <CredentialForm
+        inline
+        draft={ask.credential}
+        submitLabel="Save and grant"
+        onCancel={back}
+        onSaved={(saved) => grant(formatMention(mentionOf(saved)))}
+      />
+    )
+  if (mode === 'saved')
     return (
       <div className="flex flex-col gap-2">
         <CredentialPicker
@@ -2244,33 +2263,46 @@ function CredentialAccess({
           onChange={setPicked}
           disabled={false}
           intro={`Pick a saved secret: ${askerName} can then use it in this thread without ever seeing it.`}
-          onNew={() => setFromVault(false)}
+          onNew={() => setMode('new')}
         />
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" disabled={!picked} onClick={() => grant(picked)}>
             Grant
           </Button>
-          {refuse}
+          <Button size="sm" variant="ghost" onClick={back}>
+            Back
+          </Button>
         </div>
       </div>
     )
+  if (mode === 'else' && onSomethingElse)
+    return <SomethingElseForm disabled={false} onSend={onSomethingElse} onCancel={back} />
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
       <p className="text-sm text-muted-foreground">
-        Save it here and {askerName} uses it in this thread right away. It is encrypted the moment
-        you save it; {askerName} never sees it.
+        {askerName} uses it in this thread right away and never sees it: it is encrypted the moment
+        you save it.
       </p>
-      <CredentialForm
-        inline
-        draft={ask.credential}
-        submitLabel="Save and grant"
-        onSaved={(saved) => grant(formatMention(mentionOf(saved)))}
-      />
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="link" onClick={() => setFromVault(true)}>
-          It&apos;s already saved
+        <Button size="sm" onClick={() => setMode('new')}>
+          {ADD_CREDENTIAL[ask.credential?.kind ?? 'other']}
         </Button>
-        {refuse}
+        <Button size="sm" variant="outline" onClick={() => setMode('saved')}>
+          It&apos;s saved
+        </Button>
+        {onSomethingElse && (
+          <Button size="sm" variant="outline" onClick={() => setMode('else')}>
+            Something else
+          </Button>
+        )}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="ml-auto"
+          onClick={() => onReply({ type: 'access', granted: false })}
+        >
+          Decline
+        </Button>
       </div>
     </div>
   )
@@ -2323,19 +2355,32 @@ function SomethingElse({
   disabled: boolean
   onSend: (note: string) => void
 }) {
-  const [text, setText] = useState<string>()
-  if (text === undefined)
+  const [open, setOpen] = useState(false)
+  if (!open)
     return (
       <Button
         size="sm"
-        variant="link"
-        className="self-start px-0"
+        variant="outline"
+        className="self-start"
         disabled={disabled}
-        onClick={() => setText('')}
+        onClick={() => setOpen(true)}
       >
-        Something else…
+        Something else
       </Button>
     )
+  return <SomethingElseForm disabled={disabled} onSend={onSend} onCancel={() => setOpen(false)} />
+}
+
+function SomethingElseForm({
+  disabled,
+  onSend,
+  onCancel,
+}: {
+  disabled: boolean
+  onSend: (note: string) => void
+  onCancel: () => void
+}) {
+  const [text, setText] = useState('')
   const send = () => text.trim() && onSend(text.trim())
   return (
     <form
@@ -2354,7 +2399,7 @@ function SomethingElse({
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') setText(undefined)
+          if (e.key === 'Escape') onCancel()
           if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
             e.preventDefault()
             send()
@@ -2365,7 +2410,7 @@ function SomethingElse({
         <Button size="sm" disabled={disabled || !text.trim()}>
           Send
         </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => setText(undefined)}>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
       </div>
@@ -2704,6 +2749,10 @@ export function TicketCard({
   const answered = item.answer?.action === 'answered' ? item.answer.replies : undefined
   const disabled = !canAnswer || busy || done
   const soleAccess = item.asks.length === 1 && item.asks[0]!.type === 'access'
+  // A lone credential ask has Something else among its own buttons.
+  const sole = item.asks.length === 1 ? item.asks[0]! : undefined
+  const elseInline = sole?.type === 'access' && sole.kind === 'credential' && !sole.app
+  const somethingElse = (note: string) => void send({ action: 'declined', note })
 
   const several = item.asks.length > 1
   const count = Object.keys(answered ?? replies).length
@@ -2753,6 +2802,7 @@ export function TicketCard({
             askerName={askerName}
             onReply={(value) => reply(ask.id, value)}
             onUndo={done || busy ? undefined : () => undo(ask.id)}
+            onSomethingElse={elseInline && canAnswer ? somethingElse : undefined}
           />
         </div>
       ))}
@@ -2766,12 +2816,9 @@ export function TicketCard({
       {item.answer?.action === 'declined' && item.answer.note && (
         <SentInstead note={item.answer.note} />
       )}
-      {!done && canAnswer && (
+      {!done && canAnswer && !elseInline && (
         <div className="mt-3 flex flex-col">
-          <SomethingElse
-            disabled={busy}
-            onSend={(note) => void send({ action: 'declined', note })}
-          />
+          <SomethingElse disabled={busy} onSend={somethingElse} />
         </div>
       )}
       {error && <p className="mt-3 text-sm text-destructive-text">{error}</p>}
@@ -2833,6 +2880,7 @@ function AskView({
   askerName,
   onReply,
   onUndo,
+  onSomethingElse,
 }: {
   ask: Ask
   reply: AskReply | undefined
@@ -2843,6 +2891,8 @@ function AskView({
   askerName: string
   onReply: (reply: AskReply) => void
   onUndo: (() => void) | undefined
+  /** Something else from the ask's own buttons, rather than below the card's asks. */
+  onSomethingElse?: (note: string) => void
 }) {
   const [showDraft, setShowDraft] = useState(true)
   const [open, setOpen] = useState(false)
@@ -3017,7 +3067,12 @@ function AskView({
       ) : ask.type === 'access' && ask.app ? (
         <AppAccessAsk ask={{ ...ask, app: ask.app }} askerName={askerName} onReply={onReply} />
       ) : ask.type === 'access' && ask.kind === 'credential' ? (
-        <CredentialAccess ask={ask} askerName={askerName} onReply={onReply} />
+        <CredentialAccess
+          ask={ask}
+          askerName={askerName}
+          onReply={onReply}
+          onSomethingElse={onSomethingElse}
+        />
       ) : ask.type === 'access' ? (
         // A connection asked for in words: given by hand on the Apps page.
         <div className="flex flex-wrap items-center gap-2">
