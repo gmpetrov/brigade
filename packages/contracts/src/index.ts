@@ -54,8 +54,11 @@ export * from './trigger-events.js'
  * 30: a thread's tab comes to the front of its teammate's browser while people watch its desktop (browser.focus).
  * 31: playbook threads (the spec's `playbook`, and playbook_triage and playbook_report as schedule.call
  *     operations); follow_thread (a schedule.call operation).
+ * 32: a deleted thread's folders are removed (thread.deleted).
  */
-export const PROTOCOL_VERSION = 31
+export const PROTOCOL_VERSION = 32
+/** Runners from this version on remove a deleted thread's folders (thread.deleted). */
+export const DELETE_PROTOCOL = 32
 /** Runners from this version on bring a thread's tab to the front (browser.focus). */
 export const FOCUS_PROTOCOL = 30
 /** Runners from this version on take thread.note. */

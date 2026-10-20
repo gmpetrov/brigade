@@ -117,3 +117,26 @@ test('the thread helper takes a thread down only when none of its processes is l
   assert.equal(existsSync(join(dir, 'state', 'cmthread1')), false)
   assert.equal(existsSync(join(dir, 'tmp', 'cmthread1')), false)
 })
+
+test('the swap file is as large as the memory, within 8 GiB, a tenth of the disk and a quarter of what is free', () => {
+  const swapGib = /^swap_gib\(\) \{$[\s\S]*?^\}$/m.exec(setupScript())?.[0]
+  assert.ok(swapGib)
+  const size = (memoryKib: number, diskGib: number, freeGib: number) => {
+    const result = spawnSync(
+      'sh',
+      ['-c', `${swapGib}\nswap_gib ${Math.round(memoryKib)} ${diskGib} ${freeGib}`],
+      { encoding: 'utf8' },
+    )
+    assert.equal(result.status, 0, result.stderr)
+    return Number(result.stdout.trim())
+  }
+  const GIB = 1024 * 1024
+  // default: 8 GB of memory, 69 GB disk. Twice the memory used to take 12 GiB of it.
+  assert.equal(size(7.9 * GIB, 69, 48), 6)
+  // large: 16 GB of memory, 125 GB disk.
+  assert.equal(size(15.9 * GIB, 125, 100), 8)
+  // A disk already short of room.
+  assert.equal(size(7.9 * GIB, 69, 12), 3)
+  // small: 4 GB of memory, a small disk.
+  assert.equal(size(3.9 * GIB, 20, 15), 2)
+})

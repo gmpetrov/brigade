@@ -505,22 +505,30 @@ DelegateSubgroup=runner
 OOMScoreAdjust=-500
 OOMPolicy=continue
 UNIT
-# Swap for frozen previews (the runner's previews.ts gives their memory back to it): twice the
-# memory, at most 16 GiB and a quarter of the disk's free space, which thread folders need (the
-# runner's folders.ts does not trim them for it). Made at each boot: a resume brings back neither
-# files at the root nor fstab lines, so it costs nothing at stop or resume. Used before the
-# image's own /swapfile.
+# Swap for frozen previews (the runner's previews.ts gives their memory back to it): as much as
+# the memory, at most 8 GiB, a tenth of the disk and a quarter of its free space. The rest is for
+# thread folders and the caches of teammates' tools, which the runner frees as the disk fills
+# (folders.ts, disk.ts): it cannot free this. Made at each boot: a resume brings back neither
+# files at the root nor fstab lines, so it costs nothing at stop or resume, and a new size takes
+# effect at the next one. Used before the image's own /swapfile.
 sudo tee /usr/local/sbin/brigade-swap >/dev/null <<'SWAP'
 #!/bin/sh
 set -eu
 F=/brigade.swap
+# swap_gib <memory KiB> <disk GiB> <free GiB>: the swap file's size in GiB.
+swap_gib() {
+  G=$(( ($1 + 524288) / 1048576 ))
+  [ "$G" -le 8 ] || G=8
+  [ "$G" -le $(( $2 / 10 )) ] || G=$(( $2 / 10 ))
+  [ "$G" -le $(( $3 / 4 )) ] || G=$(( $3 / 4 ))
+  echo "$G"
+}
 swapon --show=NAME --noheadings | grep -qx "$F" && exit 0
 HAD=$(stat -c %s "$F" 2>/dev/null || echo 0)
 # Free space in GiB, with the space of a swap file from an earlier boot, made again here.
 FREE=$(( $(df --output=avail -B1 / | tail -1 | tr -dc 0-9) / 1073741824 + HAD / 1073741824 ))
-GIB=$(awk '/^MemTotal:/ { print int($2 / 1048576 + 0.5) * 2 }' /proc/meminfo)
-[ "$GIB" -le 16 ] || GIB=16
-[ "$GIB" -le $((FREE / 4)) ] || GIB=$((FREE / 4))
+DISK=$(( $(df --output=size -B1 / | tail -1 | tr -dc 0-9) / 1073741824 ))
+GIB=$(swap_gib "$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)" "$DISK" "$FREE")
 [ "$GIB" -ge 2 ] || { rm -f "$F"; echo "no room for swap"; exit 0; }
 if [ "$HAD" -ne $((GIB * 1073741824)) ]; then
   rm -f "$F"
