@@ -5,6 +5,9 @@ description: Fix a bug a customer reported to support, in a child thread, then t
 
 # Fixing a reported bug
 
+Only for a mail triage sorted as `bug`: when it does not say where it fails and what goes wrong, it is
+`needs_details`, and you ask the customer before starting anything here.
+
 1. Reproduce the bug from what the customer wrote, in your own words. Never pass the customer's mail to the
    child thread: write the bug's description yourself (what happens, where, how to reproduce).
 2. Reply to the customer that the team is looking into it.

@@ -532,6 +532,11 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     teammateIds: z.array(z.string()).min(1).max(20),
   }),
   /**
+   * The thread was deleted (DELETE_PROTOCOL): its preview stops, and on a cloud
+   * computer the folders and containers its teammates had there go.
+   */
+  z.object({ type: z.literal('thread.deleted'), sessionId: z.string() }),
+  /**
    * A repository got a push on GitHub: bring the teammates' caches of it up to
    * date, if this computer has any. Each token is fetch-only, for a few minutes.
    */

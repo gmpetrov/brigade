@@ -11,8 +11,9 @@ import {
   type PlaybookApprovalsView,
 } from '@brigade/contracts'
 import Link from 'next/link'
-import { Fragment, useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { timeAgo } from '@/components/dashboard'
+import { EmailDraftView, emailDraft, ToolArguments } from '@/components/email-cards'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,46 +24,13 @@ const record = (value: unknown) =>
   value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {}
-const strings = (value: unknown) =>
-  Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []
-const shown = (value: unknown) =>
-  typeof value === 'string' ? value : JSON.stringify(value, null, 2)
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <p className="flex min-w-0 gap-2">
-      <span className="w-14 shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 wrap-anywhere">{children}</span>
-    </p>
-  )
-}
 
 /** What an approval will do, read before deciding: the whole mail, the pull request, else its arguments. */
 function ActionPreview({ item }: { item: PlaybookApprovalItem }) {
   const input = record(item.input)
-  const box = 'flex flex-col gap-1 rounded-lg border bg-background px-3 py-2.5 text-sm'
   // A mail (gmail_send, gmail_create_draft): who it goes to, its subject and its whole body.
-  if (
-    strings(input.to).length &&
-    typeof input.subject === 'string' &&
-    typeof input.body === 'string'
-  ) {
-    const files = strings(input.attachments)
-    return (
-      <div className={box}>
-        {item.connection && <Field label="From">{item.connection}</Field>}
-        <Field label="To">{strings(input.to).join(', ')}</Field>
-        {strings(input.cc).length > 0 && <Field label="Cc">{strings(input.cc).join(', ')}</Field>}
-        <Field label="Subject">
-          <span className="font-semibold">{input.subject}</span>
-        </Field>
-        <div className="mt-1 max-h-72 overflow-auto border-t pt-2 whitespace-pre-wrap wrap-anywhere">
-          {input.body}
-        </div>
-        {files.length > 0 && <Field label="Files">{files.join(', ')}</Field>}
-      </div>
-    )
-  }
+  const draft = emailDraft(item.input)
+  if (draft) return <EmailDraftView draft={draft} account={item.connection ?? undefined} />
   // A pull request to merge: which one, to open before deciding.
   if (
     item.operation?.includes('merge') &&
@@ -70,7 +38,7 @@ function ActionPreview({ item }: { item: PlaybookApprovalItem }) {
     typeof input.number === 'number'
   )
     return (
-      <div className={box}>
+      <div className="flex flex-col gap-1 rounded-lg border bg-background px-3 py-2.5 text-sm">
         <p>
           Merge{' '}
           <Link
@@ -84,38 +52,14 @@ function ActionPreview({ item }: { item: PlaybookApprovalItem }) {
       </div>
     )
   // Anything else: its arguments, an amount first.
-  const entries = Object.entries(input).sort(
-    ([a], [b]) => Number(b === 'amount') - Number(a === 'amount'),
-  )
   return (
-    <div className={box}>
+    <div className="flex min-w-0 flex-col gap-1">
       {(item.target || item.toolName) && (
-        <p className="font-medium wrap-anywhere">
+        <p className="text-sm font-medium wrap-anywhere">
           {item.toolName ? `${item.toolName} (built-in tool)` : item.target}
         </p>
       )}
-      {entries.length > 0 ? (
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
-          {entries.map(([key, value]) => (
-            <Fragment key={key}>
-              <dt className="text-muted-foreground">{key}</dt>
-              <dd
-                className={
-                  key === 'amount'
-                    ? 'font-semibold tabular-nums'
-                    : 'max-h-40 overflow-auto whitespace-pre-wrap wrap-anywhere'
-                }
-              >
-                {shown(value)}
-              </dd>
-            </Fragment>
-          ))}
-        </dl>
-      ) : (
-        typeof item.input === 'string' && (
-          <p className="max-h-40 overflow-auto whitespace-pre-wrap wrap-anywhere">{item.input}</p>
-        )
-      )}
+      <ToolArguments input={item.input} />
     </div>
   )
 }

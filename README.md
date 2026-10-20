@@ -221,7 +221,7 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   A turn that failed on a passing error (a full disk, the network, Claude's API down or overloaded) is tried again
   on its own after 1, 5 and 15 minutes, a full disk only once 1 GB is free; a message, a stop or a person taking over
   cancels the next try. Any failed turn's error shows Try again, which runs the turn again (`thread.retry`, protocol
-  32). Either way the teammate is told the error and to check what is already done before carrying on.
+  33). Either way the teammate is told the error and to check what is already done before carrying on.
   The runner's state files are replaced whole, and an outbox line cut short is dropped, so a crash cannot keep it from
   starting. Not continued: a harness approval or question pending when the runner died without warning (as before,
   answering it fails), the later teammates of a message several were asked, a turn whose start never reached the API

@@ -1,11 +1,12 @@
 // Deleting a thread for good: its rows, and every object it left in the bucket.
 // The bucket goes first: if it fails, the thread is still there to delete again,
 // rather than gone with its files left behind where nothing points to them.
+import { DELETE_PROTOCOL } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { attachmentKey, deleteObject, folderArchiveKey, repoBackupKey } from './bucket.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
-import { broadcastSchedule } from './hub.js'
+import { broadcastSchedule, runnerProtocol, sendToRunner } from './hub.js'
 
 /** While a teammate works in it, the thread's computer is still writing to it. */
 const BUSY = new Set(['starting', 'running'])
@@ -83,7 +84,7 @@ export async function threadObjectKeys(db: ScopedDb, scope: Scope, sessionId: st
 export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, sessionId: string) {
   const thread = await db.session.findFirst({
     where: { id: sessionId },
-    select: { id: true, title: true, status: true, taskId: true },
+    select: { id: true, title: true, status: true, taskId: true, computerId: true },
   })
   if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
   if (BUSY.has(thread.status))
@@ -138,5 +139,9 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
     target: { type: 'thread', id: sessionId },
     data: { title: thread.title, objects: keys.length },
   })
+  // Its folders on its computer go too, or nothing ever removes them there. A computer
+  // offline now is told when it tries to archive one (runner-folders.ts, 410).
+  if (thread.computerId && (runnerProtocol(thread.computerId) ?? 0) >= DELETE_PROTOCOL)
+    sendToRunner(thread.computerId, { type: 'thread.deleted', sessionId }, { touch: false })
   return { taskId: thread.taskId }
 }

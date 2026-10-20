@@ -2,6 +2,7 @@
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { isAdmin, timeAgo } from '@/components/dashboard'
+import { ToolInputPreview } from '@/components/email-cards'
 import { StatusBadge, type StatusTone } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -282,17 +283,15 @@ export function TicketRow({
         </p>
       )}
       {t.payload.input !== undefined && (
-        <Detail
-          summary={
-            t.payload.source === 'harness'
+        <div className="mt-2 flex flex-col gap-1.5">
+          <p className="text-sm text-muted-foreground wrap-anywhere">
+            {t.payload.source === 'harness'
               ? `${t.payload.toolName} (built-in tool)`
-              : `${t.payload.operation} on ${t.payload.connection}: ${t.payload.target}`
-          }
-        >
-          {typeof t.payload.input === 'string'
-            ? t.payload.input
-            : JSON.stringify(t.payload.input, null, 2)}
-        </Detail>
+              : `${t.payload.operation} on ${t.payload.connection}: ${t.payload.target}`}
+          </p>
+          {/* An email as it would go; any other call's arguments one per line. */}
+          <ToolInputPreview input={t.payload.input} />
+        </div>
       )}
       {/* Last, once all there is to read before deciding has been shown. */}
       {actions && <div className="mt-3 flex flex-wrap items-center gap-2">{actions}</div>}

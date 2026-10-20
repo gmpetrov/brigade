@@ -2,7 +2,7 @@
 // teammate made there (everything but folders git ignores), kept in the bucket
 // until the thread comes back. The bytes go straight between the runner and
 // R2 through signed URLs, never through the API's memory. Authenticated by the
-// runner's token; only threads on its computer.
+// runner's token; only threads on its computer. A thread deleted since is 410 Gone.
 //   POST   /runner/folders/<thread>/<teammate>/upload  { size }  → a signed PUT URL, or { url: null }
 //   PUT    /runner/folders/<thread>/<teammate>   the archive, through the API (no R2: development)
 //   POST   /runner/folders/<thread>/<teammate>/done    { size }  → checked in the bucket
@@ -50,7 +50,16 @@ async function archiveOf(c: Context<{ Variables: { runner: Runner } }>) {
       session: { computerId: runner.computerId },
     },
   })
-  if (!seat) throw new HTTPException(404, { message: 'Unknown thread' })
+  if (!seat) {
+    // Deleted: the runner removes its folder rather than trying again.
+    const thread = await scoped(runner).session.findFirst({
+      where: { id: folder.sessionId },
+      select: { id: true },
+    })
+    throw thread
+      ? new HTTPException(404, { message: 'Unknown thread' })
+      : new HTTPException(410, { message: 'Thread deleted' })
+  }
   try {
     return { folder, key: folderArchiveKey(runner, folder) }
   } catch {

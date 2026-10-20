@@ -34,7 +34,7 @@ import { Attachments } from './attachments.js'
 import { Connection } from './connection.js'
 import { describeProject } from './describe.js'
 import { readThreadFile } from './files.js'
-import { Folders, type FolderName } from './folders.js'
+import { Folders, ThreadGone, type FolderName } from './folders.js'
 import { Library } from './library.js'
 import { BROWSER_START_PAGE, ensureBrowser, focusThreadTab } from './browsers.js'
 import { desktopClipboard } from './desktop.js'
@@ -205,6 +205,7 @@ async function start() {
     archives: {
       put: async (f, file, size) => {
         const ticket = await folderRequest(f, '/upload', sizeBody(size))
+        if (ticket.status === 410) throw new ThreadGone(`thread ${f.sessionId} was deleted`)
         if (!ticket.ok) throw refused('API', ticket)
         const { url, headers } = (await ticket.json()) as {
           url: string | null
@@ -232,7 +233,8 @@ async function start() {
         const location = response.headers.get('location')
         if (response.status >= 300 && response.status < 400 && location)
           response = await fetch(location)
-        if (response.status === 404) return false
+        // 410: the thread was deleted, and its archive with it.
+        if (response.status === 404 || response.status === 410) return false
         if (!response.ok || !response.body) throw refused('API', response)
         await pipeline(
           Readable.fromWeb(response.body as NodeReadableStream),
@@ -244,11 +246,18 @@ async function start() {
         const response = await folderRequest(f, '', { method: 'DELETE' })
         if (!response.ok) throw refused('API', response)
       },
+      gone: async (f) => {
+        // The same request as get: it answers 410 before looking for an archive.
+        const response = await folderRequest(f, '')
+        await response.body?.cancel()
+        return response.status === 410
+      },
     },
     inUse: (sessionId): boolean => threads.inUse(sessionId) || previews.has(sessionId),
     quiet: (name) => previews.archive(name.sessionId),
     stateFile: join(paths.state, 'folders.json'),
     tempDir: join(paths.state, 'folder-archives'),
+    reserveFile: join(paths.state, 'disk-reserve'),
   })
   // Before a thread's folder is used outside a turn: put back when it was archived.
   const folderReady = (sessionId: string, teammateIds: string[]) =>
@@ -588,6 +597,14 @@ async function start() {
         return library.sync()
       case 'thread.note':
         return threads.noteFromOutside(message.sessionId, message.text)
+      case 'thread.deleted':
+        await previews.stop(message.sessionId, 'The thread was deleted')
+        threads.forget(message.sessionId)
+        return folders
+          .removeThread(message.sessionId)
+          .catch((error) =>
+            console.warn(`could not remove the folders of a deleted thread: ${String(error)}`),
+          )
       case 'thread.file.read':
         return folderReady(message.sessionId, message.teammateIds)
           .then(() => readThreadFile(message))

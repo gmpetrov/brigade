@@ -1,6 +1,7 @@
 // Thread folders on a cloud computer are a cache. Threads never end, so their
-// folders cannot wait for one to. As the disk fills, the threads quiet longest
-// first lose their dependency and build folders (node_modules, .next, dist…),
+// folders cannot wait for one to. As the disk fills, the caches of teammates'
+// tools go first (disk.ts), which loses nothing; then the threads quiet longest
+// lose their dependency and build folders (node_modules, .next, dist…),
 // which a reinstall or rebuild makes again. When it is full, their folders are
 // archived to the API's bucket and removed, until there is room again. The
 // archive keeps what the teammate made (checkouts with their .git, uncommitted
@@ -26,6 +27,7 @@ import { randomUUID } from 'node:crypto'
 import type { GitAccess } from '@brigade/contracts'
 import { CLOUD, HOME } from './config.js'
 import { prune, removeFor, removeMemberProject, stopQuiet } from './containers.js'
+import { CACHES_EVERY_MS, CRITICAL, freeCaches, Reserve } from './disk.js'
 import { COPIED } from './repo-settings.js'
 import { owners, repairCaches, run } from './repos.js'
 import { teammateHome } from './teammates.js'
@@ -75,6 +77,12 @@ const SWAP_FILE = '/brigade.swap'
 /** A thread active more recently than this keeps its folder, however full the disk. */
 const MIN_QUIET_MS = 60 * 60_000
 const CHECK_EVERY_MS = 5 * 60_000
+/** How often the disk is looked at between checks: an install fills gigabytes in a minute. One statfs. */
+const WATCH_EVERY_MS = 20_000
+/** Past FULL, checked this often rather than every CHECK_EVERY_MS. */
+const FULL_CHECK_EVERY_MS = 60_000
+/** Nearly full (CRITICAL), a teammate's caches are cleared again after this, even while it works. */
+const CRITICAL_CACHES_EVERY_MS = 5 * 60_000
 /** Larger than this, a folder stays; tried again after a day. One signed PUT to R2 takes up to 5 GiB. */
 const ARCHIVE_MAX = 4 * 1024 ** 3
 const TOO_LARGE_RETRY_MS = 24 * 60 * 60_000
@@ -124,6 +132,9 @@ const STOPPED =
 
 export type FolderName = { sessionId: string; teammateId: string }
 
+/** The API no longer has the thread: it was deleted. */
+export class ThreadGone extends Error {}
+
 /** A thread folder, when last used, and its teammate's user on a cloud computer. */
 type Candidate = { name: FolderName; workDir: string; runAs?: string; active: number }
 
@@ -134,6 +145,8 @@ export type FolderArchives = {
   /** Download into the file; false when there is no archive. */
   get: (name: FolderName, file: string) => Promise<boolean>
   delete: (name: FolderName) => Promise<void>
+  /** Whether the thread was deleted (the API answers 410 Gone). */
+  gone: (name: FolderName) => Promise<boolean>
 }
 
 type State = {
@@ -178,6 +191,10 @@ export class Folders {
   /** Work on a folder (archiving it, putting it back), one at a time per folder. */
   private locks = new Map<string, Promise<unknown>>()
   private checking = false
+  private checkedAt = 0
+  /** When each teammate's caches were last cleared, by user. */
+  private cachesAt = new Map<string, number>()
+  private reserve: Reserve | undefined
   private saveTimer: NodeJS.Timeout | undefined
 
   constructor(
@@ -193,8 +210,11 @@ export class Folders {
       stateFile: string
       /** Where archives are written on their way to and from the bucket. */
       tempDir: string
+      /** On a cloud computer, the file that sets room aside on the disk (disk.ts Reserve). */
+      reserveFile?: string
     },
   ) {
+    if (CLOUD && options.reserveFile) this.reserve = new Reserve(options.reserveFile, '/home')
     this.loaded = readFile(options.stateFile, 'utf8').then(
       (text) => {
         const saved = JSON.parse(text) as Partial<State>
@@ -225,6 +245,17 @@ export class Folders {
       void this.check().catch((error) => console.warn(`folder check failed: ${String(error)}`))
     setTimeout(check, 60_000).unref()
     setInterval(check, CHECK_EVERY_MS).unref()
+    if (!CLOUD) return
+    // Between checks: past FULL, check now; nearly full, give the reserve back first.
+    setInterval(
+      () =>
+        void (async () => {
+          if ((await usage()) >= CRITICAL) await this.reserve?.release()
+          if ((await this.fullness()) >= FULL && Date.now() - this.checkedAt >= FULL_CHECK_EVERY_MS)
+            check()
+        })().catch((error) => console.warn(`disk watch failed: ${String(error)}`)),
+      WATCH_EVERY_MS,
+    ).unref()
   }
 
   /** The folder is in use now: archived last. */
@@ -333,16 +364,49 @@ export class Folders {
         await rm(file, { force: true })
       }
       if (CLOUD) await run('rm', ['-rf', '--', workDir], { runAs })
-      delete this.state.active[workDir]
-      delete this.state.retryAt[workDir]
-      delete this.state.trimmedAt[workDir]
-      delete this.state.upgradedAt[workDir]
-      delete this.state.moved[workDir]
-      for (const list of ['restored', 'stopped', 'trimmed', 'upgraded'] as const)
-        this.state[list] = this.state[list].filter((dir) => dir !== workDir)
-      this.save()
+      this.forget(workDir)
       console.log(`handed ${workDir} over to another computer`)
     })
+  }
+
+  /**
+   * The thread was deleted: its folder and containers go, on a cloud computer,
+   * where nothing else would ever remove them. A member's machine keeps the
+   * folder, theirs to look at.
+   */
+  async removeThread(sessionId: string) {
+    if (!CLOUD || !SAFE_ID.test(sessionId)) return
+    await this.loaded
+    for (const runAs of await owners()) {
+      if (!runAs) continue
+      // Teammate users are named after their teammate's id (teammateUser).
+      const name = { sessionId, teammateId: runAs.slice('bt-'.length) }
+      const { workDir } = threadFolder(name.teammateId, sessionId)
+      await this.exclusive(workDir, () => this.removeNow(name, workDir, runAs))
+    }
+  }
+
+  private async removeNow(name: FolderName, workDir: string, runAs?: string) {
+    if (await exists(workDir, runAs)) {
+      await this.quiet(name)
+      if (runAs) await removeFor(runAs, name.sessionId)
+      await run('rm', ['-rf', '--', workDir], { runAs })
+      console.log(`removed ${workDir}: its thread was deleted`)
+    }
+    delete this.state.arrived[workDir]
+    this.forget(workDir)
+  }
+
+  /** What was noted of a folder no longer here. */
+  private forget(workDir: string) {
+    delete this.state.active[workDir]
+    delete this.state.retryAt[workDir]
+    delete this.state.trimmedAt[workDir]
+    delete this.state.upgradedAt[workDir]
+    delete this.state.moved[workDir]
+    for (const list of ['restored', 'stopped', 'trimmed', 'upgraded'] as const)
+      this.state[list] = this.state[list].filter((dir) => dir !== workDir)
+    this.save()
   }
 
   /**
@@ -389,6 +453,7 @@ export class Folders {
   async check() {
     if (this.checking) return
     this.checking = true
+    let critical = false
     try {
       await this.loaded
       const now = Date.now()
@@ -425,26 +490,40 @@ export class Folders {
         )
       }
 
-      if ((await usage(await swapSize())) >= TRIM_AT)
+      // Nearly full: caches are cleared even while their teammate works, and the reserve
+      // stays given back.
+      // Given back, it stays nearly full until there is room to set it aside again.
+      critical = (await usage()) >= CRITICAL || this.reserve?.released === true
+      const users = (await owners()).filter((runAs): runAs is string => Boolean(runAs))
+      // The caches of teammates' tools first: clearing them loses nothing.
+      if ((await this.fullness(true)) >= TRIM_AT)
+        for (const runAs of users) await this.clearCaches(runAs, critical)
+
+      const trimmedFor = new Set<string>()
+      if ((await this.fullness(true)) >= TRIM_AT)
         for (const candidate of candidates) {
-          if ((await usage(await swapSize())) < TRIM_TO) break
+          if ((await this.fullness(true)) < TRIM_TO) break
           if (now - candidate.active < TRIM_QUIET_MS) break
           if (!quiet(candidate)) continue
           // Nothing new since it was last trimmed.
           if ((this.state.trimmedAt[candidate.workDir] ?? 0) >= candidate.active) continue
-          await this.trim(candidate).catch((error) =>
-            console.warn(`could not trim ${candidate.workDir}: ${String(error)}`),
-          )
+          const trimmed = await this.trim(candidate).catch((error) => {
+            console.warn(`could not trim ${candidate.workDir}: ${String(error)}`)
+            return false
+          })
+          if (trimmed && candidate.runAs) trimmedFor.add(candidate.runAs)
         }
+      // What a trim removed from node_modules stays in pnpm's store until it is pruned.
+      for (const runAs of trimmedFor) await this.clearCaches(runAs, critical, true)
 
-      if ((await usage()) < FULL) return
+      if ((await this.fullness()) < FULL) return
       for (const runAs of await owners())
         if (runAs)
           await prune(runAs).catch((error) =>
             console.warn(`could not prune ${runAs}'s Docker: ${String(error)}`),
           )
       for (const candidate of candidates) {
-        if ((await usage()) < ENOUGH) break
+        if ((await this.fullness()) < ENOUGH) break
         if (now - candidate.active < MIN_QUIET_MS) break
         if (!quiet(candidate)) continue
         if (now < (this.state.retryAt[candidate.workDir] ?? 0)) continue
@@ -453,11 +532,34 @@ export class Folders {
           console.warn(`could not archive ${candidate.workDir}: ${String(error)}`)
         })
       }
-      if ((await usage()) >= FULL)
+      if ((await this.fullness()) >= FULL)
         console.warn('the disk is still full: every thread folder left is in use or too large')
     } finally {
+      // Room again: set some aside for the next time it fills.
+      if (!critical)
+        await this.reserve
+          ?.keep()
+          .catch((error) => console.warn(`could not set room aside: ${String(error)}`))
+      this.checkedAt = Date.now()
       this.checking = false
     }
+  }
+
+  /**
+   * Clear a teammate's tool caches (disk.ts), once in a while (CACHES_EVERY_MS)
+   * unless `again`. While one of its threads is in use, an install may be
+   * under way: only when the disk is nearly full, and then more often.
+   */
+  private async clearCaches(runAs: string, critical: boolean, again = false) {
+    // Its folders now, not when the check began: a thread may have started since.
+    const busy = (await this.foldersOf(runAs)).some((c) => this.options.inUse(c.name.sessionId))
+    if (busy && !critical) return
+    const every = again ? 0 : critical ? CRITICAL_CACHES_EVERY_MS : CACHES_EVERY_MS
+    if (Date.now() - (this.cachesAt.get(runAs) ?? 0) < every) return
+    this.cachesAt.set(runAs, Date.now())
+    await freeCaches(teammateHome(runAs), runAs).catch((error) =>
+      console.warn(`could not clear ${runAs}'s caches: ${String(error)}`),
+    )
   }
 
   /**
@@ -481,38 +583,52 @@ export class Folders {
     }
   }
 
+  /**
+   * How full the disk is, for what to free: the reserve counted as free, and with
+   * `swap` the swap file too (SWAP_FILE).
+   */
+  private async fullness(swap = false) {
+    const [swapBytes, reserved] = await Promise.all([
+      swap ? swapSize() : 0,
+      this.reserve?.size() ?? 0,
+    ])
+    return usage(swapBytes + reserved)
+  }
+
   /** Every thread folder on this computer, quiet longest first. */
   private async candidates() {
     if (!CLOUD) return this.memberCandidates()
     const found: Candidate[] = []
-    for (const runAs of await owners()) {
-      if (!runAs) continue
-      const root = `${teammateHome(runAs)}/threads`
-      const lines = (
-        await run(
-          'find',
-          [root, '-mindepth', '1', '-maxdepth', '1', '-type', 'd', '-printf', '%T@ %f\\n'],
-          {
-            runAs,
-          },
-        ).catch(() => Buffer.alloc(0))
-      )
-        .toString()
-        .split('\n')
-      for (const line of lines) {
-        const [mtime = '', sessionId = ''] = line.split(' ')
-        if (!SAFE_ID.test(sessionId)) continue
-        const workDir = `${root}/${sessionId}`
-        found.push({
-          // Teammate users are named after their teammate's id (teammateUser).
-          name: { sessionId, teammateId: runAs.slice('bt-'.length) },
-          workDir,
-          runAs,
-          active: Math.max(this.state.active[workDir] ?? 0, Number(mtime) * 1000 || 0),
-        })
-      }
-    }
+    for (const runAs of await owners()) if (runAs) found.push(...(await this.foldersOf(runAs)))
     return found.sort((a, b) => a.active - b.active)
+  }
+
+  /** A teammate's thread folders on a cloud computer. */
+  private async foldersOf(runAs: string) {
+    const found: Candidate[] = []
+    const root = `${teammateHome(runAs)}/threads`
+    const lines = (
+      await run(
+        'find',
+        [root, '-mindepth', '1', '-maxdepth', '1', '-type', 'd', '-printf', '%T@ %f\\n'],
+        { runAs },
+      ).catch(() => Buffer.alloc(0))
+    )
+      .toString()
+      .split('\n')
+    for (const line of lines) {
+      const [mtime = '', sessionId = ''] = line.split(' ')
+      if (!SAFE_ID.test(sessionId)) continue
+      const workDir = `${root}/${sessionId}`
+      found.push({
+        // Teammate users are named after their teammate's id (teammateUser).
+        name: { sessionId, teammateId: runAs.slice('bt-'.length) },
+        workDir,
+        runAs,
+        active: Math.max(this.state.active[workDir] ?? 0, Number(mtime) * 1000 || 0),
+      })
+    }
+    return found
   }
 
   /**
@@ -552,14 +668,14 @@ export class Folders {
     return found.sort((a, b) => a.active - b.active)
   }
 
-  /** Remove the folder's dependency and build folders, in place. */
+  /** Remove the folder's dependency and build folders, in place. Whether anything went. */
   private async trim(candidate: Candidate) {
     const { name, workDir, runAs } = candidate
-    await this.exclusive(workDir, async () => {
+    return await this.exclusive(workDir, async () => {
       const used = () => this.used(name, workDir, TRIM_QUIET_MS)
-      if (used() || !(await exists(workDir, runAs))) return
+      if (used() || !(await exists(workDir, runAs))) return false
       const paths = await regenerable(workDir, runAs)
-      if (used()) return
+      if (used()) return false
       // On a member's machine, its containers too: nothing else frees them there.
       if (!CLOUD) {
         await this.quiet(name)
@@ -574,6 +690,7 @@ export class Folders {
         console.log(
           `trimmed ${workDir} to free disk: ${paths.map((p) => relativeTo(workDir, p)).join(', ')}`,
         )
+      return paths.length > 0
     })
   }
 
@@ -620,6 +737,8 @@ export class Folders {
       // Used since it was picked (a file read, say), or gone.
       const used = () => this.used(name, workDir, MIN_QUIET_MS)
       if (used() || !(await exists(workDir, runAs))) return
+      // Deleted while this computer was offline, and never told: nothing to pack.
+      if (await this.options.archives.gone(name)) return await this.removeNow(name, workDir, runAs)
       await this.quiet(name)
       // Its containers first: one writing into the folder would change it while it is packed.
       if (runAs) await removeFor(runAs, name.sessionId)
@@ -634,7 +753,13 @@ export class Folders {
         }
         // Used while it was being packed: what was packed may already be old.
         if (used()) return
-        await this.options.archives.put(name, file, size)
+        try {
+          await this.options.archives.put(name, file, size)
+        } catch (error) {
+          // Deleted while this computer was offline, and never told.
+          if (error instanceof ThreadGone) return await this.removeNow(name, workDir, runAs)
+          throw error
+        }
         if (used()) return
         await run('rm', ['-rf', '--', workDir], { runAs })
         delete this.state.active[workDir]
