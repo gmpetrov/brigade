@@ -12,7 +12,7 @@ import {
   type MentionKind,
   type MessageCommand,
 } from '@brigade/contracts'
-import { Extension, Node, type JSONContent } from '@tiptap/core'
+import { Extension, Node, type Editor, type JSONContent } from '@tiptap/core'
 import Document from '@tiptap/extension-document'
 import HardBreak from '@tiptap/extension-hard-break'
 import MentionNode from '@tiptap/extension-mention'
@@ -27,7 +27,8 @@ import {
   useEditor,
   type ReactNodeViewProps,
 } from '@tiptap/react'
-import { PluginKey, Selection } from '@tiptap/pm/state'
+import { Plugin, PluginKey, Selection, type EditorState } from '@tiptap/pm/state'
+import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { Suggestion, type SuggestionProps } from '@tiptap/suggestion'
 import { BookOpenText, GraduationCap, ImageIcon, Palette, Shapes } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, type ComponentType } from 'react'
@@ -551,6 +552,44 @@ function toDoc(text: string, skills: readonly string[]): JSONContent {
 const touchScreen = () =>
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
+/** Nothing written: one empty line, which a suggestion may fill. */
+const blank = (state: EditorState) =>
+  state.doc.childCount === 1 &&
+  state.doc.firstChild!.isTextblock &&
+  state.doc.firstChild!.content.size === 0
+
+/**
+ * A suggested message, grey after the caret, with the Tab key that puts it in the box (a
+ * click on it too). A touch screen has no Tab key: its Use button sits beside the box, where
+ * the send button comes after (thread-conversation). The words let a click or tap through to
+ * the box, to write something else.
+ */
+function suggestionView(text: string, take?: () => void) {
+  const view = document.createElement('span')
+  view.contentEditable = 'false'
+  view.className = 'pointer-events-none text-muted-foreground'
+  const words = document.createElement('span')
+  words.setAttribute('aria-hidden', 'true')
+  words.textContent = text
+  view.append(words)
+  if (!take) return view
+  const key = document.createElement('button')
+  key.type = 'button'
+  key.textContent = 'Tab'
+  key.title = 'Use this message (Tab)'
+  key.setAttribute('aria-label', `Use the suggested message: ${text}`)
+  key.className =
+    'pointer-events-auto ml-1.5 inline-flex h-5 cursor-pointer items-center rounded-md border bg-muted px-1.5 align-text-bottom font-sans text-xs hover:text-foreground'
+  // The box keeps its caret and focus: the click alone takes the suggestion.
+  key.addEventListener('mousedown', (event) => event.preventDefault())
+  key.addEventListener('click', (event) => {
+    event.preventDefault()
+    take()
+  })
+  view.append(key)
+  return view
+}
+
 /**
  * A message box where `@` mentions teammates, connections, repositories, library files,
  * credentials, threads and computers, and `/` first in it picks a command (what to make).
@@ -571,6 +610,7 @@ export function Composer({
   fill,
   autoFocus,
   typeToFocus,
+  suggestion,
 }: {
   value: string
   onChange: (text: string) => void
@@ -595,15 +635,31 @@ export function Composer({
    * screen, where that opens the keyboard), and typing with nothing else focused lands in it.
    */
   typeToFocus?: boolean
+  /**
+   * What the person may write next, like Claude's: grey in the empty box in place of the
+   * placeholder. Tab (or →, or a click on its key) puts it in the box to edit and send; a
+   * touch screen has a Use button beside the box instead. Typing writes over it, and Enter
+   * never sends it as it is.
+   */
+  suggestion?: string
 }) {
   const options = useMentionOptions(threadId)
   const commands = useCommandOptions()
   const skills = useSkillCommands()
   // The editor is built once; these keep its callbacks current.
-  const latest = useRef({ options, commands, skills, onChange, onSubmit, placeholder })
-  latest.current = { options, commands, skills, onChange, onSubmit, placeholder }
+  const latest = useRef({ options, commands, skills, onChange, onSubmit, placeholder, suggestion })
+  latest.current = { options, commands, skills, onChange, onSubmit, placeholder, suggestion }
   const skillNames = () => latest.current.skills.map((s) => s.name)
   const text = useRef(value)
+
+  /** The suggestion goes in the empty box, the caret after it. */
+  const takeSuggestion = (editor: Editor) => {
+    const suggested = latest.current.suggestion
+    if (!suggested || !editor.isEditable || !blank(editor.state)) return false
+    editor.commands.setContent(toDoc(suggested, skillNames()), { emitUpdate: true })
+    editor.commands.focus('end')
+    return true
+  }
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -615,7 +671,41 @@ export function Composer({
       Text,
       HardBreak,
       UndoRedo,
-      Placeholder.configure({ placeholder: () => latest.current.placeholder ?? '' }),
+      // A suggestion takes the placeholder's place.
+      Placeholder.configure({
+        placeholder: () => (latest.current.suggestion ? '' : (latest.current.placeholder ?? '')),
+      }),
+      Extension.create({
+        name: 'suggestion',
+        addKeyboardShortcuts() {
+          const take = () => takeSuggestion(this.editor)
+          return { Tab: take, ArrowRight: take }
+        },
+        addProseMirrorPlugins() {
+          const editor = this.editor
+          return [
+            new Plugin({
+              key: new PluginKey('suggestion'),
+              props: {
+                decorations: (state) => {
+                  const suggested = latest.current.suggestion
+                  if (!suggested || !editor.isEditable || !blank(state)) return null
+                  const take = touchScreen() ? undefined : () => takeSuggestion(editor)
+                  const view = () => suggestionView(suggested, take)
+                  return DecorationSet.create(state.doc, [
+                    Decoration.widget(1, view, {
+                      side: 1,
+                      ignoreSelection: true,
+                      stopEvent: () => true,
+                      key: `suggestion:${suggested}`,
+                    }),
+                  ])
+                },
+              },
+            }),
+          ]
+        },
+      }),
       MentionNode.extend({
         addAttributes() {
           return {
@@ -718,10 +808,10 @@ export function Composer({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [editor, typeToFocus])
 
-  // The placeholder reads `latest`; redraw when it changes.
+  // The placeholder and the suggestion read `latest`; redraw when they change.
   useEffect(() => {
     if (editor) editor.view.dispatch(editor.state.tr)
-  }, [editor, placeholder])
+  }, [editor, placeholder, suggestion])
 
   return (
     // `relative`: the mention menu docks here unless an ancestor is marked

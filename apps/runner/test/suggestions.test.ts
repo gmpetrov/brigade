@@ -18,9 +18,13 @@ test("Claude Code's guess at the next message becomes the thread's suggestion", 
   assert.deepEqual(mapped({ type: 'raw', rawValue: guess }), [
     { type: 'message.suggested', text: 'Corrige-le et ouvre une PR' },
   ])
-  // An empty guess is none; a long one is cut.
+  // An empty guess is none, nor one of Claude Code's own commands; a long one is cut.
   assert.deepEqual(
     mapped({ type: 'raw', rawValue: { type: 'prompt_suggestion', suggestion: ' ' } }),
+    [],
+  )
+  assert.deepEqual(
+    mapped({ type: 'raw', rawValue: { type: 'prompt_suggestion', suggestion: '/compact' } }),
     [],
   )
   const long = mapped({

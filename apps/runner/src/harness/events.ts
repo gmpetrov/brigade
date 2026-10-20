@@ -530,10 +530,11 @@ export class EventMapper {
           }
           return this.emit({ at, type: 'usage.updated', status, limits: limits(info) })
         }
-        // Claude Code's guess at the person's next message, once the turn is over.
+        // Claude Code's guess at the person's next message, once the turn is over. Its own
+        // commands (/compact) mean nothing in a thread.
         if (value?.type === 'prompt_suggestion') {
           const text = typeof value.suggestion === 'string' ? value.suggestion.trim() : ''
-          if (!text) return
+          if (!text || text.startsWith('/')) return
           return this.emit({ at, type: 'message.suggested', text: text.slice(0, SUGGESTION_CHARS) })
         }
         return this.emit({ at, type: 'raw', source: 'harness', value })

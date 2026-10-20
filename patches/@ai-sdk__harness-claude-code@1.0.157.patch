@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index e8da8699576b55f0cc271d7839d01d51cc5d649a..c1835e35726fb6c2bc7c8fc91c647ad9a88ce1c0 100644
+index e8da8699576b55f0cc271d7839d01d51cc5d649a..a83911ca34eb53f9db26ab6361422dc17db562f2 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1126,6 +1126,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
@@ -251,3 +251,13 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..c1835e35726fb6c2bc7c8fc91c647ad9
  		if (hardAbortTimer != null) clearTimeout(hardAbortTimer);
  		turn.abortSignal.removeEventListener("abort", onHostAbort);
  		queryInput.close();
+@@ -1865,6 +2016,9 @@ async function runTurn(start, turn) {
+ 		} catch {}
+ 	}
+ 	if (emittedTerminalError) return;
++	// Brigade: stopped by the host while it guessed, the turn is settled there already. A finish
++	// sent now, once the process is gone, would end the host's next turn instead.
++	if (draining && turn.abortSignal.aborted) return;
+ 	emittedTerminalFinish = true;
+ 	emit({
+ 		type: "finish",

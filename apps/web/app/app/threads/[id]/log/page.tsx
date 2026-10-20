@@ -301,6 +301,8 @@ export default function RunLogPage() {
         }
       case 'turn.completed':
         return { actor: teammate, what: `Turn finished (${String(d.finishReason)})` }
+      case 'message.suggested':
+        return { actor: teammate, what: `Suggested a next message: ${clip(String(d.text))}` }
       case 'usage.updated':
         return { actor: teammate, what: 'Usage updated', detail: d }
       case 'error':
