@@ -537,23 +537,31 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   to 1 MB. It never wakes a stopped computer.
 - **Pull requests** (`apps/api/src/pull-requests.ts`, `routes/pulls.ts`, the Pull requests page). GitHub keeps the
   code and the pull request; `PullRequest` keeps who wrote it (from the thread's `github_create_pull_request`, or,
-  for older ones, the call log by branch), who reviews it and where its review loop stands. The list reads, live
-  from GitHub, every repository where a teammate opened a pull request; a person's pull request elsewhere is not
-  listed. A pull request's page shows its description, checks, reviews and diff. Until the workspace has a working
-  GitHub connection, the page shows how to connect one. Any member asks a teammate to review a pull request; only
-  owners and admins merge, or arm a review to merge once approved. Teammates never merge.
-- **Review loop.** The review runs in the thread that opened the pull request, so the author keeps its context (a
-  pull request from outside Brigade gets a thread of its own, without an author to fix it). The reviewer is brought
-  into the thread and asked to call `github_review_pull_request` once: approve or request changes, with line
-  comments. When its turn ends, the API reads that verdict: changes go to the author as its next message; when the
-  author's turn ends, the reviewer is asked again with the commits since its review. After 3 rounds without an
-  approval, or when a teammate cannot be reached, the loop stops and opens a ticket. An approval armed to merge is
-  checked when it comes in and every minute: pending checks wait, failed checks and conflicts go back to the author,
-  a branch behind its base is brought up to date (a merge of the base into the approved commit counts as approved),
-  and a branch protection rule GitHub enforces opens a ticket. Merges are squash, audited as `pull_request.merged`.
-  Every teammate acts as the GitHub App, and GitHub refuses a verdict on the app's own pull request, so there a
-  review is a comment that starts with the verdict, and the verdict itself lives in Brigade. A repository requiring
-  an approving review needs a person to approve on GitHub, or the app allowed to bypass the rule.
+  for older ones, the call log by branch), its review and where a merge a person asked for stands. The list reads,
+  live from GitHub, every repository where a teammate opened a pull request; a person's pull request elsewhere is
+  not listed. A pull request's page shows its description, checks, reviews and diff. Until the workspace has a
+  working GitHub connection, the page shows how to connect one. Any member asks a teammate to review a pull
+  request; only owners and admins merge. Teammates merge only when a person asks. A pull request that conflicts
+  goes back to the teammate that wrote it (Resolve conflicts): when its turn ends, Brigade merges it once GitHub
+  allows it, checked every minute; failed checks and new conflicts go back to the author, three turns at most,
+  then a ticket. Merges are squash by default, audited as `pull_request.merged`.
+- **Reviews** (`apps/api/src/reviews.ts`). Another teammate reviews a pull request in a child thread of the thread
+  that opened it, which Brigade starts with a standard brief rather than the author's: the pull request, how that
+  thread started, and whether the repository runs checks (then the reviewer reads the logic and leaves the rest to
+  them; without, it also runs the typecheck and the tests). The reviewer is another teammate that can post on the
+  repository, preferably on another model than the author's; with nobody else, the author itself in a fresh
+  context. Its verdict (`github_review_pull_request`) is posted on GitHub and kept as a `PullRequestReview`; its
+  report wakes the author, which fixes what it rightly found and may ask it to look again (`message_thread`, twice
+  at most). The pull request waits on a person (Needs you, with one push) once its review is done. A project's
+  Code review setting (`Project.reviewPolicy`) says who decides there is one: the teammate that opens a pull
+  request, in `github_create_pull_request`'s `review` (wanted, and a reason shown on it), or only someone who asks
+  (`request_review` in the thread, or Ask for a review on the pull request's page). A child thread asks its parent
+  for one in its report, and its pull request's review reports to the parent; a playbook's run starts none on its
+  own. One opened outside Brigade is reviewed in a thread of its own, which becomes the pull request's. Closing a
+  pull request stops its review; one merged meanwhile keeps it, as what it finds is still worth a follow-up. Every
+  teammate acts as the GitHub App, and GitHub refuses a verdict on the app's own pull request, so there a review is
+  a comment that starts with the verdict, and the verdict itself lives in Brigade. A repository requiring an
+  approving review needs a person to approve on GitHub, or the app allowed to bypass the rule.
 
 ## License
 

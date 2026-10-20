@@ -78,7 +78,8 @@ const startedNote = (reviewer: string) =>
   `${reviewer} reviews it in a child thread, from a brief of Brigade's. You are woken here with its ` +
   'report: fix what it rightly found and push, then ask it to look at what changed with ' +
   `message_thread (${REVIEW_RECHECKS} times at most), and tell the person where it stands. Until ` +
-  'then, do not offer to merge it. End your turn now.'
+  'then, do not offer to merge it. Tell the person in a line that it is in review, then end your ' +
+  'turn: do not wait or poll.'
 
 /**
  * The checks the repository runs on this pull request: those reported on its head, else its
@@ -111,7 +112,7 @@ async function firstAsk(db: ScopedDb, sessionId: string) {
 }
 
 /** The reviewer's brief: the same for every review, whoever asked. */
-function reviewBrief(input: {
+export function reviewBrief(input: {
   repo: string
   p: GhPull
   author: string | null

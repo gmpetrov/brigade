@@ -188,7 +188,7 @@ Header: icon, name, brief, **New thread** (project preset) and a menu.
 | Library            | `…/library`          | The library opened at the project's folder                                             | Existing page with a root path                |
 | Repos and previews | `…/repos`            | Each repository, its saved preview, live previews                                      | `SavedPreviews`, filtered to its repositories |
 | Routines           | `…/routines`         | Its schedules and triggers                                                             | Existing page, `?project=<id>`                |
-| Settings           | `…/settings`         | Name, icon, brief, repositories, folder, preferred connections, archive                | New form                                      |
+| Settings           | `…/settings`         | Name, icon, brief, repositories, folder, preferred connections, code review, archive   | New form                                      |
 
 On the overview:
 
