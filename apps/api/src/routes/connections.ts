@@ -74,7 +74,7 @@ import {
   type AppEnv,
   type WorkspaceScope,
 } from '../scope.js'
-import { deleteSecret, openSecret, sealSecret } from '../vault.js'
+import { deleteSecret, openSecret, replaceSecret, sealSecret } from '../vault.js'
 
 const stateIdentifier = (state: string) => `oauth-state:${hashToken(state)}`
 /** A member's GitHub connect request, from "Connect GitHub" until GitHub sends them back. */
@@ -168,12 +168,46 @@ async function createConnection(
   existing?: { id: string },
 ) {
   const db = scoped(scope)
-  const vaultSecretId = credential ? await sealSecret(db, scope, credential) : null
   const id = randomUUID()
   const custom = connection.kind === 'webhook'
   const app =
     existing ??
     (await appFor(db, scope, appKey(connection.kind, id), custom ? connection.label : null))
+  // The member signing in again to an account they already have (Reconnect): the same
+  // account gets the new credential, rather than a second row beside the broken one.
+  const same =
+    credential && connection.externalAccount
+      ? await db.connection.findFirst({
+          where: {
+            appId: app.id,
+            externalAccount: connection.externalAccount,
+            mcpUrl: connection.mcpUrl ?? null,
+            createdByMemberId: scope.memberId,
+            status: { not: 'removed' },
+          },
+        })
+      : null
+  if (same && credential) {
+    if (same.vaultSecretId) await replaceSecret(db, scope, same.vaultSecretId, credential)
+    const vaultSecretId = same.vaultSecretId ?? (await sealSecret(db, scope, credential))
+    await db.connection.updateMany({
+      where: { id: same.id },
+      data: { status: 'active', vaultSecretId },
+    })
+    forgetMcpTools(same.id)
+    await syncConnection(scope, same.id).catch((error) =>
+      console.error('resubscribe failed:', error instanceof Error ? error.message : error),
+    )
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'connection.reconnected',
+      target: { type: 'connection', id: same.id },
+      data: { kind: connection.kind, account: connection.externalAccount },
+    })
+    return { ...same, status: 'active' as const, vaultSecretId }
+  }
+  const vaultSecretId = credential ? await sealSecret(db, scope, credential) : null
   const row = await db.connection.create({
     data: {
       ...connection,

@@ -131,7 +131,8 @@ export function AppSheet({
           : 'google'
   // A server per data region (Mixpanel): connecting starts by picking one.
   const regions = entry.regions
-  const connect = (region?: string) =>
+  /** Sign in at the provider: a new account, or the one being reconnected. */
+  const connect = (region?: string, reconnecting?: string) =>
     run(async () => {
       if (!route) return setAdding(true)
       const before = accounts.length
@@ -145,19 +146,22 @@ export function AppSheet({
         })
         return url
       })
-      if (inWindow) setWaiting({ before, since: Date.now() })
+      if (inWindow) setWaiting({ before, since: Date.now(), reconnecting })
     })
   // While the sign-in tab is open: look for the new account every few seconds, for a while.
-  const [waiting, setWaiting] = useState<{ before: number; since: number }>()
+  const [waiting, setWaiting] = useState<{ before: number; since: number; reconnecting?: string }>()
+  const reconnected =
+    !!waiting?.reconnecting &&
+    accounts.find((a) => a.id === waiting.reconnecting)?.status === 'active'
   useEffect(() => {
     if (!waiting) return
-    if (accounts.length > waiting.before) return setWaiting(undefined)
+    if (accounts.length > waiting.before || reconnected) return setWaiting(undefined)
     const timer = setInterval(() => {
       if (Date.now() - waiting.since > 10 * 60_000) setWaiting(undefined)
       else void reload()
     }, 2000)
     return () => clearInterval(timer)
-  }, [waiting, accounts.length, reload])
+  }, [waiting, accounts.length, reconnected, reload])
 
   const connectStripe = (form: FormData) =>
     run(async () => {
@@ -315,6 +319,8 @@ export function AppSheet({
                 catalog={catalog}
                 reload={reload}
                 onError={setError}
+                regions={regions}
+                onReconnect={(region) => (server ? setAdding(true) : void connect(region, c.id))}
               />
             ))}
             {adding && kind === 'stripe' && <StripeForm onSubmit={connectStripe} />}
@@ -512,6 +518,8 @@ function Account({
   catalog,
   reload,
   onError,
+  regions,
+  onReconnect,
 }: {
   connection: Connection
   data: ConnectionsResponse
@@ -519,6 +527,9 @@ function Account({
   catalog?: TriggerCatalog
   reload: () => Promise<unknown>
   onError: (message: string) => void
+  regions: { id: string; label: string }[] | null | undefined
+  /** Sign in again; the same account gets the new credential. */
+  onReconnect: (region?: string) => void
 }) {
   const { me, teammates } = useDashboard()
   const admin = isAdmin(me)
@@ -587,9 +598,24 @@ function Account({
         </span>
         {/* The account itself: a mailbox, a Stripe account, a GitHub owner; a custom app's name. */}
         <span className="min-w-0 flex-1 truncate font-medium">{c.externalAccount ?? c.label}</span>
-        {c.status === 'needs_reauth' && (
-          <span className="shrink-0 text-xs font-medium text-destructive-text">Reconnect</span>
-        )}
+        {/* Only its owner can sign in to it again; anyone else would add an account of their own. */}
+        {c.status === 'needs_reauth' &&
+          (mine ? (
+            <RegionMenu regions={regions} onPick={onReconnect}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={regions ? undefined : () => onReconnect()}
+                className="shrink-0 text-xs text-destructive-text hover:text-destructive-text"
+              >
+                Reconnect
+              </Button>
+            </RegionMenu>
+          ) : (
+            <span className="shrink-0 text-xs font-medium text-destructive-text">
+              Reconnect needed
+            </span>
+          ))}
         {chip && (
           <span className="shrink-0 rounded-md border bg-card px-2 py-0.5 text-xs text-muted-foreground">
             {chip}
