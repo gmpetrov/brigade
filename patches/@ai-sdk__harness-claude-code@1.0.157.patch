@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index e8da8699576b55f0cc271d7839d01d51cc5d649a..a83911ca34eb53f9db26ab6361422dc17db562f2 100644
+index e8da8699576b55f0cc271d7839d01d51cc5d649a..a186c6c50d6bf9c4b660f8de8ae90b9ddea85353 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1126,6 +1126,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
@@ -141,33 +141,26 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..a83911ca34eb53f9db26ab6361422dc1
  	try {
  		for await (const msg of q) {
  			if (abortCtl.signal.aborted) break;
-@@ -1799,7 +1885,55 @@ async function runTurn(start, turn) {
+@@ -1799,7 +1885,48 @@ async function runTurn(start, turn) {
  			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
-+			// Brigade: while draining, only the guess goes to the host, and it was all the drain
-+			// waited for. What the closing process says besides is no part of the turn.
-+			if (draining) {
-+				if (type === "prompt_suggestion") {
-+					emit({
-+						type: "raw",
-+						rawValue: msg
-+					});
-+					break;
-+				}
-+				continue;
-+			}
- 			emitStreamEvent(msg);
-+			messages++;
-+			clearTimeout(reportTimer);
-+			// Brigade: a guess sent while the turn still waited on work in the background.
++			// Brigade: Claude Code's guess at the person's next message goes to the host. It is no
++			// part of the turn, whose counts and timers stay as they were: a report the turn still
++			// waits on keeps its timeout. Draining, the guess was all the drain waited for, and
++			// what the closing process says besides is no part of the turn either.
 +			if (type === "prompt_suggestion") {
 +				emit({
 +					type: "raw",
 +					rawValue: msg
 +				});
++				if (draining) break;
 +				continue;
 +			}
++			if (draining) continue;
+ 			emitStreamEvent(msg);
++			messages++;
++			clearTimeout(reportTimer);
 +			if (type === "system" && msg.subtype === "task_started" && HELD_TASKS.has(msg.task_type)) heldTasks.add(msg.task_id);
 +			if (type === "system" && msg.subtype === "background_tasks_changed" && Array.isArray(msg.tasks)) {
 +				const now = new Set(msg.tasks.filter((t) => !t.ambient && HELD_TASKS.has(t.task_type)).map((t) => t.task_id));
@@ -197,7 +190,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..a83911ca34eb53f9db26ab6361422dc1
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -1835,28 +1969,45 @@ async function runTurn(start, turn) {
+@@ -1835,28 +1962,45 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -251,7 +244,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..a83911ca34eb53f9db26ab6361422dc1
  		if (hardAbortTimer != null) clearTimeout(hardAbortTimer);
  		turn.abortSignal.removeEventListener("abort", onHostAbort);
  		queryInput.close();
-@@ -1865,6 +2016,9 @@ async function runTurn(start, turn) {
+@@ -1865,6 +2009,9 @@ async function runTurn(start, turn) {
  		} catch {}
  	}
  	if (emittedTerminalError) return;

@@ -777,10 +777,14 @@ export class HarnessThread {
     // A call approved while its turn was lost, made again: approved without asking twice.
     let approvedAgain: { toolName: string; input: unknown } | undefined
     const autoApproved: string[] = []
-    // Ends the turn's streams once it is answered and only Claude Code's guess is left (drain).
-    const tail = new AbortController()
-    const streamSignal = AbortSignal.any([signal, tail.signal])
-    // The turn's main stream may end it early; the bridge says when it is answered.
+    // Ends the stream being read once the turn is answered and only Claude Code's guess is
+    // left (drain): each stream gets a signal of its own, with the turn's.
+    let tail = new AbortController()
+    const streamSignal = () => {
+      tail = new AbortController()
+      return AbortSignal.any([signal, tail.signal])
+    }
+    // A stream the turn may end in (consumeLast); the bridge says when it is answered.
     let mayAnswer = false
     let early = false
     let drained: () => void = () => {}
@@ -790,7 +794,8 @@ export class HarnessThread {
         if (frozenUnder() && !this.handingOver) return
         if (answered(event)) {
           // Answered, with a reply the person can read: done for everyone now, while Claude Code
-          // guesses what they may write next. A turn that owes a reply goes on as before.
+          // guesses what they may write next. A turn that owes a reply is asked for it in a
+          // stream of its own, which ends the turn instead.
           if (
             !mayAnswer ||
             signal.aborted ||
@@ -804,6 +809,9 @@ export class HarnessThread {
           this.emit({ type: 'turn.completed', finishReason: 'stop' })
           return
         }
+        // A guess counts once the turn is answered: before that, more of the turn comes after it
+        // (the reply it is asked for, what it waits on in the background).
+        if (event.type === 'message.suggested' && !early) return
         // After that, only the guess and the turn's usage still go out: the rest is a closing process.
         if (early && event.type !== 'message.suggested' && event.type !== 'usage.updated') return
         if (event.type === 'approval.requested') {
@@ -850,6 +858,24 @@ export class HarnessThread {
           if (image) await this.keepImage(image)
         }
       }
+      // A stream that may be the turn's last: answered there, the turn completes for everyone
+      // while Claude Code guesses the person's next message (drain).
+      const consumeLast = async (stream: TurnStream) => {
+        mayAnswer = true
+        try {
+          await consume(stream)
+        } finally {
+          mayAnswer = false
+          this.drain = undefined
+          drained()
+        }
+      }
+      // Completed for everyone once answered: Claude Code's guess came, or no longer mattered.
+      const answeredEarly = async () => {
+        if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
+        await this.persist()
+        return { kind: 'done' as const, result: { status: 'idle' as const } }
+      }
       let text = input.kind === 'prompt' || input.kind === 'resume' ? input.text : undefined
       // Nothing frozen came back after all: the teammate is told what happened instead.
       if (input.kind === 'resume' && !text && !live.session.hasUnfinishedTurn()) text = RESTARTED
@@ -887,7 +913,7 @@ export class HarnessThread {
                   if (input.approved) approvedAgain = call
                   return approvalAfterRestart(call, input.approved, input.reason)
                 })(),
-                abortSignal: streamSignal,
+                abortSignal: streamSignal(),
               })
             : closed && (input.kind === 'answer' || input.kind === 'ticket')
               ? await live.agent.stream({
@@ -897,18 +923,18 @@ export class HarnessThread {
                       ? this.answerResult(input.questionId, input.answer)
                       : this.ticketResult(input.requestId, input.answer),
                   ),
-                  abortSignal: streamSignal,
+                  abortSignal: streamSignal(),
                 })
               : input.kind === 'prompt' || input.kind === 'resume'
                 ? await live.agent.stream({
                     session: live.session,
                     prompt: text!,
-                    abortSignal: streamSignal,
+                    abortSignal: streamSignal(),
                   })
                 : input.kind === 'answer' || input.kind === 'ticket'
                   ? await live.agent.continueStream({
                       session: live.session,
-                      abortSignal: streamSignal,
+                      abortSignal: streamSignal(),
                       toolResultContinuations: [
                         input.kind === 'answer'
                           ? this.answerResult(input.questionId, input.answer)
@@ -917,7 +943,7 @@ export class HarnessThread {
                     })
                   : await live.agent.continueStream({
                       session: live.session,
-                      abortSignal: streamSignal,
+                      abortSignal: streamSignal(),
                       toolApprovalContinuations: [
                         {
                           type: 'tool-approval-response',
@@ -928,42 +954,29 @@ export class HarnessThread {
                       ],
                     })
       if (input.kind === 'approval' && !closed) this.approvals.delete(input.approvalId)
-      if (result) {
-        mayAnswer = true
-        try {
-          await consume(result.fullStream)
-        } finally {
-          mayAnswer = false
-          this.drain = undefined
-          drained()
-        }
-      }
-      // Completed for everyone once answered: Claude Code's guess came, or no longer mattered.
-      if (early) {
-        if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
-        await this.persist()
-        return { kind: 'done', result: { status: 'idle' } }
-      }
+      if (result) await consumeLast(result.fullStream)
+      if (early) return await answeredEarly()
       // The call approved while its turn was lost, made again: approved as the person did.
       while (autoApproved.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
         const approved = autoApproved.splice(0)
         result = await live.agent.continueStream({
           session: live.session,
-          abortSignal: signal,
+          abortSignal: streamSignal(),
           toolApprovalContinuations: approved.map((approvalId) => ({
             type: 'tool-approval-response' as const,
             approvalId,
             approved: true,
           })),
         })
-        await consume(result.fullStream)
+        await consumeLast(result.fullStream)
+        if (early) return await answeredEarly()
       }
       // A ticket nobody could answer: the error goes back and the turn carries on.
       while (mapper.rejected.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
         const rejected = mapper.rejected.splice(0)
         result = await live.agent.continueStream({
           session: live.session,
-          abortSignal: signal,
+          abortSignal: streamSignal(),
           toolResultContinuations: rejected.map((r) => ({
             type: 'tool-result' as const,
             toolCallId: r.toolCallId,
@@ -971,7 +984,8 @@ export class HarnessThread {
             output: { type: 'error-text' as const, value: r.error },
           })),
         })
-        await consume(result.fullStream)
+        await consumeLast(result.fullStream)
+        if (early) return await answeredEarly()
       }
       // Over with no reply after its work (only in its thinking, or before its last step): asked for once.
       const over =
@@ -981,11 +995,18 @@ export class HarnessThread {
         !mapper.error &&
         !live.session.hasUnfinishedTurn()
       const ask = over ? this.replies.ask() : undefined
-      if (ask)
-        await consume(
-          (await live.agent.stream({ session: live.session, prompt: ask, abortSignal: signal }))
-            .fullStream,
+      if (ask) {
+        await consumeLast(
+          (
+            await live.agent.stream({
+              session: live.session,
+              prompt: ask,
+              abortSignal: streamSignal(),
+            })
+          ).fullStream,
         )
+        if (early) return await answeredEarly()
+      }
       if (frozenUnder()) return { kind: 'done', result: { status: 'waiting' } }
       // A login from before tokens, refreshed during the turn, goes back to the shared account directory.
       if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
