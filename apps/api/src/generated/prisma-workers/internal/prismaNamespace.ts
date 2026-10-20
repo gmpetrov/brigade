@@ -5351,13 +5351,14 @@ export const PullRequestScalarFieldEnum = {
   baseRef: 'baseRef',
   sessionId: 'sessionId',
   authorTeammateId: 'authorTeammateId',
-  reviewerTeammateId: 'reviewerTeammateId',
-  reviewStatus: 'reviewStatus',
-  autoMerge: 'autoMerge',
+  reviewSessionId: 'reviewSessionId',
+  noReviewReason: 'noReviewReason',
+  reviewClaimedAt: 'reviewClaimedAt',
+  mergeStatus: 'mergeStatus',
   mergeMethod: 'mergeMethod',
   requestedByMemberId: 'requestedByMemberId',
   round: 'round',
-  reviewedSha: 'reviewedSha',
+  resolveFromSha: 'resolveFromSha',
   note: 'note',
   state: 'state',
   mergedAt: 'mergedAt',
@@ -5869,6 +5870,7 @@ export const ProjectScalarFieldEnum = {
   brief: 'brief',
   folder: 'folder',
   preferredConnectionIds: 'preferredConnectionIds',
+  reviewPolicy: 'reviewPolicy',
   archivedAt: 'archivedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -6313,16 +6315,16 @@ export type ListEnumAccountStatusFieldRefInput<$PrismaModel> = FieldRefInputType
 
 
 /**
- * Reference to a field of type 'ReviewStatus'
+ * Reference to a field of type 'MergeStatus'
  */
-export type EnumReviewStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReviewStatus'>
+export type EnumMergeStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MergeStatus'>
     
 
 
 /**
- * Reference to a field of type 'ReviewStatus[]'
+ * Reference to a field of type 'MergeStatus[]'
  */
-export type ListEnumReviewStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReviewStatus[]'>
+export type ListEnumMergeStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MergeStatus[]'>
     
 
 
@@ -6575,6 +6577,20 @@ export type EnumPreviewVariableKindFieldRefInput<$PrismaModel> = FieldRefInputTy
  * Reference to a field of type 'PreviewVariableKind[]'
  */
 export type ListEnumPreviewVariableKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PreviewVariableKind[]'>
+    
+
+
+/**
+ * Reference to a field of type 'ReviewPolicy'
+ */
+export type EnumReviewPolicyFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReviewPolicy'>
+    
+
+
+/**
+ * Reference to a field of type 'ReviewPolicy[]'
+ */
+export type ListEnumReviewPolicyFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReviewPolicy[]'>
     
 
 

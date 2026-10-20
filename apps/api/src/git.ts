@@ -17,6 +17,7 @@ import {
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { onDefaultBranch, pushRule } from './git-refs.js'
 import { openSecret } from './vault.js'
+import { usableIn } from './apps.js'
 import { playbookAccepts, threadPlaybook } from './playbooks.js'
 
 export { BACKUP_PREFIX, PUSH_PREFIX } from './git-refs.js'
@@ -213,8 +214,17 @@ export async function connectionsReaching(
   return reaching
 }
 
-/** Whether a teammate's GitHub grants reach a repository, and with write access. */
-export async function teammateGitHub(db: ScopedDb, scope: Scope, teammateId: string, repo: string) {
+/**
+ * Whether a teammate's GitHub grants reach a repository, and with write access. With a
+ * thread: only those it may use there (a member's own account, in the threads they start).
+ */
+export async function teammateGitHub(
+  db: ScopedDb,
+  scope: Scope,
+  teammateId: string,
+  repo: string,
+  thread?: { startedByMemberId: string },
+) {
   const grants = await db.grant.findMany({
     where: { teammateId, connection: { kind: 'github', status: 'active' } },
     include: { connection: true },
@@ -223,6 +233,7 @@ export async function teammateGitHub(db: ScopedDb, scope: Scope, teammateId: str
   let read: { connectionId: string; write: boolean } | null = null
   for (const grant of grants) {
     if (!grant.connection.vaultSecretId) continue
+    if (thread && !usableIn(grant.connection, thread)) continue
     const { installationId } = await openSecret<GitHubCredential>(
       db,
       scope,

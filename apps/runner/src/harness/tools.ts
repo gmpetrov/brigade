@@ -1582,7 +1582,7 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
         'sent with Gmail from this thread wakes you by itself; set one for it only as a deadline. Give minutes ' +
         `or at (${WAKEUP_MIN_MINUTES} minute to ${WAKEUP_MAX_DAYS} days ahead) and a note saying what to check; ` +
         'the note is the prompt you get back. Then end your turn: never sleep or poll in a loop to wait. ' +
-        "Prefer what notifies you by itself (a pull request's review loop, a ticket) when there is one. " +
+        "Prefer what notifies you by itself (a child thread's report, such as a pull request's review, or a ticket) when there is one. " +
         `At most ${WAKEUPS_PER_THREAD} pending per thread, and ${WAKEUPS_IN_A_ROW} in a row without a word ` +
         'from a person. Only in a thread a person started.',
       inputSchema: jsonSchema<{ minutes?: number; at?: string; note: string }>({
@@ -1845,6 +1845,49 @@ export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool>
           'activate_playbook',
           input,
         ),
+    }),
+  }
+}
+
+/**
+ * Reviews: another teammate reviews a pull request of this thread's, or of one of its
+ * children's, in a child thread Brigade starts with a brief of its own (src/reviews.ts in
+ * the API), whose report comes back here. Through the schedule calls; the API checks the
+ * pull request is this thread's.
+ */
+export function reviewTools(call: ScheduleCaller): Record<string, Tool> {
+  return {
+    request_review: tool({
+      description:
+        'Have another teammate review a pull request this thread (or one of its child threads) opened, in a ' +
+        'child thread Brigade starts with a brief of its own: the pull request, how this thread started, and ' +
+        'whether the repository runs checks. You are woken here with its report. Use it when the person asks ' +
+        'for a review, or when your instructions say you decide and the pull request deserves one.',
+      inputSchema: jsonSchema<{ repository: string; number: number; reviewer?: string }>({
+        type: 'object',
+        properties: {
+          repository: { type: 'string', description: 'owner/name, e.g. acme/web' },
+          number: { type: 'number', description: 'The pull request number' },
+          reviewer: {
+            type: 'string',
+            description:
+              'A teammate id or name, when the person named one. Unset: Brigade picks one, on another model when it can.',
+          },
+        },
+        required: ['repository', 'number'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'request_review',
+            repository: input.repository,
+            number: Math.round(input.number),
+            ...(input.reviewer ? { reviewer: input.reviewer } : {}),
+          },
+          toolCallId,
+          toolName: 'request_review',
+          input,
+        }),
     }),
   }
 }

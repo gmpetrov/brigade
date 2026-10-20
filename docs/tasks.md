@@ -50,8 +50,9 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
   on 2026-10-19) still made them review and decide more than they wanted. Its
   parts stay off the board: the teammate does them itself (Claude Code's
   sub-agents for parallel or side work), and starts a child thread only for what
-  must outlive its turn, is for another teammate (such as the review before it
-  is handed over) or may need a person. A goal that came up in a conversation about something else gets
+  must outlive its turn, is for another teammate or may need a person. Its pull
+  request's review, when it deserves one, is a child thread Brigade starts
+  (`apps/api/src/reviews.ts`). A goal that came up in a conversation about something else gets
   a thread of its own: the teammate assigns the task to itself by name. The
   rules are in the session instructions (`bigGoals` in apps/runner/src/instructions.ts).
 - **Missions group tasks toward one goal, rarely.** A mission is a task with

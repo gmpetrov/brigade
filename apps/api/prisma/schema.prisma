@@ -310,7 +310,6 @@ model Teammate {
   documents             Document[]
   libraryFolderGrants   LibraryFolderGrant[]
   pullRequestsAuthored  PullRequest[]          @relation("PullRequestAuthor")
-  pullRequestsReviewing PullRequest[]          @relation("PullRequestReviewer")
   pullRequestReviews    PullRequestReview[]
   tasks                 Task[]
   tasksCreated          Task[]                 @relation("TaskCreatedByTeammate")
@@ -487,8 +486,10 @@ model Session {
   attachments          ThreadAttachment[]
   /// Files teammates sent from this thread (e.g. attached to an email).
   sentAttachments      Attachment[]
-  /// Pull requests opened from this thread; their review loop runs here.
-  pullRequests         PullRequest[]
+  /// Pull requests opened from this thread; their reviews report here.
+  pullRequests         PullRequest[]      @relation("PullRequestThread")
+  /// The pull requests this thread reviews (src/reviews.ts).
+  reviewsOf            PullRequest[]      @relation("PullRequestReviewThread")
   /// When each member last looked at it.
   reads                ThreadRead[]
   /// The members who pinned it.
@@ -793,24 +794,35 @@ model Account {
 // Engineering work
 // ---------------------------------------------------------------------------
 
-/// Where a pull request stands in Brigade's review loop. GitHub keeps its code and state.
-enum ReviewStatus {
-  /// Nobody asked for a review, or the loop was stopped.
+/// Where a merge a person asked for stands. GitHub keeps the pull request's code and state.
+/// In the database it is still the review loop's type and column (ReviewStatus, reviewStatus),
+/// which the API deployed before 20261020200000_reviews_in_child_threads shares for the
+/// minutes both run: what either writes, the other reads.
+enum MergeStatus {
+  /// No merge under way.
   none
-  /// The reviewing teammate's turn.
+  /// The review loop's, gone with it (src/reviews.ts): only that older API may still write
+  /// them, while it runs. Read as none.
   reviewing
-  /// The author teammate's turn: changes were requested, checks failed or the branch conflicts.
   fixing
-  /// Approved. With autoMerge it merges once GitHub allows it.
   approved
-  /// Changes requested, and no teammate wrote it to make them.
   changes_requested
-  /// The loop stopped and a person has a ticket: rounds used up, or GitHub refuses the merge.
+  /// It stopped and a person has a ticket: the conflicts were not resolved, or GitHub refuses the merge.
   stuck
   /// A person asked to merge it once its conflicts are resolved: the author teammate's turn.
   resolving
   /// A person asked to merge it: it merges once GitHub allows it, with mergeMethod.
   merging
+
+  @@map("ReviewStatus")
+}
+
+/// Whether a project's pull requests get a review by another teammate (src/reviews.ts).
+enum ReviewPolicy {
+  /// The teammate that opens one says whether it gets a review, and why.
+  teammate
+  /// Only when someone asks: on the pull request's page, or in its thread.
+  manual
 }
 
 /// A pull request Brigade knows about: opened by a teammate, or put through a review.
@@ -825,24 +837,28 @@ model PullRequest {
   title               String
   headRef             String
   baseRef             String
-  /// The thread that opened it (or the review's own thread); its review loop runs there.
+  /// The thread that opened it (or its review's own thread, for one opened outside Brigade).
   sessionId           String?
-  session             Session?            @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  session             Session?            @relation("PullRequestThread", fields: [sessionId], references: [id], onDelete: SetNull)
   authorTeammateId    String?
   authorTeammate      Teammate?           @relation("PullRequestAuthor", fields: [authorTeammateId], references: [id], onDelete: SetNull)
-  reviewerTeammateId  String?
-  reviewerTeammate    Teammate?           @relation("PullRequestReviewer", fields: [reviewerTeammateId], references: [id], onDelete: SetNull)
-  reviewStatus        ReviewStatus        @default(none)
-  /// Merge once approved and GitHub allows it. Only an owner or admin arms it.
-  autoMerge           Boolean             @default(false)
+  /// Its latest review's thread: a child of the thread that opened it, or a thread of its own.
+  reviewSessionId     String?
+  reviewSession       Session?            @relation("PullRequestReviewThread", fields: [reviewSessionId], references: [id], onDelete: SetNull)
+  /// Why the teammate that opened it asked for no review, in its words: shown on it.
+  noReviewReason      String?
+  /// While a review of it is being started: one at a time (src/reviews.ts).
+  reviewClaimedAt     DateTime?
+  mergeStatus         MergeStatus         @default(none) @map("reviewStatus")
   /// How it merges when Brigade merges it; squash when unset.
   mergeMethod         String?
+  /// The member who last asked to merge it or for its review: its tickets and pushes go to them.
   requestedByMemberId String?
-  /// Review rounds in the current loop, from 1.
+  /// The author's turns at resolving its conflicts and getting it merged, from 1.
   round               Int                 @default(0)
-  /// The head commit the latest review looked at; while resolving conflicts, the one before the author's turn.
-  reviewedSha         String?
-  /// Why the loop is waiting or stopped, shown on the pull request.
+  /// The head when the author's turn to resolve the conflicts began: unchanged after it, nothing was pushed.
+  resolveFromSha      String?             @map("reviewedSha")
+  /// Why a merge is waiting or stopped, shown on the pull request.
   note                String?
   /// As last seen on GitHub: open, closed or merged.
   state               String              @default("open")
@@ -850,10 +866,15 @@ model PullRequest {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
   reviews             PullRequestReview[]
+  /// The review loop's, gone with it: out of the client, kept for the API deployed before
+  /// 20261020200000_reviews_in_child_threads while it runs. A later migration drops them.
+  autoMerge           Boolean             @default(false) @ignore
+  reviewerTeammateId  String?             @ignore
 
   @@unique([workspaceId, repository, number])
   @@index([sessionId])
-  @@index([reviewStatus, autoMerge])
+  @@index([reviewSessionId])
+  @@index([mergeStatus])
 }
 
 enum ReviewVerdict {
@@ -878,6 +899,7 @@ model PullRequestReview {
   comments       Json          @default("[]")
   /// The head commit it reviewed.
   sha            String
+  /// Its place among the pull request's reviews, from 1.
   round          Int
   url            String?
   createdAt      DateTime      @default(now())
@@ -1764,6 +1786,8 @@ model Project {
   folder                 String?
   /// Connections its threads should use when several could do. A hint, not a grant.
   preferredConnectionIds String[]               @default([])
+  /// Whether its pull requests get a review by another teammate.
+  reviewPolicy           ReviewPolicy           @default(teammate)
   archivedAt             DateTime?
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt

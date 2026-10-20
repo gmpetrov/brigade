@@ -9,7 +9,6 @@ import {
   GitMerge,
   GitPullRequestClosed,
   MessagesSquare,
-  Repeat,
   RotateCcw,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -23,8 +22,6 @@ import { PullStatus } from '@/components/pull-status'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -37,15 +34,19 @@ import { api, useApi, type CheckRun, type MergeMethod, type PullRequestDetail } 
 import {
   blockedBecause,
   canMerge,
+  confirmMerge,
   hasConflicts,
   resolvesInBrigade,
   resolving,
+  reviewer as reviewing,
   useLastMergeMethod,
 } from '@/lib/merge-method'
 import { cn } from '@/lib/utils'
 
-/** While the loop runs, the page follows it. */
+/** While a review or a merge is under way, the page follows it. */
 const POLL_MS = 10_000
+/** The reviewer select's first option: Brigade picks one. */
+const PICK = 'pick'
 
 export default function PullRequestPage() {
   const params = useParams<{ owner: string; name: string; number: string }>()
@@ -56,18 +57,13 @@ export default function PullRequestPage() {
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
   const [asking, setAsking] = useState(false)
-  const [reviewerId, setReviewerId] = useState<string>()
-  const [autoMerge, setAutoMerge] = useState(admin)
+  const [reviewerId, setReviewerId] = useState(PICK)
   const [method, setMethod] = useLastMergeMethod()
 
   const p = pull.data
   const t = p?.tracking
-  const running =
-    t?.reviewStatus === 'reviewing' ||
-    t?.reviewStatus === 'fixing' ||
-    t?.reviewStatus === 'resolving' ||
-    t?.reviewStatus === 'merging' ||
-    (t?.reviewStatus === 'approved' && t.autoMerge)
+  const merging = p ? resolving(p) : false
+  const running = merging || (p ? !!reviewing(p) : false)
   const reload = pull.reload
   useEffect(() => {
     if (!running) return
@@ -91,8 +87,8 @@ export default function PullRequestPage() {
     )
 
   const open = p.state === 'open'
-  const candidates = teammates.filter((m) => m.id !== t?.author?.id)
-  const reviewer = reviewerId ?? t?.reviewer?.id ?? candidates[0]?.id
+  // The author too: with nobody else, it reviews its own work in a fresh context.
+  const candidates = teammates.filter((m) => m.kind !== 'chief')
   const mergeable = canMerge(p)
   const conflicts = hasConflicts(p)
 
@@ -112,11 +108,11 @@ export default function PullRequestPage() {
   }
 
   const askForReview = () =>
-    act(() => api(`${path}/review`, { body: { reviewerId: reviewer, autoMerge } })).then(
+    act(() => api(`${path}/review`, { body: reviewerId === PICK ? {} : { reviewerId } })).then(
       (ok) => ok && setAsking(false),
     )
   const merge = () => {
-    if (!confirm(`Merge #${p.number} into ${p.base} (${method})?`)) return
+    if (!confirmMerge(p, p.number, method)) return
     void act(() => api(`${path}/merge`, { body: { method } }))
   }
   const resolve = () => {
@@ -188,7 +184,7 @@ export default function PullRequestPage() {
           {!running && (
             <Button variant={asking ? 'secondary' : 'default'} onClick={() => setAsking(!asking)}>
               <MessagesSquare />
-              Ask for review
+              Ask for a review
             </Button>
           )}
           {admin && (
@@ -240,9 +236,9 @@ export default function PullRequestPage() {
               <Link href={`/app/threads/${t.sessionId}`}>Open the thread</Link>
             </Button>
           )}
-          {running && (
+          {merging && (
             <Button variant="ghost" disabled={busy} onClick={stop}>
-              {resolving(p) ? 'Stop merging' : 'Stop the review'}
+              Stop merging
             </Button>
           )}
           {admin && (
@@ -275,13 +271,13 @@ export default function PullRequestPage() {
             <h2 className="font-semibold">Ask a teammate to review it</h2>
             <p className="text-sm text-muted-foreground">
               {t?.author
-                ? `It reviews in the thread that opened it. ${t.author.name} fixes what it finds, and they go back and forth for up to ${t.maxRounds} rounds.`
-                : 'It reviews in a new thread and posts its review on GitHub.'}
+                ? `It reviews in a child thread of the thread that opened it, from a brief of Brigade's, and posts its verdict on GitHub. ${t.author.name} fixes what it finds.`
+                : 'It reviews in a thread of its own and posts its verdict on GitHub.'}
             </p>
           </div>
           {candidates.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No other teammate to review it.{' '}
+              No teammate to review it.{' '}
               <Link
                 href="/app/teammates/new"
                 className="text-primary underline-offset-4 hover:underline"
@@ -292,11 +288,12 @@ export default function PullRequestPage() {
             </p>
           ) : (
             <div className="flex flex-wrap items-center gap-4">
-              <Select value={reviewer} onValueChange={setReviewerId}>
+              <Select value={reviewerId} onValueChange={setReviewerId}>
                 <SelectTrigger aria-label="Reviewer" className="w-56">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={PICK}>Pick one for me</SelectItem>
                   {candidates.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       <TeammateAvatar teammate={m} className="size-5" />
@@ -305,23 +302,11 @@ export default function PullRequestPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {admin && (
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="auto-merge"
-                    checked={autoMerge}
-                    onCheckedChange={(v) => setAutoMerge(v === true)}
-                  />
-                  <Label htmlFor="auto-merge" className="font-normal">
-                    Merge when approved and checks pass
-                  </Label>
-                </div>
-              )}
               <div className="ml-auto flex gap-2">
                 <Button variant="ghost" onClick={() => setAsking(false)}>
                   Cancel
                 </Button>
-                <Button disabled={busy || !reviewer} onClick={() => void askForReview()}>
+                <Button disabled={busy} onClick={() => void askForReview()}>
                   Start the review
                 </Button>
               </div>
@@ -330,7 +315,8 @@ export default function PullRequestPage() {
         </Card>
       )}
 
-      {t && t.reviewStatus !== 'none' && open && <Loop pull={p} />}
+      {open && t && t.mergeStatus !== 'none' && <Merging pull={p} />}
+      {t?.review && <Review pull={p} />}
 
       {p.checks.length > 0 && <Checks checks={p.checks} />}
 
@@ -410,40 +396,62 @@ export default function PullRequestPage() {
   )
 }
 
-/** Where the review loop, or a merge a person asked for, is: whose move, which round, and what it waits for. */
-function Loop({ pull: p }: { pull: PullRequestDetail }) {
+/** Where a merge a person asked for is: whose move, and what it waits for. */
+function Merging({ pull: p }: { pull: PullRequestDetail }) {
   const t = p.tracking!
   const turn =
-    t.reviewStatus === 'reviewing'
-      ? `${t.reviewer?.name ?? 'The reviewer'} is reviewing it.`
-      : t.reviewStatus === 'fixing'
-        ? `${t.author?.name ?? 'The author'} is working on the review.`
-        : t.reviewStatus === 'approved'
-          ? t.autoMerge
-            ? `${t.reviewer?.name ?? 'The reviewer'} approved it. It merges once GitHub allows it.`
-            : `${t.reviewer?.name ?? 'The reviewer'} approved it. Ready to merge.`
-          : t.reviewStatus === 'changes_requested'
-            ? `${t.reviewer?.name ?? 'The reviewer'} asked for changes.`
-            : t.reviewStatus === 'resolving'
-              ? `${t.author?.name ?? 'The author'} is resolving the conflicts. It merges after.`
-              : t.reviewStatus === 'merging'
-                ? 'It merges once GitHub allows it.'
-                : 'The review stopped and needs you.'
+    t.mergeStatus === 'resolving'
+      ? `${t.author?.name ?? 'The author'} is resolving the conflicts. It merges after.`
+      : t.mergeStatus === 'merging'
+        ? 'It merges once GitHub allows it.'
+        : 'The merge stopped and needs you.'
   return (
     <Card
       className={cn(
         'flex-row flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4',
-        t.reviewStatus === 'stuck' && 'border-destructive/50',
+        t.mergeStatus === 'stuck' && 'border-destructive/50',
       )}
     >
-      <Repeat className="size-5 flex-none text-primary" aria-hidden />
+      <GitMerge className="size-5 flex-none text-primary" aria-hidden />
       <div className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
         <span className="font-semibold">{turn}</span>
         {t.note && <span className="text-sm text-muted-foreground">{t.note}</span>}
       </div>
-      <span className="text-sm text-muted-foreground tabular-nums">
-        Round {t.round} of {t.maxRounds}
-      </span>
+    </Card>
+  )
+}
+
+/** Where its review stands: under way, its latest verdict, or why the teammate that opened it asked for none. */
+function Review({ pull: p }: { pull: PullRequestDetail }) {
+  const review = p.tracking!.review!
+  if (review.state === 'skipped')
+    return (
+      <Card className="flex-row items-center gap-4 px-5 py-4">
+        <MessagesSquare className="size-5 flex-none text-muted-foreground" aria-hidden />
+        <span className="min-w-0 flex-1">
+          {p.tracking!.author?.name ?? 'Its author'} asked for no review: {review.reason}
+        </span>
+      </Card>
+    )
+  const who = review.reviewer?.name ?? 'A teammate'
+  const line =
+    review.state === 'reviewing'
+      ? `${who} is reviewing it.`
+      : review.state === 'changes_requested'
+        ? `${who} asked for changes.`
+        : review.changed
+          ? `${who} approved it, before its latest commits.`
+          : `${who} approved it.`
+  const thread = review.threadId
+  return (
+    <Card className="flex-row flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
+      <MessagesSquare className="size-5 flex-none text-primary" aria-hidden />
+      <span className="min-w-0 flex-1 basis-60 font-semibold">{line}</span>
+      {thread && (
+        <Button asChild variant="ghost" size="sm">
+          <Link href={`/app/threads/${thread}`}>Open the review</Link>
+        </Button>
+      )}
     </Card>
   )
 }

@@ -208,7 +208,7 @@ test(
           title: `PR ${n}`,
           headRef: `b${n}`,
           baseRef: 'main',
-          reviewStatus: sessionId ? 'none' : 'stuck',
+          mergeStatus: sessionId ? 'none' : 'stuck',
         },
       } as never)
     await pr(t.id, 101)

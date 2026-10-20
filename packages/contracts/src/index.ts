@@ -19,6 +19,7 @@ export * from './previews.js'
 export * from './projects.js'
 export * from './pulls.js'
 export * from './repositories.js'
+export * from './reviews.js'
 export * from './runner.js'
 export * from './schedules.js'
 export * from './wakeups.js'
@@ -62,8 +63,9 @@ export * from './trigger-events.js'
  * 35: memory in layers: memory.update edits name topics, replacements, archive reasons and confirmed
  *     lines; tidy runs lay a memory file out again (memory.tidy).
  * 36: after a turn, Claude Code guesses the person's next message (the spec's `suggestions`, message.suggested).
+ * 37: reviews in child threads (request_review as a schedule.call operation; the spec's project.reviewPolicy).
  */
-export const PROTOCOL_VERSION = 36
+export const PROTOCOL_VERSION = 37
 /** Runners from this version on say when their disk is still full (disk). */
 export const DISK_PROTOCOL = 34
 /** Runners from this version on try a failed turn again when a person asks (thread.retry). */

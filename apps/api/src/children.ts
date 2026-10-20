@@ -110,7 +110,7 @@ export async function descendants(db: ScopedDb, id: string) {
 }
 
 /** Dashboards showing the parent refresh its children: told with the parent's own status. */
-async function parentChanged(scope: Scope, parentId: string) {
+export async function parentChanged(scope: Scope, parentId: string) {
   const parent = await scoped(scope).session.findFirst({
     where: { id: parentId },
     select: { status: true },

@@ -1148,6 +1148,9 @@ export type $PullRequestReviewPayload<ExtArgs extends runtime.Types.Extensions.I
      * The head commit it reviewed.
      */
     sha: string
+    /**
+     * Its place among the pull request's reviews, from 1.
+     */
     round: number
     url: string | null
     createdAt: Date

@@ -33,7 +33,7 @@ import {
 import { settleDescribe } from './project-sites.js'
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import { runnerBundle } from './routes/runner-install.js'
-import { reviewTurnEnded } from './pull-requests.js'
+import { resolveTurnEnded } from './pull-requests.js'
 import { handoffThread, titleThread } from './work.js'
 import { historyContext, pageStart } from './thread-history.js'
 import { noteChildEvents } from './children.js'
@@ -925,7 +925,7 @@ export function runnerSocket(runner: {
       // A move waiting on the turn goes once it ends.
       if (status !== session.status && session.move)
         void movesOn(runner.computerId, session.id).catch(console.error)
-      // Not awaited: a review loop may call GitHub and prompt the next teammate.
+      // Not awaited: a merge under way may call GitHub and prompt the author.
       void noteTurnsEnded(session, fresh).catch(console.error)
       // A message in a thread put away for later brings it back (src/later.ts): a member's,
       // a wake-up's or a child's report, each a new turn. Not the end of a turn already under
@@ -1092,7 +1092,7 @@ async function queuedMessagesOn(computerId: string): Promise<QueuedMessage[]> {
   return [...open.values()]
 }
 
-/** Each teammate whose turn ended: a review loop in the thread may move on. */
+/** Each teammate whose turn ended: a pull request whose conflicts it resolved in the thread merges next. */
 async function noteTurnsEnded(
   session: { id: string; organizationId: string; workspaceId: string; teammateId: string },
   events: SequencedEvent[],
@@ -1114,7 +1114,7 @@ async function noteTurnsEnded(
       current ??
       (started?.data as { teammateId?: string } | undefined)?.teammateId ??
       session.teammateId
-    await reviewTurnEnded(
+    await resolveTurnEnded(
       { organizationId: session.organizationId, workspaceId: session.workspaceId },
       session.id,
       teammateId,

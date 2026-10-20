@@ -37,6 +37,7 @@ import {
 } from './playbook-autonomy.js'
 import { playbookAccepts, playbookAccount, playbookActionOf, threadPlaybook } from './playbooks.js'
 import { notePullRequestCall } from './pull-requests.js'
+import { reviewOnCreate } from './reviews.js'
 import { endWatch, watchingNote, watchReplies } from './replies.js'
 import { syncConnection } from './subscriptions/index.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
@@ -381,7 +382,7 @@ export async function handleConnectorCall(
           data: { firstResponseAt: new Date() },
         })
         .catch((error) => console.warn(`first response bookkeeping failed: ${String(error)}`))
-    // Pull requests a teammate opens or reviews feed the review loop.
+    // Pull requests a teammate opens, reviews or merges: Brigade keeps them, their reviews and merges.
     if (connection.kind === 'github')
       await notePullRequestCall(db, scope, {
         sessionId: session.id,
@@ -390,6 +391,19 @@ export async function handleConnectorCall(
         input: input.data as Record<string, unknown>,
         output,
       }).catch((error) => console.warn(`pull request bookkeeping failed: ${String(error)}`))
+    // One it opens gets a review, or keeps why not, where the teammate decides (src/reviews.ts).
+    const review =
+      connection.kind === 'github' && call.operation === 'github_create_pull_request'
+        ? await reviewOnCreate(db, scope, {
+            sessionId: session.id,
+            teammateId: teammate.id,
+            input: input.data as Record<string, unknown>,
+            output,
+          }).catch((error) => {
+            console.warn(`review on create failed: ${String(error)}`)
+            return undefined
+          })
+        : undefined
     // An email sent from a person's thread: a reply in its conversation wakes the thread.
     const replies =
       connection.kind === 'gmail' && call.operation === 'gmail_send'
@@ -406,7 +420,11 @@ export async function handleConnectorCall(
         : undefined
     return result({
       ok: true,
-      output: replies ? { ...(output as object), replies } : output,
+      output: replies
+        ? { ...(output as object), replies }
+        : review
+          ? { ...(output as object), ...review }
+          : output,
       attachments: kept,
       ...(decision ? { decision } : {}),
     })

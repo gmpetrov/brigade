@@ -1,8 +1,9 @@
 'use client'
 // The card for a pull request a teammate opened in a thread: the whole card opens
-// its changes, and an owner or admin merges it from here. One that conflicts has
-// Resolve conflicts instead: its teammate resolves them, then it merges by itself.
-// A thread's outputs show the same pull request as a row (thread-outputs).
+// its changes, and an owner or admin merges it from here, after a word while its review
+// is under way. One that conflicts has Resolve conflicts instead: its teammate resolves
+// them, then it merges by itself. A thread's outputs show the same pull request as a row
+// (thread-outputs).
 import {
   ExternalLink,
   GitCompareArrows,
@@ -13,25 +14,27 @@ import {
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
-import { PullStatus } from '@/components/pull-status'
+import { PullStatus, reviewLine } from '@/components/pull-status'
 import { Button } from '@/components/ui/button'
 import { api, pullHref, useApi, type PullRequestState } from '@/lib/api'
 import {
   blockedBecause,
   canMerge,
+  confirmMerge,
   hasConflicts,
   resolvesInBrigade,
   resolving,
+  reviewer,
   useLastMergeMethod,
 } from '@/lib/merge-method'
 import { cn } from '@/lib/utils'
 
-/** While its conflicts are resolved and it merges, the card follows it. */
+/** While it is reviewed, or its conflicts are resolved and it merges, the card follows it. */
 const POLL_MS = 10_000
 
 /**
  * A pull request's state from GitHub, and Merge and Resolve conflicts for it.
- * While its conflicts are resolved and it merges, it follows it.
+ * While it is reviewed, or its conflicts are resolved and it merges, it follows it.
  */
 export function usePull(repository: string, number: number, options: { checks?: boolean } = {}) {
   const path = `/pulls/${repository}/${number}`
@@ -41,7 +44,7 @@ export function usePull(repository: string, number: number, options: { checks?: 
   const [error, setError] = useState<string>()
 
   const p = pull.data
-  const following = p?.state === 'open' && resolving(p)
+  const following = p?.state === 'open' && (resolving(p) || !!reviewer(p))
   const reload = pull.reload
   useEffect(() => {
     if (!following) return
@@ -63,7 +66,7 @@ export function usePull(repository: string, number: number, options: { checks?: 
   }
 
   function merge() {
-    if (!confirm(`Merge #${number}${p ? ` into ${p.base}` : ''} (${method})?`)) return
+    if (!confirmMerge(p, number, method)) return
     void act(() => api(`${path}/merge`, { body: { method } }))
   }
 
@@ -167,7 +170,10 @@ export function PullCard({
           Opened pull request #{number}
           {title && `: ${title}`}
         </Link>
-        <span className="truncate font-mono text-xs text-muted-foreground">{repository}</span>
+        <span className="truncate text-xs text-muted-foreground">
+          <span className="font-mono">{repository}</span>
+          {p && reviewLine(p) && ` · ${reviewLine(p)}`}
+        </span>
         {error && <span className="text-xs text-destructive-text">{error}</span>}
       </span>
       {action()}

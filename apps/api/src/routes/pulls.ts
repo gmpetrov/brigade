@@ -1,6 +1,6 @@
-// Pull requests: any member reads them and asks a teammate to review one;
-// owners and admins merge, close or reopen one, arm a review to merge once approved,
-// or have the teammate that wrote one resolve its conflicts and then merge it.
+// Pull requests: any member reads them and asks a teammate to review one (src/reviews.ts);
+// owners and admins merge, close or reopen one, or have the teammate that wrote one
+// resolve its conflicts and then merge it.
 import {
   MergePullRequest,
   PreviewPullRequest,
@@ -19,11 +19,11 @@ import {
   previewPull,
   pullDetail,
   pullState,
-  requestReview,
   resolveConflicts,
   setPullState,
-  stopLoop,
+  stopMerge,
 } from '../pull-requests.js'
+import { requestReview } from '../reviews.js'
 import type { ScopedDb } from '../db.js'
 import { latersOf } from '../later.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
@@ -94,6 +94,7 @@ export const pulls = new Hono<AppEnv>()
     return c.json(await pullState(c.var.db, c.var.scope, repo, number, { checks }))
   })
 
+  /** A teammate reviews it in a child thread of its thread; Brigade picks who unless reviewerId says. */
   .post('/:owner/:name/:number/review', async (c) => {
     const { repo, number } = target(c.req.param())
     const input = await parseBody(c.req.raw, RequestReview)
@@ -107,9 +108,10 @@ export const pulls = new Hono<AppEnv>()
     return c.json(await previewPull(c.var.scope, repo, number, input.teammateId))
   })
 
+  /** Stop a merge under way (Resolve conflicts). */
   .post('/:owner/:name/:number/stop', async (c) => {
     const { repo, number } = target(c.req.param())
-    await stopLoop(c.var.scope, repo, number)
+    await stopMerge(c.var.scope, repo, number)
     return c.json({ ok: true })
   })
 

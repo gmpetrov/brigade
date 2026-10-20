@@ -169,7 +169,10 @@ export function PullList({ projectId }: { projectId?: string }) {
                       <span className="font-mono">{p.repository}</span>
                       {' · '}
                       {p.tracking?.author ? p.tracking.author.name : p.author}
-                      {p.tracking?.reviewer && ` → ${p.tracking.reviewer.name}`}
+                      {p.tracking?.review &&
+                        p.tracking.review.state !== 'skipped' &&
+                        p.tracking.review.reviewer &&
+                        ` → ${p.tracking.review.reviewer.name}`}
                       {' · '}
                       {timeAgo(p.updatedAt)}
                     </span>
