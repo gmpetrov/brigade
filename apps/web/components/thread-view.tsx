@@ -2327,6 +2327,85 @@ function DeclineMenu({
   )
 }
 
+/**
+ * Something else, in place of what the teammate asked: the person's own words
+ * ("use the Cloudflare App instead"), sent as the answer so the teammate stops
+ * waiting and does that. Its Decline, with a note.
+ */
+function SomethingElse({
+  disabled,
+  onSend,
+}: {
+  disabled: boolean
+  onSend: (note: string) => void
+}) {
+  const [text, setText] = useState<string>()
+  if (text === undefined)
+    return (
+      <Button
+        size="sm"
+        variant="link"
+        className="self-start px-0"
+        disabled={disabled}
+        onClick={() => setText('')}
+      >
+        Something else…
+      </Button>
+    )
+  const send = () => text.trim() && onSend(text.trim())
+  return (
+    <form
+      className="flex flex-col gap-2"
+      onSubmit={(e) => {
+        e.preventDefault()
+        send()
+      }}
+    >
+      <Textarea
+        autoFocus
+        rows={2}
+        placeholder="What to do instead"
+        aria-label="Something else"
+        disabled={disabled}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setText(undefined)
+          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+            e.preventDefault()
+            send()
+          }
+        }}
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" disabled={disabled || !text.trim()}>
+          Send
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setText(undefined)}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+/** What a person wrote in place of answering, once sent. */
+function SentInstead({ note }: { note: string }) {
+  return (
+    <p className="mt-3 border-l-2 pl-3 text-sm wrap-anywhere whitespace-pre-wrap text-muted-foreground">
+      {note}
+    </p>
+  )
+}
+
+/** A Declined badge, or Replied when the person wrote something else instead. */
+const answerBadge = (answer: QuestionAnswer | TicketAnswer) =>
+  answer.action === 'declined'
+    ? answer.note
+      ? { tone: 'success' as const, label: 'Replied' }
+      : { tone: 'warning' as const, label: 'Declined' }
+    : { tone: 'success' as const, label: 'Answered' }
+
 /** The harness asks a person something: options, a free answer, or a decline. */
 export function QuestionCard({
   item,
@@ -2386,11 +2465,7 @@ export function QuestionCard({
                 <CircleHelp aria-hidden className="mt-0.5 size-4 flex-none text-primary" />
                 {question}
                 {item.answer ? (
-                  <StatusBadge
-                    status={item.answer.action}
-                    tone={item.answer.action === 'declined' ? 'warning' : 'success'}
-                    label={item.answer.action === 'declined' ? 'Declined' : 'Answered'}
-                  />
+                  <StatusBadge status={item.answer.action} {...answerBadge(item.answer)} />
                 ) : (
                   canAnswer && (
                     <DeclineMenu
@@ -2470,16 +2545,25 @@ export function QuestionCard({
           </div>
         )
       })}
-      {item.answer ? null : canAnswer ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            disabled={busy || !complete}
-            onClick={() => void send({ action: 'answered', answers })}
-          >
-            Answer
-          </Button>
-          {error && <span className="text-sm text-destructive-text">{error}</span>}
+      {item.answer ? (
+        item.answer.action === 'declined' &&
+        item.answer.note && <SentInstead note={item.answer.note} />
+      ) : canAnswer ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              disabled={busy || !complete}
+              onClick={() => void send({ action: 'answered', answers })}
+            >
+              Answer
+            </Button>
+            {error && <span className="text-sm text-destructive-text">{error}</span>}
+          </div>
+          <SomethingElse
+            disabled={busy}
+            onSend={(note) => void send({ action: 'declined', note })}
+          />
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
@@ -2649,11 +2733,7 @@ export function TicketCard({
         <ClipboardList aria-hidden className="mt-0.5 size-4 flex-none text-primary" />
         <div className="min-w-0 flex-1 font-semibold">{item.title}</div>
         {item.answer ? (
-          <StatusBadge
-            status={item.answer.action}
-            tone={item.answer.action === 'declined' ? 'warning' : 'success'}
-            label={item.answer.action === 'declined' ? 'Declined' : 'Answered'}
-          />
+          <StatusBadge status={item.answer.action} {...answerBadge(item.answer)} />
         ) : (
           <>
             {several && (
@@ -2698,6 +2778,17 @@ export function TicketCard({
             ? `${askerName} gets the access and your answers when every ask is answered.`
             : `Your answers go to ${askerName} when every ask is answered.`}
         </p>
+      )}
+      {item.answer?.action === 'declined' && item.answer.note && (
+        <SentInstead note={item.answer.note} />
+      )}
+      {!done && canAnswer && (
+        <div className="mt-3 flex flex-col">
+          <SomethingElse
+            disabled={busy}
+            onSend={(note) => void send({ action: 'declined', note })}
+          />
+        </div>
       )}
       {error && <p className="mt-3 text-sm text-destructive-text">{error}</p>}
       {!done && !canAnswer && (

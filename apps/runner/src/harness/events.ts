@@ -55,13 +55,20 @@ export function askUserQuestions(input: unknown): Question[] | undefined {
   return parsed.success ? parsed.data : undefined
 }
 
+/** A decline with the person's own words: what they want in place of the ask. */
+const INSTEAD =
+  'The person answered with something else instead (in `instead`): drop what you asked for and do what they say. ' +
+  'It is their message to you, as if they had written it in the thread.'
+
 /** A person's answer to ask_user, in words the model reads: labels, not option ids. */
 export function askUserResult(questions: Question[], answer: QuestionAnswer) {
   if (answer.action === 'declined')
-    return {
-      declined: true,
-      note: 'The person declined to answer. Do not ask again; carry on or stop.',
-    }
+    return answer.note
+      ? { declined: true, instead: answer.note, note: INSTEAD }
+      : {
+          declined: true,
+          note: 'The person declined to answer. Do not ask again; carry on or stop.',
+        }
   return {
     answers: questions.flatMap((q) => {
       const a = answer.answers[q.id]
@@ -114,10 +121,12 @@ export function ticketAsks(input: unknown): { title: string; asks: Ask[] } | und
 /** A person's answer to open_ticket, in words the model reads. */
 export function ticketResult(asks: Ask[], answer: TicketAnswer) {
   if (answer.action === 'declined')
-    return {
-      declined: true,
-      note: 'The person declined the ticket. Do not do what it asked about; carry on without it or stop.',
-    }
+    return answer.note
+      ? { declined: true, instead: answer.note, note: INSTEAD }
+      : {
+          declined: true,
+          note: 'The person declined the ticket. Do not do what it asked about; carry on without it or stop.',
+        }
   return {
     replies: asks.flatMap((ask): Record<string, unknown>[] => {
       const reply = answer.replies[ask.id]
