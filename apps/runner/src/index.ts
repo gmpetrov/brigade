@@ -46,6 +46,7 @@ import { runnerCgroups } from './preview-cgroup.js'
 import { Previews } from './previews.js'
 import { processGroups } from './process-groups.js'
 import { Threads, threadFolder } from './threads.js'
+import { watchHomes } from './teammates.js'
 import { prefetch, sweep, type BackupName, type BundleStore } from './repos.js'
 import { Updater } from './updater.js'
 import { noteHandOver, takeHandOver } from './hand-over.js'
@@ -684,6 +685,8 @@ async function start() {
   setInterval(sweepRepos, 6 * 60 * 60_000).unref()
   // On a cloud computer, archive the folders of the threads quiet longest when the disk fills up.
   folders.start()
+  // On a cloud computer, teammates' home folders a resume restored as root given back.
+  watchHomes()
 
   const shutdown = async () => {
     console.log('stopping: saving thread state')

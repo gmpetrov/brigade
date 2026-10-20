@@ -28,16 +28,40 @@ async function helper(...args: string[]) {
 }
 
 const users = new Map<string, Promise<void>>()
+/** The teammate users made or checked since the runner started (none off a cloud computer). */
+const known = new Set<string>()
+const HOMES_EVERY_MS = 60_000
 
-/** Once per user: a thread's turn and its title run may both ask at the same time. */
+/**
+ * At each turn, not once per runner: a resumed computer's restore goes on for
+ * minutes after the runner starts, and can bring ~/.cache back as root after
+ * the helper gave it back (it does that again here). A thread's turn and its
+ * title run may both ask at the same time: they share one call.
+ */
 export function ensureUser(user: string) {
   let made = users.get(user)
   if (!made) {
+    known.add(user)
     made = helper('ensure-user', user)
-    made.catch(() => users.delete(user))
+    const done = () => users.delete(user)
+    made.then(done, done)
     users.set(user, made)
   }
   return made
+}
+
+/**
+ * Every minute, the homes of the teammates seen so far given back again (see
+ * ensureUser): a turn that started before the restore brought ~/.cache back as
+ * root would otherwise fail on it until its end.
+ */
+export function watchHomes() {
+  setInterval(() => {
+    for (const user of known)
+      ensureUser(user).catch((error: { stderr?: string } & Error) =>
+        console.warn(`could not check ${user}'s home: ${(error.stderr || error.message).trim()}`),
+      )
+  }, HOMES_EVERY_MS).unref()
 }
 
 const containers = new Map<string, Promise<Record<string, string>>>()
