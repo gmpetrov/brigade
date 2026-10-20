@@ -416,6 +416,7 @@ export const ModelName = {
   Task: 'Task',
   Schedule: 'Schedule',
   Wakeup: 'Wakeup',
+  ReplyWatch: 'ReplyWatch',
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
   Account: 'Account',
@@ -470,7 +471,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1877,6 +1878,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.WakeupCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.WakeupCountAggregateOutputType> | number
+        }
+      }
+    }
+    ReplyWatch: {
+      payload: Prisma.$ReplyWatchPayload<ExtArgs>
+      fields: Prisma.ReplyWatchFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ReplyWatchFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ReplyWatchFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload>
+        }
+        findFirst: {
+          args: Prisma.ReplyWatchFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ReplyWatchFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload>
+        }
+        findMany: {
+          args: Prisma.ReplyWatchFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload>[]
+        }
+        create: {
+          args: Prisma.ReplyWatchCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload>
+        }
+        createMany: {
+          args: Prisma.ReplyWatchCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ReplyWatchCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload>[]
+        }
+        delete: {
+          args: Prisma.ReplyWatchDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload>
+        }
+        update: {
+          args: Prisma.ReplyWatchUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload>
+        }
+        deleteMany: {
+          args: Prisma.ReplyWatchDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ReplyWatchUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ReplyWatchUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload>[]
+        }
+        upsert: {
+          args: Prisma.ReplyWatchUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReplyWatchPayload>
+        }
+        aggregate: {
+          args: Prisma.ReplyWatchAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateReplyWatch>
+        }
+        groupBy: {
+          args: Prisma.ReplyWatchGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ReplyWatchGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ReplyWatchCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ReplyWatchCountAggregateOutputType> | number
         }
       }
     }
@@ -5116,10 +5191,29 @@ export const WakeupScalarFieldEnum = {
   wakeAt: 'wakeAt',
   status: 'status',
   firedAt: 'firedAt',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  sourceId: 'sourceId'
 } as const
 
 export type WakeupScalarFieldEnum = (typeof WakeupScalarFieldEnum)[keyof typeof WakeupScalarFieldEnum]
+
+
+export const ReplyWatchScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  connectionId: 'connectionId',
+  conversationKey: 'conversationKey',
+  to: 'to',
+  subject: 'subject',
+  until: 'until',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ReplyWatchScalarFieldEnum = (typeof ReplyWatchScalarFieldEnum)[keyof typeof ReplyWatchScalarFieldEnum]
 
 
 export const ThreadTeammateScalarFieldEnum = {
@@ -6608,6 +6702,7 @@ export type GlobalOmitConfig = {
   task?: Prisma.TaskOmit
   schedule?: Prisma.ScheduleOmit
   wakeup?: Prisma.WakeupOmit
+  replyWatch?: Prisma.ReplyWatchOmit
   threadTeammate?: Prisma.ThreadTeammateOmit
   sessionEvent?: Prisma.SessionEventOmit
   account?: Prisma.AccountOmit

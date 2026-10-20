@@ -180,7 +180,7 @@ async function fire(wakeup: {
   sessionId: string
   teammateId: string
   note: string
-  kind: 'wakeup' | 'report'
+  kind: 'wakeup' | 'report' | 'reply'
   wakeAt: Date
   createdAt: Date
 }) {
@@ -198,21 +198,23 @@ async function fire(wakeup: {
   }
   // A person has the computer: it waits until they hand back, as the teammate does.
   if (thread.controlledByMemberId) return
-  // The teammate left the thread or was archived: nobody to wake. Children's reports go to whoever is there.
+  // The teammate left the thread or was archived: nobody to wake. Children's reports and
+  // emails' replies go to whoever is there.
   const seat = thread.teammates.find((t) => t.teammateId === wakeup.teammateId)
-  const report = wakeup.kind === 'report'
-  if ((!seat || seat.teammate.archivedAt) && !report) {
+  if ((!seat || seat.teammate.archivedAt) && wakeup.kind === 'wakeup') {
     await settle('missed')
     return changed(scope, thread)
   }
   if (!(await settle('fired'))) return
-  // Archived meanwhile, the thread comes back with the reports, as with a new message.
-  if (report && thread.archivedAt)
+  // Archived meanwhile, the thread comes back with the reports and replies, as with a new message.
+  if (wakeup.kind !== 'wakeup' && thread.archivedAt)
     await db.session.updateMany({ where: { id: thread.id }, data: { archivedAt: null } })
   const outcome = await promptThread(db, scope, thread, {
-    text: report
-      ? wakeup.note
-      : prompt(wakeup, now, await memberTimezone(db, thread.startedByMemberId)),
+    // A report's and a reply's note is the message itself.
+    text:
+      wakeup.kind === 'wakeup'
+        ? prompt(wakeup, now, await memberTimezone(db, thread.startedByMemberId))
+        : wakeup.note,
     memberId: null,
     ...(seat && !seat.teammate.archivedAt ? { teammateIds: [wakeup.teammateId] } : {}),
   }).catch((error: unknown) => {
@@ -231,12 +233,15 @@ async function fire(wakeup: {
   changed(scope, thread)
 }
 
-/** A children's report, fired as soon as it is made (src/children.ts); it waits like any wake-up when it cannot go. */
-export async function fireReport(id: string) {
+/**
+ * A wake-up fired as soon as it is made: a children's report (src/children.ts) or an email's
+ * reply (src/replies.ts). It waits like any wake-up when it cannot go.
+ */
+export async function fireNow(id: string) {
   const wakeup = await prisma.wakeup.findFirst({ where: { id, status: 'pending' } })
   if (wakeup)
     await fire(wakeup).catch((error: unknown) =>
-      console.error(`report ${wakeup.id}: could not fire`, error),
+      console.error(`wake-up ${wakeup.id}: could not fire`, error),
     )
 }
 

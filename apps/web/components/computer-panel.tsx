@@ -16,6 +16,7 @@ import { describeCron } from '@/components/schedules'
 import { Terminal } from '@/components/terminal'
 import { ThreadMenu } from '@/components/thread-menu'
 import { ThreadOutputs, type ThreadOutput } from '@/components/thread-outputs'
+import { ProviderLogo } from '@/components/provider-logo'
 import { PanelResizeHandle, useEscapeToClose, usePanelStack } from '@/components/side-panel'
 import { ChildrenList } from '@/components/thread-children'
 import { Button } from '@/components/ui/button'
@@ -315,6 +316,60 @@ function Wakeups({ thread, onChange }: { thread: Thread; onChange: () => void })
   )
 }
 
+/** Emails a teammate sent from the thread: a reply in their conversation wakes it. */
+function AwaitedReplies({ thread, onChange }: { thread: Thread; onChange: () => void }) {
+  const [busy, setBusy] = useState<string>()
+  const [error, setError] = useState<string>()
+  const stop = async (id: string) => {
+    setBusy(id)
+    setError(undefined)
+    try {
+      await api(`/threads/${thread.id}/replies/${id}`, { method: 'DELETE' })
+      onChange()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(undefined)
+    }
+  }
+  const names = new Map(thread.teammates.map((t) => [t.teammate.id, t.teammate.name]))
+  return (
+    <Section title="Waiting for replies">
+      <ul className="flex flex-col">
+        {thread.replyWatches.map((w) => (
+          <li key={w.id} className="flex items-center gap-3 rounded-md px-2 py-1.5">
+            <ProviderLogo kind={w.connection.kind} className="size-4 flex-none" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-medium" title={w.subject}>
+                {w.subject}
+              </span>
+              <span
+                className="truncate text-xs text-muted-foreground"
+                title={`Sent from ${w.connection.externalAccount ?? w.connection.label}`}
+              >
+                {names.size > 1 && `${names.get(w.teammateId) ?? 'A teammate'} · `}
+                To {w.to} · until <time dateTime={w.until}>{wakeTime(w.until)}</time>
+              </span>
+            </span>
+            {thread.mayPrompt && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={busy === w.id}
+                onClick={() => void stop(w.id)}
+              >
+                Stop
+              </Button>
+            )}
+          </li>
+        ))}
+      </ul>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </Section>
+  )
+}
+
 /**
  * Beside an expanded thread, everything that is not the conversation: its
  * computer (a thumbnail of the screen that opens it, Preview, the shell, the run
@@ -389,6 +444,8 @@ export function ComputerPanel({
       </Section>
 
       {thread.wakeups.length > 0 && <Wakeups thread={thread} onChange={onChange} />}
+
+      {thread.replyWatches.length > 0 && <AwaitedReplies thread={thread} onChange={onChange} />}
 
       {thread.children.length > 0 && (
         <Section title={`Child threads · ${thread.children.length}`}>

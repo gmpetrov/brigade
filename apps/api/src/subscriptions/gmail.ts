@@ -1,13 +1,15 @@
 // Gmail: with Pub/Sub configured, Gmail tells Brigade when an inbox changes
 // (users.watch, renewed daily; Gmail drops it after seven days). Without it,
 // Brigade checks every minute. Either way the mailbox's history says what is
-// new since the last read.
+// new since the last read. Each new email goes to the threads waiting on a reply
+// in its conversation (src/replies.ts), then to the connection's triggers.
 import { createPublicKey, verify, type JsonWebKey } from 'node:crypto'
 import { env } from '../config.js'
 import { authorisedFetch } from '../connector-calls.js'
 import { API, full, type Message, type ReceivedEmail } from '../connectors/gmail.js'
 import { json } from '../connectors/types.js'
 import { prisma, scoped, type Scope } from '../db.js'
+import { automatic, wakeOnReply } from '../replies.js'
 import { dispatch } from '../triggers.js'
 import { reachable, serially, type Target } from './common.js'
 
@@ -21,7 +23,10 @@ export const gmailPush = () =>
   Boolean(env.GMAIL_PUBSUB_TOPIC && env.GMAIL_PUBSUB_PUSH_ACCOUNT && reachable())
 
 type History = {
-  history?: { id: string; messagesAdded?: { message: { id: string; labelIds?: string[] } }[] }[]
+  history?: {
+    id: string
+    messagesAdded?: { message: { id: string; threadId?: string; labelIds?: string[] } }[]
+  }[]
   historyId: string
   nextPageToken?: string
 }
@@ -31,7 +36,7 @@ export async function syncGmail(target: Target) {
   const existing = await db.subscription.findFirst({
     where: { connectionId: connection.id, resource: RESOURCE },
   })
-  const wanted = target.triggers.length > 0
+  const wanted = target.triggers.length > 0 || target.awaitingReplies
   const fetch = await authorisedFetch(db, scope, connection)
 
   if (!wanted) {
@@ -95,8 +100,8 @@ export const retryAt = new Map<string, number>()
 
 /**
  * Read what is new in the inbox since the cursor and offer each email to the
- * connection's triggers. The cursor moves past an email only once every
- * thread it should start has started.
+ * threads awaiting a reply and to the connection's triggers. The cursor moves
+ * past an email only once every thread it should start has started.
  */
 export const readInbox = (subscriptionId: string) =>
   serially(`gmail:${subscriptionId}`, async () => {
@@ -112,6 +117,19 @@ export const readInbox = (subscriptionId: string) =>
       db.subscription.updateMany({ where: { id: sub.id }, data })
     const now = async () =>
       (await json<{ historyId: string }>(await fetch(`${API}/profile`))).historyId
+
+    // Without triggers, only the conversations threads wait on a reply in are read.
+    const triggered = await db.trigger.count({
+      where: { connectionId: sub.connectionId, teammate: { archivedAt: null } },
+    })
+    const awaited = new Set(
+      (
+        await db.replyWatch.findMany({
+          where: { connectionId: sub.connectionId, until: { gt: new Date() } },
+          select: { conversationKey: true },
+        })
+      ).map((w) => w.conversationKey),
+    )
 
     const start = sub.cursor
     let cursor = start
@@ -134,6 +152,7 @@ export const readInbox = (subscriptionId: string) =>
           for (const { message } of record.messagesAdded ?? []) {
             // The mailbox's own mail, e.g. a teammate's reply to itself, starts nothing.
             if (message.labelIds?.some((l) => l === 'SENT' || l === 'DRAFT')) continue
+            if (!triggered && !(message.threadId && awaited.has(message.threadId))) continue
             if (read >= PER_READ) {
               await save({ cursor })
               // Pushes come only for new changes: read the rest now.
@@ -150,6 +169,7 @@ export const readInbox = (subscriptionId: string) =>
                 (h) => h.name.toLowerCase() === 'message-id',
               )?.value,
             }
+            if (!automatic(email.payload?.headers)) await wakeOnReply(sub.connection, payload)
             const { failed } = await dispatch(sub.connection, {
               id: email.id,
               type: 'email',

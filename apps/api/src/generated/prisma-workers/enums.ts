@@ -89,7 +89,8 @@ export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority]
 
 export const WakeupKind = {
   wakeup: 'wakeup',
-  report: 'report'
+  report: 'report',
+  reply: 'reply'
 } as const
 
 export type WakeupKind = (typeof WakeupKind)[keyof typeof WakeupKind]

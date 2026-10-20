@@ -20,8 +20,10 @@ export type Target = {
     vaultSecretId: string | null
     externalAccount: string | null
   }
-  /** The connection's triggers. None: unsubscribe. */
+  /** The connection's triggers. None, and no reply awaited: unsubscribe. */
   triggers: { event: string; options: unknown }[]
+  /** Threads wait on replies in this mailbox (src/replies.ts): its inbox is read even without triggers. */
+  awaitingReplies: boolean
 }
 
 /** The vendor event types a connection's triggers listen to, sorted. */

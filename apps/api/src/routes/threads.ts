@@ -86,6 +86,7 @@ import { setThreadArchived } from '../thread-archive.js'
 import { latersOf, setLater } from '../later.js'
 import { descendants, reportConversation } from '../children.js'
 import { deleteThread } from '../thread-delete.js'
+import { stopWatching } from '../replies.js'
 import { cancelWakeup } from '../wakeups.js'
 import { surface } from '../playbooks.js'
 import { runLog } from '../timeline.js'
@@ -369,6 +370,19 @@ export const threads = new Hono<AppEnv>()
           where: { status: 'pending', kind: 'wakeup' },
           select: { id: true, teammateId: true, note: true, wakeAt: true },
           orderBy: { wakeAt: 'asc' },
+        },
+        // Emails sent from it whose replies wake it (src/replies.ts).
+        replyWatches: {
+          where: { until: { gt: new Date() } },
+          select: {
+            id: true,
+            teammateId: true,
+            to: true,
+            subject: true,
+            until: true,
+            connection: { select: { kind: true, externalAccount: true, label: true } },
+          },
+          orderBy: { updatedAt: 'desc' },
         },
       },
     })
@@ -1333,6 +1347,16 @@ export const threads = new Hono<AppEnv>()
     const thread = await loadThread(db, c.req.param('id'))
     mayChange(scope, thread)
     await cancelWakeup(db, scope, thread, c.req.param('wakeupId'))
+    return c.json({ ok: true })
+  })
+
+  /** Stop waiting on replies in an email's conversation: who may change the thread. */
+  .delete('/:id/replies/:watchId', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    mayChange(scope, thread)
+    if (!(await stopWatching(db, scope, thread, c.req.param('watchId'))))
+      throw new HTTPException(404, { message: 'This thread does not wait on that reply' })
     return c.json({ ok: true })
   })
 

@@ -37,6 +37,8 @@ import {
 } from './playbook-autonomy.js'
 import { playbookAccepts, playbookAccount, playbookActionOf, threadPlaybook } from './playbooks.js'
 import { notePullRequestCall } from './pull-requests.js'
+import { endWatch, watchingNote, watchReplies } from './replies.js'
+import { syncConnection } from './subscriptions/index.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { actingTeammate } from './thread-spec.js'
 import { openSecret, replaceSecret } from './vault.js'
@@ -388,7 +390,26 @@ export async function handleConnectorCall(
         input: input.data as Record<string, unknown>,
         output,
       }).catch((error) => console.warn(`pull request bookkeeping failed: ${String(error)}`))
-    return result({ ok: true, output, attachments: kept, ...(decision ? { decision } : {}) })
+    // An email sent from a person's thread: a reply in its conversation wakes the thread.
+    const replies =
+      connection.kind === 'gmail' && call.operation === 'gmail_send'
+        ? await awaitReplies(db, scope, {
+            session,
+            teammateId: teammate.id,
+            connectionId: connection.id,
+            input: input.data as { to: string[]; subject: string },
+            output,
+          }).catch((error) => {
+            console.warn(`reply watch failed: ${String(error)}`)
+            return undefined
+          })
+        : undefined
+    return result({
+      ok: true,
+      output: replies ? { ...(output as object), replies } : output,
+      attachments: kept,
+      ...(decision ? { decision } : {}),
+    })
   } catch (error) {
     // The provider refused the account's sign-in: say how its owner renews it, from a ticket.
     const expired = await db.connection.count({
@@ -410,6 +431,42 @@ export async function handleConnectorCall(
     })
     return result({ ok: false, error: message, ...(decision ? { decision } : {}) })
   }
+}
+
+/**
+ * After gmail_send: watch the email's conversation, so that a reply wakes the thread, and read
+ * its mailbox from now on if nothing did yet. What the teammate is told, if anything.
+ */
+async function awaitReplies(
+  db: ScopedDb,
+  scope: Scope,
+  sent: {
+    session: { id: string; origin: string; status: string }
+    teammateId: string
+    connectionId: string
+    input: { to: string[]; subject: string }
+    output: unknown
+  },
+) {
+  const threadId = (sent.output as { threadId?: unknown } | null)?.threadId
+  if (typeof threadId !== 'string') return undefined
+  const watch = await watchReplies(db, scope, {
+    session: sent.session,
+    teammateId: sent.teammateId,
+    connectionId: sent.connectionId,
+    conversationKey: threadId,
+    to: sent.input.to,
+    subject: sent.input.subject,
+  })
+  if (!watch) return undefined
+  if (watch.created)
+    try {
+      await syncConnection(scope, sent.connectionId)
+    } catch (error) {
+      await endWatch(db, watch.id)
+      return `A reply cannot wake you here (its inbox could not be watched: ${error instanceof Error ? error.message : String(error)}). Set a wake-up to check for it.`
+    }
+  return watchingNote(watch.until)
 }
 
 /**

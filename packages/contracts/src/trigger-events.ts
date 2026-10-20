@@ -1,7 +1,11 @@
 // A trigger's event, as the first message of the thread it starts (or a later one in its
 // conversation): a few lines for the teammate, then the raw (untrusted) event in a fenced
 // block. Written by the API (triggerEventText) and read back by the dashboard (triggerEvent),
-// which shows an email as a card rather than the text the teammate reads.
+// which shows an email as a card rather than the text the teammate reads. A reply to an
+// email a teammate sent from a thread wakes that thread in the same form (AWAITED_REPLY).
+
+/** The trigger name of a reply to an email sent from the thread, rather than a trigger's event. */
+export const AWAITED_REPLY = 'Awaited reply'
 
 /** Raw payloads past this are cut: the summary carries what matters. */
 export const TRIGGER_PAYLOAD_MAX = 40_000
