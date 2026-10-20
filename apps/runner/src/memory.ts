@@ -5,9 +5,46 @@ import { z } from 'zod'
 
 /** How much of the conversation a memory run reads. */
 const CONVERSATION_CHARS = 60_000
-const MEMORY_CHARS = 20_000
 /** Lines one thread may add to a memory file: memory is loaded into every thread. */
 const MAX_ADD = 3
+/**
+ * A memory file past this is tidied by the run that edits it, so it never fills
+ * up: repeated, replaced and outdated lines go, near repeats become one line.
+ */
+export const TIDY_AT = 30_000
+/** What a run may remove from a long file, and add back as merged lines. */
+const TIDY_REMOVE = 20
+const TIDY_ADD = 6
+
+type Memory = (teammateId: string) => { workspace: string; teammate: string }
+
+/** Each teammate's memory read once, then the same: a run's answer is read against what it was shown. */
+export function readOnce(memory: Memory): Memory {
+  const read = new Map<string, ReturnType<Memory>>()
+  return (id) => {
+    if (!read.has(id)) read.set(id, memory(id))
+    return read.get(id)!
+  }
+}
+
+/** Which of the files a run may edit are long enough to tidy. A private thread edits only its teammates'. */
+function longFiles(spec: ThreadSpec, memory: Memory, speakers: { id: string }[]) {
+  return {
+    workspace: !spec.private && memory(spec.teammate.id).workspace.length > TIDY_AT,
+    project: !spec.private && (spec.project?.memory.length ?? 0) > TIDY_AT,
+    teammates: new Set(
+      speakers.filter((t) => memory(t.id).teammate.length > TIDY_AT).map((t) => t.id),
+    ),
+  }
+}
+
+/** A memory file as the run reads it: whole, so it can find repeats anywhere in it. */
+function memoryBlock(label: string, text: string, long: boolean) {
+  return [
+    `${label} now${long ? ` (long: ${text.length.toLocaleString('en')} characters, tidy it)` : ''}:`,
+    `<<<\n${text.trim() || '(empty)'}\n>>>`,
+  ].join('\n')
+}
 
 type Entry = { by: string | null; name: string; text: string; note?: true }
 
@@ -15,7 +52,7 @@ export function memoryPrompt(input: {
   spec: ThreadSpec
   entries: Entry[]
   summary: string | undefined
-  memory: (teammateId: string) => { workspace: string; teammate: string }
+  memory: Memory
   speakers: { id: string; name: string }[]
 }) {
   const { spec, speakers } = input
@@ -27,7 +64,9 @@ export function memoryPrompt(input: {
     lines.unshift(line.length > budget ? `${line.slice(0, budget)}…` : line)
     budget -= line.length
   }
-  const workspace = input.memory(spec.teammate.id).workspace.slice(0, MEMORY_CHARS)
+  const workspace = input.memory(spec.teammate.id).workspace
+  const long = longFiles(spec, input.memory, speakers)
+  const tidying = long.workspace || long.project || long.teammates.size > 0
   const teammateKeys = speakers.map((t) => JSON.stringify(t.name)).join(', ')
   const project = spec.project
   return [
@@ -55,15 +94,17 @@ export function memoryPrompt(input: {
       ].join('\n'),
       `- add: at most ${MAX_ADD} short lines per memory file, each true on its own, taken from this conversation only. Most threads add nothing: empty lists are the usual answer. When this conversation updates a line already in memory, remove the old one, so each thing is said once.`,
       '- remove: lines copied exactly from a memory file that are wrong or outdated, repeat another line, or are the kind of line never to add. Remove such a line whole; do not add back a shorter copy of it.',
+      tidying &&
+        `- A file marked long no longer fits in a thread's instructions. Besides this conversation's edits, tidy it: remove lines that say again what another line says, that a newer line replaced (lines further down are newer), or that are outdated (a plan since shipped, a "for now" that no longer holds), up to ${TIDY_REMOVE} removed from a long file in all. Where several lines say nearly the same, remove them all and add one line that says it once: up to ${TIDY_ADD} lines added in a long file. Never remove a line only because it is old, long or rarely useful.`,
       '- Never include passwords, keys, tokens or other secrets.',
-    ].join('\n'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
     input.summary && `Previous summary of this thread:\n${input.summary}`,
-    `Workspace memory now:\n<<<\n${workspace.trim() || '(empty)'}\n>>>`,
-    project &&
-      `Memory of the project "${project.name}" now:\n<<<\n${project.memory.slice(0, MEMORY_CHARS).trim() || '(empty)'}\n>>>`,
-    ...speakers.map(
-      (t) =>
-        `Memory of ${t.name} now:\n<<<\n${input.memory(t.id).teammate.slice(0, MEMORY_CHARS).trim() || '(empty)'}\n>>>`,
+    memoryBlock('Workspace memory', workspace, long.workspace),
+    project && memoryBlock(`Memory of the project "${project.name}"`, project.memory, long.project),
+    ...speakers.map((t) =>
+      memoryBlock(`Memory of ${t.name}`, input.memory(t.id).teammate, long.teammates.has(t.id)),
     ),
     `Conversation${input.summary ? ' since the previous summary' : ''}:\n<<<\n${lines.join('\n\n')}\n>>>`,
   ]
@@ -85,6 +126,7 @@ export function parseMemory(
   text: string,
   spec: ThreadSpec,
   speakers: { id: string; name: string }[],
+  memory: Memory,
 ) {
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
@@ -98,23 +140,27 @@ export function parseMemory(
   const parsed = Answer.safeParse(json)
   if (!parsed.success) return null
   const answer = parsed.data
+  const long = longFiles(spec, memory, speakers)
   return {
     summary: answer.summary.slice(0, 4000),
-    workspace: spec.private ? { add: [], remove: [] } : clamp(answer.workspace),
-    ...(spec.project && !spec.private ? { project: clamp(answer.project) } : {}),
+    workspace: spec.private ? { add: [], remove: [] } : clamp(answer.workspace, long.workspace),
+    ...(spec.project && !spec.private ? { project: clamp(answer.project, long.project) } : {}),
     teammates: speakers.flatMap((t) => {
       const edit = answer.teammates[t.name]
-      return edit ? [{ teammateId: t.id, edit: clamp(edit) }] : []
+      return edit ? [{ teammateId: t.id, edit: clamp(edit, long.teammates.has(t.id)) }] : []
     }),
   }
 }
 
 /** Within the API's limits, so one long line does not lose the whole update. */
-const clamp = (edit: { add: string[]; remove: string[] }): MemoryEdit => {
+const clamp = (edit: { add: string[]; remove: string[] }, long: boolean): MemoryEdit => {
   const lines = (list: string[], max: number) =>
     list
       .map((l) => l.trim().slice(0, 1000))
       .filter(Boolean)
       .slice(0, max)
-  return { add: lines(edit.add, MAX_ADD), remove: lines(edit.remove, 40) }
+  return {
+    add: lines(edit.add, long ? TIDY_ADD : MAX_ADD),
+    remove: lines(edit.remove, long ? TIDY_REMOVE : 40),
+  }
 }

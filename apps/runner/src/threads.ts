@@ -32,9 +32,9 @@ import type { Attachments, Folder } from './attachments.js'
 import type { Folders } from './folders.js'
 import type { HandedOver } from './hand-over.js'
 import type { Previews } from './previews.js'
-import { memoryPrompt, parseMemory } from './memory.js'
+import { memoryPrompt, parseMemory, readOnce } from './memory.js'
 import { MARKS_RULE, said, type LogEntry } from './said.js'
-import { beyondShown, pickLines, recalledBlock } from './recall.js'
+import { pickLines, recallCandidates, recalledBlock } from './recall.js'
 import { MEMORY_CHARS, memoryBody } from './instructions.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
 import { CLOUD, paths } from './config.js'
@@ -1184,6 +1184,8 @@ export class Threads {
           // Taken from the same log by the next runner, when the thread goes quiet there.
           if (this.stopping) return
           const speakers = spec.teammates.filter((t) => fresh.some((e) => e.by === t.id))
+          // Memory as the run reads it, kept for reading its answer: it may change meanwhile.
+          const memory = readOnce(this.options.context.memoryFor)
           const text = await runOnce({
             spec,
             ...this.memoryWorkDir(spec),
@@ -1191,12 +1193,12 @@ export class Threads {
               spec,
               entries: fresh,
               summary: log.summary,
-              memory: this.options.context.memoryFor,
+              memory,
               speakers,
             }),
             signal: AbortSignal.any([AbortSignal.timeout(MEMORY_RUN_MS), this.stopped.signal]),
           })
-          const update = parseMemory(text, spec, speakers)
+          const update = parseMemory(text, spec, speakers, memory)
           if (!update) return console.warn(`thread ${sessionId}: memory run gave no usable answer`)
           this.options.memoryUpdate({ type: 'memory.update', sessionId, ...update })
           log.memorized = end
@@ -1318,9 +1320,9 @@ export class Threads {
    */
   private recall(spec: ThreadSpec, seat: Seat, message: string) {
     const memory = this.options.context.memoryFor(spec.teammate.id)
-    const left = [memory.workspace, spec.project?.memory ?? '', memory.teammate].flatMap((text) =>
-      beyondShown(memoryBody(text), MEMORY_CHARS),
-    )
+    const texts = [memory.workspace, spec.project?.memory ?? '', memory.teammate].map(memoryBody)
+    // A running session lacks what its instructions file did not show: lines cut, and lines learned since.
+    const left = recallCandidates(texts, MEMORY_CHARS, seat.harness.memoryShown)
     return left.length ? recalledBlock(pickLines(left, message, seat.recalled)) : ''
   }
 

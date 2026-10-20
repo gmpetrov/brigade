@@ -25,16 +25,20 @@ import {
   WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
 import { CLOUD } from './config.js'
+import { newestLines } from './recall.js'
 import { threadBranch } from './repos.js'
 
 const MARK = '<!-- Written by Brigade when this session starts; edits here are replaced. -->'
 /** Memory beyond this is left to search and recall (recall.ts), so the file stays a reasonable size. */
 export const MEMORY_CHARS = 16_000
 
-const clip = (text: string) =>
-  text.length > MEMORY_CHARS
-    ? `${text.slice(0, MEMORY_CHARS)}\n\n… (longer than shown: lines that bear on a message come with it, search_workspace finds the rest)`
-    : text
+/** A long memory keeps its newest lines; the older ones come by recall and search. */
+const clip = (text: string) => {
+  const { shown, left } = newestLines(text, MEMORY_CHARS)
+  return left.length === 0
+    ? text
+    : `… (${left.length} older lines not shown: those that bear on a message come with it, search_workspace finds the rest)\n\n${shown}`
+}
 
 /** Strip a memory file's own top heading; the section gives one. */
 export const memoryBody = (text: string) => text.replace(/^#\s[^\n]*\n+/, '').trim()
