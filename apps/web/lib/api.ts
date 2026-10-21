@@ -263,6 +263,8 @@ export type Computer = {
   kind: 'cloud' | 'member_machine'
   status: 'pending' | 'creating' | 'starting' | 'running' | 'stopped' | 'error' | 'destroyed'
   online: boolean
+  /** Its runner restarts into an update: online all along, but nothing runs for a minute. */
+  restarting: boolean
   runner: { version: string | null; platform: string | null; lastSeenAt: string | null } | null
   /** Whether its connected runner runs the bundle the API serves, or updates to it once idle. */
   runnerUpdate: 'current' | 'waiting' | null

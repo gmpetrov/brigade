@@ -1486,6 +1486,32 @@ function BackgroundTasks({ tasks }: { tasks: BackgroundTask[] }) {
   )
 }
 
+/** The computer a thread runs on, away during its turn: by the name Settings → Computers gives it. */
+export type ComputerDown = { name: string; cloud: boolean; state: 'restarting' | 'offline' }
+
+/**
+ * Its computer went away during a turn (a restart, an update, a Mac asleep): the turn
+ * waits on it, and goes on by itself once it is back, where "is reading" would show.
+ */
+function ComputerAway({
+  computer,
+  teammate,
+}: {
+  computer: ComputerDown
+  teammate?: { name: string }
+}) {
+  const name = computer.cloud ? 'The cloud computer' : computer.name
+  return computer.state === 'restarting' ? (
+    <div role="status" className="animate-in self-start text-sm duration-300 fade-in">
+      <span className="text-shimmer">{name} is restarting…</span>
+    </div>
+  ) : (
+    <div role="status" className="self-start text-sm text-muted-foreground">
+      {name} is offline.{teammate && ` ${teammate.name} carries on once it is back.`}
+    </div>
+  )
+}
+
 /**
  * Between a message and the first thing its teammate does: a line saying how far it got,
  * where the answer will show. It counts up past the first seconds.
@@ -1539,6 +1565,7 @@ export function ThreadItems({
   starting = false,
   background = [],
   eventsWaitingSince,
+  computerDown,
   childThreads = [],
   drafting = false,
   onRetry,
@@ -1569,6 +1596,8 @@ export function ThreadItems({
   background?: BackgroundTask[]
   /** Since when its updates have not reached Brigade: said instead of how long it has worked. */
   eventsWaitingSince?: string | null
+  /** Its computer is away (restarting, offline): said instead of how the turn goes, which waits on it. */
+  computerDown?: ComputerDown
   /** The thread's child threads: where a teammate started one, its line shows how it is doing. */
   childThreads?: ThreadChild[]
   /** The person is writing a message: the buttons a teammate suggested step aside, their words win. */
@@ -2130,6 +2159,8 @@ export function ThreadItems({
       {show(nodes)}
       {eventsWaitingSince ? (
         <EventsWaiting since={eventsWaitingSince} />
+      ) : working && computerDown ? (
+        <ComputerAway computer={computerDown} teammate={waitingFor || teammate} />
       ) : waitingFor ? (
         <Answering
           teammate={waitingFor}

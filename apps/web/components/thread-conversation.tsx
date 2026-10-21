@@ -80,7 +80,7 @@ import { TicketRow } from '@/components/ticket-row'
 import { useThreadOutputs } from '@/components/thread-outputs'
 import { useThreadPanel } from '@/components/thread-panel'
 import { ThreadSkeleton } from '@/components/thread-skeleton'
-import { ThreadItems, useThreadItems } from '@/components/thread-view'
+import { ThreadItems, useThreadItems, type ComputerDown } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -572,7 +572,25 @@ export function ThreadConversation({
         }))
         .sort((a, b) => Number(!!b.current) - Number(!!a.current))
     : []
-  const machineOnline = computers.data?.computers.find((c) => c.id === t.computer.id)?.online
+  const machine = computers.data?.computers.find((c) => c.id === t.computer.id)
+  const machineOnline = machine?.online
+  // Its computer went away during a turn: said where the answer would show, by the machine's name.
+  const machineDown: ComputerDown | undefined = !machine
+    ? undefined
+    : machine.restarting
+      ? { name: machine.name, cloud: machine.kind === 'cloud', state: 'restarting' }
+      : machine.online
+        ? undefined
+        : machine.kind === 'cloud'
+          ? machine.status === 'error' || machine.status === 'destroyed'
+            ? undefined
+            : // Stopped from its menu, it waits for someone to start it; else it is coming back.
+              {
+                name: machine.name,
+                cloud: true,
+                state: machine.status === 'stopped' ? 'offline' : 'restarting',
+              }
+          : { name: machine.name, cloud: false, state: 'offline' }
   // Its machine is offline: offer the cloud computer, where its teammates can pick up.
   const cloudTarget = moveTargets.find((c) => c.cloud && !c.current && !c.unavailable)
   const offerCloud =
@@ -962,6 +980,7 @@ export function ThreadConversation({
                     starting={current === 'starting'}
                     background={background}
                     eventsWaitingSince={eventsWaitingSince}
+                    computerDown={machineDown}
                     childThreads={t.children}
                     onOpenPreview={previewLive(preview) ? openPreview : undefined}
                     onApproval={(approvalId, approved, always) =>
