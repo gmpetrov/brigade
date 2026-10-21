@@ -53,12 +53,12 @@ describe("a teammate's triggers", { skip: !database && 'no database answers' }, 
     userId: memberId === ids.owner ? `owner-${suffix}` : `bob-${suffix}`,
   })
 
-  /** A thread of Riley's that Bob, a member, started. */
-  const thread = async (origin: 'member' | 'trigger' = 'member') => {
+  /** A thread of Riley's that Bob, a member, started (or another member). */
+  const thread = async (origin: 'member' | 'trigger' = 'member', startedBy = ids.bob) => {
     const session = await db.session.create({
       data: {
         teammateId: ids.riley,
-        startedByMemberId: ids.bob,
+        startedByMemberId: startedBy,
         computerId: ids.computer,
         title: 'Errors',
         projectId: ids.project,
@@ -249,6 +249,13 @@ describe("a teammate's triggers", { skip: !database && 'no database answers' }, 
       ]),
       [[trigger.id, output.url]],
     )
+
+    // Not to another member's thread with the same teammate, nor to an event's thread: its URL is a key.
+    for (const other of [await thread('member', ids.owner), await thread('trigger')]) {
+      const theirs = await call(other, { name: 'list_triggers' })
+      assert.equal(theirs.ok, true)
+      assert.deepEqual(theirs.output!.yourTriggers, [])
+    }
   })
 
   test("an App's event, declined: nothing is made", async () => {

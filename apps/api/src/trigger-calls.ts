@@ -54,11 +54,17 @@ export async function handleTriggerCall(
         select: { id: true, kind: true, label: true, externalAccount: true },
         orderBy: { createdAt: 'asc' },
       }),
-      db.trigger.findMany({
-        where: { teammateId: teammate.id },
-        include: { connection: { select: { kind: true, label: true, externalAccount: true } } },
-        orderBy: { createdAt: 'asc' },
-      }),
+      // Only those on the accounts of the person in this thread, which a custom app's URL is a key to:
+      // none to a thread an event, a schedule or a playbook started, which no person is in.
+      session.origin === 'member' && !session.playbookRunId
+        ? db.trigger.findMany({
+            where: { teammateId: teammate.id, createdByMemberId: session.startedByMemberId },
+            include: {
+              connection: { select: { kind: true, label: true, externalAccount: true } },
+            },
+            orderBy: { createdAt: 'asc' },
+          })
+        : [],
     ])
     const catalog = triggerCatalog() as Record<string, ReturnType<typeof triggerCatalog>[string]>
     const output = {
