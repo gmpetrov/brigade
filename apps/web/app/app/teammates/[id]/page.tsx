@@ -2,17 +2,13 @@
 // A teammate's settings: who it is, what it may reach and spend, and what it is up to. Its
 // threads are where the sidebar takes you (components/thread-panel.tsx).
 import { modelLabel } from '@brigade/contracts'
-import { MessagesSquare, Monitor } from 'lucide-react'
-import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { TeammateAccess } from '@/components/teammate-access'
 import { TeammateForm } from '@/components/teammate-form'
 import { TeammateCaps, TeammateStatus, useTeammateTimeline } from '@/components/teammate-oversight'
-import { useThreadPanel } from '@/components/thread-panel'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, harnessLabel } from '@/lib/api'
 
@@ -32,7 +28,6 @@ function TeammateView() {
   const params = useSearchParams()
   const { me, teammates, reloadTeammates } = useDashboard()
   const teammate = teammates.find((t) => t.id === id)
-  const { teammateHref, openTeammate } = useThreadPanel()
   const oversight = useTeammateTimeline(id)
 
   // ?tab= keeps the open tab across reloads and links; Profile is for admins only.
@@ -79,32 +74,6 @@ function TeammateView() {
             </p>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link
-              href={teammateHref(id)}
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
-                e.preventDefault()
-                openTeammate(id)
-              }}
-            >
-              <MessagesSquare aria-hidden />
-              Threads
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href={`/app/teammates/${id}/computer`}>
-              <Monitor aria-hidden />
-              Computer
-            </Link>
-          </Button>
-          {isAdmin(me) && teammate.kind !== 'chief' && (
-            <Button variant="danger" onClick={archive}>
-              Archive
-            </Button>
-          )}
-        </div>
       </header>
       <Tabs value={tab} onValueChange={openTab} className="gap-5">
         <TabsList variant="line" className="border-b w-full justify-start rounded-none">
@@ -136,6 +105,15 @@ function TeammateView() {
                   await reloadTeammates()
                 }}
               />
+              {teammate.kind !== 'chief' && (
+                <button
+                  type="button"
+                  onClick={archive}
+                  className="mt-8 w-full max-w-2xl rounded-lg border bg-card px-4 py-3 text-left text-sm font-medium text-destructive-text transition-colors hover:bg-secondary"
+                >
+                  Archive teammate
+                </button>
+              )}
             </TabsContent>
           )}
 
