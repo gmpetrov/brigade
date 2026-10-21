@@ -37,17 +37,30 @@ export const reviewer = (p: { tracking: PullRequestTracking | null }) =>
     ? (p.tracking.review.reviewer?.name ?? 'A teammate')
     : null
 
-/** Merge, but not without a word while a review is under way: the person may want to wait for it. */
+/** Who asked for changes, while that is its review's latest verdict. */
+export const changesAskedBy = (p: { tracking: PullRequestTracking | null }) =>
+  p.tracking?.review?.state === 'changes_requested'
+    ? (p.tracking.review.reviewer?.name ?? 'A teammate')
+    : null
+
+/** Its review is under way, or asked for changes: Merge steps back, and still merges. */
+export const reviewHolds = (p: { tracking: PullRequestTracking | null }) =>
+  Boolean(reviewer(p) || changesAskedBy(p))
+
+/** Merge, but not without a word while a review is under way or asked for changes. */
 export function confirmMerge(
   p: { number: number; base?: string; tracking: PullRequestTracking | null } | undefined,
   number: number,
   method: string,
 ) {
   const by = p ? reviewer(p) : null
+  const asked = p ? changesAskedBy(p) : null
   return confirm(
     by
       ? `${by} is still reviewing #${number}. Merge it anyway (${method})?`
-      : `Merge #${number}${p?.base ? ` into ${p.base}` : ''} (${method})?`,
+      : asked
+        ? `${asked} asked for changes on #${number}. Merge it anyway (${method})?`
+        : `Merge #${number}${p?.base ? ` into ${p.base}` : ''} (${method})?`,
   )
 }
 

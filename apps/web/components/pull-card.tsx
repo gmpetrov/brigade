@@ -1,7 +1,8 @@
 'use client'
 // The card for a pull request a teammate opened in a thread: the whole card opens
-// its changes, its review line and in review badge the reviewer's thread, and an owner
-// or admin merges it from here, after a word while its review is under way. One that conflicts has Resolve conflicts instead: its teammate resolves
+// its changes, its review line and review badge the reviewer's thread, and an owner or
+// admin merges it from here, after a word while its review is under way or asked for
+// changes. One that conflicts has Resolve conflicts instead: its teammate resolves
 // them, then it merges by itself. A thread's outputs show the same pull request as a row
 // (thread-outputs).
 import {
@@ -25,6 +26,8 @@ import {
   resolvesInBrigade,
   resolving,
   reviewer,
+  reviewHolds,
+  changesAskedBy,
   useLastMergeMethod,
 } from '@/lib/merge-method'
 import { cn } from '@/lib/utils'
@@ -132,15 +135,16 @@ export function PullCard({
       )
     if (resolving(p) || (mergeElsewhere && mergeable)) return <PullStatus pull={p} />
     const button = mergeButton(mergeable, mergeable ? undefined : blockedBecause[p.mergeableState])
-    // Its review is under way: it says so first, opening the review, and Merge steps back until it is in.
+    // Its review is under way or asked for changes: it says so first, opening the review, and
+    // Merge steps back.
     const thread = reviewThread(p)
-    return reviewer(p) ? (
+    return reviewHolds(p) ? (
       <span className="flex flex-none items-center gap-2">
         {thread ? (
           <Link
             href={`/app/threads/${thread}`}
             className="relative z-10 rounded-md hover:opacity-80"
-            title={`Open ${reviewer(p)}'s review`}
+            title={`Open ${reviewer(p) ?? changesAskedBy(p)}'s review`}
           >
             <PullStatus pull={p} />
           </Link>
@@ -154,11 +158,11 @@ export function PullCard({
     )
   }
 
-  // Filled, as every card's main action, while it can merge and no review is under way.
+  // Filled, as every card's main action, while it can merge and its review holds nothing back.
   const mergeButton = (enabled: boolean, title?: string) => (
     <Button
       size="sm"
-      variant={enabled && !(p && reviewer(p)) ? 'default' : 'outline'}
+      variant={enabled && !(p && reviewHolds(p)) ? 'default' : 'outline'}
       className="relative z-10 flex-none"
       disabled={busy || !enabled}
       onClick={merge}
