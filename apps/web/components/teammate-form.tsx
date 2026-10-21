@@ -1,7 +1,7 @@
 'use client'
 import { CODEX_DEFAULT_MODEL, HARNESS_MODELS, isHarnessModel, modelLabel } from '@brigade/contracts'
 import { TriangleAlert } from 'lucide-react'
-import { Fragment, useState } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { HarnessLogo } from '@/components/harness-logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,10 +36,13 @@ export function TeammateForm({
   initial,
   submitLabel,
   onSubmit,
+  footer,
 }: {
   initial?: Teammate
   submitLabel: string
   onSubmit: (input: TeammateInput) => Promise<void>
+  /** On the left of the submit button, e.g. Archive. */
+  footer?: ReactNode
 }) {
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
@@ -161,7 +164,9 @@ export function TeammateForm({
         )}
       </div>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
-      <div className="flex justify-end border-t pt-5">
+      <div className="flex items-center justify-end gap-3 border-t pt-5">
+        {footer}
+        <span className="flex-1" />
         <Button type="submit" disabled={busy}>
           {submitLabel}
         </Button>

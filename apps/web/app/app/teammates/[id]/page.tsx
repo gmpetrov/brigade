@@ -2,6 +2,7 @@
 // A teammate's settings: who it is, what it may reach and spend, and what it is up to. Its
 // threads are where the sidebar takes you (components/thread-panel.tsx).
 import { modelLabel } from '@brigade/contracts'
+import { Archive } from 'lucide-react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
@@ -10,6 +11,7 @@ import { TeammateForm } from '@/components/teammate-form'
 import { TeammateTitle } from '@/components/teammate-title'
 import { TeammateCaps, TeammateStatus, useTeammateTimeline } from '@/components/teammate-oversight'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, harnessLabel } from '@/lib/api'
 
@@ -106,16 +108,21 @@ function TeammateView() {
                   await api(`/teammates/${id}`, { method: 'PATCH', body: input })
                   await reloadTeammates()
                 }}
+                footer={
+                  teammate.kind !== 'chief' && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="-ml-2 text-destructive-text hover:text-destructive-text"
+                      onClick={archive}
+                    >
+                      <Archive aria-hidden />
+                      Archive
+                    </Button>
+                  )
+                }
               />
-              {teammate.kind !== 'chief' && (
-                <button
-                  type="button"
-                  onClick={archive}
-                  className="mt-8 w-full max-w-2xl rounded-lg border bg-card px-4 py-3 text-left text-sm font-medium text-destructive-text transition-colors hover:bg-secondary"
-                >
-                  Archive teammate
-                </button>
-              )}
             </TabsContent>
           )}
 
