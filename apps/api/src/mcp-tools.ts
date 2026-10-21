@@ -103,7 +103,7 @@ export async function mcpOperation(
     description: tool.description ?? tool.name,
     write: mcpWrites(server, tool),
     input: Input,
-    target: targetOf,
+    target: (input) => server.target?.(tool.name, input) ?? targetOf(input),
     run: (ctx, input) => callMcpTool(ctx.fetch, server, tool.name, input),
   })
 }

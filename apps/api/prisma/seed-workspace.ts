@@ -245,9 +245,16 @@ export async function seedWorkspace(users: Users) {
   })
   const stripe = await connection({
     kind: 'stripe',
-    label: 'Stripe (test mode)',
-    externalAccount: 'Acme test account',
-    secret: { apiKey: 'sk_test_sample' },
+    label: 'Stripe',
+    externalAccount: 'Acme (acct_1SampleAcme, test mode)',
+    secret: {
+      accessToken: 'sample',
+      refreshToken: 'sample',
+      expiresAt: 0,
+      clientId: 'sample',
+      tokenEndpoint: 'https://access.stripe.com/mcp/oauth2/token',
+      resource: 'https://mcp.stripe.com',
+    },
   })
   // Carol's own mailbox: a second account of the Gmail App, used only in her threads.
   const carolGmail = await connection({
@@ -587,7 +594,15 @@ export async function seedWorkspace(users: Users) {
     ],
   })
 
-  // Waits on an approval: Sam wants to refund a customer through Stripe.
+  // Waits on an approval: Sam wants to refund a customer through Stripe's MCP server.
+  const stripeCall = (operation: string, parameters: Record<string, unknown>) => ({
+    stripe_api_operation_id: operation,
+    parameters,
+    stripe_context: 'acct_1SampleAcme',
+    livemode: false,
+  })
+  const refundCall = stripeCall('PostRefunds', { charge: 'ch_Sample2', reason: 'duplicate' })
+  const refundTarget = 'PostRefunds {"charge":"ch_Sample2","reason":"duplicate"} (test mode)'
   const refund = await thread({
     title: 'Refund request from Jamie Lee',
     teammateId: sam.id,
@@ -604,13 +619,17 @@ export async function seedWorkspace(users: Users) {
       'New email to support@acme.test from Jamie Lee <jamie@example.org>:\n\nSubject: Charged twice\n\nHi, I was charged twice for my Pro plan this month ($149 each). Could you refund one of them? Thanks, Jamie',
       null,
       [
-        ...tool(harness('stripe_search_customers'), { email: 'jamie@example.org' }, [
-          { id: 'cus_Sample1', name: 'Jamie Lee', email: 'jamie@example.org' },
-        ]),
-        ...tool(harness('stripe_list_charges'), { customer: 'cus_Sample1' }, [
-          { id: 'ch_Sample1', amount: 14900, created: '2026-10-01' },
-          { id: 'ch_Sample2', amount: 14900, created: '2026-10-01' },
-        ]),
+        ...tool(
+          harness('stripe_api_read'),
+          stripeCall('GetCustomersSearch', { query: "email:'jamie@example.org'" }),
+          { data: [{ id: 'cus_Sample1', name: 'Jamie Lee', email: 'jamie@example.org' }] },
+        ),
+        ...tool(harness('stripe_api_read'), stripeCall('GetCharges', { customer: 'cus_Sample1' }), {
+          data: [
+            { id: 'ch_Sample1', amount: 14900, created: 1790812800 },
+            { id: 'ch_Sample2', amount: 14900, created: 1790812800 },
+          ],
+        }),
         {
           type: 'message.delta',
           id: id(),
@@ -619,8 +638,8 @@ export async function seedWorkspace(users: Users) {
         {
           type: 'tool.started',
           toolCallId: `call_${id()}`,
-          toolName: harness('stripe_refund'),
-          input: { charge: 'ch_Sample2', amount: 14900, reason: 'duplicate' },
+          toolName: harness('stripe_api_write'),
+          input: refundCall,
         },
       ],
     ),
@@ -630,22 +649,27 @@ export async function seedWorkspace(users: Users) {
       ...inWorkspace,
       sessionId: refund.id,
       type: 'approval',
-      title: 'Sam: stripe refund (ch_Sample2, $149.00)',
+      title: `Sam: stripe api write (${refundTarget})`,
       payload: {
         connectionId: stripe.id,
-        connection: 'Acme test account',
-        operation: 'stripe_refund',
-        target: 'ch_Sample2, $149.00',
-        input: { charge: 'ch_Sample2', amount: 14900, reason: 'duplicate' },
+        connection: 'Acme (acct_1SampleAcme, test mode)',
+        operation: 'stripe_api_write',
+        target: refundTarget,
+        input: refundCall,
       },
       createdAt: minutes(38),
     },
   })
   await prisma.connectionCall.createMany({
     data: [
-      ['stripe_search_customers', false, 'jamie@example.org', 'ok'],
-      ['stripe_list_charges', false, 'cus_Sample1', 'ok'],
-      ['stripe_refund', true, 'ch_Sample2, $149.00', 'awaiting_approval'],
+      [
+        'stripe_api_read',
+        false,
+        `GetCustomersSearch {"query":"email:'jamie@example.org'"} (test mode)`,
+        'ok',
+      ],
+      ['stripe_api_read', false, 'GetCharges {"customer":"cus_Sample1"} (test mode)', 'ok'],
+      ['stripe_api_write', true, refundTarget, 'awaiting_approval'],
     ].map(([operation, write, target, result]) => ({
       ...inWorkspace,
       sessionId: refund.id,

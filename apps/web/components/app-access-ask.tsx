@@ -64,7 +64,7 @@ const sameServer = (a: string, b: string) => {
   }
 }
 
-/** Where each App signs in; Stripe takes a key on the Apps page. */
+/** Where each App signs in. */
 const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> = {
   gmail: 'google',
   google_calendar: 'google',
@@ -74,6 +74,7 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> 
   google_search_console: 'google',
   google_analytics: 'google',
   github: 'github',
+  stripe: 'mcp',
   cloudflare: 'mcp',
   google_cloud: 'mcp',
   neon: 'mcp',

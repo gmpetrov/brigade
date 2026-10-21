@@ -182,6 +182,11 @@ export type McpServer = {
   account?: ({ tool: string } | { url: string }) & { name: (output: unknown) => string | null }
   /** oauth: the scopes to ask for, when not all those the server lists. */
   scopes?: string[]
+  /**
+   * A call's object for approvals and the log, for servers whose tools take a whole API
+   * request (Stripe's stripe_api_write): null to show its inputs as they are.
+   */
+  target?: (tool: string, input: Record<string, unknown>) => string | null
 }
 
 /**
