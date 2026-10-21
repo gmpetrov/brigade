@@ -10,6 +10,7 @@ function scripted(answers: (RestoreState | Error)[]) {
   const wait: RestoreWait = {
     everyMs: 15_000,
     forMs: 60_000,
+    checkMs: 1_000,
     failures: 3,
     sleep: async (ms) => {
       clock += ms
@@ -60,4 +61,29 @@ test('checks that fail now and then are tried again; failing in a row, the error
   const down = scripted([copying, new Error('502')])
   await assert.rejects(restored(down.check, down.wait), /502/)
   assert.equal(down.checks(), 4)
+})
+
+test('a check that never answers fails, and does not outlast the wait', async () => {
+  let checks = 0
+  const hung = () => {
+    checks++
+    return new Promise<never>(() => {})
+  }
+  let clock = 0
+  const fake = {
+    sleep: async (ms: number) => {
+      clock += ms
+    },
+    now: () => clock,
+  }
+  await assert.rejects(
+    restored(hung, { everyMs: 15_000, forMs: 60_000, checkMs: 5, failures: 3, ...fake }),
+    /no answer in 5 ms/,
+  )
+  assert.equal(checks, 3)
+  // On a real clock, the one check left when the wait ends is given up with it.
+  assert.deepEqual(await restored(hung, { everyMs: 5, forMs: 20, checkMs: 60_000, failures: 5 }), {
+    done: false,
+    why: 'too long',
+  })
 })

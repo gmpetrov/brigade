@@ -277,10 +277,11 @@ export async function ensureSetup(
 }
 
 /** A resumed computer's restore: checked this often, for at most this long (cloud-restore.ts). */
-const RESTORE_WAIT = { everyMs: 15_000, forMs: 3 * 60 * 60_000, failures: 5 }
-/** Per computer: the restore whose homes were given back, and those whose restore is awaited. */
+const RESTORE_WAIT = { everyMs: 15_000, forMs: 3 * 60 * 60_000, checkMs: 60_000, failures: 5 }
+/** Per computer: the restore whose homes were given back. */
 const homesGivenBack = new Map<string, string>()
-const awaitingRestore = new Set<string>()
+/** Per computer whose restore is awaited: whether a hello came meanwhile (a new resume, say). */
+const awaitingRestore = new Map<string, { again: boolean }>()
 
 /**
  * A resumed computer runs before its disk is all there: boat copies the home in from its
@@ -292,8 +293,14 @@ const awaitingRestore = new Set<string>()
 export async function giveHomesBackOnceRestored(computer: { id: string; providerRef: unknown }) {
   const ref = refOf(computer)
   const cloud = provider
-  if (!cloud?.restore || !ref || awaitingRestore.has(computer.id)) return
-  awaitingRestore.add(computer.id)
+  if (!cloud?.restore || !ref) return
+  const awaiting = awaitingRestore.get(computer.id)
+  if (awaiting) {
+    awaiting.again = true
+    return
+  }
+  const watch = { again: false }
+  awaitingRestore.set(computer.id, watch)
   try {
     const restore = await restored(() => cloud.restore!(ref), RESTORE_WAIT)
     if (!restore.done) {
@@ -309,6 +316,11 @@ export async function giveHomesBackOnceRestored(computer: { id: string; provider
     console.log(`${computer.id} restored${restore.at ? ` at ${restore.at}` : ''}: homes given back`)
   } finally {
     awaitingRestore.delete(computer.id)
+    // What this one checked may predate that hello's boot: its restore is waited for too.
+    if (watch.again)
+      void giveHomesBackOnceRestored(computer).catch((error) =>
+        console.error(`giving homes back on ${computer.id} failed`, error),
+      )
   }
 }
 
