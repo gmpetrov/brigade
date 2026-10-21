@@ -111,10 +111,7 @@ export default function WorkspacePage() {
       <header className="flex flex-col gap-2">
         <h1 className="text-3xl font-extrabold tracking-tight">Workspace</h1>
         <p className="max-w-prose text-muted-foreground">
-          Its name and logo, seen by every member in the sidebar.{' '}
-          {admin
-            ? 'Click the logo to change it; changes save on their own.'
-            : 'Owners and admins can change them.'}
+          General settings for this workspace. {!admin && 'Only owners and admins can change them.'}
         </p>
       </header>
 
