@@ -785,6 +785,8 @@ const AFTER_REVIEW =
   'With a review, Brigade starts it in a child thread, with a brief of its own, and wakes you with its report: ' +
   `fix what it rightly found and push, then ask the reviewer to look at what changed with \`message_thread\` ` +
   `(${REVIEW_RECHECKS} times at most), or tell it why you disagree; then tell the person where it stands. ` +
+  'When you pushed after its last look and may not ask it again, say so: the pull request shows those commits ' +
+  'as not reviewed, and the person can have them read with Review again on it. ' +
   "When its fixes go in a new pull request, leave that one's `review` out and call `request_review` on it, " +
   'naming the same reviewer, rather than only messaging its old review thread: the person sees a review on a pull request only ' +
   'when Brigade started it, and otherwise is offered to merge it while it is still being read. ' +

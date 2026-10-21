@@ -29,7 +29,9 @@ export function pullStatus(p: Pull): { label: string; tone: StatusTone } {
         ? { label: 'changed since approval', tone: 'warning' }
         : { label: 'approved', tone: 'success' }
     case 'changes_requested':
-      return { label: 'changes requested', tone: 'warning' }
+      return t.review.changed
+        ? { label: 'changed since review', tone: 'warning' }
+        : { label: 'changes requested', tone: 'warning' }
   }
   return { label: 'open', tone: 'warning' }
 }
@@ -50,7 +52,9 @@ export function reviewLine(p: { tracking: PullRequestSummary['tracking'] }): str
     case 'approved':
       return review.changed ? `Approved by ${who}, before the latest commits` : `Approved by ${who}`
     case 'changes_requested':
-      return `${who} asked for changes`
+      return review.changed
+        ? `${who} asked for changes, before the latest commits`
+        : `${who} asked for changes`
     case 'skipped':
       return `No review: ${review.reason}`
   }
