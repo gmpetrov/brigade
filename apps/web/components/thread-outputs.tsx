@@ -36,7 +36,7 @@ import Link from 'next/link'
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { relativeFile, type OpenFile } from '@/components/file-links'
-import { pullStatus, reviewLine } from '@/components/pull-status'
+import { pullStatus, ReviewLink, reviewLine } from '@/components/pull-status'
 import { usePull } from '@/components/pull-card'
 import { Button } from '@/components/ui/button'
 import {
@@ -470,7 +470,8 @@ function pullLine(p: PullRequestState, fallback: string): ReactNode {
   // Its review while it runs, failing checks before an older verdict, then whichever it has.
   const review = reviewLine(p)
   const failing = p.checks.some((c) => c.status === 'failure')
-  if (review && (p.tracking?.review?.state === 'reviewing' || !failing)) return review
+  if (review && (p.tracking?.review?.state === 'reviewing' || !failing))
+    return <ReviewLink pull={p} />
   return p.checks.length ? checksLine(p.checks) : fallback
 }
 
