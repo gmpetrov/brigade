@@ -36,7 +36,7 @@ import Link from 'next/link'
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { relativeFile, type OpenFile } from '@/components/file-links'
-import { pullStatus, reviewLine } from '@/components/pull-status'
+import { pullStatus, ReviewLink, reviewLine } from '@/components/pull-status'
 import { usePull } from '@/components/pull-card'
 import { Button } from '@/components/ui/button'
 import {
@@ -52,7 +52,7 @@ import {
   hasConflicts,
   resolvesInBrigade,
   resolving,
-  reviewer,
+  reviewHolds,
 } from '@/lib/merge-method'
 import { dayLabel } from '@/lib/utils'
 
@@ -470,7 +470,8 @@ function pullLine(p: PullRequestState, fallback: string): ReactNode {
   // Its review while it runs, failing checks before an older verdict, then whichever it has.
   const review = reviewLine(p)
   const failing = p.checks.some((c) => c.status === 'failure')
-  if (review && (p.tracking?.review?.state === 'reviewing' || !failing)) return review
+  if (review && (p.tracking?.review?.state === 'reviewing' || !failing))
+    return <ReviewLink pull={p} />
   return p.checks.length ? checksLine(p.checks) : fallback
 }
 
@@ -555,12 +556,13 @@ function PullOutput({
         </Button>
       )
     const mergeable = canMerge(p)
-    // A failed check or a review under way doesn't stop it here, GitHub does if it must: the pill only gets quieter.
+    // A failed check, or a review under way or asking for changes, doesn't stop it here, GitHub
+    // does if it must: the pill only gets quieter.
     const failing = p.checks.some((c) => c.status === 'failure')
     return (
       <Button
         size="xs"
-        variant={failing || reviewer(p) ? 'outline' : 'default'}
+        variant={failing || reviewHolds(p) ? 'outline' : 'default'}
         className={`${pill} px-2.5`}
         disabled={busy || !mergeable}
         onClick={merge}

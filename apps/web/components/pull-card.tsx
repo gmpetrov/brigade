@@ -1,7 +1,8 @@
 'use client'
 // The card for a pull request a teammate opened in a thread: the whole card opens
-// its changes, and an owner or admin merges it from here, after a word while its review
-// is under way. One that conflicts has Resolve conflicts instead: its teammate resolves
+// its changes, its review line and review badge the reviewer's thread, and an owner or
+// admin merges it from here, after a word while its review is under way or asked for
+// changes. One that conflicts has Resolve conflicts instead: its teammate resolves
 // them, then it merges by itself. A thread's outputs show the same pull request as a row
 // (thread-outputs).
 import {
@@ -14,7 +15,7 @@ import {
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
-import { PullStatus, reviewLine } from '@/components/pull-status'
+import { PullStatus, ReviewLink, reviewLine, reviewThread } from '@/components/pull-status'
 import { Button } from '@/components/ui/button'
 import { api, pullHref, useApi, type PullRequestState } from '@/lib/api'
 import {
@@ -25,6 +26,8 @@ import {
   resolvesInBrigade,
   resolving,
   reviewer,
+  reviewHolds,
+  changesAskedBy,
   useLastMergeMethod,
 } from '@/lib/merge-method'
 import { cn } from '@/lib/utils'
@@ -132,10 +135,22 @@ export function PullCard({
       )
     if (resolving(p) || (mergeElsewhere && mergeable)) return <PullStatus pull={p} />
     const button = mergeButton(mergeable, mergeable ? undefined : blockedBecause[p.mergeableState])
-    // Its review is under way: it says so first, and Merge steps back until the review is in.
-    return reviewer(p) ? (
+    // Its review is under way or asked for changes: it says so first, opening the review, and
+    // Merge steps back.
+    const thread = reviewThread(p)
+    return reviewHolds(p) ? (
       <span className="flex flex-none items-center gap-2">
-        <PullStatus pull={p} />
+        {thread ? (
+          <Link
+            href={`/app/threads/${thread}`}
+            className="relative z-10 rounded-md hover:opacity-80"
+            title={`Open ${reviewer(p) ?? changesAskedBy(p)}'s review`}
+          >
+            <PullStatus pull={p} />
+          </Link>
+        ) : (
+          <PullStatus pull={p} />
+        )}
         {button}
       </span>
     ) : (
@@ -143,11 +158,11 @@ export function PullCard({
     )
   }
 
-  // Filled, as every card's main action, while it can merge and no review is under way.
+  // Filled, as every card's main action, while it can merge and its review holds nothing back.
   const mergeButton = (enabled: boolean, title?: string) => (
     <Button
       size="sm"
-      variant={enabled && !(p && reviewer(p)) ? 'default' : 'outline'}
+      variant={enabled && !(p && reviewHolds(p)) ? 'default' : 'outline'}
       className="relative z-10 flex-none"
       disabled={busy || !enabled}
       onClick={merge}
@@ -181,7 +196,12 @@ export function PullCard({
         </Link>
         <span className="truncate text-xs text-muted-foreground">
           <span className="font-mono">{repository}</span>
-          {p && reviewLine(p) && ` · ${reviewLine(p)}`}
+          {p && reviewLine(p) && (
+            <>
+              {' · '}
+              <ReviewLink pull={p} />
+            </>
+          )}
         </span>
         {error && <span className="text-xs text-destructive-text">{error}</span>}
       </span>
