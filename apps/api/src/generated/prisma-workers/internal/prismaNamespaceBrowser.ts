@@ -57,6 +57,7 @@ export const ModelName = {
   AuthAccount: 'AuthAccount',
   Verification: 'Verification',
   Organization: 'Organization',
+  BillingClosing: 'BillingClosing',
   Member: 'Member',
   Invitation: 'Invitation',
   Workspace: 'Workspace',
@@ -216,12 +217,20 @@ export const OrganizationScalarFieldEnum = {
   slug: 'slug',
   logo: 'logo',
   metadata: 'metadata',
-  billingClosingAt: 'billingClosingAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type OrganizationScalarFieldEnum = (typeof OrganizationScalarFieldEnum)[keyof typeof OrganizationScalarFieldEnum]
+
+
+export const BillingClosingScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  createdAt: 'createdAt'
+} as const
+
+export type BillingClosingScalarFieldEnum = (typeof BillingClosingScalarFieldEnum)[keyof typeof BillingClosingScalarFieldEnum]
 
 
 export const MemberScalarFieldEnum = {

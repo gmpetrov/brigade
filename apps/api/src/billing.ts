@@ -366,11 +366,10 @@ export async function startCheckout(input: {
   let outcome: { url: string } | { adopted: Stripe.Subscription }
   try {
     outcome = await withWorkspaceLock(workspaceId, async (tx) => {
-      const { organization } = await tx.workspace.findUniqueOrThrow({
+      const { organizationId } = await tx.workspace.findUniqueOrThrow({
         where: { id: workspaceId },
-        include: { organization: true },
       })
-      if (beingDeleted(organization.billingClosingAt))
+      if (await beingDeleted(tx, organizationId))
         throw new HTTPException(409, { message: 'This organization is being deleted' })
       const current = await workspacePlan(workspaceId, tx)
       if (current && entitles(current.status))
@@ -450,22 +449,32 @@ export async function startCheckout(input: {
 /** How long an organization stays closed to Checkout once its deletion is decided. */
 const DELETION_LEASE_MS = 10 * 60_000
 
-const beingDeleted = (closingAt: Date | null) =>
-  !!closingAt && Date.now() - closingAt.getTime() < DELETION_LEASE_MS
+/** Whether a deletion of the organization is under way: one of its closings is young enough. */
+async function beingDeleted(db: Db, organizationId: string) {
+  const since = new Date(Date.now() - DELETION_LEASE_MS)
+  return !!(await db.billingClosing.findFirst({
+    where: { organizationId, createdAt: { gt: since } },
+    select: { id: true },
+  }))
+}
 
 /**
  * Before an organization is deleted (better-auth, src/auth.ts). First it is closed to Checkout
- * (Organization.billingClosingAt, which startCheckout reads under each workspace's lock), for
- * the few moments until it is gone; then, workspace by workspace under its lock, the
- * Checkouts still open are expired and a subscription that is not over refuses the deletion:
- * it would go on billing a workspace that is gone. Refused, the organization opens again;
- * should the deletion fail after this, the closing lapses by itself.
+ * with a closing of this request's own (BillingClosing, which startCheckout reads under each
+ * workspace's lock), for the few moments until it is gone; then, workspace by workspace under
+ * its lock, the Checkouts still open are expired and a subscription that is not over refuses
+ * the deletion: it would go on billing a workspace that is gone. Refused or failed, this
+ * request removes its own closing, never another's; should the deletion fail after this, the
+ * closing lapses by itself.
  */
 export async function guardOrganizationDeletion(organizationId: string) {
   if (!stripeClient) return
-  await prisma.organization.update({
-    where: { id: organizationId },
-    data: { billingClosingAt: new Date() },
+  // The lapsed closings of deletions that failed earlier go.
+  await prisma.billingClosing.deleteMany({
+    where: { organizationId, createdAt: { lte: new Date(Date.now() - DELETION_LEASE_MS) } },
+  })
+  const closing = await prisma.billingClosing.create({
+    data: { organizationId, createdAt: new Date() },
   })
   try {
     // Read once closed: a workspace made from now on cannot start a Checkout either.
@@ -484,10 +493,7 @@ export async function guardOrganizationDeletion(organizationId: string) {
         })
     }
   } catch (error) {
-    await prisma.organization.update({
-      where: { id: organizationId },
-      data: { billingClosingAt: null },
-    })
+    await prisma.billingClosing.deleteMany({ where: { id: closing.id } })
     throw error
   }
 }

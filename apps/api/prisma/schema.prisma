@@ -113,19 +113,29 @@ model Verification {
 }
 
 model Organization {
-  id               String       @id
-  name             String
-  slug             String       @unique
-  logo             String?
-  metadata         String?
-  /// Set when its deletion is decided (src/billing.ts): no Checkout starts in it for the few
-  /// moments until it is gone. Lapses by itself after 10 minutes.
-  billingClosingAt DateTime?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime?    @updatedAt
-  members          Member[]
-  invitations      Invitation[]
-  workspaces       Workspace[]
+  id              String           @id
+  name            String
+  slug            String           @unique
+  logo            String?
+  metadata        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime?        @updatedAt
+  members         Member[]
+  invitations     Invitation[]
+  workspaces      Workspace[]
+  billingClosings BillingClosing[]
+}
+
+/// A deletion of the organization under way (src/billing.ts): while one is younger than 10
+/// minutes, no Checkout starts in it. One per request, so each removes only its own when it
+/// is refused or fails; the deletion itself removes them all.
+model BillingClosing {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime
+
+  @@index([organizationId])
 }
 
 /// A user's role in an organization: owner, admin or member.

@@ -93,6 +93,8 @@ const fake = {
   sessions: [] as Fake[],
   /** The next subscription reads fail, as when Stripe cannot be reached. */
   failReads: 0,
+  /** The next subscription lists fail, as when Stripe cannot be reached. */
+  failLists: 0,
   /** A Checkout paid just as Brigade expires it: Stripe then refuses to expire it. */
   paidOnExpire: null as string | null,
   /** The next subscription reads answer with what Stripe had when asked, this much later. */
@@ -110,6 +112,10 @@ stripe.subscriptions.retrieve = (async (subscriptionId: string) => {
 }) as never
 stripe.subscriptions.list = ((params: { customer: string }) =>
   (async function* () {
+    if (fake.failLists > 0) {
+      fake.failLists--
+      throw new Error('Stripe is unreachable')
+    }
     for (const subscription of fake.subscriptions.values())
       if (subscription.customer === params.customer) yield structuredClone(subscription)
   })()) as never
@@ -566,12 +572,35 @@ test('once its deletion is decided, no Checkout starts in the organization', { s
     await assert.rejects(checkout(second), /being deleted/)
     assert.equal(await billing.workspaceCustomerId(first), null)
     // The deletion failed after all: the closing lapses by itself.
-    await prisma.organization.update({
-      where: { id: organizationId },
-      data: { billingClosingAt: new Date(Date.now() - 11 * 60_000) },
+    await prisma.billingClosing.updateMany({
+      where: { organizationId },
+      data: { createdAt: new Date(Date.now() - 11 * 60_000) },
     })
     await checkout(first)
     assert.equal((await sessionsOf(first)).length, 1)
+  } finally {
+    await prisma.organization.deleteMany({ where: { id: organizationId } })
+  }
+})
+
+test("two deletions at once: the one that fails leaves the other's closing", { skip }, async () => {
+  const organizationId = `org-two-deletions-${id}`
+  await prisma.organization.create({
+    data: { id: organizationId, name: organizationId, slug: organizationId },
+  })
+  try {
+    const workspaceId = (await prisma.workspace.create({ data: { organizationId, name: 'twice' } }))
+      .id
+    // A Checkout opened earlier: the workspace has its customer, so the guards ask Stripe.
+    await checkout(workspaceId)
+    // B's deletion passes its guard; Better Auth has not deleted it yet.
+    await billing.guardOrganizationDeletion(organizationId)
+    // A's, at the same time, fails on Stripe.
+    fake.failLists = 1
+    await assert.rejects(billing.guardOrganizationDeletion(organizationId), /unreachable/)
+    // B's closing holds: no Checkout starts before B's deletion is done.
+    await assert.rejects(checkout(workspaceId), /being deleted/)
+    assert.equal((await sessionsOf(workspaceId)).length, 0)
   } finally {
     await prisma.organization.deleteMany({ where: { id: organizationId } })
   }

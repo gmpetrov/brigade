@@ -1,7 +1,4 @@
 -- AlterTable
-ALTER TABLE "Organization" ADD COLUMN     "billingClosingAt" TIMESTAMP(3);
-
--- AlterTable
 ALTER TABLE "Workspace" ADD COLUMN     "stripeCustomerId" TEXT;
 
 -- CreateTable
@@ -24,12 +21,27 @@ CREATE TABLE "BillingSubscription" (
     CONSTRAINT "BillingSubscription_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "BillingClosing" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "BillingClosing_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE INDEX "BillingSubscription_workspaceId_idx" ON "BillingSubscription"("workspaceId");
 
 -- CreateIndex
 CREATE INDEX "BillingSubscription_stripeSubscriptionId_idx" ON "BillingSubscription"("stripeSubscriptionId");
 
+-- CreateIndex
+CREATE INDEX "BillingClosing_organizationId_idx" ON "BillingClosing"("organizationId");
+
 -- AddForeignKey
 ALTER TABLE "BillingSubscription" ADD CONSTRAINT "BillingSubscription_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BillingClosing" ADD CONSTRAINT "BillingClosing_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

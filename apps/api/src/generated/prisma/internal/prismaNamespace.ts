@@ -403,6 +403,7 @@ export const ModelName = {
   AuthAccount: 'AuthAccount',
   Verification: 'Verification',
   Organization: 'Organization',
+  BillingClosing: 'BillingClosing',
   Member: 'Member',
   Invitation: 'Invitation',
   Workspace: 'Workspace',
@@ -473,7 +474,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow"
+    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -918,6 +919,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.OrganizationCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.OrganizationCountAggregateOutputType> | number
+        }
+      }
+    }
+    BillingClosing: {
+      payload: Prisma.$BillingClosingPayload<ExtArgs>
+      fields: Prisma.BillingClosingFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.BillingClosingFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.BillingClosingFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload>
+        }
+        findFirst: {
+          args: Prisma.BillingClosingFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.BillingClosingFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload>
+        }
+        findMany: {
+          args: Prisma.BillingClosingFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload>[]
+        }
+        create: {
+          args: Prisma.BillingClosingCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload>
+        }
+        createMany: {
+          args: Prisma.BillingClosingCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.BillingClosingCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload>[]
+        }
+        delete: {
+          args: Prisma.BillingClosingDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload>
+        }
+        update: {
+          args: Prisma.BillingClosingUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload>
+        }
+        deleteMany: {
+          args: Prisma.BillingClosingDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.BillingClosingUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.BillingClosingUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload>[]
+        }
+        upsert: {
+          args: Prisma.BillingClosingUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BillingClosingPayload>
+        }
+        aggregate: {
+          args: Prisma.BillingClosingAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateBillingClosing>
+        }
+        groupBy: {
+          args: Prisma.BillingClosingGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BillingClosingGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.BillingClosingCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BillingClosingCountAggregateOutputType> | number
         }
       }
     }
@@ -5116,12 +5191,20 @@ export const OrganizationScalarFieldEnum = {
   slug: 'slug',
   logo: 'logo',
   metadata: 'metadata',
-  billingClosingAt: 'billingClosingAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type OrganizationScalarFieldEnum = (typeof OrganizationScalarFieldEnum)[keyof typeof OrganizationScalarFieldEnum]
+
+
+export const BillingClosingScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  createdAt: 'createdAt'
+} as const
+
+export type BillingClosingScalarFieldEnum = (typeof BillingClosingScalarFieldEnum)[keyof typeof BillingClosingScalarFieldEnum]
 
 
 export const MemberScalarFieldEnum = {
@@ -6906,6 +6989,7 @@ export type GlobalOmitConfig = {
   authAccount?: Prisma.AuthAccountOmit
   verification?: Prisma.VerificationOmit
   organization?: Prisma.OrganizationOmit
+  billingClosing?: Prisma.BillingClosingOmit
   member?: Prisma.MemberOmit
   invitation?: Prisma.InvitationOmit
   workspace?: Prisma.WorkspaceOmit

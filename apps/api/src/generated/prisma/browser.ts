@@ -50,6 +50,13 @@ export type Verification = Prisma.VerificationModel
  */
 export type Organization = Prisma.OrganizationModel
 /**
+ * Model BillingClosing
+ * A deletion of the organization under way (src/billing.ts): while one is younger than 10
+ * minutes, no Checkout starts in it. One per request, so each removes only its own when it
+ * is refused or fails; the deletion itself removes them all.
+ */
+export type BillingClosing = Prisma.BillingClosingModel
+/**
  * Model Member
  * A user's role in an organization: owner, admin or member.
  */

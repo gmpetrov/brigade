@@ -41,7 +41,8 @@ workspace, paid by the owner or admin who subscribes. All of it is in
 - **An organization is not deleted while one of its workspaces has a subscription that is
   not over** (better-auth's `beforeDeleteOrganization`): it would go on billing a workspace
   that is gone. Once its deletion is decided, the organization is closed to Checkout
-  (`Organization.billingClosingAt`, read under each workspace's lock) until it is gone, and
+  (a `BillingClosing` of each deletion request, read under each workspace's lock; a
+  request that is refused or fails removes only its own) until it is gone, and
   its open Checkouts are expired; the closing lapses after 10 minutes should the deletion
   fail.
 - Brigade's metadata on the Checkout and its subscription (`workspaceId`, `rowId`) tie

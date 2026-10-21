@@ -30,7 +30,6 @@ export type OrganizationMinAggregateOutputType = {
   slug: string | null
   logo: string | null
   metadata: string | null
-  billingClosingAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -41,7 +40,6 @@ export type OrganizationMaxAggregateOutputType = {
   slug: string | null
   logo: string | null
   metadata: string | null
-  billingClosingAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -52,7 +50,6 @@ export type OrganizationCountAggregateOutputType = {
   slug: number
   logo: number
   metadata: number
-  billingClosingAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -65,7 +62,6 @@ export type OrganizationMinAggregateInputType = {
   slug?: true
   logo?: true
   metadata?: true
-  billingClosingAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -76,7 +72,6 @@ export type OrganizationMaxAggregateInputType = {
   slug?: true
   logo?: true
   metadata?: true
-  billingClosingAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -87,7 +82,6 @@ export type OrganizationCountAggregateInputType = {
   slug?: true
   logo?: true
   metadata?: true
-  billingClosingAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -171,7 +165,6 @@ export type OrganizationGroupByOutputType = {
   slug: string
   logo: string | null
   metadata: string | null
-  billingClosingAt: Date | null
   createdAt: Date
   updatedAt: Date | null
   _count: OrganizationCountAggregateOutputType | null
@@ -203,12 +196,12 @@ export type OrganizationWhereInput = {
   slug?: Prisma.StringFilter<"Organization"> | string
   logo?: Prisma.StringNullableFilter<"Organization"> | string | null
   metadata?: Prisma.StringNullableFilter<"Organization"> | string | null
-  billingClosingAt?: Prisma.DateTimeNullableFilter<"Organization"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Organization"> | Date | string
   updatedAt?: Prisma.DateTimeNullableFilter<"Organization"> | Date | string | null
   members?: Prisma.MemberListRelationFilter
   invitations?: Prisma.InvitationListRelationFilter
   workspaces?: Prisma.WorkspaceListRelationFilter
+  billingClosings?: Prisma.BillingClosingListRelationFilter
 }
 
 export type OrganizationOrderByWithRelationInput = {
@@ -217,12 +210,12 @@ export type OrganizationOrderByWithRelationInput = {
   slug?: Prisma.SortOrder
   logo?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
-  billingClosingAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   members?: Prisma.MemberOrderByRelationAggregateInput
   invitations?: Prisma.InvitationOrderByRelationAggregateInput
   workspaces?: Prisma.WorkspaceOrderByRelationAggregateInput
+  billingClosings?: Prisma.BillingClosingOrderByRelationAggregateInput
 }
 
 export type OrganizationWhereUniqueInput = Prisma.AtLeast<{
@@ -234,12 +227,12 @@ export type OrganizationWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"Organization"> | string
   logo?: Prisma.StringNullableFilter<"Organization"> | string | null
   metadata?: Prisma.StringNullableFilter<"Organization"> | string | null
-  billingClosingAt?: Prisma.DateTimeNullableFilter<"Organization"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Organization"> | Date | string
   updatedAt?: Prisma.DateTimeNullableFilter<"Organization"> | Date | string | null
   members?: Prisma.MemberListRelationFilter
   invitations?: Prisma.InvitationListRelationFilter
   workspaces?: Prisma.WorkspaceListRelationFilter
+  billingClosings?: Prisma.BillingClosingListRelationFilter
 }, "id" | "slug">
 
 export type OrganizationOrderByWithAggregationInput = {
@@ -248,7 +241,6 @@ export type OrganizationOrderByWithAggregationInput = {
   slug?: Prisma.SortOrder
   logo?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
-  billingClosingAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.OrganizationCountOrderByAggregateInput
@@ -265,7 +257,6 @@ export type OrganizationScalarWhereWithAggregatesInput = {
   slug?: Prisma.StringWithAggregatesFilter<"Organization"> | string
   logo?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
   metadata?: Prisma.StringNullableWithAggregatesFilter<"Organization"> | string | null
-  billingClosingAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Organization"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Organization"> | Date | string
   updatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Organization"> | Date | string | null
 }
@@ -276,12 +267,12 @@ export type OrganizationCreateInput = {
   slug: string
   logo?: string | null
   metadata?: string | null
-  billingClosingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string | null
   members?: Prisma.MemberCreateNestedManyWithoutOrganizationInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutOrganizationInput
   workspaces?: Prisma.WorkspaceCreateNestedManyWithoutOrganizationInput
+  billingClosings?: Prisma.BillingClosingCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationUncheckedCreateInput = {
@@ -290,12 +281,12 @@ export type OrganizationUncheckedCreateInput = {
   slug: string
   logo?: string | null
   metadata?: string | null
-  billingClosingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string | null
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutOrganizationInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutOrganizationInput
   workspaces?: Prisma.WorkspaceUncheckedCreateNestedManyWithoutOrganizationInput
+  billingClosings?: Prisma.BillingClosingUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationUpdateInput = {
@@ -304,12 +295,12 @@ export type OrganizationUpdateInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  billingClosingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   members?: Prisma.MemberUpdateManyWithoutOrganizationNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutOrganizationNestedInput
   workspaces?: Prisma.WorkspaceUpdateManyWithoutOrganizationNestedInput
+  billingClosings?: Prisma.BillingClosingUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationUncheckedUpdateInput = {
@@ -318,12 +309,12 @@ export type OrganizationUncheckedUpdateInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  billingClosingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   members?: Prisma.MemberUncheckedUpdateManyWithoutOrganizationNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutOrganizationNestedInput
   workspaces?: Prisma.WorkspaceUncheckedUpdateManyWithoutOrganizationNestedInput
+  billingClosings?: Prisma.BillingClosingUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationCreateManyInput = {
@@ -332,7 +323,6 @@ export type OrganizationCreateManyInput = {
   slug: string
   logo?: string | null
   metadata?: string | null
-  billingClosingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string | null
 }
@@ -343,7 +333,6 @@ export type OrganizationUpdateManyMutationInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  billingClosingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -354,7 +343,6 @@ export type OrganizationUncheckedUpdateManyInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  billingClosingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -365,7 +353,6 @@ export type OrganizationCountOrderByAggregateInput = {
   slug?: Prisma.SortOrder
   logo?: Prisma.SortOrder
   metadata?: Prisma.SortOrder
-  billingClosingAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -376,7 +363,6 @@ export type OrganizationMaxOrderByAggregateInput = {
   slug?: Prisma.SortOrder
   logo?: Prisma.SortOrder
   metadata?: Prisma.SortOrder
-  billingClosingAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -387,7 +373,6 @@ export type OrganizationMinOrderByAggregateInput = {
   slug?: Prisma.SortOrder
   logo?: Prisma.SortOrder
   metadata?: Prisma.SortOrder
-  billingClosingAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -395,6 +380,20 @@ export type OrganizationMinOrderByAggregateInput = {
 export type OrganizationScalarRelationFilter = {
   is?: Prisma.OrganizationWhereInput
   isNot?: Prisma.OrganizationWhereInput
+}
+
+export type OrganizationCreateNestedOneWithoutBillingClosingsInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutBillingClosingsInput, Prisma.OrganizationUncheckedCreateWithoutBillingClosingsInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutBillingClosingsInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+}
+
+export type OrganizationUpdateOneRequiredWithoutBillingClosingsNestedInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutBillingClosingsInput, Prisma.OrganizationUncheckedCreateWithoutBillingClosingsInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutBillingClosingsInput
+  upsert?: Prisma.OrganizationUpsertWithoutBillingClosingsInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutBillingClosingsInput, Prisma.OrganizationUpdateWithoutBillingClosingsInput>, Prisma.OrganizationUncheckedUpdateWithoutBillingClosingsInput>
 }
 
 export type OrganizationCreateNestedOneWithoutMembersInput = {
@@ -439,17 +438,85 @@ export type OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutWorkspacesInput, Prisma.OrganizationUpdateWithoutWorkspacesInput>, Prisma.OrganizationUncheckedUpdateWithoutWorkspacesInput>
 }
 
+export type OrganizationCreateWithoutBillingClosingsInput = {
+  id: string
+  name: string
+  slug: string
+  logo?: string | null
+  metadata?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string | null
+  members?: Prisma.MemberCreateNestedManyWithoutOrganizationInput
+  invitations?: Prisma.InvitationCreateNestedManyWithoutOrganizationInput
+  workspaces?: Prisma.WorkspaceCreateNestedManyWithoutOrganizationInput
+}
+
+export type OrganizationUncheckedCreateWithoutBillingClosingsInput = {
+  id: string
+  name: string
+  slug: string
+  logo?: string | null
+  metadata?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string | null
+  members?: Prisma.MemberUncheckedCreateNestedManyWithoutOrganizationInput
+  invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutOrganizationInput
+  workspaces?: Prisma.WorkspaceUncheckedCreateNestedManyWithoutOrganizationInput
+}
+
+export type OrganizationCreateOrConnectWithoutBillingClosingsInput = {
+  where: Prisma.OrganizationWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutBillingClosingsInput, Prisma.OrganizationUncheckedCreateWithoutBillingClosingsInput>
+}
+
+export type OrganizationUpsertWithoutBillingClosingsInput = {
+  update: Prisma.XOR<Prisma.OrganizationUpdateWithoutBillingClosingsInput, Prisma.OrganizationUncheckedUpdateWithoutBillingClosingsInput>
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutBillingClosingsInput, Prisma.OrganizationUncheckedCreateWithoutBillingClosingsInput>
+  where?: Prisma.OrganizationWhereInput
+}
+
+export type OrganizationUpdateToOneWithWhereWithoutBillingClosingsInput = {
+  where?: Prisma.OrganizationWhereInput
+  data: Prisma.XOR<Prisma.OrganizationUpdateWithoutBillingClosingsInput, Prisma.OrganizationUncheckedUpdateWithoutBillingClosingsInput>
+}
+
+export type OrganizationUpdateWithoutBillingClosingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  members?: Prisma.MemberUpdateManyWithoutOrganizationNestedInput
+  invitations?: Prisma.InvitationUpdateManyWithoutOrganizationNestedInput
+  workspaces?: Prisma.WorkspaceUpdateManyWithoutOrganizationNestedInput
+}
+
+export type OrganizationUncheckedUpdateWithoutBillingClosingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  members?: Prisma.MemberUncheckedUpdateManyWithoutOrganizationNestedInput
+  invitations?: Prisma.InvitationUncheckedUpdateManyWithoutOrganizationNestedInput
+  workspaces?: Prisma.WorkspaceUncheckedUpdateManyWithoutOrganizationNestedInput
+}
+
 export type OrganizationCreateWithoutMembersInput = {
   id: string
   name: string
   slug: string
   logo?: string | null
   metadata?: string | null
-  billingClosingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string | null
   invitations?: Prisma.InvitationCreateNestedManyWithoutOrganizationInput
   workspaces?: Prisma.WorkspaceCreateNestedManyWithoutOrganizationInput
+  billingClosings?: Prisma.BillingClosingCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationUncheckedCreateWithoutMembersInput = {
@@ -458,11 +525,11 @@ export type OrganizationUncheckedCreateWithoutMembersInput = {
   slug: string
   logo?: string | null
   metadata?: string | null
-  billingClosingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string | null
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutOrganizationInput
   workspaces?: Prisma.WorkspaceUncheckedCreateNestedManyWithoutOrganizationInput
+  billingClosings?: Prisma.BillingClosingUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationCreateOrConnectWithoutMembersInput = {
@@ -487,11 +554,11 @@ export type OrganizationUpdateWithoutMembersInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  billingClosingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   invitations?: Prisma.InvitationUpdateManyWithoutOrganizationNestedInput
   workspaces?: Prisma.WorkspaceUpdateManyWithoutOrganizationNestedInput
+  billingClosings?: Prisma.BillingClosingUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationUncheckedUpdateWithoutMembersInput = {
@@ -500,11 +567,11 @@ export type OrganizationUncheckedUpdateWithoutMembersInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  billingClosingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutOrganizationNestedInput
   workspaces?: Prisma.WorkspaceUncheckedUpdateManyWithoutOrganizationNestedInput
+  billingClosings?: Prisma.BillingClosingUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationCreateWithoutInvitationsInput = {
@@ -513,11 +580,11 @@ export type OrganizationCreateWithoutInvitationsInput = {
   slug: string
   logo?: string | null
   metadata?: string | null
-  billingClosingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string | null
   members?: Prisma.MemberCreateNestedManyWithoutOrganizationInput
   workspaces?: Prisma.WorkspaceCreateNestedManyWithoutOrganizationInput
+  billingClosings?: Prisma.BillingClosingCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationUncheckedCreateWithoutInvitationsInput = {
@@ -526,11 +593,11 @@ export type OrganizationUncheckedCreateWithoutInvitationsInput = {
   slug: string
   logo?: string | null
   metadata?: string | null
-  billingClosingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string | null
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutOrganizationInput
   workspaces?: Prisma.WorkspaceUncheckedCreateNestedManyWithoutOrganizationInput
+  billingClosings?: Prisma.BillingClosingUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationCreateOrConnectWithoutInvitationsInput = {
@@ -555,11 +622,11 @@ export type OrganizationUpdateWithoutInvitationsInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  billingClosingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   members?: Prisma.MemberUpdateManyWithoutOrganizationNestedInput
   workspaces?: Prisma.WorkspaceUpdateManyWithoutOrganizationNestedInput
+  billingClosings?: Prisma.BillingClosingUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationUncheckedUpdateWithoutInvitationsInput = {
@@ -568,11 +635,11 @@ export type OrganizationUncheckedUpdateWithoutInvitationsInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  billingClosingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   members?: Prisma.MemberUncheckedUpdateManyWithoutOrganizationNestedInput
   workspaces?: Prisma.WorkspaceUncheckedUpdateManyWithoutOrganizationNestedInput
+  billingClosings?: Prisma.BillingClosingUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationCreateWithoutWorkspacesInput = {
@@ -581,11 +648,11 @@ export type OrganizationCreateWithoutWorkspacesInput = {
   slug: string
   logo?: string | null
   metadata?: string | null
-  billingClosingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string | null
   members?: Prisma.MemberCreateNestedManyWithoutOrganizationInput
   invitations?: Prisma.InvitationCreateNestedManyWithoutOrganizationInput
+  billingClosings?: Prisma.BillingClosingCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationUncheckedCreateWithoutWorkspacesInput = {
@@ -594,11 +661,11 @@ export type OrganizationUncheckedCreateWithoutWorkspacesInput = {
   slug: string
   logo?: string | null
   metadata?: string | null
-  billingClosingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string | null
   members?: Prisma.MemberUncheckedCreateNestedManyWithoutOrganizationInput
   invitations?: Prisma.InvitationUncheckedCreateNestedManyWithoutOrganizationInput
+  billingClosings?: Prisma.BillingClosingUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationCreateOrConnectWithoutWorkspacesInput = {
@@ -623,11 +690,11 @@ export type OrganizationUpdateWithoutWorkspacesInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  billingClosingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   members?: Prisma.MemberUpdateManyWithoutOrganizationNestedInput
   invitations?: Prisma.InvitationUpdateManyWithoutOrganizationNestedInput
+  billingClosings?: Prisma.BillingClosingUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationUncheckedUpdateWithoutWorkspacesInput = {
@@ -636,11 +703,11 @@ export type OrganizationUncheckedUpdateWithoutWorkspacesInput = {
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  billingClosingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   members?: Prisma.MemberUncheckedUpdateManyWithoutOrganizationNestedInput
   invitations?: Prisma.InvitationUncheckedUpdateManyWithoutOrganizationNestedInput
+  billingClosings?: Prisma.BillingClosingUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
 
@@ -652,12 +719,14 @@ export type OrganizationCountOutputType = {
   members: number
   invitations: number
   workspaces: number
+  billingClosings: number
 }
 
 export type OrganizationCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | OrganizationCountOutputTypeCountMembersArgs
   invitations?: boolean | OrganizationCountOutputTypeCountInvitationsArgs
   workspaces?: boolean | OrganizationCountOutputTypeCountWorkspacesArgs
+  billingClosings?: boolean | OrganizationCountOutputTypeCountBillingClosingsArgs
 }
 
 /**
@@ -691,6 +760,13 @@ export type OrganizationCountOutputTypeCountWorkspacesArgs<ExtArgs extends runti
   where?: Prisma.WorkspaceWhereInput
 }
 
+/**
+ * OrganizationCountOutputType without action
+ */
+export type OrganizationCountOutputTypeCountBillingClosingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BillingClosingWhereInput
+}
+
 
 export type OrganizationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -698,12 +774,12 @@ export type OrganizationSelect<ExtArgs extends runtime.Types.Extensions.Internal
   slug?: boolean
   logo?: boolean
   metadata?: boolean
-  billingClosingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   members?: boolean | Prisma.Organization$membersArgs<ExtArgs>
   invitations?: boolean | Prisma.Organization$invitationsArgs<ExtArgs>
   workspaces?: boolean | Prisma.Organization$workspacesArgs<ExtArgs>
+  billingClosings?: boolean | Prisma.Organization$billingClosingsArgs<ExtArgs>
   _count?: boolean | Prisma.OrganizationCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["organization"]>
 
@@ -713,7 +789,6 @@ export type OrganizationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   slug?: boolean
   logo?: boolean
   metadata?: boolean
-  billingClosingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["organization"]>
@@ -724,7 +799,6 @@ export type OrganizationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   slug?: boolean
   logo?: boolean
   metadata?: boolean
-  billingClosingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["organization"]>
@@ -735,16 +809,16 @@ export type OrganizationSelectScalar = {
   slug?: boolean
   logo?: boolean
   metadata?: boolean
-  billingClosingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type OrganizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "slug" | "logo" | "metadata" | "billingClosingAt" | "createdAt" | "updatedAt", ExtArgs["result"]["organization"]>
+export type OrganizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "slug" | "logo" | "metadata" | "createdAt" | "updatedAt", ExtArgs["result"]["organization"]>
 export type OrganizationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | Prisma.Organization$membersArgs<ExtArgs>
   invitations?: boolean | Prisma.Organization$invitationsArgs<ExtArgs>
   workspaces?: boolean | Prisma.Organization$workspacesArgs<ExtArgs>
+  billingClosings?: boolean | Prisma.Organization$billingClosingsArgs<ExtArgs>
   _count?: boolean | Prisma.OrganizationCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type OrganizationIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -756,6 +830,7 @@ export type $OrganizationPayload<ExtArgs extends runtime.Types.Extensions.Intern
     members: Prisma.$MemberPayload<ExtArgs>[]
     invitations: Prisma.$InvitationPayload<ExtArgs>[]
     workspaces: Prisma.$WorkspacePayload<ExtArgs>[]
+    billingClosings: Prisma.$BillingClosingPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -763,11 +838,6 @@ export type $OrganizationPayload<ExtArgs extends runtime.Types.Extensions.Intern
     slug: string
     logo: string | null
     metadata: string | null
-    /**
-     * Set when its deletion is decided (src/billing.ts): no Checkout starts in it for the few
-     * moments until it is gone. Lapses by itself after 10 minutes.
-     */
-    billingClosingAt: Date | null
     createdAt: Date
     updatedAt: Date | null
   }, ExtArgs["result"]["organization"]>
@@ -1167,6 +1237,7 @@ export interface Prisma__OrganizationClient<T, Null = never, ExtArgs extends run
   members<T extends Prisma.Organization$membersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$membersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   invitations<T extends Prisma.Organization$invitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$invitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   workspaces<T extends Prisma.Organization$workspacesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$workspacesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  billingClosings<T extends Prisma.Organization$billingClosingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$billingClosingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingClosingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1201,7 +1272,6 @@ export interface OrganizationFieldRefs {
   readonly slug: Prisma.FieldRef<"Organization", 'String'>
   readonly logo: Prisma.FieldRef<"Organization", 'String'>
   readonly metadata: Prisma.FieldRef<"Organization", 'String'>
-  readonly billingClosingAt: Prisma.FieldRef<"Organization", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Organization", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Organization", 'DateTime'>
 }
@@ -1666,6 +1736,30 @@ export type Organization$workspacesArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.WorkspaceScalarFieldEnum | Prisma.WorkspaceScalarFieldEnum[]
+}
+
+/**
+ * Organization.billingClosings
+ */
+export type Organization$billingClosingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BillingClosing
+   */
+  select?: Prisma.BillingClosingSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the BillingClosing
+   */
+  omit?: Prisma.BillingClosingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingClosingInclude<ExtArgs> | null
+  where?: Prisma.BillingClosingWhereInput
+  orderBy?: Prisma.BillingClosingOrderByWithRelationInput | Prisma.BillingClosingOrderByWithRelationInput[]
+  cursor?: Prisma.BillingClosingWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.BillingClosingScalarFieldEnum | Prisma.BillingClosingScalarFieldEnum[]
 }
 
 /**
