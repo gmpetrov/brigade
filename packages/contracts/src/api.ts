@@ -19,9 +19,12 @@ export const SwitchWorkspace = z.object({ workspaceId: z.string() })
 
 /** One of HARNESS_MODELS for the teammate's harness, or null for the account's default. */
 export const TeammateModel = z.string().trim().max(100).nullable()
+/** A teammate's role in a few words, shown as a badge beside its name. */
+const TeammateTitle = z.string().trim().max(40)
 export const CreateTeammate = z
   .object({
     name: z.string().trim().min(1).max(80),
+    title: TeammateTitle.default(''),
     instructions: z.string().max(20_000).default(''),
     harness: HarnessId.default('claude_code'),
     model: TeammateModel.default(null),
@@ -46,6 +49,7 @@ export type Caps = z.infer<typeof Caps>
 // Not CreateTeammate.partial(): Zod applies defaults inside partial(), which would reset unsent fields.
 export const UpdateTeammate = z.object({
   name: z.string().trim().min(1).max(80).optional(),
+  title: TeammateTitle.optional(),
   instructions: z.string().max(20_000).optional(),
   harness: HarnessId.optional(),
   /** Checked against the teammate's harness by the API, which knows the stored one. */

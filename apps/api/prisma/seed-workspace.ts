@@ -110,6 +110,7 @@ export async function seedWorkspace(users: Users) {
   // -------------------------------------------------------------------------
   const teammate = (data: {
     name: string
+    title?: string
     kind?: 'chief' | 'teammate'
     instructions?: string
     caps?: object
@@ -120,6 +121,7 @@ export async function seedWorkspace(users: Users) {
   const chief = await teammate({ name: 'Chief', kind: 'chief' })
   const riley = await teammate({
     name: 'Riley',
+    title: 'Software engineer',
     instructions:
       'Full-stack engineer on the Acme web app (Next.js, Postgres).\nOpen a pull request for every change; never push to main.',
     libraryAccess: 'read_write',
@@ -131,6 +133,7 @@ export async function seedWorkspace(users: Users) {
   })
   const sam = await teammate({
     name: 'Sam',
+    title: 'Lead customer support',
     instructions:
       'Customer support: answers support@acme.test, looks customers up in Stripe.\nRefunds over $100 need a person to approve.',
     permissionPolicy: { connectorWrites: 'ask' },

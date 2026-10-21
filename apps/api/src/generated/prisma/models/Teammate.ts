@@ -29,6 +29,7 @@ export type TeammateMinAggregateOutputType = {
   organizationId: string | null
   workspaceId: string | null
   name: string | null
+  title: string | null
   kind: $Enums.TeammateKind | null
   instructions: string | null
   harness: $Enums.Harness | null
@@ -44,6 +45,7 @@ export type TeammateMaxAggregateOutputType = {
   organizationId: string | null
   workspaceId: string | null
   name: string | null
+  title: string | null
   kind: $Enums.TeammateKind | null
   instructions: string | null
   harness: $Enums.Harness | null
@@ -59,6 +61,7 @@ export type TeammateCountAggregateOutputType = {
   organizationId: number
   workspaceId: number
   name: number
+  title: number
   kind: number
   instructions: number
   harness: number
@@ -78,6 +81,7 @@ export type TeammateMinAggregateInputType = {
   organizationId?: true
   workspaceId?: true
   name?: true
+  title?: true
   kind?: true
   instructions?: true
   harness?: true
@@ -93,6 +97,7 @@ export type TeammateMaxAggregateInputType = {
   organizationId?: true
   workspaceId?: true
   name?: true
+  title?: true
   kind?: true
   instructions?: true
   harness?: true
@@ -108,6 +113,7 @@ export type TeammateCountAggregateInputType = {
   organizationId?: true
   workspaceId?: true
   name?: true
+  title?: true
   kind?: true
   instructions?: true
   harness?: true
@@ -198,6 +204,7 @@ export type TeammateGroupByOutputType = {
   organizationId: string
   workspaceId: string
   name: string
+  title: string
   kind: $Enums.TeammateKind
   instructions: string
   harness: $Enums.Harness
@@ -236,6 +243,7 @@ export type TeammateWhereInput = {
   organizationId?: Prisma.StringFilter<"Teammate"> | string
   workspaceId?: Prisma.StringFilter<"Teammate"> | string
   name?: Prisma.StringFilter<"Teammate"> | string
+  title?: Prisma.StringFilter<"Teammate"> | string
   kind?: Prisma.EnumTeammateKindFilter<"Teammate"> | $Enums.TeammateKind
   instructions?: Prisma.StringFilter<"Teammate"> | string
   harness?: Prisma.EnumHarnessFilter<"Teammate"> | $Enums.Harness
@@ -272,6 +280,7 @@ export type TeammateOrderByWithRelationInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   instructions?: Prisma.SortOrder
   harness?: Prisma.SortOrder
@@ -311,6 +320,7 @@ export type TeammateWhereUniqueInput = Prisma.AtLeast<{
   organizationId?: Prisma.StringFilter<"Teammate"> | string
   workspaceId?: Prisma.StringFilter<"Teammate"> | string
   name?: Prisma.StringFilter<"Teammate"> | string
+  title?: Prisma.StringFilter<"Teammate"> | string
   kind?: Prisma.EnumTeammateKindFilter<"Teammate"> | $Enums.TeammateKind
   instructions?: Prisma.StringFilter<"Teammate"> | string
   harness?: Prisma.EnumHarnessFilter<"Teammate"> | $Enums.Harness
@@ -347,6 +357,7 @@ export type TeammateOrderByWithAggregationInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   instructions?: Prisma.SortOrder
   harness?: Prisma.SortOrder
@@ -370,6 +381,7 @@ export type TeammateScalarWhereWithAggregatesInput = {
   organizationId?: Prisma.StringWithAggregatesFilter<"Teammate"> | string
   workspaceId?: Prisma.StringWithAggregatesFilter<"Teammate"> | string
   name?: Prisma.StringWithAggregatesFilter<"Teammate"> | string
+  title?: Prisma.StringWithAggregatesFilter<"Teammate"> | string
   kind?: Prisma.EnumTeammateKindWithAggregatesFilter<"Teammate"> | $Enums.TeammateKind
   instructions?: Prisma.StringWithAggregatesFilter<"Teammate"> | string
   harness?: Prisma.EnumHarnessWithAggregatesFilter<"Teammate"> | $Enums.Harness
@@ -386,6 +398,7 @@ export type TeammateCreateInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -422,6 +435,7 @@ export type TeammateUncheckedCreateInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -456,6 +470,7 @@ export type TeammateUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -492,6 +507,7 @@ export type TeammateUncheckedUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -527,6 +543,7 @@ export type TeammateCreateManyInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -543,6 +560,7 @@ export type TeammateUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -560,6 +578,7 @@ export type TeammateUncheckedUpdateManyInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -587,6 +606,7 @@ export type TeammateCountOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   instructions?: Prisma.SortOrder
   harness?: Prisma.SortOrder
@@ -604,6 +624,7 @@ export type TeammateMaxOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   instructions?: Prisma.SortOrder
   harness?: Prisma.SortOrder
@@ -619,6 +640,7 @@ export type TeammateMinOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   instructions?: Prisma.SortOrder
   harness?: Prisma.SortOrder
@@ -963,6 +985,7 @@ export type TeammateCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -997,6 +1020,7 @@ export type TeammateUncheckedCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1061,6 +1085,7 @@ export type TeammateScalarWhereInput = {
   organizationId?: Prisma.StringFilter<"Teammate"> | string
   workspaceId?: Prisma.StringFilter<"Teammate"> | string
   name?: Prisma.StringFilter<"Teammate"> | string
+  title?: Prisma.StringFilter<"Teammate"> | string
   kind?: Prisma.EnumTeammateKindFilter<"Teammate"> | $Enums.TeammateKind
   instructions?: Prisma.StringFilter<"Teammate"> | string
   harness?: Prisma.EnumHarnessFilter<"Teammate"> | $Enums.Harness
@@ -1077,6 +1102,7 @@ export type TeammateCreateWithoutSessionsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1112,6 +1138,7 @@ export type TeammateUncheckedCreateWithoutSessionsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1161,6 +1188,7 @@ export type TeammateUpdateWithoutSessionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1196,6 +1224,7 @@ export type TeammateUncheckedUpdateWithoutSessionsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1229,6 +1258,7 @@ export type TeammateCreateWithoutTasksInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1264,6 +1294,7 @@ export type TeammateUncheckedCreateWithoutTasksInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1302,6 +1333,7 @@ export type TeammateCreateWithoutTasksCreatedInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1337,6 +1369,7 @@ export type TeammateUncheckedCreateWithoutTasksCreatedInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1386,6 +1419,7 @@ export type TeammateUpdateWithoutTasksInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1421,6 +1455,7 @@ export type TeammateUncheckedUpdateWithoutTasksInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1465,6 +1500,7 @@ export type TeammateUpdateWithoutTasksCreatedInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1500,6 +1536,7 @@ export type TeammateUncheckedUpdateWithoutTasksCreatedInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1533,6 +1570,7 @@ export type TeammateCreateWithoutSchedulesInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1568,6 +1606,7 @@ export type TeammateUncheckedCreateWithoutSchedulesInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1606,6 +1645,7 @@ export type TeammateCreateWithoutSchedulesCreatedInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1641,6 +1681,7 @@ export type TeammateUncheckedCreateWithoutSchedulesCreatedInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1690,6 +1731,7 @@ export type TeammateUpdateWithoutSchedulesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1725,6 +1767,7 @@ export type TeammateUncheckedUpdateWithoutSchedulesInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1769,6 +1812,7 @@ export type TeammateUpdateWithoutSchedulesCreatedInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1804,6 +1848,7 @@ export type TeammateUncheckedUpdateWithoutSchedulesCreatedInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1837,6 +1882,7 @@ export type TeammateCreateWithoutWakeupsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1872,6 +1918,7 @@ export type TeammateUncheckedCreateWithoutWakeupsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -1921,6 +1968,7 @@ export type TeammateUpdateWithoutWakeupsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1956,6 +2004,7 @@ export type TeammateUncheckedUpdateWithoutWakeupsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -1989,6 +2038,7 @@ export type TeammateCreateWithoutReplyWatchesInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2024,6 +2074,7 @@ export type TeammateUncheckedCreateWithoutReplyWatchesInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2073,6 +2124,7 @@ export type TeammateUpdateWithoutReplyWatchesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2108,6 +2160,7 @@ export type TeammateUncheckedUpdateWithoutReplyWatchesInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2141,6 +2194,7 @@ export type TeammateCreateWithoutThreadSeatsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2176,6 +2230,7 @@ export type TeammateUncheckedCreateWithoutThreadSeatsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2225,6 +2280,7 @@ export type TeammateUpdateWithoutThreadSeatsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2260,6 +2316,7 @@ export type TeammateUncheckedUpdateWithoutThreadSeatsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2293,6 +2350,7 @@ export type TeammateCreateWithoutPullRequestsAuthoredInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2328,6 +2386,7 @@ export type TeammateUncheckedCreateWithoutPullRequestsAuthoredInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2377,6 +2436,7 @@ export type TeammateUpdateWithoutPullRequestsAuthoredInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2412,6 +2472,7 @@ export type TeammateUncheckedUpdateWithoutPullRequestsAuthoredInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2445,6 +2506,7 @@ export type TeammateCreateWithoutPullRequestReviewsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2480,6 +2542,7 @@ export type TeammateUncheckedCreateWithoutPullRequestReviewsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2529,6 +2592,7 @@ export type TeammateUpdateWithoutPullRequestReviewsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2564,6 +2628,7 @@ export type TeammateUncheckedUpdateWithoutPullRequestReviewsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2597,6 +2662,7 @@ export type TeammateCreateWithoutSavedCredentialsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2632,6 +2698,7 @@ export type TeammateUncheckedCreateWithoutSavedCredentialsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2681,6 +2748,7 @@ export type TeammateUpdateWithoutSavedCredentialsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2716,6 +2784,7 @@ export type TeammateUncheckedUpdateWithoutSavedCredentialsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2749,6 +2818,7 @@ export type TeammateCreateWithoutCredentialGrantsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2784,6 +2854,7 @@ export type TeammateUncheckedCreateWithoutCredentialGrantsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2833,6 +2904,7 @@ export type TeammateUpdateWithoutCredentialGrantsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2868,6 +2940,7 @@ export type TeammateUncheckedUpdateWithoutCredentialGrantsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -2901,6 +2974,7 @@ export type TeammateCreateWithoutGrantsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2936,6 +3010,7 @@ export type TeammateUncheckedCreateWithoutGrantsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -2985,6 +3060,7 @@ export type TeammateUpdateWithoutGrantsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3020,6 +3096,7 @@ export type TeammateUncheckedUpdateWithoutGrantsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3053,6 +3130,7 @@ export type TeammateCreateWithoutConnectionCallsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3088,6 +3166,7 @@ export type TeammateUncheckedCreateWithoutConnectionCallsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3137,6 +3216,7 @@ export type TeammateUpdateWithoutConnectionCallsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3172,6 +3252,7 @@ export type TeammateUncheckedUpdateWithoutConnectionCallsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3205,6 +3286,7 @@ export type TeammateCreateWithoutTriggersInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3240,6 +3322,7 @@ export type TeammateUncheckedCreateWithoutTriggersInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3289,6 +3372,7 @@ export type TeammateUpdateWithoutTriggersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3324,6 +3408,7 @@ export type TeammateUncheckedUpdateWithoutTriggersInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3357,6 +3442,7 @@ export type TeammateCreateWithoutDocumentsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3392,6 +3478,7 @@ export type TeammateUncheckedCreateWithoutDocumentsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3441,6 +3528,7 @@ export type TeammateUpdateWithoutDocumentsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3476,6 +3564,7 @@ export type TeammateUncheckedUpdateWithoutDocumentsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3509,6 +3598,7 @@ export type TeammateCreateWithoutLibraryFolderGrantsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3544,6 +3634,7 @@ export type TeammateUncheckedCreateWithoutLibraryFolderGrantsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3593,6 +3684,7 @@ export type TeammateUpdateWithoutLibraryFolderGrantsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3628,6 +3720,7 @@ export type TeammateUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3661,6 +3754,7 @@ export type TeammateCreateWithoutPlaybookInstallationsInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3696,6 +3790,7 @@ export type TeammateUncheckedCreateWithoutPlaybookInstallationsInput = {
   organizationId: string
   workspaceId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3745,6 +3840,7 @@ export type TeammateUpdateWithoutPlaybookInstallationsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3780,6 +3876,7 @@ export type TeammateUncheckedUpdateWithoutPlaybookInstallationsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3813,6 +3910,7 @@ export type TeammateCreateManyWorkspaceInput = {
   id?: string
   organizationId: string
   name: string
+  title?: string
   kind?: $Enums.TeammateKind
   instructions?: string
   harness?: $Enums.Harness
@@ -3829,6 +3927,7 @@ export type TeammateUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3863,6 +3962,7 @@ export type TeammateUncheckedUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -3897,6 +3997,7 @@ export type TeammateUncheckedUpdateManyWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
@@ -4098,6 +4199,7 @@ export type TeammateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   organizationId?: boolean
   workspaceId?: boolean
   name?: boolean
+  title?: boolean
   kind?: boolean
   instructions?: boolean
   harness?: boolean
@@ -4135,6 +4237,7 @@ export type TeammateSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   organizationId?: boolean
   workspaceId?: boolean
   name?: boolean
+  title?: boolean
   kind?: boolean
   instructions?: boolean
   harness?: boolean
@@ -4153,6 +4256,7 @@ export type TeammateSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   organizationId?: boolean
   workspaceId?: boolean
   name?: boolean
+  title?: boolean
   kind?: boolean
   instructions?: boolean
   harness?: boolean
@@ -4171,6 +4275,7 @@ export type TeammateSelectScalar = {
   organizationId?: boolean
   workspaceId?: boolean
   name?: boolean
+  title?: boolean
   kind?: boolean
   instructions?: boolean
   harness?: boolean
@@ -4183,7 +4288,7 @@ export type TeammateSelectScalar = {
   updatedAt?: boolean
 }
 
-export type TeammateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "kind" | "instructions" | "harness" | "model" | "caps" | "permissionPolicy" | "libraryAccess" | "archivedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["teammate"]>
+export type TeammateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "title" | "kind" | "instructions" | "harness" | "model" | "caps" | "permissionPolicy" | "libraryAccess" | "archivedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["teammate"]>
 export type TeammateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   sessions?: boolean | Prisma.Teammate$sessionsArgs<ExtArgs>
@@ -4241,6 +4346,10 @@ export type $TeammatePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     organizationId: string
     workspaceId: string
     name: string
+    /**
+     * Free text shown as a badge beside its name, e.g. "Software engineer".
+     */
+    title: string
     kind: $Enums.TeammateKind
     instructions: string
     harness: $Enums.Harness
@@ -4706,6 +4815,7 @@ export interface TeammateFieldRefs {
   readonly organizationId: Prisma.FieldRef<"Teammate", 'String'>
   readonly workspaceId: Prisma.FieldRef<"Teammate", 'String'>
   readonly name: Prisma.FieldRef<"Teammate", 'String'>
+  readonly title: Prisma.FieldRef<"Teammate", 'String'>
   readonly kind: Prisma.FieldRef<"Teammate", 'TeammateKind'>
   readonly instructions: Prisma.FieldRef<"Teammate", 'String'>
   readonly harness: Prisma.FieldRef<"Teammate", 'Harness'>

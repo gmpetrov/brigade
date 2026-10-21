@@ -7,6 +7,7 @@ import { Suspense } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { TeammateAccess } from '@/components/teammate-access'
 import { TeammateForm } from '@/components/teammate-form'
+import { TeammateTitle } from '@/components/teammate-title'
 import { TeammateCaps, TeammateStatus, useTeammateTimeline } from '@/components/teammate-oversight'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -58,6 +59,7 @@ function TeammateView() {
         <div className="flex flex-[1_1_16rem] flex-col gap-1.5">
           <div className="flex items-center gap-2.5">
             <h1 className="text-3xl font-extrabold tracking-tight">{teammate.name}</h1>
+            <TeammateTitle title={teammate.title} />
             <Badge
               className={
                 teammate.harness === 'codex'

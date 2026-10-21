@@ -11,6 +11,7 @@ import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { StatusDot } from '@/components/status-badge'
 import { ProjectIcon } from '@/components/projects'
 import { TeachTask } from '@/components/teach-task'
+import { TeammateTitle } from '@/components/teammate-title'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -118,6 +119,7 @@ export function TeammatePicker({
   heading = 'Send to',
   recent,
   compact = false,
+  withTitle = false,
   numbered = false,
   onPicked,
 }: {
@@ -133,6 +135,8 @@ export function TeammatePicker({
   recent?: RecentThreadActions
   /** The avatar alone on the button, where there is no room for the name. */
   compact?: boolean
+  /** The teammate's title as a badge beside its name. */
+  withTitle?: boolean
   /** 1–9 pick the first nine while the menu is open, shown beside each. */
   numbered?: boolean
   /** Where focus goes once the menu closes, instead of back to its button. */
@@ -151,6 +155,7 @@ export function TeammatePicker({
         >
           <TeammateAvatar teammate={value} className="size-5" />
           {!compact && <span className="max-w-40 truncate">{value.name}</span>}
+          {!compact && withTitle && <TeammateTitle title={value.title} />}
           <ChevronDown className="opacity-60" aria-hidden />
         </Button>
       </DropdownMenuTrigger>

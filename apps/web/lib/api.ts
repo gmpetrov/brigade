@@ -240,6 +240,8 @@ export type Me = {
 export type Teammate = {
   id: string
   name: string
+  /** Free text shown as a badge beside its name, e.g. "Software engineer"; empty for none. */
+  title: string
   /** chief: the teammate every workspace has, which sets up the team and routes work. */
   kind: 'teammate' | 'chief'
   instructions: string
