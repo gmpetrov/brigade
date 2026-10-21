@@ -631,7 +631,10 @@ const APP_TILES: { kind: ProviderKind; fan: string }[] = [
   },
 ]
 
-/** A round, outlined icon button beside the workspace's name. */
+/** A round, outlined icon button beside the workspace's name (and the sidebar's on a phone). */
+const roundButtonClass =
+  'bg-card text-foreground hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex size-9 shrink-0 items-center justify-center rounded-full border outline-none focus-visible:ring-2 group-data-[collapsible=icon]:hidden [&>svg]:size-4'
+
 function RoundButton({
   label,
   onClick,
@@ -647,7 +650,7 @@ function RoundButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="bg-card text-foreground hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex size-9 shrink-0 items-center justify-center rounded-full border outline-none focus-visible:ring-2 group-data-[collapsible=icon]:hidden [&>svg]:size-4"
+      className={roundButtonClass}
     >
       {children}
     </button>
@@ -700,7 +703,13 @@ export function SidebarToggle({ className }: { className?: string }) {
   const label = isMobile ? 'Open the sidebar' : open ? 'Collapse the sidebar' : 'Expand the sidebar'
   return (
     <SidebarTrigger
-      className={cn('-ml-1 size-8 text-muted-foreground hover:text-foreground', className)}
+      // On a phone, round like the + across from it; wider, a plain icon in the sidebar's header.
+      className={cn(
+        isMobile
+          ? roundButtonClass
+          : '-ml-1 size-8 text-muted-foreground hover:text-foreground',
+        className,
+      )}
       aria-label={label}
       title={isMobile ? label : `${label} (${mac ? '⌘' : 'Ctrl+'}B)`}
     />
