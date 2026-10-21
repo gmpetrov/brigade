@@ -80,6 +80,11 @@ app.get('/health/db', async (c) => {
   return c.json({ queryMs, colo: /^colo=(\w+)$/m.exec(trace)?.[1] ?? null })
 })
 
+// The stripe plugin's own subscription endpoints: only Checkout's return. Subscribing and
+// managing go through /api/billing, which makes Brigade's own Stripe customer first.
+app.all('/api/auth/subscription/:action', async (c, next) =>
+  c.req.param('action') === 'success' ? next() : c.json({ error: 'Not found' }, 404),
+)
 app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
 // Brigade's OAuth client ID metadata document, read by MCP servers' authorization servers.
 app.get('/api/mcp/client.json', (c) => c.json(mcpClientDocument()))
