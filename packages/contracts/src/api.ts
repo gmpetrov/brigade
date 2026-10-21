@@ -358,7 +358,7 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
     eventsWaitingSince: z.iso.datetime().nullable().optional(),
     /** Whether its computer is there, with its status: on subscribing, for a dashboard back from away. */
     computer: z
-      .object({ online: z.boolean(), restarting: z.boolean(), status: z.string() })
+      .object({ id: z.string(), online: z.boolean(), restarting: z.boolean(), status: z.string() })
       .optional(),
   }),
   z.object({

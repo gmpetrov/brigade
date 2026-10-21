@@ -36,7 +36,13 @@ export const preloadThreadEvents = (sessionId: string) => preload(latestPage(ses
  * `loaded` turns true once its latest page is in; `reconnect` tries again at once.
  */
 /** Whether a thread's computer is there, as its socket says on subscribing. */
-export type ComputerAvailability = { online: boolean; restarting: boolean; status?: string }
+export type ComputerAvailability = {
+  /** The computer it is about: the thread may have moved since the page loaded it. */
+  id: string
+  online: boolean
+  restarting: boolean
+  status?: string
+}
 
 export function useThreadEvents(
   sessionId: string,

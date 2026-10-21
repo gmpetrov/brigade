@@ -591,7 +591,8 @@ export function runnerSocket(runner: {
         )
       touch(runner.computerId)
       flushQueue(runner.computerId)
-      broadcast(runner.workspaceId, computerUpdated(runner.computerId))
+      // Running now, as written above: a status a dashboard kept (stopped, error) is over.
+      broadcast(runner.workspaceId, computerUpdated(runner.computerId, computer.status))
       // Threads that moved here while it was offline get their message now.
       void movesOn(runner.computerId).catch(console.error)
       return
@@ -1601,6 +1602,7 @@ export function browserSocket(scope: WorkspaceScope) {
           sessionId: session.id,
           status: now.status,
           computer: {
+            id: now.computer.id,
             online: isOnline(now.computer.id),
             restarting: isRestarting(now.computer.id),
             status: now.computer.status,

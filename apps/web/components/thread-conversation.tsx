@@ -187,6 +187,7 @@ export function ThreadConversation({
       // Its own computer, also another member's: whether it is there, as the message says.
       if (message.computerId === thread.data?.computer.id)
         setAvailability((was) => ({
+          id: message.computerId,
           online: message.online,
           restarting: message.restarting ?? false,
           status: message.status ?? was?.status,
@@ -197,9 +198,8 @@ export function ThreadConversation({
   const [openedAt] = useState(() => Date.now())
   const [status, setStatus] = useState<string>()
   // Its computer's availability since the thread loaded, from its sockets: newer than the thread's.
-  // Another thread, or this one moved to another computer: the thread's own says again.
   const [availability, setAvailability] = useState<ComputerAvailability>()
-  useEffect(() => setAvailability(undefined), [id, thread.data?.computer.id])
+  useEffect(() => setAvailability(undefined), [id])
   const {
     events,
     connected,
@@ -210,7 +210,10 @@ export function ThreadConversation({
     reconnect,
   } = useThreadEvents(id, (status, computer) => {
     setStatus(status)
-    if (computer) setAvailability(computer)
+    if (!computer) return
+    setAvailability(computer)
+    // It moved while this page was away: the thread again, for its new computer's name and move.
+    if (thread.data && computer.id !== thread.data.computer.id) void thread.reload()
   })
   const { items, queued, seen, turnId, background } = useThreadItems(events, firstSeq)
   const outputs = useThreadOutputs(events)
@@ -592,10 +595,12 @@ export function ThreadConversation({
         }))
         .sort((a, b) => Number(!!b.current) - Number(!!a.current))
     : []
+  // What the sockets said, once about the computer the thread is on (after a move, not yet reloaded: not).
+  const liveComputer = availability?.id === t.computer.id ? availability : undefined
   const machine = {
     ...t.computer,
-    ...availability,
-    status: availability?.status ?? t.computer.status,
+    ...liveComputer,
+    status: liveComputer?.status ?? t.computer.status,
   }
   const machineOnline = machine.online
   // Its computer went away during a turn: said where the answer would show, by the machine's name.
