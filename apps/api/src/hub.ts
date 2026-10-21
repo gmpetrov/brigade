@@ -116,18 +116,14 @@ export function dropRunner(computerId: string) {
   if (!conn) return
   runners.delete(computerId)
   conn.ws.close(1001, 'computer stopped')
-  broadcast(conn.workspaceId, { type: 'computer.updated', computerId, online: false })
+  broadcast(conn.workspaceId, computerUpdated(computerId))
 }
 
 /** An update's restart that took too long: the computer is offline, as if its runner had stopped. */
 function restartTimedOut(runner: { computerId: string; workspaceId: string }) {
   restarting.delete(runner.computerId)
   if (runners.has(runner.computerId)) return
-  broadcast(runner.workspaceId, {
-    type: 'computer.updated',
-    computerId: runner.computerId,
-    online: false,
-  })
+  broadcast(runner.workspaceId, computerUpdated(runner.computerId))
   // A thread waiting to leave it leaves without its folders.
   void movesOn(runner.computerId).catch(console.error)
 }
@@ -323,8 +319,17 @@ export function notifyLibraryChanged(workspaceId: string) {
 }
 
 /** Tell dashboards a computer's status or connection changed. */
-export function broadcastComputer(workspaceId: string, computerId: string) {
-  broadcast(workspaceId, { type: 'computer.updated', computerId, online: isOnline(computerId) })
+/** Whether a computer is there now, for dashboards: its threads say so without fetching anything. */
+const computerUpdated = (computerId: string, status?: string): ApiToBrowser => ({
+  type: 'computer.updated',
+  computerId,
+  online: isOnline(computerId),
+  restarting: isRestarting(computerId),
+  ...(status ? { status } : {}),
+})
+
+export function broadcastComputer(workspaceId: string, computerId: string, status?: string) {
+  broadcast(workspaceId, computerUpdated(computerId, status))
 }
 
 function broadcast(workspaceId: string, message: ApiToBrowser, sessionId?: string) {
@@ -448,11 +453,7 @@ export function runnerSocket(runner: {
         for (const [id] of waited) eventsWaiting.delete(id)
         if (waited.length)
           void broadcastEventsWaiting(waited.map(([id]) => id)).catch(console.error)
-        broadcast(runner.workspaceId, {
-          type: 'computer.updated',
-          computerId: runner.computerId,
-          online: false,
-        })
+        broadcast(runner.workspaceId, computerUpdated(runner.computerId))
         // A thread waiting to leave it leaves without its folders.
         void movesOn(runner.computerId).catch(console.error)
       }
@@ -590,11 +591,7 @@ export function runnerSocket(runner: {
         )
       touch(runner.computerId)
       flushQueue(runner.computerId)
-      broadcast(runner.workspaceId, {
-        type: 'computer.updated',
-        computerId: runner.computerId,
-        online: true,
-      })
+      broadcast(runner.workspaceId, computerUpdated(runner.computerId))
       // Threads that moved here while it was offline get their message now.
       void movesOn(runner.computerId).catch(console.error)
       return
@@ -1593,12 +1590,22 @@ export function browserSocket(scope: WorkspaceScope) {
         })
         afterSeq = rows.at(-1)!.seq
       }
-      // And its status now: a dashboard that was away (a phone asleep) missed its changes.
+      // And its status now, and its computer's: a dashboard that was away (a phone asleep) missed their changes.
       const now = await prisma.session.findUnique({
         where: { id: session.id },
-        select: { status: true },
+        select: { status: true, computer: { select: { id: true, status: true } } },
       })
-      if (now) send(ws, { type: 'thread.updated', sessionId: session.id, status: now.status })
+      if (now)
+        send(ws, {
+          type: 'thread.updated',
+          sessionId: session.id,
+          status: now.status,
+          computer: {
+            online: isOnline(now.computer.id),
+            restarting: isRestarting(now.computer.id),
+            status: now.computer.status,
+          },
+        })
     },
     onClose() {
       browsers.delete(conn)

@@ -35,7 +35,13 @@ export const preloadThreadEvents = (sessionId: string) => preload(latestPage(ses
  * older ones the whole thread needs (its context); `loadOlder` pages in more.
  * `loaded` turns true once its latest page is in; `reconnect` tries again at once.
  */
-export function useThreadEvents(sessionId: string, onStatus?: (status: string) => void) {
+/** Whether a thread's computer is there, as its socket says on subscribing. */
+export type ComputerAvailability = { online: boolean; restarting: boolean; status?: string }
+
+export function useThreadEvents(
+  sessionId: string,
+  onStatus?: (status: string, computer?: ComputerAvailability) => void,
+) {
   const [events, setEvents] = useState<SequencedEvent[]>([])
   const [connected, setConnected] = useState(false)
   const [firstSeq, setFirstSeq] = useState(1)
@@ -141,7 +147,7 @@ export function useThreadEvents(sessionId: string, onStatus?: (status: string) =
           // An empty thread, or an API too old to say where the page ends: loaded now.
           openOn(data.firstSeq, data.lastSeq ?? 0, data.context)
         else if (data.type === 'thread.updated' && data.sessionId === sessionId) {
-          statusRef.current?.(data.status)
+          statusRef.current?.(data.status, data.computer)
         }
       }
       socket.onclose = () => {

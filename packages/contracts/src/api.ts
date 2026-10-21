@@ -356,8 +356,20 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
      * they do again. Unset: unchanged.
      */
     eventsWaitingSince: z.iso.datetime().nullable().optional(),
+    /** Whether its computer is there, with its status: on subscribing, for a dashboard back from away. */
+    computer: z
+      .object({ online: z.boolean(), restarting: z.boolean(), status: z.string() })
+      .optional(),
   }),
-  z.object({ type: z.literal('computer.updated'), computerId: z.string(), online: z.boolean() }),
+  z.object({
+    type: z.literal('computer.updated'),
+    computerId: z.string(),
+    online: z.boolean(),
+    /** Its runner restarts into an update: online all along, but not working for a minute. */
+    restarting: z.boolean().optional(),
+    /** A cloud computer's new status, when that is what changed. */
+    status: z.string().optional(),
+  }),
   /** A task was created, changed or removed: refetch the board. */
   z.object({ type: z.literal('task.updated'), taskId: z.string() }),
   /** A ticket was opened or resolved: refetch tickets and the badges that count them. */
