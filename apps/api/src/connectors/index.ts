@@ -175,7 +175,8 @@ export const appCatalog: Record<
   },
   stripe: {
     name: 'Stripe',
-    description: 'Look up customers, payments, invoices and subscriptions, and issue refunds.',
+    description:
+      'Customers, payments, invoices, subscriptions, products and prices, refunds and reports, with Stripe’s MCP server.',
     developer: 'Stripe',
     category: 'Finance',
     personal: false,

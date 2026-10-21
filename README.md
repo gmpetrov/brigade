@@ -238,7 +238,10 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   returned, since Stripe echoes a masked key.
 - **Connections** are kept as `removed` when disconnected, so their call log survives; the credential is revoked at
   the provider (Google) and deleted from the vault. Gmail and Google Calendar connect through Google OAuth; Stripe
-  takes a secret or restricted key pasted once into a dashboard form, straight into the vault.
+  signs in on Stripe's MCP server (`mcp.stripe.com`, its own OAuth), where one sign-in may reach several Stripe
+  accounts, live and sandboxes; each call names the account (`stripe_context`) and the mode (`livemode`). The server
+  hides customers' details from keys (not from OAuth), so an account connected with a key before asks its owner to
+  sign in again; signing in to the same account and mode takes its row over, with its access and triggers.
 - **Caps** (`apps/api/src/caps.ts`) are counted from the logs, per UTC day: threads created, working time (from a
   prompt or approval to the end of the turn or the next approval request), and write calls made per connection.
   Reaching a cap pauses the work and opens a `cap` ticket that only an admin answers. "Allow once" runs the held
@@ -281,11 +284,15 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   edits a schedule; admins may pause, run or delete it. Teammates create, list and change schedules with their tools,
   only from a member's thread (never a trigger's or a schedule's), owned by that thread's starter.
 - **Subscriptions** (`apps/api/src/subscriptions/`). Brigade subscribes the vendor itself, synced whenever a
-  connection's triggers or awaited replies change: a Stripe webhook endpoint per connection listing the events needed (its signing
-  secret goes to the vault; a restricted key needs Webhook Endpoints write access); the GitHub App's one webhook;
+  connection's triggers or awaited replies change: a Stripe webhook endpoint per Stripe account of the sign-in listing
+  the events needed, made through Stripe's MCP server (which creates, updates and disables endpoints but deletes
+  none, and hides their signing secret: with no trigger left an endpoint is turned off and kept); the GitHub App's
+  one webhook;
   a Gmail `users.watch` through Pub/Sub (`GMAIL_PUBSUB_*`, renewed before its seven days run out), or, without
   Pub/Sub, a check every minute; a Calendar push channel per watched calendar, renewed before it expires. Vendor
-  pushes arrive at `/events/stripe/:id`, `/events/gmail` and `/events/google-calendar`, each verified. Gmail and
+  pushes arrive at `/events/stripe/:id`, `/events/gmail` and `/events/google-calendar`, each verified: a Stripe
+  event by its signature when its endpoint has a secret (one registered with a key before), else read again from
+  Stripe on the endpoint's account, so only what Stripe has counts (at most 120 reads a minute per endpoint). Gmail and
   Calendar pushes only say something changed: the mailbox's history and the calendar's sync token say what.
   Pushes need a public HTTPS `API_URL`. Brigade's own writes (a teammate's sent mail, calendar changes, GitHub
   actions by the app) start nothing.
