@@ -39,6 +39,7 @@ import {
   resolvesInBrigade,
   resolving,
   reviewer as reviewing,
+  unreviewedBy,
   useLastMergeMethod,
 } from '@/lib/merge-method'
 import { cn } from '@/lib/utils'
@@ -111,6 +112,8 @@ export default function PullRequestPage() {
     act(() => api(`${path}/review`, { body: reviewerId === PICK ? {} : { reviewerId } })).then(
       (ok) => ok && setAsking(false),
     )
+  const reviewAgain = (id: string | undefined) =>
+    void act(() => api(`${path}/review`, { body: id ? { reviewerId: id } : {} }))
   const merge = () => {
     if (!confirmMerge(p, p.number, method)) return
     void act(() => api(`${path}/merge`, { body: { method } }))
@@ -316,7 +319,7 @@ export default function PullRequestPage() {
       )}
 
       {open && t && t.mergeStatus !== 'none' && <Merging pull={p} />}
-      {t?.review && <Review pull={p} />}
+      {t?.review && <Review pull={p} busy={busy} onReviewAgain={reviewAgain} />}
 
       {p.checks.length > 0 && <Checks checks={p.checks} />}
 
@@ -422,7 +425,16 @@ function Merging({ pull: p }: { pull: PullRequestDetail }) {
 }
 
 /** Where its review stands: under way, its latest verdict, or why the teammate that opened it asked for none. */
-function Review({ pull: p }: { pull: PullRequestDetail }) {
+function Review({
+  pull: p,
+  busy,
+  onReviewAgain,
+}: {
+  pull: PullRequestDetail
+  busy: boolean
+  /** Its latest commits are not reviewed: the same reviewer reads it again, in a new review. */
+  onReviewAgain: (reviewerId: string | undefined) => void
+}) {
   const review = p.tracking!.review!
   if (review.state === 'skipped')
     return (
@@ -438,7 +450,9 @@ function Review({ pull: p }: { pull: PullRequestDetail }) {
     review.state === 'reviewing'
       ? `${who} is reviewing it.`
       : review.state === 'changes_requested'
-        ? `${who} asked for changes.`
+        ? review.changed
+          ? `${who} asked for changes, before its latest commits.`
+          : `${who} asked for changes.`
         : review.changed
           ? `${who} approved it, before its latest commits.`
           : `${who} approved it.`
@@ -450,6 +464,16 @@ function Review({ pull: p }: { pull: PullRequestDetail }) {
       {thread && (
         <Button asChild variant="ghost" size="sm">
           <Link href={`/app/threads/${thread}`}>Open the review</Link>
+        </Button>
+      )}
+      {p.state === 'open' && unreviewedBy(p) && (
+        <Button
+          size="sm"
+          disabled={busy}
+          onClick={() => onReviewAgain(review.reviewer?.id)}
+          title={`${who} reviews its latest commits, in a new review`}
+        >
+          Review again
         </Button>
       )}
     </Card>

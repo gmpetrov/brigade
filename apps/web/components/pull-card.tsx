@@ -1,10 +1,10 @@
 'use client'
 // The card for a pull request a teammate opened in a thread: the whole card opens
 // its changes, its review line and review badge the reviewer's thread, and an owner or
-// admin merges it from here, after a word while its review is under way or asked for
-// changes. One that conflicts has Resolve conflicts instead: its teammate resolves
-// them, then it merges by itself. A thread's outputs show the same pull request as a row
-// (thread-outputs).
+// admin merges it from here, after a word while its review is under way, asked for
+// changes or did not read its latest commits (then Review again has them read). One that
+// conflicts has Resolve conflicts instead: its teammate resolves them, then it merges by
+// itself. A thread's outputs show the same pull request as a row (thread-outputs).
 import {
   ExternalLink,
   GitCompareArrows,
@@ -28,6 +28,7 @@ import {
   reviewer,
   reviewHolds,
   changesAskedBy,
+  unreviewedBy,
   useLastMergeMethod,
 } from '@/lib/merge-method'
 import { cn } from '@/lib/utils'
@@ -44,6 +45,7 @@ export function usePull(repository: string, number: number, options: { checks?: 
   const pull = useApi<PullRequestState>(`${path}/state${options.checks ? '?checks=1' : ''}`)
   const [method] = useLastMergeMethod()
   const [busy, setBusy] = useState(false)
+  const [asking, setAsking] = useState(false)
   const [error, setError] = useState<string>()
 
   const p = pull.data
@@ -83,7 +85,17 @@ export function usePull(repository: string, number: number, options: { checks?: 
     void act(() => api(`${path}/resolve`, { body: { method } }))
   }
 
-  return { pull, busy, error, merge, resolve }
+  /** Its latest commits are not reviewed: the same reviewer reads it again, in a new review. */
+  function reviewAgain() {
+    const review = p?.tracking?.review
+    const id = review && review.state !== 'skipped' ? review.reviewer?.id : undefined
+    setAsking(true)
+    void act(() => api(`${path}/review`, { body: id ? { reviewerId: id } : {} })).finally(() =>
+      setAsking(false),
+    )
+  }
+
+  return { pull, busy, asking, error, merge, resolve, reviewAgain }
 }
 
 export function PullCard({
@@ -102,7 +114,7 @@ export function PullCard({
   mergeElsewhere?: boolean
 }) {
   const { me } = useDashboard()
-  const { pull, busy, error, merge, resolve } = usePull(repository, number)
+  const { pull, busy, asking, error, merge, resolve, reviewAgain } = usePull(repository, number)
 
   const p = pull.data
   const Icon =
@@ -144,7 +156,7 @@ export function PullCard({
           <Link
             href={`/app/threads/${thread}`}
             className="relative z-10 rounded-md hover:opacity-80"
-            title={`Open ${reviewer(p) ?? changesAskedBy(p)}'s review`}
+            title={`Open ${reviewer(p) ?? unreviewedBy(p) ?? changesAskedBy(p)}'s review`}
           >
             <PullStatus pull={p} />
           </Link>
@@ -169,7 +181,7 @@ export function PullCard({
       title={title}
     >
       <GitMerge />
-      {busy ? 'Merging…' : 'Merge'}
+      {busy && !asking ? 'Merging…' : 'Merge'}
     </Button>
   )
 
@@ -200,6 +212,20 @@ export function PullCard({
             <>
               {' · '}
               <ReviewLink pull={p} />
+            </>
+          )}
+          {p?.state === 'open' && unreviewedBy(p) && (
+            <>
+              {' · '}
+              <button
+                type="button"
+                className="relative z-10 font-medium text-primary hover:underline disabled:opacity-50"
+                disabled={busy}
+                onClick={reviewAgain}
+                title={`${unreviewedBy(p)} reviews its latest commits, in a new review`}
+              >
+                {asking ? 'Asking…' : 'Review again'}
+              </button>
             </>
           )}
         </span>
