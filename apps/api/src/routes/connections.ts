@@ -9,7 +9,6 @@ import {
   ConnectGoogle,
   ConnectMcp,
   ConnectMcpServer,
-  ConnectStripe,
   InspectMcp,
   ConnectWebhookApp,
   UpdateApp,
@@ -17,7 +16,7 @@ import {
 } from '@brigade/contracts'
 import { installAppSkills } from '../app-skills.js'
 import { appFor, appKey, requireAccountManager, requireAppManager } from '../apps.js'
-import { stripeAccount } from '../connectors/stripe.js'
+import { stripeAccounts } from '../connectors/stripe.js'
 import type { ConnectorKind } from '../connectors/types.js'
 import { syncConnection } from '../subscriptions/index.js'
 import { deleteTriggers } from './triggers.js'
@@ -100,6 +99,7 @@ type OAuthState = {
     | 'replicate'
     | 'openrouter'
     | 'posthog'
+    | 'stripe'
     | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
@@ -309,6 +309,7 @@ export const connections = new Hono<AppEnv>()
     const kind = grant.kind as ConnectorKind
     // The row would show only the App's name: say so, as the provider's reply may have changed.
     if (!account) console.warn(`mcp connection of ${kind}: no account name`)
+    if (kind === 'stripe' && account) await adoptStripeKey(db, scope, signedIn, account)
     const connection = await createConnection(
       scope,
       {
@@ -647,26 +648,6 @@ export const connections = new Hono<AppEnv>()
     return c.json({ url: githubInstallUrl() })
   })
 
-  /** Connect Stripe with a key entered once here. It goes straight into the vault. */
-  .post('/stripe', async (c) => {
-    const { scope } = c.var
-    const input = await parseBody(c.req.raw, ConnectStripe)
-    let account: string
-    try {
-      account = await stripeAccount(input.apiKey)
-    } catch (error) {
-      throw new HTTPException(400, {
-        message: `Stripe did not accept that key (${error instanceof Error ? error.message : 'error'})`,
-      })
-    }
-    const connection = await createConnection(
-      scope,
-      { kind: 'stripe', label: input.label ?? 'Stripe', externalAccount: account },
-      { apiKey: input.apiKey },
-    )
-    return c.json({ id: connection.id }, 201)
-  })
-
   /**
    * A custom app that posts events to Brigade. Nothing to sign in to: its
    * triggers, added next, each carry their own URL and signing secret.
@@ -831,8 +812,9 @@ async function disconnect(
     console.error('unsubscribe failed:', error instanceof Error ? error.message : error),
   )
   if (connection.vaultSecretId) {
-    // Google and MCP tokens are revoked at the provider. A Stripe key is revoked in Stripe's
-    // dashboard. A GitHub installation stays: other workspaces may use it; it is uninstalled on GitHub.
+    // Google and MCP tokens are revoked at the provider. A Stripe key from before Stripe signed in
+    // is revoked in Stripe's dashboard. A GitHub installation stays: other workspaces may use it;
+    // it is uninstalled on GitHub.
     const auth =
       connection.kind === 'mcp'
         ? customMcp((await db.app.findFirst({ where: { id: connection.appId } })) ?? {})?.auth ===
@@ -866,6 +848,41 @@ async function disconnect(
     action: 'connection.removed',
     target: { type: 'connection', id: connection.id },
   })
+}
+
+/**
+ * A Stripe account connected with a key, before Brigade signed in to Stripe: its owner's
+ * sign-in to the same account and mode takes that row over (createConnection repairs it in
+ * place), so its access, triggers and webhook endpoint carry on.
+ */
+async function adoptStripeKey(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  signedIn: ReturnType<typeof bearer>,
+  account: string,
+) {
+  const output = await callMcpTool(
+    signedIn,
+    connectors.stripe!.mcp!,
+    'list_available_accounts_or_orgs',
+    {},
+  ).catch(() => null)
+  const reached = stripeAccounts(output).map(
+    (a) => `${a.stripe_context}, ${a.livemode ? 'live mode' : 'test mode'})`,
+  )
+  const rows = await db.connection.findMany({
+    where: { kind: 'stripe', createdByMemberId: scope.memberId, status: { not: 'removed' } },
+  })
+  if (rows.some((r) => r.externalAccount === account)) return
+  for (const row of rows) {
+    if (!row.vaultSecretId || !reached.some((r) => row.externalAccount?.endsWith(r))) continue
+    const secret = await openSecret<{ apiKey?: string }>(db, scope, row.vaultSecretId).catch(
+      () => null,
+    )
+    if (typeof secret?.apiKey !== 'string') continue
+    await db.connection.updateMany({ where: { id: row.id }, data: { externalAccount: account } })
+    return
+  }
 }
 
 /** A fetch that sends an access token. */

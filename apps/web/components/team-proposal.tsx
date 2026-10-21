@@ -145,13 +145,7 @@ export function TeamProposalCard({
             ))}
           </ul>
 
-          {open && kinds.length > 0 && (
-            <ConnectList
-              kinds={kinds}
-              data={connections.data}
-              onConnected={() => void connections.reload()}
-            />
-          )}
+          {open && kinds.length > 0 && <ConnectList kinds={kinds} data={connections.data} />}
 
           {error && <p className="text-sm text-destructive-text">{error}</p>}
           {open && (
@@ -281,39 +275,28 @@ function ProposedRow({
 function ConnectList({
   kinds,
   data,
-  onConnected,
   created,
 }: {
   kinds: ProposedConnection['kind'][]
   data: ConnectionsResponse | undefined
-  onConnected: () => void
   /** The team exists: connecting is all that is left. */
   created?: boolean
 }) {
   const pathname = usePathname()
-  const [stripe, setStripe] = useState(false)
   const [error, setError] = useState<string>()
 
   async function connect(kind: ProposedConnection['kind']) {
     setError(undefined)
     try {
-      if (kind === 'stripe') return setStripe(true)
       const { url } = await api<{ url: string }>(
-        kind === 'github' ? '/connections/github' : '/connections/google',
+        kind === 'github'
+          ? '/connections/github'
+          : kind === 'stripe'
+            ? '/connections/mcp'
+            : '/connections/google',
         { body: kind === 'github' ? { returnTo: pathname } : { kind, returnTo: pathname } },
       )
       window.location.href = url
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }
-
-  async function connectStripe(form: FormData) {
-    setError(undefined)
-    try {
-      await api('/connections/stripe', { body: { apiKey: String(form.get('apiKey')) } })
-      setStripe(false)
-      onConnected()
     } catch (e) {
       setError((e as Error).message)
     }
@@ -351,27 +334,6 @@ function ConnectList({
           )
         })}
       </ul>
-      {stripe && (
-        <form action={connectStripe} className="flex flex-col gap-2 pt-1">
-          <Label htmlFor="stripe-key" className="text-xs font-normal text-muted-foreground">
-            A Stripe restricted key with only the access your teammates need. It goes straight into
-            the vault.
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              id="stripe-key"
-              name="apiKey"
-              placeholder="rk_live_…"
-              autoComplete="off"
-              required
-              className="flex-1 bg-card"
-            />
-            <Button size="sm" type="submit">
-              Connect
-            </Button>
-          </div>
-        </form>
-      )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       {!created && !kinds.every((kind) => connectionOf(data, kind)) && (
         <p className="text-xs text-muted-foreground">
@@ -473,7 +435,7 @@ function CreatedTeam({
         })}
       </ul>
       {isAdmin(me) && unconnected.length > 0 && (
-        <ConnectList kinds={unconnected} data={connections} onConnected={onGranted} created />
+        <ConnectList kinds={unconnected} data={connections} created />
       )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
     </div>

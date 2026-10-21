@@ -556,6 +556,12 @@ export async function authorisedFetch(
   // OAuth tokens the API refreshes: Google's, or an MCP server's own.
   const mcp = connectors[connection.kind]?.auth === 'mcp' || custom?.auth === 'oauth'
   let credential = await openSecret<GoogleCredential | McpCredential>(db, scope, secretId)
+  // A Stripe account connected with a key, before Brigade signed in to Stripe: Stripe's MCP
+  // server hides customers' details from keys, so its owner signs in again.
+  if ('apiKey' in credential) {
+    await needsReauth()
+    throw new Error('Brigade now signs in to Stripe instead of using a key: reconnect this account')
+  }
   const refresh = async () => {
     try {
       credential = mcp

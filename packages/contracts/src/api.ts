@@ -105,6 +105,7 @@ export const ConnectMcp = z.object({
     'replicate',
     'openrouter',
     'posthog',
+    'stripe',
   ]),
   /** For an App with a server per data region (Mixpanel): the region's id. Default: the first. */
   region: z.string().max(20).optional(),
@@ -149,14 +150,6 @@ export type McpInspection = {
   /** Where the member's own OAuth client must send people back. */
   redirectUri: string
 }
-/** A Stripe secret or restricted key, entered once in the dashboard and kept in the vault. */
-export const ConnectStripe = z.object({
-  apiKey: z
-    .string()
-    .trim()
-    .regex(/^(sk|rk)_(test|live)_[A-Za-z0-9]+$/, 'A Stripe secret (sk_) or restricted (rk_) key'),
-  label: z.string().trim().min(1).max(80).optional(),
-})
 /** A custom app that posts events to Brigade. No credential: its triggers' URLs carry the trust. */
 export const ConnectWebhookApp = z.object({ label: z.string().trim().min(1).max(80) })
 /**

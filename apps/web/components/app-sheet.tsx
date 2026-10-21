@@ -88,7 +88,7 @@ export function AppSheet({
   const accounts = app ? data.connections.filter((c) => c.appId === app.id) : []
   const added = accounts.length > 0
   const name = app?.name ?? entry.name
-  const [adding, setAdding] = useState(!added && (kind === 'stripe' || custom))
+  const [adding, setAdding] = useState(!added && custom)
   const [error, setError] = useState<string>()
   // The App as a whole: an admin, or the member who added it while every account is theirs.
   const managesApp =
@@ -111,9 +111,10 @@ export function AppSheet({
    * the sheet stays open and shows the account once it has connected.
    */
   const route =
-    custom || server || kind === 'stripe'
+    custom || server
       ? null
-      : kind === 'cloudflare' ||
+      : kind === 'stripe' ||
+          kind === 'cloudflare' ||
           kind === 'google_cloud' ||
           kind === 'neon' ||
           kind === 'supabase' ||
@@ -162,17 +163,6 @@ export function AppSheet({
     }, 2000)
     return () => clearInterval(timer)
   }, [waiting, accounts.length, reconnected, reload])
-
-  const connectStripe = (form: FormData) =>
-    run(async () => {
-      await api('/connections/stripe', {
-        body: {
-          apiKey: String(form.get('apiKey')),
-        },
-      })
-      setAdding(false)
-      await reload()
-    })
 
   const connectCustomApp = (form: FormData) =>
     run(async () => {
@@ -323,7 +313,6 @@ export function AppSheet({
                 onReconnect={(region) => (server ? setAdding(true) : void connect(region, c.id))}
               />
             ))}
-            {adding && kind === 'stripe' && <StripeForm onSubmit={connectStripe} />}
             {adding && custom && <CustomAppForm onSubmit={connectCustomApp} />}
             {adding && server && app && (
               <div className="px-4 py-4">
@@ -739,32 +728,6 @@ function Account({
         </div>
       )}
     </div>
-  )
-}
-
-function StripeForm({ onSubmit }: { onSubmit: (form: FormData) => void }) {
-  return (
-    <form action={onSubmit} className="flex flex-col gap-4 px-4 py-4">
-      <p className="text-sm text-muted-foreground">
-        Create a restricted key in Stripe&apos;s dashboard with only the access your teammates need,
-        and paste it here. It is encrypted in Brigade at once and is never shown again.
-      </p>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="apiKey">Secret or restricted key</Label>
-        <Input
-          id="apiKey"
-          name="apiKey"
-          type="password"
-          autoComplete="off"
-          placeholder="rk_live_… or sk_test_…"
-          className="bg-card font-mono"
-          required
-        />
-      </div>
-      <div className="flex justify-end">
-        <Button>Connect</Button>
-      </div>
-    </form>
   )
 }
 
