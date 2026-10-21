@@ -21,6 +21,7 @@ import { harnessLabel, type Teammate } from '@/lib/api'
 
 export type TeammateInput = {
   name: string
+  title: string
   instructions: string
   harness: 'claude_code' | 'codex'
   model: string | null
@@ -64,6 +65,7 @@ export function TeammateForm({
     try {
       await onSubmit({
         name: String(form.get('name')),
+        title: String(form.get('title') ?? ''),
         instructions: String(form.get('instructions') ?? ''),
         harness,
         model,
@@ -88,6 +90,17 @@ export function TeammateForm({
           // The chief keeps its name, so @chief always reaches it.
           readOnly={initial?.kind === 'chief'}
         />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
+          name="title"
+          defaultValue={initial?.title}
+          placeholder="Software engineer"
+          maxLength={40}
+        />
+        <p className="text-xs text-muted-foreground">Shown as a badge beside its name.</p>
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="instructions">Role instructions</Label>

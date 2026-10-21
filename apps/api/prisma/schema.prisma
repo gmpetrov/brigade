@@ -287,6 +287,8 @@ model Teammate {
   workspaceId           String
   workspace             Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name                  String
+  /// Free text shown as a badge beside its name, e.g. "Software engineer".
+  title                 String                 @default("")
   kind                  TeammateKind           @default(teammate)
   instructions          String                 @default("")
   harness               Harness                @default(claude_code)
