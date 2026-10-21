@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { NewThread, useLastTeammate, useThreadDraft } from '@/components/new-thread'
+import { newerBuild } from '@/components/update-pill'
 import { captures, inCaptureWindow } from '@/lib/brigade-app'
 
 const TEXT = 'brigade.capture.text'
@@ -80,7 +81,13 @@ export function CaptureDraft() {
         void sync()
         focusMessage()
       }),
-      captures.onShown(focusMessage),
+      captures.onShown(() => {
+        focusMessage()
+        // The window stays loaded for as long as Brigade.app runs, with no "New version"
+        // pill: shown again after a deploy, it reloads. The text and the captures are kept
+        // (localStorage, ~/.brigade/captures), so nothing written is lost.
+        void newerBuild().then((newer) => newer && window.location.reload())
+      }),
     ]
     return () => off.forEach((o) => void o.then((unlisten) => unlisten()))
   }, [app, add])
