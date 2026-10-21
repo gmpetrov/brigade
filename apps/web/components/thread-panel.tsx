@@ -532,7 +532,6 @@ export function ThreadPanel() {
             <DetailsPill
               teammate={teammate}
               label={teammate.name}
-              badge={teammate.title}
               details={`${teammate.name}'s computer, routines and more`}
             />
           )}
@@ -700,7 +699,6 @@ function DetailsPill({
   heading = false,
   machine,
   details,
-  badge,
   reconnecting = false,
 }: {
   project?: Pick<ProjectRef, 'name' | 'icon'> | null
@@ -714,8 +712,6 @@ function DetailsPill({
   machine?: string
   /** What the details show, for its label. */
   details: string
-  /** Beside the label: the teammate's title. */
-  badge?: string
   reconnecting?: boolean
 }) {
   const { details: open, setDetails, covered } = useThreadPanel()
@@ -748,7 +744,6 @@ function DetailsPill({
       <Label className="max-w-72 min-w-0 truncate" title={label}>
         {threadId ? <StreamedTitle threadId={threadId} text={label} /> : label}
       </Label>
-      <TeammateTitle title={badge} />
       {machine && (
         <span title={`Runs on ${machine}`} className="-ml-0.5 flex shrink-0">
           <Laptop aria-hidden className="size-4 text-muted-foreground" />
