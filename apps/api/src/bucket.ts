@@ -65,6 +65,13 @@ export function projectLogoKey(scope: Scope, projectId: string) {
   return `${scope.organizationId}/${scope.workspaceId}/project-logos/${projectId}`
 }
 
+/** The bucket key of a workspace's logo: one per workspace, replaced by a new one. */
+export function workspaceLogoKey(scope: Scope) {
+  for (const part of [scope.organizationId, scope.workspaceId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/workspace-logo`
+}
+
 /** The bucket key of a skill's file, by its SHA-256: the same bytes are kept once. */
 export function skillFileKey(scope: Scope, sha256: string) {
   for (const part of [scope.organizationId, scope.workspaceId])

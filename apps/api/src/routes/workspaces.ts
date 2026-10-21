@@ -1,11 +1,25 @@
-import { CreateWorkspace, SetSuggestions, SwitchWorkspace } from '@brigade/contracts'
+import {
+  CreateWorkspace,
+  SetSuggestions,
+  SwitchWorkspace,
+  UpdateWorkspace,
+} from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
+import { workspaceLogoKey } from '../bucket.js'
 import { ensureChief } from '../chief.js'
 import { createWorkspaceComputer } from '../cloud.js'
 import { prisma } from '../db.js'
-import { parseBody, requireUser, requireWorkspace, resolveScope, type AppEnv } from '../scope.js'
+import { LOGO_HEADERS, readLogo, removeLogo, storeLogo } from '../logos.js'
+import {
+  parseBody,
+  requireRole,
+  requireUser,
+  requireWorkspace,
+  resolveScope,
+  type AppEnv,
+} from '../scope.js'
 
 export const workspaces = new Hono<AppEnv>()
   .use(requireUser)
@@ -70,7 +84,7 @@ export const workspaces = new Hono<AppEnv>()
       })),
       activeOrganizationId: membership ? orgId : null,
       role: membership?.role ?? null,
-      workspaces: workspaceList.map((w) => ({ id: w.id, name: w.name })),
+      workspaces: workspaceList.map((w) => ({ id: w.id, name: w.name, logo: w.logo })),
       activeWorkspaceId: scope?.workspaceId ?? null,
       memberId: scope?.memberId ?? null,
       suggestions: membership?.suggestions ?? true,
@@ -125,4 +139,55 @@ export const workspaces = new Hono<AppEnv>()
       data: { activeWorkspaceId: scope.workspaceId },
     })
     return c.json({ ok: true })
+  })
+
+  /** Rename the active workspace or change its logo: owners and admins. */
+  .patch('/workspace', requireWorkspace, async (c) => {
+    const scope = c.var.scope
+    requireRole(scope, 'owner', 'admin')
+    const input = await parseBody(c.req.raw, UpdateWorkspace)
+    const before = await prisma.workspace.findUniqueOrThrow({ where: { id: scope.workspaceId } })
+    // A new logo replaces the old one's bytes; null takes it away.
+    const key = workspaceLogoKey(scope)
+    const logo =
+      input.logo === undefined
+        ? undefined
+        : input.logo === null
+          ? null
+          : await storeLogo(key, input.logo)
+    if (logo === null && before.logo) await removeLogo(key)
+    const workspace = await prisma.workspace.update({
+      where: { id: scope.workspaceId },
+      data: {
+        ...(input.name !== undefined && { name: input.name }),
+        ...(logo !== undefined && { logo }),
+      },
+    })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'workspace.updated',
+      target: { type: 'workspace', id: workspace.id },
+      data: {
+        ...(input.name !== undefined &&
+          input.name !== before.name && {
+            name: { from: before.name, to: input.name },
+          }),
+        ...(logo !== undefined && { logo: logo ? 'changed' : 'removed' }),
+      },
+    })
+    return c.json({ id: workspace.id, name: workspace.name, logo: workspace.logo })
+  })
+
+  /** A workspace's logo, for any member of its organization (the switcher shows them all). */
+  .get('/workspaces/:id/logo', async (c) => {
+    const scope = await resolveScope({ ...c.var, activeWorkspaceId: c.req.param('id') })
+    if (!scope) throw new HTTPException(404, { message: 'Workspace not found' })
+    const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: scope.workspaceId } })
+    const logo = workspace.logo && (await readLogo(workspaceLogoKey(scope), workspace.logo))
+    if (!logo) throw new HTTPException(404, { message: 'No logo' })
+    return c.body(logo.bytes as Uint8Array<ArrayBuffer>, 200, {
+      'content-type': logo.type,
+      ...LOGO_HEADERS,
+    })
   })

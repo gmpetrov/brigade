@@ -10,6 +10,7 @@ import {
   setProjectRepositories,
   updateProject,
 } from '../projects.js'
+import { LOGO_HEADERS } from '../logos.js'
 import { describeSite, readSite } from '../project-sites.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
@@ -27,10 +28,7 @@ export const projects = new Hono<AppEnv>()
     const logo = await projectLogo(c.var.db, c.var.scope, c.req.param('id'))
     return c.body(logo.bytes as Uint8Array<ArrayBuffer>, 200, {
       'content-type': logo.type,
-      'cache-control': 'private, max-age=31536000, immutable',
-      'x-content-type-options': 'nosniff',
-      // An SVG opened on its own runs nothing from the API's origin.
-      'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+      ...LOGO_HEADERS,
     })
   })
 
