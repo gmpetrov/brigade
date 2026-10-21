@@ -571,7 +571,8 @@ export function NewThread({
       onClose={() => setTeaching(false)}
     />
   )
-  const send = (
+  // As in a thread, the send button shows once there is something to send.
+  const send = (text.trim() || files.uploads.length > 0) && (
     <Button
       size="icon-sm"
       className="ml-auto rounded-full [&_svg:not([class*='size-'])]:size-5"
