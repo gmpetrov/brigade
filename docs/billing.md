@@ -13,10 +13,14 @@ workspace, paid by the owner or admin who subscribes.
   its portal shows only its own plan, and an admin who leaves takes nothing with them.
   `startCheckout` in `apps/api/src/billing.ts` makes the Checkout for it, with the plugin's
   metadata, because the plugin would bill the member.
-- One payable Checkout per workspace: under a lock on the workspace, the ones still open
-  are expired before a new one is made, so a workspace cannot be subscribed twice.
-- Webhooks can arrive late and out of order: after each subscription event, the plan is
-  read again from Stripe, and Stripe's current state is what is kept.
+- One payable Checkout per workspace: under a lock on the workspace, a subscription Stripe
+  already has for it (paid, its webhook not here yet) becomes its plan and no Checkout is
+  made; else the ones still open are expired before a new one is made. A workspace cannot
+  be subscribed twice.
+- Webhooks can arrive late and out of order: `stripeWebhook`, around the plugin's, reads
+  the plan again from Stripe after each event and keeps Stripe's current state. When Stripe
+  cannot be read, the row goes back to what it was and Stripe gets a 503, so it sends the
+  event again.
 - `apps/api/src/billing.ts` decides who has the cloud computer: a workspace whose plan
   is `active`, `trialing` or `past_due` (Stripe still retrying a payment). Without the
   plan, no cloud computer is created, and a stopped one does not start again.

@@ -3,7 +3,7 @@ import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { organization } from 'better-auth/plugins'
 import { audit } from './audit.js'
-import { CLOUD_PLAN, mayBill, planChanged, stripeClient, subscriptionEvent } from './billing.js'
+import { CLOUD_PLAN, mayBill, stripeClient } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 
@@ -122,10 +122,8 @@ export const auth = betterAuth({
               plans: [CLOUD_PLAN],
               authorizeReference: ({ user, referenceId, action }) =>
                 mayBill(user.id, referenceId, action),
-              onSubscriptionComplete: ({ subscription }) => planChanged(subscription),
-              // Events can come late and out of order: Stripe's current state wins.
-              onSubscriptionUpdate: ({ subscription }) => subscriptionEvent(subscription),
-              onSubscriptionDeleted: ({ subscription }) => subscriptionEvent(subscription),
+              // What follows an event (Stripe's current state, the cloud computer) is
+              // stripeWebhook's in src/billing.ts, around the plugin's webhook.
             },
           }),
         ]

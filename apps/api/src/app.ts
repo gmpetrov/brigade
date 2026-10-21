@@ -2,6 +2,7 @@ import { PROTOCOL_VERSION, type HealthResponse } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { auth } from './auth.js'
+import { stripeWebhook } from './billing.js'
 import { apiCors } from './cors.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
@@ -85,6 +86,7 @@ app.get('/health/db', async (c) => {
 app.all('/api/auth/subscription/:action', async (c, next) =>
   c.req.param('action') === 'success' ? next() : c.json({ error: 'Not found' }, 404),
 )
+app.post('/api/auth/stripe/webhook', (c) => stripeWebhook(c.req.raw, auth.handler))
 app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
 // Brigade's OAuth client ID metadata document, read by MCP servers' authorization servers.
 app.get('/api/mcp/client.json', (c) => c.json(mcpClientDocument()))

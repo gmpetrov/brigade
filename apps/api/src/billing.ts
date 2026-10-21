@@ -69,11 +69,16 @@ const fromUnix = (seconds: number | null | undefined) => (seconds ? new Date(sec
  */
 export async function syncPlan(plan: PlanRow): Promise<PlanRow> {
   if (!stripeClient || !plan.stripeSubscriptionId) return plan
-  const subscription = await stripeClient.subscriptions.retrieve(plan.stripeSubscriptionId)
+  return savePlan(plan.id, await stripeClient.subscriptions.retrieve(plan.stripeSubscriptionId))
+}
+
+/** A Stripe subscription, as it is, on the row. */
+function savePlan(rowId: string, subscription: Stripe.Subscription) {
   const item = subscription.items.data[0]
   return prisma.billingSubscription.update({
-    where: { id: plan.id },
+    where: { id: rowId },
     data: {
+      stripeSubscriptionId: subscription.id,
       status: subscription.status,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       cancelAt: fromUnix(subscription.cancel_at),
@@ -94,17 +99,56 @@ export async function syncPlan(plan: PlanRow): Promise<PlanRow> {
 export const refreshPlan = (plan: PlanRow) =>
   env.STRIPE_WEBHOOK_SECRET ? Promise.resolve(plan) : syncPlan(plan)
 
+/** The Stripe subscription a webhook event is about, if any. */
+function eventSubscription(event: unknown) {
+  const { type, data } = (event ?? {}) as { type?: string; data?: { object?: Record<string, any> } }
+  const object = data?.object
+  if (type === 'checkout.session.completed') {
+    const subscription = object?.subscription
+    return typeof subscription === 'string' ? subscription : (subscription?.id ?? null)
+  }
+  if (type?.startsWith('customer.subscription.')) return (object?.id as string) ?? null
+  return null
+}
+
 /**
- * From the plugin's webhook hooks, once it saved an event: Stripe's current state over the
- * event's, then the cloud computer follows.
+ * Stripe's webhook, around the plugin's (`handle`), which verifies it and saves the event.
+ * Events come late and out of order (an old "updated, active" after "deleted"), so once
+ * the plugin saved one, the plan is read again from Stripe and Stripe's current state is
+ * kept; then the cloud computer follows. When Stripe cannot be read, the row goes back to
+ * what it was before the event and Stripe is answered 503: it sends the event again later.
  */
-export async function subscriptionEvent(subscription: Pick<Subscription, 'id' | 'referenceId'>) {
-  const row = await prisma.billingSubscription.findUnique({ where: { id: subscription.id } })
-  if (row)
-    await syncPlan(row).catch((error) =>
-      console.error(`reading subscription ${row.stripeSubscriptionId} from Stripe failed`, error),
-    )
-  await planChanged(subscription)
+export async function stripeWebhook(
+  request: Request,
+  handle: (request: Request) => Promise<Response>,
+) {
+  let subscriptionId: string | null = null
+  try {
+    subscriptionId = eventSubscription(JSON.parse(await request.clone().text()))
+  } catch {
+    // Not JSON: the plugin refuses it.
+  }
+  const row = () =>
+    subscriptionId
+      ? prisma.billingSubscription.findFirst({ where: { stripeSubscriptionId: subscriptionId } })
+      : null
+  const before = await row()
+  const response = await handle(request)
+  // A forged or unreadable event (4xx), or another product's subscription: nothing more.
+  const after = response.ok ? await row() : null
+  if (!after) return response
+  try {
+    const plan = await syncPlan(after)
+    await planChanged(plan)
+  } catch (error) {
+    console.error(`reading subscription ${subscriptionId} from Stripe failed`, error)
+    if (before) {
+      const { id, ...was } = before
+      await prisma.billingSubscription.update({ where: { id }, data: was })
+    }
+    return Response.json({ error: 'Stripe could not be read: send it again' }, { status: 503 })
+  }
+  return response
 }
 
 /** Brigade's settings for Stripe's customer portal (scripts/stripe-setup.mjs), else the account's default. */
@@ -220,6 +264,21 @@ export async function startCheckout(input: {
       if (current && entitles(current.status))
         throw new HTTPException(409, { message: 'This workspace already has Brigade Cloud' })
       const customer = await workspaceCustomer(workspaceId, user)
+      // Paid already, its webhook not here yet (or the payer closed the tab before coming
+      // back): that subscription is the workspace's, and no second one is offered.
+      const known = await stripeSubscriptionOf(customer, workspaceId)
+      if (known) {
+        const plan = await adopt(workspaceId, customer, known)
+        await planChanged(plan)
+        throw new HTTPException(409, {
+          message:
+            known.status === 'incomplete'
+              ? 'A payment for this workspace is still being processed'
+              : entitles(known.status)
+                ? 'This workspace already has Brigade Cloud'
+                : 'This workspace has a subscription with an unpaid invoice: update the card in Manage billing',
+        })
+      }
       for await (const open of stripe.checkout.sessions.list({ customer, status: 'open' }))
         await stripe.checkout.sessions.expire(open.id)
       const [price] = (
@@ -264,6 +323,36 @@ export async function startCheckout(input: {
     // Stripe's answers come within the lock.
     { timeout: 30_000, maxWait: 30_000 },
   )
+}
+
+/** Statuses of a subscription that is over: a new one may be made. */
+const OVER = ['canceled', 'incomplete_expired']
+
+/** The workspace's subscription Stripe has and that is not over, if any. */
+async function stripeSubscriptionOf(customer: string, workspaceId: string) {
+  for await (const subscription of stripeClient!.subscriptions.list({ customer, status: 'all' }))
+    if (subscription.metadata?.referenceId === workspaceId && !OVER.includes(subscription.status))
+      return subscription
+  return null
+}
+
+/** A subscription Stripe has, on the workspace's row: the one already naming it, else the pending one. */
+async function adopt(workspaceId: string, customer: string, subscription: Stripe.Subscription) {
+  const row =
+    (await prisma.billingSubscription.findFirst({
+      where: { stripeSubscriptionId: subscription.id },
+    })) ??
+    (await prisma.billingSubscription.findFirst({
+      where: { referenceId: workspaceId, plan: CLOUD_PLAN.name, status: 'incomplete' },
+    })) ??
+    (await prisma.billingSubscription.create({
+      data: { id: randomUUID(), plan: CLOUD_PLAN.name, referenceId: workspaceId },
+    }))
+  await prisma.billingSubscription.update({
+    where: { id: row.id },
+    data: { stripeCustomerId: customer },
+  })
+  return savePlan(row.id, subscription)
 }
 
 /** The customer whose portal manages the workspace's plan: the workspace's own. */

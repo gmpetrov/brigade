@@ -190,8 +190,8 @@ test('members see the plan, owners and admins change it, others nothing', { skip
   assert.equal(await billing.mayBill(ids.owner, 'no-such-workspace', 'upgrade-subscription'), false)
 })
 
-/** A Stripe event delivered to the plugin's webhook, signed as Stripe would. */
-async function deliver(type: string, object: Record<string, unknown>) {
+/** A Stripe event delivered to the webhook, signed as Stripe would; Brigade's answer. */
+async function deliver(type: string, object: Record<string, unknown>, expected = 200) {
   const payload = JSON.stringify({
     id: `evt_${randomUUID()}`,
     object: 'event',
@@ -202,21 +202,35 @@ async function deliver(type: string, object: Record<string, unknown>) {
     payload,
     secret: process.env.STRIPE_WEBHOOK_SECRET!,
   })
-  const response = await auth.handler(
-    new Request(`${process.env.API_URL ?? 'http://localhost:3001'}/api/auth/stripe/webhook`, {
+  const request = new Request(
+    `${process.env.API_URL ?? 'http://localhost:3001'}/api/auth/stripe/webhook`,
+    {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'stripe-signature': signature },
       body: payload,
-    }),
+    },
   )
-  assert.equal(response.status, 200, await response.text())
+  const response = await billing.stripeWebhook(request, auth.handler)
+  assert.equal(response.status, expected, await response.text())
 }
 
 /** Stripe, faked where billing calls it: its subscriptions as they are now, its sessions. */
 const stripe = billing.stripeClient!
 const stripeNow = new Map<string, Record<string, unknown>>()
-stripe.subscriptions.retrieve = (async (subscriptionId: string) =>
-  stripeNow.get(subscriptionId)) as never
+/** Set to make Stripe's next read fail, as when it cannot be reached. */
+let stripeDown = false
+stripe.subscriptions.retrieve = (async (subscriptionId: string) => {
+  if (stripeDown) {
+    stripeDown = false
+    throw new Error('Stripe is unreachable')
+  }
+  return stripeNow.get(subscriptionId)
+}) as never
+stripe.subscriptions.list = ((params: { customer: string }) =>
+  (async function* () {
+    for (const subscription of stripeNow.values())
+      if (subscription.customer === params.customer) yield subscription
+  })()) as never
 
 const now = Math.floor(Date.now() / 1000)
 const stripeSubscription = (fields: Record<string, unknown>) => ({
@@ -282,6 +296,17 @@ test("Stripe's webhook keeps the workspace's plan in step", { skip }, async () =
   plan = await prisma.billingSubscription.findUniqueOrThrow({ where: { id: `sub-${id}-3` } })
   assert.equal(plan.status, 'canceled')
   assert.equal(await billing.cloudEntitled(workspaceId), false)
+
+  // The same while Stripe cannot be read: the row stays as it was, and Stripe is asked to
+  // send it again (503), which then settles it.
+  stripeDown = true
+  await deliver('customer.subscription.updated', stripeSubscription({}), 503)
+  plan = await prisma.billingSubscription.findUniqueOrThrow({ where: { id: `sub-${id}-3` } })
+  assert.equal(plan.status, 'canceled')
+  assert.equal(await billing.cloudEntitled(workspaceId), false)
+  await deliver('customer.subscription.updated', stripeSubscription({}))
+  plan = await prisma.billingSubscription.findUniqueOrThrow({ where: { id: `sub-${id}-3` } })
+  assert.equal(plan.status, 'canceled')
 })
 
 test("another product's subscription in the same account changes nothing", { skip }, async () => {
@@ -429,5 +454,28 @@ test(
       made.customers.map((c) => c.metadata.workspaceId).sort(),
       [workspaces.handoff, workspaces.other].sort(),
     )
+  },
+)
+
+test(
+  'paid before its webhook came: no second Checkout, the payment is the plan',
+  { skip },
+  async () => {
+    const customer = await billing.workspaceCustomerId(workspaces.other)
+    const [session] = openSessions(customer)
+    const sessionsBefore = made.sessions.length
+    // Paid in Stripe; the payer closed the tab, and the webhook is late.
+    const subscriptionId = `sub_paid_early_${id}`
+    stripeNow.set(
+      subscriptionId,
+      stripeSubscription({ id: subscriptionId, customer, metadata: session!.metadata }),
+    )
+    await assert.rejects(checkout(workspaces.other, ids.owner), /already has Brigade Cloud/)
+    assert.equal(made.sessions.length, sessionsBefore)
+    const plan = await billing.workspacePlan(workspaces.other)
+    assert.equal(plan?.status, 'active')
+    assert.equal(plan?.stripeSubscriptionId, subscriptionId)
+    assert.equal(plan?.id, session!.metadata.subscriptionId)
+    assert.equal(await billing.cloudEntitled(workspaces.other), true)
   },
 )
