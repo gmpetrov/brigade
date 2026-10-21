@@ -238,10 +238,12 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   returned, since Stripe echoes a masked key.
 - **Connections** are kept as `removed` when disconnected, so their call log survives; the credential is revoked at
   the provider (Google) and deleted from the vault. Gmail and Google Calendar connect through Google OAuth; Stripe
-  signs in on Stripe's MCP server (`mcp.stripe.com`, its own OAuth), where one sign-in may reach several Stripe
-  accounts, live and sandboxes; each call names the account (`stripe_context`) and the mode (`livemode`). The server
-  hides customers' details from keys (not from OAuth), so an account connected with a key before asks its owner to
-  sign in again; signing in to the same account and mode takes its row over, with its access and triggers.
+  signs in on Stripe's MCP server (`mcp.stripe.com`, its own OAuth). Each call there names a Stripe account
+  (`stripe_context`) and a mode (`livemode`); a Brigade account is one of each, as a key was: a sign-in that reaches
+  several is refused, and Brigade adds both to every call (left out of the tools' schemas, a call naming others
+  refused), so grants and triggers never reach an account added to the sign-in later. The server hides customers'
+  details from keys (not from OAuth), so an account connected with a key before asks its owner to sign in again;
+  signing in to the same account and mode takes its row over, with its access and triggers.
 - **Caps** (`apps/api/src/caps.ts`) are counted from the logs, per UTC day: threads created, working time (from a
   prompt or approval to the end of the turn or the next approval request), and write calls made per connection.
   Reaching a cap pauses the work and opens a `cap` ticket that only an admin answers. "Allow once" runs the held
@@ -284,8 +286,8 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   edits a schedule; admins may pause, run or delete it. Teammates create, list and change schedules with their tools,
   only from a member's thread (never a trigger's or a schedule's), owned by that thread's starter.
 - **Subscriptions** (`apps/api/src/subscriptions/`). Brigade subscribes the vendor itself, synced whenever a
-  connection's triggers or awaited replies change: a Stripe webhook endpoint per Stripe account of the sign-in listing
-  the events needed, made through Stripe's MCP server (which creates, updates and disables endpoints but deletes
+  connection's triggers or awaited replies change: a Stripe webhook endpoint per connection listing the events
+  needed, made through Stripe's MCP server (which creates, updates and disables endpoints but deletes
   none: with no trigger left an endpoint is turned off and kept; its signing secret goes to the vault); the GitHub
   App's one webhook;
   a Gmail `users.watch` through Pub/Sub (`GMAIL_PUBSUB_*`, renewed before its seven days run out), or, without

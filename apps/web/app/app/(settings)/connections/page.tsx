@@ -25,6 +25,8 @@ const CONNECT_ERRORS: Record<string, string> = {
   declined: 'Access was not granted.',
   google: 'Google did not complete the sign-in. Try again.',
   mcp: 'The sign-in did not complete. Try again.',
+  stripe_accounts:
+    'Brigade connects one Stripe account at a time, live or a sandbox: on Stripe’s page, choose a single one. Connect again for another.',
   github: 'GitHub did not complete the sign-in. Try again.',
   github_requested:
     "Your request to install Brigade was sent to the GitHub organization's owners. Connect GitHub again once they approve it.",

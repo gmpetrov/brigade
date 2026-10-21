@@ -16,7 +16,7 @@ import {
 } from '@brigade/contracts'
 import { installAppSkills } from '../app-skills.js'
 import { appFor, appKey, requireAccountManager, requireAppManager } from '../apps.js'
-import { stripeAccounts } from '../connectors/stripe.js'
+import { stripeAccountLabel, stripeAccountOf, stripeAccounts } from '../connectors/stripe.js'
 import type { ConnectorKind } from '../connectors/types.js'
 import { syncConnection } from '../subscriptions/index.js'
 import { deleteTriggers } from './triggers.js'
@@ -301,15 +301,27 @@ export const connections = new Hono<AppEnv>()
       return back('error=mcp')
     }
     const signedIn = bearer(credential.accessToken)
+    const kind = grant.kind as ConnectorKind
+    // Stripe: a Brigade account is one Stripe account in one mode (connectors/stripe.ts).
+    if (kind === 'stripe') {
+      const accounts = stripeAccounts(
+        await callMcpTool(signedIn, server, 'list_available_accounts_or_orgs', {}).catch(
+          () => null,
+        ),
+      )
+      if (accounts.length !== 1) {
+        await revokeMcp(credential)
+        return back('error=stripe_accounts')
+      }
+      await sameStripeAccount(db, scope, stripeAccountLabel(accounts[0]!))
+    }
     // An App that names its accounts (Linear's workspace, Atlassian's site) wins over the
     // sign-in's email, which would show the same on each of a member's accounts.
     const account = server.account
       ? ((await mcpAccount(server, signedIn)) ?? email)
       : (email ?? (await mcpAccount(server, signedIn)))
-    const kind = grant.kind as ConnectorKind
     // The row would show only the App's name: say so, as the provider's reply may have changed.
     if (!account) console.warn(`mcp connection of ${kind}: no account name`)
-    if (kind === 'stripe' && account) await adoptStripeKey(db, scope, signedIn, account)
     const connection = await createConnection(
       scope,
       {
@@ -851,38 +863,25 @@ async function disconnect(
 }
 
 /**
- * A Stripe account connected with a key, before Brigade signed in to Stripe: its owner's
- * sign-in to the same account and mode takes that row over (createConnection repairs it in
- * place), so its access, triggers and webhook endpoint carry on.
+ * The member's row for this Stripe account and mode, whatever its label says now (the account
+ * was renamed, or it was connected with a key before Brigade signed in to Stripe): labelled as
+ * the sign-in names it, so createConnection repairs that row in place, with its access, triggers
+ * and webhook endpoint, rather than adding a second one. Only the very same account and mode.
  */
-export async function adoptStripeKey(
-  db: ScopedDb,
-  scope: WorkspaceScope,
-  signedIn: ReturnType<typeof bearer>,
-  account: string,
-) {
-  const output = await callMcpTool(
-    signedIn,
-    connectors.stripe!.mcp!,
-    'list_available_accounts_or_orgs',
-    {},
-  ).catch(() => null)
-  const reached = stripeAccounts(output).map(
-    (a) => `(${a.stripe_context}, ${a.livemode ? 'live mode' : 'test mode'})`,
-  )
+export async function sameStripeAccount(db: ScopedDb, scope: WorkspaceScope, label: string) {
+  const account = stripeAccountOf(label)
+  if (!account) return
   const rows = await db.connection.findMany({
     where: { kind: 'stripe', createdByMemberId: scope.memberId, status: { not: 'removed' } },
+    orderBy: { createdAt: 'asc' },
   })
-  if (rows.some((r) => r.externalAccount === account)) return
-  for (const row of rows) {
-    if (!row.vaultSecretId || !reached.some((r) => row.externalAccount?.endsWith(r))) continue
-    const secret = await openSecret<{ apiKey?: string }>(db, scope, row.vaultSecretId).catch(
-      () => null,
-    )
-    if (typeof secret?.apiKey !== 'string') continue
-    await db.connection.updateMany({ where: { id: row.id }, data: { externalAccount: account } })
-    return
-  }
+  if (rows.some((r) => r.externalAccount === label)) return
+  const same = rows.find((r) => {
+    const other = stripeAccountOf(r.externalAccount)
+    return other?.stripe_context === account.stripe_context && other.livemode === account.livemode
+  })
+  if (same)
+    await db.connection.updateMany({ where: { id: same.id }, data: { externalAccount: label } })
 }
 
 /** A fetch that sends an access token. */

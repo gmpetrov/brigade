@@ -187,6 +187,14 @@ export type McpServer = {
    * request (Stripe's stripe_api_write): null to show its inputs as they are.
    */
   target?: (tool: string, input: Record<string, unknown>) => string | null
+  /**
+   * Arguments every call of an account carries, from its row (Stripe's account and mode): left
+   * out of the tools teammates see, added to each call, and a call naming other values refused.
+   * Null: the row does not say them, and the account signs in again.
+   */
+  fixed?: (connection: { externalAccount: string | null }) => Record<string, unknown> | null
+  /** Tools teammates never get, such as changing which accounts the sign-in reaches. */
+  hidden?: string[]
 }
 
 /**

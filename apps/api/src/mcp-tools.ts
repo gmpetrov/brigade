@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { authorisedFetch } from './connector-calls.js'
 import { connectors, mcpToolName } from './connectors/index.js'
 import { callMcpTool, listMcpTools, mcpWrites, type McpTool } from './connectors/mcp.js'
-import { op, type ConnectorKind, type Operation } from './connectors/types.js'
+import { op, type ConnectorKind, type McpServer, type Operation } from './connectors/types.js'
 import type { Scope, ScopedDb } from './db.js'
 import { catalogTools, serverOf } from './mcp-servers.js'
 
@@ -19,6 +19,8 @@ type McpConnection = {
   vaultSecretId: string | null
   /** The server it signed in to, for an App with one per data region. */
   mcpUrl?: string | null
+  /** Which account it is, for an App whose calls all name it (Stripe's account and mode). */
+  externalAccount?: string | null
 }
 
 /** Whether a kind's tools come from an MCP server rather than from Brigade. */
@@ -28,6 +30,30 @@ async function serverFor(db: ScopedDb, connection: McpConnection) {
   const found = await serverOf(db, connection)
   if (!found) throw new Error('This App no longer has its MCP server')
   return found
+}
+
+/**
+ * The arguments every call of this account carries (Stripe's account and mode), or {} for an
+ * App with none. A row that does not say them signs in again first.
+ */
+async function fixedOf(db: ScopedDb, connection: McpConnection, server: McpServer) {
+  if (!server.fixed) return {}
+  const fixed = server.fixed({ externalAccount: connection.externalAccount ?? null })
+  if (fixed) return fixed
+  await db.connection.updateMany({ where: { id: connection.id }, data: { status: 'needs_reauth' } })
+  throw new Error('This account must sign in again, choosing one account on the provider’s page')
+}
+
+/** A tool's input schema without the arguments Brigade adds itself. */
+function withoutFixed(schema: Record<string, unknown>, fixed: Record<string, unknown>) {
+  const keys = Object.keys(fixed)
+  if (!keys.length) return schema
+  const properties = { ...((schema.properties as Record<string, unknown> | undefined) ?? {}) }
+  for (const key of keys) delete properties[key]
+  const required = Array.isArray(schema.required)
+    ? (schema.required as unknown[]).filter((k) => !keys.includes(k as string))
+    : undefined
+  return { ...schema, properties, ...(required ? { required } : {}) }
 }
 
 async function toolsOf(
@@ -62,7 +88,9 @@ export async function mcpOperationSpecs(
 ) {
   const found = await serverFor(db, connection)
   const { server, prefix } = found
+  const fixed = await fixedOf(db, connection, server)
   return (await toolsOf(db, scope, connection, found))
+    .filter((tool) => !server.hidden?.includes(tool.name))
     .map((tool) => ({ tool, name: mcpToolName(prefix, tool.name) }))
     .filter(
       ({ tool, name }) =>
@@ -72,7 +100,7 @@ export async function mcpOperationSpecs(
       name,
       description: tool.description ?? server.tools[tool.name]?.description ?? tool.name,
       write: mcpWrites(server, tool),
-      inputSchema: tool.inputSchema ?? { type: 'object', properties: {} },
+      inputSchema: withoutFixed(tool.inputSchema ?? { type: 'object', properties: {} }, fixed),
     }))
 }
 
@@ -96,15 +124,28 @@ export async function mcpOperation(
   const found = await serverFor(db, connection)
   const { server, prefix } = found
   const tool = (await toolsOf(db, scope, connection, found)).find(
-    (t) => mcpToolName(prefix, t.name) === name,
+    (t) => mcpToolName(prefix, t.name) === name && !server.hidden?.includes(t.name),
   )
   if (!tool) return undefined
+  const fixed = await fixedOf(db, connection, server)
+  // Only the tools that take them get them (Stripe's documentation search takes no account).
+  const properties = (tool.inputSchema?.properties ?? {}) as Record<string, unknown>
+  const takes = Object.keys(fixed).filter((key) => key in properties)
+  const complete = (input: Record<string, unknown>) => ({
+    ...input,
+    ...Object.fromEntries(takes.map((key) => [key, fixed[key]])),
+  })
   return op({
     description: tool.description ?? tool.name,
     write: mcpWrites(server, tool),
-    input: Input,
-    target: (input) => server.target?.(tool.name, input) ?? targetOf(input),
-    run: (ctx, input) => callMcpTool(ctx.fetch, server, tool.name, input),
+    input: Input.refine(
+      (input) => takes.every((key) => !(key in input) || input[key] === fixed[key]),
+      {
+        message: `This account is ${takes.map((key) => `${key} ${JSON.stringify(fixed[key])}`).join(', ')} only`,
+      },
+    ),
+    target: (input) => server.target?.(tool.name, complete(input)) ?? targetOf(input),
+    run: (ctx, input) => callMcpTool(ctx.fetch, server, tool.name, complete(input)),
   })
 }
 

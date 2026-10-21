@@ -7,7 +7,8 @@ import { Hono } from 'hono'
 import { prisma, scoped, type Scope } from '../db.js'
 import { fromPubSub, inboxChanged } from '../subscriptions/gmail.js'
 import { calendarChanged } from '../subscriptions/google-calendar.js'
-import { readStripeEvent, verifyStripe } from '../subscriptions/stripe.js'
+import { stripeAccountOf } from '../connectors/stripe.js'
+import { accountKey, readStripeEvent, verifyStripe } from '../subscriptions/stripe.js'
 import { dispatch, findTrigger } from '../triggers.js'
 import { openSecret } from '../vault.js'
 
@@ -50,6 +51,11 @@ export const events = new Hono()
     const body = await c.req.text()
     if (body.length > MAX_BODY) return c.json({ error: 'Payload too large' }, 413)
     const scope: Scope = { organizationId: sub.organizationId, workspaceId: sub.workspaceId }
+    // An endpoint on another account than the one the row is (left from a sign-in that stood for
+    // several): its events start nothing, until the next sync turns it off.
+    const own = stripeAccountOf(sub.connection.externalAccount)
+    if (sub.resource !== 'account' && (!own || accountKey(own) !== sub.resource))
+      return c.json({ ok: true })
     let event: { id: string; type: string }
     if (sub.secretId) {
       const { secret } = await openSecret<SigningSecret>(scoped(scope), scope, sub.secretId)

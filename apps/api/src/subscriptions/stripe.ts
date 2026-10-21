@@ -1,6 +1,6 @@
-// Stripe, through its MCP server with the account's sign-in. A sign-in may reach several Stripe
-// accounts (a live account and its sandboxes): each gets one webhook endpoint listing the event
-// types the connection's triggers need, kept current. The server creates, updates and disables
+// Stripe, through its MCP server with the account's sign-in. A Brigade account is one Stripe
+// account in one mode: it gets one webhook endpoint listing the event types the connection's
+// triggers need, kept current. The server creates, updates and disables
 // endpoints but deletes none. It shows a new endpoint's signing secret to a sign-in (it hides it
 // from keys): kept in the vault, it checks the endpoint's events. An endpoint without one has
 // each event read again from Stripe before it starts anything (readStripeEvent).
@@ -8,7 +8,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 import { env } from '../config.js'
 import { authorisedFetch } from '../connector-calls.js'
 import { callMcpTool } from '../connectors/mcp.js'
-import { stripe, stripeAccounts, type StripeAccount } from '../connectors/stripe.js'
+import { stripe, stripeAccountOf, type StripeAccount } from '../connectors/stripe.js'
 import type { ApiKeyCredential, ConnectorKind } from '../connectors/types.js'
 import type { Scope, ScopedDb } from '../db.js'
 import { deleteSecret, openSecret, sealSecret } from '../vault.js'
@@ -84,36 +84,65 @@ export async function syncStripe(target: Target) {
     return
   }
 
+  // The one Stripe account and mode the row is. A row from when a sign-in could stand for
+  // several accounts says none: its endpoints are turned off, and its owner signs in again.
+  const account = stripeAccountOf(connection.externalAccount)
+  if (events.length && !account)
+    throw new SubscribeError(
+      'Sign in to Stripe again, choosing one account, to change the triggers of this account',
+    )
+  const resource = account && accountKey(account)
   const signedIn = await authorisedFetch(db, scope, connection)
-  const accounts = stripeAccounts(
-    await callMcpTool(signedIn, server, 'list_available_accounts_or_orgs', {}),
-  )
 
   // The endpoint registered with this account's key, before its owner signed in: kept, with its
-  // signing secret, as the endpoint of the account that has it.
+  // signing secret, when the account has it.
   for (const row of rows.filter((r) => r.resource === LEGACY)) {
-    let owner: StripeAccount | undefined
-    for (const account of row.externalId ? accounts : []) {
-      const found = await api(signedIn, account, false, 'GetWebhookEndpointsWebhookEndpoint', {
+    const found =
+      account &&
+      row.externalId &&
+      !rows.some((r) => r.resource === resource) &&
+      (await api(signedIn, account, false, 'GetWebhookEndpointsWebhookEndpoint', {
         id: row.externalId,
       }).catch((error) => {
-        // Another account's endpoint is no such endpoint on this one.
         if (gone(error)) return null
         throw error
-      })
-      if (found) {
-        owner = account
-        break
-      }
-    }
-    const taken = owner && rows.some((r) => r.resource === accountKey(owner))
-    if (owner && !taken) {
-      row.resource = accountKey(owner)
+      }))
+    if (found) {
+      row.resource = resource!
       await db.subscription.updateMany({ where: { id: row.id }, data: { resource: row.resource } })
     } else await dropRow(db, row)
   }
+  // Endpoints on other accounts, from a sign-in that stood for several: turned off where the
+  // sign-in still reaches them, and no longer listened to.
+  for (const row of rows.filter((r) => r.resource !== LEGACY && r.resource !== resource)) {
+    const other = accountOf(row.resource)
+    if (other && row.externalId && row.events.length)
+      await api(signedIn, other, true, 'PostWebhookEndpointsWebhookEndpoint', {
+        id: row.externalId,
+        disabled: true,
+      }).catch((error) =>
+        console.warn(`stripe endpoint ${row.externalId} not turned off: ${String(error)}`),
+      )
+    await dropRow(db, row)
+  }
+  if (!account) return
 
-  if (events.length && !reachable())
+  const existing = rows.find((r) => r.resource === resource)
+  if (!events.length) {
+    // Stripe's server deletes no endpoint: it is turned off, and on again with the next trigger.
+    if (existing?.externalId && existing.events.length)
+      await api(signedIn, account, true, 'PostWebhookEndpointsWebhookEndpoint', {
+        id: existing.externalId,
+        disabled: true,
+      }).catch((error) => {
+        if (!gone(error)) throw error
+      })
+    if (existing)
+      await db.subscription.updateMany({ where: { id: existing.id }, data: { events: [] } })
+    return
+  }
+
+  if (!reachable())
     throw new SubscribeError(
       `Stripe can only send events to a public HTTPS address, and this server is ${env.API_URL}`,
     )
@@ -121,75 +150,51 @@ export async function syncStripe(target: Target) {
     new SubscribeError(
       `Stripe refused to register Brigade's webhook endpoint (${error instanceof Error ? error.message : error})`,
     )
-
-  for (const account of accounts) {
-    const resource = accountKey(account)
-    const existing = rows.find((r) => r.resource === resource)
-    if (!events.length) {
-      // Stripe's server deletes no endpoint: it is turned off, and on again with the next trigger.
-      if (existing?.externalId && existing.events.length)
-        await api(signedIn, account, true, 'PostWebhookEndpointsWebhookEndpoint', {
-          id: existing.externalId,
-          disabled: true,
-        }).catch((error) => {
-          if (!gone(error)) throw error
-        })
-      if (existing)
-        await db.subscription.updateMany({ where: { id: existing.id }, data: { events: [] } })
-      continue
-    }
-    if (existing?.externalId) {
-      const updated = await api(signedIn, account, true, 'PostWebhookEndpointsWebhookEndpoint', {
-        id: existing.externalId,
-        enabled_events: events,
-        disabled: false,
-      }).then(
-        () => true,
-        (error) => {
-          // Deleted in Stripe's dashboard: register a new one below.
-          if (gone(error)) return false
-          throw refused(error)
-        },
-      )
-      if (updated) {
-        await db.subscription.updateMany({
-          where: { id: existing.id },
-          data: { events, error: null },
-        })
-        continue
-      }
-    }
-    const row =
-      existing ??
-      (await db.subscription.create({
-        data: { connectionId: connection.id, resource, mode: 'push', events: [] } as never,
-      }))
-    const endpoint = (await api(signedIn, account, true, 'PostWebhookEndpoints', {
-      url: `${env.API_URL}/events/stripe/${row.id}`,
+  if (existing?.externalId) {
+    const updated = await api(signedIn, account, true, 'PostWebhookEndpointsWebhookEndpoint', {
+      id: existing.externalId,
       enabled_events: events,
-      description: 'Brigade: starts threads for your teammates',
-    }).catch((error) => {
-      throw refused(error)
-    })) as { id?: unknown; secret?: unknown }
-    if (typeof endpoint.id !== 'string') throw refused('no endpoint id in its answer')
-    // Shown to a sign-in; "[REDACTED]" to a key, and then each event is read again instead.
-    const secret =
-      typeof endpoint.secret === 'string' && endpoint.secret.startsWith('whsec_')
-        ? endpoint.secret
-        : null
-    const secretId = secret ? await sealSecret(db, scope, { secret }) : null
-    await db.subscription.updateMany({
-      where: { id: row.id },
-      data: { externalId: endpoint.id, secretId, events, error: null },
-    })
-    if (row.secretId) await deleteSecret(db, row.secretId)
+      disabled: false,
+    }).then(
+      () => true,
+      (error) => {
+        // Deleted in Stripe's dashboard: register a new one below.
+        if (gone(error)) return false
+        throw refused(error)
+      },
+    )
+    if (updated) {
+      await db.subscription.updateMany({
+        where: { id: existing.id },
+        data: { events, error: null },
+      })
+      return
+    }
   }
-
-  // Accounts the sign-in no longer reaches: Brigade cannot turn their endpoints off, and stops
-  // taking their events (Stripe disables an endpoint that keeps failing).
-  const reached = new Set(accounts.map(accountKey))
-  for (const row of rows)
-    if (row.resource !== LEGACY && !reached.has(row.resource)) await dropRow(db, row)
+  const row =
+    existing ??
+    (await db.subscription.create({
+      data: { connectionId: connection.id, resource, mode: 'push', events: [] } as never,
+    }))
+  const endpoint = (await api(signedIn, account, true, 'PostWebhookEndpoints', {
+    url: `${env.API_URL}/events/stripe/${row.id}`,
+    enabled_events: events,
+    description: 'Brigade: starts threads for your teammates',
+  }).catch((error) => {
+    throw refused(error)
+  })) as { id?: unknown; secret?: unknown }
+  if (typeof endpoint.id !== 'string') throw refused('no endpoint id in its answer')
+  // Shown to a sign-in; "[REDACTED]" to a key, and then each event is read again instead.
+  const secret =
+    typeof endpoint.secret === 'string' && endpoint.secret.startsWith('whsec_')
+      ? endpoint.secret
+      : null
+  const secretId = secret ? await sealSecret(db, scope, { secret }) : null
+  await db.subscription.updateMany({
+    where: { id: row.id },
+    data: { externalId: endpoint.id, secretId, events, error: null },
+  })
+  if (row.secretId) await deleteSecret(db, row.secretId)
 }
 
 async function dropRow(db: ScopedDb, row: { id: string; secretId: string | null }) {
