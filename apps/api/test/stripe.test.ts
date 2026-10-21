@@ -128,6 +128,8 @@ type Fake = {
   secret: string
   deletedWithKey: string[]
   tokens: string[]
+  /** How many times the server lists the sign-in's accounts before it fails to. */
+  lists?: number
 }
 let fake: Fake
 const AUTH = 'https://access.stripe.test'
@@ -178,7 +180,10 @@ const stripeError = (message: string) => ({
 let endpoints = 0
 
 function stripeTool(name: string, args: Record<string, unknown>) {
-  if (name === 'list_available_accounts_or_orgs') return result({ accounts: fake.accounts })
+  if (name === 'list_available_accounts_or_orgs') {
+    if (fake.lists !== undefined && fake.lists-- <= 0) return stripeError('Service unavailable')
+    return result({ accounts: fake.accounts })
+  }
   const operation = args.stripe_api_operation_id as string
   const parameters = (args.parameters ?? {}) as Record<string, unknown>
   const key = keyOf(args as Account)
@@ -628,7 +633,7 @@ test(
 
 // Brigade's OAuth callback for Stripe, as the provider's redirect reaches it: only the session
 // middleware is left out. Returns the account it connected, or the error it sent back.
-async function signIn(code: string) {
+async function signIn(code: string, reconnect?: string) {
   const { Hono } = await import('hono')
   const { connections } = await import('../src/routes/connections.js')
   const { hashToken } = await import('../src/hub.js')
@@ -644,6 +649,7 @@ async function signIn(code: string) {
         memberId: member,
         kind: 'stripe',
         verifier: 'verifier',
+        ...(reconnect ? { reconnect } : {}),
       }),
     },
   })
@@ -793,3 +799,94 @@ test('each Stripe account and mode is a row of its own, whatever its name', { sk
   fake.accounts = [{ stripe_context: 'acct_1Live', livemode: true, name: 'Acme' }]
   assert.equal((await signIn('four')).connected, live.id)
 })
+
+/** A row from #302, when one sign-in could stand for several accounts and its label named none. */
+const groupedRow = async (externalAccount: string, resources: string[] = []) => {
+  const { scoped } = await import('../src/db.js')
+  const row = await connection()
+  await db.connection.update({
+    where: { id: row.id },
+    data: { externalAccount, status: 'needs_reauth' },
+  })
+  for (const resource of resources)
+    await scoped(scope).subscription.create({
+      data: {
+        connectionId: row.id,
+        resource,
+        mode: 'push',
+        externalId: `we_${resource}`,
+        events: ['payment_intent.succeeded'],
+      } as never,
+    })
+  return row
+}
+
+test(
+  'a row that stood for several accounts is taken over by a sign-in to the account it has an endpoint on, or by its Reconnect',
+  { skip },
+  async () => {
+    await removeAll()
+    const withEndpoint = await groupedRow('Acme (live mode) +1', [
+      'acct_1Live:live',
+      'acct_1Live:test',
+    ])
+    const without = await groupedRow('Beta (live mode) +1')
+    await db.grant.create({
+      data: { ...scope, connectionId: withEndpoint.id, teammateId, scope: 'read' } as never,
+    })
+
+    // Its events keep starting threads until then: they are not dropped as another account's.
+    fake.events['acct_1Live:test'] = [
+      { id: 'evt_1Kept', object: 'event', type: 'customer.created', data: { object: {} } },
+    ]
+    const [testSub] = await db.subscription.findMany({
+      where: { connectionId: withEndpoint.id, resource: 'acct_1Live:test' },
+    })
+    assert.equal(
+      (await post(`/stripe/${testSub!.id}`, JSON.stringify({ id: 'evt_1Kept' }))).status,
+      200,
+    )
+    assert.equal(fake.calls.at(-1)?.operation, 'GetEventsId', 'read again from Stripe')
+
+    // A sign-in to an account it has an endpoint on: that row, now that one account alone.
+    fake.accounts = [{ stripe_context: 'acct_1Live', livemode: false, name: 'Acme' }]
+    assert.equal((await signIn('grouped')).connected, withEndpoint.id)
+    const taken = await db.connection.findFirstOrThrow({ where: { id: withEndpoint.id } })
+    assert.equal(taken.externalAccount, 'Acme (acct_1Live, test mode)')
+    assert.equal(await db.grant.count({ where: { connectionId: withEndpoint.id } }), 1)
+
+    // One with no endpoint to tell: a new sign-in is a row of its own, its Reconnect repairs it.
+    fake.accounts = [{ stripe_context: 'acct_1Beta', livemode: true, name: 'Beta' }]
+    const fresh = (await signIn('fresh')).connected
+    assert.ok(fresh && fresh !== without.id)
+    await db.connection.update({ where: { id: fresh! }, data: { status: 'removed' } })
+    assert.equal((await signIn('reconnect', without.id)).connected, without.id)
+    const repaired = await db.connection.findFirstOrThrow({ where: { id: without.id } })
+    assert.equal(repaired.externalAccount, 'Beta (acct_1Beta, live mode)')
+    assert.equal(repaired.status, 'active')
+
+    // Reconnecting a row that is another account repairs nothing of it.
+    fake.accounts = [{ stripe_context: 'acct_1Gamma', livemode: true, name: 'Gamma' }]
+    const gamma = (await signIn('gamma', without.id)).connected
+    assert.ok(gamma && gamma !== without.id)
+    assert.equal(
+      (await db.connection.findFirstOrThrow({ where: { id: without.id } })).externalAccount,
+      'Beta (acct_1Beta, live mode)',
+    )
+  },
+)
+
+test(
+  'a sign-in names its row from the one answer it checked, even if the server fails to answer again',
+  { skip },
+  async () => {
+    await removeAll()
+    const old = await keyRow('Acme (acct_1Live, live mode)')
+    fake.accounts = [{ stripe_context: 'acct_1Live', livemode: true, name: 'Acme' }]
+    fake.lists = 1
+    assert.deepEqual(await signIn('once'), { connected: old.id, error: null })
+    const row = await db.connection.findFirstOrThrow({ where: { id: old.id } })
+    assert.equal(row.externalAccount, 'Acme (acct_1Live, live mode)')
+    assert.equal(row.status, 'active')
+  },
+)

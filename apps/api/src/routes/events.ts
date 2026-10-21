@@ -52,9 +52,10 @@ export const events = new Hono()
     if (body.length > MAX_BODY) return c.json({ error: 'Payload too large' }, 413)
     const scope: Scope = { organizationId: sub.organizationId, workspaceId: sub.workspaceId }
     // An endpoint on another account than the one the row is (left from a sign-in that stood for
-    // several): its events start nothing, until the next sync turns it off.
+    // several): its events start nothing, until the next sync turns it off. A row that names no
+    // account yet (one of those sign-ins, until its owner signs in again) keeps its endpoints.
     const own = stripeAccountOf(sub.connection.externalAccount)
-    if (sub.resource !== 'account' && (!own || accountKey(own) !== sub.resource))
+    if (own && sub.resource !== 'account' && accountKey(own) !== sub.resource)
       return c.json({ ok: true })
     let event: { id: string; type: string }
     if (sub.secretId) {

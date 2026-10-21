@@ -143,6 +143,7 @@ export function AppSheet({
             ...(route === 'github' ? {} : { kind }),
             ...(region ? { region } : {}),
             ...(returnTo ? { returnTo } : {}),
+            ...(route === 'mcp' && reconnecting ? { reconnect: reconnecting } : {}),
           },
         })
         return url
