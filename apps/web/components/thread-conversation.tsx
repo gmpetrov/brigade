@@ -178,7 +178,11 @@ export function ThreadConversation({
       message.eventsWaitingSince !== undefined
     )
       setEventsWaitingSince(message.eventsWaitingSince)
-    if (message.type === 'computer.updated') void computers.reload()
+    if (message.type === 'computer.updated') {
+      void computers.reload()
+      // Its own computer: the thread says whether it is there, also when it is another member's.
+      if (message.computerId === thread.data?.computer.id) void thread.reload()
+    }
   })
   // Keyed by the thread: when it started loading, for its placeholder's delays.
   const [openedAt] = useState(() => Date.now())
@@ -193,6 +197,20 @@ export function ThreadConversation({
     reconnect,
   } = useThreadEvents(id, setStatus)
   const { items, queued, seen, turnId, background } = useThreadItems(events, firstSeq)
+  // Back after its socket dropped (a phone asleep): what changed meanwhile, computers included.
+  const wasConnected = useRef(false)
+  useEffect(() => {
+    if (!connected) return
+    if (wasConnected.current) {
+      void thread.reload()
+      void computers.reload()
+    }
+    wasConnected.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected])
+  useEffect(() => {
+    wasConnected.current = false
+  }, [id])
   const outputs = useThreadOutputs(events)
   const preview = useCheckedPreview(id, useThreadPreview(events))
   // Preview is offered once there is something to preview: a preview it had, or code it checked out.
@@ -572,25 +590,23 @@ export function ThreadConversation({
         }))
         .sort((a, b) => Number(!!b.current) - Number(!!a.current))
     : []
-  const machine = computers.data?.computers.find((c) => c.id === t.computer.id)
-  const machineOnline = machine?.online
+  const machine = t.computer
+  const machineOnline = machine.online
   // Its computer went away during a turn: said where the answer would show, by the machine's name.
-  const machineDown: ComputerDown | undefined = !machine
-    ? undefined
-    : machine.restarting
-      ? { name: machine.name, cloud: machine.kind === 'cloud', state: 'restarting' }
-      : machine.online
-        ? undefined
-        : machine.kind === 'cloud'
-          ? machine.status === 'error' || machine.status === 'destroyed'
-            ? undefined
-            : // Stopped from its menu, it waits for someone to start it; else it is coming back.
-              {
-                name: machine.name,
-                cloud: true,
-                state: machine.status === 'stopped' ? 'offline' : 'restarting',
-              }
-          : { name: machine.name, cloud: false, state: 'offline' }
+  const machineDown: ComputerDown | undefined = machine.restarting
+    ? { name: machine.name, cloud: machine.kind === 'cloud', state: 'restarting' }
+    : machine.online
+      ? undefined
+      : machine.kind === 'cloud'
+        ? machine.status === 'error' || machine.status === 'destroyed'
+          ? undefined
+          : // Stopped from its menu, it waits for someone to start it; else it is coming back.
+            {
+              name: machine.name,
+              cloud: true,
+              state: machine.status === 'stopped' ? 'offline' : 'restarting',
+            }
+        : { name: machine.name, cloud: false, state: 'offline' }
   // Its machine is offline: offer the cloud computer, where its teammates can pick up.
   const cloudTarget = moveTargets.find((c) => c.cloud && !c.current && !c.unavailable)
   const offerCloud =

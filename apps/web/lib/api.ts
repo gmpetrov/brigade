@@ -351,7 +351,15 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
     lastTurnAt: string
     teammate: { id: string; name: string; harness: string; model: string | null }
   }[]
-  computer: { id: string; name: string; kind: string }
+  /** Where it runs, and whether that computer is there now (online, restarting into an update). */
+  computer: {
+    id: string
+    name: string
+    kind: string
+    status: Computer['status']
+    online: boolean
+    restarting: boolean
+  }
   account: { id: string; label: string; status: string } | null
   origin: 'member' | 'trigger' | 'schedule' | 'child'
   trigger: { id: string; label: string; event: string } | null
