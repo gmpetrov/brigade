@@ -4,6 +4,7 @@ import { AttachmentIds } from './attachments.js'
 import { QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath } from './library.js'
 import { isHarnessModel } from './models.js'
+import { Logo } from './projects.js'
 import { CLIPBOARD_MAX, Effort, HarnessId } from './runner.js'
 
 export const HealthResponse = z.object({
@@ -16,6 +17,15 @@ export type HealthResponse = z.infer<typeof HealthResponse>
 
 export const CreateWorkspace = z.object({ name: z.string().trim().min(1).max(80) })
 export const SwitchWorkspace = z.object({ workspaceId: z.string() })
+/** An owner or admin renames the active workspace, or changes its logo (null: back to its letter). */
+export const UpdateWorkspace = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  logo: Logo.nullable().optional(),
+})
+
+/** Where the dashboard reads a workspace's logo, under /api. */
+export const workspaceLogoPath = (workspace: { id: string; logo: string }) =>
+  `/workspaces/${workspace.id}/logo?v=${encodeURIComponent(workspace.logo)}`
 
 /** One of HARNESS_MODELS for the teammate's harness, or null for the account's default. */
 export const TeammateModel = z.string().trim().max(100).nullable()

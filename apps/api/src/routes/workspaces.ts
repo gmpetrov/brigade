@@ -1,11 +1,26 @@
-import { CreateWorkspace, SetSuggestions, SwitchWorkspace } from '@brigade/contracts'
+import {
+  CreateWorkspace,
+  SetSuggestions,
+  SwitchWorkspace,
+  UpdateWorkspace,
+} from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
+import { workspaceLogoKey } from '../bucket.js'
 import { ensureChief } from '../chief.js'
 import { createWorkspaceComputer } from '../cloud.js'
 import { prisma } from '../db.js'
-import { parseBody, requireUser, requireWorkspace, resolveScope, type AppEnv } from '../scope.js'
+import { LOGO_HEADERS, readLogo } from '../logos.js'
+import {
+  parseBody,
+  requireRole,
+  requireUser,
+  requireWorkspace,
+  resolveScope,
+  type AppEnv,
+} from '../scope.js'
+import { updateWorkspace } from '../workspace-settings.js'
 
 export const workspaces = new Hono<AppEnv>()
   .use(requireUser)
@@ -70,7 +85,7 @@ export const workspaces = new Hono<AppEnv>()
       })),
       activeOrganizationId: membership ? orgId : null,
       role: membership?.role ?? null,
-      workspaces: workspaceList.map((w) => ({ id: w.id, name: w.name })),
+      workspaces: workspaceList.map((w) => ({ id: w.id, name: w.name, logo: w.logo })),
       activeWorkspaceId: scope?.workspaceId ?? null,
       memberId: scope?.memberId ?? null,
       suggestions: membership?.suggestions ?? true,
@@ -125,4 +140,27 @@ export const workspaces = new Hono<AppEnv>()
       data: { activeWorkspaceId: scope.workspaceId },
     })
     return c.json({ ok: true })
+  })
+
+  /** Rename the active workspace or change its logo: owners and admins. */
+  .patch('/workspace', requireWorkspace, async (c) => {
+    const scope = c.var.scope
+    requireRole(scope, 'owner', 'admin')
+    const input = await parseBody(c.req.raw, UpdateWorkspace)
+    const workspace = await updateWorkspace(scope, input)
+    return c.json({ id: workspace.id, name: workspace.name, logo: workspace.logo })
+  })
+
+  /** A workspace's logo, for any member of its organization (the switcher shows them all). */
+  .get('/workspaces/:id/logo', async (c) => {
+    const scope = await resolveScope({ ...c.var, activeWorkspaceId: c.req.param('id') })
+    if (!scope) throw new HTTPException(404, { message: 'Workspace not found' })
+    const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: scope.workspaceId } })
+    const logo =
+      workspace.logo && (await readLogo(workspaceLogoKey(scope, workspace.logo), workspace.logo))
+    if (!logo) throw new HTTPException(404, { message: 'No logo' })
+    return c.body(logo.bytes as Uint8Array<ArrayBuffer>, 200, {
+      'content-type': logo.type,
+      ...LOGO_HEADERS,
+    })
   })

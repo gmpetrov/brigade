@@ -228,7 +228,8 @@ export type Me = {
   organizations: { id: string; name: string; slug: string; role: string }[]
   activeOrganizationId: string | null
   role: 'owner' | 'admin' | 'member' | null
-  workspaces: { id: string; name: string }[]
+  /** `logo`: its stored logo's version (workspaceLogoPath); null: its letter shows. */
+  workspaces: { id: string; name: string; logo: string | null }[]
   activeWorkspaceId: string | null
   memberId: string | null
   /** The member has an AI account here that has worked: nothing runs without one. */

@@ -26,8 +26,8 @@ export const PROJECT_LOGO_TYPES = [
   'image/x-icon',
   'image/svg+xml',
 ] as const
-/** A logo as the dashboard sends it: a data URL of one of those types. */
-const Logo = z
+/** A logo as the dashboard sends it: a data URL of one of those types (a workspace's too). */
+export const Logo = z
   .string()
   .max(Math.ceil((PROJECT_LOGO_MAX * 4) / 3) + 64)
   .regex(/^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/, 'A logo is an image')

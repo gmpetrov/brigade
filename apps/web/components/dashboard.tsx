@@ -1,6 +1,8 @@
 'use client'
+import { workspaceLogoPath } from '@brigade/contracts'
 import {
   Bell,
+  Building2,
   CalendarClock,
   ChevronDown,
   GitPullRequest,
@@ -102,6 +104,7 @@ import {
   type Ticket,
 } from '@/lib/api'
 import { inCaptureWindow } from '@/lib/brigade-app'
+import { API_URL } from '@/lib/config'
 import { authClient } from '@/lib/auth-client'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 import { isMac, useIsMac } from '@/lib/platform'
@@ -112,6 +115,7 @@ export { StatusBadge } from '@/components/status-badge'
 
 type Dashboard = {
   me: Me
+  reloadMe: () => Promise<void>
   teammates: Teammate[]
   reloadTeammates: () => Promise<void>
   /** Archived ones included; the sidebar and pickers leave them out. */
@@ -142,6 +146,7 @@ const WORK_NAV = [
 
 /** The setup every project shares: the Settings page's sections, its first one first. */
 export const SETTINGS_NAV = [
+  { href: '/app/workspace', label: 'Workspace', icon: Building2 },
   { href: '/app/connections', label: 'Apps', icon: Plug },
   { href: '/app/vault', label: 'Secrets', icon: KeyRound },
   { href: '/app/security', label: 'Security', icon: ShieldCheck },
@@ -158,6 +163,43 @@ const THEMES = [
 ] as const
 
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
+
+/** A workspace's logo, or its first letter on a square of colour. */
+export function WorkspaceMark({
+  workspace,
+  className,
+}: {
+  workspace: { id: string; name: string; logo?: string | null } | undefined
+  className?: string
+}) {
+  const logo = workspace?.logo
+    ? workspaceLogoPath({ id: workspace.id, logo: workspace.logo })
+    : null
+  const [failed, setFailed] = useState<string | null>(null)
+  const shown = logo && failed !== logo
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'flex shrink-0 items-center justify-center overflow-hidden rounded-sm font-bold',
+        className,
+        shown && 'bg-transparent',
+      )}
+    >
+      {shown ? (
+        // eslint-disable-next-line @next/next/no-img-element -- a stored logo, through the API
+        <img
+          src={`${API_URL}/api${logo}`}
+          alt=""
+          className="size-full object-cover"
+          onError={() => setFailed(logo)}
+        />
+      ) : (
+        initial(workspace?.name ?? '')
+      )}
+    </span>
+  )
+}
 
 /** A teammate's pebble, drawn from its id so it is the same everywhere; a teammate not
  * created yet (a proposal) has no id, and takes its name instead. The chief wears a
@@ -312,6 +354,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   const dashboard = {
     me: data,
+    reloadMe: me.reload,
     teammates: teammates.data ?? [],
     reloadTeammates: teammates.reload,
     projects: projects.data ?? [],
@@ -342,9 +385,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                           size="lg"
                           className="min-w-0 flex-1 data-[state=open]:bg-sidebar-accent"
                         >
-                          <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-sm font-bold">
-                            {initial(workspace?.name ?? '')}
-                          </span>
+                          <WorkspaceMark
+                            workspace={workspace}
+                            className="bg-sidebar-primary text-sidebar-primary-foreground size-8"
+                          />
                           <span className="truncate font-semibold group-data-[collapsible=icon]:hidden">
                             {workspace?.name}
                           </span>
@@ -357,9 +401,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         </DropdownMenuLabel>
                         {data.workspaces.map((w) => (
                           <DropdownMenuItem key={w.id} onSelect={() => void switchWorkspace(w.id)}>
-                            <span className="bg-secondary flex size-6 items-center justify-center rounded-sm text-xs font-bold">
-                              {initial(w.name)}
-                            </span>
+                            <WorkspaceMark workspace={w} className="bg-secondary size-6 text-xs" />
                             {w.name}
                           </DropdownMenuItem>
                         ))}
@@ -705,9 +747,7 @@ export function SidebarToggle({ className }: { className?: string }) {
     <SidebarTrigger
       // On a phone, round like the + across from it; wider, a plain icon in the sidebar's header.
       className={cn(
-        isMobile
-          ? roundButtonClass
-          : '-ml-1 size-8 text-muted-foreground hover:text-foreground',
+        isMobile ? roundButtonClass : '-ml-1 size-8 text-muted-foreground hover:text-foreground',
         className,
       )}
       aria-label={label}
