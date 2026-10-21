@@ -11,7 +11,7 @@ import { workspaceLogoKey } from '../bucket.js'
 import { ensureChief } from '../chief.js'
 import { createWorkspaceComputer } from '../cloud.js'
 import { prisma } from '../db.js'
-import { LOGO_HEADERS, readLogo, removeLogo, storeLogo } from '../logos.js'
+import { LOGO_HEADERS, readLogo } from '../logos.js'
 import {
   parseBody,
   requireRole,
@@ -20,6 +20,7 @@ import {
   resolveScope,
   type AppEnv,
 } from '../scope.js'
+import { updateWorkspace } from '../workspace-settings.js'
 
 export const workspaces = new Hono<AppEnv>()
   .use(requireUser)
@@ -146,36 +147,7 @@ export const workspaces = new Hono<AppEnv>()
     const scope = c.var.scope
     requireRole(scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, UpdateWorkspace)
-    const before = await prisma.workspace.findUniqueOrThrow({ where: { id: scope.workspaceId } })
-    // A new logo replaces the old one's bytes; null takes it away.
-    const key = workspaceLogoKey(scope)
-    const logo =
-      input.logo === undefined
-        ? undefined
-        : input.logo === null
-          ? null
-          : await storeLogo(key, input.logo)
-    if (logo === null && before.logo) await removeLogo(key)
-    const workspace = await prisma.workspace.update({
-      where: { id: scope.workspaceId },
-      data: {
-        ...(input.name !== undefined && { name: input.name }),
-        ...(logo !== undefined && { logo }),
-      },
-    })
-    await audit({
-      ...scope,
-      actor: { type: 'member', id: scope.memberId },
-      action: 'workspace.updated',
-      target: { type: 'workspace', id: workspace.id },
-      data: {
-        ...(input.name !== undefined &&
-          input.name !== before.name && {
-            name: { from: before.name, to: input.name },
-          }),
-        ...(logo !== undefined && { logo: logo ? 'changed' : 'removed' }),
-      },
-    })
+    const workspace = await updateWorkspace(scope, input)
     return c.json({ id: workspace.id, name: workspace.name, logo: workspace.logo })
   })
 
@@ -184,7 +156,8 @@ export const workspaces = new Hono<AppEnv>()
     const scope = await resolveScope({ ...c.var, activeWorkspaceId: c.req.param('id') })
     if (!scope) throw new HTTPException(404, { message: 'Workspace not found' })
     const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: scope.workspaceId } })
-    const logo = workspace.logo && (await readLogo(workspaceLogoKey(scope), workspace.logo))
+    const logo =
+      workspace.logo && (await readLogo(workspaceLogoKey(scope, workspace.logo), workspace.logo))
     if (!logo) throw new HTTPException(404, { message: 'No logo' })
     return c.body(logo.bytes as Uint8Array<ArrayBuffer>, 200, {
       'content-type': logo.type,

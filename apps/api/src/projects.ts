@@ -199,7 +199,7 @@ export async function createProject(
     })
   // A logo that will not keep leaves the project with its letter, not unmade.
   if (input.logo) {
-    const logo = await storeLogo(projectLogoKey(scope, project.id), input.logo).catch(
+    const logo = await storeLogo(input.logo, () => projectLogoKey(scope, project.id)).catch(
       (error: unknown) => {
         console.warn(`project ${project.id}: logo not kept: ${String(error)}`)
         return null
@@ -248,7 +248,7 @@ export async function updateProject(
       ? undefined
       : input.logo === null
         ? null
-        : await storeLogo(projectLogoKey(scope, id), input.logo)
+        : await storeLogo(input.logo, () => projectLogoKey(scope, id))
   if (logo === null && project.logo) await removeLogo(projectLogoKey(scope, id))
   if (input.preferredConnectionIds) {
     const found = await db.connection.count({

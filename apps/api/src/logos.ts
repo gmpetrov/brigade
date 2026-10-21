@@ -28,11 +28,12 @@ export function decodeLogo(dataUrl: string) {
   return { bytes, type, extension: LOGO_EXTENSIONS[type] }
 }
 
-/** Keep a logo at `key`. Returns what its row's `logo` holds. */
-export async function storeLogo(key: string, dataUrl: string) {
+/** Keep a logo at the key its version names (or at one key for all). Returns its version: what its row's `logo` holds. */
+export async function storeLogo(dataUrl: string, keyFor: (version: string) => string) {
   const { bytes, type, extension } = decodeLogo(dataUrl)
-  await putObject(key, bytes, type)
-  return `${randomUUID().slice(0, 8)}.${extension}`
+  const version = `${randomUUID().slice(0, 8)}.${extension}`
+  await putObject(keyFor(version), bytes, type)
+  return version
 }
 
 export const removeLogo = (key: string) =>
