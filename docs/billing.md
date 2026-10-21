@@ -19,11 +19,23 @@ workspace, paid by the owner or admin who subscribes. All of it is in
   Never a customer found by email: the Stripe account is shared with other products.
 - **The rows only ever hold Stripe's current state**, read under a lock on the workspace
   (a Postgres advisory lock), never what an event says. Webhook events come late, twice,
-  out of order or overlapping: each one only says "look again". When Stripe cannot be
-  read, nothing changes and the webhook answers 503, so Stripe sends the event again.
-- **One payable Checkout per workspace**, under the same lock: a subscription Stripe
-  already has for the workspace (paid, its webhook not here yet) becomes its plan and no
-  Checkout is made; else the Checkouts still open are expired before a new one is made.
+  out of order or overlapping: each one only says "look again". The rows are written
+  through the lock's own transaction, so a run that outlives its lock (a slow Stripe)
+  writes nothing. When Stripe cannot be read, nothing changes and the webhook answers
+  503, so Stripe sends the event again.
+- **One payable Checkout per workspace**, under the same lock: the Checkouts still open
+  are expired first, so none can be paid from then on; then a subscription Stripe has for
+  the workspace (one paid just before, or paid with its webhook not here yet) becomes its
+  plan and no Checkout is made; else a new Checkout is made. Should the lock have been
+  lost meanwhile, that Checkout is expired before anyone sees its address.
+- **The cloud computer follows the plan**, even when the provider is slow or fails: a
+  stop that fails answers the webhook 503 (sent again), and the idle check (each minute)
+  and the runner's hello stop a cloud computer that runs without a plan. A computer still
+  being made when the plan ends stops itself once made. A row that says "running" starts
+  nothing without the plan.
+- **An organization is not deleted while one of its workspaces has a subscription that is
+  not over** (better-auth's `beforeDeleteOrganization`): it would go on billing a workspace
+  that is gone. Its open Checkouts are expired, before and after the deletion.
 - Brigade's metadata on the Checkout and its subscription (`workspaceId`, `rowId`) tie
   them to the workspace. Events without it (another product's) are ignored.
 - Settings › Billing (`/app/billing`) subscribes through Checkout and opens Stripe's

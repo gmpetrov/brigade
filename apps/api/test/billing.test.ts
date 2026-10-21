@@ -45,6 +45,7 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 const { prisma } = await import('../src/db.js')
 const billing = await import('../src/billing.js')
 const { HTTPException } = await import('hono/http-exception')
+const { auth } = await import('../src/auth.js')
 
 const row = (status: string, periodStart: string | null) => ({
   status,
@@ -92,6 +93,8 @@ const fake = {
   sessions: [] as Fake[],
   /** The next subscription reads fail, as when Stripe cannot be reached. */
   failReads: 0,
+  /** A Checkout paid just as Brigade expires it: Stripe then refuses to expire it. */
+  paidOnExpire: null as string | null,
   /** The next subscription reads answer with what Stripe had when asked, this much later. */
   readDelaysMs: [] as number[],
 }
@@ -122,6 +125,12 @@ stripe.checkout.sessions.list = ((params: { customer: string; status: string }) 
   })()) as never
 stripe.checkout.sessions.expire = (async (sessionId: string) => {
   const session = fake.sessions.find((s) => s.id === sessionId)!
+  if (session.id === fake.paidOnExpire) {
+    fake.paidOnExpire = null
+    pay(session)
+  }
+  if (session.status !== 'open')
+    throw new Error(`${sessionId} is not open: it is ${session.status}`)
   session.status = 'expired'
   return session
 }) as never
@@ -227,7 +236,17 @@ before(async () => {
     await prisma.user.create({
       data: { id: userId, name: userId, email: `${userId}@example.com` },
     })
-  for (const name of ['plans', 'webhook', 'late', 'overlap', 'firstRead', 'checkout', 'paid'])
+  for (const name of [
+    'plans',
+    'webhook',
+    'late',
+    'overlap',
+    'firstRead',
+    'checkout',
+    'paid',
+    'replaced',
+    'fenced',
+  ])
     ws[name] = (
       await prisma.workspace.create({ data: { organizationId: ids.organization, name } })
     ).id
@@ -268,7 +287,7 @@ test('an abandoned checkout gives nothing; a complimentary plan does', { skip },
   // Ended by hand: the cloud computer goes (here there is none to stop).
   await prisma.billingSubscription.update({ where: { id: comp.id }, data: { status: 'canceled' } })
   assert.equal(await billing.cloudEntitled(ws.plans!), false)
-  await billing.planChanged(ws.plans!)
+  await billing.applyPlan(ws.plans!)
 })
 
 // --- Webhook -------------------------------------------------------------------------------
@@ -446,3 +465,88 @@ test(
     assert.equal(await billing.cloudEntitled(ws.elsewhere!), false)
   },
 )
+
+test('an old Checkout paid while it is being replaced: no second one', { skip }, async () => {
+  await checkout(ws.replaced!)
+  const [old] = await sessionsOf(ws.replaced!)
+  const made = fake.sessions.length
+  // Subscribe again; the first Checkout is paid at the very moment Brigade expires it.
+  fake.paidOnExpire = old!.id
+  await assert.rejects(checkout(ws.replaced!), /already has Brigade Cloud/)
+  assert.equal(fake.sessions.length, made)
+  assert.equal(await statusOf(ws.replaced!), 'active')
+  assert.equal((await billing.workspacePlan(ws.replaced!))?.id, old!.metadata.rowId)
+})
+
+test('a run that outlives its lock writes nothing over the next one', { skip }, async () => {
+  await checkout(ws.fenced!)
+  const [session] = await sessionsOf(ws.fenced!)
+  const paid = pay(session!)
+  await deliver('checkout.session.completed', completed(session!))
+  const lockMs = billing.billingTiming.lockMs
+  billing.billingTiming.lockMs = 500
+  try {
+    // A reads "active", and Stripe's answer takes longer than A's lock.
+    fake.readDelaysMs = [1200, 0]
+    const a = deliver('customer.subscription.updated', paid)
+    await new Promise((resolve) => setTimeout(resolve, 600))
+    // A's lock is gone; the plan is canceled and B saves it.
+    Object.assign(paid, { status: 'canceled', ended_at: now })
+    const b = await deliver('customer.subscription.deleted', paid)
+    assert.equal(b.status, 200)
+    // A's late "active" is not saved: A asks Stripe to send it again.
+    assert.equal((await a).status, 503)
+  } finally {
+    billing.billingTiming.lockMs = lockMs
+  }
+  assert.equal(await statusOf(ws.fenced!), 'canceled')
+  assert.equal(await billing.cloudEntitled(ws.fenced!), false)
+})
+
+test('an organization is not deleted while one of its workspaces is billed', { skip }, async () => {
+  const email = `owner-delete-${id}@example.com`
+  const signedUp = await auth.api.signUpEmail({
+    body: { name: 'Owner', email, password: 'correct-horse-battery' },
+    asResponse: true,
+  })
+  const headers = new Headers({
+    cookie: signedUp.headers
+      .getSetCookie()
+      .map((cookie) => cookie.split(';')[0])
+      .join('; '),
+  })
+  const organization = await auth.api.createOrganization({
+    headers,
+    body: { name: 'To delete', slug: `to-delete-${id}` },
+  })
+  const workspaceId = (
+    await prisma.workspace.create({ data: { organizationId: organization!.id, name: 'Billed' } })
+  ).id
+  try {
+    await checkout(workspaceId)
+    const [session] = await sessionsOf(workspaceId)
+    const paid = pay(session!)
+    await deliver('checkout.session.completed', completed(session!))
+    await assert.rejects(
+      auth.api.deleteOrganization({ headers, body: { organizationId: organization!.id } }),
+      /has Brigade Cloud/,
+    )
+    assert.ok(await prisma.organization.findUnique({ where: { id: organization!.id } }))
+
+    // Its plan over, and a Checkout left open: deleted, and that Checkout can't be paid.
+    Object.assign(paid, { status: 'canceled', ended_at: now })
+    await deliver('customer.subscription.deleted', paid)
+    await prisma.billingSubscription.updateMany({
+      where: { workspaceId },
+      data: { status: 'canceled' },
+    })
+    await checkout(workspaceId)
+    const [open] = await sessionsOf(workspaceId)
+    await auth.api.deleteOrganization({ headers, body: { organizationId: organization!.id } })
+    assert.equal(await prisma.organization.findUnique({ where: { id: organization!.id } }), null)
+    assert.equal(open!.status, 'expired')
+  } finally {
+    await prisma.organization.deleteMany({ where: { id: organization!.id } })
+    await prisma.user.deleteMany({ where: { email } })
+  }
+})

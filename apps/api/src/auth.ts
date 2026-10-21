@@ -1,7 +1,10 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { APIError } from 'better-auth/api'
 import { organization } from 'better-auth/plugins'
+import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
+import { afterOrganizationDeleted, guardOrganizationDeletion } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 
@@ -59,6 +62,17 @@ export const auth = betterAuth({
             target: { type: 'organization', id: organization.id },
             data: { name: organization.name },
           }),
+        // Not while a workspace of it is still billed (src/billing.ts).
+        beforeDeleteOrganization: async ({ organization }) => {
+          try {
+            await guardOrganizationDeletion(organization.id)
+          } catch (error) {
+            if (error instanceof HTTPException)
+              throw new APIError('CONFLICT', { message: error.message })
+            throw error
+          }
+        },
+        afterDeleteOrganization: ({ organization }) => afterOrganizationDeleted(organization.id),
         afterUpdateOrganization: async ({ organization, user }) => {
           if (!organization) return
           await audit({

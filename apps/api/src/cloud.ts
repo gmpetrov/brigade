@@ -45,29 +45,38 @@ async function setStatus(
 
 /**
  * Create the workspace's cloud computer and install its runner, in the background. Not
- * without the Cloud plan, when billing is on (src/billing.ts): null then.
+ * without the Cloud plan, when billing is on (src/billing.ts): null then. Under a lock on the
+ * workspace: two at once (a webhook and a click) make one computer.
  */
 export async function createWorkspaceComputer(workspace: { id: string; organizationId: string }) {
-  if (!provider || !(await cloudEntitled(workspace.id))) return null
-  const existing = await prisma.computer.findFirst({
-    where: { workspaceId: workspace.id, kind: 'cloud', status: { not: 'destroyed' } },
+  if (!provider) return null
+  const found = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`cloud:${workspace.id}`}))`
+    if (!(await cloudEntitled(workspace.id))) return null
+    const existing = await tx.computer.findFirst({
+      where: { workspaceId: workspace.id, kind: 'cloud', status: { not: 'destroyed' } },
+    })
+    if (existing) return { existing, created: null }
+    const created = await tx.computer.create({
+      data: {
+        organizationId: workspace.organizationId,
+        workspaceId: workspace.id,
+        kind: 'cloud',
+        name: 'Cloud computer',
+        size: defaults.cloudComputerSize,
+        status: 'creating',
+      },
+    })
+    return { existing: null, created }
   })
-  if (existing) {
-    if (existing.status === 'error' && !refOf(existing)) await reprovision(existing)
-    return existing
+  if (!found) return null
+  if (found.created) {
+    startProvision(found.created)
+    return found.created
   }
-  const computer = await prisma.computer.create({
-    data: {
-      organizationId: workspace.organizationId,
-      workspaceId: workspace.id,
-      kind: 'cloud',
-      name: 'Cloud computer',
-      size: defaults.cloudComputerSize,
-      status: 'creating',
-    },
-  })
-  startProvision(computer)
-  return computer
+  const existing = found.existing!
+  if (existing.status === 'error' && !refOf(existing)) await reprovision(existing)
+  return existing
 }
 
 function startProvision(computer: { id: string; organizationId: string; workspaceId: string }) {
@@ -77,9 +86,14 @@ function startProvision(computer: { id: string; organizationId: string; workspac
   })
 }
 
-/** A computer whose creation failed before the provider made it: create it again. */
+/** A computer whose creation failed before the provider made it: create it again, once. */
 async function reprovision(computer: { id: string; organizationId: string; workspaceId: string }) {
-  await setStatus(computer, 'creating')
+  const { count } = await prisma.computer.updateMany({
+    where: { id: computer.id, status: 'error' },
+    data: { status: 'creating' },
+  })
+  if (!count) return
+  broadcastComputer(computer.workspaceId, computer.id, 'creating')
   startProvision(computer)
 }
 
@@ -89,6 +103,12 @@ async function provision(computer: { id: string; organizationId: string; workspa
     size: defaults.cloudComputerSize,
   })
   await prisma.computer.update({ where: { id: computer.id }, data: { providerRef: ref } })
+  // The plan ended while it was being made, before its stop could reach it (src/billing.ts).
+  if (!(await cloudEntitled(computer.workspaceId))) {
+    await provider!.stop(ref)
+    await setStatus(computer, 'stopped')
+    return
+  }
   const { code } = await issueLinkCode({
     kind: 'cloud',
     organizationId: computer.organizationId,
@@ -150,9 +170,9 @@ export function wake(computerId: string) {
 async function bringUp(computerId: string) {
   if (!provider) return
   const computer = await prisma.computer.findUnique({ where: { id: computerId } })
-  // A workspace whose plan ended keeps its computer, stopped, until the plan comes back.
-  if (computer?.kind === 'cloud' && computer.status !== 'running')
-    await requireCloudPlan(computer.workspaceId)
+  // A workspace whose plan ended keeps its computer, stopped, until the plan comes back;
+  // whatever its row says (a stop whose answer was lost leaves it "running").
+  if (computer?.kind === 'cloud') await requireCloudPlan(computer.workspaceId)
   const ref = computer && refOf(computer)
   if (computer?.kind === 'cloud' && !ref && computer.status === 'error')
     return reprovision(computer)
@@ -186,6 +206,24 @@ async function bringUp(computerId: string) {
       console.error(`starting ${computer.id} failed: ${await providerReason(error)}`, error)
       await setStatus(computer, 'error')
     })
+}
+
+/**
+ * A cloud computer that runs without its workspace's plan (src/billing.ts) is stopped: on its
+ * runner's hello, and each minute by the idle check, until a stop goes through. True if so.
+ */
+export async function stopWithoutPlan(computer: {
+  id: string
+  organizationId: string
+  workspaceId: string
+  kind: string
+  providerRef: unknown
+}) {
+  if (computer.kind !== 'cloud' || (await cloudEntitled(computer.workspaceId))) return false
+  console.log(`stopping ${computer.id}: its workspace has no Cloud plan`)
+  keptAlive.delete(computer.id)
+  await stopComputer(computer, { type: 'system', id: 'billing' })
+  return true
 }
 
 export async function stopComputer(
@@ -397,6 +435,11 @@ async function stopIdle() {
   const idleMs = env.IDLE_STOP_MINUTES * 60_000
   const running = await prisma.computer.findMany({ where: { kind: 'cloud', status: 'running' } })
   for (const computer of running) {
+    const stopped = await stopWithoutPlan(computer).catch((error) => {
+      console.error(`stopping ${computer.id} without a plan failed`, error)
+      return true
+    })
+    if (stopped) continue
     const ref = refOf(computer)
     if (provider && ref && !isOnline(computer.id)) {
       const status = await provider.status(ref).catch(() => null)

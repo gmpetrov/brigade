@@ -18,7 +18,7 @@ import { readableEvents, storableForms, storableJson } from './storable-json.js'
 import { keepFilesApart } from './event-files.js'
 import { onScopedWrite, prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
-import { ensureSetup, giveHomesBackOnceRestored, touch, wake } from './cloud.js'
+import { ensureSetup, giveHomesBackOnceRestored, stopWithoutPlan, touch, wake } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
 import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryTidy, handleMemoryUpdate } from './library-calls.js'
@@ -526,6 +526,8 @@ export function runnerSocket(runner: {
           ...(message.machineId ? { machineId: message.machineId } : {}),
         },
       })
+      // Its workspace's plan ended meanwhile (src/billing.ts): stopped, not given work.
+      if (await stopWithoutPlan(computer).catch(() => false)) return
       // Previews its previous process ran are gone (app-previews.ts): lists that mark them
       // (the sidebar's threads, pull requests) fetch again.
       if (message.startedAt) notifyList(runner.workspaceId, 'pulls.updated')
