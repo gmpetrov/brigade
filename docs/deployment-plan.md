@@ -73,7 +73,8 @@ Cloudflare shipped first, more simply than the phases below:
   - The API's deploy migrates the database first, with the `DATABASE_URL` build secret.
   - A deploy keeps the secrets a Worker has, and no file in the repository holds them:
     - `brigade-api` reads all its settings from secrets.
-      `pnpm --filter @brigade/api exec wrangler secret list` names them.
+      `pnpm --filter @brigade/api exec wrangler secret list` names them. Billing's
+      (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) are in [billing.md](billing.md).
     - `brigade-collab` has `COLLAB_SECRET`, the same as the API's.
     - To change one, run `pnpm --filter @brigade/api exec wrangler secret put <NAME>`
       (`@brigade/collab` for collab), or use the Worker's Settings in the dashboard. The
