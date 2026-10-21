@@ -33,7 +33,13 @@ import { Suggestion, type SuggestionProps } from '@tiptap/suggestion'
 import { BookOpenText, GraduationCap, ImageIcon, Palette, Shapes } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, type ComponentType } from 'react'
 import { useDashboard } from '@/components/dashboard'
-import { credentialHint, MentionChip, MentionIcon, type ConnectionKind } from '@/components/mention'
+import {
+  connectionMentionLabel,
+  credentialHint,
+  MentionChip,
+  MentionIcon,
+  type ConnectionKind,
+} from '@/components/mention'
 import { editable, OPEN_LAYER } from '@/components/side-panel'
 import {
   computerName,
@@ -92,8 +98,9 @@ export function useMentionOptions(threadId?: string): Option[] {
         .map((c) => ({
           kind: 'connection' as const,
           id: c.id,
-          label: c.label,
-          hint: c.externalAccount ?? undefined,
+          // The account goes into the mention itself, for people and the teammate alike.
+          label: connectionMentionLabel(c),
+          hint: 'App',
           connectionKind: c.kind,
         })),
       ...(repositories.data ?? []).map((r) => ({
