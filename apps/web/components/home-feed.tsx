@@ -341,19 +341,7 @@ export function SinceAway({ feed }: { feed: HomeFeed }) {
   if (!feed.results.length && !feed.playbooks.length) return null
   return (
     <section aria-labelledby="since-away" className="flex flex-col gap-3">
-      <SectionTitle
-        id="since-away"
-        aside={
-          <Link
-            href="/app/threads"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            All threads
-          </Link>
-        }
-      >
-        Since you were away
-      </SectionTitle>
+      <SectionTitle id="since-away">Since you were away</SectionTitle>
       <Card className="gap-0 overflow-hidden py-0">
         <ul className="divide-y">
           {feed.playbooks.map((line) => (

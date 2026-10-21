@@ -1,15 +1,10 @@
 'use client'
-import { ArrowRight, Check, ChevronDown, FolderKanban, List, Monitor, Plus } from 'lucide-react'
+import { ArrowUp, Check, ChevronDown, FolderKanban, List, Monitor, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { defaultEffort, type Effort } from '@brigade/contracts'
-import {
-  ComposerMenu,
-  UploadList,
-  useFileDrop,
-  useUploads,
-} from '@/components/attachments'
+import { ComposerMenu, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { EffortButton, type EffortPick } from '@/components/effort'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
@@ -477,9 +472,7 @@ export function NewThread({
       disabled={busy}
       autoFocus={autoFocus}
       typeToFocus={typeToFocus}
-      placeholder={
-        placeholder ?? `Chat with ${teammate.name}`
-      }
+      placeholder={placeholder ?? `Chat with ${teammate.name}`}
     />
   )
   const teammatePicker = picker && (
@@ -579,9 +572,14 @@ export function NewThread({
     />
   )
   const send = (
-    <Button size="sm" className="ml-auto" disabled={busy || !ready}>
-      {busy ? 'Starting…' : 'Send'}
-      <ArrowRight aria-hidden />
+    <Button
+      size="icon-sm"
+      className="ml-auto rounded-full [&_svg:not([class*='size-'])]:size-5"
+      disabled={busy || !ready}
+      aria-label={busy ? 'Starting…' : 'Send'}
+      title={busy ? 'Starting…' : 'Send (↵)'}
+    >
+      <ArrowUp aria-hidden />
     </Button>
   )
   const message = (error || notice) && (

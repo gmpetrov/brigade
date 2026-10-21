@@ -7,10 +7,10 @@
 import {
   AppWindow,
   ArrowDown,
+  ArrowUp,
   CalendarClock,
   CircleStop,
   CloudUpload,
-  CornerDownLeft,
   FolderKanban,
   Laptop,
   Reply,
@@ -1235,7 +1235,7 @@ export function ThreadConversation({
                     {(text.trim() || files.uploads.length > 0 || moveTo) && (
                       <Button
                         size="icon-sm"
-                        className="mb-1 rounded-full"
+                        className="mb-1 rounded-full [&_svg:not([class*='size-'])]:size-5"
                         disabled={!ready || current === 'waiting'}
                         aria-label={
                           moveTo
@@ -1254,7 +1254,7 @@ export function ThreadConversation({
                               : 'Send (↵) · New line (⇧↵)'
                         }
                       >
-                        <CornerDownLeft aria-hidden />
+                        <ArrowUp aria-hidden />
                       </Button>
                     )}
                   </div>
