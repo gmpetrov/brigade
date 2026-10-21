@@ -26,6 +26,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
+import { TeammateTitle } from '@/components/teammate-title'
 import { ProjectIcon } from '@/components/projects'
 import { RailPanel } from '@/components/rail-menu'
 import { useThreadPanel } from '@/components/thread-panel'
@@ -965,6 +966,9 @@ export function SidebarWork({
                 onClick={() => clickTeammate(t.id)}
                 icon={<TeammateAvatar teammate={t} className="size-5" />}
                 label={t.name}
+                badge={
+                  <TeammateTitle title={t.title} className="max-w-28 px-1.5 py-0 text-[11px]" />
+                }
                 action={{
                   href: `/app/teammates/${t.id}`,
                   label: `${t.name}'s settings`,
@@ -1022,6 +1026,7 @@ function SidebarRow({
   onClick,
   icon,
   label,
+  badge,
   action,
 }: {
   active: boolean
@@ -1029,6 +1034,8 @@ function SidebarRow({
   onClick: () => void
   icon: ReactNode
   label: string
+  /** Beside the label: a teammate's title. */
+  badge?: ReactNode
   action?: { href: string; label: string; icon: ReactNode }
 }) {
   return (
@@ -1036,6 +1043,7 @@ function SidebarRow({
       <SidebarMenuButton isActive={active} title={title} onClick={onClick}>
         {icon}
         <span className="truncate">{label}</span>
+        {badge}
       </SidebarMenuButton>
       {action && (
         <SidebarMenuAction asChild showOnHover>
