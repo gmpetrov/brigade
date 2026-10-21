@@ -582,6 +582,20 @@ sudo -u brigade -H env BRIGADE_INSTALL_DIR=${install} sh -c 'curl -fsSL ${apiUrl
 sudo systemctl restart brigade-runner
 `
 
+/**
+ * Every teammate's home given back to it (the helper's ensure-user), through the provider
+ * once a resumed computer's disk is all there (cloud.ts). Only users that exist: ensure-user
+ * would make one.
+ */
+export const GIVE_HOMES_BACK = `F=0
+for H in /home/bt-*; do
+  U=\${H#/home/}
+  id "$U" >/dev/null 2>&1 || continue
+  sudo /usr/local/sbin/brigade-teammate ensure-user "$U" || F=1
+done
+exit $F
+`
+
 /** Install the runner under its own Linux user, as a service that survives stop and resume. */
 export function bootstrapScript(input: { apiUrl: string; code: string }) {
   return `set -eu

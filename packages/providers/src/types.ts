@@ -11,6 +11,12 @@ export type ComputerRef = { provider: string; id: string }
 
 export type ComputerStatus = 'creating' | 'running' | 'stopped' | 'error' | 'destroyed'
 
+/**
+ * Whether a computer's disk is all there after a resume. `at` tells restores apart: the
+ * same for the same restore.
+ */
+export type RestoreState = { done: false; running: boolean } | { done: true; at: string }
+
 export type ExecResult = { exitCode: number; stdout: string; stderr: string }
 
 /** A port of the computer on a public HTTPS address. */
@@ -31,4 +37,10 @@ export interface ComputerProvider {
   desktopUrl(ref: ComputerRef): Promise<string | null> // live desktop for takeover
   hostPort(ref: ComputerRef, port: number): Promise<HostedPort> // a stable public address for a port (previews)
   status(ref: ComputerRef): Promise<ComputerStatus>
+  /**
+   * For a provider that starts a computer before its disk is restored (boat copies the home
+   * in from its snapshot in the background): whether that is done. `running` false: the
+   * computer stopped, so it will not be.
+   */
+  restore?(ref: ComputerRef): Promise<RestoreState>
 }

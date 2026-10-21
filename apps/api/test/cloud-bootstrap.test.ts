@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import {
   bootstrapScript,
+  GIVE_HOMES_BACK,
   setupScript,
   TEAMMATE_HELPER,
   THREAD_HELPER,
@@ -22,6 +23,7 @@ test('the helpers and the setup the computer runs are valid shell', () => {
   parses(THREAD_HELPER)
   parses(setupScript())
   parses(bootstrapScript({ apiUrl: 'https://api.example.com', code: 'abc' }))
+  parses(GIVE_HOMES_BACK)
 })
 
 test('the thread helper reads its command from its first argument', () => {
@@ -165,4 +167,33 @@ test("the teammate helper prunes the computer's own Docker, never its volumes", 
   assert.equal(calls.trim(), 'system prune --all --force')
   // No Docker running on the computer: nothing to prune.
   assert.deepEqual(prune('no'), { out: '', calls: '' })
+})
+
+test("a restored computer's teammate homes are given back, only for users that exist", () => {
+  const dir = mkdtempSync(join(tmpdir(), 'homes-back-'))
+  const home = join(dir, 'home')
+  for (const user of ['bt-riley', 'bt-gone', 'bt-kai'])
+    mkdirSync(join(home, user), { recursive: true })
+  mkdirSync(join(home, 'user'))
+  const bin = join(dir, 'bin')
+  mkdirSync(bin)
+  const stub = (name: string, body: string) =>
+    writeFileSync(join(bin, name), `#!/bin/sh\n${body}\n`, { mode: 0o755 })
+  stub('id', '[ "$1" != bt-gone ]')
+  stub('sudo', 'echo "$*" >>"$LOG"; [ "$3" != "$FAILS" ]')
+  const giveBack = (fails: string) => {
+    const log = join(dir, `${fails || 'ok'}.log`)
+    const result = spawnSync('sh', ['-c', GIVE_HOMES_BACK.replaceAll('/home/', `${home}/`)], {
+      env: { PATH: `${bin}:/usr/bin:/bin`, LOG: log, FAILS: fails },
+      encoding: 'utf8',
+    })
+    return { status: result.status, calls: readFileSync(log, 'utf8').trim().split('\n') }
+  }
+  const calls = [
+    '/usr/local/sbin/brigade-teammate ensure-user bt-kai',
+    '/usr/local/sbin/brigade-teammate ensure-user bt-riley',
+  ]
+  assert.deepEqual(giveBack(''), { status: 0, calls })
+  // One that fails fails the run, after the others had theirs.
+  assert.deepEqual(giveBack('bt-kai'), { status: 1, calls })
 })
