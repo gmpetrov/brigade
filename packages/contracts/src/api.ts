@@ -110,6 +110,8 @@ export const ConnectMcp = z.object({
   /** For an App with a server per data region (Mixpanel): the region's id. Default: the first. */
   region: z.string().max(20).optional(),
   returnTo: ReturnTo.optional(),
+  /** The account being reconnected: Stripe repairs it when its sign-in alone cannot say which. */
+  reconnect: z.string().max(100).optional(),
 })
 /** An MCP server's address, to see what it is and how its accounts sign in. */
 export const InspectMcp = z.object({ url: z.string().trim().min(1).max(500) })

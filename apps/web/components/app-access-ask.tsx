@@ -233,6 +233,7 @@ export function AppAccessAsk({
             ...(route === 'github' ? {} : { kind }),
             ...(region ? { region } : {}),
             ...(returnTo ? { returnTo } : {}),
+            ...(route === 'mcp' && expiredId ? { reconnect: expiredId } : {}),
           },
         })
         return url
