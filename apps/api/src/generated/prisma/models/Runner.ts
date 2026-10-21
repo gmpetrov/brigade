@@ -552,6 +552,14 @@ export type RunnerUncheckedUpdateOneWithoutComputerNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.RunnerUpdateToOneWithWhereWithoutComputerInput, Prisma.RunnerUpdateWithoutComputerInput>, Prisma.RunnerUncheckedUpdateWithoutComputerInput>
 }
 
+export type NullableIntFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type RunnerCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string

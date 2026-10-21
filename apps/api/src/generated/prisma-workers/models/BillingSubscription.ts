@@ -14,156 +14,120 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model BillingSubscription
- * A workspace's paid plan (better-auth stripe plugin "subscription", src/billing.ts): Cloud,
- * which gives it the cloud computer. Kept in step with Stripe by its webhook. A row with no
+ * A workspace's paid plan (src/billing.ts): Cloud, which gives it the cloud computer. It
+ * only ever holds Stripe's current state for its subscription. A row with no
  * stripeSubscriptionId and status "active" is a complimentary plan, added by hand.
  */
 export type BillingSubscriptionModel = runtime.Types.Result.DefaultSelection<Prisma.$BillingSubscriptionPayload>
 
 export type AggregateBillingSubscription = {
   _count: BillingSubscriptionCountAggregateOutputType | null
-  _avg: BillingSubscriptionAvgAggregateOutputType | null
-  _sum: BillingSubscriptionSumAggregateOutputType | null
   _min: BillingSubscriptionMinAggregateOutputType | null
   _max: BillingSubscriptionMaxAggregateOutputType | null
 }
 
-export type BillingSubscriptionAvgAggregateOutputType = {
-  seats: number | null
-}
-
-export type BillingSubscriptionSumAggregateOutputType = {
-  seats: number | null
-}
-
 export type BillingSubscriptionMinAggregateOutputType = {
   id: string | null
+  workspaceId: string | null
   plan: string | null
-  referenceId: string | null
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   status: string | null
   periodStart: Date | null
   periodEnd: Date | null
-  trialStart: Date | null
-  trialEnd: Date | null
   cancelAtPeriodEnd: boolean | null
   cancelAt: Date | null
   canceledAt: Date | null
   endedAt: Date | null
-  seats: number | null
-  billingInterval: string | null
-  stripeScheduleId: string | null
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type BillingSubscriptionMaxAggregateOutputType = {
   id: string | null
+  workspaceId: string | null
   plan: string | null
-  referenceId: string | null
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   status: string | null
   periodStart: Date | null
   periodEnd: Date | null
-  trialStart: Date | null
-  trialEnd: Date | null
   cancelAtPeriodEnd: boolean | null
   cancelAt: Date | null
   canceledAt: Date | null
   endedAt: Date | null
-  seats: number | null
-  billingInterval: string | null
-  stripeScheduleId: string | null
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type BillingSubscriptionCountAggregateOutputType = {
   id: number
+  workspaceId: number
   plan: number
-  referenceId: number
   stripeCustomerId: number
   stripeSubscriptionId: number
   status: number
   periodStart: number
   periodEnd: number
-  trialStart: number
-  trialEnd: number
   cancelAtPeriodEnd: number
   cancelAt: number
   canceledAt: number
   endedAt: number
-  seats: number
-  billingInterval: number
-  stripeScheduleId: number
+  createdAt: number
+  updatedAt: number
   _all: number
 }
 
 
-export type BillingSubscriptionAvgAggregateInputType = {
-  seats?: true
-}
-
-export type BillingSubscriptionSumAggregateInputType = {
-  seats?: true
-}
-
 export type BillingSubscriptionMinAggregateInputType = {
   id?: true
+  workspaceId?: true
   plan?: true
-  referenceId?: true
   stripeCustomerId?: true
   stripeSubscriptionId?: true
   status?: true
   periodStart?: true
   periodEnd?: true
-  trialStart?: true
-  trialEnd?: true
   cancelAtPeriodEnd?: true
   cancelAt?: true
   canceledAt?: true
   endedAt?: true
-  seats?: true
-  billingInterval?: true
-  stripeScheduleId?: true
+  createdAt?: true
+  updatedAt?: true
 }
 
 export type BillingSubscriptionMaxAggregateInputType = {
   id?: true
+  workspaceId?: true
   plan?: true
-  referenceId?: true
   stripeCustomerId?: true
   stripeSubscriptionId?: true
   status?: true
   periodStart?: true
   periodEnd?: true
-  trialStart?: true
-  trialEnd?: true
   cancelAtPeriodEnd?: true
   cancelAt?: true
   canceledAt?: true
   endedAt?: true
-  seats?: true
-  billingInterval?: true
-  stripeScheduleId?: true
+  createdAt?: true
+  updatedAt?: true
 }
 
 export type BillingSubscriptionCountAggregateInputType = {
   id?: true
+  workspaceId?: true
   plan?: true
-  referenceId?: true
   stripeCustomerId?: true
   stripeSubscriptionId?: true
   status?: true
   periodStart?: true
   periodEnd?: true
-  trialStart?: true
-  trialEnd?: true
   cancelAtPeriodEnd?: true
   cancelAt?: true
   canceledAt?: true
   endedAt?: true
-  seats?: true
-  billingInterval?: true
-  stripeScheduleId?: true
+  createdAt?: true
+  updatedAt?: true
   _all?: true
 }
 
@@ -205,18 +169,6 @@ export type BillingSubscriptionAggregateArgs<ExtArgs extends runtime.Types.Exten
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
-   * Select which fields to average
-  **/
-  _avg?: BillingSubscriptionAvgAggregateInputType
-  /**
-   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-   * 
-   * Select which fields to sum
-  **/
-  _sum?: BillingSubscriptionSumAggregateInputType
-  /**
-   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-   * 
    * Select which fields to find the minimum value
   **/
   _min?: BillingSubscriptionMinAggregateInputType
@@ -247,33 +199,26 @@ export type BillingSubscriptionGroupByArgs<ExtArgs extends runtime.Types.Extensi
   take?: number
   skip?: number
   _count?: BillingSubscriptionCountAggregateInputType | true
-  _avg?: BillingSubscriptionAvgAggregateInputType
-  _sum?: BillingSubscriptionSumAggregateInputType
   _min?: BillingSubscriptionMinAggregateInputType
   _max?: BillingSubscriptionMaxAggregateInputType
 }
 
 export type BillingSubscriptionGroupByOutputType = {
   id: string
+  workspaceId: string
   plan: string
-  referenceId: string
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   status: string
   periodStart: Date | null
   periodEnd: Date | null
-  trialStart: Date | null
-  trialEnd: Date | null
-  cancelAtPeriodEnd: boolean | null
+  cancelAtPeriodEnd: boolean
   cancelAt: Date | null
   canceledAt: Date | null
   endedAt: Date | null
-  seats: number | null
-  billingInterval: string | null
-  stripeScheduleId: string | null
+  createdAt: Date
+  updatedAt: Date
   _count: BillingSubscriptionCountAggregateOutputType | null
-  _avg: BillingSubscriptionAvgAggregateOutputType | null
-  _sum: BillingSubscriptionSumAggregateOutputType | null
   _min: BillingSubscriptionMinAggregateOutputType | null
   _max: BillingSubscriptionMaxAggregateOutputType | null
 }
@@ -298,42 +243,38 @@ export type BillingSubscriptionWhereInput = {
   OR?: Prisma.BillingSubscriptionWhereInput[]
   NOT?: Prisma.BillingSubscriptionWhereInput | Prisma.BillingSubscriptionWhereInput[]
   id?: Prisma.StringFilter<"BillingSubscription"> | string
+  workspaceId?: Prisma.StringFilter<"BillingSubscription"> | string
   plan?: Prisma.StringFilter<"BillingSubscription"> | string
-  referenceId?: Prisma.StringFilter<"BillingSubscription"> | string
   stripeCustomerId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
   status?: Prisma.StringFilter<"BillingSubscription"> | string
   periodStart?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
   periodEnd?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
-  trialStart?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
-  trialEnd?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
-  cancelAtPeriodEnd?: Prisma.BoolNullableFilter<"BillingSubscription"> | boolean | null
+  cancelAtPeriodEnd?: Prisma.BoolFilter<"BillingSubscription"> | boolean
   cancelAt?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
   canceledAt?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
   endedAt?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
-  seats?: Prisma.IntNullableFilter<"BillingSubscription"> | number | null
-  billingInterval?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
-  stripeScheduleId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
+  createdAt?: Prisma.DateTimeFilter<"BillingSubscription"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"BillingSubscription"> | Date | string
+  workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
 }
 
 export type BillingSubscriptionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  workspaceId?: Prisma.SortOrder
   plan?: Prisma.SortOrder
-  referenceId?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   periodStart?: Prisma.SortOrderInput | Prisma.SortOrder
   periodEnd?: Prisma.SortOrderInput | Prisma.SortOrder
-  trialStart?: Prisma.SortOrderInput | Prisma.SortOrder
-  trialEnd?: Prisma.SortOrderInput | Prisma.SortOrder
-  cancelAtPeriodEnd?: Prisma.SortOrderInput | Prisma.SortOrder
+  cancelAtPeriodEnd?: Prisma.SortOrder
   cancelAt?: Prisma.SortOrderInput | Prisma.SortOrder
   canceledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   endedAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  seats?: Prisma.SortOrderInput | Prisma.SortOrder
-  billingInterval?: Prisma.SortOrderInput | Prisma.SortOrder
-  stripeScheduleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
+  workspace?: Prisma.WorkspaceOrderByWithRelationInput
 }
 
 export type BillingSubscriptionWhereUniqueInput = Prisma.AtLeast<{
@@ -341,47 +282,40 @@ export type BillingSubscriptionWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.BillingSubscriptionWhereInput | Prisma.BillingSubscriptionWhereInput[]
   OR?: Prisma.BillingSubscriptionWhereInput[]
   NOT?: Prisma.BillingSubscriptionWhereInput | Prisma.BillingSubscriptionWhereInput[]
+  workspaceId?: Prisma.StringFilter<"BillingSubscription"> | string
   plan?: Prisma.StringFilter<"BillingSubscription"> | string
-  referenceId?: Prisma.StringFilter<"BillingSubscription"> | string
   stripeCustomerId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
   status?: Prisma.StringFilter<"BillingSubscription"> | string
   periodStart?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
   periodEnd?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
-  trialStart?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
-  trialEnd?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
-  cancelAtPeriodEnd?: Prisma.BoolNullableFilter<"BillingSubscription"> | boolean | null
+  cancelAtPeriodEnd?: Prisma.BoolFilter<"BillingSubscription"> | boolean
   cancelAt?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
   canceledAt?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
   endedAt?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
-  seats?: Prisma.IntNullableFilter<"BillingSubscription"> | number | null
-  billingInterval?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
-  stripeScheduleId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
+  createdAt?: Prisma.DateTimeFilter<"BillingSubscription"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"BillingSubscription"> | Date | string
+  workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
 }, "id">
 
 export type BillingSubscriptionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  workspaceId?: Prisma.SortOrder
   plan?: Prisma.SortOrder
-  referenceId?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   periodStart?: Prisma.SortOrderInput | Prisma.SortOrder
   periodEnd?: Prisma.SortOrderInput | Prisma.SortOrder
-  trialStart?: Prisma.SortOrderInput | Prisma.SortOrder
-  trialEnd?: Prisma.SortOrderInput | Prisma.SortOrder
-  cancelAtPeriodEnd?: Prisma.SortOrderInput | Prisma.SortOrder
+  cancelAtPeriodEnd?: Prisma.SortOrder
   cancelAt?: Prisma.SortOrderInput | Prisma.SortOrder
   canceledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   endedAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  seats?: Prisma.SortOrderInput | Prisma.SortOrder
-  billingInterval?: Prisma.SortOrderInput | Prisma.SortOrder
-  stripeScheduleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   _count?: Prisma.BillingSubscriptionCountOrderByAggregateInput
-  _avg?: Prisma.BillingSubscriptionAvgOrderByAggregateInput
   _max?: Prisma.BillingSubscriptionMaxOrderByAggregateInput
   _min?: Prisma.BillingSubscriptionMinOrderByAggregateInput
-  _sum?: Prisma.BillingSubscriptionSumOrderByAggregateInput
 }
 
 export type BillingSubscriptionScalarWhereWithAggregatesInput = {
@@ -389,346 +323,484 @@ export type BillingSubscriptionScalarWhereWithAggregatesInput = {
   OR?: Prisma.BillingSubscriptionScalarWhereWithAggregatesInput[]
   NOT?: Prisma.BillingSubscriptionScalarWhereWithAggregatesInput | Prisma.BillingSubscriptionScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"BillingSubscription"> | string
+  workspaceId?: Prisma.StringWithAggregatesFilter<"BillingSubscription"> | string
   plan?: Prisma.StringWithAggregatesFilter<"BillingSubscription"> | string
-  referenceId?: Prisma.StringWithAggregatesFilter<"BillingSubscription"> | string
   stripeCustomerId?: Prisma.StringNullableWithAggregatesFilter<"BillingSubscription"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableWithAggregatesFilter<"BillingSubscription"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"BillingSubscription"> | string
   periodStart?: Prisma.DateTimeNullableWithAggregatesFilter<"BillingSubscription"> | Date | string | null
   periodEnd?: Prisma.DateTimeNullableWithAggregatesFilter<"BillingSubscription"> | Date | string | null
-  trialStart?: Prisma.DateTimeNullableWithAggregatesFilter<"BillingSubscription"> | Date | string | null
-  trialEnd?: Prisma.DateTimeNullableWithAggregatesFilter<"BillingSubscription"> | Date | string | null
-  cancelAtPeriodEnd?: Prisma.BoolNullableWithAggregatesFilter<"BillingSubscription"> | boolean | null
+  cancelAtPeriodEnd?: Prisma.BoolWithAggregatesFilter<"BillingSubscription"> | boolean
   cancelAt?: Prisma.DateTimeNullableWithAggregatesFilter<"BillingSubscription"> | Date | string | null
   canceledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"BillingSubscription"> | Date | string | null
   endedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"BillingSubscription"> | Date | string | null
-  seats?: Prisma.IntNullableWithAggregatesFilter<"BillingSubscription"> | number | null
-  billingInterval?: Prisma.StringNullableWithAggregatesFilter<"BillingSubscription"> | string | null
-  stripeScheduleId?: Prisma.StringNullableWithAggregatesFilter<"BillingSubscription"> | string | null
+  createdAt?: Prisma.DateTimeWithAggregatesFilter<"BillingSubscription"> | Date | string
+  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"BillingSubscription"> | Date | string
 }
 
 export type BillingSubscriptionCreateInput = {
-  id: string
+  id?: string
   plan: string
-  referenceId: string
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   status?: string
   periodStart?: Date | string | null
   periodEnd?: Date | string | null
-  trialStart?: Date | string | null
-  trialEnd?: Date | string | null
-  cancelAtPeriodEnd?: boolean | null
+  cancelAtPeriodEnd?: boolean
   cancelAt?: Date | string | null
   canceledAt?: Date | string | null
   endedAt?: Date | string | null
-  seats?: number | null
-  billingInterval?: string | null
-  stripeScheduleId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutBillingSubscriptionsInput
 }
 
 export type BillingSubscriptionUncheckedCreateInput = {
-  id: string
+  id?: string
+  workspaceId: string
   plan: string
-  referenceId: string
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   status?: string
   periodStart?: Date | string | null
   periodEnd?: Date | string | null
-  trialStart?: Date | string | null
-  trialEnd?: Date | string | null
-  cancelAtPeriodEnd?: boolean | null
+  cancelAtPeriodEnd?: boolean
   cancelAt?: Date | string | null
   canceledAt?: Date | string | null
   endedAt?: Date | string | null
-  seats?: number | null
-  billingInterval?: string | null
-  stripeScheduleId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type BillingSubscriptionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
-  referenceId?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   periodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   periodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  trialStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  trialEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  cancelAtPeriodEnd?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  cancelAtPeriodEnd?: Prisma.BoolFieldUpdateOperationsInput | boolean
   cancelAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  seats?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  billingInterval?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  stripeScheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutBillingSubscriptionsNestedInput
 }
 
 export type BillingSubscriptionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
-  referenceId?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   periodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   periodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  trialStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  trialEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  cancelAtPeriodEnd?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  cancelAtPeriodEnd?: Prisma.BoolFieldUpdateOperationsInput | boolean
   cancelAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  seats?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  billingInterval?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  stripeScheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BillingSubscriptionCreateManyInput = {
-  id: string
+  id?: string
+  workspaceId: string
   plan: string
-  referenceId: string
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   status?: string
   periodStart?: Date | string | null
   periodEnd?: Date | string | null
-  trialStart?: Date | string | null
-  trialEnd?: Date | string | null
-  cancelAtPeriodEnd?: boolean | null
+  cancelAtPeriodEnd?: boolean
   cancelAt?: Date | string | null
   canceledAt?: Date | string | null
   endedAt?: Date | string | null
-  seats?: number | null
-  billingInterval?: string | null
-  stripeScheduleId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type BillingSubscriptionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
-  referenceId?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   periodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   periodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  trialStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  trialEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  cancelAtPeriodEnd?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  cancelAtPeriodEnd?: Prisma.BoolFieldUpdateOperationsInput | boolean
   cancelAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  seats?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  billingInterval?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  stripeScheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BillingSubscriptionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   plan?: Prisma.StringFieldUpdateOperationsInput | string
-  referenceId?: Prisma.StringFieldUpdateOperationsInput | string
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   periodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   periodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  trialStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  trialEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  cancelAtPeriodEnd?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  cancelAtPeriodEnd?: Prisma.BoolFieldUpdateOperationsInput | boolean
   cancelAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  seats?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  billingInterval?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  stripeScheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BillingSubscriptionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  workspaceId?: Prisma.SortOrder
   plan?: Prisma.SortOrder
-  referenceId?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   periodStart?: Prisma.SortOrder
   periodEnd?: Prisma.SortOrder
-  trialStart?: Prisma.SortOrder
-  trialEnd?: Prisma.SortOrder
   cancelAtPeriodEnd?: Prisma.SortOrder
   cancelAt?: Prisma.SortOrder
   canceledAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
-  seats?: Prisma.SortOrder
-  billingInterval?: Prisma.SortOrder
-  stripeScheduleId?: Prisma.SortOrder
-}
-
-export type BillingSubscriptionAvgOrderByAggregateInput = {
-  seats?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type BillingSubscriptionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  workspaceId?: Prisma.SortOrder
   plan?: Prisma.SortOrder
-  referenceId?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   periodStart?: Prisma.SortOrder
   periodEnd?: Prisma.SortOrder
-  trialStart?: Prisma.SortOrder
-  trialEnd?: Prisma.SortOrder
   cancelAtPeriodEnd?: Prisma.SortOrder
   cancelAt?: Prisma.SortOrder
   canceledAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
-  seats?: Prisma.SortOrder
-  billingInterval?: Prisma.SortOrder
-  stripeScheduleId?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type BillingSubscriptionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  workspaceId?: Prisma.SortOrder
   plan?: Prisma.SortOrder
-  referenceId?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   periodStart?: Prisma.SortOrder
   periodEnd?: Prisma.SortOrder
-  trialStart?: Prisma.SortOrder
-  trialEnd?: Prisma.SortOrder
   cancelAtPeriodEnd?: Prisma.SortOrder
   cancelAt?: Prisma.SortOrder
   canceledAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
-  seats?: Prisma.SortOrder
-  billingInterval?: Prisma.SortOrder
-  stripeScheduleId?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
-export type BillingSubscriptionSumOrderByAggregateInput = {
-  seats?: Prisma.SortOrder
+export type BillingSubscriptionListRelationFilter = {
+  every?: Prisma.BillingSubscriptionWhereInput
+  some?: Prisma.BillingSubscriptionWhereInput
+  none?: Prisma.BillingSubscriptionWhereInput
+}
+
+export type BillingSubscriptionOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type NullableDateTimeFieldUpdateOperationsInput = {
   set?: Date | string | null
 }
 
-export type NullableBoolFieldUpdateOperationsInput = {
-  set?: boolean | null
+export type BillingSubscriptionCreateNestedManyWithoutWorkspaceInput = {
+  create?: Prisma.XOR<Prisma.BillingSubscriptionCreateWithoutWorkspaceInput, Prisma.BillingSubscriptionUncheckedCreateWithoutWorkspaceInput> | Prisma.BillingSubscriptionCreateWithoutWorkspaceInput[] | Prisma.BillingSubscriptionUncheckedCreateWithoutWorkspaceInput[]
+  connectOrCreate?: Prisma.BillingSubscriptionCreateOrConnectWithoutWorkspaceInput | Prisma.BillingSubscriptionCreateOrConnectWithoutWorkspaceInput[]
+  createMany?: Prisma.BillingSubscriptionCreateManyWorkspaceInputEnvelope
+  connect?: Prisma.BillingSubscriptionWhereUniqueInput | Prisma.BillingSubscriptionWhereUniqueInput[]
 }
 
-export type NullableIntFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
+export type BillingSubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput = {
+  create?: Prisma.XOR<Prisma.BillingSubscriptionCreateWithoutWorkspaceInput, Prisma.BillingSubscriptionUncheckedCreateWithoutWorkspaceInput> | Prisma.BillingSubscriptionCreateWithoutWorkspaceInput[] | Prisma.BillingSubscriptionUncheckedCreateWithoutWorkspaceInput[]
+  connectOrCreate?: Prisma.BillingSubscriptionCreateOrConnectWithoutWorkspaceInput | Prisma.BillingSubscriptionCreateOrConnectWithoutWorkspaceInput[]
+  createMany?: Prisma.BillingSubscriptionCreateManyWorkspaceInputEnvelope
+  connect?: Prisma.BillingSubscriptionWhereUniqueInput | Prisma.BillingSubscriptionWhereUniqueInput[]
+}
+
+export type BillingSubscriptionUpdateManyWithoutWorkspaceNestedInput = {
+  create?: Prisma.XOR<Prisma.BillingSubscriptionCreateWithoutWorkspaceInput, Prisma.BillingSubscriptionUncheckedCreateWithoutWorkspaceInput> | Prisma.BillingSubscriptionCreateWithoutWorkspaceInput[] | Prisma.BillingSubscriptionUncheckedCreateWithoutWorkspaceInput[]
+  connectOrCreate?: Prisma.BillingSubscriptionCreateOrConnectWithoutWorkspaceInput | Prisma.BillingSubscriptionCreateOrConnectWithoutWorkspaceInput[]
+  upsert?: Prisma.BillingSubscriptionUpsertWithWhereUniqueWithoutWorkspaceInput | Prisma.BillingSubscriptionUpsertWithWhereUniqueWithoutWorkspaceInput[]
+  createMany?: Prisma.BillingSubscriptionCreateManyWorkspaceInputEnvelope
+  set?: Prisma.BillingSubscriptionWhereUniqueInput | Prisma.BillingSubscriptionWhereUniqueInput[]
+  disconnect?: Prisma.BillingSubscriptionWhereUniqueInput | Prisma.BillingSubscriptionWhereUniqueInput[]
+  delete?: Prisma.BillingSubscriptionWhereUniqueInput | Prisma.BillingSubscriptionWhereUniqueInput[]
+  connect?: Prisma.BillingSubscriptionWhereUniqueInput | Prisma.BillingSubscriptionWhereUniqueInput[]
+  update?: Prisma.BillingSubscriptionUpdateWithWhereUniqueWithoutWorkspaceInput | Prisma.BillingSubscriptionUpdateWithWhereUniqueWithoutWorkspaceInput[]
+  updateMany?: Prisma.BillingSubscriptionUpdateManyWithWhereWithoutWorkspaceInput | Prisma.BillingSubscriptionUpdateManyWithWhereWithoutWorkspaceInput[]
+  deleteMany?: Prisma.BillingSubscriptionScalarWhereInput | Prisma.BillingSubscriptionScalarWhereInput[]
+}
+
+export type BillingSubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput = {
+  create?: Prisma.XOR<Prisma.BillingSubscriptionCreateWithoutWorkspaceInput, Prisma.BillingSubscriptionUncheckedCreateWithoutWorkspaceInput> | Prisma.BillingSubscriptionCreateWithoutWorkspaceInput[] | Prisma.BillingSubscriptionUncheckedCreateWithoutWorkspaceInput[]
+  connectOrCreate?: Prisma.BillingSubscriptionCreateOrConnectWithoutWorkspaceInput | Prisma.BillingSubscriptionCreateOrConnectWithoutWorkspaceInput[]
+  upsert?: Prisma.BillingSubscriptionUpsertWithWhereUniqueWithoutWorkspaceInput | Prisma.BillingSubscriptionUpsertWithWhereUniqueWithoutWorkspaceInput[]
+  createMany?: Prisma.BillingSubscriptionCreateManyWorkspaceInputEnvelope
+  set?: Prisma.BillingSubscriptionWhereUniqueInput | Prisma.BillingSubscriptionWhereUniqueInput[]
+  disconnect?: Prisma.BillingSubscriptionWhereUniqueInput | Prisma.BillingSubscriptionWhereUniqueInput[]
+  delete?: Prisma.BillingSubscriptionWhereUniqueInput | Prisma.BillingSubscriptionWhereUniqueInput[]
+  connect?: Prisma.BillingSubscriptionWhereUniqueInput | Prisma.BillingSubscriptionWhereUniqueInput[]
+  update?: Prisma.BillingSubscriptionUpdateWithWhereUniqueWithoutWorkspaceInput | Prisma.BillingSubscriptionUpdateWithWhereUniqueWithoutWorkspaceInput[]
+  updateMany?: Prisma.BillingSubscriptionUpdateManyWithWhereWithoutWorkspaceInput | Prisma.BillingSubscriptionUpdateManyWithWhereWithoutWorkspaceInput[]
+  deleteMany?: Prisma.BillingSubscriptionScalarWhereInput | Prisma.BillingSubscriptionScalarWhereInput[]
+}
+
+export type BillingSubscriptionCreateWithoutWorkspaceInput = {
+  id?: string
+  plan: string
+  stripeCustomerId?: string | null
+  stripeSubscriptionId?: string | null
+  status?: string
+  periodStart?: Date | string | null
+  periodEnd?: Date | string | null
+  cancelAtPeriodEnd?: boolean
+  cancelAt?: Date | string | null
+  canceledAt?: Date | string | null
+  endedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type BillingSubscriptionUncheckedCreateWithoutWorkspaceInput = {
+  id?: string
+  plan: string
+  stripeCustomerId?: string | null
+  stripeSubscriptionId?: string | null
+  status?: string
+  periodStart?: Date | string | null
+  periodEnd?: Date | string | null
+  cancelAtPeriodEnd?: boolean
+  cancelAt?: Date | string | null
+  canceledAt?: Date | string | null
+  endedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type BillingSubscriptionCreateOrConnectWithoutWorkspaceInput = {
+  where: Prisma.BillingSubscriptionWhereUniqueInput
+  create: Prisma.XOR<Prisma.BillingSubscriptionCreateWithoutWorkspaceInput, Prisma.BillingSubscriptionUncheckedCreateWithoutWorkspaceInput>
+}
+
+export type BillingSubscriptionCreateManyWorkspaceInputEnvelope = {
+  data: Prisma.BillingSubscriptionCreateManyWorkspaceInput | Prisma.BillingSubscriptionCreateManyWorkspaceInput[]
+  skipDuplicates?: boolean
+}
+
+export type BillingSubscriptionUpsertWithWhereUniqueWithoutWorkspaceInput = {
+  where: Prisma.BillingSubscriptionWhereUniqueInput
+  update: Prisma.XOR<Prisma.BillingSubscriptionUpdateWithoutWorkspaceInput, Prisma.BillingSubscriptionUncheckedUpdateWithoutWorkspaceInput>
+  create: Prisma.XOR<Prisma.BillingSubscriptionCreateWithoutWorkspaceInput, Prisma.BillingSubscriptionUncheckedCreateWithoutWorkspaceInput>
+}
+
+export type BillingSubscriptionUpdateWithWhereUniqueWithoutWorkspaceInput = {
+  where: Prisma.BillingSubscriptionWhereUniqueInput
+  data: Prisma.XOR<Prisma.BillingSubscriptionUpdateWithoutWorkspaceInput, Prisma.BillingSubscriptionUncheckedUpdateWithoutWorkspaceInput>
+}
+
+export type BillingSubscriptionUpdateManyWithWhereWithoutWorkspaceInput = {
+  where: Prisma.BillingSubscriptionScalarWhereInput
+  data: Prisma.XOR<Prisma.BillingSubscriptionUpdateManyMutationInput, Prisma.BillingSubscriptionUncheckedUpdateManyWithoutWorkspaceInput>
+}
+
+export type BillingSubscriptionScalarWhereInput = {
+  AND?: Prisma.BillingSubscriptionScalarWhereInput | Prisma.BillingSubscriptionScalarWhereInput[]
+  OR?: Prisma.BillingSubscriptionScalarWhereInput[]
+  NOT?: Prisma.BillingSubscriptionScalarWhereInput | Prisma.BillingSubscriptionScalarWhereInput[]
+  id?: Prisma.StringFilter<"BillingSubscription"> | string
+  workspaceId?: Prisma.StringFilter<"BillingSubscription"> | string
+  plan?: Prisma.StringFilter<"BillingSubscription"> | string
+  stripeCustomerId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
+  stripeSubscriptionId?: Prisma.StringNullableFilter<"BillingSubscription"> | string | null
+  status?: Prisma.StringFilter<"BillingSubscription"> | string
+  periodStart?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
+  periodEnd?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
+  cancelAtPeriodEnd?: Prisma.BoolFilter<"BillingSubscription"> | boolean
+  cancelAt?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
+  canceledAt?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
+  endedAt?: Prisma.DateTimeNullableFilter<"BillingSubscription"> | Date | string | null
+  createdAt?: Prisma.DateTimeFilter<"BillingSubscription"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"BillingSubscription"> | Date | string
+}
+
+export type BillingSubscriptionCreateManyWorkspaceInput = {
+  id?: string
+  plan: string
+  stripeCustomerId?: string | null
+  stripeSubscriptionId?: string | null
+  status?: string
+  periodStart?: Date | string | null
+  periodEnd?: Date | string | null
+  cancelAtPeriodEnd?: boolean
+  cancelAt?: Date | string | null
+  canceledAt?: Date | string | null
+  endedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type BillingSubscriptionUpdateWithoutWorkspaceInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  plan?: Prisma.StringFieldUpdateOperationsInput | string
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  periodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  periodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelAtPeriodEnd?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  cancelAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type BillingSubscriptionUncheckedUpdateWithoutWorkspaceInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  plan?: Prisma.StringFieldUpdateOperationsInput | string
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  periodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  periodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelAtPeriodEnd?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  cancelAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type BillingSubscriptionUncheckedUpdateManyWithoutWorkspaceInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  plan?: Prisma.StringFieldUpdateOperationsInput | string
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  periodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  periodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelAtPeriodEnd?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  cancelAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
 
 export type BillingSubscriptionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  workspaceId?: boolean
   plan?: boolean
-  referenceId?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   status?: boolean
   periodStart?: boolean
   periodEnd?: boolean
-  trialStart?: boolean
-  trialEnd?: boolean
   cancelAtPeriodEnd?: boolean
   cancelAt?: boolean
   canceledAt?: boolean
   endedAt?: boolean
-  seats?: boolean
-  billingInterval?: boolean
-  stripeScheduleId?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
+  workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["billingSubscription"]>
 
 export type BillingSubscriptionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  workspaceId?: boolean
   plan?: boolean
-  referenceId?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   status?: boolean
   periodStart?: boolean
   periodEnd?: boolean
-  trialStart?: boolean
-  trialEnd?: boolean
   cancelAtPeriodEnd?: boolean
   cancelAt?: boolean
   canceledAt?: boolean
   endedAt?: boolean
-  seats?: boolean
-  billingInterval?: boolean
-  stripeScheduleId?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
+  workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["billingSubscription"]>
 
 export type BillingSubscriptionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  workspaceId?: boolean
   plan?: boolean
-  referenceId?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   status?: boolean
   periodStart?: boolean
   periodEnd?: boolean
-  trialStart?: boolean
-  trialEnd?: boolean
   cancelAtPeriodEnd?: boolean
   cancelAt?: boolean
   canceledAt?: boolean
   endedAt?: boolean
-  seats?: boolean
-  billingInterval?: boolean
-  stripeScheduleId?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
+  workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["billingSubscription"]>
 
 export type BillingSubscriptionSelectScalar = {
   id?: boolean
+  workspaceId?: boolean
   plan?: boolean
-  referenceId?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   status?: boolean
   periodStart?: boolean
   periodEnd?: boolean
-  trialStart?: boolean
-  trialEnd?: boolean
   cancelAtPeriodEnd?: boolean
   cancelAt?: boolean
   canceledAt?: boolean
   endedAt?: boolean
-  seats?: boolean
-  billingInterval?: boolean
-  stripeScheduleId?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
 }
 
-export type BillingSubscriptionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "plan" | "referenceId" | "stripeCustomerId" | "stripeSubscriptionId" | "status" | "periodStart" | "periodEnd" | "trialStart" | "trialEnd" | "cancelAtPeriodEnd" | "cancelAt" | "canceledAt" | "endedAt" | "seats" | "billingInterval" | "stripeScheduleId", ExtArgs["result"]["billingSubscription"]>
+export type BillingSubscriptionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "workspaceId" | "plan" | "stripeCustomerId" | "stripeSubscriptionId" | "status" | "periodStart" | "periodEnd" | "cancelAtPeriodEnd" | "cancelAt" | "canceledAt" | "endedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["billingSubscription"]>
+export type BillingSubscriptionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+}
+export type BillingSubscriptionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+}
+export type BillingSubscriptionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+}
 
 export type $BillingSubscriptionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "BillingSubscription"
-  objects: {}
+  objects: {
+    workspace: Prisma.$WorkspacePayload<ExtArgs>
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    workspaceId: string
     /**
      * "cloud"
      */
     plan: string
-    /**
-     * The workspace's id. Not a relation: the plugin can write a user's id here for a
-     * subscription made in Stripe's dashboard.
-     */
-    referenceId: string
     stripeCustomerId: string | null
     stripeSubscriptionId: string | null
     /**
@@ -737,15 +809,12 @@ export type $BillingSubscriptionPayload<ExtArgs extends runtime.Types.Extensions
     status: string
     periodStart: Date | null
     periodEnd: Date | null
-    trialStart: Date | null
-    trialEnd: Date | null
-    cancelAtPeriodEnd: boolean | null
+    cancelAtPeriodEnd: boolean
     cancelAt: Date | null
     canceledAt: Date | null
     endedAt: Date | null
-    seats: number | null
-    billingInterval: string | null
-    stripeScheduleId: string | null
+    createdAt: Date
+    updatedAt: Date
   }, ExtArgs["result"]["billingSubscription"]>
   composites: {}
 }
@@ -1140,6 +1209,7 @@ readonly fields: BillingSubscriptionFieldRefs;
  */
 export interface Prisma__BillingSubscriptionClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1170,22 +1240,19 @@ export interface Prisma__BillingSubscriptionClient<T, Null = never, ExtArgs exte
  */
 export interface BillingSubscriptionFieldRefs {
   readonly id: Prisma.FieldRef<"BillingSubscription", 'String'>
+  readonly workspaceId: Prisma.FieldRef<"BillingSubscription", 'String'>
   readonly plan: Prisma.FieldRef<"BillingSubscription", 'String'>
-  readonly referenceId: Prisma.FieldRef<"BillingSubscription", 'String'>
   readonly stripeCustomerId: Prisma.FieldRef<"BillingSubscription", 'String'>
   readonly stripeSubscriptionId: Prisma.FieldRef<"BillingSubscription", 'String'>
   readonly status: Prisma.FieldRef<"BillingSubscription", 'String'>
   readonly periodStart: Prisma.FieldRef<"BillingSubscription", 'DateTime'>
   readonly periodEnd: Prisma.FieldRef<"BillingSubscription", 'DateTime'>
-  readonly trialStart: Prisma.FieldRef<"BillingSubscription", 'DateTime'>
-  readonly trialEnd: Prisma.FieldRef<"BillingSubscription", 'DateTime'>
   readonly cancelAtPeriodEnd: Prisma.FieldRef<"BillingSubscription", 'Boolean'>
   readonly cancelAt: Prisma.FieldRef<"BillingSubscription", 'DateTime'>
   readonly canceledAt: Prisma.FieldRef<"BillingSubscription", 'DateTime'>
   readonly endedAt: Prisma.FieldRef<"BillingSubscription", 'DateTime'>
-  readonly seats: Prisma.FieldRef<"BillingSubscription", 'Int'>
-  readonly billingInterval: Prisma.FieldRef<"BillingSubscription", 'String'>
-  readonly stripeScheduleId: Prisma.FieldRef<"BillingSubscription", 'String'>
+  readonly createdAt: Prisma.FieldRef<"BillingSubscription", 'DateTime'>
+  readonly updatedAt: Prisma.FieldRef<"BillingSubscription", 'DateTime'>
 }
     
 
@@ -1202,6 +1269,10 @@ export type BillingSubscriptionFindUniqueArgs<ExtArgs extends runtime.Types.Exte
    * Omit specific fields from the BillingSubscription
    */
   omit?: Prisma.BillingSubscriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionInclude<ExtArgs> | null
   /**
    * Filter, which BillingSubscription to fetch.
    */
@@ -1221,6 +1292,10 @@ export type BillingSubscriptionFindUniqueOrThrowArgs<ExtArgs extends runtime.Typ
    */
   omit?: Prisma.BillingSubscriptionOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionInclude<ExtArgs> | null
+  /**
    * Filter, which BillingSubscription to fetch.
    */
   where: Prisma.BillingSubscriptionWhereUniqueInput
@@ -1238,6 +1313,10 @@ export type BillingSubscriptionFindFirstArgs<ExtArgs extends runtime.Types.Exten
    * Omit specific fields from the BillingSubscription
    */
   omit?: Prisma.BillingSubscriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionInclude<ExtArgs> | null
   /**
    * Filter, which BillingSubscription to fetch.
    */
@@ -1287,6 +1366,10 @@ export type BillingSubscriptionFindFirstOrThrowArgs<ExtArgs extends runtime.Type
    */
   omit?: Prisma.BillingSubscriptionOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionInclude<ExtArgs> | null
+  /**
    * Filter, which BillingSubscription to fetch.
    */
   where?: Prisma.BillingSubscriptionWhereInput
@@ -1334,6 +1417,10 @@ export type BillingSubscriptionFindManyArgs<ExtArgs extends runtime.Types.Extens
    * Omit specific fields from the BillingSubscription
    */
   omit?: Prisma.BillingSubscriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionInclude<ExtArgs> | null
   /**
    * Filter, which BillingSubscriptions to fetch.
    */
@@ -1383,6 +1470,10 @@ export type BillingSubscriptionCreateArgs<ExtArgs extends runtime.Types.Extensio
    */
   omit?: Prisma.BillingSubscriptionOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionInclude<ExtArgs> | null
+  /**
    * The data needed to create a BillingSubscription.
    */
   data: Prisma.XOR<Prisma.BillingSubscriptionCreateInput, Prisma.BillingSubscriptionUncheckedCreateInput>
@@ -1416,6 +1507,10 @@ export type BillingSubscriptionCreateManyAndReturnArgs<ExtArgs extends runtime.T
    */
   data: Prisma.BillingSubscriptionCreateManyInput | Prisma.BillingSubscriptionCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1430,6 +1525,10 @@ export type BillingSubscriptionUpdateArgs<ExtArgs extends runtime.Types.Extensio
    * Omit specific fields from the BillingSubscription
    */
   omit?: Prisma.BillingSubscriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionInclude<ExtArgs> | null
   /**
    * The data needed to update a BillingSubscription.
    */
@@ -1482,6 +1581,10 @@ export type BillingSubscriptionUpdateManyAndReturnArgs<ExtArgs extends runtime.T
    * Limit how many BillingSubscriptions to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1496,6 +1599,10 @@ export type BillingSubscriptionUpsertArgs<ExtArgs extends runtime.Types.Extensio
    * Omit specific fields from the BillingSubscription
    */
   omit?: Prisma.BillingSubscriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionInclude<ExtArgs> | null
   /**
    * The filter to search for the BillingSubscription to update in case it exists.
    */
@@ -1522,6 +1629,10 @@ export type BillingSubscriptionDeleteArgs<ExtArgs extends runtime.Types.Extensio
    * Omit specific fields from the BillingSubscription
    */
   omit?: Prisma.BillingSubscriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionInclude<ExtArgs> | null
   /**
    * Filter which BillingSubscription to delete.
    */
@@ -1554,4 +1665,8 @@ export type BillingSubscriptionDefaultArgs<ExtArgs extends runtime.Types.Extensi
    * Omit specific fields from the BillingSubscription
    */
   omit?: Prisma.BillingSubscriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BillingSubscriptionInclude<ExtArgs> | null
 }

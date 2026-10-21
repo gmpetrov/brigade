@@ -18,7 +18,6 @@
     "playbooks": "node scripts/playbooks.mjs"
   },
   "dependencies": {
-    "@better-auth/stripe": "1.7.10",
     "@blocknote/core": "0.56.0",
     "@blocknote/server-util": "0.56.0",
     "@brigade/contracts": "workspace:*",

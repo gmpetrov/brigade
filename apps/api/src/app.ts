@@ -2,7 +2,7 @@ import { PROTOCOL_VERSION, type HealthResponse } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { auth } from './auth.js'
-import { stripeWebhook } from './billing.js'
+import { checkoutReturn, stripeWebhook } from './billing.js'
 import { apiCors } from './cors.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
@@ -81,13 +81,19 @@ app.get('/health/db', async (c) => {
   return c.json({ queryMs, colo: /^colo=(\w+)$/m.exec(trace)?.[1] ?? null })
 })
 
-// The stripe plugin's own subscription endpoints: only Checkout's return. Subscribing and
-// managing go through /api/billing, which makes Brigade's own Stripe customer first.
-app.all('/api/auth/subscription/:action', async (c, next) =>
-  c.req.param('action') === 'success' ? next() : c.json({ error: 'Not found' }, 404),
-)
-app.post('/api/auth/stripe/webhook', (c) => stripeWebhook(c.req.raw, auth.handler))
 app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+// Billing (src/billing.ts): Stripe's webhook, verified by its signature, and the way back
+// from Checkout, which reads only Stripe. Neither needs a session: before the routers below,
+// whose middleware asks for one.
+app.post('/api/billing/webhook', (c) => stripeWebhook(c.req.raw))
+app.get('/api/billing/return', async (c) => {
+  await checkoutReturn(c.req.query('session')).catch((error) =>
+    // The webhook does it, a moment later.
+    console.error('billing: reconciling on the way back from Checkout failed', error),
+  )
+  const page = c.req.query('to') === 'onboarding' ? '/onboarding' : '/app/billing'
+  return c.redirect(`${env.WEB_URL[0]}${page}?subscribed=1`)
+})
 // Brigade's OAuth client ID metadata document, read by MCP servers' authorization servers.
 app.get('/api/mcp/client.json', (c) => c.json(mcpClientDocument()))
 app.use('/api/connections/oauth/*', signInFirst)

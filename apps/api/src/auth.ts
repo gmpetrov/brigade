@@ -1,9 +1,7 @@
-import { stripe } from '@better-auth/stripe'
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { organization } from 'better-auth/plugins'
 import { audit } from './audit.js'
-import { CLOUD_PLAN, mayBill, stripeClient } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 
@@ -108,26 +106,6 @@ export const auth = betterAuth({
           }),
       },
     }),
-    // Billing (src/billing.ts): Stripe's webhook at /api/auth/stripe/webhook and Checkout's
-    // return, which keep a workspace's plan in step (its referenceId). Checkout itself is made
-    // by src/billing.ts, for the workspace's own Stripe customer.
-    ...(stripeClient
-      ? [
-          stripe({
-            stripeClient,
-            stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET ?? '',
-            schema: { subscription: { modelName: 'billingSubscription' } },
-            subscription: {
-              enabled: true,
-              plans: [CLOUD_PLAN],
-              authorizeReference: ({ user, referenceId, action }) =>
-                mayBill(user.id, referenceId, action),
-              // What follows an event (Stripe's current state, the cloud computer) is
-              // stripeWebhook's in src/billing.ts, around the plugin's webhook.
-            },
-          }),
-        ]
-      : []),
   ],
 })
 

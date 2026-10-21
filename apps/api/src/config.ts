@@ -102,15 +102,15 @@ const Env = z.object({
   /**
    * Billing (src/billing.ts): the Cloud plan, per workspace, gives it the cloud computer.
    * A Stripe secret key, restricted or not, of the account with the price whose lookup key
-   * is brigade_cloud_monthly. Without it, billing is off and every workspace has the cloud
+   * is brigade_cloud_monthly (scripts/stripe-setup.mjs). Without it, billing is off and every workspace has the cloud
    * computer (when a provider is configured), as on a self-hosted Brigade.
    */
   STRIPE_SECRET_KEY: z.string().optional(),
   /**
-   * The signing secret of the Stripe webhook to {API_URL}/api/auth/stripe/webhook, with the
+   * The signing secret of the Stripe webhook to {API_URL}/api/billing/webhook, with the
    * events checkout.session.completed and customer.subscription.created, .updated and .deleted.
-   * Without it, a subscription is still recorded when its checkout returns, but changes made
-   * in Stripe (a cancellation, a failed payment) are not.
+   * Without it, a subscription is recorded when its Checkout returns, and Settings › Billing
+   * reads it from Stripe each time it opens (a preview).
    */
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 })

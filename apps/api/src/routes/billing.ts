@@ -5,13 +5,11 @@ import { audit } from '../audit.js'
 import {
   billingEnabled,
   entitles,
-  planChanged,
   portalConfiguration,
   refreshPlan,
   startCheckout,
   stripeClient,
   workspaceCustomerId,
-  workspacePlan,
 } from '../billing.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
@@ -26,9 +24,7 @@ export const billing = new Hono<AppEnv>()
 
   .get('/', async (c) => {
     if (!billingEnabled()) return c.json<BillingResponse>({ enabled: false, plan: null })
-    const stored = await workspacePlan(c.var.scope.workspaceId)
-    const plan = stored && (await refreshPlan(stored))
-    if (stored && plan && entitles(stored.status) !== entitles(plan.status)) await planChanged(plan)
+    const plan = await refreshPlan(c.var.scope.workspaceId)
     return c.json<BillingResponse>({
       enabled: true,
       plan: plan && {
@@ -54,7 +50,7 @@ export const billing = new Hono<AppEnv>()
     const url = await startCheckout({
       workspaceId: c.var.scope.workspaceId,
       user,
-      successUrl: `${pageOf[from]()}?subscribed=1`,
+      from,
       cancelUrl: pageOf[from](),
     })
     await audit({

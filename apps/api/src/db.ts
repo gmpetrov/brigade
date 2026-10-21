@@ -26,7 +26,7 @@ const UNSCOPED = new Set([
   'Organization',
   'PushDevice',
   'McpClient',
-  // A workspace's plan: read and written by the stripe plugin and src/billing.ts only.
+  // A workspace's plan: read and written by src/billing.ts only, under its own lock.
   'BillingSubscription',
 ])
 const READS_AND_BULK = new Set([
