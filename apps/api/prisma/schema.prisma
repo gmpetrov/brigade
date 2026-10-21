@@ -113,16 +113,19 @@ model Verification {
 }
 
 model Organization {
-  id          String       @id
-  name        String
-  slug        String       @unique
-  logo        String?
-  metadata    String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime?    @updatedAt
-  members     Member[]
-  invitations Invitation[]
-  workspaces  Workspace[]
+  id               String       @id
+  name             String
+  slug             String       @unique
+  logo             String?
+  metadata         String?
+  /// Set when its deletion is decided (src/billing.ts): no Checkout starts in it for the few
+  /// moments until it is gone. Lapses by itself after 10 minutes.
+  billingClosingAt DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime?    @updatedAt
+  members          Member[]
+  invitations      Invitation[]
+  workspaces       Workspace[]
 }
 
 /// A user's role in an organization: owner, admin or member.

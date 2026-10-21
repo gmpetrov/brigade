@@ -550,3 +550,29 @@ test('an organization is not deleted while one of its workspaces is billed', { s
     await prisma.user.deleteMany({ where: { email } })
   }
 })
+
+test('once its deletion is decided, no Checkout starts in the organization', { skip }, async () => {
+  const organizationId = `org-closing-${id}`
+  await prisma.organization.create({
+    data: { id: organizationId, name: organizationId, slug: organizationId },
+  })
+  try {
+    const first = (await prisma.workspace.create({ data: { organizationId, name: 'first' } })).id
+    // Deletion decided: the guard passed, and Better Auth has not deleted it yet.
+    await billing.guardOrganizationDeletion(organizationId)
+    await assert.rejects(checkout(first), /being deleted/)
+    // Nor in a workspace made meanwhile.
+    const second = (await prisma.workspace.create({ data: { organizationId, name: 'second' } })).id
+    await assert.rejects(checkout(second), /being deleted/)
+    assert.equal(await billing.workspaceCustomerId(first), null)
+    // The deletion failed after all: the closing lapses by itself.
+    await prisma.organization.update({
+      where: { id: organizationId },
+      data: { billingClosingAt: new Date(Date.now() - 11 * 60_000) },
+    })
+    await checkout(first)
+    assert.equal((await sessionsOf(first)).length, 1)
+  } finally {
+    await prisma.organization.deleteMany({ where: { id: organizationId } })
+  }
+})

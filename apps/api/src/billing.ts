@@ -269,7 +269,7 @@ export async function applyPlan(workspaceId: string) {
   const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } })
   if (!workspace) return
   // Not imported above: src/cloud.ts imports this module.
-  const { createWorkspaceComputer, stopComputer } = await import('./cloud.js')
+  const { createWorkspaceComputer, shutDown } = await import('./cloud.js')
   if (await cloudEntitled(workspace.id)) {
     await createWorkspaceComputer(workspace)
     return
@@ -278,13 +278,16 @@ export async function applyPlan(workspaceId: string) {
     where: {
       workspaceId: workspace.id,
       kind: 'cloud',
-      status: { in: ['running', 'starting', 'creating'] },
+      status: { notIn: ['stopped', 'destroyed'] },
     },
   })
   const failed: unknown[] = []
   for (const computer of computers)
-    await stopComputer(computer, { type: 'system', id: 'billing' }).catch((error) =>
-      failed.push(error),
+    await shutDown(computer).catch((error) =>
+      // One that was up is the event's to retry; a broken one, the minute check's.
+      ['running', 'starting'].includes(computer.status)
+        ? failed.push(error)
+        : console.error(`shutting ${computer.id} down failed`, error),
     )
   if (failed.length)
     throw new AggregateError(failed, `stopping ${workspaceId}'s cloud computer failed`)
@@ -363,6 +366,12 @@ export async function startCheckout(input: {
   let outcome: { url: string } | { adopted: Stripe.Subscription }
   try {
     outcome = await withWorkspaceLock(workspaceId, async (tx) => {
+      const { organization } = await tx.workspace.findUniqueOrThrow({
+        where: { id: workspaceId },
+        include: { organization: true },
+      })
+      if (beingDeleted(organization.billingClosingAt))
+        throw new HTTPException(409, { message: 'This organization is being deleted' })
       const current = await workspacePlan(workspaceId, tx)
       if (current && entitles(current.status))
         throw new HTTPException(409, { message: 'This workspace already has Brigade Cloud' })
@@ -438,44 +447,47 @@ export async function startCheckout(input: {
   })
 }
 
-/** Stripe customers of organizations being deleted, for afterOrganizationDeleted. */
-const deleting = new Map<string, string[]>()
+/** How long an organization stays closed to Checkout once its deletion is decided. */
+const DELETION_LEASE_MS = 10 * 60_000
+
+const beingDeleted = (closingAt: Date | null) =>
+  !!closingAt && Date.now() - closingAt.getTime() < DELETION_LEASE_MS
 
 /**
- * Before an organization is deleted (better-auth, src/auth.ts): refused while one of its
- * workspaces has a subscription that is not over, which would go on billing a workspace that
- * is gone. Its Checkouts still open are expired, so none is paid once it is gone.
+ * Before an organization is deleted (better-auth, src/auth.ts). First it is closed to Checkout
+ * (Organization.billingClosingAt, which startCheckout reads under each workspace's lock), for
+ * the few moments until it is gone; then, workspace by workspace under its lock, the
+ * Checkouts still open are expired and a subscription that is not over refuses the deletion:
+ * it would go on billing a workspace that is gone. Refused, the organization opens again;
+ * should the deletion fail after this, the closing lapses by itself.
  */
 export async function guardOrganizationDeletion(organizationId: string) {
   if (!stripeClient) return
-  const workspaces = await prisma.workspace.findMany({ where: { organizationId } })
-  const customers: string[] = []
-  for (const { id } of workspaces) {
-    const live = await withWorkspaceLock(id, async (tx) => {
-      const workspace = await tx.workspace.findUniqueOrThrow({ where: { id } })
-      if (!workspace.stripeCustomerId) return null
-      customers.push(workspace.stripeCustomerId)
-      await closeOpenCheckouts(workspace.stripeCustomerId)
-      return liveSubscription(workspace.stripeCustomerId, id)
-    })
-    if (live)
-      throw new HTTPException(409, {
-        message:
-          'A workspace of this organization has Brigade Cloud: cancel it in Settings › Billing, then delete the organization once it has ended',
+  await prisma.organization.update({
+    where: { id: organizationId },
+    data: { billingClosingAt: new Date() },
+  })
+  try {
+    // Read once closed: a workspace made from now on cannot start a Checkout either.
+    const workspaces = await prisma.workspace.findMany({ where: { organizationId } })
+    for (const { id } of workspaces) {
+      const live = await withWorkspaceLock(id, async (tx) => {
+        const workspace = await tx.workspace.findUniqueOrThrow({ where: { id } })
+        if (!workspace.stripeCustomerId) return null
+        await closeOpenCheckouts(workspace.stripeCustomerId)
+        return liveSubscription(workspace.stripeCustomerId, id)
       })
+      if (live)
+        throw new HTTPException(409, {
+          message:
+            'A workspace of this organization has Brigade Cloud: cancel it in Settings › Billing, then delete the organization once it has ended',
+        })
+    }
+  } catch (error) {
+    await prisma.organization.update({
+      where: { id: organizationId },
+      data: { billingClosingAt: null },
+    })
+    throw error
   }
-  deleting.set(organizationId, customers)
-}
-
-/**
- * Once it is deleted: a Checkout opened in the moment between the check and the deletion is
- * expired too.
- */
-export async function afterOrganizationDeleted(organizationId: string) {
-  const customers = deleting.get(organizationId) ?? []
-  deleting.delete(organizationId)
-  for (const customer of customers)
-    await closeOpenCheckouts(customer).catch((error) =>
-      console.error(`billing: closing ${customer}'s Checkouts failed`, error),
-    )
 }

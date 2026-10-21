@@ -28,14 +28,22 @@ workspace, paid by the owner or admin who subscribes. All of it is in
   the workspace (one paid just before, or paid with its webhook not here yet) becomes its
   plan and no Checkout is made; else a new Checkout is made. Should the lock have been
   lost meanwhile, that Checkout is expired before anyone sees its address.
-- **The cloud computer follows the plan**, even when the provider is slow or fails: a
-  stop that fails answers the webhook 503 (sent again), and the idle check (each minute)
-  and the runner's hello stop a cloud computer that runs without a plan. A computer still
-  being made when the plan ends stops itself once made. A row that says "running" starts
-  nothing without the plan.
+- **The cloud computer follows the plan**, even when the provider is slow or fails:
+  - a stop that fails answers the webhook 503, so Stripe sends it again;
+  - each minute, every cloud computer that is up, being made or broken while its
+    workspace has no plan is shut down (`enforcePlans`), until the provider does it;
+  - the runner's hello stops a cloud computer whose workspace has no plan;
+  - a computer still being made when the plan ends loses its VM once made: nothing was
+    installed on it, and the next plan makes a new one;
+  - a computer whose install never finished (no runner, nothing making it) is made again
+    from a new VM rather than resumed;
+  - a row that says "running" starts nothing without the plan.
 - **An organization is not deleted while one of its workspaces has a subscription that is
   not over** (better-auth's `beforeDeleteOrganization`): it would go on billing a workspace
-  that is gone. Its open Checkouts are expired, before and after the deletion.
+  that is gone. Once its deletion is decided, the organization is closed to Checkout
+  (`Organization.billingClosingAt`, read under each workspace's lock) until it is gone, and
+  its open Checkouts are expired; the closing lapses after 10 minutes should the deletion
+  fail.
 - Brigade's metadata on the Checkout and its subscription (`workspaceId`, `rowId`) tie
   them to the workspace. Events without it (another product's) are ignored.
 - Settings › Billing (`/app/billing`) subscribes through Checkout and opens Stripe's

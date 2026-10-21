@@ -4,7 +4,7 @@ import { APIError } from 'better-auth/api'
 import { organization } from 'better-auth/plugins'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
-import { afterOrganizationDeleted, guardOrganizationDeletion } from './billing.js'
+import { guardOrganizationDeletion } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 
@@ -72,7 +72,6 @@ export const auth = betterAuth({
             throw error
           }
         },
-        afterDeleteOrganization: ({ organization }) => afterOrganizationDeleted(organization.id),
         afterUpdateOrganization: async ({ organization, user }) => {
           if (!organization) return
           await audit({

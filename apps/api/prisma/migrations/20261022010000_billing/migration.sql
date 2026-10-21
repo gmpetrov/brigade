@@ -1,4 +1,7 @@
 -- AlterTable
+ALTER TABLE "Organization" ADD COLUMN     "billingClosingAt" TIMESTAMP(3);
+
+-- AlterTable
 ALTER TABLE "Workspace" ADD COLUMN     "stripeCustomerId" TEXT;
 
 -- CreateTable

@@ -3,9 +3,9 @@
 import { providerFromEnv, type ComputerRef } from '@brigade/providers'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
-import { cloudEntitled, requireCloudPlan } from './billing.js'
+import { billingEnabled, cloudEntitled, requireCloudPlan } from './billing.js'
 import { defaults, env } from './config.js'
-import { prisma } from './db.js'
+import { Prisma, prisma } from './db.js'
 import {
   broadcastComputer,
   dropRunner,
@@ -75,38 +75,89 @@ export async function createWorkspaceComputer(workspace: { id: string; organizat
     return found.created
   }
   const existing = found.existing!
-  if (existing.status === 'error' && !refOf(existing)) await reprovision(existing)
+  if (await unfinished(existing)) await reprovision(existing)
   return existing
 }
 
-function startProvision(computer: { id: string; organizationId: string; workspaceId: string }) {
-  void provision(computer).catch(async (error) => {
-    console.error(`provisioning ${computer.id} failed: ${await providerReason(error)}`, error)
-    await setStatus(computer, 'error')
+/** Cloud computers this process is making, by id: one making at a time for each. */
+const provisioning = new Set<string>()
+
+/**
+ * A cloud computer whose runner was never installed (its making failed or was cut short, the
+ * API restarted meanwhile) and that nothing is making now: its VM, if any, holds nothing.
+ */
+async function unfinished(computer: { id: string; kind?: string }) {
+  if (computer.kind && computer.kind !== 'cloud') return false
+  if (provisioning.has(computer.id)) return false
+  const runner = await prisma.runner.findUnique({
+    where: { computerId: computer.id },
+    select: { id: true },
   })
+  return !runner
 }
 
-/** A computer whose creation failed before the provider made it: create it again, once. */
+function startProvision(computer: { id: string; organizationId: string; workspaceId: string }) {
+  if (provisioning.has(computer.id)) return
+  provisioning.add(computer.id)
+  void provision(computer)
+    .catch(async (error) => {
+      console.error(`provisioning ${computer.id} failed: ${await providerReason(error)}`, error)
+      await setStatus(computer, 'error')
+    })
+    .finally(() => provisioning.delete(computer.id))
+}
+
+/** Make an unfinished computer again, from a new VM: the one it had, if any, goes first. */
 async function reprovision(computer: { id: string; organizationId: string; workspaceId: string }) {
-  const { count } = await prisma.computer.updateMany({
-    where: { id: computer.id, status: 'error' },
-    data: { status: 'creating' },
-  })
-  if (!count) return
-  broadcastComputer(computer.workspaceId, computer.id, 'creating')
+  if (provisioning.has(computer.id)) return
+  await setStatus(computer, 'creating')
   startProvision(computer)
 }
 
+/**
+ * The VM of an unfinished computer goes, and the computer with it: nothing was installed on
+ * it. Its workspace gets a new one with its next plan. Throws when the provider fails; the
+ * minute check tries again (enforcePlans).
+ */
+async function retire(computer: { id: string; workspaceId: string; providerRef: unknown }) {
+  const ref = refOf(computer)
+  if (provider && ref) await destroyVm(ref)
+  await prisma.computer.update({ where: { id: computer.id }, data: { status: 'destroyed' } })
+  broadcastComputer(computer.workspaceId, computer.id, 'destroyed')
+}
+
+/** Destroy a VM, unless the provider no longer has it. */
+async function destroyVm(ref: ComputerRef) {
+  const gone = await provider!.status(ref).then(
+    (status) => status === 'destroyed',
+    (error: unknown) => {
+      if ((error as { response?: { status?: number } }).response?.status === 404) return true
+      throw error
+    },
+  )
+  if (!gone) await provider!.destroy(ref)
+}
+
 async function provision(computer: { id: string; organizationId: string; workspaceId: string }) {
+  // Made before and cut short: that VM holds nothing, a new one is made.
+  const before = await prisma.computer.findUniqueOrThrow({ where: { id: computer.id } })
+  const old = refOf(before)
+  if (old) {
+    await destroyVm(old)
+    await prisma.computer.update({
+      where: { id: computer.id },
+      data: { providerRef: Prisma.DbNull },
+    })
+  }
   const ref = await provider!.create({
     workspaceId: computer.workspaceId,
     size: defaults.cloudComputerSize,
   })
   await prisma.computer.update({ where: { id: computer.id }, data: { providerRef: ref } })
-  // The plan ended while it was being made, before its stop could reach it (src/billing.ts).
+  // The plan ended while it was being made, before its stop could reach it (src/billing.ts):
+  // nothing is installed yet, so the VM goes rather than wait, stopped, for a runner.
   if (!(await cloudEntitled(computer.workspaceId))) {
-    await provider!.stop(ref)
-    await setStatus(computer, 'stopped')
+    await retire({ ...computer, providerRef: ref })
     return
   }
   const { code } = await issueLinkCode({
@@ -174,8 +225,7 @@ async function bringUp(computerId: string) {
   // whatever its row says (a stop whose answer was lost leaves it "running").
   if (computer?.kind === 'cloud') await requireCloudPlan(computer.workspaceId)
   const ref = computer && refOf(computer)
-  if (computer?.kind === 'cloud' && !ref && computer.status === 'error')
-    return reprovision(computer)
+  if (computer?.kind === 'cloud' && (await unfinished(computer))) return reprovision(computer)
   if (
     !computer ||
     computer.kind !== 'cloud' ||
@@ -224,6 +274,43 @@ export async function stopWithoutPlan(computer: {
   keptAlive.delete(computer.id)
   await stopComputer(computer, { type: 'system', id: 'billing' })
   return true
+}
+
+/**
+ * A cloud computer whose workspace has no plan any more, stopped: an unfinished one goes
+ * (retire); one being made stops itself once made (provision). Throws when the provider fails.
+ */
+export async function shutDown(computer: {
+  id: string
+  organizationId: string
+  workspaceId: string
+  kind: string
+  providerRef: unknown
+}) {
+  if (computer.kind !== 'cloud' || provisioning.has(computer.id) || !refOf(computer)) return
+  if (await unfinished(computer)) return retire(computer)
+  keptAlive.delete(computer.id)
+  await stopComputer(computer, { type: 'system', id: 'billing' })
+}
+
+/**
+ * Each minute, with billing on: every cloud computer that is up, being made or broken while
+ * its workspace has no plan is shut down, until the provider does it. Whatever failed before
+ * (a stop, a VM left by a cut-short making) is tried again here.
+ */
+export async function enforcePlans() {
+  if (!provider || !billingEnabled()) return
+  const computers = await prisma.computer.findMany({
+    where: { kind: 'cloud', status: { notIn: ['stopped', 'destroyed'] } },
+  })
+  for (const computer of computers) {
+    if (provisioning.has(computer.id) || !refOf(computer)) continue
+    if (await cloudEntitled(computer.workspaceId)) continue
+    console.log(`shutting ${computer.id} down: its workspace has no Cloud plan`)
+    await shutDown(computer).catch(async (error) =>
+      console.error(`shutting ${computer.id} down failed: ${await providerReason(error)}`, error),
+    )
+  }
 }
 
 export async function stopComputer(
@@ -435,11 +522,8 @@ async function stopIdle() {
   const idleMs = env.IDLE_STOP_MINUTES * 60_000
   const running = await prisma.computer.findMany({ where: { kind: 'cloud', status: 'running' } })
   for (const computer of running) {
-    const stopped = await stopWithoutPlan(computer).catch((error) => {
-      console.error(`stopping ${computer.id} without a plan failed`, error)
-      return true
-    })
-    if (stopped) continue
+    // Without a plan: enforcePlans, just before, shut it down or will try again.
+    if (!(await cloudEntitled(computer.workspaceId))) continue
     const ref = refOf(computer)
     if (provider && ref && !isOnline(computer.id)) {
       const status = await provider.status(ref).catch(() => null)
@@ -483,5 +567,13 @@ async function stopIdle() {
 
 /** Stop idle cloud computers every minute. Started by the entry (src/jobs.ts). */
 export const watchIdle = () => {
-  if (provider) setInterval(() => void stopIdle().catch(console.error), 60_000)
+  if (provider)
+    setInterval(
+      () =>
+        void enforcePlans()
+          .catch(console.error)
+          .then(() => stopIdle())
+          .catch(console.error),
+      60_000,
+    )
 }

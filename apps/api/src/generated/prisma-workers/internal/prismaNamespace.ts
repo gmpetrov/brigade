@@ -5116,6 +5116,7 @@ export const OrganizationScalarFieldEnum = {
   slug: 'slug',
   logo: 'logo',
   metadata: 'metadata',
+  billingClosingAt: 'billingClosingAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
