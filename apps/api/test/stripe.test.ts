@@ -890,3 +890,39 @@ test(
     assert.equal(row.status, 'active')
   },
 )
+
+test(
+  'Reconnect repairs the row asked for, even beside another row for the same account',
+  { skip },
+  async () => {
+    await removeAll()
+    // Left by a Reconnect before the row being reconnected was sent: the row that stood for
+    // several accounts keeps its access and trigger, and a new row is that account alone.
+    const group = await groupedRow('Acme (live mode) +1', ['acct_1Live:live'])
+    await db.grant.create({
+      data: { ...scope, connectionId: group.id, teammateId, scope: 'read_write' } as never,
+    })
+    await trigger(group.id, 'payment_received')
+    const already = await connection()
+    fake.accounts = [{ stripe_context: 'acct_1Live', livemode: true, name: 'Acme' }]
+    assert.deepEqual(await signIn('repair-group', group.id), { connected: group.id, error: null })
+    const repaired = await db.connection.findFirstOrThrow({ where: { id: group.id } })
+    assert.equal(repaired.externalAccount, 'Acme (acct_1Live, live mode)')
+    assert.equal(repaired.status, 'active')
+    assert.equal(await db.grant.count({ where: { connectionId: group.id } }), 1)
+    assert.equal(await db.trigger.count({ where: { connectionId: group.id } }), 1)
+    assert.equal(
+      (await db.connection.findFirstOrThrow({ where: { id: already.id } })).status,
+      'active',
+    )
+
+    // Two such rows with an endpoint on the account: the one asked for, not the older one.
+    await removeAll()
+    const first = await groupedRow('First (live mode) +1', ['acct_1Live:live'])
+    const asked = await groupedRow('Second (live mode) +1', ['acct_1Live:live'])
+    assert.deepEqual(await signIn('repair-asked', asked.id), { connected: asked.id, error: null })
+    const untouched = await db.connection.findFirstOrThrow({ where: { id: first.id } })
+    assert.equal(untouched.externalAccount, 'First (live mode) +1')
+    assert.equal(untouched.status, 'needs_reauth')
+  },
+)

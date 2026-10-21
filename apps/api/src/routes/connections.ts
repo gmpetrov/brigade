@@ -169,6 +169,8 @@ async function createConnection(
   credential: object | null,
   /** An MCP server added by its URL: its App, added before its first account signs in. */
   existing?: { id: string },
+  /** The row this sign-in repairs, when its label alone cannot say which (Stripe's). */
+  repair?: string,
 ) {
   const db = scoped(scope)
   const id = randomUUID()
@@ -179,17 +181,26 @@ async function createConnection(
   // The member signing in again to an account they already have (Reconnect): the same
   // account gets the new credential, rather than a second row beside the broken one.
   const same =
-    credential && connection.externalAccount
+    credential && repair
       ? await db.connection.findFirst({
           where: {
+            id: repair,
             appId: app.id,
-            externalAccount: connection.externalAccount,
-            mcpUrl: connection.mcpUrl ?? null,
             createdByMemberId: scope.memberId,
             status: { not: 'removed' },
           },
         })
-      : null
+      : credential && connection.externalAccount
+        ? await db.connection.findFirst({
+            where: {
+              appId: app.id,
+              externalAccount: connection.externalAccount,
+              mcpUrl: connection.mcpUrl ?? null,
+              createdByMemberId: scope.memberId,
+              status: { not: 'removed' },
+            },
+          })
+        : null
   if (same && credential) {
     if (same.vaultSecretId) await replaceSecret(db, scope, same.vaultSecretId, credential)
     const vaultSecretId = same.vaultSecretId ?? (await sealSecret(db, scope, credential))
@@ -308,6 +319,7 @@ export const connections = new Hono<AppEnv>()
     // Stripe: a Brigade account is one Stripe account in one mode (connectors/stripe.ts), named
     // from this one answer, so that the row always says which.
     let stripeLabel: string | null = null
+    let repair: string | undefined
     if (kind === 'stripe') {
       const accounts = stripeAccounts(
         await callMcpTool(signedIn, server, 'list_available_accounts_or_orgs', {}).catch(
@@ -319,7 +331,7 @@ export const connections = new Hono<AppEnv>()
         return back('error=stripe_accounts')
       }
       stripeLabel = stripeAccountLabel(accounts[0]!)
-      await sameStripeAccount(db, scope, stripeLabel, grant.reconnect)
+      repair = (await sameStripeAccount(db, scope, stripeLabel, grant.reconnect)) ?? undefined
     }
     // An App that names its accounts (Linear's workspace, Atlassian's site) wins over the
     // sign-in's email, which would show the same on each of a member's accounts.
@@ -340,6 +352,7 @@ export const connections = new Hono<AppEnv>()
       },
       credential,
       added ?? undefined,
+      repair,
     )
     if (added && config) await refreshApp(db, added.id, config, server, signedIn)
     const repository = appCatalog[kind].skills
@@ -872,12 +885,13 @@ async function disconnect(
 }
 
 /**
- * The member's row for this Stripe account and mode, whatever its label says now (the account
- * was renamed, or it was connected with a key before Brigade signed in to Stripe): labelled as
- * the sign-in names it, so createConnection repairs that row in place, with its access, triggers
- * and webhook endpoint, rather than adding a second one. Only the very same account and mode, or
- * a row from when one sign-in could stand for several accounts and named none: the one with a
- * webhook endpoint on this account, or the one its owner is reconnecting.
+ * The member's row this Stripe sign-in repairs, labelled as the sign-in names it, so that it
+ * keeps its access, triggers and webhook endpoint rather than a second row being added: the one
+ * its owner is reconnecting, when it is this account and mode or names none (a row from when one
+ * sign-in could stand for several accounts); else the one with this label; else the one for this
+ * account and mode under another label (renamed, or connected with a key before Brigade signed
+ * in to Stripe); else a row that names no account and has a webhook endpoint on this one. Null:
+ * a new row.
  */
 export async function sameStripeAccount(
   db: ScopedDb,
@@ -886,26 +900,27 @@ export async function sameStripeAccount(
   reconnect?: string,
 ) {
   const account = stripeAccountOf(label)
-  if (!account) return
+  if (!account) return null
+  const resource = accountKey(account)
   const rows = await db.connection.findMany({
     where: { kind: 'stripe', createdByMemberId: scope.memberId, status: { not: 'removed' } },
     include: { subscriptions: { select: { resource: true } } },
     orderBy: { createdAt: 'asc' },
   })
-  if (rows.some((r) => r.externalAccount === label)) return
-  const resource = accountKey(account)
+  /** Whether a row is this account and mode; null when its label names none. */
+  const isThis = (r: { externalAccount: string | null }) => {
+    const other = stripeAccountOf(r.externalAccount)
+    return other ? accountKey(other) === resource : null
+  }
   const same =
-    rows.find((r) => {
-      const other = stripeAccountOf(r.externalAccount)
-      return other && accountKey(other) === resource
-    }) ??
-    rows.find(
-      (r) =>
-        !stripeAccountOf(r.externalAccount) &&
-        (r.id === reconnect || r.subscriptions.some((s) => s.resource === resource)),
-    )
-  if (same)
+    rows.find((r) => r.id === reconnect && isThis(r) !== false) ??
+    rows.find((r) => r.externalAccount === label) ??
+    rows.find((r) => isThis(r) === true) ??
+    rows.find((r) => isThis(r) === null && r.subscriptions.some((s) => s.resource === resource))
+  if (!same) return null
+  if (same.externalAccount !== label)
     await db.connection.updateMany({ where: { id: same.id }, data: { externalAccount: label } })
+  return same.id
 }
 
 /** A fetch that sends an access token. */
