@@ -3,6 +3,7 @@
 import { providerFromEnv, type ComputerRef } from '@brigade/providers'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
+import { cloudEntitled, requireCloudPlan } from './billing.js'
 import { defaults, env } from './config.js'
 import { prisma } from './db.js'
 import {
@@ -42,9 +43,12 @@ async function setStatus(
   broadcastComputer(computer.workspaceId, computer.id, status)
 }
 
-/** Create the workspace's cloud computer and install its runner, in the background. */
+/**
+ * Create the workspace's cloud computer and install its runner, in the background. Not
+ * without the Cloud plan, when billing is on (src/billing.ts): null then.
+ */
 export async function createWorkspaceComputer(workspace: { id: string; organizationId: string }) {
-  if (!provider) return null
+  if (!provider || !(await cloudEntitled(workspace.id))) return null
   const existing = await prisma.computer.findFirst({
     where: { workspaceId: workspace.id, kind: 'cloud', status: { not: 'destroyed' } },
   })
@@ -133,6 +137,8 @@ export function ensureRunning(computerId: string): Promise<void> {
  */
 export function wake(computerId: string) {
   void ensureRunning(computerId).catch(async (error: unknown) => {
+    // Its workspace has no Cloud plan: it stays stopped, nothing is broken.
+    if (error instanceof HTTPException && error.status === 402) return
     console.error(`waking ${computerId} failed: ${await providerReason(error)}`, error)
     const computer = await prisma.computer
       .update({ where: { id: computerId }, data: { status: 'error' } })
@@ -144,6 +150,9 @@ export function wake(computerId: string) {
 async function bringUp(computerId: string) {
   if (!provider) return
   const computer = await prisma.computer.findUnique({ where: { id: computerId } })
+  // A workspace whose plan ended keeps its computer, stopped, until the plan comes back.
+  if (computer?.kind === 'cloud' && computer.status !== 'running')
+    await requireCloudPlan(computer.workspaceId)
   const ref = computer && refOf(computer)
   if (computer?.kind === 'cloud' && !ref && computer.status === 'error')
     return reprovision(computer)
@@ -398,7 +407,11 @@ async function stopIdle() {
         const cutOff = await prisma.session.count({
           where: { computerId: computer.id, status: 'running' },
         })
-        if (cutOff > 0) await ensureRunning(computer.id)
+        // Not once its plan ended (a 402): the next computers are still checked.
+        if (cutOff > 0)
+          await ensureRunning(computer.id).catch((error) =>
+            console.error(`restarting ${computer.id} failed`, error),
+          )
         continue
       }
     }

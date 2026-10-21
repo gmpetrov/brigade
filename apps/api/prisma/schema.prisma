@@ -23,18 +23,50 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id            String        @id
-  name          String
-  email         String        @unique
-  emailVerified Boolean       @default(false)
-  image         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  authSessions  AuthSession[]
-  authAccounts  AuthAccount[]
-  members       Member[]
-  invitations   Invitation[]
-  pushDevices   PushDevice[]
+  id               String        @id
+  name             String
+  email            String        @unique
+  emailVerified    Boolean       @default(false)
+  image            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  authSessions     AuthSession[]
+  authAccounts     AuthAccount[]
+  members          Member[]
+  invitations      Invitation[]
+  pushDevices      PushDevice[]
+  /// Their Stripe customer (better-auth stripe plugin): who pays for the workspaces they subscribe.
+  stripeCustomerId String?
+}
+
+/// A workspace's paid plan (better-auth stripe plugin "subscription", src/billing.ts): Cloud,
+/// which gives it the cloud computer. Kept in step with Stripe by its webhook. A row with no
+/// stripeSubscriptionId and status "active" is a complimentary plan, added by hand.
+model BillingSubscription {
+  id                   String    @id
+  /// "cloud"
+  plan                 String
+  /// The workspace's id. Not a relation: the plugin can write a user's id here for a
+  /// subscription made in Stripe's dashboard.
+  referenceId          String
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  /// Stripe's: active, trialing, past_due, canceled, unpaid, incomplete…
+  status               String    @default("incomplete")
+  periodStart          DateTime?
+  periodEnd            DateTime?
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  cancelAtPeriodEnd    Boolean?  @default(false)
+  cancelAt             DateTime?
+  canceledAt           DateTime?
+  endedAt              DateTime?
+  seats                Int?
+  billingInterval      String?
+  stripeScheduleId     String?
+
+  @@index([referenceId])
+  @@index([stripeSubscriptionId])
 }
 
 /// A signed-in browser session (better-auth "session"). Not a thread.

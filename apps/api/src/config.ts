@@ -99,6 +99,20 @@ const Env = z.object({
   VAPID_PRIVATE_KEY: z.string().optional(),
   /** Who push services may contact about Brigade's pushes: mailto: or https:. Default: the dashboard's address. */
   VAPID_SUBJECT: z.string().optional(),
+  /**
+   * Billing (src/billing.ts): the Cloud plan, per workspace, gives it the cloud computer.
+   * A Stripe secret key, restricted or not, of the account with the price whose lookup key
+   * is brigade_cloud_monthly. Without it, billing is off and every workspace has the cloud
+   * computer (when a provider is configured), as on a self-hosted Brigade.
+   */
+  STRIPE_SECRET_KEY: z.string().optional(),
+  /**
+   * The signing secret of the Stripe webhook to {API_URL}/api/auth/stripe/webhook, with the
+   * events checkout.session.completed and customer.subscription.created, .updated and .deleted.
+   * Without it, a subscription is still recorded when its checkout returns, but changes made
+   * in Stripe (a cancellation, a failed payment) are not.
+   */
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 })
 
 // An empty value (KEY= in .env, as .env.example has them) means unset.

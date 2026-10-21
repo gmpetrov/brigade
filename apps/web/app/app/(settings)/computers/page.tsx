@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Cloud, EllipsisVertical, Laptop, Plus } from 'lucide-react'
 import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
@@ -92,7 +93,9 @@ export default function Computers() {
 
   // Start and Stop, out of the way.
   const menuItems: { label: string; onSelect: () => void; danger?: boolean }[] = []
-  if (cloud?.status === 'stopped')
+  // With billing on, the cloud computer comes with the workspace's Cloud plan.
+  const planNeeded = !!computers.data?.billing && !computers.data.cloudEntitled
+  if (cloud?.status === 'stopped' && !planNeeded)
     menuItems.push({
       label: 'Start',
       onSelect: () => void act(() => api(`/computers/${cloud.id}/start`, { method: 'POST' })),
@@ -141,20 +144,29 @@ export default function Computers() {
                   ? online(cloud)
                   : cloud.status === 'running'
                     ? 'Not connected'
-                    : STATUS[cloud.status],
+                    : planNeeded && cloud.status === 'stopped'
+                      ? 'Asleep · its Brigade Cloud plan ended'
+                      : STATUS[cloud.status],
                 'shared',
               )
             ) : (
               <span className="text-sm text-muted-foreground">
                 {!computers.data?.cloudAvailable
                   ? 'Not configured on this Brigade server'
-                  : isAdmin(me)
-                    ? 'Not created yet'
-                    : 'Ask an owner or admin to create it'}
+                  : planNeeded
+                    ? 'Comes with Brigade Cloud, $99 a month'
+                    : isAdmin(me)
+                      ? 'Not created yet'
+                      : 'Ask an owner or admin to create it'}
               </span>
             )}
           </div>
-          {!cloud && computers.data?.cloudAvailable && isAdmin(me) && (
+          {computers.data?.cloudAvailable && planNeeded && (
+            <Button asChild variant="outline">
+              <Link href="/app/billing">{cloud ? 'Subscribe' : 'See plan'}</Link>
+            </Button>
+          )}
+          {!cloud && computers.data?.cloudAvailable && !planNeeded && isAdmin(me) && (
             <Button
               variant="outline"
               disabled={busy}

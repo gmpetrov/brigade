@@ -23,6 +23,32 @@ export const UpdateWorkspace = z.object({
   logo: Logo.nullable().optional(),
 })
 
+/** Checkout for the Cloud plan, from Settings › Billing or onboarding, where it comes back to. */
+export const BillingCheckout = z.object({
+  from: z.enum(['billing', 'onboarding']).default('billing'),
+})
+
+/**
+ * Settings › Billing (GET /api/billing). enabled: billing is on for this server (off on a
+ * self-hosted Brigade, where the cloud computer is free). plan: the workspace's Cloud plan,
+ * or null before its first subscription.
+ */
+export type BillingResponse = {
+  enabled: boolean
+  plan: {
+    /** Stripe's status: active, trialing, past_due, canceled, unpaid… */
+    status: string
+    /** It gives the workspace its cloud computer now. */
+    active: boolean
+    /** Given by Brigade, with nothing to pay or manage. */
+    complimentary: boolean
+    /** The end of the period paid for. */
+    periodEnd: string | null
+    /** When it ends, once canceled. */
+    cancelAt: string | null
+  } | null
+}
+
 /** Where the dashboard reads a workspace's logo, under /api. */
 export const workspaceLogoPath = (workspace: { id: string; logo: string }) =>
   `/workspaces/${workspace.id}/logo?v=${encodeURIComponent(workspace.logo)}`

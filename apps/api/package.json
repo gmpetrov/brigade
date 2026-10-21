@@ -17,6 +17,7 @@
     "playbooks": "node scripts/playbooks.mjs"
   },
   "dependencies": {
+    "@better-auth/stripe": "1.7.10",
     "@blocknote/core": "0.56.0",
     "@blocknote/server-util": "0.56.0",
     "@brigade/contracts": "workspace:*",
@@ -36,6 +37,7 @@
     "prisma": "7.10.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "stripe": "22.6.2",
     "unpdf": "1.9.0",
     "ws": "8.22.0",
     "y-prosemirror": "1.3.7",

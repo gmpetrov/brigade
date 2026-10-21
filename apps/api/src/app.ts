@@ -12,6 +12,7 @@ import { authenticateRunner, browserSocket, runnerSocket } from './hub.js'
 import { accounts } from './routes/accounts.js'
 import { documentAssets } from './routes/assets.js'
 import { attachments } from './routes/attachments.js'
+import { billing } from './routes/billing.js'
 import { collab } from './routes/collab.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
@@ -86,6 +87,7 @@ app.use('/api/connections/oauth/*', signInFirst)
 app.route('/api', workspaces)
 app.route('/api/teammates', teammates)
 app.route('/api/computers', computers)
+app.route('/api/billing', billing)
 app.route('/api/accounts', accounts)
 app.route('/api/connections', connections)
 app.route('/api/credentials', credentials)

@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarClock,
   ChevronDown,
+  CreditCard,
   GitPullRequest,
   House,
   Inbox,
@@ -152,6 +153,7 @@ export const SETTINGS_NAV = [
   { href: '/app/security', label: 'Security', icon: ShieldCheck },
   { href: '/app/accounts', label: 'AI Accounts', icon: UserRound },
   { href: '/app/computers', label: 'Computers', icon: Monitor },
+  { href: '/app/billing', label: 'Billing', icon: CreditCard },
 ]
 
 export const NAV = [...WORK_NAV, ...SETTINGS_NAV]

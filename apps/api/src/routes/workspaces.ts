@@ -125,7 +125,8 @@ export const workspaces = new Hono<AppEnv>()
       data: { name },
     })
     await ensureChief(workspace)
-    // Every workspace gets its own cloud computer (when a provider is configured).
+    // Every workspace gets its own cloud computer (when a provider is configured), unless
+    // billing is on: then with its Cloud plan (src/billing.ts).
     await createWorkspaceComputer(workspace)
     return c.json({ id: workspace.id, name: workspace.name }, 201)
   })

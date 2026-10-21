@@ -47,6 +47,13 @@ export { Prisma }
  */
 export type User = Prisma.UserModel
 /**
+ * Model BillingSubscription
+ * A workspace's paid plan (better-auth stripe plugin "subscription", src/billing.ts): Cloud,
+ * which gives it the cloud computer. Kept in step with Stripe by its webhook. A row with no
+ * stripeSubscriptionId and status "active" is a complimentary plan, added by hand.
+ */
+export type BillingSubscription = Prisma.BillingSubscriptionModel
+/**
  * Model AuthSession
  * A signed-in browser session (better-auth "session"). Not a thread.
  */

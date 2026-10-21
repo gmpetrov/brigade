@@ -1,7 +1,9 @@
+import { stripe } from '@better-auth/stripe'
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { organization } from 'better-auth/plugins'
 import { audit } from './audit.js'
+import { CLOUD_PLAN, mayBill, planChanged, stripeClient } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 
@@ -106,6 +108,34 @@ export const auth = betterAuth({
           }),
       },
     }),
+    // Billing (src/billing.ts): Checkout for a workspace's Cloud plan, and Stripe's webhook at
+    // /api/auth/stripe/webhook. The customer is the member who subscribes; the subscription
+    // is the workspace's (its referenceId).
+    ...(stripeClient
+      ? [
+          stripe({
+            stripeClient,
+            stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET ?? '',
+            schema: { subscription: { modelName: 'billingSubscription' } },
+            subscription: {
+              enabled: true,
+              plans: [CLOUD_PLAN],
+              authorizeReference: ({ user, referenceId, action }) =>
+                mayBill(user.id, referenceId, action),
+              getCheckoutSessionParams: () => ({
+                params: {
+                  allow_promotion_codes: true,
+                  billing_address_collection: 'auto',
+                  tax_id_collection: { enabled: true },
+                },
+              }),
+              onSubscriptionComplete: ({ subscription }) => planChanged(subscription),
+              onSubscriptionUpdate: ({ subscription }) => planChanged(subscription),
+              onSubscriptionDeleted: ({ subscription }) => planChanged(subscription),
+            },
+          }),
+        ]
+      : []),
   ],
 })
 

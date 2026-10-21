@@ -3,6 +3,7 @@ import { RunnerLink, type RunnerLinkResult } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
+import { billingEnabled, cloudEntitled, requireCloudPlan } from '../billing.js'
 import {
   cloudAvailable,
   createWorkspaceComputer,
@@ -44,6 +45,9 @@ export const computers = new Hono<AppEnv>()
     const served = await runnerBundle()
     return c.json({
       cloudAvailable: cloudAvailable(),
+      // With billing on, the cloud computer comes with the workspace's Cloud plan.
+      billing: billingEnabled(),
+      cloudEntitled: await cloudEntitled(c.var.scope.workspaceId),
       computers: rows.map(({ providerRef: _ref, ...row }) => ({
         ...row,
         online: isOnline(row.id),
@@ -86,6 +90,7 @@ export const computers = new Hono<AppEnv>()
     requireRole(c.var.scope, 'owner', 'admin')
     if (!cloudAvailable())
       throw new HTTPException(409, { message: 'No cloud computer provider is configured' })
+    await requireCloudPlan(c.var.scope.workspaceId)
     const computer = await createWorkspaceComputer({
       id: c.var.scope.workspaceId,
       organizationId: c.var.scope.organizationId,
