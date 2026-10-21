@@ -855,7 +855,7 @@ async function disconnect(
  * sign-in to the same account and mode takes that row over (createConnection repairs it in
  * place), so its access, triggers and webhook endpoint carry on.
  */
-async function adoptStripeKey(
+export async function adoptStripeKey(
   db: ScopedDb,
   scope: WorkspaceScope,
   signedIn: ReturnType<typeof bearer>,
@@ -868,7 +868,7 @@ async function adoptStripeKey(
     {},
   ).catch(() => null)
   const reached = stripeAccounts(output).map(
-    (a) => `${a.stripe_context}, ${a.livemode ? 'live mode' : 'test mode'})`,
+    (a) => `(${a.stripe_context}, ${a.livemode ? 'live mode' : 'test mode'})`,
   )
   const rows = await db.connection.findMany({
     where: { kind: 'stripe', createdByMemberId: scope.memberId, status: { not: 'removed' } },

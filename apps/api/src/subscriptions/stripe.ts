@@ -1,9 +1,9 @@
 // Stripe, through its MCP server with the account's sign-in. A sign-in may reach several Stripe
 // accounts (a live account and its sandboxes): each gets one webhook endpoint listing the event
 // types the connection's triggers need, kept current. The server creates, updates and disables
-// endpoints but deletes none, and it hides their signing secret: an event that arrives is read
-// again from Stripe before it starts anything (readStripeEvent). An endpoint registered with a
-// key before keeps its signing secret, in the vault, and its events are checked with it.
+// endpoints but deletes none. It shows a new endpoint's signing secret to a sign-in (it hides it
+// from keys): kept in the vault, it checks the endpoint's events. An endpoint without one has
+// each event read again from Stripe before it starts anything (readStripeEvent).
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { env } from '../config.js'
 import { authorisedFetch } from '../connector-calls.js'
@@ -172,8 +172,7 @@ export async function syncStripe(target: Target) {
       throw refused(error)
     })) as { id?: unknown; secret?: unknown }
     if (typeof endpoint.id !== 'string') throw refused('no endpoint id in its answer')
-    // The server shows "[REDACTED]" instead of the secret; should it ever show it, events are
-    // checked by their signature rather than read again.
+    // Shown to a sign-in; "[REDACTED]" to a key, and then each event is read again instead.
     const secret =
       typeof endpoint.secret === 'string' && endpoint.secret.startsWith('whsec_')
         ? endpoint.secret

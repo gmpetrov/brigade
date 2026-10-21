@@ -57,7 +57,7 @@ export const events = new Hono()
         return c.json({ error: 'Bad signature' }, 401)
       event = JSON.parse(body) as typeof event
     } else {
-      // No signing secret (Stripe's MCP server hides it): the event counts only as Stripe has it.
+      // No signing secret (Stripe's MCP server did not show it): it counts only as Stripe has it.
       if (sub.connection.status === 'removed') return c.json({ ok: true })
       let posted: unknown
       try {

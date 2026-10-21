@@ -542,3 +542,36 @@ test(
     assert.equal(fake.calls.length, 0)
   },
 )
+
+test(
+  "an account connected with a key is taken over by its owner's sign-in to the same account and mode",
+  { skip },
+  async () => {
+    const { scoped } = await import('../src/db.js')
+    const { adoptStripeKey } = await import('../src/routes/connections.js')
+    const sdb = scoped(scope)
+    const owner = { ...scope, userId: ids.user, memberId: member, role: 'owner' as const }
+    const signedIn = (url: string, init?: RequestInit) => fetch(url, init)
+    await sdb.connection.updateMany({ where: { kind: 'stripe' }, data: { status: 'removed' } })
+    // Its name then came from the account's settings: not the one Stripe's server gives.
+    const legacy = await connection({ apiKey: 'rk_live_old' })
+    await sdb.connection.updateMany({
+      where: { id: legacy.id },
+      data: { externalAccount: 'Acme Inc (acct_1Live, live mode)', status: 'needs_reauth' },
+    })
+
+    // The same account in test mode is another one.
+    fake.accounts = [{ stripe_context: 'acct_1Live', livemode: false, name: 'Acme' }]
+    await adoptStripeKey(sdb, owner, signedIn, 'Acme (acct_1Live, test mode)')
+    const kept = await sdb.connection.findFirstOrThrow({ where: { id: legacy.id } })
+    assert.equal(kept.externalAccount, 'Acme Inc (acct_1Live, live mode)')
+
+    fake.accounts = [
+      { stripe_context: 'acct_1Live', livemode: true, name: 'Acme' },
+      { stripe_context: 'acct_1Live', livemode: false, name: 'Acme' },
+    ]
+    await adoptStripeKey(sdb, owner, signedIn, 'Acme (live mode) +1')
+    const taken = await sdb.connection.findFirstOrThrow({ where: { id: legacy.id } })
+    assert.equal(taken.externalAccount, 'Acme (live mode) +1')
+  },
+)
