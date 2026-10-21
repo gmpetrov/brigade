@@ -1203,6 +1203,8 @@ model Trigger {
   label                  String
   /// The catalog id, e.g. gmail.email_received.
   event                  String
+  /// What the teammate does with each event: the first lines of each thread it starts.
+  instructions           String?
   /// The trigger's options from the catalog, e.g. { "query": "to:support@acme.com" }.
   options                Json                  @default("{}")
   /// Custom apps only: the unguessable part of the trigger's URL.

@@ -1575,6 +1575,90 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
           input,
         }),
     }),
+    list_triggers: tool({
+      description:
+        "List what can start a thread for you on its own: each App account's events (connectionId, event, " +
+        'options), and your triggers with their URLs and instructions.',
+      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'list_triggers' },
+          toolCallId,
+          toolName: 'list_triggers',
+          input,
+        }),
+    }),
+    create_trigger: tool({
+      description:
+        "Make an outside event start a thread for you, on the accounts of the person in this thread: an App's " +
+        'event from list_triggers (connectionId, event, options), or any service that can send a webhook as a ' +
+        'new custom app (customApp, event "received"), which gets a URL of its own. Use it when the person asks ' +
+        'for work to start when something happens ("each failed payment", "every new Sentry error"). Each event ' +
+        'starts a fresh thread with your instructions first, then the event: write them to stand alone. An owner ' +
+        'or admin approves it first and the call waits for their decision; then it returns the URL, and a custom ' +
+        "app's signing secret as a credential only you may use. Set up the sender yourself when you can reach it.",
+      inputSchema: jsonSchema<{
+        connectionId?: string
+        customApp?: string
+        event: string
+        options?: Record<string, string>
+        label: string
+        instructions: string
+        verification?: 'hmac' | 'none'
+        reason?: string
+      }>({
+        type: 'object',
+        properties: {
+          connectionId: { type: 'string', description: 'An App account, from list_triggers' },
+          customApp: {
+            type: 'string',
+            description: 'Instead of connectionId: the name of a new custom app, e.g. "Sentry"',
+          },
+          event: {
+            type: 'string',
+            description: 'The event, from list_triggers; "received" for a custom app',
+          },
+          options: {
+            type: 'object',
+            additionalProperties: { type: 'string' },
+            description: "The event's options by name, from list_triggers",
+          },
+          label: { type: 'string', description: 'Short, e.g. "Failed payments"' },
+          instructions: {
+            type: 'string',
+            description: 'What to do with each event, standing alone',
+          },
+          verification: {
+            type: 'string',
+            enum: ['hmac', 'none'],
+            description:
+              'Custom apps only: hmac when the sender can sign its body with a secret (code you write), none when it cannot (most SaaS webhooks)',
+          },
+          reason: {
+            type: 'string',
+            description: 'For the person who approves: what the person here asked for',
+          },
+        },
+        required: ['event', 'label', 'instructions'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'create_trigger',
+            ...(input.connectionId ? { connectionId: input.connectionId } : {}),
+            ...(input.customApp ? { customApp: input.customApp } : {}),
+            event: input.event,
+            options: input.options ?? {},
+            label: input.label,
+            instructions: input.instructions,
+            ...(input.verification ? { verification: input.verification } : {}),
+            ...(input.reason ? { reason: input.reason } : {}),
+          },
+          toolCallId,
+          toolName: 'create_trigger',
+          input,
+        }),
+    }),
     set_wakeup: tool({
       description:
         'Be prompted again in this thread later, with this conversation, to check on something that is not ' +

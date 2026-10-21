@@ -174,6 +174,36 @@ the timezone and the 5-minute minimum.
 - **Thread page.** "started by schedule _\<title\>_ on \<owner\>'s accounts", linked to
   Automations.
 
+## Triggers from a thread
+
+Teammates also set up **triggers** when someone asks, in a thread, for work to start when
+something happens elsewhere ("each failed payment", "every new Sentry error"). The tools
+are `list_triggers` and `create_trigger`, sent as `schedule.call` operations
+(`apps/api/src/trigger-calls.ts`).
+
+- **What can trigger.** `list_triggers` lists each App account's events from the catalog,
+  with their options, and the teammate's own triggers. Any other service that can send a
+  webhook is a new custom app: `customApp` (its name) with the event `received`.
+- **Instructions.** Each trigger has standing instructions (`Trigger.instructions`). They
+  open each thread it starts, before the event. Admins can also give them on the Apps page.
+- **An owner or admin approves each one.** A trigger lets an outside event start work on
+  someone's accounts, and on the Apps page triggers are admins-only. So `create_trigger`
+  opens an `approval` ticket (`payload.triggerAction`) and waits for the decision, the same
+  way a connector write does. The thread shows it as an approval, and Needs you shows it to
+  admins only. The thread's starter cannot allow it unless they are an admin.
+- **Once approved:**
+  - The trigger is made with the same checks as the Apps page (`createTrigger()` in
+    `routes/triggers.ts`).
+  - Its threads run on the accounts of the thread's starter, as a schedule's do, and in
+    the thread's project.
+  - A new custom app is added by the approver.
+  - The teammate gets the URL in the same turn, so it can set up the sender itself.
+- **Signing secret.** A custom app's hmac secret is never put in a reply. It is saved as a
+  credential (kind `other`) that only that teammate may use, without asking. The teammate
+  loads it with `use_credential` to set up a sender it controls.
+- **Refused** in a thread started by an event, a schedule or a playbook's run, as for
+  schedules.
+
 ## Build order
 
 1. Schema and migration.

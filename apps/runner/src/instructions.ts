@@ -611,7 +611,12 @@ const schedules = (spec: ThreadSpec) =>
   'wakes you here only when it has something to say; `attachToThread: false` makes runs threads of their own. ' +
   '`list_schedules` and `update_schedule` show and change yours. ' +
   'A thread that starts with "Scheduled run of" is one of those runs: nobody is watching it live, so do the work ' +
-  'and open a ticket when you need a person.' +
+  'and open a ticket when you need a person.\n\n' +
+  'When the person asks for work to start on its own when something happens elsewhere (a payment fails, an app ' +
+  'reports an error, a form is sent), set it up with `create_trigger`: `list_triggers` shows the Apps whose events ' +
+  'can start a thread, and any other service that can send a webhook is a custom app with a URL of its own. Each ' +
+  'event starts a fresh thread with your instructions first, so they must stand alone. An owner or admin approves ' +
+  'each trigger, and the call waits for them; once it is made, finish setting up the sender yourself when you can.' +
   (spec.parent
     ? ''
     : '\n\n' +

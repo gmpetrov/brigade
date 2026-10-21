@@ -1569,6 +1569,7 @@ export function ThreadItems({
   childThreads = [],
   drafting = false,
   onRetry,
+  admin = false,
 }: {
   threadId: string
   items: Item[]
@@ -1604,6 +1605,8 @@ export function ThreadItems({
   drafting?: boolean
   /** Tries the turn that failed last again. Unset when they cannot write in the thread. */
   onRetry?: () => Promise<void>
+  /** An owner or admin: they alone allow what only admins may (a teammate's trigger). */
+  admin?: boolean
 }) {
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
@@ -1920,7 +1923,9 @@ export function ThreadItems({
           </Collapsible>
         )
       }
-      case 'approval':
+      case 'approval': {
+        // A trigger lets outside events start work: only an owner or admin allows one.
+        const adminsOnly = bareToolName(item.toolName) === 'create_trigger'
         return (
           <Card key={item.key} className="min-w-0 gap-3 border-warning/50 px-5 py-4 wrap-anywhere">
             <div className="flex items-start gap-2">
@@ -1938,7 +1943,7 @@ export function ThreadItems({
             </div>
             {item.reason && <p className="text-sm text-muted-foreground">{item.reason}</p>}
             <ToolInputPreview input={item.input} />
-            {item.resolved ? null : canApprove ? (
+            {item.resolved ? null : (adminsOnly ? admin : canApprove) ? (
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => onApproval(item.approvalId, true)}>
                   {item.always ? 'Allow in this thread' : 'Allow'}
@@ -1963,11 +1968,14 @@ export function ThreadItems({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Only the member who started this thread can answer.
+                {adminsOnly
+                  ? 'Waiting for an owner or admin.'
+                  : 'Only the member who started this thread can answer.'}
               </p>
             )}
           </Card>
         )
+      }
       case 'question':
         return (
           <QuestionCard

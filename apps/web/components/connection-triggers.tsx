@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { api, type Connection, type Trigger, type TriggerCatalog } from '@/lib/api'
 
 /** How each vendor's events reach Brigade, as the panel says it. */
@@ -102,6 +103,7 @@ export function ConnectionTriggers({
           options,
           ...(custom ? { verification: String(form.get('verification')) } : {}),
           ...(projectId !== 'none' && { projectId }),
+          instructions: String(form.get('instructions') ?? ''),
         },
       })
       setCreated(result.url ? { url: result.url, signingSecret: result.signingSecret } : undefined)
@@ -137,8 +139,9 @@ export function ConnectionTriggers({
         {custom
           ? 'Each event the app posts to a URL below starts a thread for its teammate, with the payload as the first message.'
           : `Pick what should start a thread. Each time it happens, a new thread starts for the teammate, with the event as the first message.`}{' '}
-        It runs on the accounts of the admin who set it up. An event can ask for anything, so grant
-        the teammate only what it needs, or set it to ask a person before changes.
+        It runs on the accounts of the admin who set it up, or of the member who asked a teammate
+        for it. An event can ask for anything, so grant the teammate only what it needs, or set it
+        to ask a person before changes.
       </p>
       {failure ? (
         <p className="text-sm text-destructive-text">Events may not be arriving: {failure.error}</p>
@@ -192,6 +195,14 @@ export function ConnectionTriggers({
                     <span className="text-xs text-muted-foreground">
                       {kind?.label ?? t.event}
                       {summary && ` · ${summary}`}
+                    </span>
+                  )}
+                  {t.instructions && (
+                    <span
+                      className="line-clamp-2 text-xs text-muted-foreground"
+                      title={t.instructions}
+                    >
+                      {t.instructions}
                     </span>
                   )}
                 </div>
@@ -293,6 +304,17 @@ export function ConnectionTriggers({
                 />
               </div>
             )}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={idFor('instructions')}>Instructions (optional)</Label>
+              <Textarea
+                id={idFor('instructions')}
+                name="instructions"
+                maxLength={4000}
+                rows={3}
+                className="bg-card"
+                placeholder="What the teammate does with each event, e.g. Find the cause and open a pull request if the fix is small."
+              />
+            </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor={idFor('label')}>Name</Label>
               <Input
