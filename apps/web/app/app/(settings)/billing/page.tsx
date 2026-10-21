@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { api, subscribeToCloud, useApi } from '@/lib/api'
+import { api, openStripe, subscribeToCloud, useApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const FEATURES = [
@@ -55,15 +55,18 @@ export default function BillingPage() {
       await open()
     } catch (e) {
       setError((e as Error).message)
+    } finally {
+      // Opened in a new tab (a preview's frame), this page stays.
       setBusy(false)
     }
   }
 
   const manage = () =>
-    go(async () => {
-      const { url } = await api<{ url: string }>('/billing/portal', { method: 'POST' })
-      window.location.assign(url)
-    })
+    go(() =>
+      openStripe(
+        async () => (await api<{ url: string }>('/billing/portal', { method: 'POST' })).url,
+      ),
+    )
 
   const data = billing.data
   const plan = data?.plan
