@@ -5,10 +5,12 @@
 // besides scripts from public CDNs and Google Fonts. A srcdoc frame also
 // inherits the dashboard's CSP, should the dashboard ever set one.
 //
-// The frame talks to the dashboard by postMessage: it reports its height, and
-// gets the dashboard's theme variables when the theme changes. The document is
-// built once per widget, so the frame loads once; a second load means the
-// widget navigated itself away, and it is replaced with a notice.
+// The frame talks to the dashboard by postMessage: it reports its height and
+// its first script error, and gets the dashboard's theme variables when the
+// theme changes. The document is built once per widget, so the frame loads
+// once; a second load means the widget navigated itself away, and it is
+// replaced with a notice. A script error shows above the widget, in its place
+// when nothing was drawn.
 import { WIDGET_THEME_VARS } from '@brigade/contracts'
 import { useEffect, useRef, useState } from 'react'
 import { themeFontHrefs } from '@/app/theme-fonts'
@@ -28,7 +30,17 @@ const CSP = [
 /** Runs in the frame, before the widget's HTML. Plain JavaScript in a string. */
 const BRIDGE = String.raw`(function () {
   var root = document.documentElement
-  var last = 0
+  var last = -1
+  var failed = false
+  var fail = function (message) {
+    if (failed) return
+    failed = true
+    parent.postMessage({ source: 'brigade-widget', type: 'error', message: String(message).slice(0, 300) }, '*')
+  }
+  addEventListener('error', function (event) { fail(event.message || 'Script error') })
+  addEventListener('unhandledrejection', function (event) {
+    fail((event.reason && event.reason.message) || event.reason || 'Unhandled rejection')
+  })
   var measure = function () {
     var height = Math.ceil(document.body.getBoundingClientRect().height)
     if (height === last) return
@@ -87,12 +99,14 @@ export function WidgetFrame({ html, title }: { html: string; title: string }) {
   const [doc, setDoc] = useState<string>()
   const [height, setHeight] = useState<number>()
   const [navigated, setNavigated] = useState(false)
+  const [error, setError] = useState<string>()
 
   // Built on the client, where the theme can be read; once per widget.
   useEffect(() => {
     loads.current = 0
     setNavigated(false)
     setHeight(undefined)
+    setError(undefined)
     setDoc(widgetDocument(html, currentTheme()))
   }, [html])
 
@@ -101,10 +115,17 @@ export function WidgetFrame({ html, title }: { html: string; title: string }) {
       // Only from this frame's own document: after a navigation, the frame holds another page.
       if (!frame.current || event.source !== frame.current.contentWindow || loads.current > 1)
         return
-      const data = event.data as { source?: unknown; type?: unknown; height?: unknown } | null
-      if (data?.source !== 'brigade-widget' || data.type !== 'height') return
+      const data = event.data as {
+        source?: unknown
+        type?: unknown
+        height?: unknown
+        message?: unknown
+      } | null
+      if (data?.source !== 'brigade-widget') return
+      if (data.type === 'error' && typeof data.message === 'string') setError(data.message)
+      if (data.type !== 'height') return
       if (typeof data.height !== 'number' || !Number.isFinite(data.height)) return
-      setHeight(Math.min(Math.max(Math.ceil(data.height), 24), HEIGHT_MAX))
+      setHeight(data.height <= 0 ? 0 : Math.min(Math.max(Math.ceil(data.height), 24), HEIGHT_MAX))
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
@@ -133,20 +154,32 @@ export function WidgetFrame({ html, title }: { html: string; title: string }) {
       </div>
     )
   if (!doc) return <div className="h-40" />
+  // A script that failed before drawing anything leaves an empty frame: only the notice shows.
+  const empty = error !== undefined && height === 0
+  const notice = error !== undefined && (
+    <div className="text-sm text-muted-foreground">
+      {empty ? 'This visual could not be drawn' : 'This visual hit an error and may be incomplete'}:{' '}
+      <span className="font-mono text-xs wrap-anywhere">{error}</span>
+    </div>
+  )
   return (
-    <iframe
-      ref={frame}
-      title={title}
-      sandbox="allow-scripts"
-      referrerPolicy="no-referrer"
-      loading="lazy"
-      srcDoc={doc}
-      onLoad={() => {
-        loads.current += 1
-        if (loads.current > 1) setNavigated(true)
-      }}
-      className="block w-full border-0 bg-transparent"
-      style={{ height: height ?? 160 }}
-    />
+    <div className="flex flex-col gap-2">
+      {notice}
+      <iframe
+        ref={frame}
+        title={title}
+        sandbox="allow-scripts"
+        referrerPolicy="no-referrer"
+        loading="lazy"
+        srcDoc={doc}
+        onLoad={() => {
+          loads.current += 1
+          if (loads.current > 1) setNavigated(true)
+        }}
+        className="block w-full border-0 bg-transparent"
+        style={{ height: height ?? 160 }}
+        hidden={empty}
+      />
+    </div>
   )
 }
