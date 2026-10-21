@@ -10,6 +10,7 @@ export type {
   ComputerStatus,
   ExecResult,
   HostedPort,
+  RestoreState,
 } from './types.js'
 
 /** The configured cloud computer provider, or null when none is configured. */

@@ -1,6 +1,12 @@
 // boat (https://boat.dev): persistent Ubuntu VMs with snapshots on stop.
 import { BoatApi, Configuration, execCommand, waitForDesktop, waitUntilReady } from '@boatdev/sdk'
-import type { ComputerProvider, ComputerRef, ComputerSize, ComputerStatus } from '../types.js'
+import type {
+  ComputerProvider,
+  ComputerRef,
+  ComputerSize,
+  ComputerStatus,
+  RestoreState,
+} from '../types.js'
 
 const PROVIDER = 'boat'
 const SIZES: Record<ComputerSize, 'small' | 'default' | 'large'> = {
@@ -127,6 +133,20 @@ export function createBoatProvider(options: {
         default:
           return 'creating'
       }
+    },
+
+    async restore(ref): Promise<RestoreState> {
+      const { sandbox } = await boat.get({ sandboxId: idOf(ref) })
+      // Stopping, stopped or gone: its restore will not finish. Still starting: it will.
+      if (['archiving', 'archived', 'error', 'cancelled'].includes(sandbox.state))
+        return { done: false, running: false }
+      if (!['ready', 'idle', 'running'].includes(sandbox.state))
+        return { done: false, running: true }
+      // A resumed sandbox answers before every file of its snapshot is back: they keep copying
+      // in, and `hydrated` turns true once they are. A sandbox that restored nothing is
+      // hydrated from the start (no `hydratedAt`); one that does not say, as restored.
+      if (sandbox.hydrated === false) return { done: false, running: true }
+      return { done: true, at: sandbox.hydratedAt?.toISOString() ?? '' }
     },
   }
 }

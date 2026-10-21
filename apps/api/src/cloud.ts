@@ -12,7 +12,14 @@ import {
   notifyLibraryChanged,
   runnerProtocol,
 } from './hub.js'
-import { bootstrapScript, reinstallScript, SETUP_SHA, setupScript } from './cloud-bootstrap.js'
+import {
+  bootstrapScript,
+  GIVE_HOMES_BACK,
+  reinstallScript,
+  SETUP_SHA,
+  setupScript,
+} from './cloud-bootstrap.js'
+import { restored } from './cloud-restore.js'
 import { issueLinkCode } from './link-codes.js'
 import { runnerBundle } from './routes/runner-install.js'
 
@@ -267,6 +274,54 @@ export async function ensureSetup(
   })
   // The library folder may be new: have the runner fill it.
   notifyLibraryChanged(computer.workspaceId)
+}
+
+/** A resumed computer's restore: checked this often, for at most this long (cloud-restore.ts). */
+const RESTORE_WAIT = { everyMs: 15_000, forMs: 3 * 60 * 60_000, checkMs: 60_000, failures: 5 }
+/** Per computer: the restore whose homes were given back. */
+const homesGivenBack = new Map<string, string>()
+/** Per computer whose restore is awaited: whether a hello came meanwhile (a new resume, say). */
+const awaitingRestore = new Map<string, { again: boolean }>()
+
+/**
+ * A resumed computer runs before its disk is all there: boat copies the home in from its
+ * snapshot in the background, and can bring a folder of a teammate's home back owned by root
+ * (its ~/.cache) after the runner's ensure-user gave the home back (TEAMMATE_HELPER). Once the
+ * restore is done, the homes are given back again. From each runner's hello: once per restore,
+ * and once more after the API restarted.
+ */
+export async function giveHomesBackOnceRestored(computer: { id: string; providerRef: unknown }) {
+  const ref = refOf(computer)
+  const cloud = provider
+  if (!cloud?.restore || !ref) return
+  const awaiting = awaitingRestore.get(computer.id)
+  if (awaiting) {
+    awaiting.again = true
+    return
+  }
+  const watch = { again: false }
+  awaitingRestore.set(computer.id, watch)
+  try {
+    const restore = await restored(() => cloud.restore!(ref), RESTORE_WAIT)
+    if (!restore.done) {
+      if (restore.why === 'too long')
+        console.warn(`${computer.id}: still restoring, homes not checked`)
+      return
+    }
+    if (homesGivenBack.get(computer.id) === restore.at) return
+    const result = await cloud.exec(ref, GIVE_HOMES_BACK)
+    if (result.exitCode !== 0)
+      throw new Error(`exit ${result.exitCode}: ${result.stderr.slice(-2000)}`)
+    homesGivenBack.set(computer.id, restore.at)
+    console.log(`${computer.id} restored${restore.at ? ` at ${restore.at}` : ''}: homes given back`)
+  } finally {
+    awaitingRestore.delete(computer.id)
+    // What this one checked may predate that hello's boot: its restore is waited for too.
+    if (watch.again)
+      void giveHomesBackOnceRestored(computer).catch((error) =>
+        console.error(`giving homes back on ${computer.id} failed`, error),
+      )
+  }
 }
 
 /**

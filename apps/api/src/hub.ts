@@ -18,7 +18,7 @@ import { readableEvents, storableForms, storableJson } from './storable-json.js'
 import { keepFilesApart } from './event-files.js'
 import { onScopedWrite, prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
-import { ensureSetup, touch, wake } from './cloud.js'
+import { ensureSetup, giveHomesBackOnceRestored, touch, wake } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
 import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryTidy, handleMemoryUpdate } from './library-calls.js'
@@ -528,10 +528,13 @@ export function runnerSocket(runner: {
       // (the sidebar's threads, pull requests) fetch again.
       if (message.startedAt) notifyList(runner.workspaceId, 'pulls.updated')
       // A cloud computer set up by an older bootstrap gets the current root setup.
+      // Then, once a resumed one's disk is all there, its teammates' homes are theirs again,
+      // with the setup's helper.
       if (computer.kind === 'cloud')
-        void ensureSetup(computer, message.setup).catch((error) =>
-          console.error(`setup on ${computer.id} failed`, error),
-        )
+        void ensureSetup(computer, message.setup)
+          .catch((error) => console.error(`setup on ${computer.id} failed`, error))
+          .then(() => giveHomesBackOnceRestored(computer))
+          .catch((error) => console.error(`giving homes back on ${computer.id} failed`, error))
       if (computer.kind === 'member_machine' && computer.memberId && message.machineLogins) {
         await syncMachineLogins(computer, computer.memberId, message.machineLogins)
       }
