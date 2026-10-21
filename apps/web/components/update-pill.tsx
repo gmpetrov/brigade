@@ -8,6 +8,20 @@ const BUILD = process.env.NEXT_PUBLIC_BUILD_ID
 // into view, where a dashboard left open for days most often learns of one.
 const EVERY = 5 * 60_000
 
+/** Whether the server runs a newer build than this page; false when it can't tell. */
+export async function newerBuild() {
+  if (!BUILD || process.env.NODE_ENV === 'development') return false
+  try {
+    const res = await fetch('/version', { cache: 'no-store' })
+    if (!res.ok) return false
+    const { build } = (await res.json()) as { build?: string }
+    return !!build && build !== BUILD
+  } catch {
+    // Offline or deploying: ask again later.
+    return false
+  }
+}
+
 /**
  * "New version" floating at the top of the page, once a newer build is deployed than
  * the one this page runs: under the header when there is one (`header`, and the top bar
@@ -19,14 +33,7 @@ export function UpdatePill({ header }: { header: boolean }) {
     if (!BUILD || process.env.NODE_ENV === 'development' || behind) return
     const check = async () => {
       if (document.visibilityState !== 'visible') return
-      try {
-        const res = await fetch('/version', { cache: 'no-store' })
-        if (!res.ok) return
-        const { build } = (await res.json()) as { build?: string }
-        if (build && build !== BUILD) setBehind(true)
-      } catch {
-        // Offline or deploying: ask again later.
-      }
+      if (await newerBuild()) setBehind(true)
     }
     const timer = setInterval(check, EVERY)
     document.addEventListener('visibilitychange', check)
