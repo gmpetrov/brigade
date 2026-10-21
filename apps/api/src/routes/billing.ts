@@ -2,19 +2,19 @@ import { BillingCheckout, type BillingResponse } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
-import { auth } from '../auth.js'
 import {
   billingEnabled,
-  CLOUD_PLAN,
-  ensureCustomer,
   entitles,
   planChanged,
   portalConfiguration,
   refreshPlan,
+  startCheckout,
   stripeClient,
+  workspaceCustomerId,
   workspacePlan,
 } from '../billing.js'
 import { env } from '../config.js'
+import { prisma } from '../db.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 const billingPage = () => `${env.WEB_URL[0]}/app/billing`
@@ -50,20 +50,12 @@ export const billing = new Hono<AppEnv>()
     const { from } = await parseBody(c.req.raw, BillingCheckout)
     if (!billingEnabled())
       throw new HTTPException(409, { message: 'Billing is off on this server' })
-    const plan = await workspacePlan(c.var.scope.workspaceId)
-    if (plan && entitles(plan.status))
-      throw new HTTPException(409, { message: 'This workspace already has Brigade Cloud' })
-    await ensureCustomer(c.var.userId)
-    const checkout = await auth.api.upgradeSubscription({
-      headers: c.req.raw.headers,
-      body: {
-        plan: CLOUD_PLAN.name,
-        referenceId: c.var.scope.workspaceId,
-        customerType: 'user',
-        successUrl: `${pageOf[from]()}?subscribed=1`,
-        cancelUrl: pageOf[from](),
-        disableRedirect: true,
-      },
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: c.var.userId } })
+    const url = await startCheckout({
+      workspaceId: c.var.scope.workspaceId,
+      user,
+      successUrl: `${pageOf[from]()}?subscribed=1`,
+      cancelUrl: pageOf[from](),
     })
     await audit({
       ...c.var.scope,
@@ -71,17 +63,20 @@ export const billing = new Hono<AppEnv>()
       action: 'billing.checkout_started',
       target: { type: 'workspace', id: c.var.scope.workspaceId },
     })
-    return c.json({ url: checkout.url! })
+    return c.json({ url })
   })
 
-  /** Stripe's billing portal for the workspace's subscription: card, invoices, cancel. */
+  /**
+   * Stripe's billing portal for the workspace's own customer: its card, invoices, and
+   * cancelling its plan. Nothing of another workspace's, whoever paid for it.
+   */
   .post('/portal', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
-    const plan = await workspacePlan(c.var.scope.workspaceId)
-    if (!stripeClient || !plan?.stripeCustomerId)
+    const customer = await workspaceCustomerId(c.var.scope.workspaceId)
+    if (!stripeClient || !customer)
       throw new HTTPException(404, { message: 'This workspace has no subscription to manage' })
     const session = await stripeClient.billingPortal.sessions.create({
-      customer: plan.stripeCustomerId,
+      customer,
       configuration: await portalConfiguration(),
       return_url: billingPage(),
     })

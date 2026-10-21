@@ -35,7 +35,7 @@ model User {
   members          Member[]
   invitations      Invitation[]
   pushDevices      PushDevice[]
-  /// Their Stripe customer (better-auth stripe plugin): who pays for the workspaces they subscribe.
+  /// The stripe plugin's field, unset: Brigade bills workspaces (Workspace.stripeCustomerId).
   stripeCustomerId String?
 }
 
@@ -189,6 +189,9 @@ model Workspace {
   /// Its logo in the bucket (workspaceLogoKey), shown instead of its letter: "<version>.<type>",
   /// e.g. "k2x9f1.png". Unset: none.
   logo                  String?
+  /// Its own Stripe customer (src/billing.ts), made on its first Checkout: its plan's
+  /// invoices and card, apart from any other workspace's.
+  stripeCustomerId      String?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   computers             Computer[]

@@ -85,6 +85,8 @@ const ids = {
   stranger: `user-billing-stranger-${id}`,
 }
 let workspaceId = ''
+/** For checkouts: one in the same organization, one in another. */
+const workspaces = { handoff: '', other: '' }
 
 before(async () => {
   if (skip) return
@@ -112,11 +114,27 @@ before(async () => {
   workspaceId = (
     await prisma.workspace.create({ data: { organizationId: ids.organization, name: 'Billing' } })
   ).id
+  workspaces.handoff = (
+    await prisma.workspace.create({ data: { organizationId: ids.organization, name: 'Handoff' } })
+  ).id
+  // Another organization's workspace, paid by the same person.
+  await prisma.organization.create({
+    data: { id: `${ids.organization}-2`, name: 'Billing test 2', slug: `${ids.organization}-2` },
+  })
+  workspaces.other = (
+    await prisma.workspace.create({
+      data: { organizationId: `${ids.organization}-2`, name: 'Elsewhere' },
+    })
+  ).id
 })
 
 after(async () => {
   if (skip) return
   await prisma.billingSubscription.deleteMany({ where: { referenceId: workspaceId } })
+  await prisma.billingSubscription.deleteMany({
+    where: { referenceId: { in: [workspaces.handoff, workspaces.other] } },
+  })
+  await prisma.organization.deleteMany({ where: { id: `${ids.organization}-2` } })
   await prisma.organization.deleteMany({ where: { id: ids.organization } })
   await prisma.user.deleteMany({ where: { id: { in: [ids.owner, ids.member, ids.stranger] } } })
   await prisma.$disconnect()
@@ -194,6 +212,12 @@ async function deliver(type: string, object: Record<string, unknown>) {
   assert.equal(response.status, 200, await response.text())
 }
 
+/** Stripe, faked where billing calls it: its subscriptions as they are now, its sessions. */
+const stripe = billing.stripeClient!
+const stripeNow = new Map<string, Record<string, unknown>>()
+stripe.subscriptions.retrieve = (async (subscriptionId: string) =>
+  stripeNow.get(subscriptionId)) as never
+
 const now = Math.floor(Date.now() / 1000)
 const stripeSubscription = (fields: Record<string, unknown>) => ({
   id: `sub_test_${id}`,
@@ -236,10 +260,9 @@ test("Stripe's webhook keeps the workspace's plan in step", { skip }, async () =
   assert.equal(await billing.cloudEntitled(workspaceId), true)
 
   // Canceled in the portal: it runs to the end of the period.
-  await deliver(
-    'customer.subscription.updated',
-    stripeSubscription({ cancel_at_period_end: true, cancel_at: now + 30 * 86400 }),
-  )
+  const canceling = stripeSubscription({ cancel_at_period_end: true, cancel_at: now + 30 * 86400 })
+  stripeNow.set(`sub_test_${id}`, canceling)
+  await deliver('customer.subscription.updated', canceling)
   let plan = await prisma.billingSubscription.findUniqueOrThrow({ where: { id: `sub-${id}-3` } })
   assert.equal(plan.status, 'active')
   assert.equal(plan.cancelAtPeriodEnd, true)
@@ -247,10 +270,15 @@ test("Stripe's webhook keeps the workspace's plan in step", { skip }, async () =
   assert.equal(await billing.cloudEntitled(workspaceId), true)
 
   // The period is over: the workspace loses the cloud computer.
-  await deliver(
-    'customer.subscription.deleted',
-    stripeSubscription({ status: 'canceled', ended_at: now }),
-  )
+  const ended = stripeSubscription({ status: 'canceled', ended_at: now })
+  stripeNow.set(`sub_test_${id}`, ended)
+  await deliver('customer.subscription.deleted', ended)
+  plan = await prisma.billingSubscription.findUniqueOrThrow({ where: { id: `sub-${id}-3` } })
+  assert.equal(plan.status, 'canceled')
+  assert.equal(await billing.cloudEntitled(workspaceId), false)
+
+  // An older "updated, active" arriving late: Stripe says canceled, and canceled it stays.
+  await deliver('customer.subscription.updated', stripeSubscription({}))
   plan = await prisma.billingSubscription.findUniqueOrThrow({ where: { id: `sub-${id}-3` } })
   assert.equal(plan.status, 'canceled')
   assert.equal(await billing.cloudEntitled(workspaceId), false)
@@ -278,3 +306,128 @@ test("another product's subscription in the same account changes nothing", { ski
   const rows = await prisma.billingSubscription.findMany({ where: { referenceId: workspaceId } })
   assert.deepEqual(rows.map((row) => row.status).sort(), ['canceled', 'canceled', 'incomplete'])
 })
+
+/** Checkout sessions and customers, as the fake Stripe has them. */
+const made = {
+  customers: [] as { id: string; metadata: Record<string, string> }[],
+  sessions: [] as {
+    id: string
+    customer: string
+    status: string
+    url: string
+    metadata: Record<string, string>
+  }[],
+  portals: [] as { customer: string }[],
+}
+const price = {
+  id: 'price_cloud',
+  lookup_key: 'brigade_cloud_monthly',
+  recurring: { interval: 'month' },
+}
+stripe.customers.create = (async (params: { metadata: Record<string, string> }) => {
+  const customer = { id: `cus_made_${id}_${made.customers.length + 1}`, ...params }
+  made.customers.push(customer)
+  return customer
+}) as never
+stripe.prices.list = (async () => ({ data: [price] })) as never
+stripe.checkout.sessions.list = ((params: { customer: string; status: string }) =>
+  (async function* () {
+    for (const session of made.sessions)
+      if (session.customer === params.customer && session.status === params.status) yield session
+  })()) as never
+stripe.checkout.sessions.expire = (async (sessionId: string) => {
+  const session = made.sessions.find((s) => s.id === sessionId)!
+  session.status = 'expired'
+  return session
+}) as never
+stripe.checkout.sessions.create = (async (params: {
+  customer: string
+  metadata: Record<string, string>
+}) => {
+  // Stripe takes a moment: two checkouts at once overlap here.
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  const sessionId = `cs_${id}_${made.sessions.length + 1}`
+  const session = {
+    id: sessionId,
+    ...params,
+    status: 'open',
+    url: `https://checkout.test/${sessionId}`,
+  }
+  made.sessions.push(session)
+  return session
+}) as never
+
+const checkout = (workspaceId: string, user: string) =>
+  billing.startCheckout({
+    workspaceId,
+    user: { id: user, email: `${user}@example.com` },
+    successUrl: 'http://localhost:3000/app/billing?subscribed=1',
+    cancelUrl: 'http://localhost:3000/app/billing',
+  })
+
+const openSessions = (customer: string | null) =>
+  made.sessions.filter((s) => s.customer === customer && s.status === 'open')
+
+test('one payable Checkout per workspace, even started twice at once', { skip }, async () => {
+  await Promise.all([
+    checkout(workspaces.handoff, ids.owner),
+    checkout(workspaces.handoff, ids.owner),
+  ])
+  const customer = await billing.workspaceCustomerId(workspaces.handoff)
+  assert.ok(customer)
+  assert.equal(openSessions(customer).length, 1)
+  // A third, later: the one still open is expired first.
+  await checkout(workspaces.handoff, ids.member)
+  assert.equal(openSessions(customer).length, 1)
+  assert.equal(made.sessions.filter((s) => s.customer === customer).length, 3)
+  // All for one row, the workspace's.
+  const rows = await prisma.billingSubscription.findMany({
+    where: { referenceId: workspaces.handoff },
+  })
+  assert.equal(rows.length, 1)
+  assert.equal(rows[0]!.stripeCustomerId, customer)
+  assert.ok(made.sessions.every((s) => s.metadata.subscriptionId === rows[0]!.id))
+})
+
+test(
+  "whoever pays, the subscription is the workspace's, on its own customer",
+  { skip },
+  async () => {
+    const customer = await billing.workspaceCustomerId(workspaces.handoff)
+    const [session] = openSessions(customer)
+    // The member who started the last checkout pays it.
+    const subscriptionId = `sub_handoff_${id}`
+    const paid = stripeSubscription({ id: subscriptionId, customer, metadata: session!.metadata })
+    stripeNow.set(subscriptionId, paid)
+    await deliver('checkout.session.completed', {
+      id: session!.id,
+      object: 'checkout.session',
+      mode: 'subscription',
+      subscription: subscriptionId,
+      customer,
+      client_reference_id: workspaces.handoff,
+      metadata: session!.metadata,
+    })
+    const plan = await billing.workspacePlan(workspaces.handoff)
+    assert.equal(plan?.status, 'active')
+    assert.equal(plan?.stripeSubscriptionId, subscriptionId)
+    assert.equal(plan?.stripeCustomerId, customer)
+    await assert.rejects(checkout(workspaces.handoff, ids.owner), /already has Brigade Cloud/)
+  },
+)
+
+test(
+  "another workspace's plan, paid by the same person, has a customer of its own",
+  { skip },
+  async () => {
+    await checkout(workspaces.other, ids.owner)
+    const here = await billing.workspaceCustomerId(workspaces.handoff)
+    const there = await billing.workspaceCustomerId(workspaces.other)
+    assert.ok(there)
+    assert.notEqual(here, there)
+    assert.deepEqual(
+      made.customers.map((c) => c.metadata.workspaceId).sort(),
+      [workspaces.handoff, workspaces.other].sort(),
+    )
+  },
+)

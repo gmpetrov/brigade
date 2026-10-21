@@ -1024,7 +1024,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     createdAt: Date
     updatedAt: Date
     /**
-     * Their Stripe customer (better-auth stripe plugin): who pays for the workspaces they subscribe.
+     * The stripe plugin's field, unset: Brigade bills workspaces (Workspace.stripeCustomerId).
      */
     stripeCustomerId: string | null
   }, ExtArgs["result"]["user"]>

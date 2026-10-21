@@ -3,7 +3,7 @@ import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { organization } from 'better-auth/plugins'
 import { audit } from './audit.js'
-import { CLOUD_PLAN, mayBill, planChanged, stripeClient } from './billing.js'
+import { CLOUD_PLAN, mayBill, planChanged, stripeClient, subscriptionEvent } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 
@@ -108,9 +108,9 @@ export const auth = betterAuth({
           }),
       },
     }),
-    // Billing (src/billing.ts): Checkout for a workspace's Cloud plan, and Stripe's webhook at
-    // /api/auth/stripe/webhook. The customer is the member who subscribes; the subscription
-    // is the workspace's (its referenceId).
+    // Billing (src/billing.ts): Stripe's webhook at /api/auth/stripe/webhook and Checkout's
+    // return, which keep a workspace's plan in step (its referenceId). Checkout itself is made
+    // by src/billing.ts, for the workspace's own Stripe customer.
     ...(stripeClient
       ? [
           stripe({
@@ -122,16 +122,10 @@ export const auth = betterAuth({
               plans: [CLOUD_PLAN],
               authorizeReference: ({ user, referenceId, action }) =>
                 mayBill(user.id, referenceId, action),
-              getCheckoutSessionParams: () => ({
-                params: {
-                  allow_promotion_codes: true,
-                  billing_address_collection: 'auto',
-                  tax_id_collection: { enabled: true },
-                },
-              }),
               onSubscriptionComplete: ({ subscription }) => planChanged(subscription),
-              onSubscriptionUpdate: ({ subscription }) => planChanged(subscription),
-              onSubscriptionDeleted: ({ subscription }) => planChanged(subscription),
+              // Events can come late and out of order: Stripe's current state wins.
+              onSubscriptionUpdate: ({ subscription }) => subscriptionEvent(subscription),
+              onSubscriptionDeleted: ({ subscription }) => subscriptionEvent(subscription),
             },
           }),
         ]

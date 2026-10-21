@@ -1,6 +1,9 @@
 -- AlterTable
 ALTER TABLE "User" ADD COLUMN "stripeCustomerId" TEXT;
 
+-- AlterTable
+ALTER TABLE "Workspace" ADD COLUMN "stripeCustomerId" TEXT;
+
 -- CreateTable
 CREATE TABLE "BillingSubscription" (
     "id" TEXT NOT NULL,

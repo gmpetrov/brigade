@@ -6,9 +6,17 @@ workspace, paid by the owner or admin who subscribes.
 
 ## How it works
 
-- better-auth's Stripe plugin (`@better-auth/stripe`, in `apps/api/src/auth.ts`) makes
-  the Checkout and keeps `BillingSubscription` rows in step through Stripe's webhook.
-  A row's `referenceId` is the workspace; its customer is the member who subscribed.
+- better-auth's Stripe plugin (`@better-auth/stripe`, in `apps/api/src/auth.ts`) keeps
+  `BillingSubscription` rows in step through Stripe's webhook and Checkout's return. A
+  row's `referenceId` is the workspace.
+- Each workspace has its own Stripe customer (`Workspace.stripeCustomerId`), whoever pays:
+  its portal shows only its own plan, and an admin who leaves takes nothing with them.
+  `startCheckout` in `apps/api/src/billing.ts` makes the Checkout for it, with the plugin's
+  metadata, because the plugin would bill the member.
+- One payable Checkout per workspace: under a lock on the workspace, the ones still open
+  are expired before a new one is made, so a workspace cannot be subscribed twice.
+- Webhooks can arrive late and out of order: after each subscription event, the plan is
+  read again from Stripe, and Stripe's current state is what is kept.
 - `apps/api/src/billing.ts` decides who has the cloud computer: a workspace whose plan
   is `active`, `trialing` or `past_due` (Stripe still retrying a payment). Without the
   plan, no cloud computer is created, and a stopped one does not start again.
@@ -35,9 +43,9 @@ preview variable is a test key runs it on start.
 
 The live account (Brigade, `acct_1TglYsRbMiIVQuK6`) is set up: product `brigade_cloud`,
 price `price_1UT74MRbMiIVQuK6v1bZtWaf`, portal settings `bpc_1UT74aRbMiIVQuK6RnAaVTIF`.
-The account also holds other products (Papers): Brigade makes its own customers, so
-their subscriptions never reach Brigade's rows; their events reach the webhook and are
-ignored (the plugin logs an error for each).
+The account also holds other products (Papers): Brigade makes its own customers, one per
+workspace, so their subscriptions never reach Brigade's rows; their events reach the
+webhook and are ignored (the plugin logs an error for each).
 
 ## Production
 

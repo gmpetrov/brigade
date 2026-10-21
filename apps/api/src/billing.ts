@@ -3,6 +3,7 @@
 // subscription; better-auth's stripe plugin (src/auth.ts) makes its Checkout and keeps
 // the BillingSubscription rows in step through Stripe's webhook. Without STRIPE_SECRET_KEY
 // billing is off and every workspace has the cloud computer, as on a self-hosted Brigade.
+import { randomUUID } from 'node:crypto'
 import type { StripePlan, Subscription } from '@better-auth/stripe'
 import { HTTPException } from 'hono/http-exception'
 import Stripe from 'stripe'
@@ -62,11 +63,12 @@ type PlanRow = NonNullable<Awaited<ReturnType<typeof workspacePlan>>>
 const fromUnix = (seconds: number | null | undefined) => (seconds ? new Date(seconds * 1000) : null)
 
 /**
- * Without a webhook (a preview), changes made in Stripe (a cancellation in its portal) reach
- * Brigade only by asking: the plan as Stripe has it now, saved. With one, the row as it is.
+ * The plan as Stripe has it now, saved. Webhooks can arrive late and out of order (an old
+ * "updated, active" after "deleted"): each one is followed by this read, so the last word is
+ * Stripe's current state, not the event's.
  */
-export async function refreshPlan(plan: PlanRow): Promise<PlanRow> {
-  if (!stripeClient || env.STRIPE_WEBHOOK_SECRET || !plan.stripeSubscriptionId) return plan
+export async function syncPlan(plan: PlanRow): Promise<PlanRow> {
+  if (!stripeClient || !plan.stripeSubscriptionId) return plan
   const subscription = await stripeClient.subscriptions.retrieve(plan.stripeSubscriptionId)
   const item = subscription.items.data[0]
   return prisma.billingSubscription.update({
@@ -83,6 +85,26 @@ export async function refreshPlan(plan: PlanRow): Promise<PlanRow> {
       }),
     },
   })
+}
+
+/**
+ * Without a webhook (a preview), changes made in Stripe (a cancellation in its portal) reach
+ * Brigade only by asking: syncPlan. With one, the row as it is.
+ */
+export const refreshPlan = (plan: PlanRow) =>
+  env.STRIPE_WEBHOOK_SECRET ? Promise.resolve(plan) : syncPlan(plan)
+
+/**
+ * From the plugin's webhook hooks, once it saved an event: Stripe's current state over the
+ * event's, then the cloud computer follows.
+ */
+export async function subscriptionEvent(subscription: Pick<Subscription, 'id' | 'referenceId'>) {
+  const row = await prisma.billingSubscription.findUnique({ where: { id: subscription.id } })
+  if (row)
+    await syncPlan(row).catch((error) =>
+      console.error(`reading subscription ${row.stripeSubscriptionId} from Stripe failed`, error),
+    )
+  await planChanged(subscription)
 }
 
 /** Brigade's settings for Stripe's customer portal (scripts/stripe-setup.mjs), else the account's default. */
@@ -157,23 +179,95 @@ export async function mayBill(userId: string, workspaceId: string, action: strin
 }
 
 /**
- * The member's own Stripe customer, made by Brigade before their first Checkout. Left to the
- * plugin, it would reuse any customer of the account with their email, and the account is
- * shared with other products: their subscriptions' events would then reach this one's rows.
+ * The workspace's own Stripe customer, made on its first Checkout: its subscription, invoices
+ * and card, and nothing else, so the portal opened for it shows only this workspace's plan,
+ * whoever pays. Never a customer found by email: the account is shared with other products.
  */
-export async function ensureCustomer(userId: string) {
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
-  if (user.stripeCustomerId) return user.stripeCustomerId
+async function workspaceCustomer(workspaceId: string, payer: { email: string }) {
+  const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId } })
+  if (workspace.stripeCustomerId) return workspace.stripeCustomerId
   const customer = await stripeClient!.customers.create({
-    email: user.email,
-    name: user.name,
-    // The plugin's own keys: it knows the customer as this user's.
-    metadata: { userId: user.id, customerType: 'user', product: 'brigade' },
+    name: workspace.name,
+    email: payer.email,
+    metadata: { workspaceId, product: 'brigade' },
   })
-  // Two checkouts at once: the first customer saved wins.
-  await prisma.user.updateMany({
-    where: { id: user.id, stripeCustomerId: null },
+  await prisma.workspace.update({
+    where: { id: workspaceId },
     data: { stripeCustomerId: customer.id },
   })
   return customer.id
+}
+
+/**
+ * Stripe Checkout for the workspace's Cloud plan: its address. One payable Checkout per
+ * workspace at a time, so it can never be subscribed twice: the ones still open are expired
+ * first, under a lock on the workspace (two clicks, two tabs, two admins). The session is
+ * the plugin's (its metadata and its return, /api/auth/subscription/success), which then
+ * keeps the row in step; made here because the plugin would bill the member, not the workspace.
+ */
+export async function startCheckout(input: {
+  workspaceId: string
+  user: { id: string; email: string }
+  successUrl: string
+  cancelUrl: string
+}) {
+  const stripe = stripeClient!
+  const { workspaceId, user } = input
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`billing:${workspaceId}`}))`
+      const current = await workspacePlan(workspaceId)
+      if (current && entitles(current.status))
+        throw new HTTPException(409, { message: 'This workspace already has Brigade Cloud' })
+      const customer = await workspaceCustomer(workspaceId, user)
+      for await (const open of stripe.checkout.sessions.list({ customer, status: 'open' }))
+        await stripe.checkout.sessions.expire(open.id)
+      const [price] = (
+        await stripe.prices.list({ lookup_keys: [CLOUD_PLAN.lookupKey], active: true, limit: 1 })
+      ).data
+      if (!price) throw new Error(`No Stripe price has the lookup key ${CLOUD_PLAN.lookupKey}`)
+      // The row Checkout completes: an abandoned one is used again.
+      const pending =
+        (await prisma.billingSubscription.findFirst({
+          where: { referenceId: workspaceId, plan: CLOUD_PLAN.name, status: 'incomplete' },
+        })) ??
+        (await prisma.billingSubscription.create({
+          data: {
+            id: randomUUID(),
+            plan: CLOUD_PLAN.name,
+            referenceId: workspaceId,
+            status: 'incomplete',
+          },
+        }))
+      await prisma.billingSubscription.update({
+        where: { id: pending.id },
+        data: { stripeCustomerId: customer },
+      })
+      // The plugin's keys: its webhook and its return find the row by them.
+      const metadata = { userId: user.id, subscriptionId: pending.id, referenceId: workspaceId }
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        customer,
+        customer_update: { name: 'auto', address: 'auto' },
+        line_items: [{ price: price.id, quantity: 1 }],
+        client_reference_id: workspaceId,
+        allow_promotion_codes: true,
+        billing_address_collection: 'auto',
+        tax_id_collection: { enabled: true },
+        subscription_data: { metadata },
+        metadata,
+        success_url: `${env.API_URL}/api/auth/subscription/success?callbackURL=${encodeURIComponent(input.successUrl)}&checkoutSessionId={CHECKOUT_SESSION_ID}`,
+        cancel_url: input.cancelUrl,
+      })
+      return session.url!
+    },
+    // Stripe's answers come within the lock.
+    { timeout: 30_000, maxWait: 30_000 },
+  )
+}
+
+/** The customer whose portal manages the workspace's plan: the workspace's own. */
+export async function workspaceCustomerId(workspaceId: string) {
+  const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } })
+  return workspace?.stripeCustomerId ?? null
 }
