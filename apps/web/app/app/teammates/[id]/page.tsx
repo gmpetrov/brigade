@@ -2,6 +2,7 @@
 // A teammate's settings: who it is, what it may reach and spend, and what it is up to. Its
 // threads are where the sidebar takes you (components/thread-panel.tsx).
 import { modelLabel } from '@brigade/contracts'
+import { Archive } from 'lucide-react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
@@ -107,25 +108,21 @@ function TeammateView() {
                   await api(`/teammates/${id}`, { method: 'PATCH', body: input })
                   await reloadTeammates()
                 }}
+                footer={
+                  teammate.kind !== 'chief' && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="-ml-2 text-destructive-text hover:text-destructive-text"
+                      onClick={archive}
+                    >
+                      <Archive aria-hidden />
+                      Archive
+                    </Button>
+                  )
+                }
               />
-              {teammate.kind !== 'chief' && (
-                <section className="mt-8 flex w-full max-w-2xl flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border bg-card px-4 py-3">
-                  <div className="flex flex-[1_1_14rem] flex-col gap-0.5">
-                    <h2 className="text-sm font-semibold">Archive teammate</h2>
-                    <p className="text-xs text-muted-foreground">
-                      {teammate.name} stops taking work. Its threads stay in the run log.
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive-text"
-                    onClick={archive}
-                  >
-                    Archive
-                  </Button>
-                </section>
-              )}
             </TabsContent>
           )}
 
