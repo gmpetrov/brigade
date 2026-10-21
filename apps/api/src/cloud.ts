@@ -39,7 +39,7 @@ async function setStatus(
   status: 'creating' | 'starting' | 'running' | 'stopped' | 'error',
 ) {
   await prisma.computer.update({ where: { id: computer.id }, data: { status } })
-  broadcastComputer(computer.workspaceId, computer.id)
+  broadcastComputer(computer.workspaceId, computer.id, status)
 }
 
 /** Create the workspace's cloud computer and install its runner, in the background. */
@@ -137,7 +137,7 @@ export function wake(computerId: string) {
     const computer = await prisma.computer
       .update({ where: { id: computerId }, data: { status: 'error' } })
       .catch(() => null)
-    if (computer) broadcastComputer(computer.workspaceId, computer.id)
+    if (computer) broadcastComputer(computer.workspaceId, computer.id, 'error')
   })
 }
 

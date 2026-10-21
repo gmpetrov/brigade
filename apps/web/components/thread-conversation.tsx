@@ -97,7 +97,11 @@ import {
   type Thread,
 } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
-import { preloadThreadEvents, useThreadEvents } from '@/lib/use-thread-events'
+import {
+  preloadThreadEvents,
+  useThreadEvents,
+  type ComputerAvailability,
+} from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 
 /** What the threads panel's bar shows of a thread: who leads it, its title and state. */
@@ -180,13 +184,22 @@ export function ThreadConversation({
       setEventsWaitingSince(message.eventsWaitingSince)
     if (message.type === 'computer.updated') {
       void computers.reload()
-      // Its own computer: the thread says whether it is there, also when it is another member's.
-      if (message.computerId === thread.data?.computer.id) void thread.reload()
+      // Its own computer, also another member's: whether it is there, as the message says.
+      if (message.computerId === thread.data?.computer.id)
+        setAvailability((was) => ({
+          id: message.computerId,
+          online: message.online,
+          restarting: message.restarting ?? false,
+          status: message.status ?? was?.status,
+        }))
     }
   })
   // Keyed by the thread: when it started loading, for its placeholder's delays.
   const [openedAt] = useState(() => Date.now())
   const [status, setStatus] = useState<string>()
+  // Its computer's availability since the thread loaded, from its sockets: newer than the thread's.
+  const [availability, setAvailability] = useState<ComputerAvailability>()
+  useEffect(() => setAvailability(undefined), [id])
   const {
     events,
     connected,
@@ -195,22 +208,14 @@ export function ThreadConversation({
     loadingOlder,
     loaded: eventsLoaded,
     reconnect,
-  } = useThreadEvents(id, setStatus)
+  } = useThreadEvents(id, (status, computer) => {
+    setStatus(status)
+    if (!computer) return
+    setAvailability(computer)
+    // It moved while this page was away: the thread again, for its new computer's name and move.
+    if (thread.data && computer.id !== thread.data.computer.id) void thread.reload()
+  })
   const { items, queued, seen, turnId, background } = useThreadItems(events, firstSeq)
-  // Back after its socket dropped (a phone asleep): what changed meanwhile, computers included.
-  const wasConnected = useRef(false)
-  useEffect(() => {
-    if (!connected) return
-    if (wasConnected.current) {
-      void thread.reload()
-      void computers.reload()
-    }
-    wasConnected.current = true
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connected])
-  useEffect(() => {
-    wasConnected.current = false
-  }, [id])
   const outputs = useThreadOutputs(events)
   const preview = useCheckedPreview(id, useThreadPreview(events))
   // Preview is offered once there is something to preview: a preview it had, or code it checked out.
@@ -590,7 +595,13 @@ export function ThreadConversation({
         }))
         .sort((a, b) => Number(!!b.current) - Number(!!a.current))
     : []
-  const machine = t.computer
+  // What the sockets said, once about the computer the thread is on (after a move, not yet reloaded: not).
+  const liveComputer = availability?.id === t.computer.id ? availability : undefined
+  const machine = {
+    ...t.computer,
+    ...liveComputer,
+    status: liveComputer?.status ?? t.computer.status,
+  }
   const machineOnline = machine.online
   // Its computer went away during a turn: said where the answer would show, by the machine's name.
   const machineDown: ComputerDown | undefined = machine.restarting
