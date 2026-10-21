@@ -57,6 +57,51 @@ export function pickPlan<T extends { status: string; periodStart: Date | null }>
   )
 }
 
+type PlanRow = NonNullable<Awaited<ReturnType<typeof workspacePlan>>>
+
+const fromUnix = (seconds: number | null | undefined) => (seconds ? new Date(seconds * 1000) : null)
+
+/**
+ * Without a webhook (a preview), changes made in Stripe (a cancellation in its portal) reach
+ * Brigade only by asking: the plan as Stripe has it now, saved. With one, the row as it is.
+ */
+export async function refreshPlan(plan: PlanRow): Promise<PlanRow> {
+  if (!stripeClient || env.STRIPE_WEBHOOK_SECRET || !plan.stripeSubscriptionId) return plan
+  const subscription = await stripeClient.subscriptions.retrieve(plan.stripeSubscriptionId)
+  const item = subscription.items.data[0]
+  return prisma.billingSubscription.update({
+    where: { id: plan.id },
+    data: {
+      status: subscription.status,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      cancelAt: fromUnix(subscription.cancel_at),
+      canceledAt: fromUnix(subscription.canceled_at),
+      endedAt: fromUnix(subscription.ended_at),
+      ...(item && {
+        periodStart: fromUnix(item.current_period_start),
+        periodEnd: fromUnix(item.current_period_end),
+      }),
+    },
+  })
+}
+
+/** Brigade's settings for Stripe's customer portal (scripts/stripe-setup.mjs), else the account's default. */
+let portal: Promise<string | undefined> | undefined
+export function portalConfiguration() {
+  portal ??= (async () => {
+    const { data } = await stripeClient!.billingPortal.configurations.list({
+      active: true,
+      limit: 100,
+    })
+    return data.find((configuration) => configuration.metadata?.brigade === 'portal')?.id
+  })().catch((error) => {
+    portal = undefined
+    console.error('reading the customer portal settings failed', error)
+    return undefined
+  })
+  return portal
+}
+
 /** Whether the workspace may have a cloud computer: always, unless billing is on. */
 export async function cloudEntitled(workspaceId: string) {
   if (!billingEnabled()) return true
@@ -109,4 +154,26 @@ export async function mayBill(userId: string, workspaceId: string, action: strin
   })
   if (!member) return false
   return action === 'list-subscription' || member.role === 'owner' || member.role === 'admin'
+}
+
+/**
+ * The member's own Stripe customer, made by Brigade before their first Checkout. Left to the
+ * plugin, it would reuse any customer of the account with their email, and the account is
+ * shared with other products: their subscriptions' events would then reach this one's rows.
+ */
+export async function ensureCustomer(userId: string) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
+  if (user.stripeCustomerId) return user.stripeCustomerId
+  const customer = await stripeClient!.customers.create({
+    email: user.email,
+    name: user.name,
+    // The plugin's own keys: it knows the customer as this user's.
+    metadata: { userId: user.id, customerType: 'user', product: 'brigade' },
+  })
+  // Two checkouts at once: the first customer saved wins.
+  await prisma.user.updateMany({
+    where: { id: user.id, stripeCustomerId: null },
+    data: { stripeCustomerId: customer.id },
+  })
+  return customer.id
 }

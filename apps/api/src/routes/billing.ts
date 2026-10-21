@@ -3,7 +3,17 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { auth } from '../auth.js'
-import { billingEnabled, CLOUD_PLAN, entitles, stripeClient, workspacePlan } from '../billing.js'
+import {
+  billingEnabled,
+  CLOUD_PLAN,
+  ensureCustomer,
+  entitles,
+  planChanged,
+  portalConfiguration,
+  refreshPlan,
+  stripeClient,
+  workspacePlan,
+} from '../billing.js'
 import { env } from '../config.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
@@ -16,7 +26,9 @@ export const billing = new Hono<AppEnv>()
 
   .get('/', async (c) => {
     if (!billingEnabled()) return c.json<BillingResponse>({ enabled: false, plan: null })
-    const plan = await workspacePlan(c.var.scope.workspaceId)
+    const stored = await workspacePlan(c.var.scope.workspaceId)
+    const plan = stored && (await refreshPlan(stored))
+    if (stored && plan && entitles(stored.status) !== entitles(plan.status)) await planChanged(plan)
     return c.json<BillingResponse>({
       enabled: true,
       plan: plan && {
@@ -41,6 +53,7 @@ export const billing = new Hono<AppEnv>()
     const plan = await workspacePlan(c.var.scope.workspaceId)
     if (plan && entitles(plan.status))
       throw new HTTPException(409, { message: 'This workspace already has Brigade Cloud' })
+    await ensureCustomer(c.var.userId)
     const checkout = await auth.api.upgradeSubscription({
       headers: c.req.raw.headers,
       body: {
@@ -69,6 +82,7 @@ export const billing = new Hono<AppEnv>()
       throw new HTTPException(404, { message: 'This workspace has no subscription to manage' })
     const session = await stripeClient.billingPortal.sessions.create({
       customer: plan.stripeCustomerId,
+      configuration: await portalConfiguration(),
       return_url: billingPage(),
     })
     return c.json({ url: session.url })

@@ -17,6 +17,11 @@ trap 'exit' INT TERM
 trap 'kill 0' EXIT
 start_db
 
+# Billing with a test account's key (a preview variable): its product, price and portal, once.
+if [[ ${STRIPE_SECRET_KEY:-} == sk_test_* || ${STRIPE_SECRET_KEY:-} == rk_test_* ]]; then
+  (cd "$REPO/apps/api" && WEB_URL=$URL node scripts/stripe-setup.mjs) || echo "Stripe setup failed: billing may not work"
+fi
+
 (cd "$REPO/apps/api" && PORT=$API_PORT API_URL=$URL WEB_URL=$URL CROSS_SITE_COOKIES=$CROSS_SITE_COOKIES \
   "${PNPM[@]}" dev) &
 
