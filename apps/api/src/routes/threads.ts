@@ -62,6 +62,8 @@ import {
   desktopClipboard,
   dispatch,
   eventsWaitingSince,
+  isOnline,
+  isRestarting,
   readThreadFile,
   runnerProtocol,
   sendToRunner,
@@ -326,7 +328,7 @@ export const threads = new Hono<AppEnv>()
           },
           orderBy: { joinedAt: 'asc' },
         },
-        computer: { select: { id: true, name: true, kind: true } },
+        computer: { select: { id: true, name: true, kind: true, status: true } },
         account: { select: { id: true, label: true, status: true } },
         startedBy: { select: { id: true, user: { select: { name: true } } } },
         trigger: { select: { id: true, label: true, event: true } },
@@ -399,6 +401,12 @@ export const threads = new Hono<AppEnv>()
     ])
     return c.json({
       ...thread,
+      // Whether it is there, for everyone in the thread: /computers lists only the member's own.
+      computer: {
+        ...thread.computer,
+        online: isOnline(thread.computer.id),
+        restarting: isRestarting(thread.computer.id),
+      },
       pinnedAt: pin?.pinnedAt.toISOString() ?? null,
       laterAt: later?.laterAt.toISOString() ?? null,
       // Where it is going, not the message that goes with it.
