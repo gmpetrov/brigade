@@ -538,10 +538,30 @@ export const usableComputers = (data: ComputersResponse | undefined) =>
         ['running', 'stopped', 'starting'].includes(c.status)),
   )
 
+/**
+ * Open a Stripe page (Checkout, the billing portal). Stripe does not show in a frame, and the
+ * dashboard is one in a thread's preview: there it opens in a new tab, opened at once, on the
+ * click, so the browser does not block it while its address is asked for. Call it on a click.
+ */
+export async function openStripe(address: () => Promise<string>) {
+  const framed = window.self !== window.top
+  const tab = framed ? window.open('', '_blank') : null
+  try {
+    const url = await address()
+    if (tab) tab.location.href = url
+    else if (framed) window.open(url, '_blank')
+    else window.location.assign(url)
+  } catch (error) {
+    tab?.close()
+    throw error
+  }
+}
+
 /** Stripe Checkout for the workspace's Cloud plan: opens it, coming back to `from` after. */
-export async function subscribeToCloud(from: 'billing' | 'onboarding' = 'billing') {
-  const { url } = await api<{ url: string }>('/billing/checkout', { body: { from } })
-  window.location.assign(url)
+export function subscribeToCloud(from: 'billing' | 'onboarding' = 'billing') {
+  return openStripe(
+    async () => (await api<{ url: string }>('/billing/checkout', { body: { from } })).url,
+  )
 }
 
 export const computerName = (c: { kind: string; name: string }) =>
