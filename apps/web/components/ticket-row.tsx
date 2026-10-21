@@ -117,6 +117,20 @@ export function TicketRow({
     ) : (
       <span className="text-sm text-muted-foreground">Waiting for an admin</span>
     )
+  } else if (open && t.type === 'approval' && t.payload.triggerAction) {
+    // A teammate's trigger: outside events start work on someone's accounts, an admin's call.
+    actions = admin ? (
+      <>
+        <Button size="sm" onClick={() => void onResolve(t.id, true)}>
+          Add the trigger
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => void onResolve(t.id, false)}>
+          Decline
+        </Button>
+      </>
+    ) : (
+      <span className="text-sm text-muted-foreground">Waiting for an owner or admin</span>
+    )
   } else if (open && t.type === 'approval' && t.payload.credentialAction) {
     // A credential's ticket: sharing or changing it is for its creator or an admin.
     const managersOnly = credentialManagersOnly(t)
@@ -269,6 +283,9 @@ export function TicketRow({
         </Detail>
       )}
       {t.payload.skillAction && t.payload.skill && <SkillProposalDetail ticket={t} />}
+      {t.payload.triggerAction && t.payload.instructions !== undefined && (
+        <TriggerProposalDetail ticket={t} />
+      )}
       {t.type === 'cap' && t.payload.pending && (
         <Detail summary="The message waiting to run">{t.payload.pending.text}</Detail>
       )}
@@ -327,5 +344,21 @@ function SkillProposalDetail({ ticket: t }: { ticket: Ticket }) {
         </Detail>
       )}
     </>
+  )
+}
+
+/** What a teammate's trigger listens to, and what it would do with each event. */
+function TriggerProposalDetail({ ticket: t }: { ticket: Ticket }) {
+  const p = t.payload
+  const options = Object.entries(p.options ?? {})
+  return (
+    <div className="mt-2 flex flex-col gap-1.5 text-sm">
+      <p className="text-muted-foreground wrap-anywhere">
+        {p.eventLabel} on {p.app}
+        {options.map(([name, value]) => ` · ${name} ${value}`).join('')}
+        {p.verification === 'none' && ' · unsigned: anyone with its URL can start a thread'}
+      </p>
+      <Detail summary="Its instructions for each event">{p.instructions}</Detail>
+    </div>
   )
 }

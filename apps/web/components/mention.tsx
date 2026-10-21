@@ -30,29 +30,36 @@ export function credentialHint(c: Credential) {
   return [CREDENTIAL_KINDS[c.kind], d.username, where].filter(Boolean).join(' · ')
 }
 
-// Which service a connection is, for its icon. Loaded once per page, again when an id is new.
-let kinds: Promise<Map<string, ConnectionKind>> | undefined
-function connectionKinds(refresh = false) {
-  if (!kinds || refresh)
-    kinds = api<ConnectionsResponse>('/connections')
-      .then((r) => new Map(r.connections.map((c) => [c.id, c.kind])))
-      .catch(() => new Map())
-  return kinds
+/** How a message names a connection: its App and its account, so two Stripe accounts differ. */
+export function connectionMentionLabel(c: Pick<Connection, 'label' | 'externalAccount'>) {
+  return c.externalAccount ? `${c.label} · ${c.externalAccount}` : c.label
 }
 
-function useConnectionKind(mention: Mention, known?: ConnectionKind) {
-  const [kind, setKind] = useState(known)
+type KnownConnection = Pick<Connection, 'kind' | 'label' | 'externalAccount'>
+
+// Which service and account a connection is. Loaded once per page, again when an id is new.
+let connections: Promise<Map<string, KnownConnection>> | undefined
+function knownConnections(refresh = false) {
+  if (!connections || refresh)
+    connections = api<ConnectionsResponse>('/connections')
+      .then((r) => new Map(r.connections.map((c) => [c.id, c])))
+      .catch(() => new Map())
+  return connections
+}
+
+function useConnection(mention: Mention, known?: ConnectionKind) {
+  const [connection, setConnection] = useState<KnownConnection>()
   useEffect(() => {
-    if (known || mention.kind !== 'connection') return
+    if (mention.kind !== 'connection') return
     let live = true
-    void connectionKinds()
-      .then((m) => (m.has(mention.id) ? m : connectionKinds(true)))
-      .then((m) => live && setKind(m.get(mention.id)))
+    void knownConnections()
+      .then((m) => (m.has(mention.id) ? m : knownConnections(true)))
+      .then((m) => live && setConnection(m.get(mention.id)))
     return () => {
       live = false
     }
-  }, [mention.kind, mention.id, known])
-  return kind
+  }, [mention.kind, mention.id])
+  return { kind: known ?? connection?.kind, connection }
 }
 
 /** A teammate reads as a name; everything else as a chip with its icon. A library file opens in the panel. */
@@ -65,7 +72,7 @@ export function MentionChip({
   connectionKind?: ConnectionKind
   className?: string
 }) {
-  const kind = useConnectionKind(mention, connectionKind)
+  const { kind, connection } = useConnection(mention, connectionKind)
   const links = useFileLinks()
   if (mention.kind === 'teammate')
     return <strong className={cn('font-semibold', className)}>@{mention.label}</strong>
@@ -77,6 +84,11 @@ export function MentionChip({
         ? mention.label
         : undefined
   const open = path !== undefined && links
+  // Older messages name a connection by its App alone: add its account.
+  const label =
+    connection && mention.label === connection.label
+      ? connectionMentionLabel(connection)
+      : mention.label
   const Tag = open ? 'button' : 'span'
   const chip =
     'mx-px inline-flex max-w-[28ch] items-center gap-1.5 overflow-hidden rounded-md border bg-card px-1.5 align-baseline leading-relaxed text-ellipsis whitespace-nowrap text-card-foreground [&>svg]:flex-none [&>svg]:text-muted-foreground'
@@ -97,16 +109,22 @@ export function MentionChip({
       data-kind={mention.kind}
       {...(open && {
         type: 'button' as const,
-        title: `Open ${mention.label}`,
         onClick: () => links.open({ path }),
       })}
-      className={cn(open && 'cursor-pointer hover:bg-accent', chip, className)}
+      title={open ? `Open ${label}` : label}
+      className={cn(
+        open && 'cursor-pointer hover:bg-accent',
+        chip,
+        // Room for the account, which is what tells two accounts of one App apart.
+        mention.kind === 'connection' && 'max-w-[40ch]',
+        className,
+      )}
     >
       <MentionIcon
         kind={isLegacyProjectMention(mention) ? 'repository' : mention.kind}
         connectionKind={kind}
       />
-      {mention.label}
+      <span className="min-w-0 truncate">{label}</span>
     </Tag>
   )
 }

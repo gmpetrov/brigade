@@ -285,20 +285,24 @@ export function NeedsYou({
         ? approved
           ? 'Skill added'
           : 'Declined'
-        : t?.payload.playbookActivation
+        : t?.payload.triggerAction
           ? approved
-            ? 'Activated'
+            ? 'Trigger added'
             : 'Declined'
-          : t?.payload.source === 'harness'
-            ? 'Declined'
-            : t?.type === 'sign_in' ||
-                t?.type === 'usage_limit' ||
-                t?.type === 'disk_full' ||
-                t?.payload.pullRequest
-              ? 'Dismissed'
-              : approved
-                ? 'Allowed'
-                : 'Denied',
+          : t?.payload.playbookActivation
+            ? approved
+              ? 'Activated'
+              : 'Declined'
+            : t?.payload.source === 'harness'
+              ? 'Declined'
+              : t?.type === 'sign_in' ||
+                  t?.type === 'usage_limit' ||
+                  t?.type === 'disk_full' ||
+                  t?.payload.pullRequest
+                ? 'Dismissed'
+                : approved
+                  ? 'Allowed'
+                  : 'Denied',
     )
   }
 

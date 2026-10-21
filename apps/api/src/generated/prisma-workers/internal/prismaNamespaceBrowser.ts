@@ -740,6 +740,7 @@ export const TriggerScalarFieldEnum = {
   teammateId: 'teammateId',
   label: 'label',
   event: 'event',
+  instructions: 'instructions',
   options: 'options',
   pathToken: 'pathToken',
   verification: 'verification',

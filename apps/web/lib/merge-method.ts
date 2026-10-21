@@ -37,17 +37,47 @@ export const reviewer = (p: { tracking: PullRequestTracking | null }) =>
     ? (p.tracking.review.reviewer?.name ?? 'A teammate')
     : null
 
-/** Merge, but not without a word while a review is under way: the person may want to wait for it. */
+/** Who asked for changes, while that is its review's latest verdict. */
+export const changesAskedBy = (p: { tracking: PullRequestTracking | null }) =>
+  p.tracking?.review?.state === 'changes_requested'
+    ? (p.tracking.review.reviewer?.name ?? 'A teammate')
+    : null
+
+/**
+ * Who gave its review's latest verdict, when commits came after the one it read: those are
+ * not reviewed (an approval, or fixes pushed once its rechecks ran out).
+ */
+export const unreviewedBy = (p: { tracking: PullRequestTracking | null }) => {
+  const review = p.tracking?.review
+  return (review?.state === 'approved' || review?.state === 'changes_requested') && review.changed
+    ? (review.reviewer?.name ?? 'A teammate')
+    : null
+}
+
+/**
+ * Its review is under way, asked for changes, or has not read its latest commits: Merge
+ * steps back, and still merges.
+ */
+export const reviewHolds = (p: { tracking: PullRequestTracking | null }) =>
+  Boolean(reviewer(p) || changesAskedBy(p) || unreviewedBy(p))
+
+/** Merge, but not without a word while a review is under way, asked for changes or is behind. */
 export function confirmMerge(
   p: { number: number; base?: string; tracking: PullRequestTracking | null } | undefined,
   number: number,
   method: string,
 ) {
   const by = p ? reviewer(p) : null
+  const behind = p ? unreviewedBy(p) : null
+  const asked = p ? changesAskedBy(p) : null
   return confirm(
     by
       ? `${by} is still reviewing #${number}. Merge it anyway (${method})?`
-      : `Merge #${number}${p?.base ? ` into ${p.base}` : ''} (${method})?`,
+      : behind
+        ? `${behind} has not reviewed the latest commits on #${number}. Merge it anyway (${method})?`
+        : asked
+          ? `${asked} asked for changes on #${number}. Merge it anyway (${method})?`
+          : `Merge #${number}${p?.base ? ` into ${p.base}` : ''} (${method})?`,
   )
 }
 

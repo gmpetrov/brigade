@@ -9,6 +9,7 @@ import {
   type ApiToRunner,
   type RunnerToApi,
   type ScheduleOperation,
+  isTriggerOperation,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
@@ -18,6 +19,7 @@ import { handlePlaybookCall, isPlaybookInstallOperation } from './playbook-chat.
 import { triageRun } from './playbook-autonomy.js'
 import { beginRun, reportRun, settleRun } from './playbooks.js'
 import { handleReviewCall, isReviewOperation } from './reviews.js'
+import { handleTriggerCall } from './trigger-calls.js'
 import { broadcastSchedule, isOnline } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate, loadThread } from './thread-spec.js'
@@ -532,6 +534,26 @@ export async function handleScheduleCall(
   if (isPlaybookInstallOperation(op)) {
     const output = await handlePlaybookCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
+  }
+  // And triggers, which wait for an admin's approval: the call says so while it waits.
+  if (isTriggerOperation(op)) {
+    const { decision, ...result } = await handleTriggerCall(
+      db,
+      scope,
+      session,
+      teammate,
+      op,
+      (asked) => reply({ type: 'connector.pending', callId: call.callId, ...asked }),
+    )
+    // With the decision, for the thread to show it on the approval.
+    return reply({
+      type: 'connector.result',
+      callId: call.callId,
+      ...('error' in result
+        ? { ok: false, error: result.error }
+        : { ok: true, output: result.output }),
+      ...(decision ? { decision } : {}),
+    })
   }
   // A playbook's run, its children included: a schedule's runs would be threads outside it.
   if (session.playbookRunId)

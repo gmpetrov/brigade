@@ -252,14 +252,18 @@ export class Connection {
     return result.output
   }
 
-  /** Create, list or change the teammate's schedules. The API checks the thread. */
+  /**
+   * Create, list or change the teammate's schedules. The API checks the thread. A trigger
+   * waits for an admin's approval, which the hooks show in the thread.
+   */
   async callSchedule(
     request: Omit<Extract<RunnerToApi, { type: 'schedule.call' }>, 'type' | 'callId'>,
+    hooks: Pick<PendingCall, 'onPending' | 'onDecision'> = {
+      onPending: () => undefined,
+      onDecision: () => undefined,
+    },
   ): Promise<unknown> {
-    const result = await this.call(
-      { type: 'schedule.call', ...request },
-      { onPending: () => undefined, onDecision: () => undefined },
-    )
+    const result = await this.call({ type: 'schedule.call', ...request }, hooks)
     return result.output
   }
 

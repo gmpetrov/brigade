@@ -34,6 +34,7 @@ export type TriggerMinAggregateOutputType = {
   teammateId: string | null
   label: string | null
   event: string | null
+  instructions: string | null
   pathToken: string | null
   verification: $Enums.TriggerVerification | null
   verificationSecretId: string | null
@@ -51,6 +52,7 @@ export type TriggerMaxAggregateOutputType = {
   teammateId: string | null
   label: string | null
   event: string | null
+  instructions: string | null
   pathToken: string | null
   verification: $Enums.TriggerVerification | null
   verificationSecretId: string | null
@@ -68,6 +70,7 @@ export type TriggerCountAggregateOutputType = {
   teammateId: number
   label: number
   event: number
+  instructions: number
   options: number
   pathToken: number
   verification: number
@@ -88,6 +91,7 @@ export type TriggerMinAggregateInputType = {
   teammateId?: true
   label?: true
   event?: true
+  instructions?: true
   pathToken?: true
   verification?: true
   verificationSecretId?: true
@@ -105,6 +109,7 @@ export type TriggerMaxAggregateInputType = {
   teammateId?: true
   label?: true
   event?: true
+  instructions?: true
   pathToken?: true
   verification?: true
   verificationSecretId?: true
@@ -122,6 +127,7 @@ export type TriggerCountAggregateInputType = {
   teammateId?: true
   label?: true
   event?: true
+  instructions?: true
   options?: true
   pathToken?: true
   verification?: true
@@ -213,6 +219,7 @@ export type TriggerGroupByOutputType = {
   teammateId: string
   label: string
   event: string
+  instructions: string | null
   options: runtime.JsonValue
   pathToken: string | null
   verification: $Enums.TriggerVerification | null
@@ -252,6 +259,7 @@ export type TriggerWhereInput = {
   teammateId?: Prisma.StringFilter<"Trigger"> | string
   label?: Prisma.StringFilter<"Trigger"> | string
   event?: Prisma.StringFilter<"Trigger"> | string
+  instructions?: Prisma.StringNullableFilter<"Trigger"> | string | null
   options?: Prisma.JsonFilter<"Trigger">
   pathToken?: Prisma.StringNullableFilter<"Trigger"> | string | null
   verification?: Prisma.EnumTriggerVerificationNullableFilter<"Trigger"> | $Enums.TriggerVerification | null
@@ -276,6 +284,7 @@ export type TriggerOrderByWithRelationInput = {
   teammateId?: Prisma.SortOrder
   label?: Prisma.SortOrder
   event?: Prisma.SortOrder
+  instructions?: Prisma.SortOrderInput | Prisma.SortOrder
   options?: Prisma.SortOrder
   pathToken?: Prisma.SortOrderInput | Prisma.SortOrder
   verification?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -304,6 +313,7 @@ export type TriggerWhereUniqueInput = Prisma.AtLeast<{
   teammateId?: Prisma.StringFilter<"Trigger"> | string
   label?: Prisma.StringFilter<"Trigger"> | string
   event?: Prisma.StringFilter<"Trigger"> | string
+  instructions?: Prisma.StringNullableFilter<"Trigger"> | string | null
   options?: Prisma.JsonFilter<"Trigger">
   verification?: Prisma.EnumTriggerVerificationNullableFilter<"Trigger"> | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.StringNullableFilter<"Trigger"> | string | null
@@ -327,6 +337,7 @@ export type TriggerOrderByWithAggregationInput = {
   teammateId?: Prisma.SortOrder
   label?: Prisma.SortOrder
   event?: Prisma.SortOrder
+  instructions?: Prisma.SortOrderInput | Prisma.SortOrder
   options?: Prisma.SortOrder
   pathToken?: Prisma.SortOrderInput | Prisma.SortOrder
   verification?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -351,6 +362,7 @@ export type TriggerScalarWhereWithAggregatesInput = {
   teammateId?: Prisma.StringWithAggregatesFilter<"Trigger"> | string
   label?: Prisma.StringWithAggregatesFilter<"Trigger"> | string
   event?: Prisma.StringWithAggregatesFilter<"Trigger"> | string
+  instructions?: Prisma.StringNullableWithAggregatesFilter<"Trigger"> | string | null
   options?: Prisma.JsonWithAggregatesFilter<"Trigger">
   pathToken?: Prisma.StringNullableWithAggregatesFilter<"Trigger"> | string | null
   verification?: Prisma.EnumTriggerVerificationNullableWithAggregatesFilter<"Trigger"> | $Enums.TriggerVerification | null
@@ -366,6 +378,7 @@ export type TriggerCreateInput = {
   organizationId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -388,6 +401,7 @@ export type TriggerUncheckedCreateInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -404,6 +418,7 @@ export type TriggerUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -426,6 +441,7 @@ export type TriggerUncheckedUpdateInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -445,6 +461,7 @@ export type TriggerCreateManyInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -460,6 +477,7 @@ export type TriggerUpdateManyMutationInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -476,6 +494,7 @@ export type TriggerUncheckedUpdateManyInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -509,6 +528,7 @@ export type TriggerCountOrderByAggregateInput = {
   teammateId?: Prisma.SortOrder
   label?: Prisma.SortOrder
   event?: Prisma.SortOrder
+  instructions?: Prisma.SortOrder
   options?: Prisma.SortOrder
   pathToken?: Prisma.SortOrder
   verification?: Prisma.SortOrder
@@ -527,6 +547,7 @@ export type TriggerMaxOrderByAggregateInput = {
   teammateId?: Prisma.SortOrder
   label?: Prisma.SortOrder
   event?: Prisma.SortOrder
+  instructions?: Prisma.SortOrder
   pathToken?: Prisma.SortOrder
   verification?: Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrder
@@ -544,6 +565,7 @@ export type TriggerMinOrderByAggregateInput = {
   teammateId?: Prisma.SortOrder
   label?: Prisma.SortOrder
   event?: Prisma.SortOrder
+  instructions?: Prisma.SortOrder
   pathToken?: Prisma.SortOrder
   verification?: Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrder
@@ -788,6 +810,7 @@ export type TriggerCreateWithoutWorkspaceInput = {
   organizationId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -808,6 +831,7 @@ export type TriggerUncheckedCreateWithoutWorkspaceInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -856,6 +880,7 @@ export type TriggerScalarWhereInput = {
   teammateId?: Prisma.StringFilter<"Trigger"> | string
   label?: Prisma.StringFilter<"Trigger"> | string
   event?: Prisma.StringFilter<"Trigger"> | string
+  instructions?: Prisma.StringNullableFilter<"Trigger"> | string | null
   options?: Prisma.JsonFilter<"Trigger">
   pathToken?: Prisma.StringNullableFilter<"Trigger"> | string | null
   verification?: Prisma.EnumTriggerVerificationNullableFilter<"Trigger"> | $Enums.TriggerVerification | null
@@ -871,6 +896,7 @@ export type TriggerCreateWithoutTeammateInput = {
   organizationId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -891,6 +917,7 @@ export type TriggerUncheckedCreateWithoutTeammateInput = {
   connectionId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -933,6 +960,7 @@ export type TriggerCreateWithoutSessionsInput = {
   organizationId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -954,6 +982,7 @@ export type TriggerUncheckedCreateWithoutSessionsInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -985,6 +1014,7 @@ export type TriggerUpdateWithoutSessionsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1006,6 +1036,7 @@ export type TriggerUncheckedUpdateWithoutSessionsInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1021,6 +1052,7 @@ export type TriggerCreateWithoutConnectionInput = {
   organizationId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1041,6 +1073,7 @@ export type TriggerUncheckedCreateWithoutConnectionInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1083,6 +1116,7 @@ export type TriggerCreateWithoutProjectInput = {
   organizationId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1104,6 +1138,7 @@ export type TriggerUncheckedCreateWithoutProjectInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1145,6 +1180,7 @@ export type TriggerCreateWithoutPlaybookInstallationInput = {
   organizationId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1166,6 +1202,7 @@ export type TriggerUncheckedCreateWithoutPlaybookInstallationInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1209,6 +1246,7 @@ export type TriggerCreateManyWorkspaceInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1224,6 +1262,7 @@ export type TriggerUpdateWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1244,6 +1283,7 @@ export type TriggerUncheckedUpdateWithoutWorkspaceInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1262,6 +1302,7 @@ export type TriggerUncheckedUpdateManyWithoutWorkspaceInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1279,6 +1320,7 @@ export type TriggerCreateManyTeammateInput = {
   connectionId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1294,6 +1336,7 @@ export type TriggerUpdateWithoutTeammateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1314,6 +1357,7 @@ export type TriggerUncheckedUpdateWithoutTeammateInput = {
   connectionId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1332,6 +1376,7 @@ export type TriggerUncheckedUpdateManyWithoutTeammateInput = {
   connectionId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1349,6 +1394,7 @@ export type TriggerCreateManyConnectionInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1364,6 +1410,7 @@ export type TriggerUpdateWithoutConnectionInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1384,6 +1431,7 @@ export type TriggerUncheckedUpdateWithoutConnectionInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1402,6 +1450,7 @@ export type TriggerUncheckedUpdateManyWithoutConnectionInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1420,6 +1469,7 @@ export type TriggerCreateManyProjectInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1434,6 +1484,7 @@ export type TriggerUpdateWithoutProjectInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1455,6 +1506,7 @@ export type TriggerUncheckedUpdateWithoutProjectInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1473,6 +1525,7 @@ export type TriggerUncheckedUpdateManyWithoutProjectInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1490,6 +1543,7 @@ export type TriggerCreateManyPlaybookInstallationInput = {
   teammateId: string
   label: string
   event: string
+  instructions?: string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: string | null
   verification?: $Enums.TriggerVerification | null
@@ -1504,6 +1558,7 @@ export type TriggerUpdateWithoutPlaybookInstallationInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1525,6 +1580,7 @@ export type TriggerUncheckedUpdateWithoutPlaybookInstallationInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1543,6 +1599,7 @@ export type TriggerUncheckedUpdateManyWithoutPlaybookInstallationInput = {
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
@@ -1591,6 +1648,7 @@ export type TriggerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   teammateId?: boolean
   label?: boolean
   event?: boolean
+  instructions?: boolean
   options?: boolean
   pathToken?: boolean
   verification?: boolean
@@ -1616,6 +1674,7 @@ export type TriggerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   teammateId?: boolean
   label?: boolean
   event?: boolean
+  instructions?: boolean
   options?: boolean
   pathToken?: boolean
   verification?: boolean
@@ -1639,6 +1698,7 @@ export type TriggerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   teammateId?: boolean
   label?: boolean
   event?: boolean
+  instructions?: boolean
   options?: boolean
   pathToken?: boolean
   verification?: boolean
@@ -1662,6 +1722,7 @@ export type TriggerSelectScalar = {
   teammateId?: boolean
   label?: boolean
   event?: boolean
+  instructions?: boolean
   options?: boolean
   pathToken?: boolean
   verification?: boolean
@@ -1672,7 +1733,7 @@ export type TriggerSelectScalar = {
   createdAt?: boolean
 }
 
-export type TriggerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "connectionId" | "teammateId" | "label" | "event" | "options" | "pathToken" | "verification" | "verificationSecretId" | "createdByMemberId" | "projectId" | "playbookInstallationId" | "createdAt", ExtArgs["result"]["trigger"]>
+export type TriggerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "connectionId" | "teammateId" | "label" | "event" | "instructions" | "options" | "pathToken" | "verification" | "verificationSecretId" | "createdByMemberId" | "projectId" | "playbookInstallationId" | "createdAt", ExtArgs["result"]["trigger"]>
 export type TriggerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
@@ -1718,6 +1779,10 @@ export type $TriggerPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * The catalog id, e.g. gmail.email_received.
      */
     event: string
+    /**
+     * What the teammate does with each event: the first lines of each thread it starts.
+     */
+    instructions: string | null
     /**
      * The trigger's options from the catalog, e.g. { "query": "to:support@acme.com" }.
      */
@@ -2183,6 +2248,7 @@ export interface TriggerFieldRefs {
   readonly teammateId: Prisma.FieldRef<"Trigger", 'String'>
   readonly label: Prisma.FieldRef<"Trigger", 'String'>
   readonly event: Prisma.FieldRef<"Trigger", 'String'>
+  readonly instructions: Prisma.FieldRef<"Trigger", 'String'>
   readonly options: Prisma.FieldRef<"Trigger", 'Json'>
   readonly pathToken: Prisma.FieldRef<"Trigger", 'String'>
   readonly verification: Prisma.FieldRef<"Trigger", 'TriggerVerification'>

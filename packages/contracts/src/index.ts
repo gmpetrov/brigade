@@ -29,6 +29,7 @@ export * from './suggestions.js'
 export * from './tasks.js'
 export * from './thread-history.js'
 export * from './trigger-events.js'
+export * from './triggers.js'
 
 /**
  * Bump when the runner protocol changes. 2: threads with several teammates.
@@ -64,8 +65,10 @@ export * from './trigger-events.js'
  *     lines; tidy runs lay a memory file out again (memory.tidy).
  * 36: after a turn, Claude Code guesses the person's next message (the spec's `suggestions`, message.suggested).
  * 37: reviews in child threads (request_review as a schedule.call operation; the spec's project.reviewPolicy).
+ * 38: triggers from a thread (list_triggers and create_trigger as schedule.call operations), which may
+ *     answer connector.pending while an admin decides.
  */
-export const PROTOCOL_VERSION = 37
+export const PROTOCOL_VERSION = 38
 /** Runners from this version on say when their disk is still full (disk). */
 export const DISK_PROTOCOL = 34
 /** Runners from this version on try a failed turn again when a person asks (thread.retry). */

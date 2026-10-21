@@ -738,6 +738,19 @@ export async function messageChild(
       error:
         'That is not a child of this thread. message_thread writes only in your child threads (list_children) or a started task’s thread (taskId).',
     }
+  // A review whose pull request is merged or closed: work it is asked for now is another pull
+  // request's, which Brigade would show as unreviewed, with Merge. That one gets its own review.
+  const reviewed = await db.pullRequest.findFirst({
+    where: { reviewSessionId: child.id, state: { not: 'open' } },
+    select: { number: true, state: true },
+  })
+  if (reviewed)
+    return {
+      error:
+        `This thread reviewed #${reviewed.number}, which is ${reviewed.state}. To have its fixes in a new ` +
+        'pull request reviewed, call request_review on that one, with this reviewer: Brigade then shows ' +
+        'the person that it is in review.',
+    }
   const thread = await loadThread(db, child.id)
   if (thread.controlledByMemberId)
     return { error: 'A person has control of that thread right now. Try again later.' }

@@ -394,6 +394,8 @@ const onlyCredentialMentions = (text: string) => {
 }
 
 type TicketPayload = {
+  /** A teammate's trigger, waiting in this API process (trigger-calls.ts). */
+  triggerAction?: 'create'
   /** A connector call waiting in this API process. */
   connectionId?: string
   /** A harness approval or question: the harness's own id for it. */
@@ -535,6 +537,12 @@ export async function resolveTicket(
         throw new HTTPException(403, { message: 'Only an admin can add or change a skill' })
       await decideSkillProposal(db, scope, ticket, input.approved)
       return { ok: true, live: false }
+    }
+    if (payload.triggerAction) {
+      // An outside event that starts work on someone's accounts: an admin's call, as on the Apps page.
+      if (!isAdmin)
+        throw new HTTPException(403, { message: 'Only an owner or admin can add a trigger' })
+      return { ok: true, live: await decideTicket(scope, ticket.id, input) }
     }
     if (payload.credentialAction) {
       await mayDecideCredential(db, scope, payload, { isAdmin, isStarter, always: input.always })

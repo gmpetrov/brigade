@@ -157,7 +157,7 @@ const saveState = (identifier: string, value: OAuthState) =>
  * account of its App, adding the App the first time. A personal account (a
  * mailbox, a calendar) starts as the member's own: used only in their threads.
  */
-async function createConnection(
+export async function createConnection(
   scope: WorkspaceScope,
   connection: {
     kind: ConnectorKind

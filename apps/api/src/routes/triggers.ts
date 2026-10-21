@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { CreateTrigger, SetProject } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { audit } from '../audit.js'
+import { audit, type Actor } from '../audit.js'
 import { env } from '../config.js'
 import { triggerCatalog, triggersOf } from '../connectors/index.js'
 import type { ConnectorKind } from '../connectors/types.js'
@@ -40,7 +40,7 @@ const KINDS: ConnectorKind[] = [
   'webhook',
 ]
 
-const urlOf = (pathToken: string) => `${env.API_URL}/hooks/${pathToken}`
+export const urlOf = (pathToken: string) => `${env.API_URL}/hooks/${pathToken}`
 
 /** Delete triggers and their signing secrets. The caller syncs the subscriptions. */
 export async function deleteTriggers(
@@ -78,6 +78,99 @@ export async function resync(scope: Scope, connectionIds: Iterable<string>) {
     await syncConnection(scope, id).catch((error) =>
       console.error(`resync ${id}:`, error instanceof Error ? error.message : error),
     )
+}
+
+/**
+ * Create a trigger and subscribe the vendor to its events now, so a refusal is seen by
+ * whoever asked and the trigger is not kept. A custom app's hmac signing secret is only
+ * ever returned here: the caller shows it once, or keeps it in the vault.
+ */
+export async function createTrigger(
+  db: ScopedDb,
+  scope: Scope,
+  input: ReturnType<typeof CreateTrigger.parse>,
+  by: {
+    /** Its threads run on this member's accounts. */
+    createdByMemberId: string
+    actor: Actor
+    /** Who approved it, when a teammate asked for it. */
+    approvedByMemberId?: string
+  },
+) {
+  const [connection, teammate] = await Promise.all([
+    db.connection.findFirst({ where: { id: input.connectionId, status: { not: 'removed' } } }),
+    db.teammate.findFirst({ where: { id: input.teammateId, archivedAt: null } }),
+  ])
+  if (!connection || !teammate)
+    throw new HTTPException(404, { message: 'Connection or teammate not found' })
+  const definition = triggersOf(connection.kind)[input.event]
+  if (!definition)
+    throw new HTTPException(400, {
+      message: `${connection.label} has no trigger "${input.event}"`,
+    })
+  const reason = unavailable(connection.kind)
+  if (reason) throw new HTTPException(409, { message: reason })
+
+  // Only the catalog's options, without empty ones.
+  const options: Record<string, string> = {}
+  for (const option of definition.options ?? []) {
+    const value = input.options[option.name]?.trim()
+    if (value) options[option.name] = value
+    else if (option.required)
+      throw new HTTPException(400, { message: `${option.label} is required` })
+  }
+
+  const custom = connection.kind === 'webhook'
+  if (custom && !input.verification)
+    throw new HTTPException(400, { message: 'Choose how the sender is verified' })
+  const secret =
+    custom && input.verification === 'hmac' ? `bwh_${randomBytes(32).toString('base64url')}` : null
+  const pathToken = custom ? randomBytes(24).toString('base64url') : null
+  const row = await db.trigger.create({
+    data: {
+      connectionId: connection.id,
+      teammateId: teammate.id,
+      label: input.label,
+      event: input.event,
+      options,
+      instructions: input.instructions || null,
+      pathToken,
+      verification: custom ? input.verification : null,
+      verificationSecretId: secret ? await sealSecret(db, scope, { secret }) : null,
+      createdByMemberId: by.createdByMemberId,
+      projectId: (await usableProject(db, input.projectId)) ?? null,
+    } as never,
+  })
+
+  try {
+    await syncConnection(scope, connection.id)
+  } catch (error) {
+    await deleteTriggers(db, { id: row.id })
+    await resync(scope, [connection.id])
+    if (error instanceof SubscribeError) throw new HTTPException(400, { message: error.message })
+    throw new HTTPException(502, {
+      message: `${connection.label} could not be subscribed to: ${error instanceof Error ? error.message : error}`,
+    })
+  }
+  await audit({
+    ...scope,
+    actor: by.actor,
+    action: 'trigger.created',
+    target: { type: 'trigger', id: row.id },
+    data: {
+      connectionId: connection.id,
+      teammateId: teammate.id,
+      event: input.event,
+      options,
+      ...(by.approvedByMemberId ? { approvedByMemberId: by.approvedByMemberId } : {}),
+    },
+  })
+  return {
+    id: row.id,
+    connection,
+    url: pathToken ? urlOf(pathToken) : null,
+    signingSecret: secret,
+  }
 }
 
 export const triggers = new Hono<AppEnv>()
@@ -118,75 +211,15 @@ export const triggers = new Hono<AppEnv>()
     const { scope, db } = c.var
     requireRole(scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, CreateTrigger)
-    const [connection, teammate] = await Promise.all([
-      db.connection.findFirst({ where: { id: input.connectionId, status: { not: 'removed' } } }),
-      db.teammate.findFirst({ where: { id: input.teammateId, archivedAt: null } }),
-    ])
-    if (!connection || !teammate)
-      throw new HTTPException(404, { message: 'Connection or teammate not found' })
-    const definition = triggersOf(connection.kind)[input.event]
-    if (!definition)
-      throw new HTTPException(400, {
-        message: `${connection.label} has no trigger "${input.event}"`,
-      })
-    const reason = unavailable(connection.kind)
-    if (reason) throw new HTTPException(409, { message: reason })
-
-    // Only the catalog's options, without empty ones.
-    const options: Record<string, string> = {}
-    for (const option of definition.options ?? []) {
-      const value = input.options[option.name]?.trim()
-      if (value) options[option.name] = value
-      else if (option.required)
-        throw new HTTPException(400, { message: `${option.label} is required` })
-    }
-
-    const custom = connection.kind === 'webhook'
-    if (custom && !input.verification)
-      throw new HTTPException(400, { message: 'Choose how the sender is verified' })
-    const secret =
-      custom && input.verification === 'hmac'
-        ? `bwh_${randomBytes(32).toString('base64url')}`
-        : null
-    const pathToken = custom ? randomBytes(24).toString('base64url') : null
-    const row = await db.trigger.create({
-      data: {
-        connectionId: connection.id,
-        teammateId: teammate.id,
-        label: input.label,
-        event: input.event,
-        options,
-        pathToken,
-        verification: custom ? input.verification : null,
-        verificationSecretId: secret ? await sealSecret(db, scope, { secret }) : null,
-        createdByMemberId: scope.memberId,
-        projectId: (await usableProject(db, input.projectId)) ?? null,
-      } as never,
-    })
-
-    // Subscribe the vendor now, so a refusal is the admin's to see and the trigger is not kept.
-    try {
-      await syncConnection(scope, connection.id)
-    } catch (error) {
-      await deleteTriggers(db, { id: row.id })
-      await resync(scope, [connection.id])
-      if (error instanceof SubscribeError) throw new HTTPException(400, { message: error.message })
-      throw new HTTPException(502, {
-        message: `${connection.label} could not be subscribed to: ${error instanceof Error ? error.message : error}`,
-      })
-    }
-    await audit({
-      ...scope,
+    const created = await createTrigger(db, scope, input, {
+      createdByMemberId: scope.memberId,
       actor: { type: 'member', id: scope.memberId },
-      action: 'trigger.created',
-      target: { type: 'trigger', id: row.id },
-      data: { connectionId: connection.id, teammateId: teammate.id, event: input.event, options },
     })
     return c.json(
       {
-        id: row.id,
-        url: pathToken ? urlOf(pathToken) : null,
-        ...(secret ? { signingSecret: secret } : {}),
+        id: created.id,
+        url: created.url,
+        ...(created.signingSecret ? { signingSecret: created.signingSecret } : {}),
       },
       201,
     )

@@ -87,6 +87,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import {
   api,
   computerName,
+  isAdmin,
   preload,
   teammateModelLabel,
   useApi,
@@ -1003,6 +1004,7 @@ export function ThreadConversation({
                     teammates={people}
                     drafting={text.trim() !== ''}
                     canApprove={t.mayPrompt}
+                    admin={isAdmin(me)}
                     working={busy}
                     starting={current === 'starting'}
                     background={background}

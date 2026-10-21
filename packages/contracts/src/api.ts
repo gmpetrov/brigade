@@ -6,6 +6,7 @@ import { LibraryAccess, LibraryPath } from './library.js'
 import { isHarnessModel } from './models.js'
 import { Logo } from './projects.js'
 import { CLIPBOARD_MAX, Effort, HarnessId } from './runner.js'
+import { TriggerInstructions } from './triggers.js'
 
 export const HealthResponse = z.object({
   status: z.literal('ok'),
@@ -203,6 +204,8 @@ export const CreateTrigger = z.object({
   verification: z.enum(['hmac', 'none']).optional(),
   /** The threads it starts are in this project. */
   projectId: z.string().nullish(),
+  /** What the teammate does with each event, before the event in each thread. */
+  instructions: TriggerInstructions.optional(),
 })
 export const ResolveTicket = z.object({
   approved: z.boolean(),

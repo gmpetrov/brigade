@@ -611,7 +611,12 @@ const schedules = (spec: ThreadSpec) =>
   'wakes you here only when it has something to say; `attachToThread: false` makes runs threads of their own. ' +
   '`list_schedules` and `update_schedule` show and change yours. ' +
   'A thread that starts with "Scheduled run of" is one of those runs: nobody is watching it live, so do the work ' +
-  'and open a ticket when you need a person.' +
+  'and open a ticket when you need a person.\n\n' +
+  'When the person asks for work to start on its own when something happens elsewhere (a payment fails, an app ' +
+  'reports an error, a form is sent), set it up with `create_trigger`: `list_triggers` shows the Apps whose events ' +
+  'can start a thread, and any other service that can send a webhook is a custom app with a URL of its own. Each ' +
+  'event starts a fresh thread with your instructions first, so they must stand alone. An owner or admin approves ' +
+  'each trigger, and the call waits for them; once it is made, finish setting up the sender yourself when you can.' +
   (spec.parent
     ? ''
     : '\n\n' +
@@ -780,6 +785,11 @@ const AFTER_REVIEW =
   'With a review, Brigade starts it in a child thread, with a brief of its own, and wakes you with its report: ' +
   `fix what it rightly found and push, then ask the reviewer to look at what changed with \`message_thread\` ` +
   `(${REVIEW_RECHECKS} times at most), or tell it why you disagree; then tell the person where it stands. ` +
+  'When you pushed after its last look and may not ask it again, say so: the pull request shows those commits ' +
+  'as not reviewed, and the person can have them read with Review again on it. ' +
+  "When its fixes go in a new pull request, leave that one's `review` out and call `request_review` on it, " +
+  'naming the same reviewer, rather than only messaging its old review thread: the person sees a review on a pull request only ' +
+  'when Brigade started it, and otherwise is offered to merge it while it is still being read. ' +
   'Do not offer to merge a pull request while its review runs.'
 
 /** Reviews of the pull requests this thread opens. */
