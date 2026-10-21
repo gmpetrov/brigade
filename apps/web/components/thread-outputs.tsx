@@ -52,6 +52,7 @@ import {
   hasConflicts,
   resolvesInBrigade,
   resolving,
+  reviewer,
 } from '@/lib/merge-method'
 import { dayLabel } from '@/lib/utils'
 
@@ -554,12 +555,12 @@ function PullOutput({
         </Button>
       )
     const mergeable = canMerge(p)
-    // A failed check doesn't stop it here, GitHub does if it must: the pill only gets quieter.
+    // A failed check or a review under way doesn't stop it here, GitHub does if it must: the pill only gets quieter.
     const failing = p.checks.some((c) => c.status === 'failure')
     return (
       <Button
         size="xs"
-        variant={failing ? 'outline' : 'default'}
+        variant={failing || reviewer(p) ? 'outline' : 'default'}
         className={`${pill} px-2.5`}
         disabled={busy || !mergeable}
         onClick={merge}

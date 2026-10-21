@@ -131,14 +131,23 @@ export function PullCard({
         </Button>
       )
     if (resolving(p) || (mergeElsewhere && mergeable)) return <PullStatus pull={p} />
-    return mergeButton(mergeable, mergeable ? undefined : blockedBecause[p.mergeableState])
+    const button = mergeButton(mergeable, mergeable ? undefined : blockedBecause[p.mergeableState])
+    // Its review is under way: it says so first, and Merge steps back until the review is in.
+    return reviewer(p) ? (
+      <span className="flex flex-none items-center gap-2">
+        <PullStatus pull={p} />
+        {button}
+      </span>
+    ) : (
+      button
+    )
   }
 
-  // Filled, as every card's main action, while it can merge.
+  // Filled, as every card's main action, while it can merge and no review is under way.
   const mergeButton = (enabled: boolean, title?: string) => (
     <Button
       size="sm"
-      variant={enabled ? 'default' : 'outline'}
+      variant={enabled && !(p && reviewer(p)) ? 'default' : 'outline'}
       className="relative z-10 flex-none"
       disabled={busy || !enabled}
       onClick={merge}

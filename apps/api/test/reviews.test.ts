@@ -492,6 +492,30 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     assert.equal((await row(21)).state, 'closed')
   })
 
+  test('once its pull request is merged, its reviewer is not asked to look at another one in the same thread', async () => {
+    const { messageChild } = await import('../src/children.js')
+    await open(ids.thread, 22, { wanted: true, reason: 'New permissions' })
+    const child = (await row(22)).reviewSessionId!
+    await db.session.updateMany({ where: { id: child }, data: { reportDeliveredAt: new Date() } })
+    await db.pullRequest.updateMany({
+      where: { repository: repo, number: 22 },
+      data: { state: 'merged' },
+    })
+    const told = await messageChild(
+      db,
+      scope,
+      { id: ids.thread, title: 'Thread' },
+      { id: ids.riley, name: 'Riley' },
+      child,
+      'The fixes are in #23, can you look?',
+    )
+    assert.ok('error' in told)
+    assert.match(told.error, /#22, which is merged.*request_review/)
+    // Nothing waits for it: the new pull request is not shown as in review by this thread.
+    const after = await db.session.findFirstOrThrow({ where: { id: child } })
+    assert.ok(after.reportDeliveredAt)
+  })
+
   test('the brief says whether the repository runs checks, and how the thread started', async () => {
     const { reviewBrief } = await import('../src/reviews.js')
     const brief = (checks: string[], child = true, self = false) =>
