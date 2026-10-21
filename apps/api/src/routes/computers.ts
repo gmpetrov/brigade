@@ -12,7 +12,7 @@ import {
 } from '../cloud.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
-import { connectedBundle, hashToken, isOnline } from '../hub.js'
+import { connectedBundle, hashToken, isOnline, isRestarting } from '../hub.js'
 import { issueLinkCode, redeemLinkCode } from '../link-codes.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import { runnerBundle } from './runner-install.js'
@@ -47,6 +47,8 @@ export const computers = new Hono<AppEnv>()
       computers: rows.map(({ providerRef: _ref, ...row }) => ({
         ...row,
         online: isOnline(row.id),
+        // Its runner restarts into an update: online all along, but not working for a minute.
+        restarting: isRestarting(row.id),
         runnerUpdate: runnerUpdate(served, connectedBundle(row.id)),
       })),
     })

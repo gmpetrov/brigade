@@ -91,7 +91,8 @@ const restarting = new Map<
 /** Longest an update's restart may take: past it, the computer is offline after all. */
 const RESTART_MS = 2 * 60_000
 
-const isRestarting = (computerId: string) => (restarting.get(computerId)?.until ?? 0) > Date.now()
+export const isRestarting = (computerId: string) =>
+  (restarting.get(computerId)?.until ?? 0) > Date.now()
 
 export const hashToken = (token: string) => createHash('sha256').update(token).digest('hex')
 
@@ -608,6 +609,8 @@ export function runnerSocket(runner: {
         timer: setTimeout(() => restartTimedOut(runner), RESTART_MS),
         protocolVersion: conn.protocolVersion,
       })
+      // Its threads say their computer is restarting, rather than look at work.
+      broadcastComputer(runner.workspaceId, runner.computerId)
       return
     }
 
@@ -1590,6 +1593,12 @@ export function browserSocket(scope: WorkspaceScope) {
         })
         afterSeq = rows.at(-1)!.seq
       }
+      // And its status now: a dashboard that was away (a phone asleep) missed its changes.
+      const now = await prisma.session.findUnique({
+        where: { id: session.id },
+        select: { status: true },
+      })
+      if (now) send(ws, { type: 'thread.updated', sessionId: session.id, status: now.status })
     },
     onClose() {
       browsers.delete(conn)
