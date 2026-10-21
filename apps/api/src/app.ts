@@ -2,6 +2,7 @@ import { PROTOCOL_VERSION, type HealthResponse } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { auth } from './auth.js'
+import { checkoutReturn, stripeWebhook } from './billing.js'
 import { apiCors } from './cors.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
@@ -12,6 +13,7 @@ import { authenticateRunner, browserSocket, runnerSocket } from './hub.js'
 import { accounts } from './routes/accounts.js'
 import { documentAssets } from './routes/assets.js'
 import { attachments } from './routes/attachments.js'
+import { billing } from './routes/billing.js'
 import { collab } from './routes/collab.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
@@ -80,12 +82,25 @@ app.get('/health/db', async (c) => {
 })
 
 app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+// Billing (src/billing.ts): Stripe's webhook, verified by its signature, and the way back
+// from Checkout, which reads only Stripe. Neither needs a session: before the routers below,
+// whose middleware asks for one.
+app.post('/api/billing/webhook', (c) => stripeWebhook(c.req.raw))
+app.get('/api/billing/return', async (c) => {
+  await checkoutReturn(c.req.query('session')).catch((error) =>
+    // The webhook does it, a moment later.
+    console.error('billing: reconciling on the way back from Checkout failed', error),
+  )
+  const page = c.req.query('to') === 'onboarding' ? '/onboarding' : '/app/billing'
+  return c.redirect(`${env.WEB_URL[0]}${page}?subscribed=1`)
+})
 // Brigade's OAuth client ID metadata document, read by MCP servers' authorization servers.
 app.get('/api/mcp/client.json', (c) => c.json(mcpClientDocument()))
 app.use('/api/connections/oauth/*', signInFirst)
 app.route('/api', workspaces)
 app.route('/api/teammates', teammates)
 app.route('/api/computers', computers)
+app.route('/api/billing', billing)
 app.route('/api/accounts', accounts)
 app.route('/api/connections', connections)
 app.route('/api/credentials', credentials)

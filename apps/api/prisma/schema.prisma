@@ -37,6 +37,32 @@ model User {
   pushDevices   PushDevice[]
 }
 
+/// A workspace's paid plan (src/billing.ts): Cloud, which gives it the cloud computer. It
+/// only ever holds Stripe's current state for its subscription. A row with no
+/// stripeSubscriptionId and status "active" is a complimentary plan, added by hand.
+model BillingSubscription {
+  id                   String    @id @default(cuid())
+  workspaceId          String
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// "cloud"
+  plan                 String
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  /// Stripe's: active, trialing, past_due, canceled, unpaid, incomplete…
+  status               String    @default("incomplete")
+  periodStart          DateTime?
+  periodEnd            DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  cancelAt             DateTime?
+  canceledAt           DateTime?
+  endedAt              DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([stripeSubscriptionId])
+}
+
 /// A signed-in browser session (better-auth "session"). Not a thread.
 model AuthSession {
   id                   String   @id
@@ -87,16 +113,29 @@ model Verification {
 }
 
 model Organization {
-  id          String       @id
-  name        String
-  slug        String       @unique
-  logo        String?
-  metadata    String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime?    @updatedAt
-  members     Member[]
-  invitations Invitation[]
-  workspaces  Workspace[]
+  id              String           @id
+  name            String
+  slug            String           @unique
+  logo            String?
+  metadata        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime?        @updatedAt
+  members         Member[]
+  invitations     Invitation[]
+  workspaces      Workspace[]
+  billingClosings BillingClosing[]
+}
+
+/// A deletion of the organization under way (src/billing.ts): while one is younger than 10
+/// minutes, no Checkout starts in it. One per request, so each removes only its own when it
+/// is refused or fails; the deletion itself removes them all.
+model BillingClosing {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime
+
+  @@index([organizationId])
 }
 
 /// A user's role in an organization: owner, admin or member.
@@ -157,6 +196,9 @@ model Workspace {
   /// Its logo in the bucket (workspaceLogoKey), shown instead of its letter: "<version>.<type>",
   /// e.g. "k2x9f1.png". Unset: none.
   logo                  String?
+  /// Its own Stripe customer (src/billing.ts), made on its first Checkout: its plan's
+  /// invoices and card, apart from any other workspace's.
+  stripeCustomerId      String?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   computers             Computer[]
@@ -206,6 +248,7 @@ model Workspace {
   playbookRuns          PlaybookRun[]
   playbookDryRuns       PlaybookDryRun[]
   threadFollows         ThreadFollow[]
+  billingSubscriptions  BillingSubscription[]
 
   @@index([organizationId])
 }

@@ -14,6 +14,7 @@
     "db:seed": "tsx --env-file=.env prisma/seed.ts",
     "test": "node scripts/playbooks.mjs && node --import tsx --test test/*.test.ts",
     "vapid": "node scripts/vapid.mjs",
+    "stripe:setup": "node --env-file-if-exists=.env scripts/stripe-setup.mjs",
     "playbooks": "node scripts/playbooks.mjs"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "prisma": "7.10.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "stripe": "22.6.2",
     "unpdf": "1.9.0",
     "ws": "8.22.0",
     "y-prosemirror": "1.3.7",

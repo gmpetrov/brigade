@@ -26,6 +26,9 @@ const UNSCOPED = new Set([
   'Organization',
   'PushDevice',
   'McpClient',
+  // A workspace's plan, an organization's deletion under way: src/billing.ts's only.
+  'BillingSubscription',
+  'BillingClosing',
 ])
 const READS_AND_BULK = new Set([
   'findUnique',

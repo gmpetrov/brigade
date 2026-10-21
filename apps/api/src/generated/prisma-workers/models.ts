@@ -9,10 +9,12 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/User.js'
+export type * from './models/BillingSubscription.js'
 export type * from './models/AuthSession.js'
 export type * from './models/AuthAccount.js'
 export type * from './models/Verification.js'
 export type * from './models/Organization.js'
+export type * from './models/BillingClosing.js'
 export type * from './models/Member.js'
 export type * from './models/Invitation.js'
 export type * from './models/Workspace.js'

@@ -516,14 +516,33 @@ export type Account = {
   login: AccountLogin | null
 }
 
-export type ComputersResponse = { cloudAvailable: boolean; computers: Computer[] }
+export type ComputersResponse = {
+  cloudAvailable: boolean
+  /** Billing is on: the cloud computer comes with the workspace's Cloud plan (Settings › Billing). */
+  billing: boolean
+  /** The workspace may have its cloud computer: it has the plan, or billing is off. */
+  cloudEntitled: boolean
+  computers: Computer[]
+}
 
-/** Computers a thread can run on: online machines, and the workspace computer unless broken (it resumes on demand). */
+/**
+ * Computers a thread can run on: online machines, and the workspace computer unless broken
+ * (it resumes on demand) or its plan ended (it stays stopped until the plan comes back).
+ */
 export const usableComputers = (data: ComputersResponse | undefined) =>
   (data?.computers ?? []).filter(
     (c) =>
-      c.online || (c.kind === 'cloud' && ['running', 'stopped', 'starting'].includes(c.status)),
+      c.online ||
+      (c.kind === 'cloud' &&
+        data!.cloudEntitled &&
+        ['running', 'stopped', 'starting'].includes(c.status)),
   )
+
+/** Stripe Checkout for the workspace's Cloud plan: opens it, coming back to `from` after. */
+export async function subscribeToCloud(from: 'billing' | 'onboarding' = 'billing') {
+  const { url } = await api<{ url: string }>('/billing/checkout', { body: { from } })
+  window.location.assign(url)
+}
 
 export const computerName = (c: { kind: string; name: string }) =>
   c.kind === 'cloud' ? 'Cloud computer' : c.name

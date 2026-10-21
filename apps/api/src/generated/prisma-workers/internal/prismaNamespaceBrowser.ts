@@ -52,10 +52,12 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
+  BillingSubscription: 'BillingSubscription',
   AuthSession: 'AuthSession',
   AuthAccount: 'AuthAccount',
   Verification: 'Verification',
   Organization: 'Organization',
+  BillingClosing: 'BillingClosing',
   Member: 'Member',
   Invitation: 'Invitation',
   Workspace: 'Workspace',
@@ -142,6 +144,26 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const BillingSubscriptionScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  plan: 'plan',
+  stripeCustomerId: 'stripeCustomerId',
+  stripeSubscriptionId: 'stripeSubscriptionId',
+  status: 'status',
+  periodStart: 'periodStart',
+  periodEnd: 'periodEnd',
+  cancelAtPeriodEnd: 'cancelAtPeriodEnd',
+  cancelAt: 'cancelAt',
+  canceledAt: 'canceledAt',
+  endedAt: 'endedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type BillingSubscriptionScalarFieldEnum = (typeof BillingSubscriptionScalarFieldEnum)[keyof typeof BillingSubscriptionScalarFieldEnum]
+
+
 export const AuthSessionScalarFieldEnum = {
   id: 'id',
   token: 'token',
@@ -202,6 +224,15 @@ export const OrganizationScalarFieldEnum = {
 export type OrganizationScalarFieldEnum = (typeof OrganizationScalarFieldEnum)[keyof typeof OrganizationScalarFieldEnum]
 
 
+export const BillingClosingScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  createdAt: 'createdAt'
+} as const
+
+export type BillingClosingScalarFieldEnum = (typeof BillingClosingScalarFieldEnum)[keyof typeof BillingClosingScalarFieldEnum]
+
+
 export const MemberScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -234,6 +265,7 @@ export const WorkspaceScalarFieldEnum = {
   organizationId: 'organizationId',
   name: 'name',
   logo: 'logo',
+  stripeCustomerId: 'stripeCustomerId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

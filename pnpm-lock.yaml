@@ -94,6 +94,9 @@ importers:
       react-dom:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
+      stripe:
+        specifier: 22.6.2
+        version: 22.6.2(@types/node@22.20.5)
       unpdf:
         specifier: 1.9.0
         version: 1.9.0(@napi-rs/canvas@1.0.11)
@@ -5205,6 +5208,15 @@ packages:
   strip-final-newline@2.0.0:
     resolution: {integrity: sha512-BrpvfNAE3dcvq7ll3xVumzjKjZQ5tI1sEUIKr3Uoks0XUl45St3FlatVqef9prk4jRDzhW6WZg+3bk93y6pLjA==}
     engines: {node: '>=6'}
+
+  stripe@22.6.2:
+    resolution: {integrity: sha512-PwRE2scocvXqDKPiskMa5vRJEAEkq46W69XyUYmAwrNSLr675lQnfqLwnsndAWizwgihOWw/irLmoFRo3ez7ew==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/node': '>=18'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   style-to-js@1.1.21:
     resolution: {integrity: sha512-RjQetxJrrUJLQPHbLku6U/ocGtzyjbJMP9lCNK7Ag0CNh690nSH8woqWH9u16nMjYBAok+i7JO1NP2pOy8IsPQ==}
@@ -10840,6 +10852,10 @@ snapshots:
       ansi-regex: 6.4.0
 
   strip-final-newline@2.0.0: {}
+
+  stripe@22.6.2(@types/node@22.20.5):
+    optionalDependencies:
+      '@types/node': 22.20.5
 
   style-to-js@1.1.21:
     dependencies:

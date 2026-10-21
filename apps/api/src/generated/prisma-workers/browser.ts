@@ -23,6 +23,13 @@ export * from './enums.js';
  */
 export type User = Prisma.UserModel
 /**
+ * Model BillingSubscription
+ * A workspace's paid plan (src/billing.ts): Cloud, which gives it the cloud computer. It
+ * only ever holds Stripe's current state for its subscription. A row with no
+ * stripeSubscriptionId and status "active" is a complimentary plan, added by hand.
+ */
+export type BillingSubscription = Prisma.BillingSubscriptionModel
+/**
  * Model AuthSession
  * A signed-in browser session (better-auth "session"). Not a thread.
  */
@@ -42,6 +49,13 @@ export type Verification = Prisma.VerificationModel
  * 
  */
 export type Organization = Prisma.OrganizationModel
+/**
+ * Model BillingClosing
+ * A deletion of the organization under way (src/billing.ts): while one is younger than 10
+ * minutes, no Checkout starts in it. One per request, so each removes only its own when it
+ * is refused or fails; the deletion itself removes them all.
+ */
+export type BillingClosing = Prisma.BillingClosingModel
 /**
  * Model Member
  * A user's role in an organization: owner, admin or member.

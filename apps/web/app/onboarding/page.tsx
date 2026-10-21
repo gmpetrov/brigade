@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import {
   api,
   ApiError,
+  subscribeToCloud,
   useApi,
   usableComputers,
   type Account,
@@ -309,8 +310,12 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
   // A new workspace's computer is still being made: sign-in opens once it starts.
   const preparing =
     !computer &&
-    (cloud ? ['pending', 'creating'].includes(cloud.status) : !!computers.data?.cloudAvailable)
+    (cloud
+      ? ['pending', 'creating'].includes(cloud.status)
+      : !!computers.data?.cloudAvailable && computers.data.cloudEntitled)
   const failed = !computer && cloud?.status === 'error'
+  // With billing on, the cloud computer comes with Brigade Cloud: their own machine is free.
+  const planNeeded = !computer && !!computers.data?.cloudAvailable && !computers.data.cloudEntitled
 
   async function signIn(provider: Account['provider']) {
     if (!computer) return
@@ -374,8 +379,8 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
                 </Button>
                 {cloud && !cloud.online && (
                   <p className="text-center text-xs text-muted-foreground">
-                    Your cloud computer is starting. Sign-in begins as soon as it is up, which
-                    takes a few minutes the first time.
+                    Your cloud computer is starting. Sign-in begins as soon as it is up, which takes
+                    a few minutes the first time.
                   </p>
                 )}
               </>
@@ -405,10 +410,29 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
                   Try again
                 </Button>
               </div>
+            ) : planNeeded ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Link your own machine below, for free: its Claude or Codex login is used as is. Or
+                  let your teammates work on Brigade&apos;s cloud computer, even when your Mac is
+                  asleep, with Brigade Cloud at $99 a month.
+                </p>
+                <Button
+                  variant="outline"
+                  className="self-start"
+                  disabled={busy}
+                  onClick={() => {
+                    setBusy(true)
+                    void act(subscribeToCloud('onboarding')).then(() => setBusy(false))
+                  }}
+                >
+                  Subscribe to Brigade Cloud
+                </Button>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                This Brigade has no cloud computer. Link your own machine below: its Claude or
-                Codex login is used as is.
+                This Brigade has no cloud computer. Link your own machine below: its Claude or Codex
+                login is used as is.
               </p>
             )}
           </CardContent>
