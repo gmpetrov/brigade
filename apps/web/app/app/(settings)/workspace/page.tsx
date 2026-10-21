@@ -1,72 +1,110 @@
 'use client'
 // Workspace: its name and logo, seen by every member in the sidebar and the
-// workspace menu. Owners and admins change them; the others see them here.
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+// workspace menu. Owners and admins change them: a click on the logo changes
+// it, and each change saves on its own. The others see them here.
+import { Pencil } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { isAdmin, useDashboard, WorkspaceMark } from '@/components/dashboard'
 import { shrinkLogo } from '@/components/projects'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/api'
+
+type Status = { saving: true } | { saved: true } | { error: string } | null
 
 export default function WorkspacePage() {
   const { me, reloadMe } = useDashboard()
   const admin = isAdmin(me)
   const workspace = me.workspaces.find((w) => w.id === me.activeWorkspaceId)
   const [name, setName] = useState(workspace?.name ?? '')
-  /** Unset: as it is. Null: back to the letter. A data URL: a new logo. */
-  const [logo, setLogo] = useState<string | null>()
+  /** A logo picked and still saving, shown at once. */
+  const [pending, setPending] = useState<string>()
+  const [status, setStatus] = useState<Status>(null)
   const file = useRef<HTMLInputElement>(null)
-  const [busy, setBusy] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [error, setError] = useState<string>()
+  const editing = useRef(false)
+  /** One change at a time, in the order they were made. */
+  const queue = useRef<Promise<unknown>>(Promise.resolve())
 
-  const changed = name.trim() !== (workspace?.name ?? '') || logo !== undefined
-  // A change made elsewhere shows unless this form has unsaved edits.
+  // A change made elsewhere shows, unless the name is being edited here.
   useEffect(() => {
-    if (!changed) setName(workspace?.name ?? '')
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the workspace changes
+    if (!editing.current) setName(workspace?.name ?? '')
   }, [workspace?.name])
 
+  // "Saved" shows for a moment, then goes.
+  useEffect(() => {
+    if (!status || !('saved' in status)) return
+    const timer = setTimeout(() => setStatus(null), 2500)
+    return () => clearTimeout(timer)
+  }, [status])
+
   if (!workspace) return null
+
+  function save(body: { name?: string; logo?: string | null }) {
+    setStatus({ saving: true })
+    const run = queue.current.then(async () => {
+      try {
+        await api('/workspace', { method: 'PATCH', body })
+        await reloadMe()
+        setStatus({ saved: true })
+      } catch (e) {
+        setStatus({ error: (e as Error).message })
+        if (body.name !== undefined) setName(workspace?.name ?? '')
+      } finally {
+        if (body.logo !== undefined) setPending(undefined)
+      }
+    })
+    queue.current = run
+  }
+
+  function saveName() {
+    editing.current = false
+    const next = name.trim()
+    if (!next) return setName(workspace!.name)
+    if (next !== workspace!.name) save({ name: next })
+  }
 
   function pickLogo(picked: File | undefined) {
     if (!picked) return
     const reader = new FileReader()
     reader.onload = async () => {
       const shrunk = await shrinkLogo(String(reader.result)).catch(() => null)
-      if (!shrunk) return setError('That image cannot be a logo: try a PNG or an SVG under 256 KB')
-      setLogo(shrunk)
-      setSaved(false)
-      setError(undefined)
+      if (!shrunk)
+        return setStatus({ error: 'That image cannot be a logo: try a PNG or an SVG under 256 KB' })
+      setPending(shrunk)
+      save({ logo: shrunk })
     }
     reader.readAsDataURL(picked)
   }
 
-  async function save(event: FormEvent) {
-    event.preventDefault()
-    if (!name.trim()) return setError('Name the workspace')
-    setBusy(true)
-    setError(undefined)
-    setSaved(false)
-    try {
-      await api('/workspace', {
-        method: 'PATCH',
-        body: { name: name.trim(), ...(logo !== undefined && { logo }) },
-      })
-      await reloadMe()
-      setLogo(undefined)
-      setSaved(true)
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  /** What shows now: the new logo, the letter, or the saved one. */
-  const hasLogo = logo === undefined ? Boolean(workspace.logo) : logo !== null
+  const mark = pending ? (
+    <span aria-hidden className="flex size-16 overflow-hidden rounded-xl">
+      {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, still saving */}
+      <img src={pending} alt="" className="size-full object-cover" />
+    </span>
+  ) : (
+    <WorkspaceMark
+      workspace={workspace}
+      className="size-16 rounded-xl bg-primary text-2xl text-primary-foreground"
+    />
+  )
+  /** The pencil on the logo: a click changes it. */
+  const editable = (
+    <span className="relative block">
+      {mark}
+      <span className="absolute -right-1.5 -bottom-1.5 flex size-6 items-center justify-center rounded-full border bg-card text-muted-foreground transition-colors group-hover:text-foreground">
+        <Pencil className="size-3" aria-hidden />
+      </span>
+    </span>
+  )
+  const trigger =
+    'group rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card'
 
   return (
     <div className="flex flex-col gap-7">
@@ -74,90 +112,80 @@ export default function WorkspacePage() {
         <h1 className="text-3xl font-extrabold tracking-tight">Workspace</h1>
         <p className="max-w-prose text-muted-foreground">
           Its name and logo, seen by every member in the sidebar.{' '}
-          {!admin && 'Owners and admins can change them.'}
+          {admin
+            ? 'Click the logo to change it; changes save on their own.'
+            : 'Owners and admins can change them.'}
         </p>
       </header>
 
-      <form onSubmit={(e) => void save(e)}>
-        <Card className="gap-5 px-6 py-5">
-          <div className="flex flex-col gap-2">
-            <Label>Logo</Label>
-            <div className="flex flex-wrap items-center gap-3">
-              {logo ? (
-                <span aria-hidden className="flex size-12 overflow-hidden rounded-md">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- a data URL, not sent yet */}
-                  <img src={logo} alt="" className="size-full object-cover" />
-                </span>
-              ) : (
-                <WorkspaceMark
-                  workspace={logo === null ? { ...workspace, logo: null } : workspace}
-                  className="size-12 rounded-md bg-primary text-xl text-primary-foreground"
-                />
-              )}
-              {admin && (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => file.current?.click()}
-                  >
-                    Upload
-                  </Button>
-                  {hasLogo && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setLogo(null)
-                        setSaved(false)
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  )}
-                  <input
-                    ref={file}
-                    type="file"
-                    accept="image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/svg+xml"
-                    className="hidden"
-                    onChange={(e) => {
-                      pickLogo(e.target.files?.[0])
-                      e.target.value = ''
-                    }}
-                  />
-                </>
-              )}
-              {!hasLogo && (
-                <span className="text-sm text-muted-foreground">None: its first letter shows.</span>
-              )}
-            </div>
-          </div>
-          <div className="flex max-w-sm flex-col gap-2">
-            <Label htmlFor="workspace-name">Name</Label>
-            <Input
-              id="workspace-name"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value)
-                setSaved(false)
-              }}
-              maxLength={80}
-              disabled={!admin}
-            />
-          </div>
-          {admin && (
-            <div className="flex items-center gap-3">
-              <Button type="submit" size="sm" disabled={busy || !changed}>
-                {busy ? 'Saving…' : 'Save'}
-              </Button>
-              {saved && !changed && <span className="text-sm text-muted-foreground">Saved</span>}
-              {error && <span className="text-sm text-destructive-text">{error}</span>}
-            </div>
-          )}
-        </Card>
-      </form>
+      <Card className="max-w-xl flex-row items-center gap-5 px-6 py-5">
+        {!admin ? (
+          mark
+        ) : workspace.logo || pending ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger className={trigger} aria-label="Change the logo">
+              {editable}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={() => file.current?.click()}>
+                Upload a new logo
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onSelect={() => save({ logo: null })}>
+                Remove
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <button
+            type="button"
+            className={trigger}
+            aria-label="Upload a logo"
+            onClick={() => file.current?.click()}
+          >
+            {editable}
+          </button>
+        )}
+        <input
+          ref={file}
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/svg+xml"
+          className="hidden"
+          onChange={(e) => {
+            pickLogo(e.target.files?.[0])
+            e.target.value = ''
+          }}
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <Label htmlFor="workspace-name">Name</Label>
+          <Input
+            id="workspace-name"
+            value={name}
+            maxLength={80}
+            disabled={!admin}
+            onFocus={() => (editing.current = true)}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur()
+              if (e.key === 'Escape') {
+                setName(workspace.name)
+                editing.current = false
+                requestAnimationFrame(() => (e.target as HTMLInputElement).blur())
+              }
+            }}
+          />
+        </div>
+      </Card>
+      {status && (
+        <p
+          role="status"
+          className={
+            'error' in status ? 'text-sm text-destructive-text' : 'text-sm text-muted-foreground'
+          }
+        >
+          {'error' in status ? status.error : 'saving' in status ? 'Saving…' : 'Saved'}
+        </p>
+      )}
     </div>
   )
 }
