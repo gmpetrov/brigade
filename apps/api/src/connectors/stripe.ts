@@ -1,6 +1,8 @@
-// Stripe connector: Stripe's own MCP server, signed in with Stripe's OAuth. One sign-in may
-// reach several Stripe accounts (a live account and its sandboxes): each tool call names the
-// account (stripe_context) and the mode (livemode), as list_available_accounts_or_orgs gives them.
+// Stripe connector: Stripe's own MCP server, signed in with Stripe's OAuth. A sign-in may reach
+// several Stripe accounts (a live account and its sandboxes), and each tool call names one
+// (stripe_context) and its mode (livemode). A Brigade account is one Stripe account in one mode,
+// as a key was: its sign-in reaches that one alone, and Brigade adds both to every call, so its
+// access, triggers and grants never reach another account, even one added to the sign-in later.
 import type { ConnectorDefinition } from './types.js'
 
 const read = (description: string) => ({ description, write: false })
@@ -22,17 +24,22 @@ export function stripeAccounts(output: unknown): StripeAccount[] {
 }
 
 /**
- * The accounts a sign-in reaches, as a row shows them: one as its name, id and mode (as
- * accounts connected with a key showed), several as the first one's name and how many more.
+ * A Stripe account as its row shows it: its name, id and mode, as accounts connected with a key
+ * showed. The id and mode say which account the row is (stripeAccountOf).
  */
+export const stripeAccountLabel = (a: StripeAccount) =>
+  `${a.name ? `${a.name} ` : ''}(${a.stripe_context}, ${a.livemode ? 'live mode' : 'test mode'})`
+
+/** The one account a sign-in reaches, as its row shows it; null when it reaches several. */
 export function stripeAccountName(output: unknown): string | null {
   const accounts = stripeAccounts(output)
-  const first = accounts[0]
-  if (!first) return null
-  const mode = first.livemode ? 'live mode' : 'test mode'
-  if (accounts.length === 1)
-    return `${first.name ? `${first.name} ` : ''}(${first.stripe_context}, ${mode})`
-  return `${first.name ?? first.stripe_context} (${mode}) +${accounts.length - 1}`
+  return accounts.length === 1 ? stripeAccountLabel(accounts[0]!) : null
+}
+
+/** The Stripe account and mode a row is, from its label. */
+export function stripeAccountOf(externalAccount: string | null) {
+  const m = /\((acct_\w+), (live|test) mode\)$/.exec(externalAccount ?? '')
+  return m ? { stripe_context: m[1]!, livemode: m[2] === 'live' } : null
 }
 
 /** A call's object for approvals and the log: the API operation, its parameters, the mode. */
@@ -173,15 +180,12 @@ export const stripe: ConnectorDefinition = {
     url: 'https://mcp.stripe.com',
     account: { tool: 'list_available_accounts_or_orgs', name: stripeAccountName },
     target: stripeTarget,
+    fixed: (connection) => stripeAccountOf(connection.externalAccount),
+    // Which accounts the sign-in reaches is the person's choice on Stripe's page, not a teammate's.
+    hidden: ['list_available_accounts_or_orgs', 'manage_stripe_accounts'],
     // As the server lists them to an OAuth sign-in. Its Treasury tools come only to accounts
     // with Treasury, and go by its read-only marks.
     tools: {
-      list_available_accounts_or_orgs: read(
-        'The Stripe accounts of this sign-in, with the stripe_context and livemode each call needs.',
-      ),
-      manage_stripe_accounts: read(
-        'A Stripe Dashboard link where a person adds or removes accounts of this sign-in.',
-      ),
       stripe_api_search: read('Find the Stripe API operation for a task.'),
       stripe_api_details: read('The parameters of a Stripe API operation.'),
       stripe_api_read: read(
