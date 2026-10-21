@@ -10,6 +10,7 @@ import { TeammateForm } from '@/components/teammate-form'
 import { TeammateTitle } from '@/components/teammate-title'
 import { TeammateCaps, TeammateStatus, useTeammateTimeline } from '@/components/teammate-oversight'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, harnessLabel } from '@/lib/api'
 
@@ -108,13 +109,22 @@ function TeammateView() {
                 }}
               />
               {teammate.kind !== 'chief' && (
-                <button
-                  type="button"
-                  onClick={archive}
-                  className="mt-8 w-full max-w-2xl rounded-lg border bg-card px-4 py-3 text-left text-sm font-medium text-destructive-text transition-colors hover:bg-secondary"
-                >
-                  Archive teammate
-                </button>
+                <section className="mt-8 flex w-full max-w-2xl flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border bg-card px-4 py-3">
+                  <div className="flex flex-[1_1_14rem] flex-col gap-0.5">
+                    <h2 className="text-sm font-semibold">Archive teammate</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {teammate.name} stops taking work. Its threads stay in the run log.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive-text"
+                    onClick={archive}
+                  >
+                    Archive
+                  </Button>
+                </section>
               )}
             </TabsContent>
           )}
