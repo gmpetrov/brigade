@@ -352,8 +352,11 @@ async function start() {
       connection.callLibrary({ sessionId, teammateId, operation }),
     callTask: (sessionId, teammateId, { operation }) =>
       connection.callTask({ sessionId, teammateId, operation }),
-    callSchedule: (sessionId, teammateId, { operation }) =>
-      connection.callSchedule({ sessionId, teammateId, operation }),
+    callSchedule: (sessionId, teammateId, { operation, toolCallId, toolName, input }) =>
+      connection.callSchedule(
+        { sessionId, teammateId, operation },
+        approvalHooks(sessionId, teammateId, { toolCallId, toolName, input }),
+      ),
     memoryUpdate: (update) => connection.send(update),
     memoryTidy: (tidy) => connection.send(tidy),
     title: (update) => connection.send(update),

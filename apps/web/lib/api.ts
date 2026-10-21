@@ -21,6 +21,7 @@ import type {
   PullReview,
   ReviewPolicy,
   SkillProposalPayload,
+  TriggerProposalPayload,
   TaskColumn,
   TaskPriority,
   UploadTicket,
@@ -702,6 +703,8 @@ export type Trigger = {
   /** The catalog id, e.g. payment_received. */
   event: string
   options: Record<string, string>
+  /** What the teammate does with each event, first in each thread. */
+  instructions: string | null
   /** Custom apps only. */
   verification: 'hmac' | 'none' | null
   url: string | null
@@ -826,7 +829,8 @@ export type Ticket = {
     details?: CredentialSummary['details']
     changes?: Record<string, string>
     secretReplaced?: boolean
-  } & Partial<SkillProposalPayload>
+  } & Partial<SkillProposalPayload> &
+    Partial<TriggerProposalPayload>
   createdAt: string
   resolvedAt: string | null
   session: {
@@ -938,7 +942,12 @@ export function waitsOn(t: Ticket, me: Me) {
   const admin = isAdmin(me)
   const starter = t.session?.startedByMemberId === me.memberId
   // A skill shapes what every teammate does, and a playbook acts alone: an admin's call.
-  if (t.type === 'approval' && (t.payload.skillAction || t.payload.playbookActivation)) return admin
+  // So does a trigger: outside events would start work on someone's accounts.
+  if (
+    t.type === 'approval' &&
+    (t.payload.skillAction || t.payload.playbookActivation || t.payload.triggerAction)
+  )
+    return admin
   if (t.type === 'approval')
     return credentialManagersOnly(t)
       ? admin || t.payload.credentialOwnerId === me.memberId

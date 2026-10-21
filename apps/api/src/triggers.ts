@@ -161,9 +161,12 @@ export async function deliver(
   }
 }
 
-/** An event's thread: its title, and its first message, a few lines then the raw (untrusted) event. */
+/**
+ * An event's thread: its title, and its first message, the trigger's standing instructions
+ * when it has some, a few lines, then the raw (untrusted) event.
+ */
 export function eventMessage(
-  trigger: { label: string },
+  trigger: { label: string; instructions?: string | null },
   definition: TriggerDefinition,
   connection: { externalAccount: string | null; label: string },
   event: VendorEvent,
@@ -180,7 +183,12 @@ export function eventMessage(
     received,
     payload: event.payload,
   })
-  return { title: `${trigger.label}: ${title}`, text }
+  return {
+    title: `${trigger.label}: ${title}`,
+    text: trigger.instructions
+      ? `Instructions for each event of this trigger:\n${trigger.instructions}\n\n${text}`
+      : text,
+  }
 }
 
 /**
