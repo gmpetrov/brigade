@@ -17,27 +17,40 @@ export function DemoTour() {
     if (!DEMO || !new URLSearchParams(location.search).has(TOUR_PARAM)) return
     setState('waiting')
     const abort = new AbortController()
-    // A person's own input ends it: events the tour makes are not trusted.
-    const takeOver = (e: Event) => {
-      if (e.isTrusted && !abort.signal.aborted) abort.abort()
-    }
-    for (const kind of ['pointerdown', 'keydown', 'wheel', 'touchstart'])
-      window.addEventListener(kind, takeOver, { capture: true, passive: true })
-    // The merge asks to confirm; the tour says yes, and only while it plays.
-    const confirm = window.confirm
-    window.confirm = () => true
-
+    const kinds = ['pointerdown', 'keydown', 'wheel', 'touchstart']
     let observer: IntersectionObserver | undefined
+    let restore: (() => void) | undefined
+    // However it ends (the visitor, the walkthrough done, the page left): nothing of it stays.
+    const end = () => {
+      observer?.disconnect()
+      restore?.()
+      restore = undefined
+      for (const kind of kinds) window.removeEventListener(kind, takeOver, { capture: true })
+    }
+    // A person's own input ends it, also before it started: events the tour makes are not trusted.
+    const takeOver = (e: Event) => {
+      if (!e.isTrusted || abort.signal.aborted) return
+      abort.abort()
+      end()
+      setState((was) => (was === 'waiting' ? 'off' : 'yours'))
+    }
+    for (const kind of kinds)
+      window.addEventListener(kind, takeOver, { capture: true, passive: true })
+
     const start = () => {
       observer?.disconnect()
       if (abort.signal.aborted || !cursor.current) return
+      // The merge asks to confirm: the tour says yes, only while it plays.
+      const confirm = window.confirm
+      window.confirm = () => true
+      restore = () => (window.confirm = confirm)
       setState('playing')
       play({ signal: abort.signal, cursor: cursor.current })
         .catch((e) => {
           if (!(e instanceof Stopped)) console.error(e)
         })
         .finally(() => {
-          window.confirm = confirm
+          end()
           setState('yours')
         })
     }
@@ -51,10 +64,7 @@ export function DemoTour() {
     observer.observe(document.documentElement)
     return () => {
       abort.abort()
-      observer?.disconnect()
-      window.confirm = confirm
-      for (const kind of ['pointerdown', 'keydown', 'wheel', 'touchstart'])
-        window.removeEventListener(kind, takeOver, { capture: true })
+      end()
     }
   }, [])
 
