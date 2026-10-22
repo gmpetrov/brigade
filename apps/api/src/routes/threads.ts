@@ -319,7 +319,7 @@ export const threads = new Hono<AppEnv>()
     const thread = await c.var.db.session.findFirst({
       where: { id: c.req.param('id') },
       include: {
-        teammate: { select: { id: true, name: true, harness: true, model: true } },
+        teammate: { select: { id: true, name: true, title: true, harness: true, model: true } },
         teammates: {
           select: {
             joinedAt: true,
