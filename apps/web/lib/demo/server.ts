@@ -31,7 +31,9 @@ walk((o) => {
 
 const body = <T>(key: string) => store.get(key)?.body as T | undefined
 const me = body<{ memberId: string; user: { name: string } }>('GET /me')!
-const teammates = body<{ id: string; name: string }[]>('GET /teammates') ?? []
+const teammates =
+  body<{ id: string; name: string; harness: string; model: string | null }[]>('GET /teammates') ??
+  []
 const pulls = demoPulls(store)
 
 /** Every object in every response, for a change that shows wherever the thing is. */
@@ -265,7 +267,12 @@ const actions = {
 
 let threadCount = 0
 /** A new thread from Home or a teammate's page: a copy of the teammate's latest one, empty. */
-function newThread(input: { text?: string; teammateId?: string; title?: string }) {
+function newThread(input: {
+  text?: string
+  teammateId?: string
+  title?: string
+  projectId?: string | null
+}) {
   const teammate =
     teammates.find((t) => t.id === input.teammateId) ??
     teammates.find((t) => t.name !== 'Chief') ??
@@ -274,6 +281,7 @@ function newThread(input: { text?: string; teammateId?: string; title?: string }
   const template =
     (list.find((t) => (t.teammate as Json | undefined)?.id === teammate.id) as Json | undefined) ??
     list[0]!
+  const project = (body<Json[]>('GET /projects') ?? []).find((p) => p.id === input.projectId)
   const threadId = `demo-thread-${++threadCount}-${id()}`
   const title = input.title ?? (input.text ?? 'New thread').split('\n')[0]!.slice(0, 70)
   const fresh = {
@@ -294,9 +302,14 @@ function newThread(input: { text?: string; teammateId?: string; title?: string }
     updatedAt: now(),
     startedByMemberId: me.memberId,
     startedBy: { id: me.memberId, user: { name: me.user.name } },
+    // The visitor's own: they write in it, whoever started the thread it is copied from.
+    private: false,
+    controlledByMemberId: null,
+    mayPrompt: true,
     teammateId: teammate.id,
-    teammate: { ...(template.teammate as Json), id: teammate.id, name: teammate.name },
+    teammate: { id: teammate.id, name: teammate.name },
     teammates: [{ teammate: { id: teammate.id, name: teammate.name } }],
+    projectId: project?.id ?? null,
     replies: 0,
     unread: false,
   }
@@ -313,8 +326,18 @@ function newThread(input: { text?: string; teammateId?: string; title?: string }
     reportingSchedules: [],
     trigger: null,
     schedule: null,
-    teammates: [{ joinedAt: now(), lastTurnAt: now(), teammate: detail.teammate }],
+    // The thread's page shows the teammate's harness and model, which lists leave out.
+    teammate: {
+      id: teammate.id,
+      name: teammate.name,
+      harness: teammate.harness,
+      model: teammate.model,
+    },
+    project: project
+      ? { id: project.id, name: project.name, icon: project.icon, logo: null, archivedAt: null }
+      : null,
   })
+  detail.teammates = [{ joinedAt: now(), lastTurnAt: now(), teammate: detail.teammate }]
   store.set(`GET /threads/${threadId}`, { status: 200, body: detail })
   list.unshift(fresh)
   if (input.text) sendMessage(threadId, input.text)

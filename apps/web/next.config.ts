@@ -37,6 +37,9 @@ const DEMO = process.env.NEXT_PUBLIC_DEMO === '1'
 const nextConfig = async (phase: string): Promise<NextConfig> => ({
   env: {
     NEXT_PUBLIC_BUILD_ID: buildId,
+    // Always set, so the build sees through `process.env.NEXT_PUBLIC_DEMO === '1'` and leaves
+    // the demo out of other builds (lib/config.ts).
+    NEXT_PUBLIC_DEMO: DEMO ? '1' : '',
     BRIGADE_LANDING_PROOF: DEMO ? '' : await landingProof(phase),
   },
   // A sample workspace is not something to find in a search engine.

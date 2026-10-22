@@ -28,7 +28,7 @@ const WHAT = {
 export function DemoMachine({ what, onClose }: { what: keyof typeof WHAT; onClose?: () => void }) {
   const { Icon, title, text } = WHAT[what]
   return (
-    <div className="bg-muted/40 relative flex min-h-64 flex-1 flex-col items-center justify-center gap-3 rounded-lg border p-8 text-center">
+    <div className="bg-card text-card-foreground relative flex min-h-64 flex-1 flex-col items-center justify-center gap-3 rounded-lg border p-8 text-center">
       {onClose && (
         <Button
           variant="ghost"
