@@ -42,8 +42,13 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
     button: a preview from a runner without the script has none. While select
     mode is on, the element under the pointer is outlined in a shadow root, and
     a click goes to the dashboard instead of the page: its label (nearest React
-    component and tag, read from React's fiber in development), page, CSS
-    selector, size and HTML, clipped. The composer shows it as a chip and the
+    component and tag, read from React's fiber in development), that
+    component's plain props, page, CSS selector, size, text and HTML, clipped.
+    The page then draws it (`modern-screenshot`, served at
+    `/__brigade/screenshot.mjs` and loaded only then) and sends the PNG, which
+    the message carries as an image attachment named in the block; its chip
+    shows it, as Claude's does, rather than the files list. A click on a chip
+    opens what the teammate gets. The composer shows it as a chip and the
     message carries it as a `<preview-element>` block
     (`packages/contracts/src/preview-elements.ts`), so the teammate reads it as
     text, with no new field for the API or runner to pass on, and the thread
@@ -224,9 +229,10 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   tested. Sign-in there needs the new tab.
 - **Google, GitHub and Microsoft sign-in** refuse to load in a frame on another
   site, whatever the cookies.
-- **Picking elements** sees only the page's DOM: no screenshot of the element,
-  and no source file (React 19 no longer exposes `_debugSource`), only its
-  components' names. A page whose CSP forbids `'self'` scripts, or a compressed
+- **Picking elements** sees only the page's DOM: its picture is the DOM drawn
+  again (cross-origin images without CORS and some CSS, like backdrop filters,
+  can be missing from it), and there is no source file (React 19 no longer
+  exposes `_debugSource`), only its components' names. A page whose CSP forbids `'self'` scripts, or a compressed
   page the app sends whatever it is asked, gets no select button.
 - **Cookies set by scripts** (`document.cookie`) do not pass the proxy. Rare for
   sessions; storage (`localStorage`, as Supabase and Firebase use) works in the

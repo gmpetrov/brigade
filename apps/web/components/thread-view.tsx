@@ -120,7 +120,14 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
 import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
-import { storedFileUrl, threadImageUrl, useApi, type Credential, type ThreadChild } from '@/lib/api'
+import {
+  attachmentUrl,
+  storedFileUrl,
+  threadImageUrl,
+  useApi,
+  type Credential,
+  type ThreadChild,
+} from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
 import { cn } from '@/lib/utils'
 
@@ -1765,8 +1772,13 @@ export function ThreadItems({
             </div>
           )
         // A command it starts with (/design, a skill) is a label above it: what was asked for.
-        // Elements picked in the preview are chips above it, out of its text.
+        // Elements picked in the preview are chips above it, out of its text; their
+        // pictures show in them, not with its other files.
         const { text: written, elements } = splitPreviewElements(forPeople(item.text))
+        const pictureOf = (name?: string) =>
+          name ? item.attachments.find((a) => a.name === name && a.status === 'ready') : undefined
+        const pictures = new Set(elements.flatMap((e) => pictureOf(e.image)?.id ?? []))
+        const files = item.attachments.filter((a) => !pictures.has(a.id))
         const asked = startingCommand(written, skillNames)
         const text = asked ? asked.rest : written
         return (
@@ -1784,7 +1796,13 @@ export function ThreadItems({
               />
             )}
             {asked && <CommandChip command={asked.command} />}
-            <PreviewElementChips elements={elements} className="justify-end" />
+            <PreviewElementChips
+              elements={elements.map((element) => {
+                const picture = pictureOf(element.image)
+                return { element, ...(picture && { picture: attachmentUrl(picture.id) }) }
+              })}
+              className="justify-end"
+            />
             {text && (
               <div className="group/message flex items-center gap-1">
                 <MessageActions
@@ -1796,9 +1814,7 @@ export function ThreadItems({
                 </div>
               </div>
             )}
-            {item.attachments.length > 0 && (
-              <MessageAttachments attachments={item.attachments} className="justify-end" />
-            )}
+            {files.length > 0 && <MessageAttachments attachments={files} className="justify-end" />}
             {item.steeredTo && asksParallel(item.text) ? (
               <span className="text-xs text-muted-foreground">
                 Sent to run in parallel, in a child thread

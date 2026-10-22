@@ -14,7 +14,13 @@
 import http from 'node:http'
 import net from 'node:net'
 import { pipeline } from 'node:stream'
-import { SELECT_SCRIPT, SELECT_SCRIPT_PATH, withSelectScript } from './preview-select.js'
+import {
+  SCREENSHOT_SCRIPT_PATH,
+  SELECT_SCRIPT,
+  SELECT_SCRIPT_PATH,
+  screenshotScript,
+  withSelectScript,
+} from './preview-select.js'
 
 /** Where an app's other ports are served on the preview's address. */
 export const PORTS_PREFIX = '/__ports/'
@@ -150,13 +156,14 @@ export class PreviewProxy {
   }
 
   private request(req: http.IncomingMessage, res: http.ServerResponse) {
-    if (req.url?.split('?')[0] === SELECT_SCRIPT_PATH)
+    const path = req.url?.split('?')[0]
+    if (path === SELECT_SCRIPT_PATH || path === SCREENSHOT_SCRIPT_PATH)
       return void res
         .writeHead(200, {
           'content-type': 'text/javascript; charset=utf-8',
           'cache-control': 'no-cache',
         })
-        .end(SELECT_SCRIPT)
+        .end(path === SELECT_SCRIPT_PATH ? SELECT_SCRIPT : screenshotScript())
     this.used()
     const target = route(req.url ?? '/', this.options)
     if (!target)

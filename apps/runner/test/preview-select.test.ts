@@ -3,7 +3,7 @@ import http from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { test } from 'node:test'
 import { PreviewProxy } from '../src/preview-proxy.js'
-import { SELECT_SCRIPT, SELECT_SCRIPT_PATH } from '../src/preview-select.js'
+import { SCREENSHOT_SCRIPT_PATH, SELECT_SCRIPT, SELECT_SCRIPT_PATH } from '../src/preview-select.js'
 
 const TAG = `<script src="${SELECT_SCRIPT_PATH}"></script>`
 
@@ -74,7 +74,7 @@ test('a page gets the select script after its <head>, uncompressed; data does no
   assert.equal(seen[1], 'gzip')
 })
 
-test('the proxy serves the script itself', async (t) => {
+test('the proxy serves the scripts itself', async (t) => {
   const { at, seen } = await app(t)
   const script = await get(at, SELECT_SCRIPT_PATH)
   assert.equal(script.status, 200)
@@ -83,4 +83,9 @@ test('the proxy serves the script itself', async (t) => {
   assert.equal(seen.length, 0)
   // It parses as a script.
   assert.doesNotThrow(() => new Function(SELECT_SCRIPT))
+  // And the library that draws an element, a module with no imports.
+  const drawing = await get(at, SCREENSHOT_SCRIPT_PATH)
+  assert.equal(drawing.status, 200)
+  assert.match(drawing.body, /export \{[^}]*domToBlob/)
+  assert.doesNotMatch(drawing.body, /^import /m)
 })

@@ -194,8 +194,11 @@ function LivePreviewPanel({
   waking?: boolean
   /** Put a message to the teammate in the composer (or send it, off the thread). */
   onAsk?: (text: string) => void
-  /** Put an element picked in the page in the composer; without it, nothing can be picked. */
-  onPick?: (element: PreviewElement) => void
+  /**
+   * Put an element picked in the page in the composer, then its picture (none when the
+   * page could not draw it), by the id the page gave it. Without it, nothing can be picked.
+   */
+  onPick?: PickHandlers
   /** How many picked elements wait in the composer. */
   picked?: number
   /** The commit it should run (a pull request's head): when it runs another, the panel says so. */
@@ -604,10 +607,15 @@ function LivePreviewPanel({
  * the button shown, so a preview from an older runner has none. Select mode is the
  * panel's: it is sent to each page as it loads, and the page sends back what was clicked.
  */
+export type PickHandlers = {
+  element: (id: string, element: PreviewElement) => void
+  picture: (id: string, image?: Blob) => void
+}
+
 function usePreviewSelect(
   url: string | undefined,
   previewId: string,
-  onPick: ((element: PreviewElement) => void) | undefined,
+  onPick: PickHandlers | undefined,
 ) {
   const frame = useRef<HTMLIFrameElement>(null)
   const [available, setAvailable] = useState(false)
@@ -635,7 +643,13 @@ function usePreviewSelect(
   useEffect(() => {
     if (!origin || !picking) return
     const listen = (e: MessageEvent) => {
-      const data = e.data as { source?: string; type?: string; element?: unknown } | null
+      const data = e.data as {
+        source?: string
+        type?: string
+        id?: unknown
+        element?: unknown
+        image?: unknown
+      } | null
       if (
         e.origin !== origin ||
         e.source !== frame.current?.contentWindow ||
@@ -647,10 +661,15 @@ function usePreviewSelect(
         // A page it navigated to starts with select mode off.
         if (latest.current.on) send(true)
       } else if (data.type === 'stopped') setOn(false)
+      else if (typeof data.id !== 'string') return
       else if (data.type === 'selected') {
         const element = PreviewElement.safeParse(data.element)
-        if (element.success) latest.current.onPick?.(element.data)
-      }
+        if (element.success) latest.current.onPick?.element(data.id, element.data)
+      } else if (data.type === 'captured')
+        latest.current.onPick?.picture(
+          data.id,
+          data.image instanceof Blob && data.image.type === 'image/png' ? data.image : undefined,
+        )
     }
     window.addEventListener('message', listen)
     return () => window.removeEventListener('message', listen)

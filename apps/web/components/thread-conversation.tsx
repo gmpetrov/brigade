@@ -70,6 +70,7 @@ import {
   useThreadRepositories,
 } from '@/components/preview-panel'
 import { PreviewElementChips } from '@/components/preview-elements'
+import type { PickHandlers } from '@/components/preview-panel'
 import { usePreviewStart } from '@/components/preview-start'
 import { ThreadProjectMenu } from '@/components/projects'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
@@ -128,6 +129,9 @@ export type ThreadHeading = {
 }
 
 /** Replies being written, per thread: closing the panel or opening another thread keeps them. */
+/** An element picked in the preview, by the id its page gave it, and the upload of its picture. */
+type Picked = { id: string; element: PreviewElement; upload?: string }
+
 const replyDrafts = new Map<string, string>()
 
 function useReplyDraft(id: string) {
@@ -251,16 +255,6 @@ export function ThreadConversation({
   // The computer the next message moves the thread to, as a chip above it (+ › Continue on…).
   const [moveTo, setMoveTo] = useState<MoveTarget>()
   useEffect(() => setMoveTo(undefined), [id])
-  // Elements picked in the preview, as chips above it; the message carries them.
-  const [elements, setElements] = useState<PreviewElement[]>([])
-  useEffect(() => setElements([]), [id])
-  const pickElement = useCallback((element: PreviewElement) => {
-    setElements((list) =>
-      list.some((e) => e.page === element.page && e.selector === element.selector)
-        ? list
-        : [...list, element],
-    )
-  }, [])
   // The effort just picked, until the thread comes back with it.
   const [effortPicked, setEffortPicked] = useState<{ value: Effort | null }>()
   // The turn running when it was picked: that turn keeps the effort it started with.
@@ -273,6 +267,57 @@ export function ThreadConversation({
   const [waitForMachine, setWaitForMachine] = useState(false)
   useEffect(() => setWaitForMachine(false), [id])
   const files = useUploads()
+  // Elements picked in the preview, as chips above it; the message carries them, and their
+  // pictures as files of its own that show in their chips rather than with the other files.
+  const [elements, setElements] = useState<Picked[]>([])
+  useEffect(() => setElements([]), [id])
+  const elementsRef = useRef(elements)
+  elementsRef.current = elements
+  const pickElement = useMemo<PickHandlers>(
+    () => ({
+      element: (pickId, element) =>
+        setElements((list) =>
+          list.some(
+            (e) => e.element.page === element.page && e.element.selector === element.selector,
+          )
+            ? list
+            : [...list, { id: pickId, element }],
+        ),
+      picture: (pickId, image) => {
+        if (!image || !elementsRef.current.some((e) => e.id === pickId)) return
+        const name = `element-${pickId}.png`
+        const [upload] = files.add([new File([image], name, { type: 'image/png' })])
+        setElements((list) =>
+          list.map((e) =>
+            e.id === pickId ? { ...e, upload, element: { ...e.element, image: name } } : e,
+          ),
+        )
+      },
+    }),
+    [files.add],
+  )
+  // A picture that did not upload is left out: the element goes without it.
+  const removeUpload = files.remove
+  useEffect(() => {
+    const failed = elements.filter(
+      (e) => e.upload && files.uploads.some((u) => u.key === e.upload && u.error),
+    )
+    if (!failed.length) return
+    for (const e of failed) removeUpload(e.upload!)
+    setElements((list) =>
+      list.map((e) => {
+        if (!failed.some((f) => f.id === e.id)) return e
+        const { image: _image, ...element } = e.element
+        return { id: e.id, element }
+      }),
+    )
+  }, [elements, files.uploads, removeUpload])
+  const pictureKeys = new Set(elements.flatMap((e) => (e.upload ? [e.upload] : [])))
+  const removeElement = (index: number) => {
+    const upload = elements[index]?.upload
+    if (upload) files.remove(upload)
+    setElements((list) => list.filter((_, i) => i !== index))
+  }
   const drop = useFileDrop(files.add)
   const root = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
@@ -691,7 +736,9 @@ export function ThreadConversation({
       return moveThread(moving.id).catch(() => setMoveTo((current) => current ?? moving))
     }
     // The elements after what the person wrote, so a preview of the message starts with it.
-    const sending = [written, ...picked.map(formatPreviewElement)].filter(Boolean).join('\n\n')
+    const sending = [written, ...picked.map((p) => formatPreviewElement(p.element))]
+      .filter(Boolean)
+      .join('\n\n')
     setText('')
     setReplyTo(undefined)
     setMoveTo(undefined)
@@ -1227,11 +1274,19 @@ export function ThreadConversation({
                     </div>
                   )}
                   <PreviewElementChips
-                    elements={elements}
-                    onRemove={(i) => setElements((list) => list.filter((_, j) => j !== i))}
+                    elements={elements.map((e) => ({
+                      element: e.element,
+                      ...(e.upload && {
+                        picture: files.uploads.find((u) => u.key === e.upload)?.preview,
+                      }),
+                    }))}
+                    onRemove={removeElement}
                     className="px-1"
                   />
-                  <UploadList uploads={files.uploads} onRemove={files.remove} />
+                  <UploadList
+                    uploads={files.uploads.filter((u) => !pictureKeys.has(u.key))}
+                    onRemove={files.remove}
+                  />
                   <div className="flex items-end gap-1">
                     <div className="mb-1">
                       {/* The + on phones too: teaching needs a desktop, so not there. */}

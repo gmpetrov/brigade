@@ -12,12 +12,15 @@ const hero = {
   page: '/?plan="pro"&x=1',
   selector: 'main > div.hero > h1.title',
   components: ['Landing', 'HeroCopy'],
+  props: { pagePath: 'page.tsx', title: 'Say "hi"' },
   size: '672×419',
+  text: 'One team builds it, sells it',
+  image: 'element-1.png',
   html: '<h1 class="title">One team builds it,\nsells it</h1>',
 }
 
 test('an element written into a message reads back as it was, apart from its text', () => {
-  const text = `Make this bigger\n\n${formatPreviewElement(hero)}\n\n${formatPreviewElement({ ...hero, components: undefined, size: undefined, label: 'button' })}`
+  const text = `Make this bigger\n\n${formatPreviewElement(hero)}\n\n${formatPreviewElement({ label: 'button', page: hero.page, selector: hero.selector, html: hero.html })}`
   const { text: rest, elements } = splitPreviewElements(text)
   assert.equal(rest, 'Make this bigger')
   assert.deepEqual(elements[0], hero)

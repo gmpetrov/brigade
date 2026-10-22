@@ -3,7 +3,8 @@
 // outlines what the pointer is over and sends what was clicked to the dashboard
 // (runner/src/preview-select.ts). The composer holds them as chips and writes each
 // into the message as a <preview-element> block: the teammate reads where it is
-// and its HTML; the dashboard shows a chip in its place.
+// and its HTML; the dashboard shows a chip in its place. Its picture, when the page
+// could draw it, goes with the message as an image the block names.
 import { z } from 'zod'
 
 export const PreviewElement = z.object({
@@ -15,8 +16,17 @@ export const PreviewElement = z.object({
   selector: z.string().max(1000),
   /** React components around it, outermost first, when the page is a React app in development. */
   components: z.array(z.string().max(100)).max(8).optional(),
+  /** Its nearest component's props that are plain values (strings, numbers, booleans), clipped. */
+  props: z
+    .record(z.string().max(100), z.string().max(200))
+    .refine((props) => Object.keys(props).length <= 12, 'Up to 12 props')
+    .optional(),
   /** Its size on screen, in CSS pixels ("672×419"). */
   size: z.string().max(40).optional(),
+  /** Its text, clipped. */
+  text: z.string().max(500).optional(),
+  /** The name of the image of it attached to the same message. */
+  image: z.string().max(200).optional(),
   /** Its HTML, clipped. */
   html: z.string().max(4000),
 })
@@ -33,7 +43,15 @@ export function formatPreviewElement(element: PreviewElement) {
     ['page', element.page],
     ['selector', element.selector],
     ['components', element.components?.join(' › ')],
+    [
+      'props',
+      element.props && Object.keys(element.props).length
+        ? JSON.stringify(element.props)
+        : undefined,
+    ],
     ['size', element.size],
+    ['text', element.text],
+    ['image', element.image],
   ]
   const head = attributes
     .filter((a): a is [string, string] => !!a[1])
@@ -58,12 +76,27 @@ export function splitPreviewElements(text: string): { text: string; elements: Pr
       page: attributes.page ?? '',
       selector: attributes.selector ?? '',
       ...(attributes.components ? { components: attributes.components.split(' › ') } : {}),
+      ...(attributes.props ? { props: parseProps(attributes.props) } : {}),
       ...(attributes.size ? { size: attributes.size } : {}),
+      ...(attributes.text ? { text: attributes.text } : {}),
+      ...(attributes.image ? { image: attributes.image } : {}),
       html,
     })
     return ''
   })
   return { text: rest.replace(/\n{3,}/g, '\n\n').trim(), elements }
+}
+
+function parseProps(json: string): Record<string, string> {
+  try {
+    const value: unknown = JSON.parse(json)
+    if (!value || typeof value !== 'object') return {}
+    return Object.fromEntries(
+      Object.entries(value).filter((e): e is [string, string] => typeof e[1] === 'string'),
+    )
+  } catch {
+    return {}
+  }
 }
 
 /** Elements reduced to their labels, for titles and previews. */

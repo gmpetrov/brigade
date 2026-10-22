@@ -3,16 +3,29 @@
 // off. While it is on, what the pointer is over is outlined; a click sends that
 // element (where it is, its React components, its HTML) to the panel instead of
 // reaching the page, and the panel puts it in the composer (contracts'
-// preview-elements.ts). Esc in the page turns it off.
+// preview-elements.ts). Esc in the page turns it off. Then the page draws the
+// element (modern-screenshot, loaded only then from the proxy) and sends that
+// picture too, for the message to carry as an image.
 //
 // The script is served from the preview's own address (a page's Content-Security-Policy
 // allows 'self' more often than inline scripts), runs before the page's own scripts
 // and removes its tag at once, so a React page hydrates against the HTML it rendered.
 // Outside the dashboard's frame (a tab of its own) it does nothing.
+import { readFileSync } from 'node:fs'
 import { Transform } from 'node:stream'
+import { fileURLToPath } from 'node:url'
 
 /** Where the proxy serves the script, on every preview's address. */
 export const SELECT_SCRIPT_PATH = '/__brigade/select.js'
+/** And the library that draws an element, loaded once something is picked. */
+export const SCREENSHOT_SCRIPT_PATH = '/__brigade/screenshot.mjs'
+
+let screenshot: string | undefined
+/** modern-screenshot's browser module: one file, no imports. */
+export function screenshotScript() {
+  screenshot ??= readFileSync(fileURLToPath(import.meta.resolve('modern-screenshot')), 'utf8')
+  return screenshot
+}
 
 const TAG = `<script src="${SELECT_SCRIPT_PATH}"></script>`
 
@@ -97,6 +110,20 @@ export const SELECT_SCRIPT = String.raw`(() => {
     document.documentElement.appendChild(host)
   }
 
+  // A component's props worth showing: plain values, not children or callbacks.
+  function plain(props) {
+    const out = {}
+    let n = 0
+    for (const key of Object.keys(props || {})) {
+      const value = props[key]
+      if (key === 'children' || key === 'key' || n >= 12) continue
+      if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') continue
+      out[key.slice(0, 100)] = String(value).slice(0, 200)
+      n++
+    }
+    return out
+  }
+
   function components(el) {
     let node = el
     let fiber = null
@@ -106,15 +133,17 @@ export const SELECT_SCRIPT = String.raw`(() => {
       node = node.parentNode
     }
     const names = []
+    let props = null
     for (; fiber && names.length < 40; fiber = fiber.return) {
       const type = fiber.type
       if (!type || typeof type === 'string') continue
       const inner = type.render || type.type || type
       const name = type.displayName || (inner && (inner.displayName || inner.name))
       if (!name || typeof name !== 'string' || name.length < 3 || INTERNAL.test(name)) continue
+      if (!props) props = plain(fiber.memoizedProps)
       if (names[names.length - 1] !== name) names.push(name)
     }
-    return names.slice(0, 5).reverse()
+    return { names: names.slice(0, 5).reverse(), props: props || {} }
   }
 
   function short(el) {
@@ -156,15 +185,19 @@ export const SELECT_SCRIPT = String.raw`(() => {
 
   function describe(el) {
     const rect = el.getBoundingClientRect()
-    const names = components(el)
+    const found = components(el)
+    const names = found.names
     const name = short(el)
+    const text = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim()
     const near = names[names.length - 1]
     return {
       label: (near ? near + ' › ' + name : name).slice(0, 200),
       page: (location.pathname + location.search + location.hash).slice(0, 2000),
       selector: selector(el).slice(0, 1000),
       components: names.map((n) => n.slice(0, 100)),
+      props: found.props,
       size: Math.round(rect.width) + '×' + Math.round(rect.height),
+      text: text.length > 300 ? text.slice(0, 300) + '…' : text,
       html: html(el),
     }
   }
@@ -210,7 +243,23 @@ export const SELECT_SCRIPT = String.raw`(() => {
     draw()
     box.classList.add('picked')
     setTimeout(() => box && box.classList.remove('picked'), 300)
-    post({ type: 'selected', element: describe(el) }, origin)
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+    post({ type: 'selected', id, element: describe(el) }, origin)
+    capture(el, id, origin)
+  }
+
+  // Its picture, up to 1600 pixels on its longest side; none when the page cannot draw it.
+  function capture(el, id, to) {
+    const r = el.getBoundingClientRect()
+    const longest = Math.max(r.width, r.height)
+    if (!longest) return post({ type: 'captured', id }, to)
+    const scale = Math.min(window.devicePixelRatio || 1, 1600 / longest)
+    import('${SCREENSHOT_SCRIPT_PATH}')
+      .then((m) => m.domToBlob(el, { scale, type: 'image/png', timeout: 10000 }))
+      .then(
+        (image) => post({ type: 'captured', id, image }, to),
+        () => post({ type: 'captured', id }, to),
+      )
   }
   function key(e) {
     if (e.key !== 'Escape') return
