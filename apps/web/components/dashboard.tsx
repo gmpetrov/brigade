@@ -104,7 +104,7 @@ import {
   type Teammate,
   type Ticket,
 } from '@/lib/api'
-import { inCaptureWindow } from '@/lib/brigade-app'
+import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
 import { API_URL } from '@/lib/config'
 import { authClient } from '@/lib/auth-client'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
@@ -284,7 +284,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (me.error?.status === 401) {
       markSignedOut()
-      router.replace('/sign-in')
+      // Brigade.app's sign-in in the browser comes back here once signed in.
+      router.replace(
+        location.pathname === DESKTOP_SIGN_IN
+          ? `/sign-in?next=${encodeURIComponent(location.pathname + location.search)}`
+          : '/sign-in',
+      )
     } else if (me.data) markSignedIn()
     // No workspace yet, or no AI account to run anything: onboarding first.
     if (me.data && (!me.data.activeWorkspaceId || !me.data.aiReady)) router.replace('/onboarding')
@@ -303,7 +308,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   useSettingsShortcut()
 
   // Brigade.app's screenshot window shows its page alone; signing in there lands it back on it.
-  const capture = pathname === '/app/capture'
+  // So does the page that signs that window in, in the browser.
+  const alone = pathname === '/app/capture' || pathname === DESKTOP_SIGN_IN
   useEffect(() => {
     if (pathname === '/app' && inCaptureWindow()) router.replace('/app/capture')
   }, [pathname, router])
@@ -362,7 +368,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     projects: projects.data ?? [],
     reloadProjects,
   }
-  if (capture)
+  if (alone)
     return <DashboardContext.Provider value={dashboard}>{children}</DashboardContext.Provider>
 
   return (

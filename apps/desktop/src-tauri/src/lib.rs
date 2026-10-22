@@ -115,8 +115,9 @@ fn alert(app: &AppHandle, title: &str, message: &str, kind: MessageDialogKind) {
 }
 
 /// brigade://link?code=…&api=…[&dashboard=…], from "Open in Brigade" in the dashboard.
+/// brigade://sign-in?code=…, from the dashboard's page that signs the screenshot window in.
 fn open_link(app: &AppHandle, link: &Url) {
-    if link.scheme() != "brigade" || link.host_str() != Some("link") {
+    if link.scheme() != "brigade" {
         return;
     }
     let query = |key: &str| {
@@ -124,6 +125,15 @@ fn open_link(app: &AppHandle, link: &Url) {
             .find(|(k, _)| k == key)
             .map(|(_, v)| v.into_owned())
     };
+    if link.host_str() == Some("sign-in") {
+        if let Some(code) = query("code") {
+            capture::signed_in(app, &code);
+        }
+        return;
+    }
+    if link.host_str() != Some("link") {
+        return;
+    }
     let (Some(code), Some(api)) = (query("code"), query("api")) else {
         return;
     };
@@ -484,6 +494,7 @@ pub fn run() {
             capture::capture_remove,
             capture::capture_clear,
             capture::capture_hide,
+            capture::capture_sign_in,
         ])
         .menu(app_menu)
         // Every menu's events come here too, the tray's included: only the app menu's own.
