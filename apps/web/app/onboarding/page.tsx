@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccountCard, machineName } from '@/components/account-card'
+import { BrigadeMark } from '@/components/brigade-mark'
 import { HarnessLogo } from '@/components/harness-logo'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
@@ -62,12 +63,7 @@ function Shell({
     <main className="flex min-h-svh items-center justify-center px-4 py-12">
       <div className="flex w-full max-w-md flex-col gap-7">
         <div className="flex flex-col items-center gap-4 text-center">
-          <span
-            aria-hidden
-            className="flex size-14 items-center justify-center rounded-2xl bg-primary text-2xl font-extrabold text-primary-foreground"
-          >
-            B
-          </span>
+          <BrigadeMark className="size-14" />
           {title && (
             <div className="flex flex-col gap-1.5">
               <h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>

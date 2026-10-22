@@ -248,9 +248,17 @@ svg.i {
   z-index: 5;
 }
 .word {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36em;
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.045em;
+}
+/* The logo before the name, sized with the name's text. */
+.word-mark {
+  width: 1.3em;
+  height: 1.3em;
 }
 .top nav {
   display: flex;
@@ -1026,12 +1034,6 @@ svg.i {
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: var(--foreground);
-  color: var(--background);
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  font-size: 15px;
   flex: none;
 }
 .push .bd {
@@ -2411,16 +2413,12 @@ svg.i {
   font-size: 11px;
   font-weight: 600;
 }
+/* The menu-bar icon, one colour like the bar's text, as macOS draws it. */
 .mb-bar .bb {
-  width: 16px;
-  height: 16px;
-  border-radius: 5px;
-  background: var(--primary);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 9px;
-  font-weight: 800;
+  width: 15px;
+  height: 15px;
+  background: currentColor;
+  mask: url(/icons/mark-mono.svg) center / contain no-repeat;
 }
 .mb-menu {
   margin: 6px 0 0 auto;

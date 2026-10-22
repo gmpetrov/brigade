@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { BrigadeMark } from '@/components/brigade-mark'
 import { useDashboard } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -45,12 +46,7 @@ export default function DesktopSignIn() {
     <main className="flex min-h-svh items-center justify-center px-4 py-12">
       <div className="flex w-full max-w-sm flex-col gap-7">
         <div className="flex flex-col items-center gap-4 text-center">
-          <span
-            aria-hidden
-            className="flex size-14 items-center justify-center rounded-2xl bg-primary text-2xl font-extrabold text-primary-foreground"
-          >
-            B
-          </span>
+          <BrigadeMark className="size-14" />
           <div className="flex flex-col gap-1.5">
             <h1 className="text-3xl font-extrabold tracking-tight">Sign in to Brigade.app</h1>
             <p className="text-sm text-muted-foreground">

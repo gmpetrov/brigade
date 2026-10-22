@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BrigadeMark } from '@/components/brigade-mark'
 import { REPO_URL } from '@/lib/github-proof'
 import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
 
@@ -6,6 +7,7 @@ export function Header() {
   return (
     <header className={c('wrap top')}>
       <Link className={c('word')} href="/">
+        <BrigadeMark className={c('word-mark')} />
         Brigade
       </Link>
       <nav aria-label="Main">
