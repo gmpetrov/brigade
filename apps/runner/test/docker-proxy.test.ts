@@ -144,9 +144,16 @@ function fakeDocker(path: string, events: string[] = []) {
   )
 }
 
-/** A teammate's threads' folders, as the thread helper makes them. */
+/**
+ * A teammate's threads' folders, as the thread helper makes them: on a tmpfs where there is
+ * one, as /run/brigade-docker is. (On a resumed boat computer, /tmp is a FUSE filesystem that
+ * refuses a socket made again where one was deleted while it listened.)
+ */
 function threads(...names: [string, string][]) {
-  const root = mkdtempSync(join(tmpdir(), 'docker-proxy-'))
+  const base = statSync('/dev/shm', { throwIfNoEntry: false })?.isDirectory()
+    ? '/dev/shm'
+    : tmpdir()
+  const root = mkdtempSync(join(base, 'docker-proxy-'))
   for (const [thread, address] of names) {
     mkdirSync(join(root, thread, 'bt-test'), { recursive: true })
     writeFileSync(join(root, thread, 'bt-test.address'), `${address}\n`)
@@ -420,7 +427,7 @@ test("a thread's container that starts or stops by itself puts its ports right",
   proxy.close()
 })
 
-test('the proxy follows its threads: a new folder gets a socket, one gone loses it, none left ends it', async () => {
+test('the proxy follows its threads: a new folder gets a socket, one gone loses it, none left ends it', async (t) => {
   const root = threads(['cmthread1', '127.231.0.7'])
   let empty = 0
   const proxy = new DockerProxy({
@@ -431,6 +438,7 @@ test('the proxy follows its threads: a new folder gets a socket, one gone loses 
     publish: async () => undefined,
     onEmpty: () => empty++,
   })
+  t.after(() => proxy.close())
   proxy.scan()
   assert.deepEqual(proxy.threads(), ['cmthread1'])
   mkdirSync(join(root, 'cmthread2', 'bt-test'), { recursive: true })

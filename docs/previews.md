@@ -185,14 +185,17 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
     (chains `BD-<n>-<uid>` on the host, `BD-<uid>` in the thread's network).
   - **Started on first use, stopped when unused.** The teammate's Docker is a
     transient unit of its own systemd, `brigade-docker`, that the proxy starts
-    at a thread's first connection (about a second): a thread that never runs
-    docker costs nothing. It runs with the systemd cgroup driver, so `docker
-pause` (a frozen preview's database) works, and with `--ip=127.0.0.1`, so a
-    container published without the proxy is not on the computer's public
-    address. The runner stops a quiet thread's containers and removes its
-    socket (`docker-stop`); once nothing runs in that Docker and nobody works in
-    any of the teammate's threads, it stops it (`docker-down`). The proxy ends
-    with its last thread folder.
+    at a thread's first connection (0.4 s on a test VM): a thread that never
+    runs docker costs nothing. It runs with the systemd cgroup driver, so
+    `docker pause` (a frozen preview's database) works, and with
+    `--ip=127.0.0.1`, so a container published without the proxy is not on the
+    computer's public address. The runner stops a quiet thread's containers and
+    removes its socket (`docker-stop`); once nothing runs in that Docker and
+    nobody works in any of the teammate's threads, it stops it
+    (`docker-down`). At rest the Docker takes about 185 MB (dockerd 99,
+    containerd 60, rootlesskit 26) and the proxy 60 MB; the proxy runs on the
+    runner's Node.js, starts again if it fails, and ends with its last thread
+    folder.
   - **Not Podman.** It has no daemon, keeps one image store per user and
     publishes ports in the caller's network, which would have made the ports
     simple. But it is another engine, `docker compose` goes through its API
@@ -220,6 +223,9 @@ pause` (a frozen preview's database) works, and with `--ip=127.0.0.1`, so a
   created by name, and the bridge network. Compose names its containers,
   volumes and networks after the thread's project (`COMPOSE_PROJECT_NAME`), so
   `docker compose` stays per thread.
+- **Processes on the computer itself**, outside any thread (the runner),
+  reach every thread's published ports on its `127.231.x.y` address; threads
+  reach only their own.
 - **Two teammates in one thread** cannot both publish the same port, as before
   (they share its address). And `localhost` over IPv6 (`::1`) reaches no
   container: clients that try `::1` first (libpq, Node) fall back to
@@ -242,7 +248,9 @@ pause` (a frozen preview's database) works, and with `--ip=127.0.0.1`, so a
    provider's token cookie in the frame.
 4. **Check the teammates' Docker on a cloud computer** after deploying the API
    and the runner (the root setup runs again by itself, its stamp changed).
-   Root and systemd do not run in a thread, so this was never run. With
+   Run on a test boat VM on October 22, 2026 (Ubuntu 24.04, Docker 29.7,
+   systemd 255) with the branch's root setup and runner, the runner's calls
+   made by hand: all eight passed (#317). With
    `U=<teammate user>`, `UI=$(id -u $U)`, and
    `as() { sudo -u $U XDG_RUNTIME_DIR=/run/user/$UI "$@"; }` on the computer:
    1. **The setup**: `grep -c docker-ports /usr/local/sbin/brigade-thread` is

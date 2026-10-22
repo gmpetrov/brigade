@@ -252,8 +252,15 @@ function dockerHelper() {
     `echo "systemctl $*" >>"$LOG"; case "$*" in *is-active*) [ -e "$DIR/proxy-up" ] ;; *"kill -s HUP"*) ${listen} ;; esac`,
   )
   stub('systemd-run', `echo "systemd-run $*" >>"$LOG"; : >"$DIR/proxy-up"; ${listen}`)
+  // The runner's wrapper, as its installer writes it, with the computer's own Node.js.
+  writeFileSync(
+    join(dir, 'brigade-runner'),
+    `#!/bin/sh\nwhile :; do\n  "${bin}/node" "/opt/brigade/runner/dist/index.js" "$@"\ndone\n`,
+  )
+  stub('node', 'exit 0')
   const helper = THREAD_HELPER.replace('STATE=/run/brigade-threads', `STATE=${dir}/state`)
     .replace('DOCKER_RUN=/run/brigade-docker', `DOCKER_RUN=${dir}/run`)
+    .replace('RUNNER=/opt/brigade/bin/brigade-runner', `RUNNER=${dir}/brigade-runner`)
     .replaceAll('/run/netns/', `${dir}/netns/`)
     .replaceAll('/run/user/', `${dir}/user/`)
     .replaceAll('/etc/subuid', `${dir}/subuid`)
@@ -374,7 +381,8 @@ test(
     )
     const started = first.log.split('\n').filter((line) => line.startsWith('systemd-run'))
     assert.deepEqual(started, [
-      'systemd-run --user --quiet --collect --unit=brigade-docker-proxy.service /opt/brigade/node/bin/node /opt/brigade/runner/dist/docker-proxy.js',
+      // On the Node.js the runner runs on.
+      `systemd-run --user --quiet --collect --unit=brigade-docker-proxy.service -p Restart=on-failure ${dir}/bin/node /opt/brigade/runner/dist/docker-proxy.js`,
     ])
     // Docker on first use only: not with the teammate's systemd.
     assert.match(first.log, /systemctl --user disable --quiet docker\.service/)

@@ -163,7 +163,14 @@ lock() { install -d -m 755 "$STATE"; exec 9>"$STATE/.lock"; flock 9; }
 # own systemd, brigade-docker), behind a proxy of its own (brigade-docker-proxy, the runner's
 # docker-proxy.js) with a socket in each of its threads' folders here.
 DOCKER_RUN=/run/brigade-docker
-DOCKER_PROXY="/opt/brigade/node/bin/node /opt/brigade/runner/dist/docker-proxy.js"
+RUNNER=/opt/brigade/bin/brigade-runner
+# The Node.js the runner runs on, from its wrapper (its installer's choice: the computer's own
+# when recent enough, else a copy in /opt/brigade/node).
+runner_node() {
+  RN=$(sed -n 's|^ *"\\([^"]*\\)" "/opt/brigade/runner/dist/index.js".*|\\1|p' "$RUNNER" 2>/dev/null | head -1)
+  [ -x "$RN" ] || RN=/opt/brigade/node/bin/node
+  echo "$RN"
+}
 # Where thread n's containers publish their ports on the host: a loopback address of its own.
 # Rootless Docker publishes a port number once per loopback address, but only once for all other
 # addresses (it reaches its containers through its own 127.0.0.1 for those).
@@ -263,8 +270,9 @@ docker_proxy() {
       [ $((PI % 20)) -ne 0 ] || as_user "$1" systemctl --user kill -s HUP $DPU 2>/dev/null || true
     else
       as_user "$1" systemctl --user reset-failed $DPU 2>/dev/null || true
-      # shellcheck disable=SC2086
-      as_user "$1" systemd-run --user --quiet --collect --unit=$DPU $DOCKER_PROXY 2>/dev/null || true
+      # Started again if it fails: a thread's docker commands would fail until its next turn.
+      as_user "$1" systemd-run --user --quiet --collect --unit=$DPU -p Restart=on-failure \\
+        "$(runner_node)" /opt/brigade/runner/dist/docker-proxy.js 2>/dev/null || true
     fi
     sleep 0.1
     PI=$((PI + 1))
