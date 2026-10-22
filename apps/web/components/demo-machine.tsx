@@ -44,7 +44,9 @@ export function DemoMachine({ what, onClose }: { what: keyof typeof WHAT; onClos
       <p className="font-semibold">{title}</p>
       <p className="text-muted-foreground max-w-sm text-sm">{text}</p>
       <Button asChild size="sm" className="mt-1 rounded-full">
-        <a href={SIGN_UP_URL}>Start free on your Mac</a>
+        <a href={SIGN_UP_URL} target="_top">
+          Start free on your Mac
+        </a>
       </Button>
     </div>
   )

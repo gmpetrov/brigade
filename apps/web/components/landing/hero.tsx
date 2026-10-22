@@ -48,6 +48,9 @@ export function Hero() {
             <Link className={c('btn pri lg')} href={SIGN_UP}>
               Start free on your Mac
             </Link>
+            <a className={c('btn lg')} href="#demo">
+              Try the live demo
+            </a>
           </div>
           <p className={c('fine')}>Open source · Free on your Mac</p>
         </div>

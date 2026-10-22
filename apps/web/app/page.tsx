@@ -3,6 +3,7 @@ import { BuiltBy, Download, Faq, FinalCall, Footer, Pricing } from '@/components
 import { Control } from '@/components/landing/control'
 import { Header, Hero, PlanBand } from '@/components/landing/hero'
 import { Jobs } from '@/components/landing/jobs'
+import { LiveDemo } from '@/components/landing/live-demo'
 import { PauseOffscreen } from '@/components/landing/in-view'
 import { c } from '@/components/landing/parts'
 import { Bridge, Message, Tiles } from '@/components/landing/sections'
@@ -66,6 +67,7 @@ export default function Landing() {
       <main>
         <Hero />
         <PlanBand />
+        <LiveDemo />
         <Message />
         <Bridge />
         <Tiles />

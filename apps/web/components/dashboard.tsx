@@ -108,7 +108,7 @@ import {
 import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
 import { API_URL } from '@/lib/config'
 import { authClient } from '@/lib/auth-client'
-import { DEMO, SIGN_UP_URL } from '@/lib/demo/flag'
+import { DEMO, signUp } from '@/lib/demo/flag'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 import { isMac, useIsMac } from '@/lib/platform'
 import { useLive } from '@/lib/use-live'
@@ -358,7 +358,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   async function signOut() {
     // The demo has no account to leave: the way out is signing up for real.
-    if (DEMO) return void (window.location.href = SIGN_UP_URL)
+    if (DEMO) return signUp()
     await authClient.signOut()
     markSignedOut()
     router.replace('/sign-in')

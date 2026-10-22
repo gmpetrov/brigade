@@ -6339,3 +6339,102 @@ a.lgr:hover .tt {
 .page [data-offscreen] *::after {
   animation-play-state: paused !important;
 }
+
+/* =================== Live demo (live-demo.tsx) =================== */
+.live-demo {
+  padding-top: 40px;
+}
+.demo-win {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  box-shadow: 0 30px 80px -30px oklch(0 0 0 / 0.35);
+  overflow: hidden;
+}
+.demo-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.demo-bar i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.demo-bar span {
+  margin-left: 10px;
+}
+.demo-bar a {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.demo-bar a svg.i {
+  width: 14px;
+  height: 14px;
+}
+.demo-view {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: var(--background);
+}
+.demo-view iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.demo-shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+.dark-only {
+  display: none;
+}
+:global(.dark) .light-only {
+  display: none;
+}
+:global(.dark) .dark-only {
+  display: block;
+}
+.demo-start {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: oklch(0 0 0 / 0.18);
+}
+.demo-phone {
+  display: none;
+}
+@media (max-width: 640px) {
+  .live-demo {
+    padding-top: 20px;
+  }
+  .demo-bar span {
+    display: none;
+  }
+  .demo-view {
+    aspect-ratio: 4 / 3;
+  }
+  .demo-desk {
+    display: none;
+  }
+  .demo-phone {
+    display: inline-flex;
+  }
+}
