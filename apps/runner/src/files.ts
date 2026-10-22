@@ -28,7 +28,7 @@ const inside = (root: string, path: string) => {
 }
 
 /** The real path, or undefined when there is no such file (as `user` when given). */
-async function real(path: string, user?: string) {
+export async function real(path: string, user?: string) {
   if (!user) return realpath(path).catch(() => undefined)
   return run('sudo', ['-n', '-u', user, 'realpath', '-e', '--', path], { cwd: '/' }).then(
     ({ stdout }) => stdout.trim() || undefined,
@@ -37,7 +37,7 @@ async function real(path: string, user?: string) {
 }
 
 /** Size and the first `max` + 1 bytes. */
-async function readStart(path: string, user?: string, max = FILE_VIEW_MAX) {
+export async function readStart(path: string, user?: string, max = FILE_VIEW_MAX) {
   if (!user) {
     const size = (await stat(path)).size
     const file = await open(path, 'r')

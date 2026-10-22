@@ -150,6 +150,8 @@ export type Item =
       text: string
       done: boolean
       teammateId?: string
+      /** The images it shows, kept with the thread (message.images): by path, as it writes it. */
+      images?: Record<string, string>
     }
   | { kind: 'thinking'; key: string; text: string }
   | {
@@ -357,6 +359,11 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
               done: true,
               teammateId: e.teammateId,
             })
+          break
+        }
+        case 'message.images': {
+          const item = byKey.get(`m${e.teammateId ?? ''}:${e.id}`)
+          if (item?.kind === 'assistant') item.images = e.images
           break
         }
         case 'tool.started':
@@ -1824,7 +1831,12 @@ export function ThreadItems({
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
               {named && <span className="text-sm font-semibold">{author.name}</span>}
               {/* A file it names opens from its own working folder first. */}
-              <FileLinksProvider value={{ teammateId: item.teammateId }}>
+              <FileLinksProvider
+                value={{
+                  teammateId: item.teammateId,
+                  ...(item.images ? { images: item.images } : {}),
+                }}
+              >
                 {/* A card it ends with shows once the reply is done, without its markup. */}
                 <Markdown text={item.done ? item.text : withoutCard(item.text)} />
               </FileLinksProvider>

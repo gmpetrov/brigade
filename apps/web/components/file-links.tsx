@@ -14,6 +14,8 @@ type FileLinks = {
   base?: string
   /** The thread whose teammates' folders hold the files: an image in one opens over the page. */
   threadId?: string
+  /** The images the message shows, kept with the thread (message.images), by path. */
+  images?: Record<string, string>
 }
 
 const Context = createContext<FileLinks | null>(null)

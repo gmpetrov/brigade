@@ -449,6 +449,18 @@ export const AgentEvent = z.discriminatedUnion('type', [
   }),
   z.object({ ...base, type: z.literal('message.delta'), id: z.string(), text: z.string() }),
   z.object({ ...base, type: z.literal('message.done'), id: z.string(), text: z.string() }),
+  /**
+   * The images a finished message shows (`![…](path)` or a link to one), read from
+   * the computer as it was sent, so the thread shows them once the file has gone or
+   * the computer is off. By the path as the message writes it (`relativeFile`): a
+   * data: URL from the runner, STORED_FILE and the file's name once stored.
+   */
+  z.object({
+    ...base,
+    type: z.literal('message.images'),
+    id: z.string(),
+    images: z.record(z.string(), z.string()),
+  }),
   z.object({
     ...base,
     type: z.literal('tool.started'),

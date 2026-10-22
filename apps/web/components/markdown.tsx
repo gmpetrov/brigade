@@ -5,7 +5,7 @@
 // mentions a teammate echoes back show as chips, and code blocks are highlighted
 // (highlight.js's common languages: JSON, YAML, XML/HTML, CSS, JS/TS, Python,
 // shell, SQL, diff and more; colors in globals.css).
-import { MENTION_KINDS, type MentionKind } from '@brigade/contracts'
+import { MENTION_KINDS, STORED_FILE, STORED_FILE_NAME, type MentionKind } from '@brigade/contracts'
 import { Check, Copy, ImageIcon } from 'lucide-react'
 import {
   createContext,
@@ -26,7 +26,7 @@ import {
   useFileLinks,
 } from '@/components/file-links'
 import { MentionChip, MessageText } from '@/components/mention'
-import { threadImageUrl } from '@/lib/api'
+import { storedFileUrl, threadImageUrl } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const MENTION_HREF = new RegExp(`^(${MENTION_KINDS.join('|')}):([^\\s]+)$`)
@@ -176,6 +176,19 @@ const linkClass = 'font-medium text-primary underline underline-offset-2 hover:n
 const IMAGE_FILE = /\.(png|jpe?g|gif|webp)$/i
 
 /**
+ * Where an image the message names shows from: its copy kept with the thread when
+ * there is one (message.images), else the teammate's computer, as it is now.
+ */
+function imageSrc(links: NonNullable<ReturnType<typeof useFileLinks>>, path: string) {
+  const kept = links.images?.[path]
+  const name = kept?.startsWith(STORED_FILE) && kept.slice(STORED_FILE.length)
+  if (name && STORED_FILE_NAME.test(name)) return storedFileUrl(links.threadId!, name)
+  // Small ones stay in the event.
+  if (kept?.startsWith('data:image/')) return kept
+  return threadImageUrl(links.threadId!, path, links.teammateId)
+}
+
+/**
  * An image in a teammate's folder, named by a relative link or `![](path)`: it
  * opens over the page like an attached one. Its path is no address on the web.
  */
@@ -195,11 +208,7 @@ function FileImage({ path, children }: { path: string; children: ReactNode }) {
         {children}
       </button>
       <MediaPreview
-        media={
-          open
-            ? { name, src: threadImageUrl(links.threadId, path, links.teammateId), kind: 'image' }
-            : undefined
-        }
+        media={open ? { name, src: imageSrc(links, path), kind: 'image' } : undefined}
         onClose={() => setOpen(false)}
       />
     </>

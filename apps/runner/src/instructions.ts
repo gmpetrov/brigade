@@ -509,9 +509,7 @@ const VISUALS =
   `Read \`${WIDGET_GUIDE_TOOL}\` before your first one in a thread. A widget is not kept: what someone will keep, comment on or build from is a design. ` +
   'Your reply still says what matters: other teammates read the reply and never the widget. When a widget shows options, ' +
   'end your reply with a choices block whose labels are numbered and named as in the widget ("3 · Small square caps"), so a pick reads on its own. ' +
-  'A person can choose for you: a message that says they asked for a visual (/visual) or a design (/design) gets that one.\n\n' +
-  "To show an image file in your reply (a screenshot, a chart), write `![what it shows](path)` with a path inside this thread's " +
-  'working folder: copy it there first, since the thread cannot show a file elsewhere on the computer (such as /tmp).'
+  'A person can choose for you: a message that says they asked for a visual (/visual) or a design (/design) gets that one.'
 
 /** Cards a reply ends with: buttons to answer in one click, alternatives to pick (replyCard). */
 const REPLIES =

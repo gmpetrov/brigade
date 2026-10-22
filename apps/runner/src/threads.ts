@@ -38,6 +38,7 @@ import { memoryNews, threadMemory } from './memory-layers.js'
 import { tidyRun, type TidyFile } from './memory-tidy.js'
 import { MARKS_RULE, said, type LogEntry } from './said.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
+import { readReplyImages } from './reply-images.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
 import {
@@ -1479,6 +1480,20 @@ export class Threads {
           if (event.type === 'message.done' && event.text.trim()) {
             this.note(spec, teammateId, spec.teammate.name, event.text)
             seat!.turn.push({ kind: 'message', chars: visibleChars(event.text), text: event.text })
+            // The images it shows, kept with the thread: a file in /tmp is gone by tomorrow.
+            void readReplyImages(event.text, folder).then(
+              (images) =>
+                Object.keys(images).length > 0 &&
+                this.options.emit(spec.sessionId, {
+                  at: new Date().toISOString(),
+                  type: 'message.images',
+                  id: event.id,
+                  images,
+                  teammateId,
+                }),
+              (error: unknown) =>
+                console.warn(`could not read the images of a reply: ${String(error)}`),
+            )
           }
           const waiting = backgroundWait(event)
           if (waiting !== undefined) {
