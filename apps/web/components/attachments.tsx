@@ -501,6 +501,8 @@ function Thumbnail({
 
 /** An image or a video at full size over the page; Esc, a click outside or × closes it. */
 export function MediaPreview({ media, onClose }: { media?: Media; onClose: () => void }) {
+  // The src that failed to load: a file gone from the computer, or one it does not show.
+  const [failed, setFailed] = useState<string>()
   return (
     <Dialog open={!!media} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -519,14 +521,22 @@ export function MediaPreview({ media, onClose }: { media?: Media; onClose: () =>
             <X aria-hidden />
           </Button>
         </DialogClose>
-        {media?.kind === 'image' && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={media.src}
-            alt={media.name}
-            className="max-h-[calc(100vh-4rem)] max-w-[calc(100vw-4rem)] object-contain"
-          />
-        )}
+        {media?.kind === 'image' &&
+          (failed === media.src ? (
+            <p className="flex items-center gap-2 py-6 pr-14 pl-6 text-sm text-muted-foreground">
+              <Ban aria-hidden className="size-4 shrink-0" />
+              This image can’t be shown: it is no longer on the computer, or outside the teammate’s
+              folder.
+            </p>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={media.src}
+              alt={media.name}
+              onError={() => setFailed(media.src)}
+              className="max-h-[calc(100vh-4rem)] max-w-[calc(100vw-4rem)] object-contain"
+            />
+          ))}
         {media?.kind === 'video' && (
           <video
             src={media.src}

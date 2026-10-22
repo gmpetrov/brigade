@@ -442,6 +442,7 @@ export const ModelName = {
   LibraryFolder: 'LibraryFolder',
   LibraryFolderGrant: 'LibraryFolderGrant',
   DocumentAsset: 'DocumentAsset',
+  BucketCleanup: 'BucketCleanup',
   AuditEntry: 'AuditEntry',
   Attachment: 'Attachment',
   ThreadAttachment: 'ThreadAttachment',
@@ -474,7 +475,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow"
+    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3808,6 +3809,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    BucketCleanup: {
+      payload: Prisma.$BucketCleanupPayload<ExtArgs>
+      fields: Prisma.BucketCleanupFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.BucketCleanupFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.BucketCleanupFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload>
+        }
+        findFirst: {
+          args: Prisma.BucketCleanupFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.BucketCleanupFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload>
+        }
+        findMany: {
+          args: Prisma.BucketCleanupFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload>[]
+        }
+        create: {
+          args: Prisma.BucketCleanupCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload>
+        }
+        createMany: {
+          args: Prisma.BucketCleanupCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.BucketCleanupCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload>[]
+        }
+        delete: {
+          args: Prisma.BucketCleanupDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload>
+        }
+        update: {
+          args: Prisma.BucketCleanupUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload>
+        }
+        deleteMany: {
+          args: Prisma.BucketCleanupDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.BucketCleanupUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.BucketCleanupUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload>[]
+        }
+        upsert: {
+          args: Prisma.BucketCleanupUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BucketCleanupPayload>
+        }
+        aggregate: {
+          args: Prisma.BucketCleanupAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateBucketCleanup>
+        }
+        groupBy: {
+          args: Prisma.BucketCleanupGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BucketCleanupGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.BucketCleanupCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BucketCleanupCountAggregateOutputType> | number
+        }
+      }
+    }
     AuditEntry: {
       payload: Prisma.$AuditEntryPayload<ExtArgs>
       fields: Prisma.AuditEntryFieldRefs
@@ -5894,6 +5969,17 @@ export const DocumentAssetScalarFieldEnum = {
 export type DocumentAssetScalarFieldEnum = (typeof DocumentAssetScalarFieldEnum)[keyof typeof DocumentAssetScalarFieldEnum]
 
 
+export const BucketCleanupScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  prefix: 'prefix',
+  notBefore: 'notBefore',
+  createdAt: 'createdAt'
+} as const
+
+export type BucketCleanupScalarFieldEnum = (typeof BucketCleanupScalarFieldEnum)[keyof typeof BucketCleanupScalarFieldEnum]
+
+
 export const AuditEntryScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -7028,6 +7114,7 @@ export type GlobalOmitConfig = {
   libraryFolder?: Prisma.LibraryFolderOmit
   libraryFolderGrant?: Prisma.LibraryFolderGrantOmit
   documentAsset?: Prisma.DocumentAssetOmit
+  bucketCleanup?: Prisma.BucketCleanupOmit
   auditEntry?: Prisma.AuditEntryOmit
   attachment?: Prisma.AttachmentOmit
   threadAttachment?: Prisma.ThreadAttachmentOmit

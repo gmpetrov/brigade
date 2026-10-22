@@ -32,6 +32,7 @@ import { repositories } from './routes/repositories.js'
 import { runnerAttachments } from './routes/runner-attachments.js'
 import { runnerSkillFiles } from './routes/runner-skill-files.js'
 import { runnerBackups } from './routes/runner-backups.js'
+import { runnerFiles } from './routes/runner-files.js'
 import { runnerFolders } from './routes/runner-folders.js'
 import { runnerLibrary } from './routes/runner-library.js'
 import { schedules } from './routes/schedules.js'
@@ -129,6 +130,7 @@ app.route('/runner', runnerInstall)
 app.route('/runner/library', runnerLibrary)
 app.route('/runner/backups', runnerBackups)
 app.route('/runner/folders', runnerFolders)
+app.route('/runner/files', runnerFiles)
 app.route('/runner/attachments', runnerAttachments)
 app.route('/runner/skill-files', runnerSkillFiles)
 // Git for teammates, proxied to GitHub. Authenticated by a thread's git token, not a session.

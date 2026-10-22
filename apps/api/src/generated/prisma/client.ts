@@ -300,6 +300,13 @@ export type LibraryFolderGrant = Prisma.LibraryFolderGrantModel
  */
 export type DocumentAsset = Prisma.DocumentAssetModel
 /**
+ * Model BucketCleanup
+ * A deleted thread's files folder in the bucket, emptied again once every signed upload
+ * URL issued before its deletion has expired (a runner's late image, runner-files.ts).
+ * Kept until a sweep empties it whole: the row is the promise that nothing is left.
+ */
+export type BucketCleanup = Prisma.BucketCleanupModel
+/**
  * Model AuditEntry
  * Append-only record of an action. workspaceId is null for organization-level actions.
  */
