@@ -4,7 +4,7 @@
 // send a message) and the others accepted without effect. A reload starts over.
 import type { ApiToBrowser, SequencedEvent } from '@brigade/contracts'
 import fixtures from './fixtures.json'
-import { DEMO_API } from './flag'
+import { DEMO_API, DEMO_THREAD } from './flag'
 import { demoPulls, mergedPull, newPull, type DemoPull, type NewPull } from './pulls'
 import { afterDecision, replyTo, type Run } from './scripts'
 import { keyOf, reviveDates } from './shared'
@@ -295,7 +295,7 @@ function newThread(input: {
     (list.find((t) => (t.teammate as Json | undefined)?.id === teammate.id) as Json | undefined) ??
     list[0]!
   const project = (body<Json[]>('GET /projects') ?? []).find((p) => p.id === input.projectId)
-  const threadId = `demo-thread-${++threadCount}-${id()}`
+  const threadId = `${DEMO_THREAD}${++threadCount}-${id()}`
   const title = input.title ?? (input.text ?? 'New thread').split('\n')[0]!.slice(0, 70)
   const fresh = {
     ...structuredClone(template),

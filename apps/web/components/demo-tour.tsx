@@ -88,7 +88,8 @@ export function DemoTour() {
           <span className="font-medium">Your turn: click around</span>
           <button
             type="button"
-            onClick={() => location.reload()}
+            // From the start, Home: a reload anywhere else would replay from where it ended.
+            onClick={() => location.assign(`/app?${TOUR_PARAM}`)}
             className="hover:bg-muted inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium"
           >
             <RotateCcw className="size-3.5" aria-hidden />

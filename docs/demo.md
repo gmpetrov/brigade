@@ -108,8 +108,9 @@ customers who asked; sending waits for a person, and the cursor allows it in the
 it asks for the same with every bug report, and Riley makes it a routine. It takes about 45 seconds.
 
 It drives the real dashboard with events no person made: the visitor's first click, key,
-scroll or touch in the frame stops it, and "Your turn: click around" offers a replay (a reload,
-which starts the demo over). It finds what to click by what the page shows (the teammate menu,
+scroll or touch in the frame stops it, and "Your turn: click around" offers a replay (Home
+again, `/app?tour`, which starts the demo over). A thread the visitor started lives in memory:
+reloaded on its address, the demo opens Home instead (`lib/demo/install.ts`). It finds what to click by what the page shows (the teammate menu,
 "Merge #153", "Allow"): a change to those labels needs the same change in `lib/demo/tour.ts`.
 `pnpm test` plays its scenario against the demo's server; the clicks themselves are checked
 by running it in a browser.

@@ -7,6 +7,9 @@ export const DEMO = process.env.NEXT_PUBLIC_DEMO === '1'
 export const DEMO_API = 'https://api.demo.invalid'
 /** Where the demo's visitor goes to start for real. */
 export const SIGN_UP_URL = 'https://www.brigade.lol/sign-up'
+/** How the ids of threads started in the demo begin (lib/demo/server.ts): none outlives a reload. */
+export const DEMO_THREAD = 'demo-thread-'
+
 /** Where the landing page shows the demo in a frame (components/landing/live-demo.tsx). */
 export const DEMO_URL = 'https://demo.brigade.lol'
 
