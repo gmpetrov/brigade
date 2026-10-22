@@ -161,6 +161,14 @@ netns() { [ -e "/run/netns/bt-$1" ] || fail "no network for thread $1"; echo "/r
 # whatever the ids: under its runtime directory, containerd's were longer than a unix socket's
 # path may be (104), and it never started. <thread> <user>
 docker_exec() { echo "/run/bd/$(printf '%s/%s' "$1" "$2" | sha256sum | cut -c1-12)"; }
+# One change at a time to a teammate's Docker in a thread: two turns, or a turn and a terminal,
+# may ask for it at once, and one must not delete the socket the other just made. Held until
+# the helper exits. <thread> <user>
+docker_lock() {
+  install -d -m 755 /run/brigade-docker "/run/brigade-docker/$1"
+  exec 8>"/run/brigade-docker/$1/.$2.lock"
+  flock 8
+}
 # The teammate's Docker in a thread started, unless it runs: its own unit (it outlives the
 # runner's restarts), in the thread's namespace (its published ports are the thread's), its
 # sockets in docker_exec's. Waits for its socket. <thread> <user>
@@ -384,13 +392,8 @@ case "\${1:-}" in
     grep -q "^$3:" /etc/subuid || fail "no subordinate ids for $3"
     R="/run/brigade-docker/$2/$3"
     GATE="brigade-gate-$2-$3"
-    # Its Docker stopped by itself (not by docker-stop): its proxy goes too, and the next
-    # connection starts both again.
-    if systemctl is-active --quiet "$GATE.service" && ! systemctl is-active --quiet "brigade-docker-$2-$3"; then
-      systemctl stop "$GATE.service"
-    fi
+    docker_lock "$2" "$3"
     if ! systemctl is-active --quiet "$GATE.socket"; then
-      install -d -m 755 /run/brigade-docker "/run/brigade-docker/$2"
       install -d -o "$3" -g "$3" -m 700 "$R"
       rm -f "$R/docker.sock"
       systemctl stop "$GATE.service" 2>/dev/null || true
@@ -409,14 +412,22 @@ case "\${1:-}" in
     thread_ok "$2"
     user_ok "$3"
     docker_up "$2" "$3"
-    # shut-close: once Docker closes a connection, its client's closes whole, as Docker's would.
-    exec setpriv --reuid="$3" --regid="$3" --init-groups \\
-      socat -t 86400 ACCEPT-FD:3,fork,shut-close "UNIX-CONNECT:$(docker_exec "$2" "$3")/docker.sock"
+    # As the teammate, the relay. shut-close: once Docker closes a connection, its client's
+    # closes whole, as Docker's would.
+    setpriv --reuid="$3" --regid="$3" --init-groups \\
+      socat -t 86400 ACCEPT-FD:3,fork,shut-close "UNIX-CONNECT:$(docker_exec "$2" "$3")/docker.sock" &
+    S=$!
+    exec 3>&-
+    # Until the relay or the Docker stops (by itself, say): then this ends, and the socket's next
+    # connection starts both again.
+    while kill -0 "$S" 2>/dev/null && systemctl is-active --quiet "brigade-docker-$2-$3"; do sleep 5; done
+    kill "$S" 2>/dev/null || true
     ;;
   docker-stop) # <thread> <user> [purge]: that Docker stopped, its containers with it, and its
     # socket; with purge, its images, containers and volumes deleted
     thread_ok "$2"
     user_ok "$3"
+    docker_lock "$2" "$3"
     for U in "brigade-gate-$2-$3.socket" "brigade-gate-$2-$3.service" "brigade-docker-$2-$3.service"; do
       systemctl stop "$U" 2>/dev/null || true
     done

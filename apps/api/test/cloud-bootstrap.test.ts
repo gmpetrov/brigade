@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import { setTimeout as sleep } from 'node:timers/promises'
 import {
   bootstrapScript,
   GIVE_HOMES_BACK,
@@ -78,9 +79,65 @@ test("a thread's Docker starts on its socket's first connection, not when a turn
   assert.doesNotMatch(docker, /docker_up "|dockerd-rootless\.sh --/)
   const gate = branch('docker-gate')
   assert.match(gate, /docker_up "\$2" "\$3"/)
-  assert.match(gate, /exec setpriv --reuid="\$3"[\s\S]*socat -t 86400 ACCEPT-FD:3,fork,shut-close/)
+  assert.match(gate, /setpriv --reuid="\$3"[\s\S]*socat -t 86400 ACCEPT-FD:3,fork,shut-close.* &$/m)
+  // It ends with its Docker (stopped by itself, say): the next connection starts both again.
+  assert.match(gate, /while kill -0 "\$S" .*systemctl is-active --quiet "brigade-docker-\$2-\$3"/)
   assert.match(setupScript(), /for P in [^;]*\bsocat\b/)
 })
+
+test(
+  "two starts at once leave the thread's Docker socket in place",
+  { skip: spawnSync('sh', ['-c', 'command -v flock']).status !== 0 && 'no flock here' },
+  async () => {
+    // Both saw no socket unit, and the second deleted the socket the first had just made: the
+    // daemon ran, unreachable. The second now waits (docker_lock), then finds the socket up.
+    // The helper's own `docker`, its root paths in a temporary folder, what needs root stubbed.
+    const dir = mkdtempSync(join(tmpdir(), 'thread-docker-'))
+    const bin = join(dir, 'bin')
+    mkdirSync(bin)
+    mkdirSync(join(dir, 'netns'))
+    writeFileSync(join(dir, 'netns', 'bt-t1'), '')
+    writeFileSync(join(dir, 'subuid'), 'bt-test:100000:65536\n')
+    const stub = (name: string, body: string) =>
+      writeFileSync(join(bin, name), `#!/bin/sh\n${body}\n`, { mode: 0o755 })
+    stub('id', 'exit 0')
+    stub('dockerd-rootless.sh', 'exit 0')
+    stub('newuidmap', 'exit 0')
+    // The socket unit runs once its socket is made.
+    stub('systemctl', 'case "$1" in is-active) [ -e "$SOCKET" ] ;; *) exit 0 ;; esac')
+    stub('systemd-run', 'echo "$*" >>"$DIR/runs"; : >"$SOCKET"')
+    // The first caller stops there, after it saw no socket unit, until the test goes on.
+    stub(
+      'install',
+      [
+        'case " $* " in *" -o "*) if [ "$CALLER" = first ]; then',
+        '  : >"$DIR/inside"; while [ ! -e "$DIR/go" ]; do sleep 0.01; done',
+        'fi ;; esac',
+        'A=""; while [ $# -gt 0 ]; do case "$1" in -o|-g) shift ;; *) A="$A $1" ;; esac; shift; done',
+        'exec /usr/bin/install $A',
+      ].join('\n'),
+    )
+    const helper = THREAD_HELPER.replaceAll('/run/brigade-docker', `${dir}/r`)
+      .replaceAll('/run/netns', `${dir}/netns`)
+      .replaceAll('/etc/subuid', `${dir}/subuid`)
+    const socket = `${dir}/r/t1/bt-test/docker.sock`
+    const docker = (caller: string) =>
+      new Promise<number | null>((resolve) =>
+        spawn('sh', ['-c', helper, 'brigade-thread', 'docker', 't1', 'bt-test'], {
+          env: { PATH: `${bin}:/usr/bin:/bin`, DIR: dir, SOCKET: socket, CALLER: caller },
+          stdio: 'ignore',
+        }).on('exit', resolve),
+      )
+    const first = docker('first')
+    while (!existsSync(join(dir, 'inside'))) await sleep(10)
+    const second = docker('second')
+    await sleep(300)
+    writeFileSync(join(dir, 'go'), '')
+    assert.deepEqual(await Promise.all([first, second]), [0, 0])
+    assert.ok(existsSync(socket))
+    assert.equal(readFileSync(join(dir, 'runs'), 'utf8').trim().split('\n').length, 1)
+  },
+)
 
 test('docker-gate runs only from its socket', () => {
   const result = spawnSync(
