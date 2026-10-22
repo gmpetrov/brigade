@@ -38,7 +38,7 @@ import { memoryNews, threadMemory } from './memory-layers.js'
 import { tidyRun, type TidyFile } from './memory-tidy.js'
 import { MARKS_RULE, said, type LogEntry } from './said.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
-import { readReplyImages } from './reply-images.js'
+import { keepReplyImages, type StoreImage } from './reply-images.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
 import {
@@ -256,6 +256,8 @@ export class Threads {
       context: Omit<ThreadContext, 'callLibrary' | 'callTask' | 'callSchedule' | 'preview'>
       /** Apps teammates run for people to try, one per thread. */
       previews: Previews
+      /** Put an image a reply shows in its thread's bucket folder (reply-images.ts). */
+      storeImage: StoreImage
       /** Thread folders archived to free disk, or moved here: put back before a turn. */
       folders: Pick<Folders, 'ready' | 'takeNote' | 'touch' | 'arrive' | 'release'>
       callLibrary: (
@@ -1481,18 +1483,16 @@ export class Threads {
             this.note(spec, teammateId, spec.teammate.name, event.text)
             seat!.turn.push({ kind: 'message', chars: visibleChars(event.text), text: event.text })
             // The images it shows, kept with the thread: a file in /tmp is gone by tomorrow.
-            // One event each, so none comes near the WebSocket's message limit.
-            void readReplyImages(event.text, folder).then(
-              (images) => {
-                for (const [path, image] of Object.entries(images))
-                  this.options.emit(spec.sessionId, {
-                    at: new Date().toISOString(),
-                    type: 'message.images',
-                    id: event.id,
-                    images: { [path]: image },
-                    teammateId,
-                  })
-              },
+            void keepReplyImages(event.text, folder, spec.sessionId, this.options.storeImage).then(
+              (images) =>
+                Object.keys(images).length > 0 &&
+                this.options.emit(spec.sessionId, {
+                  at: new Date().toISOString(),
+                  type: 'message.images',
+                  id: event.id,
+                  images,
+                  teammateId,
+                }),
               (error: unknown) =>
                 console.warn(`could not read the images of a reply: ${String(error)}`),
             )

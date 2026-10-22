@@ -1,10 +1,12 @@
 // The images a teammate's reply shows (`![…](/tmp/shot.png)`, a link to one), read
-// when the reply is done and sent with it (message.images): the API keeps them in the
-// thread's bucket folder, so the thread shows them after the file has gone (/tmp, a
-// folder cleaned up) or while the computer is off. Read as the teammate's user on a
-// cloud computer: what it can read itself, nothing more.
+// when the reply is done and put in the thread's bucket folder, straight to R2 through
+// a signed URL (the API's /runner/files): the thread shows them after the file has gone
+// (/tmp, a folder cleaned up) or while the computer is off. The reply's event names
+// each by its stored file (message.images). Read as the teammate's user on a cloud
+// computer: what it can read itself, nothing more.
+import { createHash } from 'node:crypto'
 import { isAbsolute, join } from 'node:path'
-import { IMAGE_VIEW_MAX } from '@brigade/contracts'
+import { IMAGE_VIEW_MAX, STORED_FILE } from '@brigade/contracts'
 import { readStart, real } from './files.js'
 
 /** A link target in Markdown, `](path)` or `](<path with spaces>)`, with an optional title. */
@@ -14,11 +16,16 @@ const IMAGE_FILE = /\.(png|jpe?g|gif|webp)$/i
 const MAX_IMAGES = 10
 
 /** The type of an image by its leading bytes; SVG is not one (it can run script). */
-const TYPES: { type: string; is: (b: Buffer) => boolean }[] = [
-  { type: 'image/png', is: (b) => b[0] === 0x89 && b.toString('latin1', 1, 4) === 'PNG' },
-  { type: 'image/jpeg', is: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
-  { type: 'image/gif', is: (b) => b.toString('latin1', 0, 4) === 'GIF8' },
+const TYPES: { ext: string; type: string; is: (b: Buffer) => boolean }[] = [
   {
+    ext: 'png',
+    type: 'image/png',
+    is: (b) => b[0] === 0x89 && b.toString('latin1', 1, 4) === 'PNG',
+  },
+  { ext: 'jpg', type: 'image/jpeg', is: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  { ext: 'gif', type: 'image/gif', is: (b) => b.toString('latin1', 0, 4) === 'GIF8' },
+  {
+    ext: 'webp',
     type: 'image/webp',
     is: (b) => b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WEBP',
   },
@@ -58,14 +65,55 @@ export function imagesIn(text: string) {
   return [...paths]
 }
 
+/** Put an image in the thread's bucket folder under `name` (`<sha256>.<ext>`). */
+export type StoreImage = (
+  sessionId: string,
+  name: string,
+  bytes: Buffer,
+  type: string,
+) => Promise<void>
+
 /**
- * Each image the reply names that is on the computer, as a data: URL, by its path as
- * the reply writes it. A relative one is in the thread's working folder. One that is
- * missing, too large or no image is left out: the thread tries the computer for it.
+ * StoreImage through the API's /runner/files: a signed URL to PUT the image to R2,
+ * or the API itself without R2 (development).
  */
-export async function readReplyImages(
+export function imageStore(api: { apiUrl: string; token: string }): StoreImage {
+  return async (sessionId, name, bytes, type) => {
+    const file = new URL(
+      `/runner/files/${encodeURIComponent(sessionId)}/${encodeURIComponent(name)}`,
+      api.apiUrl,
+    )
+    const auth = { authorization: `Bearer ${api.token}` }
+    const ticket = await fetch(`${file}/upload`, {
+      method: 'POST',
+      headers: { ...auth, 'content-type': 'application/json' },
+      body: JSON.stringify({ size: bytes.length }),
+    })
+    if (!ticket.ok) throw new Error(`the API refused the image (${ticket.status})`)
+    const { url, headers } = (await ticket.json()) as {
+      url: string | null
+      headers?: Record<string, string>
+    }
+    const body = new Uint8Array(bytes)
+    const upload = url
+      ? await fetch(url, { method: 'PUT', headers: headers ?? { 'content-type': type }, body })
+      : await fetch(file, { method: 'PUT', headers: { ...auth, 'content-type': type }, body })
+    if (!upload.ok)
+      throw new Error(`the ${url ? 'bucket' : 'API'} refused the image (${upload.status})`)
+  }
+}
+
+/**
+ * Each image the reply names that is on the computer, stored in the thread's bucket
+ * folder, by its path as the reply writes it: STORED_FILE and the stored file's name.
+ * A relative one is in the thread's working folder. One that is missing, too large,
+ * no image or could not be stored is left out: the thread tries the computer for it.
+ */
+export async function keepReplyImages(
   text: string,
   folder: { workDir: string; runAs?: string },
+  sessionId: string,
+  store: StoreImage,
 ): Promise<Record<string, string>> {
   const images: Record<string, string> = {}
   for (const path of imagesIn(text)) {
@@ -74,10 +122,14 @@ export async function readReplyImages(
     try {
       const { bytes } = await readStart(target, folder.runAs, IMAGE_VIEW_MAX)
       if (bytes.length > IMAGE_VIEW_MAX) continue
-      const type = TYPES.find((t) => t.is(bytes))?.type
-      if (type) images[path] = `data:${type};base64,${bytes.toString('base64')}`
-    } catch {
-      // Unreadable (gone since, not its own): the thread tries the computer.
+      const kind = TYPES.find((t) => t.is(bytes))
+      if (!kind) continue
+      const name = `${createHash('sha256').update(bytes).digest('hex')}.${kind.ext}`
+      await store(sessionId, name, bytes, kind.type)
+      images[path] = `${STORED_FILE}${name}`
+    } catch (error) {
+      // Unreadable (gone since, not its own) or not stored: the thread tries the computer.
+      console.warn(`thread ${sessionId}: could not keep the image ${path}: ${String(error)}`)
     }
   }
   return images

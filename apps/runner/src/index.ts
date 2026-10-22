@@ -41,6 +41,7 @@ import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys, usePersonPath, type Transcript } from './harness/index.js'
 import { Outbox } from './outbox.js'
+import { imageStore } from './reply-images.js'
 import { MemoryGuard } from './memory-guard.js'
 import { runnerCgroups } from './preview-cgroup.js'
 import { Previews } from './previews.js'
@@ -314,6 +315,8 @@ async function start() {
     concurrency: Number(values.concurrency),
     previews,
     folders,
+    // The images a reply shows, straight to the API's bucket through a signed URL.
+    storeImage: imageStore(config),
     emit: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
     // Connector calls go to the API. A write waiting for a person shows as an approval in the thread.
     callConnector: (sessionId, teammateId, call) =>

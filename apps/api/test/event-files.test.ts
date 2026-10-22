@@ -151,24 +151,3 @@ test('a stored file key takes only a hash and an image or PDF extension', () => 
   assert.throws(() => threadFileKey(scope, 's1', `${'a'.repeat(64)}.svg`))
   assert.throws(() => threadFileKey(scope, '../s1', `${'a'.repeat(64)}.png`))
 })
-
-test("a reply's images (message.images) go to the bucket, by the path the reply names", async () => {
-  const { puts, put } = recorder()
-  const event = {
-    at: '2026-10-22T12:00:00.000Z',
-    type: 'message.images',
-    id: 'm1',
-    images: {
-      '/tmp/rec/m0.png': `data:image/png;base64,${png().toString('base64')}`,
-      'tiny.png': `data:image/png;base64,${png().subarray(0, 50).toString('base64')}`,
-    },
-  }
-  const kept = await keepFilesApart(scope, 's-images', event, put)
-  assert.equal(kept.images['/tmp/rec/m0.png'], `${STORED_FILE}${nameOf(png(), 'png')}`)
-  // A small one stays in the event, a data: URL the thread shows as it is.
-  assert.equal(kept.images['tiny.png'], event.images['tiny.png'])
-  assert.deepEqual(
-    puts.map((p) => p.key),
-    [threadFileKey(scope, 's-images', nameOf(png(), 'png'))],
-  )
-})

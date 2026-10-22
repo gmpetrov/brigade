@@ -183,8 +183,6 @@ function imageSrc(links: NonNullable<ReturnType<typeof useFileLinks>>, path: str
   const kept = links.images?.[path]
   const name = kept?.startsWith(STORED_FILE) && kept.slice(STORED_FILE.length)
   if (name && STORED_FILE_NAME.test(name)) return storedFileUrl(links.threadId!, name)
-  // Small ones stay in the event.
-  if (kept?.startsWith('data:image/')) return kept
   return threadImageUrl(links.threadId!, path, links.teammateId)
 }
 
