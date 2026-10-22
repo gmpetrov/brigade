@@ -193,6 +193,11 @@ export type Item =
   | { kind: 'image'; key: string; path: string; teammateId?: string; prompt?: string }
   /** Where a teammate's turn begins: what it did until its turn ends folds under one line. */
   | { kind: 'start'; key: string; at: number; teammateId?: string }
+  /**
+   * The turn only waited on work it left in the background, and a report from that work
+   * set the teammate going again, no message steered in: what came before answered.
+   */
+  | { kind: 'woke'; key: string; at: number }
   | { kind: 'turn'; key: string; finishReason: string; startedAt?: number; at: number }
   | { kind: 'error'; key: string; message: string }
   /** settles: something happened that the buttons asked before it no longer fit (thread.note). */
@@ -260,6 +265,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
     let lastPreview: { previewId: string; status: string } | undefined
     // The running turn's background work, by task id: Claude Code sends every one still running at each change.
     let background = new Map<string, BackgroundTask>()
+    // The running turn only waits on that work: 'steered' once a message went in.
+    let idle: 'waiting' | 'steered' | undefined
     let shown = true
     const add = (item: Item) => {
       if (shown || ASKS.has(item.kind)) items.push(item)
@@ -275,6 +282,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           }
           // Not steered into a turn: one still open never ended.
           if (!e.steered) turnStartedAt = undefined
+          else if (idle) idle = 'steered'
           add({
             kind: 'user',
             key: `u${seq}`,
@@ -317,6 +325,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           turnTeammate = e.teammateId
           // A turn resumed (after a restart, say) starts again before it ends: still the same turn.
           turnStartedAt ??= Date.parse(e.at)
+          idle = undefined
           add({ kind: 'start', key: `s${seq}`, at: turnStartedAt, teammateId: e.teammateId })
           break
         // Ids come from each teammate's own harness: keyed by teammate too.
@@ -439,6 +448,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           })
           turnStartedAt = undefined
           background = new Map()
+          idle = undefined
           break
         case 'error':
           add({ kind: 'error', key: `e${seq}`, message: e.message })
@@ -450,7 +460,13 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             add({ kind: 'note', key: `n${seq}`, text: e.value })
           else if (e.source === THREAD_NOTE_SOURCE && typeof e.value === 'string')
             add({ kind: 'note', key: `n${seq}`, text: e.value, settles: true })
-          else if (e.source === 'harness') background = backgroundTasks(background, e.value)
+          else if (e.source === 'harness') {
+            background = backgroundTasks(background, e.value)
+            const waiting = backgroundWait(e.value)
+            if (waiting === false && idle === 'waiting')
+              add({ kind: 'woke', key: `b${seq}`, at: Date.parse(e.at) })
+            if (waiting !== undefined) idle = waiting ? 'waiting' : undefined
+          }
           break
         case 'account.switched':
           add({
@@ -556,6 +572,12 @@ function backgroundTasks(tasks: Map<string, BackgroundTask>, value: unknown) {
   if (msg.subtype === 'task_progress' && task && typeof msg.usage?.tool_uses === 'number')
     task.steps = msg.usage.tool_uses
   return tasks
+}
+
+/** The bridge's word on whether the turn only waits on its background work now, from a harness event. */
+function backgroundWait(value: unknown) {
+  const msg = value as { type?: string; subtype?: string; waiting?: unknown } | null
+  if (msg?.type === 'system' && msg.subtype === 'brigade_waiting') return msg.waiting === true
 }
 
 const clipText = (text: string, max: number) =>
@@ -861,7 +883,8 @@ type Node =
  * How the thread reads: steps in a row fold together, and a long turn that ended
  * folds everything before its last message under how long it worked. What a person
  * must see (asks, pull requests, pictures, choices, team proposals, errors) stays out of the fold.
- * A message steered into a turn ends what came before it the same way, as a turn of its own.
+ * A message steered into a turn ends what came before it the same way, as a turn of its own,
+ * and so does a report from its background work that sets the teammate going again.
  * `running` is when the turn still running began, or the message steered into it last.
  */
 function layoutThread(items: Item[], working: boolean) {
@@ -924,9 +947,9 @@ function layoutThread(items: Item[], working: boolean) {
   }
   const nodes: Node[] = []
   let running: number | undefined
-  // When the last message steered into the running turn was given to it.
+  // When the last message steered into the running turn was given to it, or a report woke it.
   let steered: number | undefined
-  // Since the last turn began or ended, or a message was steered into it.
+  // Since the last turn began or ended, or a message was steered into it, or a report woke it.
   let since: number[] = []
   const worked = (to: number, from?: number) => (from === undefined ? 0 : to - from)
   items.forEach((item, i) => {
@@ -944,9 +967,10 @@ function layoutThread(items: Item[], working: boolean) {
       since = []
       running = steered = undefined
     }
-    // Steered into the turn, such as one that only waited on a server it left running:
-    // what came before answers the message before, and keeps its answer out of the fold.
-    if (item.kind === 'user' && item.steeredTo) {
+    // Steered into the turn, such as one that only waited on a server it left running, or woken
+    // there by a report from that work: what came before answers the message before, and keeps
+    // its answer out of the fold.
+    if ((item.kind === 'user' && item.steeredTo) || item.kind === 'woke') {
       nodes.push(...fold(since, worked(item.at, steered ?? running), item.key, true))
       since = []
       steered = item.at
@@ -2148,6 +2172,7 @@ export function ThreadItems({
           </div>
         )
       case 'start':
+      case 'woke':
         return null
     }
   }
