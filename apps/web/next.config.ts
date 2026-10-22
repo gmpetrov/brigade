@@ -45,6 +45,8 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
       return [{ source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex' }] }]
     },
   }),
+  // Another build folder, beside a dev server that holds .next (scripts/demo/record.sh).
+  ...(process.env.NEXT_DIST_DIR && { distDir: process.env.NEXT_DIST_DIR }),
   // Dev tunnels that serve this dashboard (see apps/web/.env.local).
   allowedDevOrigins: (process.env.DEV_ORIGINS ?? '').split(',').filter(Boolean),
   // The VPS image (deploy/vps/Dockerfile) runs Next's own server, with the files it

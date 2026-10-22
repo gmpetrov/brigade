@@ -500,6 +500,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               </SidebarContent>
 
               <SidebarFooter className="gap-3">
+                <DemoBanner place="sidebar" />
                 {/* The member and their menu, and the way to connect apps; folded, a column. */}
                 <div className="flex items-center gap-2 px-2 pb-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:p-0">
                   <DropdownMenu onOpenChange={(open) => open && void reloadAccounts()}>
@@ -803,8 +804,8 @@ function Inset({ children }: { children: ReactNode }) {
   return (
     // min-w-0: long unwrapped text inside a page must not widen it past the window.
     <SidebarInset className="min-w-0">
+      <DemoBanner place="phone" />
       <UpdatePill header={expanded} />
-      <DemoBanner />
       {!expanded && <TopBar />}
       {/* Before the document: a document opened over a docked thread covers it until closed. */}
       <ThreadPanel />

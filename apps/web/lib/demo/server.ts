@@ -124,7 +124,9 @@ function emit(threadId: string, events: AgentEvent[]) {
   const p = page(threadId)
   const sequenced = events.map((event) => ({ sessionId: threadId, seq: ++p.lastSeq, event }))
   p.events.push(...sequenced)
-  patchThread(threadId, { lastSeq: p.lastSeq, updatedAt: new Date().toISOString() })
+  // Not for each word of a reply: that goes through every response, and the reply's end does it.
+  if (events.some((e) => e.type !== 'message.delta'))
+    patchThread(threadId, { lastSeq: p.lastSeq, updatedAt: new Date().toISOString() })
   broadcast({ type: 'events', events: sequenced })
 }
 
@@ -255,6 +257,10 @@ const actions = {
     return pull
   },
   openTickets: () => body<{ title: string; session?: { title: string } }[]>('GET /tickets') ?? [],
+  playbook: () =>
+    body<{
+      playbooks?: { count: number; onItsOwn: number; approvedByYou: number; withPerson: number }[]
+    }>('GET /home')?.playbooks?.[0],
 }
 
 let threadCount = 0
@@ -434,6 +440,10 @@ function pullResponse(number: number, part: 'detail' | 'state'): Stored {
 
 // ---- Requests ----
 
+const OFF = 'That is off in the demo workspace. Start free on your Mac to do it for real.'
+const CREATES =
+  /^\/(teammates|teammates\/team|tasks|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|attachments\/uploads|library\/assets\/uploads|library\/(text|folders)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
+
 /** Gets the pattern's groups, the request's JSON body and its URL. */
 type Handler = (params: [string, string], input: Json, url: URL) => Stored | unknown | undefined
 const ok = { ok: true }
@@ -563,20 +573,12 @@ const routes: [string, RegExp, Handler][] = [
         ? { firstSeq: 1, events: [] }
         : structuredClone(page(threadId)),
   ],
-  // Files go nowhere in the demo: the composer says so where it attaches one.
-  [
-    'POST',
-    /^\/(attachments|library\/assets)\/uploads$/,
-    () => ({
-      status: 403,
-      body: { error: 'Files stay on your computer in the demo. Start free to attach one.' },
-    }),
-  ],
-  [
-    'POST',
-    /^\/library\/upload$/,
-    () => ({ status: 403, body: { error: 'Uploads are off in the demo.' } }),
-  ],
+  // What makes something new (a teammate, a task, a project, an App, a file) answers with
+  // what it made, which the page then opens: in the demo it says it is off, where the
+  // page shows errors, rather than open nothing.
+  ['POST', CREATES, () => ({ status: 403, body: { error: OFF } })],
+  ['PUT', /^\/library\/(text|folders)$/, () => ({ status: 403, body: { error: OFF } })],
+  ['POST', /^\/library\/upload$/, () => ({ status: 403, body: { error: OFF } })],
   // Signing out of the demo leads to signing up for real.
   ['POST', /^\/auth\/sign-out$/, () => ({ success: true })],
   [

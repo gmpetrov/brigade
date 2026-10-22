@@ -39,6 +39,8 @@ export type Context = {
   actions: {
     openPull: (threadId: string, teammate: Ref) => DemoPull
     openTickets: () => { title: string; session?: { title: string } }[]
+    playbook: () =>
+      { count: number; onItsOwn: number; approvedByYou: number; withPerson: number } | undefined
   }
 }
 
@@ -79,7 +81,7 @@ export function replyTo(text: string, ctx: Context): Run {
   return {
     steps: [
       {
-        say: `In the demo, ${teammate.name} knows a few tasks: building the annual billing toggle on Acme’s pricing page and opening its pull request, summarizing a thread, listing what waits on you, and writing the weekly support digest. Pick one below.\n\nIn your own workspace, a teammate works on anything you ask, on your Mac or a cloud computer, with your Claude or Codex subscription.`,
+        say: `In the demo, ${teammate.name} knows a few tasks: building the annual billing toggle on Acme’s pricing page and opening its pull request, summarizing a thread, listing what waits on you, and writing the weekly support digest. Pick one below.\n\nIn your own workspace, teammates work on what you ask, on your Mac or a cloud computer, with your own Claude or Codex subscription.`,
         ms: 700,
       },
     ],
@@ -191,22 +193,34 @@ function waiting(ctx: Context): Run {
 }
 
 function digest(ctx: Context): Run {
+  // The sample's own numbers: the Support and bugs playbook's week, as Home shows it.
+  const week = ctx.actions.playbook()
+  const volume = week
+    ? `- **${week.count} support mails** went through the Support and bugs playbook: ${week.onItsOwn} answered on its own, ${week.approvedByYou} approved by you, ${week.withPerson} with a person.`
+    : '- Support mails went through the Support and bugs playbook.'
+  const open = ctx.actions.openTickets().length
   return {
     steps: [
       {
         tool: tool('gmail_search_support_acme_test'),
         input: { query: 'to:support@acme.test newer_than:7d' },
-        output: { messages: 41 },
+        output: { messages: week?.count ?? 0 },
         takes: 1400,
       },
       {
         tool: 'Read',
         input: { file_path: 'library/Support/digest-template.md' },
-        output: '# Weekly support digest\n\n## Volume\n## Themes\n## Bugs filed\n## Waiting on us',
+        output: '# Weekly support digest\n\n## Volume\n## Themes\n## Waiting on us',
         takes: 700,
       },
       {
-        say: '**Support, this week**\n\n- **41 conversations**, 34 answered on their own by the Support and bugs playbook, 7 with a person.\n- **Themes**: invite links (fixed in acme/web#146, waiting on merge), CSV export (fixed in #141), plan changes.\n- **Waiting on us**: Globex’s plan change, Jamie Lee’s duplicate charge.\n\nSaved to the library as Support/digests/this-week.md.',
+        tool: tool('save_to_library'),
+        input: { path: 'Projects/Support/digests/this-week.md' },
+        output: { saved: 'Projects/Support/digests/this-week.md' },
+        takes: 800,
+      },
+      {
+        say: `**Support, this week**\n\n${volume}\n- **Themes**: invite links that expired at once (fixed in acme/web#146), the invoice CSV export (fixed in #141), plan changes.\n- **Waiting on us**: ${open} ${open === 1 ? 'ticket' : 'tickets'} in Tickets.\n\nSaved to the library as Projects/Support/digests/this-week.md.`,
       },
     ],
     replies: suggestions(ctx).filter((s) => !s.includes('digest')),

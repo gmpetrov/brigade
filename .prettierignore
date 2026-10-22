@@ -3,3 +3,5 @@ dist
 .next
 .turbo
 src/generated
+# Recorded by scripts/demo/record.sh
+apps/web/lib/demo/fixtures.json

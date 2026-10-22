@@ -17,9 +17,10 @@ const OUT = arg('out', fileURLToPath(new URL('../lib/demo/fixtures.json', import
 const MAX_PAGES = Number(arg('max-pages', '400'))
 
 // Query parameters that change with each visit (a timeline's window): dropped from keys.
+// The same as lib/demo/shared.ts, which looks them up.
 const VOLATILE = new Set(['from', 'to'])
 /** A request's key in the fixtures: method, path under /api, and its stable query. */
-export function keyOf(method, url) {
+function keyOf(method, url) {
   const u = new URL(url)
   const params = [...u.searchParams].filter(([k]) => !VOLATILE.has(k)).sort()
   const search = params.length ? `?${new URLSearchParams(params)}` : ''
@@ -33,8 +34,6 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 900 
 const page = await context.newPage()
 /** @type {Record<string, { status: number, body: unknown }>} */
 const responses = {}
-/** Messages the API's socket sent: the shapes the demo's own socket plays. */
-const socket = []
 
 // A page's response, or one fetched below (which has no request to ask its method).
 const keep = async (response, method = response.request().method()) => {
@@ -56,15 +55,19 @@ const keep = async (response, method = response.request().method()) => {
   responses[key] = { status: response.status(), body }
 }
 page.on('response', (response) => void keep(response).catch(() => undefined))
-page.on('websocket', (ws) =>
-  ws.on('framereceived', ({ payload }) => {
-    if (socket.length < 200) socket.push(String(payload))
-  }),
-)
 
 const queue = ['/app']
 const visited = new Set()
-while (queue.length && visited.size < MAX_PAGES) {
+// Threads a list holds but no page links to (past a sidebar's "+N more"): opened after the rest.
+const unlinked = () =>
+  Object.entries(responses)
+    .filter(([key]) => /^GET \/threads(\?|$)/.test(key))
+    .flatMap(([, { body }]) => (Array.isArray(body) ? body : []))
+    .map((thread) => `/app/threads/${thread.id}`)
+    .filter((path) => !visited.has(path))
+while (visited.size < MAX_PAGES) {
+  if (!queue.length) queue.push(...new Set(unlinked()))
+  if (!queue.length) break
   const path = queue.shift()
   if (visited.has(path)) continue
   visited.add(path)
@@ -82,8 +85,8 @@ while (queue.length && visited.size < MAX_PAGES) {
   }
 }
 
-// What pages ask for only on a click: each library file's content and versions, each
-// skill and thread file. Fetched with the page's session.
+// What pages ask for only on a click: each library file's content and versions. Fetched
+// with the page's session.
 const get = async (path) => {
   await keep(await page.request.get(`${BASE}/api${path}`), 'GET')
 }
@@ -94,24 +97,10 @@ for (const file of tree?.files ?? []) {
 }
 await browser.close()
 
-// Each thread page's own socket sent the thread's state; one of each type is enough.
-const byType = new Map()
-for (const raw of socket) {
-  try {
-    const message = JSON.parse(raw)
-    if (!byType.has(message.type)) byType.set(message.type, message)
-  } catch {}
-}
-
 const sorted = Object.fromEntries(Object.entries(responses).sort(([a], [b]) => a.localeCompare(b)))
 // The preview's address in what it answered (file links, say) becomes the demo's at run time.
 const text = JSON.stringify(
-  {
-    recordedAt: new Date().toISOString(),
-    origin: BASE,
-    socket: [...byType.values()],
-    responses: sorted,
-  },
+  { recordedAt: new Date().toISOString(), responses: sorted },
   null,
   1,
 ).replaceAll(BASE, '{{origin}}')

@@ -19,7 +19,10 @@
     "cf:build:web": "scripts/deploy/workers.sh build web",
     "cf:deploy:web": "scripts/deploy/workers.sh deploy web",
     "cf:build:collab": "scripts/deploy/workers.sh build collab",
-    "cf:deploy:collab": "scripts/deploy/workers.sh deploy collab"
+    "cf:deploy:collab": "scripts/deploy/workers.sh deploy collab",
+    "cf:build:demo": "scripts/deploy/workers.sh build demo",
+    "cf:deploy:demo": "scripts/deploy/workers.sh deploy demo",
+    "demo:record": "scripts/demo/record.sh"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
