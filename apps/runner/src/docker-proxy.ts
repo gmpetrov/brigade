@@ -89,12 +89,10 @@ type Head = { line: string; headers: [string, string][]; method: string; path: s
 
 function parseHead(raw: string): Head {
   const [line = '', ...rest] = raw.split('\r\n')
-  const headers = rest
-    .filter(Boolean)
-    .map((h): [string, string] => {
-      const at = h.indexOf(':')
-      return at < 0 ? [h, ''] : [h.slice(0, at).trim(), h.slice(at + 1).trim()]
-    })
+  const headers = rest.filter(Boolean).map((h): [string, string] => {
+    const at = h.indexOf(':')
+    return at < 0 ? [h, ''] : [h.slice(0, at).trim(), h.slice(at + 1).trim()]
+  })
   const [method = '', path = ''] = line.split(' ')
   return { line, headers, method, path }
 }
@@ -138,7 +136,12 @@ export type Hooks = {
 type State =
   | { kind: 'head' }
   | { kind: 'length'; left: number; then: 'head' | 'raw' }
-  | { kind: 'chunked'; phase: 'size' | 'data' | 'crlf' | 'trailer'; left: number; then: 'head' | 'raw' }
+  | {
+      kind: 'chunked'
+      phase: 'size' | 'data' | 'crlf' | 'trailer'
+      left: number
+      then: 'head' | 'raw'
+    }
   | { kind: 'raw' }
 
 /**
@@ -155,6 +158,8 @@ export function relay(client: Socket, upstream: Socket, hooks: Hooks) {
   let clientEnded = false
   let hold = false
   let held = Buffer.alloc(0)
+  // A held answer, until it is written: Docker may close meanwhile.
+  let flushed = Promise.resolve()
 
   const send = (data: Buffer | string) => {
     if (!upstream.write(data)) {
@@ -162,7 +167,8 @@ export function relay(client: Socket, upstream: Socket, hooks: Hooks) {
       upstream.once('drain', () => client.resume())
     }
   }
-  const after = (then: 'head' | 'raw'): State => (then === 'raw' ? { kind: 'raw' } : { kind: 'head' })
+  const after = (then: 'head' | 'raw'): State =>
+    then === 'raw' ? { kind: 'raw' } : { kind: 'head' }
   const raw = () => {
     state = { kind: 'raw' }
     if (buf.length) send(buf)
@@ -199,9 +205,13 @@ export function relay(client: Socket, upstream: Socket, hooks: Hooks) {
               ([key]) => !/^(content-length|transfer-encoding)$/i.test(key),
             )
             send(
-              [head.line, ...kept.map(([k, v]) => `${k}: ${v}`), `Content-Length: ${rewritten.length}`, '', ''].join(
-                '\r\n',
-              ),
+              [
+                head.line,
+                ...kept.map(([k, v]) => `${k}: ${v}`),
+                `Content-Length: ${rewritten.length}`,
+                '',
+                '',
+              ].join('\r\n'),
             )
             send(rewritten)
             state = after(then)
@@ -234,7 +244,10 @@ export function relay(client: Socket, upstream: Socket, hooks: Hooks) {
           send(part)
           state.left -= part.length
           if (state.left === 0)
-            state = state.phase === 'data' ? { ...state, phase: 'crlf', left: 2 } : { ...state, phase: 'size' }
+            state =
+              state.phase === 'data'
+                ? { ...state, phase: 'crlf', left: 2 }
+                : { ...state, phase: 'size' }
           continue
         }
         const eol = buf.indexOf('\r\n')
@@ -246,7 +259,8 @@ export function relay(client: Socket, upstream: Socket, hooks: Hooks) {
           if (eol === 0) state = after(state.then)
         } else {
           const size = Number.parseInt(line.toString('latin1').split(';')[0]!.trim(), 16)
-          state = size > 0 ? { ...state, phase: 'data', left: size } : { ...state, phase: 'trailer' }
+          state =
+            size > 0 ? { ...state, phase: 'data', left: size } : { ...state, phase: 'trailer' }
         }
         if (state.kind === 'raw') raw()
       }
@@ -285,14 +299,16 @@ export function relay(client: Socket, upstream: Socket, hooks: Hooks) {
     held = Buffer.alloc(0)
     upstream.pause()
     const ok = /^HTTP\/1\.[01] 2\d\d/.test(out.toString('latin1', 0, 16))
-    void (ok ? hooks.started().catch(() => undefined) : Promise.resolve()).then(() => {
+    flushed = (ok ? hooks.started().catch(() => undefined) : Promise.resolve()).then(() => {
       client.write(out)
       upstream.resume()
     })
   })
   upstream.on('end', () => {
-    if (held.length) client.write(held)
-    client.end(() => client.destroy())
+    void flushed.then(() => {
+      if (held.length) client.write(held)
+      client.end(() => client.destroy())
+    })
   })
   client.on('close', () => upstream.destroy())
   upstream.on('close', () => {
@@ -327,6 +343,7 @@ export class DockerProxy {
   private servers = new Map<string, { server: Server; address: string }>()
   private starting: Promise<void> | null = null
   private watching = false
+  private events: ReturnType<typeof request> | null = null
   private publishing = new Map<string, { run: Promise<void>; again: Promise<void> | null }>()
   private timers = new Map<string, NodeJS.Timeout>()
 
@@ -373,6 +390,7 @@ export class DockerProxy {
   close() {
     for (const { server } of this.servers.values()) server.close()
     this.servers.clear()
+    this.events?.destroy()
     for (const timer of this.timers.values()) clearTimeout(timer)
   }
 
@@ -474,7 +492,9 @@ export class DockerProxy {
     const run = this.options
       .publish(thread)
       .catch((error: { stderr?: string } & Error) =>
-        console.error(`docker proxy: ports of ${thread}: ${(error.stderr || error.message).trim()}`),
+        console.error(
+          `docker proxy: ports of ${thread}: ${(error.stderr || error.message).trim()}`,
+        ),
       )
       .finally(() => this.publishing.delete(thread))
     this.publishing.set(thread, { run, again: null })
@@ -535,6 +555,10 @@ export class DockerProxy {
       },
     )
     req.on('error', done)
+    req.on('close', () => {
+      if (this.events === req) this.events = null
+    })
+    this.events = req
     req.end()
   }
 }

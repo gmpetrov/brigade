@@ -143,6 +143,53 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   starts a daemon under the teammate's user session (`loginctl enable-linger`).
   The runner sets `DOCKER_HOST` and `XDG_RUNTIME_DIR` for that teammate's turns,
   terminals and previews. Where the computer has no Docker, nothing changes.
+- **One Docker per teammate, each thread's ports its own.** Where threads have
+  their own network (cloud computers), a teammate's threads share one rootless
+  Docker on the computer's network: one daemon (about 190 MB idle) and one copy
+  of each image (PostgreSQL's is 646 MB), instead of one of each per thread.
+  Each thread still gets its own ports: a container that publishes 5432 in
+  thread A answers on thread A's `localhost:5432`, and thread B's can publish
+  5432 too.
+  - **A proxy per teammate** (`apps/runner/src/docker-proxy.ts`, the user unit
+    `brigade-docker-proxy`) holds a socket in each of its threads' folders,
+    `/run/brigade-docker/<thread>/<user>/docker.sock`, the threads'
+    `DOCKER_HOST`. It relays to the teammate's Docker as is, connections Docker
+    takes over (attach, exec, BuildKit) included, and reads only the requests:
+    a container create gets the label `brigade.thread=<thread>`, and each port
+    it publishes goes on the thread's own loopback address (`127.231.x.y` for
+    thread n, written beside the socket), same port number (`-P` too, from the
+    image's exposed ports). A container's start is answered once its ports are
+    up; Docker's events do the same when one starts or stops by itself.
+  - **Why a loopback address per thread.** Measured with Docker 29.7 and
+    rootlesskit 3.0.2: rootless Docker publishes a port number once per
+    loopback address (127.231.0.45:15432 and 127.231.0.46:15432 both work),
+    but only once for every other address, since it reaches its containers
+    through its own 127.0.0.1 for those ("Bind for 127.0.0.1:15432 failed:
+    port is already allocated" for 10.231.x.y). So no port is renumbered:
+    `docker ps` and `docker compose port` show the port that was asked for.
+  - **The thread's localhost.** The root thread helper's `docker-ports`
+    (called by the proxy through sudo, for its own user only) reads the
+    teammate's running containers as the teammate, keeps the ports published on
+    that thread's address, and puts up NAT rules: in the thread's network,
+    `127.0.0.1:<port>` (and `127.231.x.y:<port>`) go to the host's side of its
+    pair, which sends them to `127.231.x.y:<port>`. Only that thread's
+    interface has those rules, so no other thread reaches its containers. The
+    rules are made again from scratch at each change, per thread and teammate
+    (chains `BD-<n>-<uid>` on the host, `BD-<uid>` in the thread's network).
+  - **Started on first use, stopped when unused.** The teammate's Docker is a
+    transient unit of its own systemd, `brigade-docker`, that the proxy starts
+    at a thread's first connection (about a second): a thread that never runs
+    docker costs nothing. It runs with the systemd cgroup driver, so `docker
+pause` (a frozen preview's database) works, and with `--ip=127.0.0.1`, so a
+    container published without the proxy is not on the computer's public
+    address. The runner stops a quiet thread's containers and removes its
+    socket (`docker-stop`); once nothing runs in that Docker and nobody works in
+    any of the teammate's threads, it stops it (`docker-down`). The proxy ends
+    with its last thread folder.
+  - **Not Podman.** It has no daemon, keeps one image store per user and
+    publishes ports in the caller's network, which would have made the ports
+    simple. But it is another engine, `docker compose` goes through its API
+    service anyway, and the member asked for Docker.
 
 ## Known limits
 
@@ -157,7 +204,19 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   (`SameSite=None`, ideally `Partitioned`). It does in Chrome today.
 - **Rootless Docker** cannot bind ports under 1024 and keeps images in each
   teammate's home: a project that publishes port 80, or many large images, needs
-  changing. Not tested on a workspace computer yet (see below).
+  changing. Until October 22, 2026, a thread's Docker never started on a cloud
+  computer (containerd's socket paths under `/run/brigade-docker/<thread>/<user>`
+  were longer than 104 characters, #315); the shared Docker's are under
+  `/run/user/<uid>`. Systemd and root are not tested from a thread (see below).
+- **What a teammate's threads share in its Docker**: container names given with
+  `--name`, `docker ps` (it lists all the teammate's containers), volumes
+  created by name, and the bridge network. Compose names its containers,
+  volumes and networks after the thread's project (`COMPOSE_PROJECT_NAME`), so
+  `docker compose` stays per thread.
+- **Two teammates in one thread** cannot both publish the same port, as before
+  (they share its address). And `localhost` over IPv6 (`::1`) reaches no
+  container: clients that try `::1` first (libpq, Node) fall back to
+  127.0.0.1.
 - **Seeds that call third-party APIs** (a Stripe product list) fail without a
   key: the teammate asks for a test-mode key as a preview variable, or seeds
   what it can and says what is empty.
@@ -174,6 +233,41 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
    weeks: start early.
 3. **Test in Safari and Firefox**: signing in to an app in the pane, and the
    provider's token cookie in the frame.
-4. **Test rootless Docker on a workspace computer** after deploying: the root
-   setup runs again by itself (its stamp changed); then a teammate runs
-   `docker compose up -d` in a repository with Postgres and Redis.
+4. **Check the teammates' Docker on a cloud computer** after deploying the API
+   and the runner (the root setup runs again by itself, its stamp changed).
+   Root and systemd do not run in a thread, so this was never run. With
+   `U=<teammate user>`, `UI=$(id -u $U)`, and
+   `as() { sudo -u $U XDG_RUNTIME_DIR=/run/user/$UI "$@"; }` on the computer:
+   1. **The setup**: `grep -c docker-ports /usr/local/sbin/brigade-thread` is
+      not 0, and `/etc/sudoers.d/brigade-thread` has the
+      `%brigade-teammates ... docker-ports *` line.
+   2. **Nothing before first use**: after a turn started in thread A, its
+      `echo $DOCKER_HOST` is `unix:///run/brigade-docker/<A>/<U>/docker.sock`,
+      `as systemctl --user is-active brigade-docker-proxy` is `active` and
+      `as systemctl --user is-active brigade-docker` is `inactive`.
+   3. **Started once**: in thread A, `docker info` answers within a few
+      seconds and shows `Cgroup Driver: systemd`; `brigade-docker` is now
+      active, and `pgrep -u $U -c dockerd` is 1.
+   4. **Each thread's 5432**: in threads A and B of the same teammate, a
+      `compose.yml` with `postgres:17` and `ports: ["5432:5432"]`, then
+      `docker compose up -d` in each. Both start; `docker compose ps` shows
+      `127.231.x.y:5432` with another address in each. In each thread,
+      `psql -h localhost -U postgres` (or `pg_isready -h localhost`) works;
+      write a different row in each, and each reads back its own. Thread B's
+      `up` pulled nothing, and `pgrep -u $U -c dockerd` is still 1.
+   5. **Output**: `docker run --rm busybox echo ok` prints `ok`;
+      `docker exec -i <container> sh -c 'sleep 2; echo late' </dev/null`
+      prints `late`; `sleep 30 | docker compose exec -T db echo quick` returns
+      at once; `docker compose exec db psql -U postgres` works in a person's
+      terminal (a TTY).
+   6. **Isolation**: from thread B, `nc -zv -w 3 <A's host-side address> 5432`
+      (A's `ip route` gateway) fails; `sudo iptables -t nat -S | grep BD-`
+      shows rules for A's interface and B's only.
+   7. **Stopped when unused**: `docker compose down` in A; the thread's
+      rules go (`iptables -t nat -S BD-<n>-$UI` is empty). With both threads
+      quiet for an hour, the runner's log says "stopped ... container(s) of
+      quiet thread" then "stopped the Docker of $U", and `brigade-docker` is
+      inactive; a new turn's `docker info` starts it again.
+   8. **A frozen preview**: a preview whose setup runs `docker compose up -d`,
+      left until it freezes: its log says "Paused 1 of the thread's
+      containers", and they run again when it is used.

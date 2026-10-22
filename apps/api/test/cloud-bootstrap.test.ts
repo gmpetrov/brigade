@@ -207,7 +207,8 @@ test("a restored computer's teammate homes are given back, only for users that e
 function dockerHelper() {
   const dir = mkdtempSync(join(tmpdir(), 'thread-docker-'))
   const bin = join(dir, 'bin')
-  for (const sub of ['bin', 'state', 'netns', 'run', 'user/1500']) mkdirSync(join(dir, sub), { recursive: true })
+  for (const sub of ['bin', 'state', 'netns', 'run', 'user/1500'])
+    mkdirSync(join(dir, sub), { recursive: true })
   writeFileSync(join(dir, 'subuid'), 'bt-test:100000:65536\n')
   const stub = (name: string, body: string) =>
     writeFileSync(join(bin, name), `#!/bin/sh\n${body}\n`, { mode: 0o755 })
@@ -289,7 +290,9 @@ test("a thread's localhost reaches the ports its teammate's containers publish o
     DOCKER_INSPECT: inspect,
   })
   assert.equal(result.status, 0, result.stderr)
-  const rules = result.log.split('\n').filter((line) => / -A BD-| -A OUTPUT| -A PREROUTING| -I INPUT/.test(line))
+  const rules = result.log
+    .split('\n')
+    .filter((line) => / -A BD-| -A OUTPUT| -A PREROUTING| -I INPUT/.test(line))
   assert.deepEqual(rules, [
     'host -t nat -A PREROUTING -i btn7 -j BD-7-1500',
     'host -I INPUT 1 -i btn7 -j BD-7-1500',
@@ -341,12 +344,19 @@ test(
     thread('cmthread1', 7)
     thread('cmthread2', 300)
     const bus = join(dir, 'user', '1500', 'bus')
-    spawnSync('python3', ['-c', 'import socket, sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])', bus])
+    spawnSync('python3', [
+      '-c',
+      'import socket, sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])',
+      bus,
+    ])
 
     const first = call(['docker', 'cmthread1', 'bt-test'])
     assert.equal(first.status, 0, first.stderr)
     assert.equal(first.stdout.trim(), `${dir}/run/cmthread1/bt-test/docker.sock`)
-    assert.equal(readFileSync(join(dir, 'run', 'cmthread1', 'bt-test', 'address'), 'utf8'), '127.231.0.7\n')
+    assert.equal(
+      readFileSync(join(dir, 'run', 'cmthread1', 'bt-test', 'address'), 'utf8'),
+      '127.231.0.7\n',
+    )
     const started = first.log.split('\n').filter((line) => line.startsWith('systemd-run'))
     assert.deepEqual(started, [
       'systemd-run --user --quiet --collect --unit=brigade-docker-proxy.service /opt/brigade/node/bin/node /opt/brigade/runner/dist/docker-proxy.js',
@@ -358,7 +368,10 @@ test(
     // Running already: told, not started again. Thread 300's address is its own.
     const second = call(['docker', 'cmthread2', 'bt-test'])
     assert.equal(second.status, 0, second.stderr)
-    assert.equal(readFileSync(join(dir, 'run', 'cmthread2', 'bt-test', 'address'), 'utf8'), '127.231.1.44\n')
+    assert.equal(
+      readFileSync(join(dir, 'run', 'cmthread2', 'bt-test', 'address'), 'utf8'),
+      '127.231.1.44\n',
+    )
     assert.doesNotMatch(second.log, /systemd-run/)
     assert.match(second.log, /systemctl --user kill -s HUP brigade-docker-proxy\.service/)
 
@@ -379,5 +392,12 @@ test("each thread's containers publish on a loopback address of its own", () => 
     spawnSync('sh', ['-c', `${loopAddr}\nloop_addr ${index}`], { encoding: 'utf8' }).stdout.trim()
   // make_net hands out 1 to 16382.
   const all = [1, 2, 255, 256, 257, 16382].map(of)
-  assert.deepEqual(all, ['127.231.0.1', '127.231.0.2', '127.231.0.255', '127.231.1.0', '127.231.1.1', '127.231.63.254'])
+  assert.deepEqual(all, [
+    '127.231.0.1',
+    '127.231.0.2',
+    '127.231.0.255',
+    '127.231.1.0',
+    '127.231.1.1',
+    '127.231.63.254',
+  ])
 })
