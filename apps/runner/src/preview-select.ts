@@ -153,9 +153,17 @@ export const SELECT_SCRIPT = String.raw`(() => {
     return cls ? tag + '.' + cls : tag
   }
 
+  // The shortest path up from it that finds it alone, so two alike elements never share one.
+  const unique = (parts) => {
+    try {
+      return document.querySelectorAll(parts.join(' > ')).length === 1
+    } catch (error) {
+      return false
+    }
+  }
   function selector(el) {
     const parts = []
-    for (let node = el; node && node.nodeType === 1 && parts.length < 6; node = node.parentElement) {
+    for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
       const tag = node.tagName.toLowerCase()
       if (node.id && document.querySelectorAll('#' + CSS.escape(node.id)).length === 1) {
         parts.unshift('#' + CSS.escape(node.id))
@@ -174,6 +182,7 @@ export const SELECT_SCRIPT = String.raw`(() => {
         if (same.length > 1) part += ':nth-of-type(' + (same.indexOf(node) + 1) + ')'
       }
       parts.unshift(part)
+      if (unique(parts)) break
     }
     return parts.join(' > ')
   }
@@ -273,7 +282,8 @@ export const SELECT_SCRIPT = String.raw`(() => {
     draw()
   }
 
-  const BLOCKED = ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'dblclick', 'contextmenu', 'auxclick', 'touchstart', 'touchend', 'submit']
+  // Not touchstart or touchend: cancelling them cancels the click a tap picks with.
+  const BLOCKED = ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'dblclick', 'contextmenu', 'auxclick', 'submit']
   function set(value) {
     if (value === on) return
     on = value
