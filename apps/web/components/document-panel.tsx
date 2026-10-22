@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { api } from '@/lib/api'
+import { changedSince, type Stamps } from '@/lib/document-changes'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -159,12 +160,15 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
     () => ({ current, tabs: state.tabs, changed, open, close, remove, closeAll }),
     [current, state.tabs, changed, open, close, remove, closeAll],
   )
+  // Kept while the panel is hidden, so what changed meanwhile still shows when it comes back.
+  const stamps = useRef<Stamps>(new Map())
   const watched = state.tabs.flatMap((t) => (t.target.kind === 'library' ? [t.target.id] : []))
   return (
     <Context.Provider value={value}>
       {children}
-      {current && watched.length > 1 && (
+      {current && state.tabs.length > 1 && watched.length > 0 && (
         <WatchChanges
+          stamps={stamps.current}
           ids={watched}
           front={current.target.kind === 'library' ? current.target.id : null}
           onChanged={(ids) => setChanged((c) => new Set([...c, ...ids]))}
@@ -180,16 +184,16 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
  * was last written with what it was before.
  */
 function WatchChanges({
+  stamps,
   ids,
   front,
   onChanged,
 }: {
+  stamps: Stamps
   ids: string[]
   front: string | null
   onChanged: (ids: string[]) => void
 }) {
-  /** When each was last written, as of the last look. */
-  const stamps = useRef(new Map<string, string>())
   const latest = useRef({ ids, front, onChanged })
   latest.current = { ids, front, onChanged }
 
@@ -201,23 +205,16 @@ function WatchChanges({
       return
     }
     const { ids, front, onChanged } = latest.current
-    const marked: string[] = []
-    for (const file of files) {
-      if (!ids.includes(file.id)) continue
-      const before = stamps.current.get(file.id)
-      stamps.current.set(file.id, file.updatedAt)
-      const byTeammate = file.updatedBy?.type === 'teammate' || file.updatedBy?.type === 'runner'
-      if (before && before !== file.updatedAt && file.id !== front && byTeammate)
-        marked.push(file.id)
-    }
+    const marked = changedSince(stamps, files, ids, front)
     if (marked.length) onChanged(marked)
-  }, [])
+  }, [stamps])
 
-  // Where each new tab's file stands, to compare with later.
-  const unknown = ids.some((id) => !stamps.current.has(id))
+  // A look as it shows and each time the tabs change: what changed while the
+  // panel was hidden, and where each new tab's file stands, to compare with later.
+  const opened = ids.join()
   useEffect(() => {
-    if (unknown) void check()
-  }, [unknown, check])
+    void check()
+  }, [opened, check])
 
   useLive((message) => {
     if (message.type === 'library.updated') void check()
