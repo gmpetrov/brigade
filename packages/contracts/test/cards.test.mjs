@@ -76,6 +76,23 @@ test('a [merge] line is the merge action, shown before the replies', () => {
   })
 })
 
+test('a [preview] line is the preview action', () => {
+  const { replies } = replyCard(
+    `${reply}\n\`\`\`replies\n[preview] Lancer la preview\nPas encore\n\`\`\``,
+  )
+  assert.deepEqual(replies, {
+    replies: ['Pas encore'],
+    actions: [{ action: 'preview', label: 'Lancer la preview' }],
+  })
+})
+
+test('an action this version does not know is left out, not its replies', () => {
+  assert.deepEqual(
+    safeReplies({ replies: ['Pas encore'], actions: [{ action: 'deploy', label: 'Deploy' }] }),
+    { replies: ['Pas encore'] },
+  )
+})
+
 test('a choice whose label could mention or command is left out', () => {
   const choices = {
     question: 'Which?',

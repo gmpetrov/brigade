@@ -82,10 +82,12 @@ export function safeReplies(input: unknown): SuggestedReplies | null {
     .filter((r): r is string => r !== null)
     .map(clip)
     .slice(0, 3)
+  // An action this version does not know (from a newer runner) is left out, not its replies.
   const actions = Array.isArray(raw?.actions)
     ? raw.actions.flatMap((a: { action?: unknown; label?: unknown }) => {
         const label = typeof a?.label === 'string' ? buttonText(a.label) : null
-        return label ? [{ action: a.action, label: clip(label) }] : []
+        const known = REPLY_ACTIONS.includes(a?.action as ReplyAction)
+        return label && known ? [{ action: a.action, label: clip(label) }] : []
       })
     : []
   const parsed = SuggestedReplies.safeParse({

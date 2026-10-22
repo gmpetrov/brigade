@@ -1012,6 +1012,11 @@ export function ThreadConversation({
                     computerDown={machineDown}
                     childThreads={t.children}
                     onOpenPreview={previewLive(preview) ? openPreview : undefined}
+                    previewStart={{
+                      live,
+                      busy: previewStart.busy,
+                      start: (words) => void previewStart.start(words),
+                    }}
                     onApproval={(approvalId, approved, always) =>
                       void call('/approvals', {
                         approvalId,

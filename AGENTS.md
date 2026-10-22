@@ -25,7 +25,9 @@ In a thread, start it with `start_preview({ repository: "gmpetrov/brigade" })`, 
 
 The seed runs with each `setup.sh` and adds the sample only when the Acme organization is missing; to start over, delete `.preview/` (embedded PostgreSQL) or run `docker compose down -v` (Docker), then `setup.sh` again.
 
-PostgreSQL comes from `docker-compose.yml` when Docker works, else from the `embedded-postgres` package (no Docker or root needed), with its data in `.preview/`; delete that folder to start over. Downloads (Node, PostgreSQL) are cached in `~/.cache/brigade-preview`. If the dashboard goes blank, Next crashed: `start.sh` starts it again, and the page reloads by itself.
+`setup.sh` runs on each start of the preview, so it skips what is done already: pnpm's quick install check while `pnpm-lock.yaml` and what pnpm installed are as its last run left them (that check alone misses a lockfile-only update), the Prisma Client while its schema and output are as its last run left them (stamps in `.preview/stamps`), migrations the database has, and the seed when the dev accounts and their organization exist. In a preview on a cloud computer, a start with nothing new spent 24 seconds in setup, and now 4 to 5.
+
+PostgreSQL comes from `docker-compose.yml` when Docker works, else from the `embedded-postgres` package (no Docker or root needed), with its data in `.preview/`; delete that folder to start over. Once the embedded one holds the data, it stays the one used even when Docker works later (deleting `.preview/` goes back to Docker), and Docker is not asked again: on a cloud computer, asking took 13 seconds of each start. A preview takes the embedded one too, unless the thread's Docker holds the database already: it is cached for every checkout on the computer, where each thread's Docker downloads PostgreSQL's image into its own (646 MB, 13 seconds). Downloads (Node, PostgreSQL) are cached in `~/.cache/brigade-preview`. If the dashboard goes blank, Next crashed: `start.sh` starts it again, and the page reloads by itself.
 
 # Adding a built-in App
 

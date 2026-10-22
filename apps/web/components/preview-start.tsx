@@ -1,6 +1,7 @@
 'use client'
 // Starting a thread's preview from the dashboard: the Preview button in a
-// thread and on a pull request. The runner starts it without a turn when it
+// thread and on a pull request, and a teammate's own preview button under its
+// reply (`[preview]` in its replies). The runner starts it without a turn when it
 // can (again as it last ran, or from its repository's saved setup); else the
 // teammate sets it up, after a dialog that says what that involves. The dialog
 // shows the first time only, unless the person keeps it. A stopped workspace
@@ -85,11 +86,11 @@ export function usePreviewStart({
     }
   }, [threadId])
 
-  async function send(next: Asking) {
+  async function send(text: string) {
     setBusy(true)
     setError(undefined)
     try {
-      await ask(request(next))
+      await ask(text)
       setAsking(undefined)
       onAsked?.()
     } catch (e) {
@@ -99,7 +100,12 @@ export function usePreviewStart({
     }
   }
 
-  async function start() {
+  /**
+   * `words`: what the person clicked, a teammate's own preview button. When the runner
+   * cannot start it by itself, they go to the teammate as their message, as a reply's
+   * button does, without the dialog: the teammate offered the preview.
+   */
+  async function start(words?: string) {
     if (!threadId || busy) return
     setBusy(true)
     setError(undefined)
@@ -126,12 +132,13 @@ export function usePreviewStart({
     setWaking(false)
     if (result.outcome === 'waking') return
     if (result.outcome === 'started' || result.outcome === 'running') return onStarting()
+    if (words) return void send(words)
     const next: Asking =
       result.outcome === 'teammate'
         ? { kind: 'teammate', repository: result.repository, reason: result.reason }
         : { kind: 'setup', repository: repository ?? result.repositories[0] }
     // Explained before and nothing new to say: ask right away.
-    if (next.kind === 'setup' && explained()) return void send(next)
+    if (next.kind === 'setup' && explained()) return void send(request(next))
     setAsking(next)
   }
 
@@ -142,7 +149,7 @@ export function usePreviewStart({
       computer={computer}
       busy={busy}
       error={error}
-      onConfirm={() => void send(asking)}
+      onConfirm={() => void send(request(asking))}
       onClose={() => {
         setAsking(undefined)
         setError(undefined)

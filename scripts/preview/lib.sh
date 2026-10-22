@@ -12,6 +12,14 @@ DB_PORT=5433
 
 say() { printf '\033[1m==> %s\033[0m\n' "$*"; }
 
+# What files are now (paths and contents; missing ones count too), with cksum, which Linux
+# and macOS both have. A step whose files are as its last run left them (its stamp) is skipped.
+fingerprint() {
+  (cd "$REPO" && { find "$@" -type f -exec cksum {} + 2>/dev/null || true; } | LC_ALL=C sort | cksum)
+}
+unchanged() { [ "$(cat "$DATA/stamps/$1" 2>/dev/null)" = "$2" ]; }
+stamp() { mkdir -p "$DATA/stamps" && echo "$2" >"$DATA/stamps/$1"; }
+
 # Node 22.13 or newer: the one on PATH, else one downloaded to the cache.
 use_node() {
   if command -v node >/dev/null && node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 13) ? 0 : 1)'; then
@@ -38,6 +46,20 @@ use_pnpm() {
   if [ "${major:-0}" -ge 10 ] 2>/dev/null; then PNPM=(pnpm); else PNPM=(env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm); fi
 }
 
+# The dependencies pnpm-lock.yaml asks for, with pnpm's quick check when it is enough: done in
+# a moment rather than seconds. That check sees package.json files and missing folders, not a
+# lockfile that alone changed (a dependency updated within its range) nor an install by hand
+# since, which leave what pnpm installed (node_modules/.pnpm/lock.yaml) unlike the last stamp.
+install_deps() {
+  local files=(pnpm-lock.yaml node_modules/.pnpm/lock.yaml)
+  if unchanged deps "$(fingerprint "${files[@]}")"; then
+    (cd "$REPO" && "${PNPM[@]}" install --frozen-lockfile --config.optimistic-repeat-install=true)
+  else
+    (cd "$REPO" && "${PNPM[@]}" install --frozen-lockfile)
+  fi
+  stamp deps "$(fingerprint "${files[@]}")"
+}
+
 # PostgreSQL from docker-compose.yml when Docker works here, else embedded (no Docker or root needed).
 use_docker() { command -v docker >/dev/null && docker info >/dev/null 2>&1; }
 
@@ -49,15 +71,37 @@ wait_for_db() {
   return 1
 }
 
+# Whether the thread's Docker holds the database already: its Compose volume is there.
+docker_holds_db() {
+  [ -n "${COMPOSE_PROJECT_NAME:-}" ] && use_docker &&
+    [ -n "$(docker volume ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME" \
+      --filter label=com.docker.compose.volume=postgres 2>/dev/null)" ]
+}
+
 # Starts PostgreSQL unless something already answers on its port. Embedded, it runs in the
-# background until this script exits. Also embedded when Docker answers but cannot start the
-# container (a rootless daemon whose overlay mounts fail, say).
+# background until this script exits. Docker's when Docker works here, except:
+# - once the embedded one holds this checkout's data. Its data stays the same whether Docker
+#   answers or not, and a daemon still starting (or failing to) does not hold each start for
+#   as long as `docker info` waits on it, 13 seconds on a cloud computer;
+# - in a preview, unless the thread's Docker holds the database already: the embedded one is
+#   cached for every checkout on the computer, where each thread's Docker downloads
+#   PostgreSQL's image into its own (646 MB, 13 seconds on a cloud computer).
+# Also embedded when Docker answers but cannot start the container (a rootless daemon whose
+# overlay mounts fail, say).
 start_db() {
   db_answers && return
-  if use_docker && (cd "$REPO" && docker compose up -d postgres); then
+  local docker=
+  if [ -f "$DATA/postgres/PG_VERSION" ]; then
+    :
+  elif [ -n "${BRIGADE_PREVIEW_URL:-}" ]; then
+    if docker_holds_db; then docker=1; fi
+  elif use_docker; then
+    docker=1
+  fi
+  if [ -n "$docker" ] && (cd "$REPO" && docker compose up -d postgres); then
     :
   else
-    use_docker && say "Docker could not start PostgreSQL: using the embedded one"
+    [ -z "$docker" ] || say "Docker could not start PostgreSQL: using the embedded one"
     if [ ! -f "$CACHE/postgres/node_modules/embedded-postgres/package.json" ]; then
       say "Downloading PostgreSQL"
       npm install --silent --prefix "$CACHE/postgres" "embedded-postgres@$EMBEDDED_POSTGRES"
