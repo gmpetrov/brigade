@@ -150,8 +150,7 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   (about a second), then `socat` relays to it, as the teammate. Started at each
   turn instead, an idle Docker cost about 190 MB (dockerd 92, containerd 47,
   rootlesskit 52) in every thread working at once, used or not. The relay is
-  `socat` (`shut-close`, a day's `-t`) because systemd-socket-proxyd (systemd
-  255) lost what a container printed once its client half-closed (`docker run`,
+  `socat` (`shut-close`, a day's `-t`) because systemd-socket-proxyd (systemd 255) lost what a container printed once its client half-closed (`docker run`,
   `docker exec`), and kept a client whose stdin stayed open waiting once Docker
   was done.
 
