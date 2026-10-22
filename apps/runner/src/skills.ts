@@ -4,7 +4,9 @@
 // directory, written each time its harness session starts. Both list a skill by
 // its name and description, and read the rest only when the work calls for it.
 // A folder there that Brigade did not write is left alone. A skill's files
-// come from the API by their SHA-256, cached on the computer.
+// come from the API by their SHA-256, cached on the computer. Imports keep no
+// file modes, so a file that starts with `#!` is written executable: a skill's
+// launcher script (Impeccable's `scripts/impeccable`) runs by its path.
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { SKILL_ENTRY, type ThreadSkill, type ThreadSpec, skillMarkdown } from '@brigade/contracts'
@@ -16,7 +18,8 @@ export const skillsDir = (spec: ThreadSpec) =>
   spec.teammate.harness === 'codex' ? join('.agents', 'skills') : join('.claude', 'skills')
 
 // Run by node as the teammate's user, the skills as JSON on stdin. Folders in
-// the old manifest go; a folder Brigade did not write keeps its name.
+// the old manifest go; a folder Brigade did not write keeps its name. A script
+// (it starts with `#!`) is executable.
 const SCRIPT = `
 const fs = require('node:fs'), path = require('node:path')
 const root = process.argv[1]
@@ -39,7 +42,9 @@ process.stdin.setEncoding('utf8').on('data', (d) => (input += d)).on('end', () =
       const target = path.resolve(dir, file.path)
       if (!target.startsWith(dir + path.sep)) continue
       fs.mkdirSync(path.dirname(target), { recursive: true })
-      fs.writeFileSync(target, Buffer.from(file.base64, 'base64'), { mode: 0o644 })
+      const bytes = Buffer.from(file.base64, 'base64')
+      const script = bytes[0] === 0x23 && bytes[1] === 0x21
+      fs.writeFileSync(target, bytes, { mode: script ? 0o755 : 0o644 })
     }
     written.push(skill.name)
   }

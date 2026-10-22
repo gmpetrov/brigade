@@ -46,6 +46,8 @@ read. Memory holds facts: its core is always loaded, its topics when the work to
   A manifest (`.brigade-skills.json`) names the folders Brigade wrote, so it replaces only
   those; a folder the teammate made keeps its name. Per thread, not in the teammate's
   home: threads of one teammate in different projects get different skills.
+  Imports keep no file modes, so a file that starts with `#!` is written executable
+  (a skill's launcher script runs by its path); the others are not.
 - **Teach a task.** The composer's + opens the computer over the window with a recording
   bar (`components/teach-task.tsx`). The dashboard records what it shows and logs what the
   person does there (`lib/demo-recorder.ts`): nothing runs on the computer. Done sends
