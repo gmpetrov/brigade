@@ -80,7 +80,7 @@ export function DemoTour() {
       >
         <MousePointer2 className="fill-primary text-primary-foreground size-6 -translate-x-1 -translate-y-1 drop-shadow-md" />
         <span className="bg-primary text-primary-foreground ml-4 rounded-full px-2 py-0.5 text-xs font-semibold shadow-md">
-          Ada
+          You
         </span>
       </div>
       {state === 'yours' && (

@@ -101,11 +101,11 @@ pictures again after a visible change to Home, without the demo's sign.
 
 In the landing page's frame, the demo opens on `/app?tour`, and plays a walkthrough on its own
 once most of the frame is in view (`lib/demo/tour.ts`, `components/demo-tour.tsx`), as
-x.ai/bot does: a cursor named Ada asks Riley, from Home, to fix the export button a customer
-reported. Riley fixes it and opens a pull request (scripted in `lib/demo/scripts.ts`); Ada
-merges it, which has Riley draft the replies to the three customers who asked; sending waits
-for her, and she allows it in the thread; then she asks for the same with every bug report, and
-Riley makes it a routine. It takes about 45 seconds.
+x.ai/bot does: a cursor marked "You" (the visitor, signed in as Ada) asks Riley, from Home, to
+fix the export button a customer reported. Riley fixes it and opens a pull request (scripted in
+`lib/demo/scripts.ts`); the cursor merges it, which has Riley draft the replies to the three
+customers who asked; sending waits for a person, and the cursor allows it in the thread; then
+it asks for the same with every bug report, and Riley makes it a routine. It takes about 45 seconds.
 
 It drives the real dashboard with events no person made: the visitor's first click, key,
 scroll or touch in the frame stops it, and "Your turn: click around" offers a replay (a reload,
