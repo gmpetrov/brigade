@@ -76,3 +76,17 @@ test('a private thread is told it writes only to its own memory', () => {
     /\(this thread is private: only into your own memory\)/,
   )
 })
+
+test('a thread asks for an App account it lacks with a ticket, rather than guessing why it is missing', () => {
+  const spec = testSpec('')
+  const text = instructions(
+    spec,
+    threadMemory(spec, { workspace: '', teammate: '', lines: {} }, '/threads/s1', now),
+    '/library',
+    {
+      ready: true,
+    },
+  )
+  assert.match(text, /## App accounts\n\n/)
+  assert.match(text, /`app` of that App's kind with the scope you need and `account` naming it/)
+})
