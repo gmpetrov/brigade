@@ -521,9 +521,7 @@ export const threads = new Hono<AppEnv>()
     const found = await db.document.findMany({
       where: { kind: 'library', deletedAt: null, path: { in: candidates } },
     })
-    const library = candidates.map((p) => found.find((d) => d.path === p)).find(Boolean)
-    if (library) {
-      const row = library
+    const fromLibrary = (row: (typeof found)[number]) => {
       const editable = row.contentType.startsWith('text/') || /json|yaml|xml/.test(row.contentType)
       return c.json({
         source: 'library',
@@ -536,19 +534,38 @@ export const threads = new Hono<AppEnv>()
         truncated: false,
       } satisfies ThreadFile)
     }
+    const library = candidates.map((p) => found.find((d) => d.path === p)).find(Boolean)
+    if (library) return fromLibrary(library)
 
     const result = await readThreadFile(thread.computerId, {
       sessionId: thread.id,
       teammateIds: teammatesFirst(thread, c.req.query('teammateId')),
       path,
     })
-    if (!result.ok)
+    if (!result.ok) {
+      // A bare name ("10-bold-alternative.md") the teammate wrote for a library file in a
+      // folder: the only library file of that name, in the thread's project first.
+      const named = !path.includes('/')
+        ? await db.document
+            .findMany({
+              where: { kind: 'library', deletedAt: null, path: { endsWith: `/${path}` } },
+              take: 20,
+            })
+            .then((rows) => rows.filter((d) => d.path.endsWith(`/${path}`)))
+        : []
+      const projectFolder = project?.folder?.replace(/\/+$/, '')
+      const inFolder = projectFolder
+        ? named.filter((d) => d.path.startsWith(`${projectFolder}/`))
+        : []
+      const only = inFolder.length === 1 ? inFolder[0] : named.length === 1 ? named[0] : undefined
+      if (only) return fromLibrary(only)
       throw new HTTPException(result.error === 'not_found' ? 404 : 409, {
         message:
           result.error === 'not_found'
             ? `No file "${path}" in the library or the teammate's folder`
             : (result.error ?? 'Could not read the file'),
       })
+    }
     return c.json({
       source: 'thread',
       path: result.path ?? path,
