@@ -418,6 +418,8 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
   z.object({ type: z.literal('schedule.updated'), scheduleId: z.string() }),
   /** A project was created, changed or removed: refetch the sidebar and project pages. */
   z.object({ type: z.literal('projects.updated') }),
+  /** The library or memory changed: open documents check whether theirs did. */
+  z.object({ type: z.literal('library.updated') }),
   z.object({ type: z.literal('terminal.output'), terminalId: z.string(), data: z.string() }),
   z.object({
     type: z.literal('terminal.exit'),

@@ -121,7 +121,7 @@ export function MemoryCard({
               documents.open({ target, title: `${title} memory`, subtitle: description })
               return
             }
-            documents.close()
+            documents.remove(target)
             void onSaved()
           }}
         >

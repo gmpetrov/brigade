@@ -546,11 +546,7 @@ export function LibraryBrowser({
                           void act(async () => {
                             await api(`/library/${f.id}`, { method: 'DELETE' })
                             if (panel?.id === f.id) setPanel(undefined)
-                            if (
-                              documents.current?.target.kind === 'library' &&
-                              documents.current.target.id === f.id
-                            )
-                              documents.close()
+                            documents.remove({ kind: 'library', id: f.id })
                           })
                         }
                       >
