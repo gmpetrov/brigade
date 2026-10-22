@@ -49,7 +49,8 @@ workspace, paid by the owner or admin who subscribes. All of it is in
   them to the workspace. Events without it (another product's) are ignored.
 - Settings › Billing (`/app/billing`) subscribes through Checkout and opens Stripe's
   customer portal (card, invoices, cancel at the end of the period). Onboarding offers
-  it beside linking one's own machine. Back from Checkout (`/api/billing/return`), the
+  it first, with the member's own machine below it, for free (Brigade.app on a Mac, the
+  install command on Linux); either can be added later. Back from Checkout (`/api/billing/return`), the
   plan is read from Stripe at once, without waiting for the webhook.
 - The price is found by its lookup key `brigade_cloud_monthly`: one price, USD with a
   EUR currency option, so Checkout shows each customer their currency. Test and live
