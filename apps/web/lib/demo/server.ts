@@ -166,17 +166,18 @@ function play(threadId: string, run: Run) {
     for (const step of run.steps) {
       await wait(step.ms ?? 900)
       if ('tool' in step) {
-        const toolCallId = `call_${id()}`
-        emit(threadId, [
-          {
-            at: now(),
-            type: 'tool.started',
-            toolCallId,
-            toolName: step.tool,
-            input: step.input,
-            ...by,
-          },
-        ])
+        const toolCallId = step.toolCallId ?? `call_${id()}`
+        if (!step.toolCallId)
+          emit(threadId, [
+            {
+              at: now(),
+              type: 'tool.started',
+              toolCallId,
+              toolName: step.tool,
+              input: step.input,
+              ...by,
+            },
+          ])
         await wait(step.takes ?? 1200)
         emit(threadId, [
           {
@@ -185,7 +186,7 @@ function play(threadId: string, run: Run) {
             toolCallId,
             toolName: step.tool,
             output: step.output,
-            isError: false,
+            isError: step.isError ?? false,
             ...by,
           },
         ])
@@ -463,6 +464,13 @@ function pullResponse(number: number, part: 'detail' | 'state'): Stored {
 
 // ---- Requests ----
 
+/** The sidebar's Archived (recorded, else empty), with what the visitor archived. */
+const ARCHIVED = 'GET /threads?archived=1'
+function archivedList() {
+  if (!store.has(ARCHIVED)) store.set(ARCHIVED, { status: 200, body: [] })
+  return store.get(ARCHIVED)!.body as Json[]
+}
+
 const OFF = 'That is off in the demo workspace. Start free on your Mac to do it for real.'
 const CREATES =
   /^\/(teammates|teammates\/team|tasks|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|attachments\/uploads|library\/assets\/uploads|library\/(text|folders)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
@@ -538,9 +546,16 @@ const routes: [string, RegExp, Handler][] = [
     /^\/threads\/([^/]+)\/archive$/,
     ([threadId]) => {
       patchThread(threadId, { archivedAt: now() })
+      let row: Json | undefined
       for (const [key, s] of store)
-        if (/^GET \/threads(\?|$)/.test(key) && Array.isArray(s.body))
+        if (/^GET \/threads(\?|$)/.test(key) && key !== ARCHIVED && Array.isArray(s.body)) {
+          row ??= s.body.find((t: Json) => t.id === threadId)
           s.body = s.body.filter((t: Json) => t.id !== threadId)
+        }
+      // To the sidebar's Archived, where it can be found and brought back.
+      const archived = archivedList()
+      if (!archived.some((t) => t.id === threadId))
+        archived.unshift(structuredClone(row ?? body<Json>(`GET /threads/${threadId}`) ?? {}))
       broadcast({
         type: 'thread.updated',
         sessionId: threadId,
@@ -553,11 +568,14 @@ const routes: [string, RegExp, Handler][] = [
     'DELETE',
     /^\/threads\/([^/]+)\/archive$/,
     ([threadId]) => {
+      const archived = archivedList()
+      const row = archived.find((t) => t.id === threadId)
+      store.get(ARCHIVED)!.body = archived.filter((t) => t.id !== threadId)
       patchThread(threadId, { archivedAt: null })
-      const thread = body<Json>(`GET /threads/${threadId}`)
       const list = body<Json[]>('GET /threads')
+      const thread = row ?? body<Json>(`GET /threads/${threadId}`)
       if (thread && list && !list.some((t) => t.id === threadId))
-        list.unshift(structuredClone(thread))
+        list.unshift({ ...structuredClone(thread), archivedAt: null })
       return ok
     },
   ],

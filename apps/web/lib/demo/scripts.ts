@@ -14,6 +14,9 @@ export type Step =
       takes?: number
       /** Done to the workspace once it finished. */
       then?: () => void
+      /** Finishes this call, started before (one an approval held), rather than a new one. */
+      toolCallId?: string
+      isError?: boolean
     }
   | { file: string; ms?: number }
   | { say: string; ms?: number }
@@ -244,9 +247,20 @@ export function afterDecision(
   const input = (ticket.payload?.input ?? {}) as Record<string, unknown>
   if (ticket.type === 'approval' && ctx.pending) {
     const toolName = ctx.pending.toolName
+    // The call the approval held finishes, as the runner finishes it.
+    const held = { toolCallId: ctx.pending.toolCallId }
     if (outcome.approved === false)
       return {
         steps: [
+          {
+            ...held,
+            ms: 300,
+            tool: toolName,
+            input: ctx.pending.input,
+            output: 'Declined by a person',
+            isError: true,
+            takes: 0,
+          },
           {
             say: `Understood: I didn’t do it (${String(ticket.payload?.target ?? operation)}). Tell me what to do instead.`,
             ms: 500,
@@ -259,6 +273,7 @@ export function afterDecision(
       return {
         steps: [
           {
+            ...held,
             ms: 400,
             tool: toolName,
             input: ctx.pending.input,
@@ -276,6 +291,7 @@ export function afterDecision(
       return {
         steps: [
           {
+            ...held,
             ms: 400,
             tool: toolName,
             input: ctx.pending.input,
@@ -296,6 +312,7 @@ export function afterDecision(
       return {
         steps: [
           {
+            ...held,
             ms: 400,
             tool: toolName,
             input: ctx.pending.input,
@@ -309,7 +326,14 @@ export function afterDecision(
       }
     return {
       steps: [
-        { ms: 400, tool: toolName, input: ctx.pending.input, output: { ok: true }, takes: 900 },
+        {
+          ...held,
+          ms: 400,
+          tool: toolName,
+          input: ctx.pending.input,
+          output: { ok: true },
+          takes: 900,
+        },
         { say: 'Done.' },
       ],
     }

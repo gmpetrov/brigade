@@ -96,6 +96,21 @@ test('approving a ticket closes it and its thread goes on', async () => {
   const types = [...page.context, ...page.events].map((e: any) => e.event.type)
   assert.ok(types.includes('approval.resolved'))
   assert.equal(types.at(-1), 'turn.completed')
+  // The call the approval held is the one that finishes: no second one, none left open.
+  const all = [...page.context, ...page.events].map((e: any) => e.event)
+  const started = all.filter((e: any) => e.type === 'tool.started').map((e: any) => e.toolCallId)
+  const finished = new Set(
+    all.filter((e: any) => e.type === 'tool.finished').map((e: any) => e.toolCallId),
+  )
+  assert.deepEqual(
+    started.filter((id: string) => !finished.has(id)),
+    [],
+  )
+  assert.equal(
+    all.filter((e: any) => e.type === 'tool.started' && e.toolName.endsWith('stripe_api_write'))
+      .length,
+    1,
+  )
 })
 
 test('merging a pull request takes it off what waits on a person', async () => {
@@ -124,10 +139,17 @@ test('a new thread opens on the message, and its teammate answers it', async () 
   assert.ok(events.some((e: any) => e.type === 'message.done' && /wait on you/.test(e.text)))
 })
 
-test('an archived thread leaves the lists', async () => {
+test('an archived thread moves to Archived, and back', async () => {
   const list = (await call('/threads')).body as { id: string }[]
   const id = list.at(-1)!.id
   await call(`/threads/${id}/archive`, { method: 'POST' })
   assert.ok(!(await call('/threads')).body.some((t: any) => t.id === id))
   assert.ok((await call(`/threads/${id}`)).body.archivedAt)
+  // In Archived, and only there, until it is brought back.
+  const archived = (await call('/threads?archived=1')).body as { id: string }[]
+  assert.ok(archived.some((t) => t.id === id))
+  assert.ok(!archived.some((t) => list.slice(0, -1).some((l) => l.id === t.id)))
+  await call(`/threads/${id}/archive`, { method: 'DELETE' })
+  assert.ok((await call('/threads')).body.some((t: any) => t.id === id))
+  assert.ok(!(await call('/threads?archived=1')).body.some((t: any) => t.id === id))
 })

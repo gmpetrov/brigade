@@ -85,7 +85,8 @@ while (visited.size < MAX_PAGES) {
   }
 }
 
-// What pages ask for only on a click: each library file's content and versions. Fetched
+// What pages ask for only on a click: each library file's content and versions, and each
+// version's content. Fetched
 // with the page's session.
 const get = async (path) => {
   await keep(await page.request.get(`${BASE}/api${path}`), 'GET')
@@ -94,7 +95,12 @@ const tree = responses['GET /library/tree']?.body
 for (const file of tree?.files ?? []) {
   await get(`/library/${file.id}/content`)
   await get(`/library/${file.id}/versions`)
+  const versions = responses[`GET /library/${file.id}/versions`]?.body
+  for (const version of Array.isArray(versions) ? versions : [])
+    await get(`/library/${file.id}/versions/${version.id}/content`)
 }
+// The sidebar's Archived, asked for only when opened.
+await get('/threads?archived=1')
 await browser.close()
 
 const sorted = Object.fromEntries(Object.entries(responses).sort(([a], [b]) => a.localeCompare(b)))
