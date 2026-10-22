@@ -44,7 +44,7 @@ export function LiveDemo() {
             <img className={c('demo-shot dark-only')} src="/landing/demo-dark.webp" alt="" />
             {wide ? (
               <iframe
-                // ?tour: Ada walks through a job on her own until the visitor takes over (lib/demo/tour.ts).
+                // ?tour: a cursor walks through a job on its own until the visitor takes over (lib/demo/tour.ts).
                 src={`${DEMO_URL}/app?tour`}
                 title="Brigade demo workspace: click around, nothing here is real"
                 allow="clipboard-write"

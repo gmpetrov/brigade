@@ -1,13 +1,13 @@
 // The demo's walkthrough, played on its own in the landing page's frame (demo.brigade.lol/app?tour):
-// a cursor named Ada uses the real dashboard, the way squad.so and x.ai/bot show theirs. She
-// asks Riley to fix the export button, merges his pull request, lets the replies to the
+// a cursor marked "You" (the visitor, as Ada, the workspace's owner) uses the real dashboard, the
+// way squad.so and x.ai/bot show theirs. It asks Riley to fix the export button, merges his pull request, lets the replies to the
 // customers go, and makes it a routine; the teammate's side is scripted in lib/demo/scripts.ts.
 // It acts through the page's own elements, with events no person made: the first one a person
 // makes (a click, a key, the wheel) stops it, and the dashboard is theirs.
 
 export const TOUR_PARAM = 'tour'
 
-/** The message Ada sends, and the one that makes it a routine: scripts.ts answers both. */
+/** The message the cursor sends, and the one that makes it a routine: scripts.ts answers both. */
 export const TOUR_ASK =
   'A customer says the export button on Reports does nothing. Fix it and tell the customers who asked.'
 export const TOUR_ROUTINE = 'Great. Do the same for every bug report that comes in.'
@@ -127,7 +127,7 @@ export async function send(stage: Stage, editor: HTMLElement) {
 
 const EDITOR = '[contenteditable="true"]'
 
-/** The walkthrough itself. Resolves once Ada is done; throws Stopped when a person takes over. */
+/** The walkthrough itself. Resolves once the cursor is done; throws Stopped when a person takes over. */
 export async function play(stage: Stage) {
   const { signal } = stage
   // Home: the message box, and who it goes to.

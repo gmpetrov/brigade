@@ -80,16 +80,19 @@ export function DemoTour() {
       >
         <MousePointer2 className="fill-primary text-primary-foreground size-6 -translate-x-1 -translate-y-1 drop-shadow-md" />
         <span className="bg-primary text-primary-foreground ml-4 rounded-full px-2 py-0.5 text-xs font-semibold shadow-md">
-          Ada
+          You
         </span>
       </div>
       {state === 'yours' && (
-        <div className="bg-card fixed right-4 bottom-4 z-50 flex items-center gap-3 rounded-full border py-1.5 pr-1.5 pl-4 text-sm shadow-lg">
-          <span className="font-medium">Your turn: click around</span>
+        // In the brand's violet, so it shows at once; above the message box, not over its send button.
+        <div className="bg-primary text-primary-foreground fixed right-4 bottom-24 z-50 flex items-center gap-2 rounded-full py-1.5 pr-1.5 pl-4 text-sm shadow-lg">
+          <span className="font-semibold">Your turn</span>
+          <span className="opacity-80">click around</span>
           <button
             type="button"
-            onClick={() => location.reload()}
-            className="hover:bg-muted inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium"
+            // From the start, Home: a reload anywhere else would replay from where it ended.
+            onClick={() => location.assign(`/app?${TOUR_PARAM}`)}
+            className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 font-semibold transition-colors hover:bg-white/30"
           >
             <RotateCcw className="size-3.5" aria-hidden />
             Replay

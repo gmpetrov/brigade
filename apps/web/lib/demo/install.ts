@@ -1,4 +1,4 @@
-import { DEMO_API } from './flag'
+import { DEMO_API, DEMO_THREAD } from './flag'
 
 const WS = DEMO_API.replace(/^http/, 'ws')
 // What answers the demo's requests, loaded with its fixtures on the first one (lib/demo/server.ts).
@@ -13,6 +13,9 @@ export function installDemo() {
   const w = window as Window & { __brigadeDemo?: boolean }
   if (w.__brigadeDemo) return
   w.__brigadeDemo = true
+  // A thread the visitor started lived in memory, gone with the reload: Home instead.
+  if (location.pathname.startsWith(`/app/threads/${DEMO_THREAD}`))
+    return location.replace(`/app${location.search}`)
 
   const realFetch = window.fetch.bind(window)
   window.fetch = async (input, init) => {
