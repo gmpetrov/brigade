@@ -33,6 +33,35 @@ test('the thread helper reads its command from its first argument', () => {
   assert.match(setupScript(), /NOPASSWD:SETENV: \/usr\/local\/sbin\/brigade-thread$/m)
 })
 
+test(
+  "a thread's Docker keeps its sockets on a short path, whatever the ids",
+  { skip: spawnSync('sh', ['-c', 'command -v sha256sum']).status !== 0 && 'no sha256sum here' },
+  () => {
+    // Under its runtime directory (/run/brigade-docker/<thread>/<user>), containerd's socket
+    // paths were longer than a unix socket's may be (104), and it never started.
+    const execRoot = /^docker_exec\(\) \{.*\}$/m.exec(THREAD_HELPER)?.[0]
+    assert.ok(execRoot)
+    const of = (thread: string, user: string) => {
+      const result = spawnSync(
+        'sh',
+        ['-c', `${execRoot}\ndocker_exec "$1" "$2"`, 'sh', thread, user],
+        {
+          encoding: 'utf8',
+        },
+      )
+      assert.equal(result.status, 0, result.stderr)
+      return result.stdout.trim()
+    }
+    // The longest ids thread_ok and user_ok let through.
+    const longest = of('t'.repeat(64), `bt-${'a'.repeat(28)}`)
+    assert.ok(`${longest}/containerd/containerd-debug.sock`.length <= 104, longest)
+    assert.equal(of('cmthread1', 'bt-ada'), of('cmthread1', 'bt-ada'))
+    assert.notEqual(of('cmthread1', 'bt-ada'), of('cmthread2', 'bt-ada'))
+    assert.notEqual(of('cmthread1', 'bt-ada'), of('cmthread1', 'bt-bob'))
+    assert.match(THREAD_HELPER, /dockerd-rootless\.sh --data-root="\$D" --exec-root="\$X"/)
+  },
+)
+
 test("the thread helper restarts systemd-resolved when the threads' listener is missing", () => {
   // Its host_rules alone, with what it calls stubbed: systemctl's calls are logged, ss lists
   // what LISTENING says.

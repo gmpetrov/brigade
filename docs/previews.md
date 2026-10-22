@@ -156,8 +156,16 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
 - **The provider's own token cookie** must also work in a cross-site frame
   (`SameSite=None`, ideally `Partitioned`). It does in Chrome today.
 - **Rootless Docker** cannot bind ports under 1024 and keeps images in each
-  teammate's home: a project that publishes port 80, or many large images, needs
-  changing. Not tested on a workspace computer yet (see below).
+  thread's own data root, in the teammate's home: a project that publishes port
+  80, or many large images, needs changing (PostgreSQL's is 646 MB, downloaded in
+  13 seconds, in each thread that uses it). Until October 22, 2026 it never
+  started in a thread on a cloud computer: under its runtime directory
+  (`/run/brigade-docker/<thread>/<user>`), containerd's socket paths were longer
+  than a unix socket's may be (104), so containerd failed and dockerd gave up
+  after about 15 seconds, holding `docker info` until then. Its sockets now go
+  in an exec root of 20 characters (`/run/bd/<hash>`); with that, a rootless
+  Docker started in a second, ran a container and published a port the thread
+  reached (tried as a teammate's user, outside the helper).
 - **Seeds that call third-party APIs** (a Stripe product list) fail without a
   key: the teammate asks for a test-mode key as a preview variable, or seeds
   what it can and says what is empty.
@@ -174,6 +182,7 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
    weeks: start early.
 3. **Test in Safari and Firefox**: signing in to an app in the pane, and the
    provider's token cookie in the frame.
-4. **Test rootless Docker on a workspace computer** after deploying: the root
-   setup runs again by itself (its stamp changed); then a teammate runs
-   `docker compose up -d` in a repository with Postgres and Redis.
+4. **Test rootless Docker on a workspace computer through the helper** after
+   deploying: the root setup runs again by itself (its stamp changed); then a
+   teammate runs `docker info` and `docker compose up -d` in a repository with
+   Postgres and Redis, in a thread.

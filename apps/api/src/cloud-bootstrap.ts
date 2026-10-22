@@ -157,6 +157,10 @@ TMPS=/var/lib/brigade/thread-tmp
 addr() { B=$(($1 * 4)); echo "10.231.$((B / 256)).$((B % 256 + $2))"; }
 index() { cat "$STATE/$1" 2>/dev/null || fail "no network for thread $1"; }
 netns() { [ -e "/run/netns/bt-$1" ] || fail "no network for thread $1"; echo "/run/netns/bt-$1"; }
+# Where a teammate's Docker in a thread keeps its sockets (dockerd's exec root), 20 characters
+# whatever the ids: under its runtime directory, containerd's were longer than a unix socket's
+# path may be (104), and it never started. <thread> <user>
+docker_exec() { echo "/run/bd/$(printf '%s/%s' "$1" "$2" | sha256sum | cut -c1-12)"; }
 lock() { install -d -m 755 "$STATE"; exec 9>"$STATE/.lock"; flock 9; }
 # Threads reach the internet (masqueraded) and the host's DNS resolver, never each other.
 host_rules() {
@@ -351,10 +355,13 @@ case "\${1:-}" in
     command -v dockerd-rootless.sh >/dev/null && command -v newuidmap >/dev/null || exit 0
     grep -q "^$3:" /etc/subuid || fail "no subordinate ids for $3"
     R="/run/brigade-docker/$2/$3"
+    X=$(docker_exec "$2" "$3")
     UNIT="brigade-docker-$2-$3"
     if ! systemctl is-active --quiet "$UNIT"; then
-      install -d -m 755 /run/brigade-docker "/run/brigade-docker/$2"
-      install -d -o "$3" -g "$3" -m 700 "$R"
+      install -d -m 755 /run/brigade-docker "/run/brigade-docker/$2" /run/bd
+      install -d -o "$3" -g "$3" -m 700 "$R" "$X"
+      # A socket left by a Docker that stopped answers nothing: the wait below is for the new one's.
+      rm -f "$R/docker.sock"
       D="/home/$3/.local/share/brigade-docker/$2"
       runuser -u "$3" -- mkdir -p "$D"
       systemctl reset-failed "$UNIT" 2>/dev/null || true
@@ -363,7 +370,7 @@ case "\${1:-}" in
       systemd-run --quiet --unit="$UNIT" --collect -p NetworkNamespacePath="$N" \\
         -p User="$3" -p Group="$3" -p Delegate=yes -p KillMode=mixed \\
         -E XDG_RUNTIME_DIR="$R" -E HOME="/home/$3" -E PATH=/usr/bin:/bin:/usr/sbin:/sbin \\
-        dockerd-rootless.sh --data-root="$D" --exec-opt native.cgroupdriver=cgroupfs
+        dockerd-rootless.sh --data-root="$D" --exec-root="$X" --exec-opt native.cgroupdriver=cgroupfs
     fi
     I=0
     while [ ! -S "$R/docker.sock" ] && [ $I -lt 120 ]; do sleep 0.25; I=$((I + 1)); done
@@ -375,7 +382,7 @@ case "\${1:-}" in
     thread_ok "$2"
     user_ok "$3"
     systemctl stop "brigade-docker-$2-$3" 2>/dev/null || true
-    rm -rf "/run/brigade-docker/$2/$3"
+    rm -rf "/run/brigade-docker/$2/$3" "$(docker_exec "$2" "$3")"
     D="/home/$3/.local/share/brigade-docker/$2"
     if [ "\${4:-}" = purge ] && [ -d "$D" ]; then
       # As the teammate, mapped to its subordinate ids as Docker was: no more than it can reach.
