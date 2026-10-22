@@ -14,6 +14,7 @@ import {
   type DocumentBlockEditor,
 } from '@/components/document-blocks'
 import type { DocumentEditorProps } from '@/components/document-editor'
+import { agentTyping, typeNextUpdate, type Writer } from '@/components/document-typing'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
@@ -108,12 +109,14 @@ function LiveEditor({
   const [status, setStatus] = useState<Status>('connecting')
   const [synced, setSynced] = useState(false)
   const [others, setOthers] = useState<{ name: string; color: string }[]>([])
+  const [typing, setTyping] = useState<Writer | null>(null)
 
   const self = useRef<DocumentBlockEditor>(null)
   const editor = useCreateBlockNote(
     withCollaboration({
       schema: editorSchema,
       ...editorFiles(documentId, self),
+      extensions: [agentTyping(setTyping)],
       collaboration: {
         provider,
         fragment: doc.getXmlFragment(DOCUMENT_FRAGMENT),
@@ -150,9 +153,22 @@ function LiveEditor({
       }
       setOthers([...seen.values()])
     }
+    // A teammate saved the document: the update that follows is its edit.
+    const onMessage = (message: string) => {
+      let notice: { type?: string; writer?: Writer }
+      try {
+        notice = JSON.parse(message) as typeof notice
+      } catch {
+        return
+      }
+      if (notice.type !== 'typing' || !notice.writer) return
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      typeNextUpdate(editor, notice.writer)
+    }
     provider.on('status', onStatus)
     provider.on('sync', onSync)
     provider.on('connection-close', onClose)
+    provider.on('custom-message', onMessage)
     provider.awareness.on('change', onAwareness)
     // It may have connected and synced before this listened.
     if (provider.wsconnected) setStatus((s) => (s === 'deleted' ? s : 'live'))
@@ -161,9 +177,10 @@ function LiveEditor({
       provider.off('status', onStatus)
       provider.off('sync', onSync)
       provider.off('connection-close', onClose)
+      provider.off('custom-message', onMessage)
       provider.awareness.off('change', onAwareness)
     }
-  }, [provider, doc])
+  }, [provider, doc, editor])
 
   if (status === 'deleted')
     return <p className="text-sm text-muted-foreground">This document was deleted.</p>
@@ -174,7 +191,13 @@ function LiveEditor({
       ) : (
         <Skeleton className="h-32 w-full" />
       )}
-      <EditorStatus status={status} synced={synced} others={others} />
+      <EditorStatus
+        status={status}
+        synced={synced}
+        others={
+          typing && !others.some((o) => o.name === typing.name) ? [typing, ...others] : others
+        }
+      />
     </div>
   )
 }
