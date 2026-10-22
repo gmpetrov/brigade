@@ -1481,16 +1481,18 @@ export class Threads {
             this.note(spec, teammateId, spec.teammate.name, event.text)
             seat!.turn.push({ kind: 'message', chars: visibleChars(event.text), text: event.text })
             // The images it shows, kept with the thread: a file in /tmp is gone by tomorrow.
+            // One event each, so none comes near the WebSocket's message limit.
             void readReplyImages(event.text, folder).then(
-              (images) =>
-                Object.keys(images).length > 0 &&
-                this.options.emit(spec.sessionId, {
-                  at: new Date().toISOString(),
-                  type: 'message.images',
-                  id: event.id,
-                  images,
-                  teammateId,
-                }),
+              (images) => {
+                for (const [path, image] of Object.entries(images))
+                  this.options.emit(spec.sessionId, {
+                    at: new Date().toISOString(),
+                    type: 'message.images',
+                    id: event.id,
+                    images: { [path]: image },
+                    teammateId,
+                  })
+              },
               (error: unknown) =>
                 console.warn(`could not read the images of a reply: ${String(error)}`),
             )

@@ -453,7 +453,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
    * The images a finished message shows (`![…](path)` or a link to one), read from
    * the computer as it was sent, so the thread shows them once the file has gone or
    * the computer is off. By the path as the message writes it (`relativeFile`): a
-   * data: URL from the runner, STORED_FILE and the file's name once stored.
+   * data: URL from the runner, STORED_FILE and the file's name once stored. The runner
+   * sends one image per event, so none nears the WebSocket's message limit.
    */
   z.object({
     ...base,

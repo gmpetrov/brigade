@@ -8,7 +8,7 @@ import type { RunnerToApi, SequencedEvent } from '@brigade/contracts'
 const home = await mkdtemp(join(tmpdir(), 'brigade-waiting-'))
 process.env.BRIGADE_HOME = home
 const { Outbox } = await import('../src/outbox.js')
-const { Connection } = await import('../src/connection.js')
+const { Connection, eventBatches } = await import('../src/connection.js')
 
 test.after(() => rm(home, { recursive: true, force: true }))
 
@@ -110,4 +110,30 @@ test('a thread waiting for over a day is no longer sent again but on reconnect',
     sent.map((m) => m.type),
     ['events.waiting'],
   )
+})
+
+test('a replay goes in batches small enough for the WebSocket, an image-sized event alone', () => {
+  const at = new Date().toISOString()
+  const image = (seq: number): SequencedEvent => ({
+    sessionId: 's1',
+    seq,
+    event: {
+      at,
+      type: 'message.images',
+      id: 'm1',
+      images: { [`/tmp/${seq}.png`]: `data:image/png;base64,${'A'.repeat(5 * 1024 * 1024)}` },
+    },
+  })
+  const small = (seq: number): SequencedEvent => ({ sessionId: 's1', seq, event })
+  const sizes = (events: SequencedEvent[]) =>
+    eventBatches(events).map((batch) => batch.map((e) => e.seq))
+  // Three 5 MiB images: one with the small events before it, then one each.
+  assert.deepEqual(sizes([small(1), image(2), image(3), image(4), small(5)]), [[1, 2], [3], [4, 5]])
+  // Small events still go 200 at a time.
+  const many = Array.from({ length: 450 }, (_, i) => small(i + 1))
+  assert.deepEqual(
+    eventBatches(many).map((b) => b.length),
+    [200, 200, 50],
+  )
+  assert.deepEqual(eventBatches([]), [])
 })

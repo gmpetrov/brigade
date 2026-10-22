@@ -15,9 +15,21 @@ test('a reply names its images by path, as the dashboard reads them', () => {
         'See [the chart](./out/chart.JPG "Chart") and ![again](/tmp/rec/m0.png).',
         '![spaced](<shots/a b.webp>) ![encoded](shots/a%20c.gif#x)',
         '[a page](https://example.com/a.png) [notes](notes.md) [top](#top) ![](//cdn.example.com/x.png)',
+        'By reference: ![shot][capture]',
+        '',
+        '[capture]: /tmp/shot.png',
+        '  [other]: <shots/d e.png> "Title"',
+        '[site]: https://example.com/b.png',
       ].join('\n'),
     ),
-    ['/tmp/rec/m0.png', 'out/chart.JPG', 'shots/a b.webp', 'shots/a c.gif'],
+    [
+      '/tmp/rec/m0.png',
+      'out/chart.JPG',
+      'shots/a b.webp',
+      'shots/a c.gif',
+      '/tmp/shot.png',
+      'shots/d e.png',
+    ],
   )
 })
 

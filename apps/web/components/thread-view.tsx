@@ -363,7 +363,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
         }
         case 'message.images': {
           const item = byKey.get(`m${e.teammateId ?? ''}:${e.id}`)
-          if (item?.kind === 'assistant') item.images = e.images
+          if (item?.kind === 'assistant') item.images = { ...item.images, ...e.images }
           break
         }
         case 'tool.started':

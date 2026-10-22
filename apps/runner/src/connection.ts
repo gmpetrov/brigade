@@ -17,6 +17,32 @@ const STARTED_AT = new Date().toISOString()
 
 const BATCH = 200
 /**
+ * And at most about this much JSON in one: Cloudflare refuses a WebSocket message over
+ * 32 MiB, and a replay can bring many events that each hold an image. One event larger
+ * than this still goes alone.
+ */
+const BATCH_CHARS = 8 * 1024 * 1024
+
+/** Events in the batches they are sent in, by count and size, in order. */
+export function eventBatches(events: SequencedEvent[]) {
+  if (events.length <= 1) return events.length ? [events] : []
+  const batches: SequencedEvent[][] = []
+  let batch: SequencedEvent[] = []
+  let chars = 0
+  for (const event of events) {
+    const size = JSON.stringify(event).length
+    if (batch.length && (batch.length >= BATCH || chars + size > BATCH_CHARS)) {
+      batches.push(batch)
+      batch = []
+      chars = 0
+    }
+    batch.push(event)
+    chars += size
+  }
+  batches.push(batch)
+  return batches
+}
+/**
  * A ping this often keeps the socket from looking idle (Cloudflare closes
  * WebSockets that carry nothing), and one unanswered by the next tells a dead
  * connection from a quiet one. The API cannot see pings: a heartbeat message
@@ -173,8 +199,7 @@ export class Connection {
 
   private sendEvents(events: SequencedEvent[], now = Date.now()) {
     for (const e of events) this.sentAt.set(e.sessionId, now)
-    for (let i = 0; i < events.length; i += BATCH)
-      this.send({ type: 'events', events: events.slice(i, i + BATCH) })
+    for (const batch of eventBatches(events)) this.send({ type: 'events', events: batch })
   }
 
   /** Send one new event now if connected; otherwise it waits in the outbox for replay. */

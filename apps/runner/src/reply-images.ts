@@ -41,11 +41,17 @@ export function imagePath(href: string) {
   return path && IMAGE_FILE.test(path) ? path : undefined
 }
 
+/** A reference definition, `[name]: path` on a line of its own, for `![alt][name]`. */
+const DEFINITION = /^ {0,3}\[[^\]\n]+\]:[ \t]*(?:<([^>\n]+)>|(\S+))/gm
+
 /** The image files a reply names, each once, in order, at most MAX_IMAGES. */
 export function imagesIn(text: string) {
   const paths = new Set<string>()
-  for (const match of text.matchAll(TARGET)) {
-    const path = imagePath(match[1] ?? match[2]!)
+  const targets = [...text.matchAll(TARGET), ...text.matchAll(DEFINITION)]
+    .sort((a, b) => a.index - b.index)
+    .map((m) => m[1] ?? m[2]!)
+  for (const target of targets) {
+    const path = imagePath(target)
     if (path) paths.add(path)
     if (paths.size >= MAX_IMAGES) break
   }
