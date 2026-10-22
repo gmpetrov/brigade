@@ -96,6 +96,7 @@ export const ModelName = {
   LibraryFolder: 'LibraryFolder',
   LibraryFolderGrant: 'LibraryFolderGrant',
   DocumentAsset: 'DocumentAsset',
+  BucketCleanup: 'BucketCleanup',
   AuditEntry: 'AuditEntry',
   Attachment: 'Attachment',
   ThreadAttachment: 'ThreadAttachment',
@@ -918,6 +919,17 @@ export const DocumentAssetScalarFieldEnum = {
 } as const
 
 export type DocumentAssetScalarFieldEnum = (typeof DocumentAssetScalarFieldEnum)[keyof typeof DocumentAssetScalarFieldEnum]
+
+
+export const BucketCleanupScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  prefix: 'prefix',
+  notBefore: 'notBefore',
+  createdAt: 'createdAt'
+} as const
+
+export type BucketCleanupScalarFieldEnum = (typeof BucketCleanupScalarFieldEnum)[keyof typeof BucketCleanupScalarFieldEnum]
 
 
 export const AuditEntryScalarFieldEnum = {

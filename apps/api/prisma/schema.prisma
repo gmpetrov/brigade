@@ -1559,6 +1559,20 @@ enum ActorType {
   system
 }
 
+/// A deleted thread's files folder in the bucket, emptied again once every signed upload
+/// URL issued before its deletion has expired (a runner's late image, runner-files.ts).
+/// Kept until a sweep empties it whole: the row is the promise that nothing is left.
+model BucketCleanup {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  prefix    String
+  /// Not before this: a URL issued just before the deletion works until then.
+  notBefore DateTime
+  createdAt DateTime @default(now())
+
+  @@index([notBefore])
+}
+
 /// Append-only record of an action. workspaceId is null for organization-level actions.
 model AuditEntry {
   id             BigInt     @id @default(autoincrement())

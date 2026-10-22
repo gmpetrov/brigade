@@ -140,6 +140,14 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
       message: `Could not delete ${failed.length} of the thread's files from storage. Try again.`,
     })
 
+  // First, the promise to empty its files folder again once a late upload can no longer
+  // land: kept before the thread goes, so no deletion is ever without it.
+  const notBefore = new Date(Date.now() + LATE_UPLOADS_MS)
+  await prisma.bucketCleanup.upsert({
+    where: { sessionId },
+    create: { sessionId, prefix: threadFilesPrefix(scope, sessionId), notBefore },
+    update: { notBefore },
+  })
   // Its events, seats, reads, pins, tickets, comments and summary go with it (cascades);
   // the files given only to it are deleted here, as they belong to no other thread.
   await db.attachment.deleteMany({ where: { id: { in: attachmentIds } } })
@@ -160,41 +168,40 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
 
 /**
  * A runner may still be uploading a reply's image (runner-files.ts) when its thread is
- * deleted: its signed URL works for 10 minutes after the thread check, and would put the
- * image back in the deleted thread's folder. So the folders of threads deleted this
- * recently are emptied again by each sweep (hourly), long enough to see every such URL out.
+ * deleted: its signed URL works for 10 minutes after the thread check (UPLOAD_URL_SECONDS),
+ * and would put the image back in the deleted thread's folder. So the folder is emptied
+ * again once that long has passed, with a margin.
  */
-const LATE_UPLOADS_MS = 3 * 60 * 60_000
+const LATE_UPLOADS_MS = 15 * 60_000
 
-/** Empty again the bucket folders of threads deleted lately, of what was uploaded after. */
+/**
+ * Empty again the files folders of deleted threads whose late uploads can no longer land
+ * (BucketCleanup). A row goes only once its folder was emptied whole: one a sweep could
+ * not finish is tried again by the next, however long the bucket refuses. A row whose
+ * thread is still there (its deletion failed after the row was kept) just goes.
+ */
 export async function sweepDeletedThreadFiles(now = Date.now()) {
-  // By organization, as the audit log is indexed.
-  const organizations = await prisma.organization.findMany({ select: { id: true } })
-  const deleted = await prisma.auditEntry.findMany({
-    where: {
-      organizationId: { in: organizations.map((o) => o.id) },
-      at: { gte: new Date(now - LATE_UPLOADS_MS) },
-      action: 'thread.deleted',
-      targetType: 'thread',
-    },
-    select: { organizationId: true, workspaceId: true, targetId: true },
+  const due = await prisma.bucketCleanup.findMany({
+    where: { notBefore: { lte: new Date(now) } },
+    orderBy: { notBefore: 'asc' },
+    take: 500,
   })
   let removed = 0
-  for (const entry of deleted) {
-    if (!entry.workspaceId) continue
-    const scope = { organizationId: entry.organizationId, workspaceId: entry.workspaceId }
-    let keys: string[]
+  for (const row of due) {
     try {
-      keys = await listObjects(threadFilesPrefix(scope, entry.targetId))
-    } catch {
-      // Not a thread id Brigade could have written under: nothing of ours there.
-      continue
+      // Still there: its deletion did not go through, and its files are its own again.
+      if (await prisma.session.findUnique({ where: { id: row.sessionId }, select: { id: true } })) {
+        await prisma.bucketCleanup.delete({ where: { id: row.id } })
+        continue
+      }
+      for (const key of await listObjects(row.prefix)) {
+        await deleteObject(key)
+        removed++
+      }
+      await prisma.bucketCleanup.delete({ where: { id: row.id } })
+    } catch (error) {
+      console.warn(`deleted thread ${row.sessionId}: files not emptied yet: ${String(error)}`)
     }
-    for (const key of keys)
-      await deleteObject(key).then(
-        () => removed++,
-        (error: unknown) => console.warn(`${key}: not deleted: ${String(error)}`),
-      )
   }
   if (removed > 0) console.log(`deleted threads: removed ${removed} file(s) uploaded late`)
 }

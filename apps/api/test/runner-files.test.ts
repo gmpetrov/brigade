@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdtempSync, readFileSync } from 'node:fs'
+import { chmod } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { after, before, test } from 'node:test'
 import pg from 'pg'
 
@@ -44,7 +45,7 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 
 const { prisma, scoped } = await import('../src/db.js')
 const { hashToken } = await import('../src/hub.js')
-const { getObject, putObject, threadFileKey } = await import('../src/bucket.js')
+const { getObject, putObject, threadFileKey, threadFilesPrefix } = await import('../src/bucket.js')
 const { deleteThread, sweepDeletedThreadFiles } = await import('../src/thread-delete.js')
 const { runnerFiles } = await import('../src/routes/runner-files.js')
 
@@ -58,6 +59,8 @@ const token = `runner-token-${id}`
 const otherToken = `other-runner-token-${id}`
 let scope: { organizationId: string; workspaceId: string }
 let threadId: string
+/** What a thread in it needs: its teammate and computer. */
+let seat: { teammateId: string; computerId: string }
 
 const PNG = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -106,10 +109,14 @@ before(async () => {
     } as never,
   })
   threadId = thread.id
+  seat = { teammateId: teammate.id, computerId: computers[0]!.id }
 })
 
 after(async () => {
   if (skip) return
+  await prisma.bucketCleanup.deleteMany({
+    where: { prefix: { startsWith: `${ids.organization}/` } },
+  })
   await prisma.organization.deleteMany({ where: { id: ids.organization } })
   await prisma.user.deleteMany({ where: { id: ids.user } })
   await prisma.$disconnect()
@@ -157,19 +164,65 @@ test('another computer, a bad name, a PDF or a deleted thread is refused', { ski
   assert.equal((await ticket(`/${threadId}/${name}`, PNG.length, 'unknown')).status, 401)
 })
 
+const LATER = 16 * 60_000
+const cleanup = (sessionId: string) => prisma.bucketCleanup.findUnique({ where: { sessionId } })
+
 test(
-  'an image uploaded after its thread was deleted goes at the next sweep',
+  'an image uploaded after its thread was deleted goes once its URL expired, however many sweeps it takes',
   { skip },
   async () => {
     const path = `/${threadId}/${name}`
+    const key = threadFileKey(scope, threadId, name)
     // The runner had its signed URL before the thread was deleted…
     assert.equal((await ticket(path, PNG.length)).status, 200)
     await deleteThread(scoped(scope), scope, { type: 'member', id: ids.member }, threadId)
-    assert.equal(await getObject(threadFileKey(scope, threadId, name)), null)
+    assert.equal(await getObject(key), null)
     // …and the image reaches the bucket after: the API is no longer asked.
-    await putObject(threadFileKey(scope, threadId, name), new Uint8Array(PNG), 'image/png')
+    await putObject(key, new Uint8Array(PNG), 'image/png')
     assert.equal((await ticket(path, PNG.length)).status, 410)
+    // Before the URL expired: left for later, as more could still land.
     await sweepDeletedThreadFiles()
-    assert.equal(await getObject(threadFileKey(scope, threadId, name)), null)
+    assert.ok(await getObject(key))
+    assert.ok(await cleanup(threadId))
+    // A sweep the bucket refuses keeps the promise for the next one.
+    const folder = dirname(join(process.env.BUCKET_DIR!, key))
+    await chmod(folder, 0o555)
+    try {
+      await sweepDeletedThreadFiles(Date.now() + LATER)
+    } finally {
+      await chmod(folder, 0o755)
+    }
+    assert.ok(await getObject(key))
+    assert.ok(await cleanup(threadId))
+    // Then it is emptied, and the promise kept.
+    await sweepDeletedThreadFiles(Date.now() + LATER)
+    assert.equal(await getObject(key), null)
+    assert.equal(await cleanup(threadId), null)
   },
 )
+
+test('a cleanup whose thread is still there leaves its files alone', { skip }, async () => {
+  const thread = await prisma.session.create({
+    data: {
+      ...scope,
+      ...seat,
+      startedByMemberId: ids.member,
+      title: 'Still here',
+      status: 'idle',
+      origin: 'member',
+    } as never,
+  })
+  const key = threadFileKey(scope, thread.id, name)
+  await putObject(key, new Uint8Array(PNG), 'image/png')
+  // As a deletion that failed after keeping its row leaves it.
+  await prisma.bucketCleanup.create({
+    data: {
+      sessionId: thread.id,
+      prefix: threadFilesPrefix(scope, thread.id),
+      notBefore: new Date(),
+    },
+  })
+  await sweepDeletedThreadFiles(Date.now() + LATER)
+  assert.ok(await getObject(key))
+  assert.equal(await cleanup(thread.id), null)
+})
