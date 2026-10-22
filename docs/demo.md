@@ -88,10 +88,11 @@ command `pnpm run cf:deploy:demo`, the same watch paths and build token as `brig
 
 ## On the landing page
 
-The landing page shows the demo in a window (`components/landing/live-demo.tsx`): a picture
-of it (`public/landing/demo-light.webp` and `demo-dark.webp`) until the visitor presses "Try
-the live demo", then the demo itself in a frame. The landing page loads none of the dashboard
-until then. On a phone, the button opens the demo on its own. The demo allows only
-www.brigade.lol (and localhost) to frame it (`frame-ancestors`, `next.config.ts`); in the
-frame, its own sign hides, the page around it being the sign, and "Start free on your Mac"
-opens in the whole window. Take the pictures again after a visible change to Home.
+The landing page shows the demo right under the hero, in a window, running as soon as the page
+opens (`components/landing/live-demo.tsx`), as squad.so and x.ai/bot do. A picture of it
+(`public/landing/demo-light.webp` and `demo-dark.webp`) shows while it loads. Narrower than
+900px, the dashboard would show its phone layout in a small box, so the picture stays, with a
+button that opens the demo on its own. The demo allows only www.brigade.lol (and localhost) to
+frame it (`frame-ancestors`, `next.config.ts`); in the frame, its own sign hides, the page
+around it being the sign, and "Start free on your Mac" opens in the whole window. Take the
+pictures again after a visible change to Home, without the demo's sign.

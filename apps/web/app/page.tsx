@@ -66,8 +66,8 @@ export default function Landing() {
       <Header />
       <main>
         <Hero />
-        <PlanBand />
         <LiveDemo />
+        <PlanBand />
         <Message />
         <Bridge />
         <Tiles />

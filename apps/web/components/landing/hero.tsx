@@ -32,7 +32,7 @@ export function Header() {
 
 export function Hero() {
   return (
-    <section className={c('hero')} aria-labelledby="hero-title" data-anim>
+    <section className={c('hero')} aria-labelledby="hero-title">
       <div className={c('wrap')}>
         <div className={c('hero-copy')}>
           <p className={c('eyebrow')}>The operating system for AI-native companies</p>
@@ -48,134 +48,8 @@ export function Hero() {
             <Link className={c('btn pri lg')} href={SIGN_UP}>
               Start free on your Mac
             </Link>
-            <a className={c('btn lg')} href="#demo">
-              Try the live demo
-            </a>
           </div>
           <p className={c('fine')}>Open source · Free on your Mac</p>
-        </div>
-
-        <div className={c('hero-art')}>
-          <div className={c('blk slab')} aria-hidden="true"></div>
-          <div className={c('blk b-orange')} aria-hidden="true"></div>
-          <div className={c('blk b-green')} aria-hidden="true"></div>
-          <div className={c('blk b-ink')} aria-hidden="true"></div>
-
-          <div
-            className={c('thread')}
-            role="img"
-            aria-label="A Brigade thread: Ada asks for the export bug to be fixed, Riley fixes it and ships it after her approval, Sam drafts replies to the customers who asked, and a weekly routine is created."
-          >
-            <div className={c('th-top')}>
-              <span className={c('th-pill')}>
-                <span className={c('proj')}>A</span>
-                <span className={c('av xs')}>R</span>Acme · Export bug
-              </span>
-              <span className={c('th-state')}>
-                <span className={c('dot run')}></span>Riley, Sam
-              </span>
-            </div>
-            <div className={c('th-body')}>
-              <div className={c('me-who seq s0')}>Ada</div>
-              <div className={c('me seq s1')}>
-                A customer says the export button is broken. Fix it and tell the people who asked.
-              </div>
-
-              <div className={c('mm seq s2')}>
-                <span className={c('av')}>R</span>
-                <div className={c('tx')}>
-                  <div className={c('who')}>Riley</div>
-                  <p>On it.</p>
-                  <div className={c('conn')}>
-                    <span className={c('chip seq s3')}>
-                      <span className={c('tile sm')}>GH</span>GitHub{' '}
-                      <span className={c('ok-i')}>
-                        <Icon name="check" />
-                      </span>
-                    </span>
-                    <span className={c('chip seq s4')}>
-                      <span className={c('tile sm')}>G</span>Gmail{' '}
-                      <span className={c('ok-i')}>
-                        <Icon name="check" />
-                      </span>
-                    </span>
-                    <span className={c('seq s5')}>connected</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className={c('steps-l')}>
-                <div className={c('st seq s6')}>
-                  → found the bug in export.ts{' '}
-                  <span className={c('ok-i')}>
-                    <Icon name="check" />
-                  </span>
-                </div>
-                <div className={c('st seq s7')}>
-                  → tests pass{' '}
-                  <span className={c('ok-i')}>
-                    <Icon name="check" />
-                  </span>
-                </div>
-              </div>
-
-              <div className={c('pvw seq s8')}>
-                <div className={c('pvw-bar')}>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <span>preview · /reports</span>
-                  <b>live</b>
-                </div>
-                <div className={c('pvw-body')}>
-                  <div className={c('rows')}>
-                    <span className={c('ttl')}>Reports</span>
-                    <div className={c('bar')}></div>
-                    <div className={c('bar')}></div>
-                  </div>
-                  <span className={c('pvw-exp')}>
-                    Export <Icon name="check" />
-                  </span>
-                </div>
-              </div>
-
-              <div className={c('appr seq s9')}>
-                <span className={c('av')}>R</span>
-                <div className={c('tx')}>
-                  <div className={c('o')}>Needs you</div>
-                  <div className={c('tt')}>
-                    Riley wants to ship <span className={c('k')}>· Fix export button</span>
-                  </div>
-                </div>
-                <div className={c('act')}>
-                  <span className={c('btn sm pri')}>Approve</span>
-                  <span className={c('badge ok')}>approved</span>
-                </div>
-              </div>
-
-              <div className={c('mm seq s10')}>
-                <span className={c('av sam')}>S</span>
-                <div className={c('tx')}>
-                  <div className={c('who')}>Sam</div>
-                  <p>3 customers asked about it. Replies drafted, waiting on you.</p>
-                  <div className={c('conn')}>
-                    <span className={c('badge yel')}>waiting on you</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className={c('sys seq s11')}>
-                <Icon name="refresh" />
-                Created routine · <b>Weekly release notes</b>
-              </div>
-            </div>
-            <div className={c('composer')} aria-hidden="true">
-              <span className={c('ph-t')}>Reply to Riley and Sam…</span>
-              <span className={c('send')}>
-                <Icon name="arrowUp" />
-              </span>
-            </div>
-          </div>
         </div>
       </div>
     </section>
