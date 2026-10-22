@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
+import { BrigadeMark } from '@/components/brigade-mark'
 import { formatCount, mergeDate, type ProofNumbers, REPO, REPO_URL } from '@/lib/github-proof'
 import { MAC_APP_URL } from '@/lib/mac-app'
 import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
@@ -433,7 +434,10 @@ export function Footer() {
   return (
     <footer className={c('foot')}>
       <div className={c('wrap')}>
-        <span className={c('word')}>Brigade</span>
+        <span className={c('word')}>
+          <BrigadeMark className={c('word-mark')} />
+          Brigade
+        </span>
         <nav aria-label="Footer">
           <a href="/#pricing">Pricing</a>
           <a href="/#download">Download</a>

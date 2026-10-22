@@ -248,9 +248,17 @@ svg.i {
   z-index: 5;
 }
 .word {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36em;
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.045em;
+}
+/* The logo before the name, sized with the name's text. */
+.word-mark {
+  width: 1.3em;
+  height: 1.3em;
 }
 .top nav {
   display: flex;
