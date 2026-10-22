@@ -65,6 +65,7 @@ import { UpdatePill } from '@/components/update-pill'
 import { UsageMenu } from '@/components/usage-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DemoBanner } from '@/components/demo-banner'
+import { DemoTour } from '@/components/demo-tour'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -805,6 +806,7 @@ function Inset({ children }: { children: ReactNode }) {
     // min-w-0: long unwrapped text inside a page must not widen it past the window.
     <SidebarInset className="min-w-0">
       <DemoBanner place="phone" />
+      <DemoTour />
       <UpdatePill header={expanded} />
       {!expanded && <TopBar />}
       {/* Before the document: a document opened over a docked thread covers it until closed. */}

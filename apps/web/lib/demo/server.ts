@@ -5,7 +5,7 @@
 import type { ApiToBrowser, SequencedEvent } from '@brigade/contracts'
 import fixtures from './fixtures.json'
 import { DEMO_API } from './flag'
-import { demoPulls, mergedPull, newPull, type DemoPull } from './pulls'
+import { demoPulls, mergedPull, newPull, type DemoPull, type NewPull } from './pulls'
 import { afterDecision, replyTo, type Run } from './scripts'
 import { keyOf, reviveDates } from './shared'
 
@@ -211,6 +211,10 @@ function play(threadId: string, run: Run) {
           await wait(45)
         }
         emit(threadId, [{ at: now(), type: 'message.done', id: messageId, text: step.say, ...by }])
+      } else if ('approval' in step) {
+        // The turn waits on a person here: no end, and a ticket in Needs you.
+        requestApproval(threadId, teammateId, step.approval)
+        return
       }
     }
     if (run.replies?.length || run.merge) {
@@ -254,12 +258,19 @@ function sendMessage(threadId: string, text: string) {
 
 /** What scripted runs may do to the workspace (lib/demo/scripts.ts). */
 const actions = {
-  openPull: (threadId: string, teammate: { id: string; name: string }) => {
-    const pull = newPull(threadId, teammate)
+  openPull: (
+    threadId: string,
+    teammate: { id: string; name: string },
+    kind?: NewPull,
+    merged?: Run,
+  ) => {
+    const pull = newPull(threadId, teammate, kind)
     pulls.set(pull.number, pull)
+    if (merged) afterMerge.set(pull.number, { threadId, run: merged })
     syncPulls()
     return pull
   },
+  addRoutine,
   openTickets: () => body<{ title: string; session?: { title: string } }[]>('GET /tickets') ?? [],
   playbook: () =>
     body<{
@@ -315,7 +326,9 @@ function newThread(input: {
     replies: 0,
     unread: false,
   }
-  const detail = structuredClone(body<Json>(`GET /threads/${template.id}`) ?? fresh)
+  const detail: Json = structuredClone(body<Json>(`GET /threads/${template.id}`) ?? fresh)
+  // The page's computer, with whether it is there: the list's has only its kind and name.
+  const computer = detail.computer
   Object.assign(detail, fresh, {
     parent: null,
     children: [],
@@ -340,6 +353,7 @@ function newThread(input: {
       : null,
   })
   detail.teammates = [{ joinedAt: now(), lastTurnAt: now(), teammate: detail.teammate }]
+  detail.computer = computer
   store.set(`GET /threads/${threadId}`, { status: 200, body: detail })
   list.unshift(fresh)
   if (input.text) sendMessage(threadId, input.text)
@@ -449,12 +463,127 @@ function syncPulls() {
 }
 syncPulls()
 
+/** What a teammate goes on with once its pull request is merged, as Brigade tells its thread. */
+const afterMerge = new Map<number, { threadId: string; run: Run }>()
+
 function merge(number: number) {
   const pull = pulls.get(number)
   if (!pull || pull.summary.state !== 'open') return false
   pulls.set(number, mergedPull(pull))
   syncPulls()
+  const next = afterMerge.get(number)
+  afterMerge.delete(number)
+  if (next) play(next.threadId, next.run)
   return true
+}
+
+/**
+ * A teammate's write to an App held for a person: its call starts, and its ticket opens in
+ * Tickets, Home and the thread, as a template from the recorded ones (a Gmail send).
+ */
+function requestApproval(
+  threadId: string,
+  teammateId: string,
+  ask: { tool: string; input: unknown; operation: string; target: string },
+) {
+  const toolCallId = `call_${id()}`
+  const approvalId = `demo-approval-${id()}`
+  const thread = body<Json>(`GET /threads/${threadId}`)
+  const teammate = teammates.find((t) => t.id === teammateId)
+  const template = (body<Ticket[]>('GET /tickets') ?? []).find(
+    (t) => t.payload?.operation === ask.operation,
+  ) as (Ticket & Json) | undefined
+  const ticket = {
+    ...structuredClone(template ?? {}),
+    id: approvalId,
+    sessionId: threadId,
+    type: 'approval',
+    status: 'open',
+    title: `${teammate?.name ?? 'Teammate'}: ${ask.operation.replace(/_/g, ' ')} (${ask.target})`,
+    payload: {
+      input: ask.input,
+      target: ask.target,
+      operation: ask.operation,
+      connection: (template?.payload?.connection as string | undefined) ?? 'support@acme.test',
+      connectionId: template?.payload?.connectionId ?? null,
+    },
+    createdAt: now(),
+    session: {
+      id: threadId,
+      title: thread?.title,
+      origin: 'member',
+      startedByMemberId: me.memberId,
+      projectId: thread?.projectId ?? null,
+      parentId: null,
+      archivedAt: null,
+      teammate: teammate ? { id: teammate.id, name: teammate.name } : null,
+      laterAt: null,
+    },
+    playbook: null,
+  }
+  for (const key of ['GET /tickets', 'GET /tickets?status=open']) {
+    const list = body<Json[]>(key)
+    if (list) list.unshift(structuredClone(ticket))
+  }
+  const detail = body<{ tickets?: Json[] }>(`GET /threads/${threadId}`)
+  if (detail)
+    (detail.tickets ??= []).push({
+      id: approvalId,
+      type: 'approval',
+      title: ticket.title,
+      payload: ticket.payload,
+      createdAt: ticket.createdAt,
+    })
+  emit(threadId, [
+    {
+      at: now(),
+      type: 'tool.started',
+      toolCallId,
+      toolName: ask.tool,
+      input: ask.input,
+      teammateId,
+    },
+    {
+      at: now(),
+      type: 'approval.requested',
+      approvalId,
+      toolCallId,
+      toolName: ask.tool,
+      input: ask.input,
+      teammateId,
+    },
+  ])
+  setStatus(threadId, 'waiting')
+  broadcast({ type: 'tickets.updated' })
+}
+
+/** A routine a teammate made: in Routines, from the recorded ones as a template. */
+function addRoutine(routine: {
+  title: string
+  cron: string
+  instructions: string
+  teammateId: string
+}) {
+  const list = body<Json[]>('GET /schedules')
+  const teammate = teammates.find((t) => t.id === routine.teammateId)
+  if (!list || !teammate) return
+  const template = list.find((s) => (s.teammate as Json | undefined)?.id === teammate.id) ?? list[0]
+  list.unshift({
+    ...structuredClone(template ?? {}),
+    id: `demo-routine-${id()}`,
+    ...routine,
+    pausedAt: null,
+    lastError: null,
+    lastRun: null,
+    parentSessionId: null,
+    parentSession: null,
+    createdByTeammateId: teammate.id,
+    createdByTeammate: { id: teammate.id, name: teammate.name },
+    nextRunAt: new Date(Date.now() + 18 * 3600_000).toISOString(),
+    createdAt: now(),
+    updatedAt: now(),
+  })
+  broadcast({ type: 'schedule.updated', scheduleId: 'demo-routine' })
 }
 
 function pullResponse(number: number, part: 'detail' | 'state'): Stored {

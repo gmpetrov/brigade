@@ -56,7 +56,12 @@ test('a message the demo knows plays its task; anything else offers what it know
       teammate: { id: 'r', name: 'Riley' },
     },
     teammates: [{ id: 'r', name: 'Riley' }],
-    actions: { openPull: () => ({}) as never, openTickets: () => [], playbook: () => undefined },
+    actions: {
+      openPull: () => ({}) as never,
+      addRoutine: () => undefined,
+      openTickets: () => [],
+      playbook: () => undefined,
+    },
   }
   const build = replyTo('Build it and open a PR', ctx)
   assert.ok(build.steps.some((s) => 'tool' in s && s.tool.endsWith('github_create_pull_request')))
@@ -160,4 +165,52 @@ test('an archived thread moves to Archived, and back', async () => {
   assert.ok((await call('/threads')).body.some((t: any) => t.id === id))
   assert.ok(await inProject())
   assert.ok(!(await call('/threads?archived=1')).body.some((t: any) => t.id === id))
+})
+
+test('the walkthrough: a fix, its merge, the replies once allowed, then a routine', async () => {
+  const { TOUR_ASK, TOUR_ROUTINE } = await import('../lib/demo/tour')
+  const teammates = (await call('/teammates')).body as { id: string; name: string }[]
+  const riley = teammates.find((t) => t.name === 'Riley')!
+  const { body } = await call('/threads', { body: { text: TOUR_ASK, teammateId: riley.id } })
+  const id = body.id as string
+  const status = async () => (await call(`/threads/${id}`)).body.status
+  const events = async () =>
+    ((await call(`/threads/${id}/events`)).body.events as { event: any }[]).map((e) => e.event)
+
+  // Riley opens the fix and offers its merge.
+  await until(async () => (await status()) === 'idle', 30_000)
+  assert.equal((await call('/pulls/acme/web/153/state')).body.state, 'open')
+  const offer = (await events()).find(
+    (e) => e.toolName === 'suggest_replies' && e.type === 'tool.started',
+  )
+  assert.deepEqual(offer.input.actions, [{ action: 'merge', label: 'Merge #153' }])
+
+  // Merged: the replies wait for a person, in the thread and in Tickets.
+  await call('/pulls/acme/web/153/merge', { body: { method: 'squash' } })
+  await until(async () => (await status()) === 'waiting', 30_000)
+  const asked = (await events()).findLast((e) => e.type === 'approval.requested')
+  assert.ok(asked)
+  const tickets = (await call('/tickets?status=open')).body as { id: string; sessionId: string }[]
+  assert.ok(tickets.some((t) => t.id === asked.approvalId && t.sessionId === id))
+
+  // Allowed from the thread's card: sent, and the ticket is gone.
+  await call(`/threads/${id}/approvals`, { body: { approvalId: asked.approvalId, approved: true } })
+  await until(async () => (await status()) === 'idle', 30_000)
+  const after = await events()
+  assert.ok(after.some((e) => e.type === 'message.done' && /Sent to the 3 customers/.test(e.text)))
+  assert.ok(after.some((e) => e.type === 'tool.finished' && e.toolCallId === asked.toolCallId))
+  assert.ok(
+    !((await call('/tickets')).body as { id: string }[]).some((t) => t.id === asked.approvalId),
+  )
+
+  // A routine, in Routines.
+  await call(`/threads/${id}/messages`, { body: { text: TOUR_ROUTINE } })
+  await until(
+    async () =>
+      (await status()) === 'idle' &&
+      (await events()).some((e) => e.toolName?.endsWith('create_schedule')),
+    30_000,
+  )
+  const routines = (await call('/schedules')).body as { title: string; teammateId: string }[]
+  assert.ok(routines.some((r) => r.title === 'Morning bug reports' && r.teammateId === riley.id))
 })
