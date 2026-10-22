@@ -28,7 +28,13 @@ export const challengeOf = (verifier: string) =>
 /** base64url of 32 bytes, as the app's verifier and its challenge are. */
 const secret = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
 
-type Grant = { userId: string; activeWorkspaceId: string | null; challenge: string }
+/** The browser session's scope goes with it: /me falls back to the first organization without it. */
+type Grant = {
+  userId: string
+  activeOrganizationId: string | null
+  activeWorkspaceId: string | null
+  challenge: string
+}
 
 export const desktopSignIn = () =>
   ({
@@ -38,12 +44,15 @@ export const desktopSignIn = () =>
         '/desktop/code',
         { method: 'POST', body: z.object({ challenge: secret }), use: [sessionMiddleware] },
         async (c) => {
-          const { session } = c.context.session
+          const session = c.context.session.session as typeof c.context.session.session & {
+            activeOrganizationId?: string | null
+            activeWorkspaceId?: string | null
+          }
           const code = randomBytes(32).toString('base64url')
           const grant: Grant = {
             userId: session.userId,
-            activeWorkspaceId:
-              (session as { activeWorkspaceId?: string | null }).activeWorkspaceId ?? null,
+            activeOrganizationId: session.activeOrganizationId ?? null,
+            activeWorkspaceId: session.activeWorkspaceId ?? null,
             challenge: c.body.challenge,
           }
           await c.context.internalAdapter.createVerificationValue({
@@ -72,6 +81,7 @@ export const desktopSignIn = () =>
           const user = await c.context.internalAdapter.findUserById(grant.userId)
           if (!user) throw invalid()
           const session = await c.context.internalAdapter.createSession(user.id, false, {
+            activeOrganizationId: grant.activeOrganizationId,
             activeWorkspaceId: grant.activeWorkspaceId,
           })
           await setSessionCookie(c, { session, user })

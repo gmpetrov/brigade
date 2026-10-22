@@ -24,7 +24,11 @@ function setup() {
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
     session: {
-      additionalFields: { activeWorkspaceId: { type: 'string', required: false, input: false } },
+      additionalFields: {
+        // The organization plugin's, in the API.
+        activeOrganizationId: { type: 'string', required: false, input: false },
+        activeWorkspaceId: { type: 'string', required: false, input: false },
+      },
     },
     plugins: [desktopSignIn()],
   })
@@ -64,7 +68,9 @@ const newVerifier = () => randomBytes(32).toString('base64url')
 test('a code issued in the browser signs the app in with a session of its own', async () => {
   const { db, call } = setup()
   const browser = await signedIn(call)
-  db.session[0]!.activeWorkspaceId = 'workspace-1'
+  // In a second organization: without it, /me would fall back to the first one.
+  db.session[0]!.activeOrganizationId = 'organization-b'
+  db.session[0]!.activeWorkspaceId = 'workspace-b'
   const verifier = newVerifier()
   const issued = await call('/desktop/code', { challenge: challengeOf(verifier) }, browser)
   assert.equal(issued.status, 200)
@@ -76,8 +82,9 @@ test('a code issued in the browser signs the app in with a session of its own', 
   assert.match(app, /better-auth\.session_token=/)
   assert.equal(db.session.length, 2)
   assert.notEqual(app, browser)
-  // In the browser's workspace.
-  assert.equal(db.session[1]!.activeWorkspaceId, 'workspace-1')
+  // In the browser's organization and workspace.
+  assert.equal(db.session[1]!.activeOrganizationId, 'organization-b')
+  assert.equal(db.session[1]!.activeWorkspaceId, 'workspace-b')
 
   // Used once.
   const again = await call('/desktop/redeem', { code, verifier })
