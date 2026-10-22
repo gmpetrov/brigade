@@ -603,6 +603,9 @@ export async function seedWorkspace(users: Users) {
   })
   const refundCall = stripeCall('PostRefunds', { charge: 'ch_Sample2', reason: 'duplicate' })
   const refundTarget = 'PostRefunds {"charge":"ch_Sample2","reason":"duplicate"} (test mode)'
+  // The approval's id is its ticket's, as the runner asks for a connector write.
+  const refundTicketId = randomUUID()
+  const refundCallId = `call_${id()}`
   const refund = await thread({
     title: 'Refund request from Jamie Lee',
     teammateId: sam.id,
@@ -637,7 +640,14 @@ export async function seedWorkspace(users: Users) {
         },
         {
           type: 'tool.started',
-          toolCallId: `call_${id()}`,
+          toolCallId: refundCallId,
+          toolName: harness('stripe_api_write'),
+          input: refundCall,
+        },
+        {
+          type: 'approval.requested',
+          approvalId: refundTicketId,
+          toolCallId: refundCallId,
           toolName: harness('stripe_api_write'),
           input: refundCall,
         },
@@ -647,6 +657,7 @@ export async function seedWorkspace(users: Users) {
   await prisma.ticket.create({
     data: {
       ...inWorkspace,
+      id: refundTicketId,
       sessionId: refund.id,
       type: 'approval',
       title: `Sam: stripe api write (${refundTarget})`,

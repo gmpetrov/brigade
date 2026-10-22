@@ -1,4 +1,6 @@
 'use client'
+import { DemoMachine } from '@/components/demo-machine'
+import { DEMO } from '@/lib/demo/flag'
 import '@xterm/xterm/css/xterm.css'
 import { ApiToBrowser } from '@brigade/contracts'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -8,7 +10,7 @@ const COLS = 110
 const ROWS = 28
 
 /** A shell on the workspace computer, in the thread's directory, as the teammate's user. */
-export function Terminal({
+function LiveTerminal({
   sessionId,
   onExit,
   actions,
@@ -92,4 +94,9 @@ export function Terminal({
       <div ref={host} data-keyboard className="overflow-x-auto rounded-lg bg-black p-1.5" />
     </div>
   )
+}
+
+/** In the demo, what it would show: there is no computer behind it (components/demo-machine.tsx). */
+export function Terminal(props: Parameters<typeof LiveTerminal>[0]) {
+  return DEMO ? <DemoMachine what="terminal" /> : <LiveTerminal {...props} />
 }

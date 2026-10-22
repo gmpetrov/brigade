@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The public demo: the dashboard built with NEXT_PUBLIC_DEMO=1, on recorded data, with no
+  // API behind it (docs/demo.md). Built and deployed by scripts/deploy/workers.sh like
+  // wrangler.jsonc's brigade-web, under its own name and host.
+  "name": "brigade-web-demo",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // As brigade-web's: next-themes' inline script breaks with esbuild's keepNames.
+  "keep_names": false,
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "brigade-web-demo" }],
+  "routes": [{ "pattern": "demo.brigade.lol", "custom_domain": true }],
+  "observability": { "enabled": true },
+}

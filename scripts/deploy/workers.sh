@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build or deploy one of Brigade's Workers:
-#   scripts/deploy/workers.sh build|deploy api|api-front|web|collab
+#   scripts/deploy/workers.sh build|deploy api|api-front|web|collab|demo
 # Each Worker's Workers Build runs it on a push to main (the cf:* scripts in the root
 # package.json), after installing dependencies. Deploying the API migrates the database
 # first, with DATABASE_URL from the environment (a build secret on Cloudflare). A deploy
@@ -90,6 +90,17 @@ deploy:web)
   wait_for_api
   pnpm --filter @brigade/web exec opennextjs-cloudflare deploy
   ;;
+build:demo)
+  # The public demo (docs/demo.md): the dashboard on recorded data, no API. DEMO_RECORD=1
+  # records its fixtures again first, from a fresh sample workspace (scripts/demo/record.sh).
+  pnpm --filter "@brigade/web^..." build
+  [ "${DEMO_RECORD:-}" != 1 ] || scripts/demo/record.sh
+  NEXT_PUBLIC_DEMO=1 pnpm --filter @brigade/web exec opennextjs-cloudflare build -c wrangler.demo.jsonc
+  ;;
+deploy:demo)
+  # It asks no API, so it does not wait for one.
+  pnpm --filter @brigade/web exec opennextjs-cloudflare deploy -c wrangler.demo.jsonc
+  ;;
 build:collab)
   # Nothing: wrangler bundles it when deploying.
   ;;
@@ -97,7 +108,7 @@ deploy:collab)
   pnpm --filter @brigade/collab exec wrangler deploy --var "API_URL:$API_URL"
   ;;
 *)
-  echo "Usage: $0 build|deploy api|api-front|web|collab" >&2
+  echo "Usage: $0 build|deploy api|api-front|web|collab|demo" >&2
   exit 1
   ;;
 esac

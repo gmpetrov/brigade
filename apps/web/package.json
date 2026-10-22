@@ -7,6 +7,7 @@
     "build": "next build",
     "dev": "next dev --port 3000",
     "start": "next start --port 3000",
+    "test": "node --import tsx --test test/*.test.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "clean": "rm -rf .next .turbo",
     "theme": "node scripts/theme.mjs"
@@ -61,6 +62,8 @@
     "@types/node": "22.20.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "wrangler": "4.151.0"
+    "wrangler": "4.151.0",
+    "playwright-core": "1.64.1",
+    "tsx": "4.23.15"
   }
 }

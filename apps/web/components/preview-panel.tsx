@@ -1,4 +1,6 @@
 'use client'
+import { DemoMachine } from '@/components/demo-machine'
+import { DEMO } from '@/lib/demo/flag'
 // The thread's live preview beside it: the app its teammate runs, in a frame,
 // as the person's own browser renders it (not a picture of the computer's
 // screen). Its state comes from the thread's preview.changed events (or, on a
@@ -160,7 +162,7 @@ export function endedText(status: 'failed' | 'stopped', reason?: string) {
   return `Preview ${status}${reason ? `: ${reason}` : ''}`
 }
 
-export function PreviewPanel({
+function LivePreviewPanel({
   threadId,
   preview,
   teammateName,
@@ -473,8 +475,8 @@ export function PreviewPanel({
                 </p>
                 {waking && (
                   <p className="max-w-xs">
-                    Starting the cloud computer first. It takes a minute or so; the preview
-                    starts once it is up.
+                    Starting the cloud computer first. It takes a minute or so; the preview starts
+                    once it is up.
                   </p>
                 )}
                 <div className="flex flex-wrap justify-center gap-2">
@@ -597,5 +599,14 @@ function NoticeAction({ onClick, children }: { onClick: () => void; children: Re
     >
       {children}
     </button>
+  )
+}
+
+/** In the demo, what it would show: there is no computer behind it (components/demo-machine.tsx). */
+export function PreviewPanel(props: Parameters<typeof LivePreviewPanel>[0]) {
+  return DEMO ? (
+    <DemoMachine what="preview" onClose={props.onClose} />
+  ) : (
+    <LivePreviewPanel {...props} />
   )
 }
