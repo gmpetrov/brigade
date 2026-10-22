@@ -32,6 +32,28 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
     requests get a plain 502.
   - **Use keeps it alive.** Any request through the proxy counts as use, so a
     preview someone is using does not expire.
+  - **Picking elements** (`apps/runner/src/preview-select.ts`), as in Claude.
+    Each page navigation is asked for uncompressed and gets
+    `<script src="/__brigade/select.js">` right after its `<head>` (the proxy
+    serves that path itself; same origin, so a `script-src 'self'` policy allows
+    it). The script removes its tag before the page's own scripts run, so React
+    hydrates against the HTML it rendered, and does nothing outside a frame. It
+    says `ready` to the dashboard, which only then shows the panel's select
+    button: a preview from a runner without the script has none. While select
+    mode is on, the element under the pointer is outlined in a shadow root, and
+    a click goes to the dashboard instead of the page: its label (nearest React
+    component and tag, read from React's fiber in development), that
+    component's plain props, page, CSS selector, size, text and HTML, clipped.
+    The page then draws it (`modern-screenshot`, served at
+    `/__brigade/screenshot.mjs` and loaded only then) and sends the PNG, which
+    the message carries as an image attachment named in the block; its chip
+    shows it, as Claude's does, rather than the files list. A click on a chip
+    opens what the teammate gets. The composer shows it as a chip and the
+    message carries it as a `<preview-element>` block
+    (`packages/contracts/src/preview-elements.ts`), so the teammate reads it as
+    text, with no new field for the API or runner to pass on, and the thread
+    shows the chip in its place. Esc in the page turns select mode off; it stays
+    on across the page's navigations.
 - **Crashes restart.** An app that stops after it answered starts again after
   1, 3 and 10 seconds; a fourth stop within 10 minutes fails the preview. An app
   that never answered fails at once, as before: its command is wrong, and the
@@ -207,6 +229,11 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   tested. Sign-in there needs the new tab.
 - **Google, GitHub and Microsoft sign-in** refuse to load in a frame on another
   site, whatever the cookies.
+- **Picking elements** sees only the page's DOM: its picture is the DOM drawn
+  again (cross-origin images without CORS and some CSS, like backdrop filters,
+  can be missing from it), and there is no source file (React 19 no longer
+  exposes `_debugSource`), only its components' names. A page whose CSP forbids `'self'` scripts, or a compressed
+  page the app sends whatever it is asked, gets no select button.
 - **Cookies set by scripts** (`document.cookie`) do not pass the proxy. Rare for
   sessions; storage (`localStorage`, as Supabase and Firebase use) works in the
   frame, kept for it.

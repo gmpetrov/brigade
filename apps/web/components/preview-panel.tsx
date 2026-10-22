@@ -9,6 +9,7 @@ import { DEMO } from '@/lib/demo/flag'
 // API so, which keeps the preview running. Starting, it says what it is doing
 // and the app's latest output; running, whether its pages passed their check.
 import {
+  PreviewElement,
   previewReady,
   type PreviewInfo,
   type PreviewView,
@@ -28,9 +29,10 @@ import {
   RotateCw,
   ScrollText,
   Square,
+  SquareMousePointer,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 
 /** The preview's name among the panels beside a page. */
@@ -173,6 +175,8 @@ function LivePreviewPanel({
   starting,
   waking,
   onAsk,
+  onPick,
+  picked = 0,
   expectedCommit,
 }: {
   threadId: string
@@ -190,6 +194,13 @@ function LivePreviewPanel({
   waking?: boolean
   /** Put a message to the teammate in the composer (or send it, off the thread). */
   onAsk?: (text: string) => void
+  /**
+   * Put an element picked in the page in the composer, then its picture (none when the
+   * page could not draw it), by the id the page gave it. Without it, nothing can be picked.
+   */
+  onPick?: PickHandlers
+  /** How many picked elements wait in the composer. */
+  picked?: number
   /** The commit it should run (a pull request's head): when it runs another, the panel says so. */
   expectedCommit?: string
 }) {
@@ -203,6 +214,7 @@ function LivePreviewPanel({
   const [lastLine, setLastLine] = useState<string>()
   const running = preview.status === 'running'
   const phase = previewPhase(preview)
+  const select = usePreviewSelect(view?.url, preview.previewId, onPick)
 
   // The address, once per run of the preview.
   useEffect(() => {
@@ -309,6 +321,24 @@ function LivePreviewPanel({
         </div>
         {view && (
           <>
+            {select.available && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-pressed={select.on}
+                aria-label={select.on ? 'Stop selecting' : 'Select an element'}
+                title={
+                  select.on
+                    ? 'Stop selecting (Esc)'
+                    : 'Select an element in the page to mention it in your message'
+                }
+                className={cn(select.on && 'bg-primary/12 text-primary hover:text-primary')}
+                onClick={() => select.set(!select.on)}
+              >
+                <SquareMousePointer aria-hidden />
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"
@@ -419,6 +449,12 @@ function LivePreviewPanel({
                 )}
               </Notice>
             )}
+            {select.on && (
+              <Notice icon={<SquareMousePointer aria-hidden className="size-4 shrink-0" />}>
+                Click an element to add it to your message
+                {picked > 0 && ` · ${picked} added`}. Esc to stop.
+              </Notice>
+            )}
             {view.local && (
               <p className="border-b px-3 py-1.5 text-xs text-muted-foreground">
                 The app runs on {computerName}, so it opens there only, at{' '}
@@ -426,6 +462,7 @@ function LivePreviewPanel({
               </p>
             )}
             <iframe
+              ref={select.frame}
               key={`${preview.previewId}:${frame}`}
               src={view.url}
               title={`Preview of the app ${teammateName} runs`}
@@ -562,6 +599,90 @@ function LivePreviewPanel({
       </div>
     </SidePanel>
   )
+}
+
+/**
+ * Picking elements in the frame. The proxy in front of the app adds a script to its
+ * pages (runner/src/preview-select.ts) that says it is there once loaded: only then is
+ * the button shown, so a preview from an older runner has none. Select mode is the
+ * panel's: it is sent to each page as it loads, and the page sends back what was clicked.
+ */
+export type PickHandlers = {
+  element: (id: string, element: PreviewElement) => void
+  picture: (id: string, image?: Blob) => void
+}
+
+function usePreviewSelect(
+  url: string | undefined,
+  previewId: string,
+  onPick: PickHandlers | undefined,
+) {
+  const frame = useRef<HTMLIFrameElement>(null)
+  const [available, setAvailable] = useState(false)
+  const [on, setOn] = useState(false)
+  const latest = useRef({ on, onPick })
+  latest.current = { on, onPick }
+  const origin = url ? new URL(url).origin : undefined
+
+  useEffect(() => {
+    setAvailable(false)
+    setOn(false)
+  }, [previewId, origin])
+
+  const send = useCallback(
+    (value: boolean) =>
+      origin &&
+      frame.current?.contentWindow?.postMessage(
+        { source: 'brigade', type: 'select', on: value },
+        origin,
+      ),
+    [origin],
+  )
+
+  const picking = !!onPick
+  useEffect(() => {
+    if (!origin || !picking) return
+    const listen = (e: MessageEvent) => {
+      const data = e.data as {
+        source?: string
+        type?: string
+        id?: unknown
+        element?: unknown
+        image?: unknown
+      } | null
+      if (
+        e.origin !== origin ||
+        e.source !== frame.current?.contentWindow ||
+        data?.source !== 'brigade-preview'
+      )
+        return
+      if (data.type === 'ready') {
+        setAvailable(true)
+        // A page it navigated to starts with select mode off.
+        if (latest.current.on) send(true)
+      } else if (data.type === 'stopped') setOn(false)
+      else if (typeof data.id !== 'string') return
+      else if (data.type === 'selected') {
+        const element = PreviewElement.safeParse(data.element)
+        if (element.success) latest.current.onPick?.element(data.id, element.data)
+      } else if (data.type === 'captured')
+        latest.current.onPick?.picture(
+          data.id,
+          data.image instanceof Blob && data.image.type === 'image/png' ? data.image : undefined,
+        )
+    }
+    window.addEventListener('message', listen)
+    return () => window.removeEventListener('message', listen)
+  }, [origin, picking, send])
+
+  const set = useCallback(
+    (value: boolean) => {
+      setOn(value)
+      send(value)
+    },
+    [send],
+  )
+  return { frame, available: available && picking, on: on && picking, set }
 }
 
 /** A line above the frame: what the check found, or that it runs another commit. */

@@ -87,10 +87,13 @@ export function useUploads() {
     [commit],
   )
 
+  /** Add files to the message; returns their keys, in order. */
   const add = useCallback(
     (files: Iterable<File>) => {
+      const keys: string[] = []
       for (const file of files) {
         const key = `${Date.now()}-${count.current++}`
+        keys.push(key)
         const upload: Upload = {
           key,
           name: file.name || 'Pasted file',
@@ -117,6 +120,7 @@ export function useUploads() {
             if (e.name !== 'AbortError') update(key, { error: e.message })
           })
       }
+      return keys
     },
     [commit, update],
   )

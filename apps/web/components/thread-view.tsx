@@ -18,6 +18,7 @@ import {
   PREVIEW_REPLACED,
   PROPOSE_TEAM_TOOL,
   SHOW_WIDGET_TOOL,
+  splitPreviewElements,
   STORED_FILE,
   STORED_FILE_NAME,
   SUGGEST_REPLIES_TOOL,
@@ -84,6 +85,7 @@ import { contentUrl } from '@/components/library-browser'
 import { CommandChip, startingCommand, useSkillCommands } from '@/components/composer'
 import { CodeSnippet, CopyableCode, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
+import { PreviewElementChips } from '@/components/preview-elements'
 import { endedText } from '@/components/preview-panel'
 import { VariablesAsk } from '@/components/preview-variables'
 import { PullMergeButton } from '@/components/pull-action'
@@ -118,7 +120,14 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
 import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
-import { storedFileUrl, threadImageUrl, useApi, type Credential, type ThreadChild } from '@/lib/api'
+import {
+  attachmentUrl,
+  storedFileUrl,
+  threadImageUrl,
+  useApi,
+  type Credential,
+  type ThreadChild,
+} from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
 import { cn } from '@/lib/utils'
 
@@ -1763,8 +1772,15 @@ export function ThreadItems({
             </div>
           )
         // A command it starts with (/design, a skill) is a label above it: what was asked for.
-        const asked = startingCommand(forPeople(item.text), skillNames)
-        const text = asked ? asked.rest : forPeople(item.text)
+        // Elements picked in the preview are chips above it, out of its text; their
+        // pictures show in them, not with its other files.
+        const { text: written, elements } = splitPreviewElements(forPeople(item.text))
+        const pictureOf = (name?: string) =>
+          name ? item.attachments.find((a) => a.name === name && a.status === 'ready') : undefined
+        const pictures = new Set(elements.flatMap((e) => pictureOf(e.image)?.id ?? []))
+        const files = item.attachments.filter((a) => !pictures.has(a.id))
+        const asked = startingCommand(written, skillNames)
+        const text = asked ? asked.rest : written
         return (
           <div
             key={item.key}
@@ -1780,23 +1796,25 @@ export function ThreadItems({
               />
             )}
             {asked && <CommandChip command={asked.command} />}
+            <PreviewElementChips
+              elements={elements.map((element) => {
+                const picture = pictureOf(element.image)
+                return { element, ...(picture && { picture: attachmentUrl(picture.id) }) }
+              })}
+              className="justify-end"
+            />
             {text && (
               <div className="group/message flex items-center gap-1">
                 <MessageActions
                   text={text}
-                  onReply={
-                    onReply &&
-                    (() => onReply({ seq: item.seq, text: replyText(forPeople(item.text)) }))
-                  }
+                  onReply={onReply && (() => onReply({ seq: item.seq, text: replyText(written) }))}
                 />
                 <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
                   <MessageWithCode text={text} />
                 </div>
               </div>
             )}
-            {item.attachments.length > 0 && (
-              <MessageAttachments attachments={item.attachments} className="justify-end" />
-            )}
+            {files.length > 0 && <MessageAttachments attachments={files} className="justify-end" />}
             {item.steeredTo && asksParallel(item.text) ? (
               <span className="text-xs text-muted-foreground">
                 Sent to run in parallel, in a child thread

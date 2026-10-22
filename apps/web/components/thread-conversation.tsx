@@ -24,14 +24,17 @@ import {
 import {
   defaultEffort,
   type Effort,
+  formatPreviewElement,
   type HarnessId,
   mentionsToText,
+  type PreviewElement,
   type QueuedMessageAction,
   type ReplyTo,
   suggestionFor,
 } from '@brigade/contracts'
 import Link from 'next/link'
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -66,6 +69,8 @@ import {
   useThreadPreview,
   useThreadRepositories,
 } from '@/components/preview-panel'
+import { PreviewElementChips } from '@/components/preview-elements'
+import type { PickHandlers } from '@/components/preview-panel'
 import { usePreviewStart } from '@/components/preview-start'
 import { ThreadProjectMenu } from '@/components/projects'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
@@ -124,6 +129,15 @@ export type ThreadHeading = {
 }
 
 /** Replies being written, per thread: closing the panel or opening another thread keeps them. */
+/**
+ * An element picked in the preview, by the id its page gave it, and the upload of its
+ * picture; `drawing` while its page draws it, when the message waits for the picture.
+ */
+type Picked = { id: string; element: PreviewElement; upload?: string; drawing?: boolean }
+
+/** How long a message waits for a picture its page is drawing (it may have gone away). */
+const DRAWING_MS = 15_000
+
 const replyDrafts = new Map<string, string>()
 
 function useReplyDraft(id: string) {
@@ -259,6 +273,60 @@ export function ThreadConversation({
   const [waitForMachine, setWaitForMachine] = useState(false)
   useEffect(() => setWaitForMachine(false), [id])
   const files = useUploads()
+  // Elements picked in the preview, as chips above it; the message carries them, and their
+  // pictures as files of its own that show in their chips rather than with the other files.
+  const [elements, setElements] = useState<Picked[]>([])
+  useEffect(() => setElements([]), [id])
+  const elementsRef = useRef(elements)
+  elementsRef.current = elements
+  const pickElement = useMemo<PickHandlers>(() => {
+    const drawn = (pickId: string, change: Partial<Picked> = {}) =>
+      setElements((list) =>
+        list.map((e) => (e.id === pickId ? { ...e, ...change, drawing: false } : e)),
+      )
+    return {
+      element: (pickId, element) => {
+        setElements((list) =>
+          list.some(
+            (e) => e.element.page === element.page && e.element.selector === element.selector,
+          )
+            ? list
+            : [...list, { id: pickId, element, drawing: true }],
+        )
+        setTimeout(() => drawn(pickId), DRAWING_MS)
+      },
+      picture: (pickId, image) => {
+        const picked = elementsRef.current.find((e) => e.id === pickId)
+        if (!picked?.drawing) return
+        if (!image) return drawn(pickId)
+        const name = `element-${pickId}.png`
+        const [upload] = files.add([new File([image], name, { type: 'image/png' })])
+        drawn(pickId, { ...(upload && { upload }), element: { ...picked.element, image: name } })
+      },
+    }
+  }, [files.add])
+  // A picture that did not upload is left out: the element goes without it.
+  const removeUpload = files.remove
+  useEffect(() => {
+    const failed = elements.filter(
+      (e) => e.upload && files.uploads.some((u) => u.key === e.upload && u.error),
+    )
+    if (!failed.length) return
+    for (const e of failed) removeUpload(e.upload!)
+    setElements((list) =>
+      list.map((e) => {
+        if (!failed.some((f) => f.id === e.id)) return e
+        const { image: _image, ...element } = e.element
+        return { id: e.id, element }
+      }),
+    )
+  }, [elements, files.uploads, removeUpload])
+  const pictureKeys = new Set(elements.flatMap((e) => (e.upload ? [e.upload] : [])))
+  const removeElement = (index: number) => {
+    const upload = elements[index]?.upload
+    if (upload) files.remove(upload)
+    setElements((list) => list.filter((_, i) => i !== index))
+  }
   const drop = useFileDrop(files.add)
   const root = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
@@ -655,7 +723,11 @@ export function ThreadConversation({
     }
   }
 
-  const ready = (text.trim() || files.ids.length > 0 || moveTo) && !files.busy && !files.failed
+  const ready =
+    (text.trim() || files.ids.length > 0 || elements.length > 0 || moveTo) &&
+    !files.busy &&
+    !elements.some((e) => e.drawing) &&
+    !files.failed
 
   /**
    * Send the composer's message; it shows above the composer until the thread shows it.
@@ -665,24 +737,31 @@ export function ThreadConversation({
   async function send(e?: React.FormEvent) {
     e?.preventDefault()
     if (!ready || current === 'waiting') return
-    const sending = text.trim()
+    const written = text.trim()
     const replying = replyTo
     const moving = moveTo
-    if (moving && !sending && files.ids.length === 0) {
+    const picked = elements
+    if (moving && !written && files.ids.length === 0 && picked.length === 0) {
       setMoveTo(undefined)
       return moveThread(moving.id).catch(() => setMoveTo((current) => current ?? moving))
     }
+    // The elements after what the person wrote, so a preview of the message starts with it.
+    const sending = [written, ...picked.map((p) => formatPreviewElement(p.element))]
+      .filter(Boolean)
+      .join('\n\n')
     setText('')
     setReplyTo(undefined)
     setMoveTo(undefined)
+    setElements([])
     try {
       await deliver(sending, files.ids, undefined, replying, moving)
       files.clear()
     } catch (err) {
       // Not sent: back in the composer, as it was.
-      setText((current) => current || sending)
+      setText((current) => current || written)
       setReplyTo((current) => current ?? replying)
       setMoveTo((current) => current ?? moving)
+      setElements((current) => (current.length ? current : picked))
       setError((err as Error).message)
     }
   }
@@ -924,6 +1003,7 @@ export function ThreadConversation({
           starting={previewStart.busy}
           waking={previewStart.waking}
           onAsk={t.mayPrompt ? askInComposer : undefined}
+          {...(t.mayPrompt ? { onPick: pickElement, picked: elements.length } : {})}
         />
       )}
       {expanded && computerOpen && t.computer.kind === 'cloud' && (
@@ -1203,7 +1283,21 @@ export function ThreadConversation({
                       </span>
                     </div>
                   )}
-                  <UploadList uploads={files.uploads} onRemove={files.remove} />
+                  <PreviewElementChips
+                    elements={elements.map((e) => ({
+                      element: e.element,
+                      ...(e.drawing && { drawing: true }),
+                      ...(e.upload && {
+                        picture: files.uploads.find((u) => u.key === e.upload)?.preview,
+                      }),
+                    }))}
+                    onRemove={removeElement}
+                    className="px-1"
+                  />
+                  <UploadList
+                    uploads={files.uploads.filter((u) => !pictureKeys.has(u.key))}
+                    onRemove={files.remove}
+                  />
                   <div className="flex items-end gap-1">
                     <div className="mb-1">
                       {/* The + on phones too: teaching needs a desktop, so not there. */}
