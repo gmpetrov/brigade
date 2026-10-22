@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   formatMention,
+  taskComment,
   type ApiToRunner,
   type RunnerToApi,
   type TaskColumn,
@@ -1295,7 +1296,7 @@ export async function handleTaskCall(
         if (target.controlledByMemberId)
           return fail('A person has control of that thread right now. Try again later.')
         const outcome = await promptThread(db, scope, target, {
-          text: `**${teammate.name}** commented from the thread “${session.title}”:\n\n${op.text}`,
+          text: taskComment({ from: teammate.name, threadTitle: session.title, text: op.text }),
           memberId: null,
           ...(task.teammateId && target.teammates.some((t) => t.teammateId === task.teammateId)
             ? { teammateIds: [task.teammateId] }

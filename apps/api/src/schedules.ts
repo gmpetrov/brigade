@@ -6,6 +6,7 @@ import {
   cronProblem,
   nextRun,
   nextRuns,
+  scheduledRunMessage,
   type ApiToRunner,
   type RunnerToApi,
   type ScheduleOperation,
@@ -362,17 +363,13 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
   }
   const runId = run?.runId
 
-  const text = [
-    `Scheduled run of "${schedule.title}", due ${localTime(dueAt, schedule.timezone)} (${schedule.timezone}). ` +
-      'Nobody is watching this thread live: do the work below, and open a ticket if you need a person.' +
-      (parent
-        ? ` It reports to the thread “${parent.title}”: when you are done, call \`report\` once, with ` +
-          'status nothing when there is nothing new (that wakes nobody), report when there is something to tell, ' +
-          'needs_person when you opened a ticket, or failed.'
-        : ''),
-    '',
-    schedule.instructions,
-  ].join('\n')
+  const text = scheduledRunMessage({
+    title: schedule.title,
+    due: localTime(dueAt, schedule.timezone),
+    timezone: schedule.timezone,
+    ...(parent ? { parentTitle: parent.title } : {}),
+    instructions: schedule.instructions,
+  })
   try {
     const { thread, outcome } = await startThread(db, scope, {
       teammate: schedule.teammate,

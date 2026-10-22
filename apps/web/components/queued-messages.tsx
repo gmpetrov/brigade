@@ -9,6 +9,7 @@ import {
 } from '@brigade/contracts'
 import { ChevronDown, Clock, CornerDownRight, Pencil, RotateCcw, Split, X } from 'lucide-react'
 import { useState } from 'react'
+import { brigadeNote, notePreview } from '@/components/brigade-notes'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -76,6 +77,8 @@ export function QueuedMessages({
   }
   const preview = (m: QueuedMessage) => {
     const files = m.attachments.length
+    const note = m.memberId === null && !childNote(m.text) ? brigadeNote(m.text, true) : null
+    if (note) return notePreview(note)
     return mentionsToText(forPeople(m.text)) || `${files} file${files === 1 ? '' : 's'}`
   }
   const cancellable = queued.filter((m) => mayChangeQueued(m.memberId, 'cancel'))
@@ -120,7 +123,7 @@ export function QueuedMessages({
                     ? 'Reports from child threads'
                     : childNote(m.text) === 'task' || childNote(m.text) === 'parent'
                       ? 'From the parent thread'
-                      : 'From Brigade')
+                      : (brigadeNote(m.text, true)?.label ?? 'From Brigade'))
                 return (
                   <li key={m.messageId} className="py-2.5">
                     {editing?.messageId === m.messageId ? (
