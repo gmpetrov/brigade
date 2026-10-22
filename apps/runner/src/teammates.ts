@@ -63,9 +63,9 @@ export async function containerEnv(user: string, sessionId: string) {
 }
 
 /**
- * In a thread with its own network, the teammate's Docker of that thread (see
- * thread-net.ts): what its containers publish is the thread's. {} without one,
- * or when it did not start (said in the runner's log).
+ * In a thread with its own network, the teammate's Docker through the thread's
+ * socket (docker-proxy.ts): what its containers publish there is the thread's.
+ * {} without one, or when the helper failed (said in the runner's log).
  */
 async function threadDockerEnv(net: ThreadNet, user: string): Promise<Record<string, string>> {
   const socket = await threadDocker(net, user).catch((error: { stderr?: string } & Error) => {
