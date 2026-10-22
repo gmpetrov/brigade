@@ -8,10 +8,15 @@ import { createExtension, type BlockNoteEditor } from '@blocknote/core'
 import type { Node } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
+import { ySyncPluginKey } from 'y-prosemirror'
 
 export type Writer = { name: string; color: string }
 
-/** A changed block: its units (characters, and 1 per mention or image) from `from` to `to` get typed. */
+/**
+ * What gets typed in a changed block: the document between `from` and `to`,
+ * kept in step with later edits. `whole` when the block is new, hidden until
+ * typing reaches it.
+ */
 type Typed = { id: string; from: number; to: number; whole: boolean }
 type Run = { writer: Writer; blocks: Typed[]; start: number; cps: number; end: number }
 type Meta = { type: 'start'; writer: Writer } | { type: 'tick' }
@@ -54,6 +59,23 @@ function unitsOf(block: Node) {
   return text
 }
 
+/** Where unit `unit` of a block starts (`end`: where the unit before it ends). */
+function positionOf(block: Node, pos: number, unit: number, end = false) {
+  let at = pos + 1
+  let seen = 0
+  block.descendants((node, offset) => {
+    if (!node.isText && !node.isLeaf) return true
+    const size = node.isText ? node.text!.length : 1
+    const start = pos + 1 + offset
+    if (end ? unit <= seen + size : unit < seen + size) {
+      at = node.isText ? start + unit - seen : end ? start + node.nodeSize : start
+      seen = Infinity
+    } else seen += size
+    return false
+  })
+  return at
+}
+
 /** What changed from `a` to `b`: `b` between what both start and end with. */
 function changed(a: string, b: string) {
   let from = 0
@@ -89,7 +111,13 @@ function startRun(before: Node, after: Node, writer: Writer, now: number): Run |
     const previous = replaced.shift()
     const units = unitsOf(block.node)
     const span = previous ? changed(unitsOf(previous), units) : { from: 0, to: units.length }
-    if (span.to > span.from) blocks.push({ id: block.id, ...span, whole: !previous })
+    if (span.to > span.from)
+      blocks.push({
+        id: block.id,
+        from: positionOf(block.node, block.pos, span.from),
+        to: positionOf(block.node, block.pos, span.to, true),
+        whole: !previous,
+      })
   }
   const total = blocks.reduce((sum, b) => sum + b.to - b.from, 0)
   if (!total) return null
@@ -123,45 +151,26 @@ function decorate(doc: Node, run: Run, now: number) {
   let left = Math.floor(((now - run.start) / 1000) * run.cps)
   let typing = false
   for (const typed of run.blocks) {
-    const block = at.get(typed.id)
-    // Gone since (someone deleted it), or changed so the span no longer fits.
-    if (!block || unitsOf(block.node).length < typed.to) continue
     const length = typed.to - typed.from
     const shown = Math.min(Math.max(left, 0), length)
     left -= length
     if (shown === length) continue
-    if (typing && typed.whole) {
+    const block = at.get(typed.id)
+    if (typing && typed.whole && block) {
       decorations.push(Decoration.node(block.pos, block.pos + block.node.nodeSize, HIDDEN))
       continue
     }
     const hideFrom = typed.from + shown
-    let unit = 0
-    block.node.descendants((node, offset) => {
-      const pos = block.pos + 1 + offset
-      if (!node.isText && !node.isLeaf) return true
-      const size = node.isText ? node.text!.length : 1
-      const from = Math.max(unit, hideFrom)
-      const to = Math.min(unit + size, typed.to)
-      if (!typing && hideFrom >= unit && hideFrom < unit + size) {
-        typing = true
-        decorations.push(
-          Decoration.widget(node.isText ? pos + hideFrom - unit : pos, () => cursor(run.writer), {
-            key: `agent-typing:${run.writer.name}`,
-            side: -1,
-          }),
-        )
-      }
-      if (from < to)
-        decorations.push(
-          node.isText
-            ? Decoration.inline(pos + from - unit, pos + to - unit, HIDDEN)
-            : node.isInline
-              ? Decoration.inline(pos, pos + node.nodeSize, HIDDEN)
-              : Decoration.node(pos, pos + node.nodeSize, HIDDEN),
-        )
-      unit += size
-      return false
-    })
+    if (!typing) {
+      typing = true
+      decorations.push(
+        Decoration.widget(hideFrom, () => cursor(run.writer), {
+          key: `agent-typing:${run.writer.name}`,
+          side: -1,
+        }),
+      )
+    }
+    decorations.push(Decoration.inline(hideFrom, typed.to, HIDDEN))
   }
   return decorations
 }
@@ -181,16 +190,22 @@ const typingPlugin = (onTyping: (writer: Writer | null) => void) =>
           run = null
         }
         if (pending && now > pending.until) pending = null
-        if (pending && tr.docChanged) {
-          const started = startRun(tr.before, tr.doc, pending.writer, now)
-          if (started) {
-            run = started
-            pending = null
-          }
+        const remote = Boolean(tr.getMeta(ySyncPluginKey)?.isChangeOrigin)
+        if (run && tr.docChanged) {
+          // Edited meanwhile (people typing, the next sync): keep each span on its text.
+          const blocks = run.blocks
+            .map((b) => ({ ...b, from: tr.mapping.map(b.from, 1), to: tr.mapping.map(b.to, -1) }))
+            .filter((b) => b.to > b.from)
+          run = blocks.length ? { ...run, blocks } : null
+        }
+        // The notice is for the next update from the collab server, animated or not (formatting only).
+        if (pending && tr.docChanged && remote) {
+          run = startRun(tr.before, tr.doc, pending.writer, now) ?? run
+          pending = null
         }
         if (run && now >= run.end) run = null
         if (!run) return { pending, run, decorations: DecorationSet.empty }
-        if (!meta && !tr.docChanged) return { ...state, pending }
+        if (!meta && !tr.docChanged) return { ...state, pending, run }
         return {
           pending,
           run,
