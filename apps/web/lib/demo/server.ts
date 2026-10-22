@@ -244,7 +244,8 @@ function play(threadId: string, run: Run) {
 
 function sendMessage(threadId: string, text: string) {
   emit(threadId, [{ at: now(), type: 'message.user', text, memberId: me.memberId }])
-  patchThread(threadId, { archivedAt: null })
+  // Written in again, an archived thread is back in the sidebar.
+  if (body<Json>(`GET /threads/${threadId}`)?.archivedAt) unarchive(threadId)
   const thread = body<{ title: string; teammate?: { id: string; name: string } }>(
     `GET /threads/${threadId}`,
   )
@@ -471,6 +472,49 @@ function archivedList() {
   return store.get(ARCHIVED)!.body as Json[]
 }
 
+/** The thread lists (all threads, a project's) an archived thread left, and where it was. */
+const leftLists = new Map<string, { key: string; index: number }[]>()
+const isThreadList = (key: string) => /^GET \/threads(\?|$)/.test(key) && key !== ARCHIVED
+
+function archive(threadId: string) {
+  patchThread(threadId, { archivedAt: now() })
+  let row: Json | undefined
+  const left: { key: string; index: number }[] = []
+  for (const [key, s] of store) {
+    if (!isThreadList(key) || !Array.isArray(s.body)) continue
+    const index = s.body.findIndex((t: Json) => t.id === threadId)
+    if (index === -1) continue
+    row ??= s.body[index]
+    left.push({ key, index })
+    s.body = s.body.filter((t: Json) => t.id !== threadId)
+  }
+  leftLists.set(threadId, left)
+  // To the sidebar's Archived, where it can be found and brought back.
+  const archived = archivedList()
+  if (!archived.some((t) => t.id === threadId))
+    archived.unshift(structuredClone(row ?? body<Json>(`GET /threads/${threadId}`) ?? {}))
+}
+
+/** Back in every list it left; one archived before the demo opened, in all threads and its project's. */
+function unarchive(threadId: string) {
+  const archived = archivedList()
+  const row = archived.find((t) => t.id === threadId) ?? body<Json>(`GET /threads/${threadId}`)
+  store.get(ARCHIVED)!.body = archived.filter((t) => t.id !== threadId)
+  patchThread(threadId, { archivedAt: null })
+  if (!row) return
+  const projectId = row.projectId as string | null | undefined
+  const left = leftLists.get(threadId) ?? [
+    { key: 'GET /threads', index: 0 },
+    ...(projectId ? [{ key: `GET /threads?project=${projectId}`, index: 0 }] : []),
+  ]
+  leftLists.delete(threadId)
+  for (const { key, index } of left) {
+    const list = store.get(key)?.body
+    if (!Array.isArray(list) || list.some((t: Json) => t.id === threadId)) continue
+    list.splice(Math.min(index, list.length), 0, { ...structuredClone(row), archivedAt: null })
+  }
+}
+
 const OFF = 'That is off in the demo workspace. Start free on your Mac to do it for real.'
 const CREATES =
   /^\/(teammates|teammates\/team|tasks|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|attachments\/uploads|library\/assets\/uploads|library\/(text|folders)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
@@ -545,17 +589,7 @@ const routes: [string, RegExp, Handler][] = [
     'POST',
     /^\/threads\/([^/]+)\/archive$/,
     ([threadId]) => {
-      patchThread(threadId, { archivedAt: now() })
-      let row: Json | undefined
-      for (const [key, s] of store)
-        if (/^GET \/threads(\?|$)/.test(key) && key !== ARCHIVED && Array.isArray(s.body)) {
-          row ??= s.body.find((t: Json) => t.id === threadId)
-          s.body = s.body.filter((t: Json) => t.id !== threadId)
-        }
-      // To the sidebar's Archived, where it can be found and brought back.
-      const archived = archivedList()
-      if (!archived.some((t) => t.id === threadId))
-        archived.unshift(structuredClone(row ?? body<Json>(`GET /threads/${threadId}`) ?? {}))
+      archive(threadId)
       broadcast({
         type: 'thread.updated',
         sessionId: threadId,
@@ -568,14 +602,7 @@ const routes: [string, RegExp, Handler][] = [
     'DELETE',
     /^\/threads\/([^/]+)\/archive$/,
     ([threadId]) => {
-      const archived = archivedList()
-      const row = archived.find((t) => t.id === threadId)
-      store.get(ARCHIVED)!.body = archived.filter((t) => t.id !== threadId)
-      patchThread(threadId, { archivedAt: null })
-      const list = body<Json[]>('GET /threads')
-      const thread = row ?? body<Json>(`GET /threads/${threadId}`)
-      if (thread && list && !list.some((t) => t.id === threadId))
-        list.unshift({ ...structuredClone(thread), archivedAt: null })
+      unarchive(threadId)
       return ok
     },
   ],

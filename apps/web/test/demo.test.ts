@@ -140,16 +140,24 @@ test('a new thread opens on the message, and its teammate answers it', async () 
 })
 
 test('an archived thread moves to Archived, and back', async () => {
-  const list = (await call('/threads')).body as { id: string }[]
-  const id = list.at(-1)!.id
+  const list = (await call('/threads')).body as { id: string; projectId: string | null }[]
+  // One in a project: it leaves that project's list as well.
+  const { id, projectId } = list.filter((t) => t.projectId).at(-1)!
+  const inProject = async () =>
+    ((await call(`/threads?project=${projectId}`)).body as { id: string }[]).some(
+      (t) => t.id === id,
+    )
+  assert.ok(await inProject())
   await call(`/threads/${id}/archive`, { method: 'POST' })
+  assert.ok(!(await inProject()))
   assert.ok(!(await call('/threads')).body.some((t: any) => t.id === id))
   assert.ok((await call(`/threads/${id}`)).body.archivedAt)
   // In Archived, and only there, until it is brought back.
   const archived = (await call('/threads?archived=1')).body as { id: string }[]
   assert.ok(archived.some((t) => t.id === id))
-  assert.ok(!archived.some((t) => list.slice(0, -1).some((l) => l.id === t.id)))
+  assert.ok(!archived.some((t) => list.some((l) => l.id === t.id && l.id !== id)))
   await call(`/threads/${id}/archive`, { method: 'DELETE' })
   assert.ok((await call('/threads')).body.some((t: any) => t.id === id))
+  assert.ok(await inProject())
   assert.ok(!(await call('/threads?archived=1')).body.some((t: any) => t.id === id))
 })
