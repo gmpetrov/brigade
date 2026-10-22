@@ -88,7 +88,9 @@ export function instructions(
       `\`${DESIGN_MANIFEST}\`, \`${DESIGN_KNOBS}\` and assets); and a design system as \`@[name](design-system:path)\`: ` +
       `the one named, its folder at ${libraryDir}/path. Asked to build a design in a product, match it at ` +
       "each of its viewports with the product's own components and conventions, and use the values in its " +
-      `\`${DESIGN_KNOBS}\`.` +
+      `\`${DESIGN_KNOBS}\`. ` +
+      'Name a library file in your reply by its mention (`save_to_library` returns it) or its whole library path, ' +
+      'never its bare file name.' +
       saving(spec),
     spec.project && project(spec.project, libraryDir),
     projects(spec),

@@ -543,22 +543,23 @@ export const threads = new Hono<AppEnv>()
       path,
     })
     if (!result.ok) {
-      // A bare name ("10-bold-alternative.md") the teammate wrote for a library file in a
-      // folder: the only library file of that name, in the thread's project first.
-      const named = !path.includes('/')
-        ? await db.document
-            .findMany({
-              where: { kind: 'library', deletedAt: null, path: { endsWith: `/${path}` } },
-              take: 20,
-            })
-            .then((rows) => rows.filter((d) => d.path.endsWith(`/${path}`)))
-        : []
-      const projectFolder = project?.folder?.replace(/\/+$/, '')
-      const inFolder = projectFolder
-        ? named.filter((d) => d.path.startsWith(`${projectFolder}/`))
-        : []
-      const only = inFolder.length === 1 ? inFolder[0] : named.length === 1 ? named[0] : undefined
-      if (only) return fromLibrary(only)
+      // A bare name ("10-bold-alternative.md") for a file in a folder of the thread's
+      // project: the only one of that name there. Never another project's file.
+      const folder = project?.folder?.replace(/\/+$/, '')
+      const named =
+        folder && !path.includes('/')
+          ? (
+              await db.document.findMany({
+                where: {
+                  kind: 'library',
+                  deletedAt: null,
+                  path: { startsWith: `${folder}/`, endsWith: `/${path}` },
+                },
+                take: 20,
+              })
+            ).filter((d) => d.path.startsWith(`${folder}/`) && d.path.endsWith(`/${path}`))
+          : []
+      if (named.length === 1) return fromLibrary(named[0]!)
       throw new HTTPException(result.error === 'not_found' ? 404 : 409, {
         message:
           result.error === 'not_found'

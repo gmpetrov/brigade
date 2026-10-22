@@ -2,6 +2,7 @@
 // the memory a quiet thread leaves behind. Both come from a runner over its socket;
 // the API checks the thread is on that runner's computer and the teammate's grant.
 import {
+  formatMention,
   LIBRARY_SAVE_MAX,
   TRASH_DAYS,
   type ApiToRunner,
@@ -155,7 +156,13 @@ export async function handleLibraryCall(
     { path: op.path, bytes, contentType: op.contentType ?? null },
     { sessionId: session.id },
   )
-  return done({ path: row.path, size: row.size, contentType: row.contentType })
+  // The mention opens this file from the teammate's reply, where a bare name may not.
+  return done({
+    path: row.path,
+    size: row.size,
+    contentType: row.contentType,
+    mention: formatMention({ kind: 'document', id: row.id, label: row.path }),
+  })
 }
 
 /**
