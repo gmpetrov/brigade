@@ -42,8 +42,8 @@ export function Hero() {
           </h1>
           <p className={c('sub')}>
             AI teammates write your code, answer your customers, run your marketing and chase your
-            leads, all in one place. They run on the Claude or ChatGPT plan you already pay for, and
-            every decision that needs you lands in one list on your phone.
+            leads. They run on the Claude or ChatGPT plan you already pay for. Anything that needs
+            your decision waits in one list on your phone.
           </p>
           <div className={c('cta-row')}>
             <Link className={c('btn pri lg')} href={SIGN_UP}>
