@@ -46,6 +46,20 @@ use_pnpm() {
   if [ "${major:-0}" -ge 10 ] 2>/dev/null; then PNPM=(pnpm); else PNPM=(env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm); fi
 }
 
+# The dependencies pnpm-lock.yaml asks for, with pnpm's quick check when it is enough: done in
+# a moment rather than seconds. That check sees package.json files and missing folders, not a
+# lockfile that alone changed (a dependency updated within its range) nor an install by hand
+# since, which leave what pnpm installed (node_modules/.pnpm/lock.yaml) unlike the last stamp.
+install_deps() {
+  local files=(pnpm-lock.yaml node_modules/.pnpm/lock.yaml)
+  if unchanged deps "$(fingerprint "${files[@]}")"; then
+    (cd "$REPO" && "${PNPM[@]}" install --frozen-lockfile --config.optimistic-repeat-install=true)
+  else
+    (cd "$REPO" && "${PNPM[@]}" install --frozen-lockfile)
+  fi
+  stamp deps "$(fingerprint "${files[@]}")"
+}
+
 # PostgreSQL from docker-compose.yml when Docker works here, else embedded (no Docker or root needed).
 use_docker() { command -v docker >/dev/null && docker info >/dev/null 2>&1; }
 

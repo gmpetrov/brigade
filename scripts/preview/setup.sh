@@ -23,8 +23,7 @@ if ! grep -q '^VAPID_PRIVATE_KEY=.' apps/api/.env; then
 fi
 
 say "Installing dependencies"
-# pnpm's quick check first: with nothing to install, done in a moment rather than seconds.
-"${PNPM[@]}" install --frozen-lockfile --config.optimistic-repeat-install=true
+install_deps
 
 say "Building shared packages"
 "${PNPM[@]}" exec turbo run build --filter='@brigade/api^...' --filter='@brigade/web^...'
