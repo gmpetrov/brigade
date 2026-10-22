@@ -1266,12 +1266,7 @@ export class Previews {
     if (ids.length === 0) return
     preview.pausedContainers = ids
     this.savePaused()
-    this.append(
-      preview,
-      ids[0] === '*'
-        ? "[preview] Paused the thread's Docker, its containers with it\n"
-        : `[preview] Paused ${ids.length} of the thread's containers\n`,
-    )
+    this.append(preview, `[preview] Paused ${ids.length} of the thread's containers\n`)
   }
 
   private async unpauseContainers(preview: Preview) {

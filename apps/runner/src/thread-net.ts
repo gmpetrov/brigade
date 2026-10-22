@@ -1,8 +1,10 @@
 // Each thread's own network on a workspace cloud computer: a network
 // namespace per thread (the root thread helper's, installed by the API's
-// setup), where its teammates' processes run, with a rootless Docker per
-// teammate in it. Two threads can then run the same app on the same ports, its
-// database container's published port included, without reaching each other.
+// setup), where its teammates' processes run. Two threads can then run the
+// same app on the same ports without reaching each other, its database
+// container's published port included: each teammate has one rootless Docker
+// for all its threads, and the thread's localhost reaches what its containers
+// publish (docker-proxy.ts).
 //
 // The runner stays outside: it reaches a thread's loopback at the thread's
 // address (what the host sends there goes to its 127.0.0.1), for a preview's
@@ -17,6 +19,8 @@
 // namespaces are taken down once none of its processes is left (takeDown), and
 // come back at the same address with its next command.
 import { execFile } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { promisify } from 'node:util'
 import { CLOUD } from './config.js'
 
@@ -116,8 +120,10 @@ export async function takeDown(sessionId: string, purge = false) {
 }
 
 /**
- * The teammate's own Docker in the thread, started if needed: its socket, or
- * null where the computer has no rootless Docker.
+ * The teammate's Docker, as the thread sees it: the socket of its proxy in the
+ * thread (docker-proxy.ts), which starts that Docker on first use, or null
+ * where the computer has no rootless Docker. What its containers publish there
+ * is the thread's.
  */
 export async function threadDocker(net: ThreadNet, runAs: string) {
   const { stdout } = await run('sudo', ['-n', THREAD_HELPER, 'docker', net.thread, runAs], {
@@ -127,7 +133,11 @@ export async function threadDocker(net: ThreadNet, runAs: string) {
   return stdout.trim() || null
 }
 
-/** Stop the teammate's Docker in a thread; with purge, delete its images, containers and volumes too. */
+/**
+ * The teammate's Docker socket in a thread gone, with the thread's ports (its
+ * containers are stopped first); with purge, what an older runner's Docker of
+ * the thread kept too.
+ */
 export async function stopThreadDocker(sessionId: string, runAs: string, purge = false) {
   if (!ENABLED) return
   await run(
@@ -137,47 +147,19 @@ export async function stopThreadDocker(sessionId: string, runAs: string, purge =
   )
 }
 
-/**
- * Freeze the teammate's Docker in a thread, its containers with it, and give
- * its memory back; or thaw it. For a frozen preview's database, say.
- */
-export async function freezeThreadDocker(sessionId: string, runAs: string, frozen: boolean) {
-  await run(
-    'sudo',
-    ['-n', THREAD_HELPER, frozen ? 'docker-freeze' : 'docker-thaw', sessionId, runAs],
-    { cwd: '/', timeout: 60_000 },
-  )
+/** Stop the teammate's Docker, its containers with it: none of its threads uses it. */
+export async function stopTeammateDocker(runAs: string) {
+  if (!ENABLED) return
+  await run('sudo', ['-n', THREAD_HELPER, 'docker-down', runAs], { cwd: '/', timeout: 120_000 })
 }
 
-/** The unit of a teammate's Docker in a thread (systemd's, outside the runner's own). */
-export const dockerUnit = (sessionId: string, runAs: string) =>
-  `brigade-docker-${sessionId}-${runAs}.service`
-
-/** Its socket, where the helper puts it. */
+/** The teammate's Docker socket in a thread, where the helper puts it. */
 export const dockerSocket = (sessionId: string, runAs: string) =>
   `/run/brigade-docker/${sessionId}/${runAs}/docker.sock`
 
-/** The threads whose Docker of this teammate is running, from systemd. */
-export async function runningThreadDockers(runAs: string): Promise<string[]> {
-  const { stdout } = await run(
-    'systemctl',
-    ['list-units', '--plain', '--no-legend', '--state=active', `brigade-docker-*-${runAs}.service`],
-    { cwd: '/' },
-  ).catch(() => ({ stdout: '' }))
-  return threadsOfUnits(stdout, runAs)
-}
-
-/** The threads in systemctl's listing of a teammate's Docker units (dockerUnit's names). */
-export function threadsOfUnits(listing: string, runAs: string) {
-  const prefix = 'brigade-docker-'
-  const suffix = `-${runAs}.service`
-  return listing
-    .split('\n')
-    .map((line) => line.trim().split(/\s+/)[0] ?? '')
-    .filter((unit) => unit.startsWith(prefix) && unit.endsWith(suffix))
-    .map((unit) => unit.slice(prefix.length, -suffix.length))
-    .filter(Boolean)
-}
+/** Whether the teammate has a Docker socket in the thread (the helper's docker made it). */
+export const hasThreadDocker = (sessionId: string, runAs: string) =>
+  ENABLED && existsSync(dirname(dockerSocket(sessionId, runAs)))
 
 /**
  * The teammate's browser on the host's loopback, reachable from the thread's

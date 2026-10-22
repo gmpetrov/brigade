@@ -133,7 +133,8 @@ esac
 /**
  * Root helper for each thread's own namespaces: a network per thread, where its
  * teammates' processes run (their commands, its preview, a person's terminal),
- * with a rootless Docker per teammate in it; and, joined by the same processes,
+ * whose localhost reaches what its containers publish (each teammate has one
+ * rootless Docker for all its threads, the runner's docker-proxy.ts); and, joined by the same processes,
  * its own /tmp, /var/tmp and /dev/shm, processes and IPC (its holder). Two
  * threads can then use the same ports, their containers' published ones too,
  * and the same socket and lock files, without seeing or stopping each other.
@@ -158,6 +159,117 @@ addr() { B=$(($1 * 4)); echo "10.231.$((B / 256)).$((B % 256 + $2))"; }
 index() { cat "$STATE/$1" 2>/dev/null || fail "no network for thread $1"; }
 netns() { [ -e "/run/netns/bt-$1" ] || fail "no network for thread $1"; echo "/run/netns/bt-$1"; }
 lock() { install -d -m 755 "$STATE"; exec 9>"$STATE/.lock"; flock 9; }
+# Each teammate's rootless Docker: one on the host's network for all its threads (a unit of its
+# own systemd, brigade-docker), behind a proxy of its own (brigade-docker-proxy, the runner's
+# docker-proxy.js) with a socket in each of its threads' folders here.
+DOCKER_RUN=/run/brigade-docker
+DOCKER_PROXY="/opt/brigade/node/bin/node /opt/brigade/runner/dist/docker-proxy.js"
+# Where thread n's containers publish their ports on the host: a loopback address of its own.
+# Rootless Docker publishes a port number once per loopback address, but only once for all other
+# addresses (it reaches its containers through its own 127.0.0.1 for those).
+loop_addr() { echo "127.231.$(($1 / 256)).$(($1 % 256))"; }
+# <user> <command>...: as the teammate, with its own systemd.
+as_user() {
+  AU=$1
+  AUI=$(id -u "$AU")
+  shift
+  (cd / && runuser -u "$AU" -- env -i HOME="/home/$AU" USER="$AU" LOGNAME="$AU" \\
+    PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin XDG_RUNTIME_DIR="/run/user/$AUI" \\
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$AUI/bus" "$@")
+}
+# <user>: its systemd, which outlives any login: it runs the teammate's Docker and its proxy.
+user_session() {
+  loginctl enable-linger "$1"
+  SI=0
+  while [ ! -S "/run/user/$(id -u "$1")/bus" ] && [ $SI -lt 60 ]; do sleep 0.25; SI=$((SI + 1)); done
+  [ -S "/run/user/$(id -u "$1")/bus" ] || fail "no user session for $1"
+}
+# One change at a time to a teammate's Docker sockets: two turns, or a turn and a terminal, may
+# ask at once. Held until the helper exits. <user>
+docker_lock() {
+  install -d -m 755 "$DOCKER_RUN"
+  exec 8>"$DOCKER_RUN/.$1.lock"
+  flock 8
+}
+# <user> <address>: "<protocol> <port>" for each port the teammate's running containers publish
+# on that address, read as the teammate. Nothing while its Docker is stopped.
+docker_ports() {
+  DS="unix:///run/user/$(id -u "$1")/docker.sock"
+  DIDS=$(as_user "$1" timeout 20 docker -H "$DS" ps -q 2>/dev/null) || return 0
+  [ -n "$DIDS" ] || return 0
+  # shellcheck disable=SC2086
+  as_user "$1" timeout 20 docker -H "$DS" inspect --format \\
+    '{{range $p, $b := .NetworkSettings.Ports}}{{range $b}}{{.HostIp}} {{.HostPort}} {{$p}}{{"\\n"}}{{end}}{{end}}' \\
+    $DIDS 2>/dev/null | awk -v a="$2" 'NF == 3 && $1 == a && $2 ~ "^[0-9]+$" && $2 > 0 && $2 < 65536 &&
+      $3 ~ "^[0-9]+/(tcp|udp)$" { split($3, p, "/"); print p[2], $2 }' | sort -u
+}
+# <thread> <user>: what the teammate's containers publish on the thread's address, the thread's:
+# its localhost (and that address) reach them through the host's side of its pair, which sends
+# them on; no other thread reaches them. Only containers that run, of a teammate with a Docker
+# socket in the thread (docker): those are its own. Nothing left otherwise.
+docker_rules() {
+  DI=$(cat "$STATE/$1" 2>/dev/null) || return 0
+  DH=$(addr "$DI" 1)
+  DL=$(loop_addr "$DI")
+  DC="BD-$DI-$(id -u "$2")"
+  DNC="BD-$(id -u "$2")"
+  DP=""
+  [ ! -f "$DOCKER_RUN/$1/$2/address" ] || DP=$(docker_ports "$2" "$DL")
+  iptables -t nat -N "$DC" 2>/dev/null || iptables -t nat -F "$DC"
+  iptables -N "$DC" 2>/dev/null || iptables -F "$DC"
+  iptables -t nat -C PREROUTING -i "btn$DI" -j "$DC" 2>/dev/null || iptables -t nat -A PREROUTING -i "btn$DI" -j "$DC"
+  iptables -C INPUT -i "btn$DI" -j "$DC" 2>/dev/null || iptables -I INPUT 1 -i "btn$DI" -j "$DC"
+  DN=""
+  if [ -e "/run/netns/bt-$1" ]; then
+    DN="bt-$1"
+    ip netns exec "$DN" iptables -t nat -N "$DNC" 2>/dev/null || ip netns exec "$DN" iptables -t nat -F "$DNC"
+    ip netns exec "$DN" iptables -t nat -C OUTPUT -j "$DNC" 2>/dev/null ||
+      ip netns exec "$DN" iptables -t nat -A OUTPUT -j "$DNC"
+  fi
+  echo "$DP" | while read -r PR PO; do
+    [ -n "$PO" ] || continue
+    iptables -t nat -A "$DC" -d "$DH" -p "$PR" --dport "$PO" -j DNAT --to-destination "$DL"
+    iptables -A "$DC" -d "$DL" -p "$PR" --dport "$PO" -j ACCEPT
+    [ -n "$DN" ] || continue
+    for D in 127.0.0.1 "$DL"; do
+      ip netns exec "$DN" iptables -t nat -A "$DNC" -d "$D" -p "$PR" --dport "$PO" -j DNAT --to-destination "$DH"
+    done
+  done
+}
+# <thread> <user>: those rules gone, their chains too.
+docker_rules_drop() {
+  DI=$(cat "$STATE/$1" 2>/dev/null) || return 0
+  DC="BD-$DI-$(id -u "$2")"
+  DNC="BD-$(id -u "$2")"
+  iptables -t nat -D PREROUTING -i "btn$DI" -j "$DC" 2>/dev/null || true
+  iptables -D INPUT -i "btn$DI" -j "$DC" 2>/dev/null || true
+  for TB in nat filter; do iptables -t $TB -F "$DC" 2>/dev/null && iptables -t $TB -X "$DC" 2>/dev/null || true; done
+  if [ -e "/run/netns/bt-$1" ]; then
+    ip netns exec "bt-$1" iptables -t nat -D OUTPUT -j "$DNC" 2>/dev/null || true
+    ip netns exec "bt-$1" iptables -t nat -F "$DNC" 2>/dev/null &&
+      ip netns exec "bt-$1" iptables -t nat -X "$DNC" 2>/dev/null || true
+  fi
+}
+# <user> <folder>: the teammate's proxy listening in that thread folder: started if needed, told
+# otherwise (it reads its threads' folders again on SIGHUP). Waits for its socket.
+docker_proxy() {
+  DPU=brigade-docker-proxy.service
+  # A stopped proxy's socket answers nobody.
+  as_user "$1" systemctl --user is-active --quiet $DPU || rm -f "$2/docker.sock"
+  PI=0
+  while [ ! -S "$2/docker.sock" ]; do
+    [ $PI -lt 100 ] || fail "the Docker proxy of $1 did not start (journalctl --user-unit $DPU)"
+    if as_user "$1" systemctl --user is-active --quiet $DPU; then
+      [ $((PI % 20)) -ne 0 ] || as_user "$1" systemctl --user kill -s HUP $DPU 2>/dev/null || true
+    else
+      as_user "$1" systemctl --user reset-failed $DPU 2>/dev/null || true
+      # shellcheck disable=SC2086
+      as_user "$1" systemd-run --user --quiet --collect --unit=$DPU $DOCKER_PROXY 2>/dev/null || true
+    fi
+    sleep 0.1
+    PI=$((PI + 1))
+  done
+}
 # Threads reach the internet (masqueraded) and the host's DNS resolver, never each other.
 host_rules() {
   ip addr add "$DNS/32" dev lo 2>/dev/null || true
@@ -343,39 +455,51 @@ case "\${1:-}" in
       rm -rf "\${TMPS:?}/$2"
     fi
     ;;
-  docker) # <thread> <user>: the teammate's rootless Docker in the thread's namespace, started if
-    # needed (its published ports are the thread's); prints its socket. Nothing without Docker.
+  docker) # <thread> <user>: the teammate's Docker, for the thread: a socket of its proxy in the
+    # thread's folder, which starts that Docker on first use (docker-proxy.js), and what the
+    # thread's containers publish its own (docker_rules). Prints that socket. Nothing without Docker.
     thread_ok "$2"
     user_ok "$3"
-    N=$(netns "$2")
+    netns "$2" >/dev/null
     command -v dockerd-rootless.sh >/dev/null && command -v newuidmap >/dev/null || exit 0
     grep -q "^$3:" /etc/subuid || fail "no subordinate ids for $3"
-    R="/run/brigade-docker/$2/$3"
-    UNIT="brigade-docker-$2-$3"
-    if ! systemctl is-active --quiet "$UNIT"; then
-      install -d -m 755 /run/brigade-docker "/run/brigade-docker/$2"
-      install -d -o "$3" -g "$3" -m 700 "$R"
-      D="/home/$3/.local/share/brigade-docker/$2"
-      runuser -u "$3" -- mkdir -p "$D"
-      systemctl reset-failed "$UNIT" 2>/dev/null || true
-      # Its own unit: it outlives the runner's restarts. No systemd of the teammate's to manage
-      # cgroups from there, hence cgroupfs (containers without resource limits).
-      systemd-run --quiet --unit="$UNIT" --collect -p NetworkNamespacePath="$N" \\
-        -p User="$3" -p Group="$3" -p Delegate=yes -p KillMode=mixed \\
-        -E XDG_RUNTIME_DIR="$R" -E HOME="/home/$3" -E PATH=/usr/bin:/bin:/usr/sbin:/sbin \\
-        dockerd-rootless.sh --data-root="$D" --exec-opt native.cgroupdriver=cgroupfs
-    fi
-    I=0
-    while [ ! -S "$R/docker.sock" ] && [ $I -lt 120 ]; do sleep 0.25; I=$((I + 1)); done
-    [ -S "$R/docker.sock" ] || fail "Docker did not start for $3 in thread $2 (journalctl -u $UNIT)"
+    docker_lock "$3"
+    user_session "$3"
+    # The teammate helper's containers enables Docker with the teammate's systemd (a computer
+    # without threads' networks): here it starts on first use only.
+    as_user "$3" systemctl --user disable --quiet docker.service 2>/dev/null || true
+    R="$DOCKER_RUN/$2/$3"
+    install -d -m 755 "$DOCKER_RUN" "$DOCKER_RUN/$2"
+    install -d -o "$3" -g "$3" -m 700 "$R"
+    loop_addr "$(index "$2")" >"$R/address"
+    docker_proxy "$3" "$R"
+    lock
+    docker_rules "$2" "$3"
     echo "$R/docker.sock"
     ;;
-  docker-stop) # <thread> <user> [purge]: that Docker stopped, its containers with it; with purge,
-    # its images, containers and volumes deleted
+  docker-ports) # <thread> <user>: docker_rules, as the teammate's containers start and stop. Its
+    # proxy calls it too (sudo), for itself only.
     thread_ok "$2"
     user_ok "$3"
+    [ -z "\${SUDO_USER:-}" ] || [ "$SUDO_USER" = brigade ] || [ "$SUDO_USER" = "$3" ] || fail "not yours"
+    lock
+    docker_rules "$2" "$3"
+    ;;
+  docker-stop) # <thread> <user> [purge]: the teammate's Docker socket in the thread gone, and the
+    # thread's ports with it (the runner stops or removes its containers first). With purge, what
+    # an older helper's Docker of the thread kept too.
+    thread_ok "$2"
+    user_ok "$3"
+    docker_lock "$3"
+    rm -rf "\${DOCKER_RUN:?}/$2/$3"
+    rmdir "$DOCKER_RUN/$2" 2>/dev/null || true
+    if [ -S "/run/user/$(id -u "$3")/bus" ]; then
+      as_user "$3" systemctl --user kill -s HUP brigade-docker-proxy.service 2>/dev/null || true
+    fi
+    lock
+    docker_rules_drop "$2" "$3"
+    # An older helper's: a Docker per thread and teammate, its images in the teammate's home.
     systemctl stop "brigade-docker-$2-$3" 2>/dev/null || true
-    rm -rf "/run/brigade-docker/$2/$3"
     D="/home/$3/.local/share/brigade-docker/$2"
     if [ "\${4:-}" = purge ] && [ -d "$D" ]; then
       # As the teammate, mapped to its subordinate ids as Docker was: no more than it can reach.
@@ -385,21 +509,17 @@ case "\${1:-}" in
       rm -rf "$T"
     fi
     ;;
-  docker-freeze) # <thread> <user>: that Docker frozen, its containers with it (its thread's preview
-    # is): no CPU, and its memory given back to swap, in 10 s at most (the kernel may go on
-    # forever toward what it cannot free). docker pause cannot: it runs without cgroups of its own.
-    thread_ok "$2"
-    user_ok "$3"
-    UNIT="brigade-docker-$2-$3.service"
-    systemctl is-active --quiet "$UNIT" || exit 0
-    systemctl freeze "$UNIT"
-    C="/sys/fs/cgroup$(systemctl show -p ControlGroup --value "$UNIT")"
-    timeout 10 sh -c 'echo "$1" >"$0"' "$C/memory.reclaim" "$(cat "$C/memory.current")" 2>/dev/null || true
-    ;;
-  docker-thaw) # <thread> <user>
-    thread_ok "$2"
-    user_ok "$3"
-    systemctl thaw "brigade-docker-$2-$3.service" 2>/dev/null || true
+  docker-down) # <user>: the teammate's Docker stopped, its containers with it, when none of its
+    # threads uses it (the runner's containers.ts); its proxy starts it again on next use
+    user_ok "$2"
+    [ -S "/run/user/$(id -u "$2")/bus" ] || exit 0
+    as_user "$2" systemctl --user stop brigade-docker.service docker.service 2>/dev/null || true
+    lock
+    for F in "$DOCKER_RUN"/*/"$2"/address; do
+      [ -f "$F" ] || continue
+      T=\${F#"$DOCKER_RUN/"}
+      docker_rules "\${T%%/*}" "$2"
+    done
     ;;
   browser) # <thread> <user>: in the thread's namespace, the teammate's browser port (the teammate
     # helper's \`browser\`) reaches its Chrome on the host's loopback, for the teammate's user only
@@ -436,11 +556,13 @@ ${TEAMMATE_HELPER}HELPER
 sudo chmod 755 /usr/local/sbin/brigade-teammate
 # Each thread's own network (the thread helper). Its \`run\` passes the runner's environment on,
 # as sudo -E -u <teammate> does: sudo still drops what could change the helper itself (LD_*).
+# A teammate's Docker proxy makes its own containers' ports its threads' (docker-ports).
 sudo tee /usr/local/sbin/brigade-thread >/dev/null <<'HELPER'
 ${THREAD_HELPER}HELPER
 sudo chmod 755 /usr/local/sbin/brigade-thread
 sudo tee /etc/sudoers.d/brigade-thread >/dev/null <<'SUDOERS'
 brigade ALL=(root) NOPASSWD:SETENV: /usr/local/sbin/brigade-thread
+%brigade-teammates ALL=(root) NOPASSWD: /usr/local/sbin/brigade-thread docker-ports *
 SUDOERS
 sudo chmod 440 /etc/sudoers.d/brigade-thread
 sudo visudo -cq
