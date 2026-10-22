@@ -45,7 +45,21 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
   // A sample workspace is not something to find in a search engine.
   ...(DEMO && {
     async headers() {
-      return [{ source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex' }] }]
+      return [
+        {
+          source: '/:path*',
+          headers: [
+            { key: 'X-Robots-Tag', value: 'noindex' },
+            // Shown in a frame on the landing page (components/landing/live-demo.tsx), and
+            // nowhere else; localhost for working on the landing.
+            {
+              key: 'Content-Security-Policy',
+              value:
+                "frame-ancestors 'self' https://www.brigade.lol https://brigade.lol http://localhost:*",
+            },
+          ],
+        },
+      ]
     },
   }),
   // Another build folder, beside a dev server that holds .next (scripts/demo/record.sh).

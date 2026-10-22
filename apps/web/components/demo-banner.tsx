@@ -1,6 +1,7 @@
 'use client'
 import { ArrowRight } from 'lucide-react'
-import { DEMO, SIGN_UP_URL } from '@/lib/demo/flag'
+import { useEffect, useState } from 'react'
+import { DEMO, framed, SIGN_UP_URL } from '@/lib/demo/flag'
 import { cn } from '@/lib/utils'
 
 /**
@@ -9,13 +10,17 @@ import { cn } from '@/lib/utils'
  * a round button there when it is folded to icons, and a strip atop the page on a phone.
  */
 export function DemoBanner({ place }: { place: 'sidebar' | 'phone' }) {
-  if (!DEMO) return null
+  // In the landing page's frame, the page around it is the sign.
+  const [inFrame, setInFrame] = useState(false)
+  useEffect(() => setInFrame(framed()), [])
+  if (!DEMO || inFrame) return null
   if (place === 'phone')
     return (
       <div className="bg-primary text-primary-foreground flex items-center justify-between gap-3 px-4 py-2 text-sm md:hidden">
         <span className="font-medium">Demo workspace</span>
         <a
           href={SIGN_UP_URL}
+          target="_top"
           className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline"
         >
           Start free on your Mac
@@ -35,6 +40,7 @@ export function DemoBanner({ place }: { place: 'sidebar' | 'phone' }) {
         </p>
         <a
           href={SIGN_UP_URL}
+          target="_top"
           className={cn(
             'bg-primary text-primary-foreground mt-2.5 flex h-8 items-center justify-center gap-1 rounded-full px-3 font-semibold transition-opacity hover:opacity-90',
           )}
@@ -45,6 +51,7 @@ export function DemoBanner({ place }: { place: 'sidebar' | 'phone' }) {
       </div>
       <a
         href={SIGN_UP_URL}
+        target="_top"
         title="Demo workspace: start free on your Mac"
         aria-label="Demo workspace: start free on your Mac"
         className="bg-primary text-primary-foreground hidden size-8 items-center justify-center rounded-full group-data-[collapsible=icon]:flex"

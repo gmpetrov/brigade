@@ -37,7 +37,8 @@ request leaves the browser; a reload starts over.
 - **The sign.** A card at the foot of the sidebar (a strip atop the page on a phone) says
   it is a demo, with "Start free on your Mac" to www.brigade.lol/sign-up
   (`components/demo-banner.tsx`). Signing out goes there too; `/`, `/sign-in` and
-  `/onboarding` open Home, and the pages are `noindex` (`next.config.ts`).
+  `/onboarding` open Home, and the pages are `noindex` (`next.config.ts`). In the landing
+  page's frame, the sign hides (below).
 
 The scripted replies only show what Brigade does: approvals follow each teammate's
 permissions, a push opens the ticket in the app, account failover stays within one
@@ -78,9 +79,20 @@ pnpm run cf:build:demo    # DEMO_RECORD=1 records the fixtures again first
 pnpm run cf:deploy:demo
 ```
 
-Its custom domain, `demo.brigade.lol`, is in that file: the first deploy adds the DNS record
-and the certificate on the `brigade.lol` zone. To deploy on each push to `main`, add a Workers
-Build for `brigade-web-demo` in the Cloudflare dashboard, as for the other Workers
-([deployment-plan.md](deployment-plan.md)): root directory the repository, build command
-`pnpm run cf:build:demo`, deploy command `pnpm run cf:deploy:demo`, watch paths `apps/web`,
-`packages` and `pnpm-lock.yaml`. It needs no secret, and it does not wait for the API.
+Its custom domain, `demo.brigade.lol`, is in that file: the first deploy added the DNS record
+and the certificate on the `brigade.lol` zone. A Workers Build deploys it on each push to `main`
+that touches what it is built from, as for the other Workers
+([deployment-plan.md](deployment-plan.md)): build command `pnpm run cf:build:demo`, deploy
+command `pnpm run cf:deploy:demo`, the same watch paths and build token as `brigade-web`, and
+`PNPM_VERSION` as its build variable. It needs no secret, and it does not wait for the API.
+
+## On the landing page
+
+The landing page shows the demo right under the hero, in a window, running as soon as the page
+opens (`components/landing/live-demo.tsx`), as squad.so and x.ai/bot do. A picture of it
+(`public/landing/demo-light.webp` and `demo-dark.webp`) shows while it loads. Narrower than
+900px, the dashboard would show its phone layout in a small box, so the picture stays, with a
+button that opens the demo on its own. The demo allows only www.brigade.lol (and localhost) to
+frame it (`frame-ancestors`, `next.config.ts`); in the frame, its own sign hides, the page
+around it being the sign, and "Start free on your Mac" opens in the whole window. Take the
+pictures again after a visible change to Home, without the demo's sign.
