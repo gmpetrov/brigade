@@ -69,7 +69,8 @@ const norm = (text: string) =>
 export function replyTo(text: string, ctx: Context): Run {
   const said = norm(text)
   const teammate = ctx.thread?.teammate ?? ctx.teammates[0] ?? { id: '', name: 'Riley' }
-  if (/build it|open a pr|annual billing|billing toggle/.test(said)) return buildToggle(ctx, teammate)
+  if (/build it|open a pr|annual billing|billing toggle/.test(said))
+    return buildToggle(ctx, teammate)
   if (/^not yet/.test(said))
     return { steps: [{ say: 'Fine, I’ll leave it here. Say the word when you want it built.' }] }
   if (/summar/.test(said)) return summarize(ctx)
@@ -90,29 +91,41 @@ function buildToggle(ctx: Context, teammate: Ref): Run {
   const number = 152
   return {
     steps: [
-      { say: 'On it: the toggle above the cards, annual prices per month, then a pull request.', ms: 600 },
+      {
+        say: 'On it: the toggle above the cards, annual prices per month, then a pull request.',
+        ms: 600,
+      },
       {
         tool: tool('checkout_repository'),
         input: { repository: 'acme/web' },
-        output: { directory: 'web', branch: `brigade/${teammate.name.toLowerCase()}-annual-billing` },
+        output: {
+          directory: 'web',
+          branch: `brigade/${teammate.name.toLowerCase()}-annual-billing`,
+        },
         takes: 1400,
       },
       {
         tool: 'Read',
         input: { file_path: 'web/components/pricing-cards.tsx' },
-        output: 'export function PricingCards() {\n  return (\n    <div className="grid gap-6 md:grid-cols-3">…',
+        output:
+          'export function PricingCards() {\n  return (\n    <div className="grid gap-6 md:grid-cols-3">…',
         takes: 700,
       },
       {
         tool: 'Grep',
         input: { pattern: 'price_.*_yearly', path: 'web/lib' },
-        output: 'web/lib/plans.ts:14:  yearly: "price_team_yearly",\nweb/lib/plans.ts:22:  yearly: "price_business_yearly",',
+        output:
+          'web/lib/plans.ts:14:  yearly: "price_team_yearly",\nweb/lib/plans.ts:22:  yearly: "price_business_yearly",',
         takes: 700,
       },
       { file: 'web/components/billing-toggle.tsx', ms: 1200 },
       { file: 'web/components/pricing-cards.tsx', ms: 900 },
       { file: 'web/components/pricing-cards.test.tsx', ms: 900 },
-      bash('pnpm test pricing', '✓ pricing-cards › annual prices are ten months over twelve\nTests: 34 passed, 34 total', 2200),
+      bash(
+        'pnpm test pricing',
+        '✓ pricing-cards › annual prices are ten months over twelve\nTests: 34 passed, 34 total',
+        2200,
+      ),
       bash('pnpm typecheck', 'Done in 6.1s', 1400),
       bash(
         'git commit -am "Pricing page: monthly or annual billing" && git push -u origin HEAD',
@@ -156,7 +169,9 @@ function summarize(ctx: Context): Run {
 
 function waiting(ctx: Context): Run {
   const open = ctx.actions.openTickets()
-  const lines = open.slice(0, 6).map((t) => `- ${t.title}${t.session ? ` (in “${t.session.title}”)` : ''}`)
+  const lines = open
+    .slice(0, 6)
+    .map((t) => `- ${t.title}${t.session ? ` (in “${t.session.title}”)` : ''}`)
   return {
     steps: [
       {
@@ -229,23 +244,53 @@ export function afterDecision(
       const number = Number(input.number)
       return {
         steps: [
-          { ms: 400, tool: toolName, input: ctx.pending.input, output: { merged: true, sha: '3f9c2a1' }, takes: 900, then: () => void ctx.merge(number) },
-          { say: `Merged acme/web#${number} (squash). It deploys with main; I’ll tell the customer in the support thread once it’s live.` },
+          {
+            ms: 400,
+            tool: toolName,
+            input: ctx.pending.input,
+            output: { merged: true, sha: '3f9c2a1' },
+            takes: 900,
+            then: () => void ctx.merge(number),
+          },
+          {
+            say: `Merged acme/web#${number} (squash). It deploys with main; I’ll tell the customer in the support thread once it’s live.`,
+          },
         ],
       }
     }
     if (operation === 'stripe_api_write')
       return {
         steps: [
-          { ms: 400, tool: toolName, input: ctx.pending.input, output: { id: 're_3SampleDemo', object: 'refund', status: 'succeeded', livemode: false }, takes: 1000 },
-          { say: 'Refunded the duplicate charge (test mode). I’ll reply to Jamie with the refund and when it shows on their statement.' },
+          {
+            ms: 400,
+            tool: toolName,
+            input: ctx.pending.input,
+            output: {
+              id: 're_3SampleDemo',
+              object: 'refund',
+              status: 'succeeded',
+              livemode: false,
+            },
+            takes: 1000,
+          },
+          {
+            say: 'Refunded the duplicate charge (test mode). I’ll reply to Jamie with the refund and when it shows on their statement.',
+          },
         ],
       }
     if (operation === 'gmail_send')
       return {
         steps: [
-          { ms: 400, tool: toolName, input: ctx.pending.input, output: { id: '18f2c0a9d3', labelIds: ['SENT'] }, takes: 900 },
-          { say: `Sent: “${String(input.subject ?? 'the reply')}”. I’ll watch the thread for an answer.` },
+          {
+            ms: 400,
+            tool: toolName,
+            input: ctx.pending.input,
+            output: { id: '18f2c0a9d3', labelIds: ['SENT'] },
+            takes: 900,
+          },
+          {
+            say: `Sent: “${String(input.subject ?? 'the reply')}”. I’ll watch the thread for an answer.`,
+          },
         ],
       }
     return {
@@ -256,8 +301,12 @@ export function afterDecision(
     }
   }
   if (ctx.asked?.type === 'question.asked') {
-    const answer = outcome.answer as { answers?: Record<string, { optionIds: string[]; freeform?: string }> } | undefined
-    const questions = (ctx.asked.questions ?? []) as { id: string; options?: { id: string; label: string }[] }[]
+    const answer = outcome.answer as
+      { answers?: Record<string, { optionIds: string[]; freeform?: string }> } | undefined
+    const questions = (ctx.asked.questions ?? []) as {
+      id: string
+      options?: { id: string; label: string }[]
+    }[]
     const picked = questions
       .map((q) => {
         const a = answer?.answers?.[q.id]
@@ -276,18 +325,33 @@ export function afterDecision(
     }
   }
   if (ctx.asked?.type === 'ticket.opened') {
-    const answer = outcome.answer as { action: string; replies?: Record<string, { type: string; approved?: boolean; optionId?: string }> } | undefined
-    const asks = (ctx.asked.asks ?? []) as { id: string; type: string; options?: { id: string; label: string }[] }[]
+    const answer = outcome.answer as
+      | {
+          action: string
+          replies?: Record<string, { type: string; approved?: boolean; optionId?: string }>
+        }
+      | undefined
+    const asks = (ctx.asked.asks ?? []) as {
+      id: string
+      type: string
+      options?: { id: string; label: string }[]
+    }[]
     if (answer?.action === 'declined')
       return { steps: [{ say: 'Understood, I’ve dropped it.', ms: 500 }] }
     const parts = asks.map((ask) => {
       const reply = answer?.replies?.[ask.id]
       if (reply?.type === 'approval') return reply.approved ? 'Approved' : 'Not approved'
-      if (reply?.type === 'decision') return ask.options?.find((o) => o.id === reply.optionId)?.label ?? 'Noted'
+      if (reply?.type === 'decision')
+        return ask.options?.find((o) => o.id === reply.optionId)?.label ?? 'Noted'
       return 'Noted'
     })
     return {
-      steps: [{ say: `Thanks: ${parts.join(', ').toLowerCase()}. I’ll take it from here and report back in this thread.`, ms: 600 }],
+      steps: [
+        {
+          say: `Thanks: ${parts.join(', ').toLowerCase()}. I’ll take it from here and report back in this thread.`,
+          ms: 600,
+        },
+      ],
     }
   }
   return undefined

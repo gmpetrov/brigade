@@ -45,7 +45,8 @@ const keep = async (response, method = response.request().method()) => {
   let body
   try {
     if (type.includes('json')) body = await response.json()
-    else if (type.startsWith('text/') || type.includes('markdown')) body = { $text: await response.text(), type }
+    else if (type.startsWith('text/') || type.includes('markdown'))
+      body = { $text: await response.text(), type }
     else return
   } catch {
     return
@@ -105,7 +106,12 @@ for (const raw of socket) {
 const sorted = Object.fromEntries(Object.entries(responses).sort(([a], [b]) => a.localeCompare(b)))
 // The preview's address in what it answered (file links, say) becomes the demo's at run time.
 const text = JSON.stringify(
-  { recordedAt: new Date().toISOString(), origin: BASE, socket: [...byType.values()], responses: sorted },
+  {
+    recordedAt: new Date().toISOString(),
+    origin: BASE,
+    socket: [...byType.values()],
+    responses: sorted,
+  },
   null,
   1,
 ).replaceAll(BASE, '{{origin}}')

@@ -1,4 +1,6 @@
 'use client'
+import { DemoMachine } from '@/components/demo-machine'
+import { DEMO } from '@/lib/demo/flag'
 import type RFB from '@novnc/novnc'
 import { useEffect, useRef, useState } from 'react'
 import { bridgeInput, type DesktopClipboard, type DesktopInput } from '@/lib/desktop-input'
@@ -25,7 +27,7 @@ const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(mi
  * `zoom`, two fingers pinch to zoom in on it, and drag to move around it once
  * zoomed (else they scroll the desktop).
  */
-export function DesktopView({
+function LiveDesktopView({
   connection,
   control,
   focus,
@@ -242,4 +244,9 @@ export function DesktopView({
       )}
     </div>
   )
+}
+
+/** In the demo, what it would show: there is no computer behind it (components/demo-machine.tsx). */
+export function DesktopView(props: Parameters<typeof LiveDesktopView>[0]) {
+  return DEMO ? <DemoMachine what="screen" /> : <LiveDesktopView {...props} />
 }

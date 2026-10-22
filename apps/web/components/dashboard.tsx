@@ -64,6 +64,7 @@ import { TopBar } from '@/components/top-bar'
 import { UpdatePill } from '@/components/update-pill'
 import { UsageMenu } from '@/components/usage-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { DemoBanner } from '@/components/demo-banner'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -107,6 +108,7 @@ import {
 import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
 import { API_URL } from '@/lib/config'
 import { authClient } from '@/lib/auth-client'
+import { DEMO, SIGN_UP_URL } from '@/lib/demo/flag'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 import { isMac, useIsMac } from '@/lib/platform'
 import { useLive } from '@/lib/use-live'
@@ -355,6 +357,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    // The demo has no account to leave: the way out is signing up for real.
+    if (DEMO) return void (window.location.href = SIGN_UP_URL)
     await authClient.signOut()
     markSignedOut()
     router.replace('/sign-in')
@@ -800,6 +804,7 @@ function Inset({ children }: { children: ReactNode }) {
     // min-w-0: long unwrapped text inside a page must not widen it past the window.
     <SidebarInset className="min-w-0">
       <UpdatePill header={expanded} />
+      <DemoBanner />
       {!expanded && <TopBar />}
       {/* Before the document: a document opened over a docked thread covers it until closed. */}
       <ThreadPanel />

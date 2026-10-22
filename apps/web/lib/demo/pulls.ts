@@ -332,7 +332,11 @@ export function mergedPull(pull: DemoPull): DemoPull {
 }
 
 /** The pull request Riley opens for the annual billing toggle. */
-export function newPull(threadId: string, teammate: Ref, title = 'Pricing page: monthly or annual billing') {
+export function newPull(
+  threadId: string,
+  teammate: Ref,
+  title = 'Pricing page: monthly or annual billing',
+) {
   return make({
     number: 152,
     title,

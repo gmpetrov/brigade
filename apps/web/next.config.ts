@@ -31,8 +31,20 @@ async function landingProof(phase: string) {
   return proof
 }
 
+// The public demo's build (docs/demo.md): the dashboard on recorded data, nothing else.
+const DEMO = process.env.NEXT_PUBLIC_DEMO === '1'
+
 const nextConfig = async (phase: string): Promise<NextConfig> => ({
-  env: { NEXT_PUBLIC_BUILD_ID: buildId, BRIGADE_LANDING_PROOF: await landingProof(phase) },
+  env: {
+    NEXT_PUBLIC_BUILD_ID: buildId,
+    BRIGADE_LANDING_PROOF: DEMO ? '' : await landingProof(phase),
+  },
+  // A sample workspace is not something to find in a search engine.
+  ...(DEMO && {
+    async headers() {
+      return [{ source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex' }] }]
+    },
+  }),
   // Dev tunnels that serve this dashboard (see apps/web/.env.local).
   allowedDevOrigins: (process.env.DEV_ORIGINS ?? '').split(',').filter(Boolean),
   // The VPS image (deploy/vps/Dockerfile) runs Next's own server, with the files it
@@ -45,6 +57,19 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
   // The root has its own rule: on OpenNext, a destination whose `:path*` matched
   // nothing keeps the `:path*` as it is.
   async redirects() {
+    // The demo (lib/demo/flag.ts) is the dashboard alone: it opens on Home, and the pages
+    // to sign up or read about Brigade are www.brigade.lol's.
+    if (DEMO)
+      return [
+        { source: '/', destination: '/app', permanent: false },
+        { source: '/:page(sign-in|onboarding)', destination: '/app', permanent: false },
+        { source: '/sign-up', destination: 'https://www.brigade.lol/sign-up', permanent: false },
+        {
+          source: '/:page(how-it-works|privacy|terms)',
+          destination: 'https://www.brigade.lol/:page',
+          permanent: false,
+        },
+      ]
     const apex = [{ type: 'host' as const, value: '^brigade\\.lol$' }]
     return [
       { source: '/', has: apex, destination: 'https://www.brigade.lol/', permanent: true },

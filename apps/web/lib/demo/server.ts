@@ -61,7 +61,9 @@ function removeTicket(id: string) {
   for (const s of store.values()) {
     const prune = (value: unknown): unknown => {
       if (Array.isArray(value))
-        return value.filter((v) => !(v && typeof v === 'object' && (v as Json).id === id)).map(prune)
+        return value
+          .filter((v) => !(v && typeof v === 'object' && (v as Json).id === id))
+          .map(prune)
       if (value && typeof value === 'object')
         for (const [k, v] of Object.entries(value)) (value as Json)[k] = prune(v)
       return value
@@ -101,10 +103,16 @@ const broadcast = (message: ApiToBrowser) => sockets.forEach((send) => send(mess
 
 // ---- Threads and their events ----
 
-type Page = { firstSeq: number; lastSeq: number; context: SequencedEvent[]; events: SequencedEvent[] }
+type Page = {
+  firstSeq: number
+  lastSeq: number
+  context: SequencedEvent[]
+  events: SequencedEvent[]
+}
 const page = (threadId: string) => {
   const key = `GET /threads/${threadId}/events`
-  if (!store.has(key)) store.set(key, { status: 200, body: { firstSeq: 1, lastSeq: 0, context: [], events: [] } })
+  if (!store.has(key))
+    store.set(key, { status: 200, body: { firstSeq: 1, lastSeq: 0, context: [], events: [] } })
   return store.get(key)!.body as Page
 }
 const allEvents = (threadId: string) => {
@@ -135,20 +143,35 @@ const running = new Map<string, Promise<void>>()
 function play(threadId: string, run: Run) {
   const previous = running.get(threadId) ?? Promise.resolve()
   const next = previous.then(async () => {
-    const thread = body<{ teammate?: { id: string }; accountId?: string }>(`GET /threads/${threadId}`)
+    const thread = body<{ teammate?: { id: string }; accountId?: string }>(
+      `GET /threads/${threadId}`,
+    )
     const teammateId = run.teammateId ?? thread?.teammate?.id ?? teammates[0]?.id ?? ''
     const by = { teammateId }
     setStatus(threadId, 'running')
     if (!run.continues)
       emit(threadId, [
-        { at: now(), type: 'turn.started', turnId: id(), accountId: thread?.accountId ?? '', ...by },
+        {
+          at: now(),
+          type: 'turn.started',
+          turnId: id(),
+          accountId: thread?.accountId ?? '',
+          ...by,
+        },
       ])
     for (const step of run.steps) {
       await wait(step.ms ?? 900)
       if ('tool' in step) {
         const toolCallId = `call_${id()}`
         emit(threadId, [
-          { at: now(), type: 'tool.started', toolCallId, toolName: step.tool, input: step.input, ...by },
+          {
+            at: now(),
+            type: 'tool.started',
+            toolCallId,
+            toolName: step.tool,
+            input: step.input,
+            ...by,
+          },
         ])
         await wait(step.takes ?? 1200)
         emit(threadId, [
@@ -164,20 +187,27 @@ function play(threadId: string, run: Run) {
         ])
         if (step.then) step.then()
       } else if ('file' in step) {
-        emit(threadId, [{ at: now(), type: 'file.changed', path: step.file, toolName: 'Edit', ...by }])
+        emit(threadId, [
+          { at: now(), type: 'file.changed', path: step.file, toolName: 'Edit', ...by },
+        ])
       } else if ('say' in step) {
         const messageId = id()
         const words = step.say.split(/(?<=\s)/)
         for (let i = 0; i < words.length; i += 4) {
           emit(threadId, [
-            { at: now(), type: 'message.delta', id: messageId, text: words.slice(i, i + 4).join(''), ...by },
+            {
+              at: now(),
+              type: 'message.delta',
+              id: messageId,
+              text: words.slice(i, i + 4).join(''),
+              ...by,
+            },
           ])
           await wait(45)
         }
         emit(threadId, [{ at: now(), type: 'message.done', id: messageId, text: step.say, ...by }])
       }
     }
-    emit(threadId, [{ at: now(), type: 'turn.completed', finishReason: 'stop', ...by }])
     if (run.replies?.length || run.merge) {
       const toolCallId = `call_${id()}`
       const input = {
@@ -196,16 +226,23 @@ function play(threadId: string, run: Run) {
         },
       ])
     }
+    // After the reply's buttons, as the runner records a replies block.
+    emit(threadId, [{ at: now(), type: 'turn.completed', finishReason: 'stop', ...by }])
     setStatus(threadId, run.status ?? 'idle')
     if (run.done) run.done()
   })
-  running.set(threadId, next.catch(() => undefined))
+  running.set(
+    threadId,
+    next.catch(() => undefined),
+  )
 }
 
 function sendMessage(threadId: string, text: string) {
   emit(threadId, [{ at: now(), type: 'message.user', text, memberId: me.memberId }])
   patchThread(threadId, { archivedAt: null })
-  const thread = body<{ title: string; teammate?: { id: string; name: string } }>(`GET /threads/${threadId}`)
+  const thread = body<{ title: string; teammate?: { id: string; name: string } }>(
+    `GET /threads/${threadId}`,
+  )
   play(threadId, replyTo(text, { threadId, thread, teammates, actions }))
 }
 
@@ -223,7 +260,9 @@ const actions = {
 let threadCount = 0
 /** A new thread from Home or a teammate's page: a copy of the teammate's latest one, empty. */
 function newThread(input: { text?: string; teammateId?: string; title?: string }) {
-  const teammate = teammates.find((t) => t.id === input.teammateId) ?? teammates.find((t) => t.name !== 'Chief') ??
+  const teammate =
+    teammates.find((t) => t.id === input.teammateId) ??
+    teammates.find((t) => t.name !== 'Chief') ??
     teammates[0]!
   const list = body<Json[]>('GET /threads') ?? []
   const template =
@@ -289,9 +328,10 @@ function decide(ticket: Ticket, outcome: { approved?: boolean; answer?: unknown 
   const threadId = ticket.sessionId
   if (!threadId || !store.has(`GET /threads/${threadId}`)) return
   const events = allEvents(threadId)
-  const asked = [...events].reverse().find((e) =>
-    ['approval.requested', 'question.asked', 'ticket.opened'].includes(e.event.type),
-  )?.event as Json | undefined
+  const asked = [...events]
+    .reverse()
+    .find((e) => ['approval.requested', 'question.asked', 'ticket.opened'].includes(e.event.type))
+    ?.event as Json | undefined
   if (asked?.type === 'approval.requested')
     emit(threadId, [
       {
@@ -345,10 +385,18 @@ function pendingTool(threadId: string) {
 
 function syncPulls() {
   const open = [...pulls.values()].filter((p) => p.summary.state === 'open')
-  const list = { pulls: [...pulls.values()].map((p) => p.summary), repositories: ['acme/web'], errors: [] }
+  const list = {
+    pulls: [...pulls.values()].map((p) => p.summary),
+    repositories: ['acme/web'],
+    errors: [],
+  }
   for (const key of store.keys())
     if (key.startsWith('GET /pulls?')) store.set(key, { status: 200, body: structuredClone(list) })
-  const attention = store.get('GET /pulls/attention')?.body as { pulls: Json[]; count: number; open: number }
+  const attention = store.get('GET /pulls/attention')?.body as {
+    pulls: Json[]
+    count: number
+    open: number
+  }
   if (attention) {
     const waiting = open.map((p) => ({
       repository: p.summary.repository,
@@ -403,7 +451,11 @@ const routes: [string, RegExp, Handler][] = [
     'POST',
     /^\/threads\/([^/]+)\/approvals$/,
     ([threadId], input) => {
-      const t = findTicket((t) => t.sessionId === threadId && (t.id === input.approvalId || t.payload?.approvalId === input.approvalId))
+      const t = findTicket(
+        (t) =>
+          t.sessionId === threadId &&
+          (t.id === input.approvalId || t.payload?.approvalId === input.approvalId),
+      )
       if (t) decide(t, { approved: Boolean(input.approved) })
       return { ok: true, live: true }
     },
@@ -412,7 +464,9 @@ const routes: [string, RegExp, Handler][] = [
     'POST',
     /^\/threads\/([^/]+)\/answers$/,
     ([threadId], input) => {
-      const t = findTicket((t) => t.sessionId === threadId && t.payload?.questionId === input.questionId)
+      const t = findTicket(
+        (t) => t.sessionId === threadId && t.payload?.questionId === input.questionId,
+      )
       if (t) decide(t, { answer: input.answer })
       return ok
     },
@@ -421,7 +475,9 @@ const routes: [string, RegExp, Handler][] = [
     'POST',
     /^\/threads\/([^/]+)\/tickets$/,
     ([threadId], input) => {
-      const t = findTicket((t) => t.sessionId === threadId && t.payload?.requestId === input.requestId)
+      const t = findTicket(
+        (t) => t.sessionId === threadId && t.payload?.requestId === input.requestId,
+      )
       if (t) decide(t, { answer: input.answer })
       return ok
     },
@@ -452,7 +508,11 @@ const routes: [string, RegExp, Handler][] = [
       for (const [key, s] of store)
         if (/^GET \/threads(\?|$)/.test(key) && Array.isArray(s.body))
           s.body = s.body.filter((t: Json) => t.id !== threadId)
-      broadcast({ type: 'thread.updated', sessionId: threadId, status: String(body<Json>(`GET /threads/${threadId}`)?.status ?? 'idle') })
+      broadcast({
+        type: 'thread.updated',
+        sessionId: threadId,
+        status: String(body<Json>(`GET /threads/${threadId}`)?.status ?? 'idle'),
+      })
       return ok
     },
   ],
@@ -463,35 +523,67 @@ const routes: [string, RegExp, Handler][] = [
       patchThread(threadId, { archivedAt: null })
       const thread = body<Json>(`GET /threads/${threadId}`)
       const list = body<Json[]>('GET /threads')
-      if (thread && list && !list.some((t) => t.id === threadId)) list.unshift(structuredClone(thread))
+      if (thread && list && !list.some((t) => t.id === threadId))
+        list.unshift(structuredClone(thread))
       return ok
     },
   ],
-  ['POST', /^\/threads\/([^/]+)\/(pin|later)$/, ([threadId, what]) => (patchThread(threadId, { [`${what === 'pin' ? 'pinned' : 'later'}At`]: now() }), ok)],
-  ['DELETE', /^\/threads\/([^/]+)\/(pin|later)$/, ([threadId, what]) => (patchThread(threadId, { [`${what === 'pin' ? 'pinned' : 'later'}At`]: null }), ok)],
+  [
+    'POST',
+    /^\/threads\/([^/]+)\/(pin|later)$/,
+    ([threadId, what]) => (
+      patchThread(threadId, { [`${what === 'pin' ? 'pinned' : 'later'}At`]: now() }),
+      ok
+    ),
+  ],
+  [
+    'DELETE',
+    /^\/threads\/([^/]+)\/(pin|later)$/,
+    ([threadId, what]) => (
+      patchThread(threadId, { [`${what === 'pin' ? 'pinned' : 'later'}At`]: null }),
+      ok
+    ),
+  ],
   [
     'POST',
     /^\/pulls\/acme\/web\/(\d+)\/merge$/,
     ([number]) => (merge(Number(number)) ? ok : { status: 409, body: { error: 'Already merged' } }),
   ],
   ['GET', /^\/pulls\/acme\/web\/(\d+)$/, ([number]) => pullResponse(Number(number), 'detail')],
-  ['GET', /^\/pulls\/acme\/web\/(\d+)\/state$/, ([number]) => pullResponse(Number(number), 'state')],
+  [
+    'GET',
+    /^\/pulls\/acme\/web\/(\d+)\/state$/,
+    ([number]) => pullResponse(Number(number), 'state'),
+  ],
   [
     'GET',
     /^\/threads\/([^/]+)\/events$/,
     ([threadId], _, url) =>
-      url.searchParams.has('before') ? { firstSeq: 1, events: [] } : structuredClone(page(threadId)),
+      url.searchParams.has('before')
+        ? { firstSeq: 1, events: [] }
+        : structuredClone(page(threadId)),
   ],
   // Files go nowhere in the demo: the composer says so where it attaches one.
   [
     'POST',
     /^\/(attachments|library\/assets)\/uploads$/,
-    () => ({ status: 403, body: { error: 'Files stay on your computer in the demo. Start free to attach one.' } }),
+    () => ({
+      status: 403,
+      body: { error: 'Files stay on your computer in the demo. Start free to attach one.' },
+    }),
   ],
-  ['POST', /^\/library\/upload$/, () => ({ status: 403, body: { error: 'Uploads are off in the demo.' } })],
+  [
+    'POST',
+    /^\/library\/upload$/,
+    () => ({ status: 403, body: { error: 'Uploads are off in the demo.' } }),
+  ],
   // Signing out of the demo leads to signing up for real.
   ['POST', /^\/auth\/sign-out$/, () => ({ success: true })],
-  ['GET', /^\/auth\/get-session$/, () => ({ session: { id: 'demo' }, user: body<Json>('GET /me')?.user })],
+  [
+    'GET',
+    /^\/auth\/get-session$/,
+    () => ({ session: { id: 'demo' }, user: body<Json>('GET /me')?.user }),
+  ],
 ]
 
 function respond({ status, body }: Stored) {
@@ -504,7 +596,11 @@ function respond({ status, body }: Stored) {
 }
 
 const isStored = (value: unknown): value is Stored =>
-  !!value && typeof value === 'object' && 'status' in value && 'body' in value && Object.keys(value).length === 2
+  !!value &&
+  typeof value === 'object' &&
+  'status' in value &&
+  'body' in value &&
+  Object.keys(value).length === 2
 
 /** Answers one request to DEMO_API. */
 export async function handle(request: Request): Promise<Response> {

@@ -47,12 +47,15 @@ export function installDemo() {
     constructor(url: string | URL) {
       super()
       this.url = String(url)
-      void server().then(({ connect }) => {
-        if (this.readyState !== 0) return
-        this.readyState = 1
-        this.detach = connect((message) => this.deliver(message))
-        this.fire(new Event('open'))
-      })
+      // Opens after a beat, as a socket does: after the close of one a page just dropped.
+      void server().then(({ connect }) =>
+        setTimeout(() => {
+          if (this.readyState !== 0) return
+          this.readyState = 1
+          this.detach = connect((message) => this.deliver(message))
+          this.fire(new Event('open'))
+        }, 50),
+      )
     }
     send(data: string) {
       if (this.readyState !== 1) return
