@@ -24,14 +24,17 @@ import {
 import {
   defaultEffort,
   type Effort,
+  formatPreviewElement,
   type HarnessId,
   mentionsToText,
+  type PreviewElement,
   type QueuedMessageAction,
   type ReplyTo,
   suggestionFor,
 } from '@brigade/contracts'
 import Link from 'next/link'
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -66,6 +69,7 @@ import {
   useThreadPreview,
   useThreadRepositories,
 } from '@/components/preview-panel'
+import { PreviewElementChips } from '@/components/preview-elements'
 import { usePreviewStart } from '@/components/preview-start'
 import { ThreadProjectMenu } from '@/components/projects'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
@@ -247,6 +251,16 @@ export function ThreadConversation({
   // The computer the next message moves the thread to, as a chip above it (+ › Continue on…).
   const [moveTo, setMoveTo] = useState<MoveTarget>()
   useEffect(() => setMoveTo(undefined), [id])
+  // Elements picked in the preview, as chips above it; the message carries them.
+  const [elements, setElements] = useState<PreviewElement[]>([])
+  useEffect(() => setElements([]), [id])
+  const pickElement = useCallback((element: PreviewElement) => {
+    setElements((list) =>
+      list.some((e) => e.page === element.page && e.selector === element.selector)
+        ? list
+        : [...list, element],
+    )
+  }, [])
   // The effort just picked, until the thread comes back with it.
   const [effortPicked, setEffortPicked] = useState<{ value: Effort | null }>()
   // The turn running when it was picked: that turn keeps the effort it started with.
@@ -655,7 +669,10 @@ export function ThreadConversation({
     }
   }
 
-  const ready = (text.trim() || files.ids.length > 0 || moveTo) && !files.busy && !files.failed
+  const ready =
+    (text.trim() || files.ids.length > 0 || elements.length > 0 || moveTo) &&
+    !files.busy &&
+    !files.failed
 
   /**
    * Send the composer's message; it shows above the composer until the thread shows it.
@@ -665,24 +682,29 @@ export function ThreadConversation({
   async function send(e?: React.FormEvent) {
     e?.preventDefault()
     if (!ready || current === 'waiting') return
-    const sending = text.trim()
+    const written = text.trim()
     const replying = replyTo
     const moving = moveTo
-    if (moving && !sending && files.ids.length === 0) {
+    const picked = elements
+    if (moving && !written && files.ids.length === 0 && picked.length === 0) {
       setMoveTo(undefined)
       return moveThread(moving.id).catch(() => setMoveTo((current) => current ?? moving))
     }
+    // The elements after what the person wrote, so a preview of the message starts with it.
+    const sending = [written, ...picked.map(formatPreviewElement)].filter(Boolean).join('\n\n')
     setText('')
     setReplyTo(undefined)
     setMoveTo(undefined)
+    setElements([])
     try {
       await deliver(sending, files.ids, undefined, replying, moving)
       files.clear()
     } catch (err) {
       // Not sent: back in the composer, as it was.
-      setText((current) => current || sending)
+      setText((current) => current || written)
       setReplyTo((current) => current ?? replying)
       setMoveTo((current) => current ?? moving)
+      setElements((current) => (current.length ? current : picked))
       setError((err as Error).message)
     }
   }
@@ -924,6 +946,7 @@ export function ThreadConversation({
           starting={previewStart.busy}
           waking={previewStart.waking}
           onAsk={t.mayPrompt ? askInComposer : undefined}
+          {...(t.mayPrompt ? { onPick: pickElement, picked: elements.length } : {})}
         />
       )}
       {expanded && computerOpen && t.computer.kind === 'cloud' && (
@@ -1203,6 +1226,11 @@ export function ThreadConversation({
                       </span>
                     </div>
                   )}
+                  <PreviewElementChips
+                    elements={elements}
+                    onRemove={(i) => setElements((list) => list.filter((_, j) => j !== i))}
+                    className="px-1"
+                  />
                   <UploadList uploads={files.uploads} onRemove={files.remove} />
                   <div className="flex items-end gap-1">
                     <div className="mb-1">

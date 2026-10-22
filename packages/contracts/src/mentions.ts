@@ -1,3 +1,5 @@
+import { previewElementsToText } from './preview-elements.js'
+
 /**
  * Mentions inside message text. The composer writes them as `@[Label](kind:id)`:
  * a teammate reads the label and the reference; the dashboard renders a chip.
@@ -45,9 +47,9 @@ export function parseMentions(text: string): (string | Mention)[] {
   return parts
 }
 
-/** Mentions reduced to their labels, for titles and previews. */
+/** Mentions (and elements picked in a preview) reduced to their labels, for titles and previews. */
 export const mentionsToText = (text: string) =>
-  text.replace(MENTION, (_, label: string, kind: MentionKind) =>
+  previewElementsToText(text).replace(MENTION, (_, label: string, kind: MentionKind) =>
     kind === 'teammate' ? `@${label}` : label,
   )
 

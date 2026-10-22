@@ -9,8 +9,12 @@
 //   Domain, so signing in works in the frame without changing the app.
 // - While the app starts, restarts or is down, a page that says so and reloads
 //   itself, instead of a blank frame.
+// - Its pages get the script that lets people pick elements in them from the
+//   dashboard (preview-select.ts).
 import http from 'node:http'
 import net from 'node:net'
+import { pipeline } from 'node:stream'
+import { SELECT_SCRIPT, SELECT_SCRIPT_PATH, withSelectScript } from './preview-select.js'
 
 /** Where an app's other ports are served on the preview's address. */
 export const PORTS_PREFIX = '/__ports/'
@@ -146,10 +150,19 @@ export class PreviewProxy {
   }
 
   private request(req: http.IncomingMessage, res: http.ServerResponse) {
+    if (req.url?.split('?')[0] === SELECT_SCRIPT_PATH)
+      return void res
+        .writeHead(200, {
+          'content-type': 'text/javascript; charset=utf-8',
+          'cache-control': 'no-cache',
+        })
+        .end(SELECT_SCRIPT)
     this.used()
     const target = route(req.url ?? '/', this.options)
     if (!target)
       return void res.writeHead(404, { 'content-type': 'text/plain' }).end('No such port')
+    // A page gets the select script: asked for uncompressed, to add its tag on the way.
+    const page = req.method === 'GET' && isNavigation(req)
     const upstream = http.request(
       {
         host: this.options.host ?? '127.0.0.1',
@@ -159,11 +172,19 @@ export class PreviewProxy {
         headers: {
           ...withoutHopHeaders(req.headers),
           ...(target.prefix && { 'x-forwarded-prefix': target.prefix }),
+          ...(page && { 'accept-encoding': 'identity' }),
         },
         agent: this.agent,
       },
       (response) => {
         const headers = withoutHopHeaders(response.headers)
+        const tagged =
+          page &&
+          /^text\/html/i.test(headers['content-type'] ?? '') &&
+          (headers['content-encoding'] ?? 'identity') === 'identity' &&
+          response.statusCode !== 204 &&
+          response.statusCode !== 304
+        if (tagged) delete headers['content-length']
         if (this.options.crossSiteCookies && headers['set-cookie'])
           headers['set-cookie'] = headers['set-cookie'].map(crossSiteCookie)
         // A redirect to the app's own path stays under its prefix.
@@ -171,7 +192,8 @@ export class PreviewProxy {
         if (target.prefix && location?.startsWith('/') && !location.startsWith('//'))
           headers.location = target.prefix + location
         res.writeHead(response.statusCode ?? 502, headers)
-        response.pipe(res)
+        if (tagged) pipeline(response, withSelectScript(), res, () => undefined)
+        else response.pipe(res)
       },
     )
     upstream.on('error', () => {

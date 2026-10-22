@@ -1,0 +1,76 @@
+// Elements a person picked in a thread's preview, for the teammate. The preview's
+// proxy adds a script to its pages that, while the panel's select mode is on,
+// outlines what the pointer is over and sends what was clicked to the dashboard
+// (runner/src/preview-select.ts). The composer holds them as chips and writes each
+// into the message as a <preview-element> block: the teammate reads where it is
+// and its HTML; the dashboard shows a chip in its place.
+import { z } from 'zod'
+
+export const PreviewElement = z.object({
+  /** What people read on its chip: its component and tag ("HeroCopy › h1.title"). */
+  label: z.string().min(1).max(200),
+  /** The page it is on: path, query and hash. */
+  page: z.string().max(2000),
+  /** A CSS selector that finds it on that page. */
+  selector: z.string().max(1000),
+  /** React components around it, outermost first, when the page is a React app in development. */
+  components: z.array(z.string().max(100)).max(8).optional(),
+  /** Its size on screen, in CSS pixels ("672×419"). */
+  size: z.string().max(40).optional(),
+  /** Its HTML, clipped. */
+  html: z.string().max(4000),
+})
+export type PreviewElement = z.infer<typeof PreviewElement>
+
+const escape = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/\s+/g, ' ')
+const unescape = (value: string) => value.replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+
+/** The block a message carries for one element. */
+export function formatPreviewElement(element: PreviewElement) {
+  const attributes: [string, string | undefined][] = [
+    ['label', element.label],
+    ['page', element.page],
+    ['selector', element.selector],
+    ['components', element.components?.join(' › ')],
+    ['size', element.size],
+  ]
+  const head = attributes
+    .filter((a): a is [string, string] => !!a[1])
+    .map(([name, value]) => ` ${name}="${escape(value)}"`)
+    .join('')
+  const html = element.html.replace(/<\/preview-element/gi, '<\\/preview-element')
+  return `<preview-element${head}>\n${html}\n</preview-element>`
+}
+
+const BLOCK = /<preview-element((?:\s+[a-z]+="[^"]*")*)\s*>\n?([\s\S]*?)\n?<\/preview-element>/g
+
+/** The elements a message's text carries, and its text without them. */
+export function splitPreviewElements(text: string): { text: string; elements: PreviewElement[] } {
+  if (!text.includes('<preview-element')) return { text, elements: [] }
+  const elements: PreviewElement[] = []
+  const rest = text.replace(BLOCK, (_, head: string, html: string) => {
+    const attributes = Object.fromEntries(
+      [...head.matchAll(/([a-z]+)="([^"]*)"/g)].map((m) => [m[1]!, unescape(m[2]!)]),
+    )
+    elements.push({
+      label: attributes.label || 'Element',
+      page: attributes.page ?? '',
+      selector: attributes.selector ?? '',
+      ...(attributes.components ? { components: attributes.components.split(' › ') } : {}),
+      ...(attributes.size ? { size: attributes.size } : {}),
+      html,
+    })
+    return ''
+  })
+  return { text: rest.replace(/\n{3,}/g, '\n\n').trim(), elements }
+}
+
+/** Elements reduced to their labels, for titles and previews. */
+export const previewElementsToText = (text: string) =>
+  text.includes('<preview-element')
+    ? text.replace(BLOCK, (_, head: string) => {
+        const label = /\slabel="([^"]*)"/.exec(head)?.[1]
+        return `[${label ? unescape(label) : 'Element'}]`
+      })
+    : text

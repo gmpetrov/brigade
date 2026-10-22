@@ -18,6 +18,7 @@ import {
   PREVIEW_REPLACED,
   PROPOSE_TEAM_TOOL,
   SHOW_WIDGET_TOOL,
+  splitPreviewElements,
   STORED_FILE,
   STORED_FILE_NAME,
   SUGGEST_REPLIES_TOOL,
@@ -84,6 +85,7 @@ import { contentUrl } from '@/components/library-browser'
 import { CommandChip, startingCommand, useSkillCommands } from '@/components/composer'
 import { CodeSnippet, CopyableCode, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
+import { PreviewElementChips } from '@/components/preview-elements'
 import { endedText } from '@/components/preview-panel'
 import { VariablesAsk } from '@/components/preview-variables'
 import { PullMergeButton } from '@/components/pull-action'
@@ -1763,8 +1765,10 @@ export function ThreadItems({
             </div>
           )
         // A command it starts with (/design, a skill) is a label above it: what was asked for.
-        const asked = startingCommand(forPeople(item.text), skillNames)
-        const text = asked ? asked.rest : forPeople(item.text)
+        // Elements picked in the preview are chips above it, out of its text.
+        const { text: written, elements } = splitPreviewElements(forPeople(item.text))
+        const asked = startingCommand(written, skillNames)
+        const text = asked ? asked.rest : written
         return (
           <div
             key={item.key}
@@ -1780,14 +1784,12 @@ export function ThreadItems({
               />
             )}
             {asked && <CommandChip command={asked.command} />}
+            <PreviewElementChips elements={elements} className="justify-end" />
             {text && (
               <div className="group/message flex items-center gap-1">
                 <MessageActions
                   text={text}
-                  onReply={
-                    onReply &&
-                    (() => onReply({ seq: item.seq, text: replyText(forPeople(item.text)) }))
-                  }
+                  onReply={onReply && (() => onReply({ seq: item.seq, text: replyText(written) }))}
                 />
                 <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
                   <MessageWithCode text={text} />
