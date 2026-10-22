@@ -521,9 +521,7 @@ export const threads = new Hono<AppEnv>()
     const found = await db.document.findMany({
       where: { kind: 'library', deletedAt: null, path: { in: candidates } },
     })
-    const library = candidates.map((p) => found.find((d) => d.path === p)).find(Boolean)
-    if (library) {
-      const row = library
+    const fromLibrary = (row: (typeof found)[number]) => {
       const editable = row.contentType.startsWith('text/') || /json|yaml|xml/.test(row.contentType)
       return c.json({
         source: 'library',
@@ -536,19 +534,39 @@ export const threads = new Hono<AppEnv>()
         truncated: false,
       } satisfies ThreadFile)
     }
+    const library = candidates.map((p) => found.find((d) => d.path === p)).find(Boolean)
+    if (library) return fromLibrary(library)
 
     const result = await readThreadFile(thread.computerId, {
       sessionId: thread.id,
       teammateIds: teammatesFirst(thread, c.req.query('teammateId')),
       path,
     })
-    if (!result.ok)
+    if (!result.ok) {
+      // A bare name ("10-bold-alternative.md") for a file in a folder of the thread's
+      // project: the only one of that name there. Never another project's file.
+      const folder = project?.folder?.replace(/\/+$/, '')
+      const named =
+        folder && !path.includes('/')
+          ? (
+              await db.document.findMany({
+                where: {
+                  kind: 'library',
+                  deletedAt: null,
+                  path: { startsWith: `${folder}/`, endsWith: `/${path}` },
+                },
+                take: 20,
+              })
+            ).filter((d) => d.path.startsWith(`${folder}/`) && d.path.endsWith(`/${path}`))
+          : []
+      if (named.length === 1) return fromLibrary(named[0]!)
       throw new HTTPException(result.error === 'not_found' ? 404 : 409, {
         message:
           result.error === 'not_found'
             ? `No file "${path}" in the library or the teammate's folder`
             : (result.error ?? 'Could not read the file'),
       })
+    }
     return c.json({
       source: 'thread',
       path: result.path ?? path,
