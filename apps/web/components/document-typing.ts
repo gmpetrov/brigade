@@ -61,19 +61,19 @@ function unitsOf(block: Node) {
 
 /** Where unit `unit` of a block starts (`end`: where the unit before it ends). */
 function positionOf(block: Node, pos: number, unit: number, end = false) {
-  let at = pos + 1
+  let at: number | null = null
   let seen = 0
   block.descendants((node, offset) => {
+    if (at !== null) return false
     if (!node.isText && !node.isLeaf) return true
     const size = node.isText ? node.text!.length : 1
     const start = pos + 1 + offset
-    if (end ? unit <= seen + size : unit < seen + size) {
+    if (end ? unit <= seen + size : unit < seen + size)
       at = node.isText ? start + unit - seen : end ? start + node.nodeSize : start
-      seen = Infinity
-    } else seen += size
+    seen += size
     return false
   })
-  return at
+  return at ?? pos + 1
 }
 
 /** What changed from `a` to `b`: `b` between what both start and end with. */
