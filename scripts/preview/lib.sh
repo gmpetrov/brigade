@@ -57,16 +57,33 @@ wait_for_db() {
   return 1
 }
 
+# Whether the thread's Docker holds the database already: its Compose volume is there.
+docker_holds_db() {
+  [ -n "${COMPOSE_PROJECT_NAME:-}" ] && use_docker &&
+    [ -n "$(docker volume ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME" \
+      --filter label=com.docker.compose.volume=postgres 2>/dev/null)" ]
+}
+
 # Starts PostgreSQL unless something already answers on its port. Embedded, it runs in the
-# background until this script exits. Also embedded when Docker answers but cannot start the
-# container (a rootless daemon whose overlay mounts fail, say), and from then on: once the
-# embedded one holds this checkout's data, Docker is not asked again. Its data stays the same
-# whether Docker answers or not, and a daemon still starting (or failing to) does not hold
-# each start for as long as `docker info` waits on it, 13 seconds on a cloud computer.
+# background until this script exits. Docker's when Docker works here, except:
+# - once the embedded one holds this checkout's data. Its data stays the same whether Docker
+#   answers or not, and a daemon still starting (or failing to) does not hold each start for
+#   as long as `docker info` waits on it, 13 seconds on a cloud computer;
+# - in a preview, unless the thread's Docker holds the database already: the embedded one is
+#   cached for every checkout on the computer, where each thread's Docker downloads
+#   PostgreSQL's image into its own (646 MB, 13 seconds on a cloud computer).
+# Also embedded when Docker answers but cannot start the container (a rootless daemon whose
+# overlay mounts fail, say).
 start_db() {
   db_answers && return
   local docker=
-  [ -f "$DATA/postgres/PG_VERSION" ] || ! use_docker || docker=1
+  if [ -f "$DATA/postgres/PG_VERSION" ]; then
+    :
+  elif [ -n "${BRIGADE_PREVIEW_URL:-}" ]; then
+    if docker_holds_db; then docker=1; fi
+  elif use_docker; then
+    docker=1
+  fi
   if [ -n "$docker" ] && (cd "$REPO" && docker compose up -d postgres); then
     :
   else
