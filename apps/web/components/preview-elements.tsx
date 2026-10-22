@@ -11,7 +11,12 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 /** A picked element, and where its picture shows from (an object URL, or its attachment's). */
-export type PickedElement = { element: PreviewElement; picture?: string }
+export type PickedElement = {
+  element: PreviewElement
+  picture?: string
+  /** Its page is still drawing its picture: the message waits for it. */
+  drawing?: boolean
+}
 
 function Row({ name, children }: { name: string; children: React.ReactNode }) {
   return (
@@ -107,6 +112,7 @@ function ElementCard({ element, picture }: PickedElement) {
 export function PreviewElementChip({
   element,
   picture,
+  drawing,
   onRemove,
   className,
 }: PickedElement & { onRemove?: () => void; className?: string }) {
@@ -127,8 +133,12 @@ export function PreviewElementChip({
             )}
             aria-label={`${element.label}: show what goes with the message`}
           >
-            <SquareMousePointer aria-hidden className="size-3.5 shrink-0" />
+            <SquareMousePointer
+              aria-hidden
+              className={cn('size-3.5 shrink-0', drawing && 'animate-pulse')}
+            />
             <span className="min-w-0 truncate">{element.label}</span>
+            {drawing && <span className="sr-only">(taking its picture)</span>}
           </button>
         </Popover.Trigger>
         {onRemove && (

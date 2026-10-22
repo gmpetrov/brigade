@@ -129,8 +129,14 @@ export type ThreadHeading = {
 }
 
 /** Replies being written, per thread: closing the panel or opening another thread keeps them. */
-/** An element picked in the preview, by the id its page gave it, and the upload of its picture. */
-type Picked = { id: string; element: PreviewElement; upload?: string }
+/**
+ * An element picked in the preview, by the id its page gave it, and the upload of its
+ * picture; `drawing` while its page draws it, when the message waits for the picture.
+ */
+type Picked = { id: string; element: PreviewElement; upload?: string; drawing?: boolean }
+
+/** How long a message waits for a picture its page is drawing (it may have gone away). */
+const DRAWING_MS = 15_000
 
 const replyDrafts = new Map<string, string>()
 
@@ -273,29 +279,32 @@ export function ThreadConversation({
   useEffect(() => setElements([]), [id])
   const elementsRef = useRef(elements)
   elementsRef.current = elements
-  const pickElement = useMemo<PickHandlers>(
-    () => ({
-      element: (pickId, element) =>
+  const pickElement = useMemo<PickHandlers>(() => {
+    const drawn = (pickId: string, change: Partial<Picked> = {}) =>
+      setElements((list) =>
+        list.map((e) => (e.id === pickId ? { ...e, ...change, drawing: false } : e)),
+      )
+    return {
+      element: (pickId, element) => {
         setElements((list) =>
           list.some(
             (e) => e.element.page === element.page && e.element.selector === element.selector,
           )
             ? list
-            : [...list, { id: pickId, element }],
-        ),
+            : [...list, { id: pickId, element, drawing: true }],
+        )
+        setTimeout(() => drawn(pickId), DRAWING_MS)
+      },
       picture: (pickId, image) => {
-        if (!image || !elementsRef.current.some((e) => e.id === pickId)) return
+        const picked = elementsRef.current.find((e) => e.id === pickId)
+        if (!picked?.drawing) return
+        if (!image) return drawn(pickId)
         const name = `element-${pickId}.png`
         const [upload] = files.add([new File([image], name, { type: 'image/png' })])
-        setElements((list) =>
-          list.map((e) =>
-            e.id === pickId ? { ...e, upload, element: { ...e.element, image: name } } : e,
-          ),
-        )
+        drawn(pickId, { ...(upload && { upload }), element: { ...picked.element, image: name } })
       },
-    }),
-    [files.add],
-  )
+    }
+  }, [files.add])
   // A picture that did not upload is left out: the element goes without it.
   const removeUpload = files.remove
   useEffect(() => {
@@ -717,6 +726,7 @@ export function ThreadConversation({
   const ready =
     (text.trim() || files.ids.length > 0 || elements.length > 0 || moveTo) &&
     !files.busy &&
+    !elements.some((e) => e.drawing) &&
     !files.failed
 
   /**
@@ -1276,6 +1286,7 @@ export function ThreadConversation({
                   <PreviewElementChips
                     elements={elements.map((e) => ({
                       element: e.element,
+                      ...(e.drawing && { drawing: true }),
                       ...(e.upload && {
                         picture: files.uploads.find((u) => u.key === e.upload)?.preview,
                       }),
