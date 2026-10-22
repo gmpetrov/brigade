@@ -1343,7 +1343,7 @@ function DropOverlay() {
     <div className="pointer-events-none absolute inset-0 z-30 grid place-items-center bg-background/80 backdrop-blur-[2px]">
       <div className="absolute inset-3 rounded-xl border-2 border-dashed border-primary bg-primary/10" />
       <div className="relative text-center">
-        <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-primary text-primary-foreground">
+        <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-primary-solid text-primary-foreground">
           <CloudUpload aria-hidden className="size-6" />
         </div>
         <p className="text-lg font-bold">Drop to attach</p>

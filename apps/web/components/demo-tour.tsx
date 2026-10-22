@@ -79,13 +79,13 @@ export function DemoTour() {
         style={{ transform: 'translate(55vw, 60vh)' }}
       >
         <MousePointer2 className="fill-primary text-primary-foreground size-6 -translate-x-1 -translate-y-1 drop-shadow-md" />
-        <span className="bg-primary text-primary-foreground ml-4 rounded-full px-2 py-0.5 text-xs font-semibold shadow-md">
+        <span className="bg-primary-solid text-primary-foreground ml-4 rounded-full px-2 py-0.5 text-xs font-semibold shadow-md">
           You
         </span>
       </div>
       {state === 'yours' && (
         // In the brand's violet, so it shows at once; above the message box, not over its send button.
-        <div className="bg-primary text-primary-foreground fixed right-4 bottom-24 z-50 flex items-center gap-2 rounded-full py-1.5 pr-1.5 pl-4 text-sm shadow-lg">
+        <div className="bg-primary-solid text-primary-foreground fixed right-4 bottom-24 z-50 flex items-center gap-2 rounded-full py-1.5 pr-1.5 pl-4 text-sm shadow-lg">
           <span className="font-semibold">Your turn</span>
           <span className="opacity-80">click around</span>
           <button

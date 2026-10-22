@@ -50,7 +50,7 @@ export function UpdatePill({ header }: { header: boolean }) {
         type="button"
         onClick={() => window.location.reload()}
         className={cn(
-          'bg-primary text-primary-foreground animate-in fade-in slide-in-from-top-2 pointer-events-auto mt-14 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold shadow-md transition-opacity hover:opacity-90',
+          'bg-primary-solid text-primary-foreground animate-in fade-in slide-in-from-top-2 pointer-events-auto mt-14 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold shadow-md transition-opacity hover:opacity-90',
           !header && 'md:mt-3',
         )}
       >

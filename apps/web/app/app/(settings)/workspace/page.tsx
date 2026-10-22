@@ -91,7 +91,7 @@ export default function WorkspacePage() {
   ) : (
     <WorkspaceMark
       workspace={workspace}
-      className="size-16 rounded-xl bg-primary text-2xl text-primary-foreground"
+      className="size-16 rounded-xl bg-primary-solid text-2xl text-primary-foreground"
     />
   )
   /** The pencil on the logo: a click changes it. */

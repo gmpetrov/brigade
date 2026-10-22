@@ -681,7 +681,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
           <>
             <ol className="flex flex-col gap-3.5 text-sm">
               <li className="flex gap-3">
-                <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-primary-solid text-primary-foreground">
                   <Check aria-hidden className="size-3" />
                 </span>
                 <span className="flex flex-col gap-0.5">

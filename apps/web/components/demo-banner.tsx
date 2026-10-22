@@ -16,7 +16,7 @@ export function DemoBanner({ place }: { place: 'sidebar' | 'phone' }) {
   if (!DEMO || inFrame) return null
   if (place === 'phone')
     return (
-      <div className="bg-primary text-primary-foreground flex items-center justify-between gap-3 px-4 py-2 text-sm md:hidden">
+      <div className="bg-primary-solid text-primary-foreground flex items-center justify-between gap-3 px-4 py-2 text-sm md:hidden">
         <span className="font-medium">Demo workspace</span>
         <a
           href={SIGN_UP_URL}
@@ -42,7 +42,7 @@ export function DemoBanner({ place }: { place: 'sidebar' | 'phone' }) {
           href={SIGN_UP_URL}
           target="_top"
           className={cn(
-            'bg-primary text-primary-foreground mt-2.5 flex h-8 items-center justify-center gap-1 rounded-full px-3 font-semibold transition-opacity hover:opacity-90',
+            'bg-primary-solid text-primary-foreground mt-2.5 flex h-8 items-center justify-center gap-1 rounded-full px-3 font-semibold transition-opacity hover:opacity-90',
           )}
         >
           Start free on your Mac
@@ -54,7 +54,7 @@ export function DemoBanner({ place }: { place: 'sidebar' | 'phone' }) {
         target="_top"
         title="Demo workspace: start free on your Mac"
         aria-label="Demo workspace: start free on your Mac"
-        className="bg-primary text-primary-foreground hidden size-8 items-center justify-center rounded-full group-data-[collapsible=icon]:flex"
+        className="bg-primary-solid text-primary-foreground hidden size-8 items-center justify-center rounded-full group-data-[collapsible=icon]:flex"
       >
         <ArrowRight className="size-4" aria-hidden />
       </a>

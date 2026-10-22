@@ -104,8 +104,8 @@ svg.i {
   flex: none;
 }
 .btn.pri {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: var(--primary-solid);
+  border-color: var(--primary-solid);
   color: var(--primary-foreground);
 }
 .btn.ghost {
@@ -401,7 +401,7 @@ svg.i {
 .me {
   align-self: flex-end;
   max-width: 82%;
-  background: var(--primary);
+  background: var(--primary-solid);
   color: var(--primary-foreground);
   border-radius: 20px 20px 6px 20px;
   padding: 11px 15px;

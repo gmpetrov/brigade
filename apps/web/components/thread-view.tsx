@@ -1789,7 +1789,7 @@ export function ThreadItems({
                     (() => onReply({ seq: item.seq, text: replyText(forPeople(item.text)) }))
                   }
                 />
-                <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
+                <div className="rounded-2xl rounded-br-md bg-primary-solid px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
                   <MessageWithCode text={text} />
                 </div>
               </div>
