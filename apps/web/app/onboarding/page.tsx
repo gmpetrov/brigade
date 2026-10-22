@@ -1,8 +1,20 @@
 'use client'
-import { LoaderCircle, ShieldCheck, Terminal } from 'lucide-react'
+import {
+  Check,
+  Clock,
+  Cloud,
+  ExternalLink,
+  Laptop,
+  Moon,
+  ShieldCheck,
+  Terminal,
+  Wallet,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AccountCard } from '@/components/account-card'
+import { AccountCard, machineName } from '@/components/account-card'
+import { HarnessLogo } from '@/components/harness-logo'
+import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,6 +22,7 @@ import { Label } from '@/components/ui/label'
 import {
   api,
   ApiError,
+  harnessLabel,
   subscribeToCloud,
   useApi,
   usableComputers,
@@ -21,8 +34,10 @@ import {
   type ThreadSummary,
 } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
+import { MAC_APP_URL } from '@/lib/mac-app'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 import { useLive } from '@/lib/use-live'
+import { cn } from '@/lib/utils'
 
 const slugify = (name: string) =>
   `${
@@ -208,12 +223,101 @@ export default function Onboarding() {
   )
 }
 
-type LinkCode = { command: string; expiresAt: string }
+type LinkCode = { command: string; expiresAt: string; appLink?: string }
+
+/** Where this page is open: Brigade.app runs on a Mac, the runner on a Mac or Linux. */
+type Device = 'mac' | 'linux' | 'other'
+
+function detectDevice(): Device {
+  const ua = navigator.userAgent
+  if (/iPhone|iPad|Android/.test(ua)) return 'other'
+  if (/Mac/.test(ua)) return 'mac'
+  if (/Linux|X11/.test(ua)) return 'linux'
+  return 'other'
+}
+
+/** Apple's mark, in the text color, for the Mac download. */
+function AppleLogo({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className={cn('size-4', className)}>
+      <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" />
+    </svg>
+  )
+}
+
+/** A card's leading icon on a soft tile; violet for Brigade Cloud. */
+function Tile({ children, violet }: { children: React.ReactNode; violet?: boolean }) {
+  return (
+    <span
+      className={cn(
+        'flex size-9 shrink-0 items-center justify-center rounded-xl [&_svg]:size-4',
+        violet ? 'bg-primary/15 text-primary' : 'bg-secondary',
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+/** A card's head: icon, title, one line under it, and what sits at its right. */
+function CardHead({
+  icon,
+  violet,
+  title,
+  meta,
+  aside,
+}: {
+  icon: React.ReactNode
+  violet?: boolean
+  title: React.ReactNode
+  meta: React.ReactNode
+  aside?: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <Tile violet={violet}>{icon}</Tile>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="font-bold">{title}</p>
+        <p className="text-xs text-muted-foreground">{meta}</p>
+      </div>
+      {aside}
+    </div>
+  )
+}
+
+/** Something on its way, with a pulsing violet dot rather than a spinner. */
+function Waiting({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-xl bg-muted px-3.5 py-3">
+      <p className="flex items-center gap-2.5 text-sm">
+        <span aria-hidden className="size-2 shrink-0 animate-pulse rounded-full bg-primary" />
+        {title}
+      </p>
+      <p className="text-xs text-muted-foreground">{children}</p>
+    </div>
+  )
+}
+
+function Command({ command }: { command: string }) {
+  return (
+    <pre className="rounded-xl border bg-muted p-3 font-mono text-xs break-all whitespace-pre-wrap text-foreground">
+      {command}
+    </pre>
+  )
+}
+
+const PRICE = (
+  <>
+    $99<span className="text-xs font-medium text-muted-foreground"> / month</span>
+  </>
+)
 
 /**
- * Nothing runs without an AI account: sign in to Claude (or ChatGPT for
- * Codex) on the workspace computer, or link a machine already signed in.
- * Once one works, the chief's setup thread starts.
+ * Nothing runs without an AI account on a computer: Brigade Cloud first, then
+ * the member's own machine, for free, offered as this device allows (Brigade.app
+ * on a Mac, the install command on Linux). Not one or the other: the second can
+ * be added later from Computers. Once an account works, the chief's setup
+ * thread starts.
  */
 function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
   const router = useRouter()
@@ -223,6 +327,11 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
   const [link, setLink] = useState<LinkCode>()
+  // On a Mac: the install command rather than Brigade.app.
+  const [terminal, setTerminal] = useState(false)
+  const [device, setDevice] = useState<Device>()
+  // A link code expires: the page offers a new one once it has.
+  const [now, setNow] = useState(() => Date.now())
   const [finishing, setFinishing] = useState(false)
   // The live update and the timer can both see the account ready: start one thread.
   const started = useRef(false)
@@ -298,31 +407,61 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
       void reloadAccounts()
       void reloadComputers()
       void check()
+      setNow(Date.now())
     }, 5000)
     return () => clearInterval(timer)
   }, [reloadAccounts, reloadComputers, check])
 
+  useEffect(() => setDevice(detectDevice()), [])
+
+  const getLink = useCallback(() => {
+    setError(undefined)
+    return api<LinkCode>('/computers/link-code', { method: 'POST' })
+      .then(setLink)
+      .catch((e: Error) => setError(e.message))
+  }, [])
+
+  const all = computers.data?.computers ?? []
   const usable = usableComputers(computers.data)
-  // The workspace computer first: it needs nothing on the person's machine.
-  const computer = usable.find((c) => c.kind === 'cloud') ?? usable.find((c) => c.online)
-  const cloud = computers.data?.computers.find((c) => c.kind === 'cloud')
+  const cloud = all.find((c) => c.kind === 'cloud')
+  const cloudUsable = usable.find((c) => c.kind === 'cloud')
+  const machine = all.find((c) => c.kind === 'member_machine' && c.online)
   const signingIn = (accounts.data ?? []).filter((a) => a.source === 'brigade')
+  // A sign-in under way on this computer; one that failed, or on another computer, leaves its buttons.
+  const signingInOn = (computerId: string) =>
+    signingIn.some((a) => {
+      const login = logins[a.id] ?? a.login
+      return (
+        a.computer.id === computerId &&
+        a.status === 'signing_in' &&
+        login?.state !== 'done' &&
+        login?.state !== 'failed'
+      )
+    })
+  const offerCloud = !!computers.data?.cloudAvailable
+  // With billing on, the cloud computer comes with Brigade Cloud: their own machine is free.
+  const planNeeded = offerCloud && !computers.data?.cloudEntitled
   // A new workspace's computer is still being made: sign-in opens once it starts.
   const preparing =
-    !computer &&
-    (cloud
-      ? ['pending', 'creating'].includes(cloud.status)
-      : !!computers.data?.cloudAvailable && computers.data.cloudEntitled)
-  const failed = !computer && cloud?.status === 'error'
-  // With billing on, the cloud computer comes with Brigade Cloud: their own machine is free.
-  const planNeeded = !computer && !!computers.data?.cloudAvailable && !computers.data.cloudEntitled
+    !cloudUsable &&
+    (cloud ? ['pending', 'creating'].includes(cloud.status) : offerCloud && !planNeeded)
+  const failed = !cloudUsable && cloud?.status === 'error'
+  // Once they set up their own machine, Brigade Cloud steps back to one line.
+  const cloudCompact = planNeeded && (!!link || !!machine)
 
-  async function signIn(provider: Account['provider']) {
-    if (!computer) return
+  // On Linux the command is the way in: show it straight away.
+  const linuxLink = useRef(false)
+  useEffect(() => {
+    if (device !== 'linux' || !computers.data || machine || linuxLink.current) return
+    linuxLink.current = true
+    void getLink()
+  }, [device, computers.data, machine, getLink])
+
+  async function signIn(computerId: string, provider: Account['provider']) {
     setBusy(true)
     setError(undefined)
     try {
-      await api('/accounts', { body: { computerId: computer.id, provider } })
+      await api('/accounts', { body: { computerId, provider } })
       await accounts.reload()
     } catch (e) {
       setError((e as Error).message)
@@ -340,13 +479,326 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
     }
   }
 
-  if (finishing) return <Shell title="Meeting Chief…" description="Starting your first thread." />
+  function subscribe() {
+    setBusy(true)
+    void act(subscribeToCloud('onboarding')).then(() => setBusy(false))
+  }
+
+  if (finishing)
+    return (
+      <Shell
+        title="Your team is ready"
+        description="Chief, your first teammate, is setting up your team with you."
+      >
+        <p className="flex items-center justify-center gap-2.5 text-sm">
+          <span aria-hidden className="size-2 animate-pulse rounded-full bg-primary" />
+          Meeting Chief… starting your first thread.
+        </p>
+      </Shell>
+    )
+
+  const signInButtons = (computerId: string) =>
+    !signingInOn(computerId) && (
+      <div className="flex flex-col gap-2.5">
+        <Button
+          size="lg"
+          variant="outline"
+          disabled={busy}
+          onClick={() => void signIn(computerId, 'claude_code')}
+        >
+          <HarnessLogo harness="claude_code" />
+          Sign in with Claude
+        </Button>
+        <Button
+          size="lg"
+          variant="outline"
+          disabled={busy}
+          onClick={() => void signIn(computerId, 'codex')}
+        >
+          <HarnessLogo harness="codex" />
+          Sign in with ChatGPT (Codex)
+        </Button>
+      </div>
+    )
+
+  const cloudHead = (aside: React.ReactNode) => (
+    <CardHead
+      icon={<Cloud />}
+      violet
+      title="Brigade Cloud"
+      meta="Your team's own computer, always on"
+      aside={aside}
+    />
+  )
+
+  const cloudCard = !offerCloud ? null : cloudCompact ? null : planNeeded ? (
+    <Card>
+      <CardContent className="flex flex-col gap-4">
+        {cloudHead(<p className="text-xl font-extrabold tracking-tight">{PRICE}</p>)}
+        <ul className="flex flex-col gap-2 text-sm [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground">
+          <li className="flex gap-2.5">
+            <Moon aria-hidden />
+            Close your laptop. Your teammates keep working.
+          </li>
+          <li className="flex gap-2.5">
+            <Clock aria-hidden />
+            Schedules and triggers run on time, even at 3&nbsp;a.m.
+          </li>
+          <li className="flex gap-2.5">
+            <Wallet aria-hidden />
+            Runs on your Claude or ChatGPT plan, so no API bill
+          </li>
+        </ul>
+        <Button size="lg" disabled={busy} onClick={subscribe}>
+          Get Brigade Cloud
+        </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          Ready in a few minutes. Cancel anytime.
+        </p>
+      </CardContent>
+    </Card>
+  ) : cloudUsable ? (
+    <Card>
+      <CardContent className="flex flex-col gap-4">
+        {cloudHead(<StatusBadge status={cloudUsable.online ? 'online' : 'starting'} />)}
+        {signInButtons(cloudUsable.id)}
+        {!cloudUsable.online && !signingInOn(cloudUsable.id) && (
+          <p className="text-center text-xs text-muted-foreground">
+            Your cloud computer is starting. Sign-in begins as soon as it is up, which takes a few
+            minutes the first time.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  ) : preparing ? (
+    <Card>
+      <CardContent className="flex flex-col gap-4">
+        {cloudHead(<StatusBadge status="active" />)}
+        <Waiting title="Getting your cloud computer ready…">
+          A few minutes the first time. Sign-in opens here as soon as it is up.
+        </Waiting>
+      </CardContent>
+    </Card>
+  ) : failed ? (
+    <Card>
+      <CardContent className="flex flex-col gap-4">
+        {cloudHead(<StatusBadge status="error" />)}
+        <p className="text-sm text-muted-foreground">
+          Your cloud computer could not be set up. Try again, or use your own computer.
+        </p>
+        <Button
+          variant="outline"
+          className="self-start"
+          onClick={() =>
+            void act(api(`/computers/${cloud!.id}/start`, { method: 'POST' })).then(() =>
+              computers.reload(),
+            )
+          }
+        >
+          Try again
+        </Button>
+      </CardContent>
+    </Card>
+  ) : null
+
+  const free = <StatusBadge status="free" tone="success" />
+  const until = link && new Date(link.expiresAt).toLocaleTimeString([], { timeStyle: 'short' })
+  const expired = !!link && Date.parse(link.expiresAt) <= now
+  /** Waiting for the machine while its code works; a new code once it expired. */
+  const waitFor = (what: string, code: 'code' | 'link') =>
+    expired ? (
+      <div className="flex flex-col items-start gap-2 rounded-xl bg-muted px-3.5 py-3">
+        <p className="text-sm">
+          This {code} expired before your {what} connected.
+        </p>
+        <Button size="sm" variant="outline" onClick={() => void getLink()}>
+          Get a new {code}
+        </Button>
+      </div>
+    ) : (
+      <Waiting title={`Waiting for your ${what}…`}>
+        This page goes on by itself once it connects. The {code} works once, until {until}.
+      </Waiting>
+    )
+
+  const machineCard = machine ? (
+    <Card>
+      <CardContent className="flex flex-col gap-4">
+        <CardHead
+          icon={device === 'mac' ? <AppleLogo /> : <Laptop />}
+          title={machineName(machine)}
+          meta="Your computer · linked"
+          aside={<StatusBadge status="online" />}
+        />
+        {!signingInOn(machine.id) && (
+          <>
+            <p className="text-sm text-muted-foreground">
+              No Claude or Codex login on it yet. Sign in on the vendor&apos;s page:
+            </p>
+            {signInButtons(machine.id)}
+            <p className="text-center text-xs text-muted-foreground">
+              Already signed in with <code>claude</code> or <code>codex</code> in a terminal? It
+              shows up here by itself.
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  ) : device === 'mac' ? (
+    <Card className={cn(!link && 'bg-transparent shadow-none')}>
+      <CardContent className="flex flex-col gap-4">
+        <CardHead
+          icon={<AppleLogo />}
+          title="Run them on this Mac"
+          meta="Uses the Claude or Codex login already on it. Your teammates work while your Mac is awake."
+          aside={free}
+        />
+        {!link ? (
+          <>
+            <Button variant="outline" size="lg" asChild>
+              <a href={MAC_APP_URL} onClick={() => void getLink()}>
+                <AppleLogo />
+                Download Brigade for Mac
+              </a>
+            </Button>
+            <button
+              type="button"
+              className="text-center text-xs text-muted-foreground"
+              onClick={() => {
+                setTerminal(true)
+                void getLink()
+              }}
+            >
+              Prefer a terminal?{' '}
+              <span className="text-foreground underline underline-offset-4">
+                Get the install command
+              </span>
+            </button>
+          </>
+        ) : terminal || !link.appLink ? (
+          <>
+            <p className="text-sm text-muted-foreground">Run this in a terminal on your Mac:</p>
+            <Command command={link.command} />
+            {waitFor('Mac', 'code')}
+          </>
+        ) : (
+          <>
+            <ol className="flex flex-col gap-3.5 text-sm">
+              <li className="flex gap-3">
+                <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <Check aria-hidden className="size-3" />
+                </span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-muted-foreground">Download Brigade for Mac</span>
+                  <a
+                    href={MAC_APP_URL}
+                    className="text-xs text-muted-foreground underline underline-offset-4"
+                  >
+                    Download again
+                  </a>
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full border border-primary text-xs font-semibold text-primary">
+                  2
+                </span>
+                <span className="flex flex-col items-start gap-2">
+                  <span className="font-semibold">Open it and link this workspace</span>
+                  <span className="text-xs text-muted-foreground">
+                    Brigade.app asks before it installs anything.
+                  </span>
+                  {!expired && (
+                    <Button asChild>
+                      <a href={link.appLink}>
+                        <ExternalLink aria-hidden />
+                        Open in Brigade
+                      </a>
+                    </Button>
+                  )}
+                </span>
+              </li>
+            </ol>
+            {waitFor('Mac', 'link')}
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer text-center">Or run it in a terminal</summary>
+              <div className="mt-2.5">
+                <Command command={link.command} />
+              </div>
+            </details>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  ) : device === 'linux' ? (
+    <Card className={cn(!link && 'bg-transparent shadow-none')}>
+      <CardContent className="flex flex-col gap-4">
+        <CardHead
+          icon={<Terminal />}
+          title="Run them on this machine"
+          meta="Uses the claude or codex login already on it. Your teammates work while it is on."
+          aside={free}
+        />
+        {link ? (
+          <>
+            <p className="text-sm text-muted-foreground">Run this in a terminal on it:</p>
+            <Command command={link.command} />
+            {waitFor('machine', 'code')}
+          </>
+        ) : (
+          <Button variant="outline" className="self-start" onClick={() => void getLink()}>
+            Get the install command
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  ) : device === 'other' ? (
+    <Card className="bg-transparent shadow-none">
+      <CardContent className="flex flex-col gap-4">
+        <CardHead
+          icon={<Laptop />}
+          title="Have a Mac or Linux machine?"
+          meta="Your teammates can run there, on its Claude or Codex login"
+          aside={free}
+        />
+        {link ? (
+          <>
+            <p className="text-sm text-muted-foreground">Run this in a terminal on it:</p>
+            <Command command={link.command} />
+            {waitFor('machine', 'code')}
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Open this page on it to link it, or link it later from Computers.{' '}
+            <button
+              type="button"
+              className="text-foreground underline underline-offset-4"
+              onClick={() => void getLink()}
+            >
+              Get the install command
+            </button>
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  ) : null
 
   return (
     <Shell
-      title="Connect your AI"
-      description="Your teammates run on your own Claude or ChatGPT subscription. Nothing runs until one is connected."
+      title="Give your teammates a computer"
+      description="They work on a computer of their own, using your Claude or ChatGPT plan. Use Brigade Cloud, your own computer, or both."
     >
+      <div className="-mt-3 flex justify-center gap-2">
+        {(['claude_code', 'codex'] as const).map((harness) => (
+          <span
+            key={harness}
+            className="inline-flex h-7 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-semibold"
+          >
+            <HarnessLogo harness={harness} className="size-3.5" />
+            {harnessLabel(harness)}
+          </span>
+        ))}
+      </div>
+
       <div className="flex gap-3 rounded-lg bg-accent p-4 text-sm text-accent-foreground">
         <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
         <p>
@@ -359,127 +811,37 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
         <AccountCard key={a.id} account={a} login={logins[a.id] ?? a.login} onAct={act} />
       ))}
 
-      {signingIn.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col gap-3">
-            {!computers.data ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
-            ) : computer ? (
-              <>
-                <Button size="lg" disabled={busy} onClick={() => void signIn('claude_code')}>
-                  Sign in with Claude
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void signIn('codex')}
-                >
-                  Sign in with ChatGPT (Codex)
-                </Button>
-                {cloud && !cloud.online && (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Your cloud computer is starting. Sign-in begins as soon as it is up, which takes
-                    a few minutes the first time.
-                  </p>
-                )}
-              </>
-            ) : preparing ? (
-              <div className="flex flex-col items-center gap-2 py-2 text-center">
-                <LoaderCircle aria-hidden className="size-5 animate-spin text-muted-foreground" />
-                <p className="text-sm font-medium">Getting your cloud computer ready…</p>
+      {!computers.data ? (
+        <p className="text-center text-sm text-muted-foreground">Loading…</p>
+      ) : (
+        <>
+          {cloudCard}
+          {cloudCard && machineCard && (
+            <div className="flex items-center gap-3 text-xs text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+              {planNeeded ? 'or, for free' : 'and, for free'}
+            </div>
+          )}
+          {machineCard}
+          {cloudCompact && (
+            <div className="flex items-center gap-3 rounded-xl border px-4 py-3">
+              <Tile violet>
+                <Cloud />
+              </Tile>
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <p className="text-sm font-semibold">Brigade Cloud · {PRICE}</p>
                 <p className="text-xs text-muted-foreground">
-                  This takes a few minutes the first time. Sign-in opens here as soon as it is up.
+                  Your teammates keep working when your computer sleeps
                 </p>
               </div>
-            ) : failed ? (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm text-muted-foreground">
-                  Your cloud computer could not be set up. Try again, or link your own machine
-                  below.
-                </p>
-                <Button
-                  variant="outline"
-                  className="self-start"
-                  onClick={() =>
-                    void act(api(`/computers/${cloud!.id}/start`, { method: 'POST' })).then(() =>
-                      computers.reload(),
-                    )
-                  }
-                >
-                  Try again
-                </Button>
-              </div>
-            ) : planNeeded ? (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm text-muted-foreground">
-                  Link your own machine below, for free: its Claude or Codex login is used as is. Or
-                  let your teammates work on Brigade&apos;s cloud computer, even when your Mac is
-                  asleep, with Brigade Cloud at $99 a month.
-                </p>
-                <Button
-                  variant="outline"
-                  className="self-start"
-                  disabled={busy}
-                  onClick={() => {
-                    setBusy(true)
-                    void act(subscribeToCloud('onboarding')).then(() => setBusy(false))
-                  }}
-                >
-                  Subscribe to Brigade Cloud
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                This Brigade has no cloud computer. Link your own machine below: its Claude or Codex
-                login is used as is.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+              <Button variant="outline" size="sm" disabled={busy} onClick={subscribe}>
+                Start
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {error && <p className="text-center text-sm text-destructive-text">{error}</p>}
-
-      <details
-        className="group rounded-lg border px-4 py-3 text-sm"
-        open={!computer && !preparing && !!computers.data}
-      >
-        <summary className="flex cursor-pointer items-center gap-2 font-medium">
-          <Terminal className="size-4" aria-hidden />
-          Use my own machine instead
-        </summary>
-        <div className="mt-3 flex flex-col gap-3 text-muted-foreground">
-          <p>
-            Already signed in to <code>claude</code> or <code>codex</code> on your Mac or Linux
-            machine? Link it and your teammates run there, on that login.
-          </p>
-          {link ? (
-            <>
-              <pre className="rounded-md border bg-muted p-3 font-mono text-xs break-all whitespace-pre-wrap text-foreground">
-                {link.command}
-              </pre>
-              <p>
-                Run it in a terminal. The code works once and expires at{' '}
-                {new Date(link.expiresAt).toLocaleTimeString()}. This page goes on by itself once
-                your machine connects.
-              </p>
-            </>
-          ) : (
-            <Button
-              variant="outline"
-              className="self-start"
-              onClick={() =>
-                void api<LinkCode>('/computers/link-code', { method: 'POST' })
-                  .then(setLink)
-                  .catch((e: Error) => setError(e.message))
-              }
-            >
-              Get the install command
-            </Button>
-          )}
-        </div>
-      </details>
     </Shell>
   )
 }
