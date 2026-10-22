@@ -83,8 +83,14 @@ export function BrigadeNoteLine({ note }: { note: BrigadeNote }) {
     <Collapsible className="text-sm text-muted-foreground">
       <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 text-left hover:text-foreground">
         <Icon aria-hidden className="size-4 shrink-0" />
-        <span className="shrink-0 font-medium">{note.label}</span>
-        <span className="min-w-0 truncate group-data-[state=open]:hidden">
+        {/* A long title shrinks it, cut short until open, rather than pushing past the column. */}
+        <span
+          title={note.label}
+          className="min-w-0 truncate font-medium group-data-[state=open]:whitespace-normal group-data-[state=open]:wrap-anywhere"
+        >
+          {note.label}
+        </span>
+        <span className="min-w-0 flex-1 truncate group-data-[state=open]:hidden">
           {firstLine(note.body)}
         </span>
         <ChevronRight
