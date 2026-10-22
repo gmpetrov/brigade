@@ -303,7 +303,8 @@ const libraryTimers = new Map<string, NodeJS.Timeout>()
 
 /**
  * Tell the workspace's connected runners the library or memory changed, so
- * they fetch it again. Changes in quick succession go as one.
+ * they fetch it again, and its dashboards, so open documents can show they
+ * changed. Changes in quick succession go as one.
  */
 export function notifyLibraryChanged(workspaceId: string) {
   if (libraryTimers.has(workspaceId)) return
@@ -314,6 +315,7 @@ export function notifyLibraryChanged(workspaceId: string) {
       for (const conn of runners.values())
         if (conn.workspaceId === workspaceId && conn.protocolVersion >= 4)
           send(conn.ws, { type: 'library.changed' })
+      broadcast(workspaceId, { type: 'library.updated' })
     }, 300),
   )
 }
