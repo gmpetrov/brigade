@@ -174,10 +174,11 @@ export const search = new Hono<AppEnv>()
           result({ kind: 'memory', id: hit.documentId, title: hit.title, snippet: hit.snippet }),
         )
     }
-    // Files whose path matches, though their text may not.
+    // Files whose path matches, though their text may not. Never one in the trash.
     const byPath = await db.document.findMany({
       where: {
         kind: 'library',
+        deletedAt: null,
         id: { notIn: files.map((f) => f.id) },
         ...matching(words, ['path']),
       },
