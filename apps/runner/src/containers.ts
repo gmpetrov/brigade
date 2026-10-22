@@ -107,7 +107,8 @@ const ofThread = (container: Container, sessionId: string) =>
  * Stop the running containers of the threads `quiet` says may lose them.
  * Resolves to those threads, by the id `quiet` was asked about. A thread's own
  * Docker with no container at all stops as soon as nobody works in the thread
- * (`idle`): each costs some memory, and starts again at the thread's next turn.
+ * (`idle`): each costs some memory, and starts again at the thread's next docker command
+ * (its socket starts it: the thread helper's docker-gate).
  */
 export async function stopQuiet(
   user: string,

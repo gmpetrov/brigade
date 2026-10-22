@@ -143,6 +143,17 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   starts a daemon under the teammate's user session (`loginctl enable-linger`).
   The runner sets `DOCKER_HOST` and `XDG_RUNTIME_DIR` for that teammate's turns,
   terminals and previews. Where the computer has no Docker, nothing changes.
+- **A thread's Docker starts on its first use.** In a thread with its own
+  network, the thread helper's `docker` (called as each turn, terminal and
+  preview starts) only puts up a socket at `DOCKER_HOST`, a systemd socket unit.
+  Its first connection runs `docker-gate`: the thread's rootless Docker starts
+  (about a second), then `socat` relays to it, as the teammate. Started at each
+  turn instead, an idle Docker cost about 190 MB (dockerd 92, containerd 47,
+  rootlesskit 52) in every thread working at once, used or not. The relay is
+  `socat` (`shut-close`, a day's `-t`) because systemd-socket-proxyd (systemd
+  255) lost what a container printed once its client half-closed (`docker run`,
+  `docker exec`), and kept a client whose stdin stayed open waiting once Docker
+  was done.
 
 ## Known limits
 
@@ -163,9 +174,12 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   (`/run/brigade-docker/<thread>/<user>`), containerd's socket paths were longer
   than a unix socket's may be (104), so containerd failed and dockerd gave up
   after about 15 seconds, holding `docker info` until then. Its sockets now go
-  in an exec root of 20 characters (`/run/bd/<hash>`); with that, a rootless
-  Docker started in a second, ran a container and published a port the thread
-  reached (tried as a teammate's user, outside the helper).
+  in an exec root of 20 characters (`/run/bd/<hash>`). With that, the thread
+  helper's own `docker-gate` (run as a teammate's user, systemd stood in for)
+  started Docker on the first connection in under a second, and `docker run`,
+  `docker exec`, `docker compose` and a published port worked through it. What
+  only a cloud computer shows (the socket unit, root dropping to the teammate)
+  is checked after deploying.
 - **Seeds that call third-party APIs** (a Stripe product list) fail without a
   key: the teammate asks for a test-mode key as a preview variable, or seeds
   what it can and says what is empty.
@@ -183,6 +197,7 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
 3. **Test in Safari and Firefox**: signing in to an app in the pane, and the
    provider's token cookie in the frame.
 4. **Test rootless Docker on a workspace computer through the helper** after
-   deploying: the root setup runs again by itself (its stamp changed); then a
-   teammate runs `docker info` and `docker compose up -d` in a repository with
-   Postgres and Redis, in a thread.
+   deploying: the root setup runs again by itself (its stamp changed); then, in
+   a thread, no `brigade-docker-*` unit runs before the teammate's first
+   `docker info`, which starts one, and `docker compose up -d` in a repository
+   with Postgres and Redis works, `docker compose exec` included.

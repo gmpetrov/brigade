@@ -116,8 +116,8 @@ export async function takeDown(sessionId: string, purge = false) {
 }
 
 /**
- * The teammate's own Docker in the thread, started if needed: its socket, or
- * null where the computer has no rootless Docker.
+ * The teammate's own Docker in the thread: its socket, which starts it on the
+ * first connection, or null where the computer has no rootless Docker.
  */
 export async function threadDocker(net: ThreadNet, runAs: string) {
   const { stdout } = await run('sudo', ['-n', THREAD_HELPER, 'docker', net.thread, runAs], {

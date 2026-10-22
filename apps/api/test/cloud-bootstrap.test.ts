@@ -58,9 +58,42 @@ test(
     assert.equal(of('cmthread1', 'bt-ada'), of('cmthread1', 'bt-ada'))
     assert.notEqual(of('cmthread1', 'bt-ada'), of('cmthread2', 'bt-ada'))
     assert.notEqual(of('cmthread1', 'bt-ada'), of('cmthread1', 'bt-bob'))
-    assert.match(THREAD_HELPER, /dockerd-rootless\.sh --data-root="\$D" --exec-root="\$X"/)
+    assert.match(
+      THREAD_HELPER,
+      /dockerd-rootless\.sh --data-root="\$DD" --exec-root="\$DX" -H "unix:\/\/\$DX\/docker\.sock"/,
+    )
   },
 )
+
+test("a thread's Docker starts on its socket's first connection, not when a turn starts", () => {
+  // `docker`, which the runner calls as each turn, preview and terminal starts, only puts up
+  // the socket; docker-gate, which that socket runs, starts Docker (docker_up).
+  const branch = (name: string) =>
+    new RegExp(`^  ${name}\\) #[\\s\\S]*?^    ;;$`, 'm').exec(THREAD_HELPER)?.[0] ?? ''
+  const docker = branch('docker')
+  assert.match(docker, /--socket-property=ListenStream="\$R\/docker\.sock"/)
+  assert.match(docker, /--socket-property=SocketUser="\$3"/)
+  assert.match(docker, /brigade-thread docker-gate "\$2" "\$3"/)
+  // It may look for dockerd-rootless.sh, never run it.
+  assert.doesNotMatch(docker, /docker_up "|dockerd-rootless\.sh --/)
+  const gate = branch('docker-gate')
+  assert.match(gate, /docker_up "\$2" "\$3"/)
+  assert.match(gate, /exec setpriv --reuid="\$3"[\s\S]*socat -t 86400 ACCEPT-FD:3,fork,shut-close/)
+  assert.match(setupScript(), /for P in [^;]*\bsocat\b/)
+})
+
+test('docker-gate runs only from its socket', () => {
+  const result = spawnSync(
+    'sh',
+    ['-c', THREAD_HELPER, 'brigade-thread', 'docker-gate', 't1', 'bt-ada'],
+    {
+      env: { PATH: '/usr/bin:/bin' },
+      encoding: 'utf8',
+    },
+  )
+  assert.equal(result.status, 2)
+  assert.match(result.stderr, /only the socket of docker starts this/)
+})
 
 test("the thread helper restarts systemd-resolved when the threads' listener is missing", () => {
   // Its host_rules alone, with what it calls stubbed: systemctl's calls are logged, ss lists

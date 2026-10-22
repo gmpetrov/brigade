@@ -161,6 +161,32 @@ netns() { [ -e "/run/netns/bt-$1" ] || fail "no network for thread $1"; echo "/r
 # whatever the ids: under its runtime directory, containerd's were longer than a unix socket's
 # path may be (104), and it never started. <thread> <user>
 docker_exec() { echo "/run/bd/$(printf '%s/%s' "$1" "$2" | sha256sum | cut -c1-12)"; }
+# The teammate's Docker in a thread started, unless it runs: its own unit (it outlives the
+# runner's restarts), in the thread's namespace (its published ports are the thread's), its
+# sockets in docker_exec's. Waits for its socket. <thread> <user>
+docker_up() {
+  DX=$(docker_exec "$1" "$2")
+  DU="brigade-docker-$1-$2"
+  if ! systemctl is-active --quiet "$DU"; then
+    DN=$(netns "$1")
+    install -d -m 755 /run/bd
+    install -d -o "$2" -g "$2" -m 700 "$DX"
+    rm -f "$DX/docker.sock"
+    DD="/home/$2/.local/share/brigade-docker/$1"
+    runuser -u "$2" -- mkdir -p "$DD"
+    systemctl reset-failed "$DU" 2>/dev/null || true
+    # No systemd of the teammate's to manage cgroups from there, hence cgroupfs (containers
+    # without resource limits).
+    systemd-run --quiet --unit="$DU" --collect -p NetworkNamespacePath="$DN" \\
+      -p User="$2" -p Group="$2" -p Delegate=yes -p KillMode=mixed \\
+      -E XDG_RUNTIME_DIR="/run/brigade-docker/$1/$2" -E HOME="/home/$2" -E PATH=/usr/bin:/bin:/usr/sbin:/sbin \\
+      dockerd-rootless.sh --data-root="$DD" --exec-root="$DX" -H "unix://$DX/docker.sock" \\
+      --exec-opt native.cgroupdriver=cgroupfs
+  fi
+  DI=0
+  while [ ! -S "$DX/docker.sock" ] && [ $DI -lt 120 ]; do sleep 0.25; DI=$((DI + 1)); done
+  [ -S "$DX/docker.sock" ] || fail "Docker did not start for $2 in thread $1 (journalctl -u $DU)"
+}
 lock() { install -d -m 755 "$STATE"; exec 9>"$STATE/.lock"; flock 9; }
 # Threads reach the internet (masqueraded) and the host's DNS resolver, never each other.
 host_rules() {
@@ -347,41 +373,53 @@ case "\${1:-}" in
       rm -rf "\${TMPS:?}/$2"
     fi
     ;;
-  docker) # <thread> <user>: the teammate's rootless Docker in the thread's namespace, started if
-    # needed (its published ports are the thread's); prints its socket. Nothing without Docker.
+  docker) # <thread> <user>: the teammate's rootless Docker in the thread's namespace, behind a
+    # socket that starts it on its first connection (docker-gate): a thread that never runs
+    # docker costs no memory (a running one, about 190 MB). Prints that socket. Nothing
+    # without Docker.
     thread_ok "$2"
     user_ok "$3"
-    N=$(netns "$2")
+    netns "$2" >/dev/null
     command -v dockerd-rootless.sh >/dev/null && command -v newuidmap >/dev/null || exit 0
     grep -q "^$3:" /etc/subuid || fail "no subordinate ids for $3"
     R="/run/brigade-docker/$2/$3"
-    X=$(docker_exec "$2" "$3")
-    UNIT="brigade-docker-$2-$3"
-    if ! systemctl is-active --quiet "$UNIT"; then
-      install -d -m 755 /run/brigade-docker "/run/brigade-docker/$2" /run/bd
-      install -d -o "$3" -g "$3" -m 700 "$R" "$X"
-      # A socket left by a Docker that stopped answers nothing: the wait below is for the new one's.
-      rm -f "$R/docker.sock"
-      D="/home/$3/.local/share/brigade-docker/$2"
-      runuser -u "$3" -- mkdir -p "$D"
-      systemctl reset-failed "$UNIT" 2>/dev/null || true
-      # Its own unit: it outlives the runner's restarts. No systemd of the teammate's to manage
-      # cgroups from there, hence cgroupfs (containers without resource limits).
-      systemd-run --quiet --unit="$UNIT" --collect -p NetworkNamespacePath="$N" \\
-        -p User="$3" -p Group="$3" -p Delegate=yes -p KillMode=mixed \\
-        -E XDG_RUNTIME_DIR="$R" -E HOME="/home/$3" -E PATH=/usr/bin:/bin:/usr/sbin:/sbin \\
-        dockerd-rootless.sh --data-root="$D" --exec-root="$X" --exec-opt native.cgroupdriver=cgroupfs
+    GATE="brigade-gate-$2-$3"
+    # Its Docker stopped by itself (not by docker-stop): its proxy goes too, and the next
+    # connection starts both again.
+    if systemctl is-active --quiet "$GATE.service" && ! systemctl is-active --quiet "brigade-docker-$2-$3"; then
+      systemctl stop "$GATE.service"
     fi
-    I=0
-    while [ ! -S "$R/docker.sock" ] && [ $I -lt 120 ]; do sleep 0.25; I=$((I + 1)); done
-    [ -S "$R/docker.sock" ] || fail "Docker did not start for $3 in thread $2 (journalctl -u $UNIT)"
+    if ! systemctl is-active --quiet "$GATE.socket"; then
+      install -d -m 755 /run/brigade-docker "/run/brigade-docker/$2"
+      install -d -o "$3" -g "$3" -m 700 "$R"
+      rm -f "$R/docker.sock"
+      systemctl stop "$GATE.service" 2>/dev/null || true
+      systemctl reset-failed "$GATE.socket" "$GATE.service" 2>/dev/null || true
+      systemd-run --quiet --unit="$GATE" \\
+        --socket-property=ListenStream="$R/docker.sock" --socket-property=SocketUser="$3" \\
+        --socket-property=SocketGroup="$3" --socket-property=SocketMode=0600 \\
+        /usr/local/sbin/brigade-thread docker-gate "$2" "$3"
+    fi
     echo "$R/docker.sock"
     ;;
-  docker-stop) # <thread> <user> [purge]: that Docker stopped, its containers with it; with purge,
-    # its images, containers and volumes deleted
+  docker-gate) # <thread> <user>: what the socket of \`docker\` runs on a connection, as root: the
+    # teammate's Docker started (docker_up), then, as the teammate, the proxy to it. socat:
+    # systemd-socket-proxyd (255) lost what a container printed once its client half-closed.
+    [ -n "\${LISTEN_FDS:-}" ] || fail "only the socket of docker starts this"
     thread_ok "$2"
     user_ok "$3"
-    systemctl stop "brigade-docker-$2-$3" 2>/dev/null || true
+    docker_up "$2" "$3"
+    # shut-close: once Docker closes a connection, its client's closes whole, as Docker's would.
+    exec setpriv --reuid="$3" --regid="$3" --init-groups \\
+      socat -t 86400 ACCEPT-FD:3,fork,shut-close "UNIX-CONNECT:$(docker_exec "$2" "$3")/docker.sock"
+    ;;
+  docker-stop) # <thread> <user> [purge]: that Docker stopped, its containers with it, and its
+    # socket; with purge, its images, containers and volumes deleted
+    thread_ok "$2"
+    user_ok "$3"
+    for U in "brigade-gate-$2-$3.socket" "brigade-gate-$2-$3.service" "brigade-docker-$2-$3.service"; do
+      systemctl stop "$U" 2>/dev/null || true
+    done
     rm -rf "/run/brigade-docker/$2/$3" "$(docker_exec "$2" "$3")"
     D="/home/$3/.local/share/brigade-docker/$2"
     if [ "\${4:-}" = purge ] && [ -d "$D" ]; then
@@ -469,7 +507,8 @@ fi
 # never the root daemon, whose socket would make it root. Where Docker is installed.
 if command -v dockerd-rootless-setuptool.sh >/dev/null; then
   NEED=""
-  for P in uidmap slirp4netns dbus-user-session; do dpkg -s "$P" >/dev/null 2>&1 || NEED="$NEED $P"; done
+  # socat: the proxy of each thread's Docker socket (the thread helper's docker-gate).
+  for P in uidmap slirp4netns dbus-user-session socat; do dpkg -s "$P" >/dev/null 2>&1 || NEED="$NEED $P"; done
   if [ -n "$NEED" ]; then
     sudo apt-get update -qq
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $NEED >/dev/null
