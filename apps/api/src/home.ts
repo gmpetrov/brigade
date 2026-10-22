@@ -227,7 +227,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
       at: event.at.toISOString(),
       thread: { id: thread.id, title: thread.title },
       teammate: thread.teammate,
-      // A Brigade action (merge) runs from the thread's own button, not from here.
+      // A Brigade action (merge, preview) runs from the thread's own button, not from here.
       reply: replies?.replies[0] ?? null,
       offers,
     })

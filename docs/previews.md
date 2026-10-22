@@ -99,6 +99,13 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   started, or from the saved setup of a repository checked out in the thread,
   then checks its pages itself. With nothing saved, the dashboard explains what
   setting one up involves (the first time only, unless kept) and asks the teammate.
+- **A teammate offers it with a button.** Its offer ends with a `[preview]` line
+  in its replies: Brigade's own button, shown while no preview runs, which starts
+  it as Preview does, without a turn. Asked in the chat, teammates took 10
+  seconds to over 2 minutes before even calling start_preview (October 15 to 21,
+  2026), often longer than the start itself. When the runner cannot start it
+  alone (nothing saved, or vault credentials), the click goes to the teammate as
+  the person's message, as a reply's button does.
 - **No browser testing by default.** Measured on four days of threads (October
   15 to 18, 2026), teammates testing their own changes in a browser took about
   22% of their active time in threads that changed code, 60% of it unasked, and

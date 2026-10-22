@@ -1572,6 +1572,7 @@ export function ThreadItems({
   teammate,
   teammates = [],
   onOpenPreview,
+  previewStart,
   working = false,
   starting = false,
   background = [],
@@ -1600,6 +1601,8 @@ export function ThreadItems({
   teammates?: { id: string; name: string; harness: string }[]
   /** Opens the thread's preview beside it; set while one runs. */
   onOpenPreview?: () => void
+  /** Starts the thread's preview, for a teammate's preview button. Unset where it cannot. */
+  previewStart?: ReplyPreview
   /** A teammate's turn runs now: its latest steps show live, with how long it has worked. */
   working?: boolean
   /** The thread's computer is starting for that turn. */
@@ -1897,6 +1900,7 @@ export function ThreadItems({
               key={item.key}
               replies={replies}
               pull={pullBefore(i)}
+              {...(previewStart ? { preview: previewStart } : {})}
               onSend={onChoose}
             />
           )
@@ -3359,15 +3363,28 @@ function ChoicesCard({
   )
 }
 
+/** What a teammate's preview button needs from the thread: whether one runs, and starting it. */
+export type ReplyPreview = {
+  /** One starts or runs: the button steps aside, Preview and its panel show it. */
+  live: boolean
+  /** It is being started, from this button or Preview. */
+  busy: boolean
+  /** As Preview starts it; `words` go to the teammate when the runner cannot start it alone. */
+  start: (words: string) => void
+}
+
 /** Answers a teammate suggested under its reply: a click sends one as the person's message. */
 function SuggestedReplyButtons({
   replies,
   pull,
+  preview,
   onSend,
 }: {
   replies: SuggestedReplies
   /** The pull request opened last in the thread: what a merge button merges. */
   pull: { repository: string; number: number } | null
+  /** The thread's preview: what a preview button starts. */
+  preview?: ReplyPreview
   onSend: (text: string) => Promise<void>
 }) {
   const [sending, setSending] = useState<string>()
@@ -3387,15 +3404,35 @@ function SuggestedReplyButtons({
   return (
     <div className="flex flex-col -mt-2 gap-1.5 pl-11">
       <div className="flex flex-wrap gap-2">
-        {pull &&
-          replies.actions?.map((a) => (
-            <PullMergeButton
-              key={`${a.action}:${a.label}`}
-              repository={pull.repository}
-              number={pull.number}
-              label={a.label}
-            />
-          ))}
+        {replies.actions?.map((a) =>
+          a.action === 'merge'
+            ? pull && (
+                <PullMergeButton
+                  key={`${a.action}:${a.label}`}
+                  repository={pull.repository}
+                  number={pull.number}
+                  label={a.label}
+                />
+              )
+            : preview &&
+              !preview.live && (
+                <Button
+                  key={`${a.action}:${a.label}`}
+                  type="button"
+                  size="sm"
+                  className="rounded-full"
+                  disabled={preview.busy || sending !== undefined}
+                  onClick={() => preview.start(a.label)}
+                >
+                  {preview.busy ? (
+                    <LoaderCircle aria-hidden className="animate-spin" />
+                  ) : (
+                    <AppWindow aria-hidden />
+                  )}
+                  {a.label}
+                </Button>
+              ),
+        )}
         {replies.replies.map((reply) => (
           <Button
             key={reply}
