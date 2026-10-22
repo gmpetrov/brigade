@@ -104,6 +104,8 @@ export function instructions(
     !spec.playbook && schedules(spec),
     children(spec),
     spec.playbook ? playbook(spec.playbook, !!spec.parent) : !spec.parent && INSTALLING,
+    // A playbook's run has only the Apps the playbook declares.
+    !spec.playbook && APP_ACCOUNTS,
     credentials(browser),
     remembered(memory.workspace) &&
       `## Workspace memory\n\n${memorySection(memory.workspace, memory.dir, 'workspace')}`,
@@ -742,6 +744,20 @@ const playbook = (playbook: NonNullable<ThreadSpec['playbook']>, child: boolean)
  * computer (a member's machine), or why it did not start on a cloud computer.
  */
 export type Browser = { ready: true } | { ready: false; error?: string }
+
+/**
+ * Getting an App account the teammate lacks: one connected to the workspace but
+ * not granted to it does not show, and it would otherwise guess why.
+ */
+const APP_ACCOUNTS =
+  '## App accounts\n\n' +
+  "Each App tool's description ends with the account it reaches, in brackets. You have only the accounts granted " +
+  'to you: one connected to the workspace but not granted to you does not show at all. When the work needs an ' +
+  'account your tools do not reach (a message names one, or your tools reach another account of that App), do not ' +
+  'stop to explain it or guess why: open a ticket (`open_ticket`) with an `access` ask of kind `connection`, `app` ' +
+  "of that App's kind with the scope you need and `account` naming it as the person wrote it. Once they grant it, " +
+  'its tools reach you in this thread; check the account in their description before you use them, then finish ' +
+  'the task.'
 
 /** The vault, and getting a login or key it lacks without stopping the work. */
 const credentials = (browser: Browser) =>
