@@ -214,7 +214,7 @@ docker_rules() {
   DC="BD-$DI-$(id -u "$2")"
   DNC="BD-$(id -u "$2")"
   DP=""
-  [ ! -f "$DOCKER_RUN/$1/$2/address" ] || DP=$(docker_ports "$2" "$DL")
+  [ ! -f "$DOCKER_RUN/$1/$2.address" ] || DP=$(docker_ports "$2" "$DL")
   iptables -t nat -N "$DC" 2>/dev/null || iptables -t nat -F "$DC"
   iptables -N "$DC" 2>/dev/null || iptables -F "$DC"
   iptables -t nat -C PREROUTING -i "btn$DI" -j "$DC" 2>/dev/null || iptables -t nat -A PREROUTING -i "btn$DI" -j "$DC"
@@ -471,7 +471,9 @@ case "\${1:-}" in
     R="$DOCKER_RUN/$2/$3"
     install -d -m 755 "$DOCKER_RUN" "$DOCKER_RUN/$2"
     install -d -o "$3" -g "$3" -m 700 "$R"
-    loop_addr "$(index "$2")" >"$R/address"
+    # Beside the teammate's folder, never in it: root writes no file the teammate could have
+    # made a link to another.
+    loop_addr "$(index "$2")" >"$DOCKER_RUN/$2/$3.address"
     docker_proxy "$3" "$R"
     lock
     docker_rules "$2" "$3"
@@ -491,7 +493,7 @@ case "\${1:-}" in
     thread_ok "$2"
     user_ok "$3"
     docker_lock "$3"
-    rm -rf "\${DOCKER_RUN:?}/$2/$3"
+    rm -rf "\${DOCKER_RUN:?}/$2/$3" "$DOCKER_RUN/$2/$3.address"
     rmdir "$DOCKER_RUN/$2" 2>/dev/null || true
     if [ -S "/run/user/$(id -u "$3")/bus" ]; then
       as_user "$3" systemctl --user kill -s HUP brigade-docker-proxy.service 2>/dev/null || true
@@ -515,7 +517,7 @@ case "\${1:-}" in
     [ -S "/run/user/$(id -u "$2")/bus" ] || exit 0
     as_user "$2" systemctl --user stop brigade-docker.service docker.service 2>/dev/null || true
     lock
-    for F in "$DOCKER_RUN"/*/"$2"/address; do
+    for F in "$DOCKER_RUN"/*/"$2".address; do
       [ -f "$F" ] || continue
       T=\${F#"$DOCKER_RUN/"}
       docker_rules "\${T%%/*}" "$2"

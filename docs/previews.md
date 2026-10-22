@@ -157,7 +157,7 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
     takes over (attach, exec, BuildKit) included, and reads only the requests:
     a container create gets the label `brigade.thread=<thread>`, and each port
     it publishes goes on the thread's own loopback address (`127.231.x.y` for
-    thread n, written beside the socket), same port number (`-P` too, from the
+    thread n, written by root beside the teammate's folder, never in it), same port number (`-P` too, from the
     image's exposed ports). A container's start is answered once its ports are
     up; Docker's events do the same when one starts or stops by itself.
   - **Why a loopback address per thread.** Measured with Docker 29.7 and

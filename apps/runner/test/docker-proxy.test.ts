@@ -149,7 +149,7 @@ function threads(...names: [string, string][]) {
   const root = mkdtempSync(join(tmpdir(), 'docker-proxy-'))
   for (const [thread, address] of names) {
     mkdirSync(join(root, thread, 'bt-test'), { recursive: true })
-    writeFileSync(join(root, thread, 'bt-test', 'address'), `${address}\n`)
+    writeFileSync(join(root, thread, 'bt-test.address'), `${address}\n`)
   }
   return root
 }
@@ -434,14 +434,22 @@ test('the proxy follows its threads: a new folder gets a socket, one gone loses 
   proxy.scan()
   assert.deepEqual(proxy.threads(), ['cmthread1'])
   mkdirSync(join(root, 'cmthread2', 'bt-test'), { recursive: true })
-  writeFileSync(join(root, 'cmthread2', 'bt-test', 'address'), '127.231.0.8\n')
+  writeFileSync(join(root, 'cmthread2', 'bt-test.address'), '127.231.0.8\n')
   // A folder without its address yet, another teammate's, and a name the helper never makes.
   mkdirSync(join(root, 'cmthread3', 'bt-test'), { recursive: true })
   mkdirSync(join(root, 'cmthread4', 'bt-other'), { recursive: true })
-  writeFileSync(join(root, 'cmthread4', 'bt-other', 'address'), '127.231.0.9\n')
+  writeFileSync(join(root, 'cmthread4', 'bt-other.address'), '127.231.0.9\n')
   mkdirSync(join(root, '.bt-test.lock'), { recursive: true })
   proxy.scan()
   assert.deepEqual(proxy.threads().sort(), ['cmthread1', 'cmthread2'])
+  await listening(socketOf(root, 'cmthread2'))
+  // Its folder removed and made again before the proxy looked (docker-stop, then docker):
+  // its socket is bound again.
+  rmSync(join(root, 'cmthread2', 'bt-test'), { recursive: true })
+  mkdirSync(join(root, 'cmthread2', 'bt-test'))
+  proxy.scan()
+  await listening(socketOf(root, 'cmthread2'))
+  proxy.scan()
   await listening(socketOf(root, 'cmthread2'))
   rmSync(join(root, 'cmthread1'), { recursive: true })
   proxy.scan()

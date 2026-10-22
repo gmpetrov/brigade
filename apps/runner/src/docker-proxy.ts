@@ -7,7 +7,7 @@
 //
 // - A container created there is labelled with the thread, and what it
 //   publishes goes on the thread's own loopback address (127.231.x.y, written
-//   by the root thread helper beside the socket) instead of 0.0.0.0. Two
+//   by the root thread helper beside the thread's folder) instead of 0.0.0.0. Two
 //   threads can then both publish 5432: rootless Docker publishes a port number
 //   once per loopback address, but once for all others (it reaches its
 //   containers through its own 127.0.0.1 for those).
@@ -21,7 +21,7 @@
 // exec, BuildKit's session) included. Only the requests on a connection are
 // read, never the responses, which are relayed as they come.
 import { execFile } from 'node:child_process'
-import { chmodSync, readdirSync, readFileSync, unlinkSync } from 'node:fs'
+import { chmodSync, readdirSync, readFileSync, statSync, unlinkSync } from 'node:fs'
 import { request } from 'node:http'
 import { connect, createServer, type Server, type Socket } from 'node:net'
 import { userInfo } from 'node:os'
@@ -338,9 +338,12 @@ export type ProxyOptions = {
   startTimeoutMs?: number
 }
 
+/** A thread's socket: the file it bound, once bound. */
+type Listener = { server: Server; address: string; inode?: number; failed?: boolean }
+
 /** The proxy for all of a teammate's threads: one socket per thread folder. */
 export class DockerProxy {
-  private servers = new Map<string, { server: Server; address: string }>()
+  private servers = new Map<string, Listener>()
   private starting: Promise<void> | null = null
   private watching = false
   private events: ReturnType<typeof request> | null = null
@@ -364,16 +367,24 @@ export class DockerProxy {
       const dir = join(root, thread, user)
       let address: string
       try {
-        address = readFileSync(join(dir, 'address'), 'utf8').trim()
+        // Root's, beside the teammate's folder.
+        address = readFileSync(join(root, thread, `${user}.address`), 'utf8').trim()
       } catch {
         continue
       }
-      if (!LOOPBACK.test(address)) continue
+      if (!LOOPBACK.test(address) || !statSync(dir, { throwIfNoEntry: false })?.isDirectory())
+        continue
       seen.add(thread)
       const current = this.servers.get(thread)
-      if (current?.address === address) continue
+      // Kept while its socket is the file it bound (bound as it listens, known once it
+      // listens): a folder removed and made again (docker-stop, then docker) before this scan
+      // has none.
+      if (current?.address === address && !current.failed) {
+        const socket = statSync(join(dir, 'docker.sock'), { throwIfNoEntry: false })
+        if (socket && (current.inode === undefined || socket.ino === current.inode)) continue
+      }
       current?.server.close()
-      this.servers.set(thread, { server: this.listen(thread, dir, address), address })
+      this.servers.set(thread, this.listen(thread, dir, address))
     }
     for (const [thread, { server }] of this.servers)
       if (!seen.has(thread)) {
@@ -394,7 +405,7 @@ export class DockerProxy {
     for (const timer of this.timers.values()) clearTimeout(timer)
   }
 
-  private listen(thread: string, dir: string, address: string) {
+  private listen(thread: string, dir: string, address: string): Listener {
     const path = join(dir, 'docker.sock')
     try {
       unlinkSync(path)
@@ -404,15 +415,22 @@ export class DockerProxy {
     const server = createServer({ allowHalfOpen: true, pauseOnConnect: true }, (client) =>
       this.serve(thread, address, client),
     )
-    server.on('error', (error) => console.error(`docker proxy: ${thread}: ${String(error)}`))
+    const listener: Listener = { server, address }
+    server.on('error', (error) => {
+      // Its folder went meanwhile, say: bound again at the next scan.
+      listener.failed = true
+      console.error(`docker proxy: ${thread}: ${String(error)}`)
+    })
     server.listen(path, () => {
       try {
+        listener.inode = statSync(path).ino
         chmodSync(path, 0o600)
       } catch {
-        // Its folder is the teammate's alone anyway.
+        // Gone already: bound again at the next scan.
+        listener.failed = true
       }
     })
-    return server
+    return listener
   }
 
   private serve(thread: string, address: string, client: Socket) {

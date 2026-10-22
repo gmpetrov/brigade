@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -273,7 +281,7 @@ test("a thread's localhost reaches the ports its teammate's containers publish o
   const { dir, call, thread } = dockerHelper()
   thread('cmthread1', 7)
   mkdirSync(join(dir, 'run', 'cmthread1', 'bt-test'), { recursive: true })
-  writeFileSync(join(dir, 'run', 'cmthread1', 'bt-test', 'address'), '127.231.0.7\n')
+  writeFileSync(join(dir, 'run', 'cmthread1', 'bt-test.address'), '127.231.0.7\n')
   const inspect = [
     '127.231.0.7 5432 5432/tcp',
     '127.231.0.7 32768 80/tcp',
@@ -312,7 +320,7 @@ test("a thread's localhost reaches the ports its teammate's containers publish o
   assert.match(result.log, /^host -t nat -N BD-7-1500$/m)
 
   // Without the teammate's Docker socket in the thread, none of its ports is the thread's.
-  rmSync(join(dir, 'run', 'cmthread1', 'bt-test', 'address'))
+  rmSync(join(dir, 'run', 'cmthread1', 'bt-test.address'))
   const none = call(['docker-ports', 'cmthread1', 'bt-test'], {
     DOCKER_PS: 'c1',
     DOCKER_INSPECT: inspect,
@@ -350,11 +358,18 @@ test(
       bus,
     ])
 
+    // The teammate's own folder, where it left a link to a file of root's: root writes nothing
+    // in it.
+    mkdirSync(join(dir, 'run', 'cmthread1', 'bt-test'), { recursive: true })
+    writeFileSync(join(dir, 'passwd'), 'root:x:0:0\n')
+    symlinkSync(join(dir, 'passwd'), join(dir, 'run', 'cmthread1', 'bt-test', 'address'))
+
     const first = call(['docker', 'cmthread1', 'bt-test'])
     assert.equal(first.status, 0, first.stderr)
+    assert.equal(readFileSync(join(dir, 'passwd'), 'utf8'), 'root:x:0:0\n')
     assert.equal(first.stdout.trim(), `${dir}/run/cmthread1/bt-test/docker.sock`)
     assert.equal(
-      readFileSync(join(dir, 'run', 'cmthread1', 'bt-test', 'address'), 'utf8'),
+      readFileSync(join(dir, 'run', 'cmthread1', 'bt-test.address'), 'utf8'),
       '127.231.0.7\n',
     )
     const started = first.log.split('\n').filter((line) => line.startsWith('systemd-run'))
@@ -369,7 +384,7 @@ test(
     const second = call(['docker', 'cmthread2', 'bt-test'])
     assert.equal(second.status, 0, second.stderr)
     assert.equal(
-      readFileSync(join(dir, 'run', 'cmthread2', 'bt-test', 'address'), 'utf8'),
+      readFileSync(join(dir, 'run', 'cmthread2', 'bt-test.address'), 'utf8'),
       '127.231.1.44\n',
     )
     assert.doesNotMatch(second.log, /systemd-run/)
