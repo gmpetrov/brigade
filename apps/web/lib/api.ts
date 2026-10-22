@@ -349,7 +349,7 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   lastSeq: number
   /** In a child a person talked with: when its last message goes to the parent, unless sent sooner. */
   reportDueAt: string | null
-  teammate: { id: string; name: string; harness: string; model: string | null }
+  teammate: { id: string; name: string; title: string; harness: string; model: string | null }
   teammates: {
     joinedAt: string
     lastTurnAt: string

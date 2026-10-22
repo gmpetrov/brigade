@@ -10,6 +10,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CloseButton } from '@/components/close-button'
 import { StatusBadge, TeammateAvatar } from '@/components/dashboard'
+import { TeammateTitle } from '@/components/teammate-title'
 import { DesktopScreen } from '@/components/desktop-preview'
 import type { OpenFile } from '@/components/file-links'
 import { describeCron } from '@/components/schedules'
@@ -63,7 +64,7 @@ function Frame({
   onEscape = onClose,
   children,
 }: {
-  teammate: Pick<Teammate, 'id' | 'name' | 'harness'>
+  teammate: Pick<Teammate, 'id' | 'name' | 'title' | 'harness'>
   subtitle: string
   onClose: () => void
   /** What Escape does: closes it, as it does the other panels beside a page, unless told else. */
@@ -86,7 +87,10 @@ function Frame({
       <div className="flex h-14 shrink-0 flex-nowrap items-center gap-3 px-4">
         <TeammateAvatar teammate={teammate} className="size-7" />
         <div className="min-w-0 flex-1 leading-tight">
-          <strong className="block truncate text-sm font-semibold">{teammate.name}</strong>
+          <span className="flex min-w-0 items-center gap-2">
+            <strong className="truncate text-sm font-semibold">{teammate.name}</strong>
+            <TeammateTitle title={teammate.title} className="px-1.5 py-0 text-[11px]" />
+          </span>
           <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
         </div>
         <CloseButton label={`Close ${teammate.name}'s panel`} title="Close" onClick={onClose} />
