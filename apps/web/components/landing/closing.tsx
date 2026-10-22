@@ -199,7 +199,7 @@ export function Download() {
               <div className={c('mb')}>
                 <div className={c('mb-bar')}>
                   <span>Mon 9:41</span>
-                  <span className={c('bb')}>B</span>
+                  <span className={c('bb')}></span>
                 </div>
                 <div className={c('mb-menu')}>
                   <div className={c('r')}>

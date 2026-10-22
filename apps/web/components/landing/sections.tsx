@@ -82,7 +82,7 @@ export function Message() {
               </div>
               <div className={c('ph-push m-push')}>
                 <div className={c('push')}>
-                  <span className={c('app')}>B</span>
+                  <img className={c('app')} src="/icons/icon-192.png" alt="" />
                   <div className={c('bd')}>
                     <div className={c('ph')}>
                       <b>Brigade</b>
