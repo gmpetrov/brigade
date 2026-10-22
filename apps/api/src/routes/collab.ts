@@ -4,11 +4,19 @@
 // everything that follows.
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { fromCollabServer, normalizeMarkdown, toMarkdown, updateFrom } from '../collab.js'
+import {
+  cursorColor,
+  fromCollabServer,
+  normalizeMarkdown,
+  toMarkdown,
+  updateFrom,
+} from '../collab.js'
 import { prisma, scoped } from '../db.js'
 import { documentText, isMarkdown, saveDocumentText, StaleMemory } from '../library.js'
 
 const SHA = 'x-collab-sha'
+/** The teammate who last wrote the text, as `{ name, color }` in URI encoding. */
+const WRITER = 'x-collab-writer'
 
 async function document(id: string) {
   const row = await prisma.document.findUnique({ where: { id } })
@@ -21,9 +29,9 @@ async function document(id: string) {
 
 const body = async (request: Request) => new Uint8Array(await request.arrayBuffer())
 
-const binary = (update: Uint8Array, sha: string) =>
+const binary = (update: Uint8Array, sha: string, headers: Record<string, string> = {}) =>
   new Response(update as Uint8Array<ArrayBuffer>, {
-    headers: { 'content-type': 'application/octet-stream', [SHA]: sha },
+    headers: { 'content-type': 'application/octet-stream', [SHA]: sha, ...headers },
   })
 
 export const collab = new Hono()
@@ -37,13 +45,27 @@ export const collab = new Hono()
    * Bring a room up to date. The body is the room's state when it last
    * matched the stored text (`x-collab-sha`), empty on first load. Nothing
    * when that is still the stored text; otherwise the update from there to
-   * now, which the room merges into what people are editing.
+   * now, which the room merges into what people are editing. When a
+   * teammate wrote it, `x-collab-writer` names them, so people's editors show
+   * it typed in by them.
    */
   .post('/documents/:id/reconcile', async (c) => {
-    const { row, scope } = await document(c.req.param('id'))
+    const { row, scope, db } = await document(c.req.param('id'))
     if (c.req.header(SHA) === row.sha256) return c.body(null, 204)
     const update = await updateFrom(await body(c.req.raw), await documentText(scope, row))
-    return binary(update, row.sha256)
+    const teammate =
+      row.updatedByType === 'teammate' && row.updatedById
+        ? await db.teammate.findFirst({
+            where: { id: row.updatedById },
+            select: { id: true, name: true },
+          })
+        : null
+    const writer = teammate && { name: teammate.name, color: cursorColor(teammate.id) }
+    return binary(
+      update,
+      row.sha256,
+      writer ? { [WRITER]: encodeURIComponent(JSON.stringify(writer)) } : {},
+    )
   })
 
   /**

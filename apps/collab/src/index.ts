@@ -13,6 +13,8 @@ type Token = Editor & { room: string; exp: number }
 
 const EDITOR_HEADER = 'x-brigade-editor'
 const SHA = 'x-collab-sha'
+/** The teammate who wrote what the API sends (URI-encoded JSON), when one did. */
+const WRITER = 'x-collab-writer'
 
 const encoder = new TextEncoder()
 
@@ -132,6 +134,17 @@ export class DocRoom extends YServer<Env> {
     if (response.status === 404) return this.#forget()
     if (!response.ok) throw new Error(`reconcile returned ${response.status}`)
     const update = new Uint8Array(await response.arrayBuffer())
+    // A teammate's edit to a document people have open: say whose it is just
+    // before it goes out, so their editors type it in. Not on a first load.
+    const writer = response.headers.get(WRITER)
+    if (writer && this.#base) {
+      try {
+        const notice = { type: 'typing', writer: JSON.parse(decodeURIComponent(writer)) }
+        this.broadcastCustomMessage(JSON.stringify(notice))
+      } catch (error) {
+        console.warn(`${this.name}: unreadable writer`, error)
+      }
+    }
     Y.applyUpdate(this.document, update, 'api')
     const base = new Y.Doc()
     if (this.#base) Y.applyUpdate(base, this.#base)
