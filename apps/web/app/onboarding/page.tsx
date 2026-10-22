@@ -330,6 +330,8 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
   // On a Mac: the install command rather than Brigade.app.
   const [terminal, setTerminal] = useState(false)
   const [device, setDevice] = useState<Device>()
+  // A link code expires: the page offers a new one once it has.
+  const [now, setNow] = useState(() => Date.now())
   const [finishing, setFinishing] = useState(false)
   // The live update and the timer can both see the account ready: start one thread.
   const started = useRef(false)
@@ -405,6 +407,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
       void reloadAccounts()
       void reloadComputers()
       void check()
+      setNow(Date.now())
     }, 5000)
     return () => clearInterval(timer)
   }, [reloadAccounts, reloadComputers, check])
@@ -424,6 +427,17 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
   const cloudUsable = usable.find((c) => c.kind === 'cloud')
   const machine = all.find((c) => c.kind === 'member_machine' && c.online)
   const signingIn = (accounts.data ?? []).filter((a) => a.source === 'brigade')
+  // A sign-in under way on this computer; one that failed, or on another computer, leaves its buttons.
+  const signingInOn = (computerId: string) =>
+    signingIn.some((a) => {
+      const login = logins[a.id] ?? a.login
+      return (
+        a.computer.id === computerId &&
+        a.status === 'signing_in' &&
+        login?.state !== 'done' &&
+        login?.state !== 'failed'
+      )
+    })
   const offerCloud = !!computers.data?.cloudAvailable
   // With billing on, the cloud computer comes with Brigade Cloud: their own machine is free.
   const planNeeded = offerCloud && !computers.data?.cloudEntitled
@@ -484,7 +498,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
     )
 
   const signInButtons = (computerId: string) =>
-    signingIn.length === 0 && (
+    !signingInOn(computerId) && (
       <div className="flex flex-col gap-2.5">
         <Button
           size="lg"
@@ -548,7 +562,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
       <CardContent className="flex flex-col gap-4">
         {cloudHead(<StatusBadge status={cloudUsable.online ? 'online' : 'starting'} />)}
         {signInButtons(cloudUsable.id)}
-        {!cloudUsable.online && signingIn.length === 0 && (
+        {!cloudUsable.online && !signingInOn(cloudUsable.id) && (
           <p className="text-center text-xs text-muted-foreground">
             Your cloud computer is starting. Sign-in begins as soon as it is up, which takes a few
             minutes the first time.
@@ -589,6 +603,23 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
 
   const free = <StatusBadge status="free" tone="success" />
   const until = link && new Date(link.expiresAt).toLocaleTimeString([], { timeStyle: 'short' })
+  const expired = !!link && Date.parse(link.expiresAt) <= now
+  /** Waiting for the machine while its code works; a new code once it expired. */
+  const waitFor = (what: string, code: 'code' | 'link') =>
+    expired ? (
+      <div className="flex flex-col items-start gap-2 rounded-xl bg-muted px-3.5 py-3">
+        <p className="text-sm">
+          This {code} expired before your {what} connected.
+        </p>
+        <Button size="sm" variant="outline" onClick={() => void getLink()}>
+          Get a new {code}
+        </Button>
+      </div>
+    ) : (
+      <Waiting title={`Waiting for your ${what}…`}>
+        This page goes on by itself once it connects. The {code} works once, until {until}.
+      </Waiting>
+    )
 
   const machineCard = machine ? (
     <Card>
@@ -599,7 +630,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
           meta="Your computer · linked"
           aside={<StatusBadge status="online" />}
         />
-        {signingIn.length === 0 && (
+        {!signingInOn(machine.id) && (
           <>
             <p className="text-sm text-muted-foreground">
               No Claude or Codex login on it yet. Sign in on the vendor&apos;s page:
@@ -648,9 +679,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
           <>
             <p className="text-sm text-muted-foreground">Run this in a terminal on your Mac:</p>
             <Command command={link.command} />
-            <Waiting title="Waiting for your Mac…">
-              This page goes on by itself once it connects. The code works once, until {until}.
-            </Waiting>
+            {waitFor('Mac', 'code')}
           </>
         ) : (
           <>
@@ -678,18 +707,18 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
                   <span className="text-xs text-muted-foreground">
                     Brigade.app asks before it installs anything.
                   </span>
-                  <Button asChild>
-                    <a href={link.appLink}>
-                      <ExternalLink aria-hidden />
-                      Open in Brigade
-                    </a>
-                  </Button>
+                  {!expired && (
+                    <Button asChild>
+                      <a href={link.appLink}>
+                        <ExternalLink aria-hidden />
+                        Open in Brigade
+                      </a>
+                    </Button>
+                  )}
                 </span>
               </li>
             </ol>
-            <Waiting title="Waiting for your Mac…">
-              This page goes on by itself once it connects. The link works once, until {until}.
-            </Waiting>
+            {waitFor('Mac', 'link')}
             <details className="text-xs text-muted-foreground">
               <summary className="cursor-pointer text-center">Or run it in a terminal</summary>
               <div className="mt-2.5">
@@ -713,9 +742,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
           <>
             <p className="text-sm text-muted-foreground">Run this in a terminal on it:</p>
             <Command command={link.command} />
-            <Waiting title="Waiting for your machine…">
-              This page goes on by itself once it connects. The code works once, until {until}.
-            </Waiting>
+            {waitFor('machine', 'code')}
           </>
         ) : (
           <Button variant="outline" className="self-start" onClick={() => void getLink()}>
@@ -737,9 +764,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
           <>
             <p className="text-sm text-muted-foreground">Run this in a terminal on it:</p>
             <Command command={link.command} />
-            <Waiting title="Waiting for your machine…">
-              This page goes on by itself once it connects. The code works once, until {until}.
-            </Waiting>
+            {waitFor('machine', 'code')}
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
