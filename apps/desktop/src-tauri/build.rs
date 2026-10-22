@@ -10,6 +10,7 @@ fn main() {
             "capture_remove",
             "capture_clear",
             "capture_hide",
+            "capture_sign_in",
         ]),
     ))
     .expect("failed to run tauri-build");

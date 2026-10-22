@@ -36,3 +36,12 @@ export const captures = {
   /** The window came up again, from the menu. */
   onShown: (handle: () => void) => listen('capture-shown', () => handle()),
 }
+
+/**
+ * The browser's page that signs the window in (src/desktop-sign-in.ts in the API): the
+ * window opens it, with ?challenge=, and gets the code back as brigade://sign-in?code=….
+ */
+export const DESKTOP_SIGN_IN = '/app/desktop-sign-in'
+
+/** Opens the browser to sign the window in; the app then brings it back to /sign-in with the code. */
+export const signInWithBrowser = () => invoke<void>('capture_sign_in')

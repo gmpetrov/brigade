@@ -10,7 +10,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine;
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use tauri::ipc::{CapabilityBuilder, Response};
 use tauri::menu::CheckMenuItem;
 use tauri::{
@@ -18,6 +21,7 @@ use tauri::{
 };
 use tauri_plugin_dialog::MessageDialogKind;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+use tauri_plugin_opener::OpenerExt;
 use url::Url;
 
 use crate::setup::Helper;
@@ -44,6 +48,8 @@ pub struct Capture {
     items: Vec<(&'static str, CheckMenuItem<Wry>)>,
     /// Dashboard origins whose page may call the commands below.
     allowed: Mutex<HashSet<String>>,
+    /// The secret of the window's sign-in through the browser, once started (`capture_sign_in`).
+    verifier: Mutex<Option<String>>,
 }
 
 impl Capture {
@@ -52,6 +58,7 @@ impl Capture {
             taking: AtomicBool::new(false),
             items,
             allowed: Mutex::new(HashSet::new()),
+            verifier: Mutex::new(None),
         }
     }
 }
@@ -204,6 +211,7 @@ fn allow(app: &AppHandle, origin: &str) {
         .permission("allow-capture-remove")
         .permission("allow-capture-clear")
         .permission("allow-capture-hide")
+        .permission("allow-capture-sign-in")
         // The header drags the window (`data-tauri-drag-region`): it has no title bar.
         .permission("core:window:allow-start-dragging")
         .permission("core:event:allow-listen")
@@ -299,4 +307,43 @@ pub fn capture_clear(app: AppHandle) {
 #[tauri::command]
 pub fn capture_hide(window: WebviewWindow) {
     let _ = window.hide();
+}
+
+/// The window signs in through the browser, where the member likely is already: its WebKit
+/// has cookies of its own. The browser gets the hash of a secret kept here, and sends back a
+/// code (`signed_in`) that only that secret redeems (desktop-sign-in.ts in the API).
+#[tauri::command]
+pub fn capture_sign_in(app: AppHandle) -> Result<(), String> {
+    let mut bytes = [0u8; 32];
+    getrandom::fill(&mut bytes).map_err(|e| e.to_string())?;
+    let verifier = URL_SAFE_NO_PAD.encode(bytes);
+    let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
+    *app.state::<Capture>().verifier.lock().unwrap() = Some(verifier);
+    let mut url =
+        Url::parse(&format!("{}/desktop-sign-in", dashboard())).map_err(|e| e.to_string())?;
+    url.query_pairs_mut().append_pair("challenge", &challenge);
+    app.opener()
+        .open_url(url.as_str(), None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
+/// brigade://sign-in?code=…, from the browser: the window's sign-in page redeems the code with
+/// the secret. Without a sign-in started here, the link does nothing.
+pub fn signed_in(app: &AppHandle, code: &str) {
+    let Some(verifier) = app.state::<Capture>().verifier.lock().unwrap().clone() else {
+        return;
+    };
+    let Ok(mut url) = Url::parse(&dashboard()).and_then(|d| d.join("/sign-in")) else {
+        return;
+    };
+    url.query_pairs_mut()
+        .append_pair("desktop_code", code)
+        .append_pair("verifier", &verifier);
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        show(&handle);
+        if let Some(window) = handle.get_webview_window(WINDOW) {
+            let _ = window.navigate(url);
+        }
+    });
 }

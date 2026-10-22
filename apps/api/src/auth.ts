@@ -7,6 +7,7 @@ import { audit } from './audit.js'
 import { guardOrganizationDeletion } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
+import { desktopSignIn } from './desktop-sign-in.js'
 
 /** Audit actors are members. Fall back to the user when no membership exists yet. */
 async function memberActor(organizationId: string, userId: string) {
@@ -51,6 +52,7 @@ export const auth = betterAuth({
     advanced: { defaultCookieAttributes: { sameSite: 'none', secure: true, partitioned: true } },
   }),
   plugins: [
+    desktopSignIn(),
     organization({
       organizationHooks: {
         afterCreateOrganization: async ({ organization, user }) =>
