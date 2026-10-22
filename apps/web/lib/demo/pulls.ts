@@ -331,16 +331,64 @@ export function mergedPull(pull: DemoPull): DemoPull {
   }
 }
 
-/** The pull request Riley opens for the annual billing toggle. */
-export function newPull(
-  threadId: string,
-  teammate: Ref,
-  title = 'Pricing page: monthly or annual billing',
-) {
+const EXPORT_FIX: DiffFile[] = [
+  {
+    path: 'app/reports/export-button.tsx',
+    previousPath: null,
+    status: 'modified',
+    additions: 2,
+    deletions: 1,
+    patch: `@@ -9,7 +9,8 @@ export function ExportButton({ rows }: { rows: Row[] }) {
+   const onExport = () => download(toCsv(rows), 'report.csv')
+   return (
+-    <Button variant="outline" disabled={!rows.length}>
++    // Lost when Reports moved to the new table: the button did nothing.
++    <Button variant="outline" disabled={!rows.length} onClick={onExport}>
+       <Download /> Export
+     </Button>
+   )`,
+  },
+  {
+    path: 'app/reports/export-button.test.tsx',
+    previousPath: null,
+    status: 'added',
+    additions: 9,
+    deletions: 0,
+    patch: `@@ -0,0 +1,9 @@
++import { fireEvent, render, screen } from '@testing-library/react'
++import { ExportButton } from './export-button'
++
++test('export downloads the rows as CSV', () => {
++  const download = vi.spyOn(files, 'download')
++  render(<ExportButton rows={[{ id: 1, total: 42 }]} />)
++  fireEvent.click(screen.getByRole('button', { name: /export/i }))
++  expect(download).toHaveBeenCalledWith(expect.stringContaining('42'), 'report.csv')
++})`,
+  },
+]
+
+/** What a teammate's scripted run can open (lib/demo/scripts.ts). */
+export type NewPull = 'annual' | 'export'
+
+/** The pull request a teammate opens in the demo: the annual billing toggle, or the export fix. */
+export function newPull(threadId: string, teammate: Ref, kind: NewPull = 'annual') {
+  const slug = teammate.name.toLowerCase()
+  if (kind === 'export')
+    return make({
+      number: 153,
+      title: 'Reports: the export button exports again',
+      head: `brigade/${slug}-export-button`,
+      body: 'The export button on Reports lost its click handler when the page moved to the new table, so it did nothing. It downloads the CSV again. Covered by a test.',
+      files: EXPORT_FIX,
+      author: teammate,
+      session: { id: threadId, title: 'The export button does nothing' },
+      review: { state: 'skipped', reason: 'A one-line fix, covered by a test' },
+      updatedAt: new Date().toISOString(),
+    })
   return make({
     number: 152,
-    title,
-    head: `brigade/${teammate.name.toLowerCase()}-annual-billing`,
+    title: 'Pricing page: monthly or annual billing',
+    head: `brigade/${slug}-annual-billing`,
     body: 'A Monthly / Annual toggle above the pricing cards. Annual prices are ten months over twelve, shown per month, with "2 months free" under them. Stripe already has the yearly prices. Covered by a test.',
     files: ANNUAL,
     author: teammate,

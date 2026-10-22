@@ -2,7 +2,7 @@
 // streams a real turn (lib/demo/server.ts), and a friendly reply with suggestions for
 // anything else. They only do what Brigade does: a write to an App waits for a person's
 // approval when the teammate's permissions ask for it, and a merge is a person's call.
-import type { DemoPull } from './pulls'
+import type { DemoPull, NewPull } from './pulls'
 
 export type Step =
   | {
@@ -20,6 +20,14 @@ export type Step =
     }
   | { file: string; ms?: number }
   | { say: string; ms?: number }
+  /**
+   * A write to an App that waits for a person: its call starts, its ticket opens and the run
+   * stops there, waiting. Approving it goes on as afterDecision says.
+   */
+  | {
+      approval: { tool: string; input: unknown; operation: string; target: string }
+      ms?: number
+    }
 
 export type Run = {
   steps: Step[]
@@ -40,7 +48,15 @@ export type Context = {
   thread?: { title: string; teammate?: Ref }
   teammates: Ref[]
   actions: {
-    openPull: (threadId: string, teammate: Ref) => DemoPull
+    /** Opens the pull request; `merged` is the run its merge starts in the thread. */
+    openPull: (threadId: string, teammate: Ref, kind?: NewPull, merged?: Run) => DemoPull
+    /** A routine the teammate made, shown in Routines. */
+    addRoutine: (routine: {
+      title: string
+      cron: string
+      instructions: string
+      teammateId: string
+    }) => void
     openTickets: () => { title: string; session?: { title: string } }[]
     playbook: () =>
       { count: number; onItsOwn: number; approvedByYou: number; withPerson: number } | undefined
@@ -78,13 +94,16 @@ export function replyTo(text: string, ctx: Context): Run {
     return buildToggle(ctx, teammate)
   if (/^not yet/.test(said))
     return { steps: [{ say: 'Fine, I’ll leave it here. Say the word when you want it built.' }] }
+  if (/export button|export is broken|export doesn't work/.test(said))
+    return fixExport(ctx, teammate)
+  if (/every bug report|each bug report/.test(said)) return bugRoutine(ctx, teammate)
   if (/summar/.test(said)) return summarize(ctx)
   if (/waiting on me|needs me|my tickets|what's waiting/.test(said)) return waiting(ctx)
   if (/digest|support/.test(said)) return digest(ctx)
   return {
     steps: [
       {
-        say: `In the demo, ${teammate.name} knows a few tasks: building the annual billing toggle on Acme’s pricing page and opening its pull request, summarizing a thread, listing what waits on you, and writing the weekly support digest. Pick one below.\n\nIn your own workspace, teammates work on what you ask, on your Mac or a cloud computer, with your own Claude or Codex subscription.`,
+        say: `In the demo, ${teammate.name} knows a few tasks: building the annual billing toggle on Acme’s pricing page and opening its pull request, fixing the export button on Reports, summarizing a thread, listing what waits on you, and writing the weekly support digest. Pick one below.\n\nIn your own workspace, teammates work on what you ask, on your Mac or a cloud computer, with your own Claude or Codex subscription.`,
         ms: 700,
       },
     ],
@@ -156,6 +175,126 @@ function buildToggle(ctx: Context, teammate: Ref): Run {
     ],
     merge: `Merge #${number}`,
     replies: ['Not yet'],
+  }
+}
+
+/**
+ * The landing page's walkthrough (lib/demo/tour.ts): a customer reports the export button does
+ * nothing. The teammate fixes it and opens a pull request; once a person merges it, it drafts
+ * the replies to the customers who asked, which wait for the person's OK before they go.
+ */
+function fixExport(ctx: Context, teammate: Ref): Run {
+  const slug = teammate.name.toLowerCase()
+  const customers = ['jo@northwind.test', 'mia@lumen.test', 'sara@globex.test']
+  const replies: Run = {
+    teammateId: teammate.id,
+    steps: [
+      { say: 'Merged: the fix ships with main. Now the customers who asked.', ms: 500 },
+      {
+        tool: tool('gmail_search_support_acme_test'),
+        input: { query: 'export button newer_than:14d' },
+        output: { messages: 3, from: customers },
+        takes: 1100,
+      },
+      {
+        say: 'Three customers wrote about it: Northwind, Lumen and Globex. I drafted a short reply to each, saying it’s fixed. Sending waits for your OK.',
+      },
+      {
+        approval: {
+          tool: tool('gmail_send_support_acme_test'),
+          operation: 'gmail_send',
+          input: {
+            to: customers,
+            subject: 'Re: Export button',
+            body: 'Hi,\n\nThanks for telling us: the export button on Reports works again. It was a bug on our side, now fixed and covered by a test.\n\nThe Acme team',
+          },
+          target: `email to ${customers.join(', ')}: "Re: Export button"`,
+        },
+        ms: 600,
+      },
+    ],
+  }
+  return {
+    steps: [
+      {
+        say: 'On it: I’ll find why the export button does nothing, fix it and open a pull request.',
+        ms: 500,
+      },
+      {
+        tool: tool('checkout_repository'),
+        input: { repository: 'acme/web' },
+        output: { directory: 'web', branch: `brigade/${slug}-export-button` },
+        takes: 900,
+      },
+      {
+        tool: 'Grep',
+        input: { pattern: 'onExport', path: 'web/app/reports' },
+        output:
+          "web/app/reports/export-button.tsx:9:  const onExport = () => download(toCsv(rows), 'report.csv')",
+        takes: 600,
+      },
+      {
+        tool: 'Read',
+        input: { file_path: 'web/app/reports/export-button.tsx' },
+        output:
+          '<Button variant="outline" disabled={!rows.length}>\n  <Download /> Export\n</Button>',
+        takes: 500,
+      },
+      { file: 'web/app/reports/export-button.tsx', ms: 700 },
+      { file: 'web/app/reports/export-button.test.tsx', ms: 600 },
+      bash(
+        'pnpm test reports',
+        '✓ export-button › export downloads the rows as CSV\nTests: 41 passed, 41 total',
+        1300,
+      ),
+      bash(
+        'git commit -am "Reports: the export button exports again" && git push -u origin HEAD',
+        `To acme/web\n * [new branch]      brigade/${slug}-export-button -> brigade/${slug}-export-button`,
+        900,
+      ),
+      {
+        tool: tool('github_create_pull_request'),
+        input: {
+          repository: 'acme/web',
+          title: 'Reports: the export button exports again',
+          head: `brigade/${slug}-export-button`,
+          base: 'main',
+          review: { wanted: false, reason: 'A one-line fix, covered by a test' },
+        },
+        output: { number: 153, url: 'https://github.com/acme/web/pull/153', state: 'open' },
+        takes: 900,
+        then: () => void ctx.actions.openPull(ctx.threadId, teammate, 'export', replies),
+      },
+      {
+        say: 'Found it: the button lost its click handler when Reports moved to the new table, so it did nothing. Fixed in [acme/web#153](https://github.com/acme/web/pull/153), with a test. Once it’s merged, I’ll tell the customers who asked.',
+      },
+    ],
+    merge: 'Merge #153',
+  }
+}
+
+function bugRoutine(ctx: Context, teammate: Ref): Run {
+  const routine = {
+    title: 'Morning bug reports',
+    cron: '0 8 * * 1-5',
+    instructions:
+      'Read the support inbox for new bug reports. Fix each one in acme/web with a pull request, and draft a reply to the customers who reported it. Merging and sending wait for a person.',
+    teammateId: teammate.id,
+  }
+  return {
+    steps: [
+      {
+        tool: tool('create_schedule'),
+        input: { title: routine.title, cron: routine.cron, instructions: routine.instructions },
+        output: { id: 'routine-morning-bugs', nextRunAt: 'tomorrow 08:00' },
+        takes: 900,
+        ms: 600,
+        then: () => ctx.actions.addRoutine(routine),
+      },
+      {
+        say: 'Done: every weekday at 8:00, I read the support inbox, fix each new bug report the same way and draft the replies. Merging and sending still wait for you. It’s in Routines as “Morning bug reports”.',
+      },
+    ],
   }
 }
 
@@ -320,7 +459,10 @@ export function afterDecision(
             takes: 900,
           },
           {
-            say: `Sent: “${String(input.subject ?? 'the reply')}”. I’ll watch the thread for an answer.`,
+            say:
+              Array.isArray(input.to) && input.to.length > 1
+                ? `Sent to the ${input.to.length} customers: “${String(input.subject ?? 'the reply')}”. I’ll watch for their answers.`
+                : `Sent: “${String(input.subject ?? 'the reply')}”. I’ll watch the thread for an answer.`,
           },
         ],
       }
