@@ -126,3 +126,15 @@ export const TaskOperation = z.discriminatedUnion('name', [
   }),
 ])
 export type TaskOperation = z.infer<typeof TaskOperation>
+
+/** A teammate's comment on a task (comment_task), as the task's thread gets it. */
+export const taskComment = (c: { from: string; threadTitle: string; text: string }) =>
+  `**${c.from}** commented from the thread “${c.threadTitle}”:\n\n${c.text}`
+
+const COMMENT_HEAD = /^\*\*(.+?)\*\* commented from the thread “(.*)”:\n\n/
+
+/** A task comment read back (taskComment): who wrote it, from where, and what. */
+export function fromTaskComment(text: string) {
+  const m = COMMENT_HEAD.exec(text)
+  return m ? { from: m[1]!, threadTitle: m[2]!, text: text.slice(m[0].length) } : null
+}

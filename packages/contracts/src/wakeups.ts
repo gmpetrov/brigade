@@ -46,3 +46,39 @@ export function wakeTime(
     return `A wake-up is at most ${WAKEUP_MAX_DAYS} days from now; for longer, open a ticket or set up a schedule`
   return when
 }
+
+const WAKEUP_ASK =
+  'Check it now and tell the person what you found. Set another wake-up only if it is still not ready.'
+
+/** The message a wake-up brings back to its thread (src/wakeups.ts in the API). */
+export function wakeupMessage(w: {
+  /** When it was set, as the person reads it in their timezone. */
+  set: string
+  timezone: string
+  /** Minutes past when it was due, when the computer was offline. */
+  lateMinutes?: number
+  note: string
+}) {
+  return (
+    `Wake-up you set at ${w.set} (${w.timezone})` +
+    (w.lateMinutes ? `, ${w.lateMinutes} minutes late (the computer was offline)` : '') +
+    `: ${w.note}\n\n${WAKEUP_ASK}`
+  )
+}
+
+const WAKEUP_MESSAGE = new RegExp(
+  '^Wake-up you set at (.+?) \\(([^()]+)\\)(?:, (\\d+) minutes late \\(the computer was offline\\))?: ' +
+    `([\\s\\S]*)\\n\\n${WAKEUP_ASK.replace(/[.]/g, '\\.')}$`,
+)
+
+/** A wake-up's message read back (wakeupMessage), for the dashboard's note; null for any other text. */
+export function wakeupNote(text: string) {
+  const m = WAKEUP_MESSAGE.exec(text)
+  if (!m) return null
+  return {
+    set: m[1]!,
+    timezone: m[2]!,
+    ...(m[3] ? { lateMinutes: Number(m[3]) } : {}),
+    note: m[4]!,
+  }
+}

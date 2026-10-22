@@ -76,6 +76,7 @@ import { MediaPreview, MessageAttachments } from '@/components/attachments'
 import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
 import { CredentialForm } from '@/components/credential-form'
+import { BrigadeNoteLine, brigadeNote, type BrigadeNote } from '@/components/brigade-notes'
 import { ReceivedEmailCard, ToolInputPreview } from '@/components/email-cards'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
@@ -139,6 +140,8 @@ export type Item =
       brigade?: NonNullable<ReturnType<typeof childNote>>
       /** An email a trigger received, shown as a mail rather than as the teammate's prompt. */
       email?: { event: TriggerEventMessage; email: TriggerEmail }
+      /** Anything else Brigade wrote (a wake-up, a schedule's run…): a line rather than a person's bubble. */
+      note?: BrigadeNote
     }
   | {
       kind: 'assistant'
@@ -283,6 +286,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             ...(e.steered && turnTeammate ? { steeredTo: turnTeammate } : {}),
             ...(e.memberId === null && childNote(e.text) ? { brigade: childNote(e.text)! } : {}),
             ...(e.memberId === null ? receivedEmail(e.text) : {}),
+            ...userNote(e.text, e.memberId === null),
           })
           break
         case 'message.queued':
@@ -627,6 +631,13 @@ function ReplyQuote({ reply, author }: { reply: ReplyTo; author?: string }) {
       </span>
     </button>
   )
+}
+
+/** What else Brigade wrote, once child notes and emails, which have cards of their own, are told apart. */
+function userNote(text: string, fromBrigade: boolean) {
+  if (!fromBrigade || childNote(text) || receivedEmail(text).email) return {}
+  const note = brigadeNote(text, true)
+  return note ? { note } : {}
 }
 
 /** A trigger's email in a message Brigade wrote (memberId null), for its card. */
@@ -1707,6 +1718,16 @@ export function ThreadItems({
             </div>
           )
         }
+        // A wake-up, a schedule's run…: a line saying what it is, what it says folded under it.
+        if (item.note)
+          return (
+            <div key={item.key} data-seq={item.seq} className="min-w-0">
+              <BrigadeNoteLine note={item.note} />
+              {item.attachments.length > 0 && (
+                <MessageAttachments attachments={item.attachments} className="mt-2" />
+              )}
+            </div>
+          )
         // A command it starts with (/design, a skill) is a label above it: what was asked for.
         const asked = startingCommand(forPeople(item.text), skillNames)
         const text = asked ? asked.rest : forPeople(item.text)

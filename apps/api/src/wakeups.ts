@@ -7,6 +7,7 @@ import {
   WAKEUPS_IN_A_ROW,
   WAKEUPS_PER_THREAD,
   wakeTime,
+  wakeupMessage,
   type ScheduleOperation,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -162,14 +163,12 @@ function prompt(
   timezone: string,
 ) {
   const late = now.getTime() - wakeup.wakeAt.getTime()
-  return (
-    `Wake-up you set at ${localTime(wakeup.createdAt, timezone)} (${timezone})` +
-    (late > 5 * 60_000
-      ? `, ${Math.round(late / 60_000)} minutes late (the computer was offline)`
-      : '') +
-    `: ${wakeup.note}\n\n` +
-    'Check it now and tell the person what you found. Set another wake-up only if it is still not ready.'
-  )
+  return wakeupMessage({
+    set: localTime(wakeup.createdAt, timezone),
+    timezone,
+    ...(late > 5 * 60_000 ? { lateMinutes: Math.round(late / 60_000) } : {}),
+    note: wakeup.note,
+  })
 }
 
 /** Fire one due wake-up into its thread, or say it waits for the next tick. */
