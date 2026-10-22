@@ -23,20 +23,33 @@ if ! grep -q '^VAPID_PRIVATE_KEY=.' apps/api/.env; then
 fi
 
 say "Installing dependencies"
-"${PNPM[@]}" install --frozen-lockfile
+# pnpm's quick check first: with nothing to install, done in a moment rather than seconds.
+"${PNPM[@]}" install --frozen-lockfile --config.optimistic-repeat-install=true
 
 say "Building shared packages"
 "${PNPM[@]}" exec turbo run build --filter='@brigade/api^...' --filter='@brigade/web^...'
-"${PNPM[@]}" --filter @brigade/api exec prisma generate
-"${PNPM[@]}" --filter @brigade/api playbooks
+# The Prisma Client again only when its schema, Prisma or the client itself changed since.
+CLIENT=(apps/api/prisma/schema.prisma apps/api/prisma.config.ts apps/api/node_modules/prisma/package.json
+  apps/api/src/generated/prisma apps/api/src/generated/prisma-workers)
+if unchanged client "$(fingerprint "${CLIENT[@]}")"; then
+  say "The Prisma Client is up to date"
+else
+  "${PNPM[@]}" --filter @brigade/api exec prisma generate
+  stamp client "$(fingerprint "${CLIENT[@]}")"
+fi
+node apps/api/scripts/playbooks.mjs
 
 say "Starting PostgreSQL"
 mkdir -p "$DATA"
 trap 'kill $(jobs -p) 2>/dev/null || true; wait' EXIT
 start_db
 
-say "Applying migrations"
-"${PNPM[@]}" --filter @brigade/api exec prisma migrate deploy
+if node "$HERE/migrated.mjs"; then
+  say "No migrations to apply"
+else
+  say "Applying migrations"
+  "${PNPM[@]}" --filter @brigade/api exec prisma migrate deploy
+fi
 
 say "Adding the dev accounts and the sample workspace"
 "${PNPM[@]}" --filter @brigade/api db:seed

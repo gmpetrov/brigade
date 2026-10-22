@@ -86,8 +86,9 @@ export const SUGGESTED_REPLY_MAX = 40
 /**
  * What a button may do instead of sending its text: Brigade's own action, shown
  * only while it can be done. merge: the pull request opened last in the thread.
+ * preview: starts the thread's preview as Preview does, without a turn, while none runs.
  */
-export const REPLY_ACTIONS = ['merge'] as const
+export const REPLY_ACTIONS = ['merge', 'preview'] as const
 export const SuggestedReplies = z
   .object({
     replies: z.array(z.string().trim().min(1).max(SUGGESTED_REPLY_MAX)).max(3),

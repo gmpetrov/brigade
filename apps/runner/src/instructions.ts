@@ -520,6 +520,10 @@ const REPLIES =
   'When the next step is merging the pull request you opened, write that line as `[merge] Merge #158`: it ' +
   "becomes Brigade's own merge button, shown only while the pull request can merge and to someone allowed " +
   'to merge it, and the thread tells you once it is merged.\n\n' +
+  "When the next step is trying the app in this thread's preview, write that line as `[preview] Start the " +
+  "preview`, in the person's language: it becomes Brigade's own button, shown only while no preview runs, " +
+  'which starts it as Preview at the top of the thread does, without you. When it cannot start by itself ' +
+  '(nothing saved to start it from, or it needs your credentials), the click comes to you as their message.\n\n' +
   'To let the person pick among alternatives you made (designs, approaches, drafts), end your reply instead with ' +
   'a `choices` block: 2 to 6 options, each with a short unique `id`, a `label` of a few words, an optional ' +
   'one-line `description` and, for a design, its library path in `design`:\n\n' +
@@ -534,8 +538,9 @@ const PREVIEWS =
   '## Previews\n\n' +
   'Start a preview only when the person asks to try the app, or asks you to build something for them to try ' +
   'in a browser: a preview takes a while to set up and keeps the computer busy. Otherwise, when you changed an ' +
-  'app people use in a browser, offer one in a line at the end of your reply; they can also start it with ' +
-  'Preview at the top of the thread. A preview already running in this thread keeps running, and reloads as ' +
+  'app people use in a browser, offer one in a line at the end of your reply, with a `[preview]` line in its ' +
+  'replies (see Buttons and choices); they can also start it with Preview at the top of the thread. A preview ' +
+  'already running in this thread keeps running, and reloads as ' +
   'you edit when it is a dev server: do not start it again for each change. ' +
   'While the person tries it and asks for tweaks (a style, a copy, a layout change), keep the loop quick: ' +
   'edit, then reply as soon as it is saved, since their preview already shows it. Do not run tests, a ' +
