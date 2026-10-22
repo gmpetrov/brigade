@@ -308,6 +308,11 @@ svg.i {
   font-style: normal;
   color: var(--primary);
 }
+/* Plus Jakarta Sans has no t-comma or t-period kerning pair: at this weight and tracking the
+ * punctuation stands apart from "it", so it is pulled in by hand. */
+.hero h1 .kern {
+  margin-left: -0.06em;
+}
 .hero .sub {
   margin: 30px auto 0;
   font-size: 19px;

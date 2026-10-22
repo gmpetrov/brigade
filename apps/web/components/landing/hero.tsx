@@ -37,7 +37,8 @@ export function Hero() {
         <div className={c('hero-copy')}>
           <p className={c('eyebrow')}>The operating system for AI-native companies</p>
           <h1 id="hero-title">
-            <em>One team</em> builds it, sells it and supports it.
+            <em>One team</em> builds it<span className={c('kern')}>,</span> sells it and supports it
+            <span className={c('kern')}>.</span>
           </h1>
           <p className={c('sub')}>
             AI teammates write your code, answer your customers, run your marketing and chase your
