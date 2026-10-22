@@ -157,3 +157,44 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
     sendToRunner(thread.computerId, { type: 'thread.deleted', sessionId }, { touch: false })
   return { taskId: thread.taskId }
 }
+
+/**
+ * A runner may still be uploading a reply's image (runner-files.ts) when its thread is
+ * deleted: its signed URL works for 10 minutes after the thread check, and would put the
+ * image back in the deleted thread's folder. So the folders of threads deleted this
+ * recently are emptied again by each sweep (hourly), long enough to see every such URL out.
+ */
+const LATE_UPLOADS_MS = 3 * 60 * 60_000
+
+/** Empty again the bucket folders of threads deleted lately, of what was uploaded after. */
+export async function sweepDeletedThreadFiles(now = Date.now()) {
+  // By organization, as the audit log is indexed.
+  const organizations = await prisma.organization.findMany({ select: { id: true } })
+  const deleted = await prisma.auditEntry.findMany({
+    where: {
+      organizationId: { in: organizations.map((o) => o.id) },
+      at: { gte: new Date(now - LATE_UPLOADS_MS) },
+      action: 'thread.deleted',
+      targetType: 'thread',
+    },
+    select: { organizationId: true, workspaceId: true, targetId: true },
+  })
+  let removed = 0
+  for (const entry of deleted) {
+    if (!entry.workspaceId) continue
+    const scope = { organizationId: entry.organizationId, workspaceId: entry.workspaceId }
+    let keys: string[]
+    try {
+      keys = await listObjects(threadFilesPrefix(scope, entry.targetId))
+    } catch {
+      // Not a thread id Brigade could have written under: nothing of ours there.
+      continue
+    }
+    for (const key of keys)
+      await deleteObject(key).then(
+        () => removed++,
+        (error: unknown) => console.warn(`${key}: not deleted: ${String(error)}`),
+      )
+  }
+  if (removed > 0) console.log(`deleted threads: removed ${removed} file(s) uploaded late`)
+}

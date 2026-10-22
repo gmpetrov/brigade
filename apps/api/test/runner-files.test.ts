@@ -42,9 +42,10 @@ async function reachable() {
 }
 const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env DATABASE_URL)'
 
-const { prisma } = await import('../src/db.js')
+const { prisma, scoped } = await import('../src/db.js')
 const { hashToken } = await import('../src/hub.js')
-const { getObject, threadFileKey } = await import('../src/bucket.js')
+const { getObject, putObject, threadFileKey } = await import('../src/bucket.js')
+const { deleteThread, sweepDeletedThreadFiles } = await import('../src/thread-delete.js')
 const { runnerFiles } = await import('../src/routes/runner-files.js')
 
 const id = randomUUID().slice(0, 8)
@@ -155,3 +156,20 @@ test('another computer, a bad name, a PDF or a deleted thread is refused', { ski
   assert.equal((await ticket(`/missing-${id}/${name}`, PNG.length)).status, 410)
   assert.equal((await ticket(`/${threadId}/${name}`, PNG.length, 'unknown')).status, 401)
 })
+
+test(
+  'an image uploaded after its thread was deleted goes at the next sweep',
+  { skip },
+  async () => {
+    const path = `/${threadId}/${name}`
+    // The runner had its signed URL before the thread was deleted…
+    assert.equal((await ticket(path, PNG.length)).status, 200)
+    await deleteThread(scoped(scope), scope, { type: 'member', id: ids.member }, threadId)
+    assert.equal(await getObject(threadFileKey(scope, threadId, name)), null)
+    // …and the image reaches the bucket after: the API is no longer asked.
+    await putObject(threadFileKey(scope, threadId, name), new Uint8Array(PNG), 'image/png')
+    assert.equal((await ticket(path, PNG.length)).status, 410)
+    await sweepDeletedThreadFiles()
+    assert.equal(await getObject(threadFileKey(scope, threadId, name)), null)
+  },
+)
