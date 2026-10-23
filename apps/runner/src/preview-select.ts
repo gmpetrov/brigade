@@ -5,7 +5,8 @@
 // reaching the page, and the panel puts it in the composer (contracts'
 // preview-elements.ts). Esc in the page turns it off. Then the page draws the
 // element (modern-screenshot, loaded only then from the proxy) and sends that
-// picture too, for the message to carry as an image.
+// picture too, for the message to carry as an image. It also tells the panel which
+// path the page is at, and opens the one a person types in the panel's bar.
 //
 // The script is served from the preview's own address (a page's Content-Security-Policy
 // allows 'self' more often than inline scripts), runs before the page's own scripts
@@ -309,11 +310,48 @@ export const SELECT_SCRIPT = String.raw`(() => {
     draw()
   }
 
+  // Where the page is, for the panel's address bar: once the panel answered, and on each
+  // navigation inside the page (a client-side router's pushState, Back, a #hash).
+  let shown = null
+  function report() {
+    const page = (location.pathname + location.search + location.hash).slice(0, 2000)
+    if (!origin || page === shown) return
+    shown = page
+    post({ type: 'location', page }, origin)
+  }
+  for (const name of ['pushState', 'replaceState']) {
+    const original = history[name]
+    history[name] = function () {
+      const result = original.apply(this, arguments)
+      report()
+      return result
+    }
+  }
+  addEventListener('popstate', report)
+  addEventListener('hashchange', report)
+
   addEventListener('message', (e) => {
     const data = e.data
-    if (e.source !== window.parent || !data || data.source !== 'brigade' || data.type !== 'select') return
-    origin = e.origin
-    set(!!data.on)
+    if (e.source !== window.parent || !data || data.source !== 'brigade') return
+    if (data.type === 'select') {
+      origin = e.origin
+      set(!!data.on)
+      report()
+    } else if (data.type === 'hello') {
+      origin = e.origin
+      shown = null
+      report()
+    } else if (data.type === 'navigate' && typeof data.page === 'string') {
+      // A path the person typed in the panel's bar, only on this page's own address
+      // (a browser reads '//host' and '/\host' as another one).
+      let to = null
+      try {
+        to = new URL(data.page, location.href)
+      } catch (error) {
+        return
+      }
+      if (to.origin === location.origin) location.assign(to.href)
+    }
   })
   // Here, for the panel to show its button and turn select mode back on after a navigation.
   post({ type: 'ready' }, '*')

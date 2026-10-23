@@ -1,3 +1,4 @@
+import vm from 'node:vm'
 import assert from 'node:assert/strict'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -88,4 +89,85 @@ test('the proxy serves the scripts itself', async (t) => {
   assert.equal(drawing.status, 200)
   assert.match(drawing.body, /export \{[^}]*domToBlob/)
   assert.doesNotMatch(drawing.body, /^import /m)
+})
+
+/** The script in a page framed by the dashboard: what it posts to the panel, and where it goes. */
+function framedPage(path: string) {
+  const posted: { message: Record<string, unknown>; to: string }[] = []
+  const listeners = new Map<string, ((e: unknown) => void)[]>()
+  const parent = {
+    postMessage: (message: Record<string, unknown>, to: string) =>
+      // Out of the page's realm, for deepEqual.
+      posted.push({ message: JSON.parse(JSON.stringify(message)) as Record<string, unknown>, to }),
+  }
+  const at = new URL(path, 'https://box.example')
+  const location = {
+    get href() {
+      return at.href
+    },
+    get origin() {
+      return at.origin
+    },
+    get pathname() {
+      return at.pathname
+    },
+    get search() {
+      return at.search
+    },
+    get hash() {
+      return at.hash
+    },
+    assigned: [] as string[],
+    assign(to: string) {
+      this.assigned.push(to)
+    },
+  }
+  const history = {
+    pushState(_state: unknown, _title: string, to: string) {
+      at.href = new URL(to, at).href
+    },
+    replaceState(_state: unknown, _title: string, to: string) {
+      at.href = new URL(to, at).href
+    },
+  }
+  const window: Record<string, unknown> = {
+    parent,
+    location,
+    history,
+    document: { currentScript: null },
+    URL,
+    addEventListener: (type: string, listener: (e: unknown) => void) =>
+      listeners.set(type, [...(listeners.get(type) ?? []), listener]),
+  }
+  window.window = window
+  vm.runInNewContext(SELECT_SCRIPT, window)
+  const fromPanel = (data: unknown) =>
+    listeners
+      .get('message')
+      ?.forEach((l) => l({ data, source: parent, origin: 'https://dash.example' }))
+  return { posted, location, history, fromPanel }
+}
+
+test('the page tells the panel where it is, and opens the path typed there', () => {
+  const page = framedPage('/app?tab=2')
+  assert.deepEqual(page.posted, [
+    { message: { source: 'brigade-preview', type: 'ready' }, to: '*' },
+  ])
+  page.fromPanel({ source: 'brigade', type: 'hello' })
+  assert.deepEqual(page.posted[1], {
+    message: { source: 'brigade-preview', type: 'location', page: '/app?tab=2' },
+    to: 'https://dash.example',
+  })
+  // A client-side navigation is said too, once.
+  page.history.pushState(null, '', '/app/settings')
+  page.history.replaceState(null, '', '/app/settings')
+  assert.equal(page.posted.length, 3)
+  assert.equal(page.posted[2]!.message.page, '/app/settings')
+
+  page.fromPanel({ source: 'brigade', type: 'navigate', page: '/login' })
+  // Only a path on its own address.
+  page.fromPanel({ source: 'brigade', type: 'navigate', page: '//evil.example/x' })
+  page.fromPanel({ source: 'brigade', type: 'navigate', page: '/\\evil.example/' })
+  page.fromPanel({ source: 'brigade', type: 'navigate', page: 'javascript:alert(1)' })
+  assert.deepEqual(page.location.assigned, ['https://box.example/login'])
 })
