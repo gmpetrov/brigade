@@ -13,6 +13,7 @@ import {
   fromParent,
   forPeople,
   formatMention,
+  handbackNote,
   mentionsToText,
   OFFER_CHOICES_TOOL,
   PREVIEW_REPLACED,
@@ -37,6 +38,7 @@ import {
   type Ask,
   type AskReply,
   type CredentialKind,
+  type Handback,
   type MessageAttachment,
   type Question,
   type QuestionAnswer,
@@ -151,6 +153,8 @@ export type Item =
       email?: { event: TriggerEventMessage; email: TriggerEmail }
       /** Anything else Brigade wrote (a wake-up, a schedule's run…): a line rather than a person's bubble. */
       note?: BrigadeNote
+      /** A person handed the thread back: their note and what they did, as a card rather than the teammate's prompt. */
+      handback?: Handback & { commands: string[] }
     }
   | {
       kind: 'assistant'
@@ -213,8 +217,17 @@ export type Item =
   | { kind: 'error'; key: string; message: string }
   /** settles: something happened that the buttons asked before it no longer fit (thread.note). */
   | { kind: 'note'; key: string; text: string; settles?: true }
-  /** A person at the computer: taking over, handing back, a command in the shell. */
-  | { kind: 'control'; key: string; change: 'took' | 'handed' | 'command'; command?: string }
+  /**
+   * A person at the computer: taking over, handing back, a command in the shell. Handing
+   * back holds the commands run since taking over, for its card.
+   */
+  | {
+      kind: 'control'
+      key: string
+      change: 'took' | 'handed' | 'command'
+      command?: string
+      commands?: string[]
+    }
   | {
       kind: 'preview'
       key: string
@@ -279,6 +292,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
     // The running turn only waits on that work: 'steered' once a message went in.
     let idle: 'waiting' | 'steered' | undefined
     let shown = true
+    // Since a person took over: the commands they ran, then their hand back, until its message comes.
+    let commands: Extract<Item, { kind: 'control' }>[] = []
+    let handed: Extract<Item, { kind: 'control' }> | undefined
     const add = (item: Item) => {
       if (shown || ASKS.has(item.kind)) items.push(item)
       byKey.set(item.key, item)
@@ -294,6 +310,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           // Not steered into a turn: one still open never ended.
           if (!e.steered) turnStartedAt = undefined
           else if (idle) idle = 'steered'
+          const handback = e.memberId !== null ? handbackNote(e.text) : null
+          // Its card takes the place of the hand back's line, and of what that line held.
+          if (handback && handed && items.includes(handed)) items.splice(items.indexOf(handed), 1)
           add({
             kind: 'user',
             key: `u${seq}`,
@@ -306,7 +325,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             ...(e.memberId === null && childNote(e.text) ? { brigade: childNote(e.text)! } : {}),
             ...(e.memberId === null ? receivedEmail(e.text) : {}),
             ...userNote(e.text, e.memberId === null),
+            ...(handback ? { handback: { ...handback, commands: handed?.commands ?? [] } } : {}),
           })
+          handed = undefined
           break
         case 'message.queued':
           seen.add(e.messageId)
@@ -495,9 +516,17 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
               : `Paused: all your accounts for this agent are out of usage${e.resetsAt ? ` until ${new Date(e.resetsAt).toLocaleString()}` : ''}. Send a message to try again, for example after upgrading your plan, or add an account.`,
           })
           break
-        case 'terminal.command':
-          add({ kind: 'control', key: `n${seq}`, change: 'command', command: e.command })
+        case 'terminal.command': {
+          const command = {
+            kind: 'control',
+            key: `n${seq}`,
+            change: 'command',
+            command: e.command,
+          } as const
+          commands.push(command)
+          add(command)
           break
+        }
         case 'preview.changed': {
           // Starting and checking show in the panel and the teammate's tool calls; what came of them here.
           const status =
@@ -533,11 +562,25 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           break
         }
         case 'control.changed':
-          add({
+          if (e.controller === 'human') {
+            commands = []
+            handed = undefined
+            add({ kind: 'control', key: `n${seq}`, change: 'took' })
+            break
+          }
+          // The commands go in the hand back's card, rather than in lines of their own.
+          for (const command of commands) {
+            const at = items.indexOf(command)
+            if (at >= 0) items.splice(at, 1)
+          }
+          handed = {
             kind: 'control',
             key: `n${seq}`,
-            change: e.controller === 'human' ? 'took' : 'handed',
-          })
+            change: 'handed',
+            commands: commands.flatMap((c) => c.command ?? []),
+          }
+          commands = []
+          add(handed)
           break
       }
     }
@@ -909,9 +952,11 @@ function layoutThread(items: Item[], working: boolean) {
     for (const i of actionsLast(items, is)) {
       const last = nodes.at(-1)
       // Taking over, handing back and shell commands in a row fold the same way.
-      const type = isActivity(items[i]!)
+      // A hand back is a card of its own.
+      const item = items[i]!
+      const type = isActivity(item)
         ? 'activity'
-        : items[i]!.kind === 'control'
+        : item.kind === 'control' && item.change !== 'handed'
           ? 'control'
           : undefined
       if (!type) nodes.push({ type: 'item', i })
@@ -1434,7 +1479,10 @@ function ActivityGroup({
   )
 }
 
-/** "Took over twice, ran 5 commands, handed back": what a run of control lines did. */
+/**
+ * "A person took over once, ran 5 commands, has control": what a run of control lines did.
+ * Handing back is a card of its own, which takes the commands before it.
+ */
 function controlLabel(group: Extract<Item, { kind: 'control' }>[]) {
   const took = group.filter((c) => c.change === 'took').length
   const commands = group.filter((c) => c.change === 'command').length
@@ -1442,11 +1490,69 @@ function controlLabel(group: Extract<Item, { kind: 'control' }>[]) {
     took && `A person took over ${plural(took, 'once', 'times')}`,
     commands && `ran ${plural(commands, 'a command', 'commands')}`,
   ].filter(Boolean) as string[]
-  // Where it stands now: the last change of control.
-  const last = group.findLast((c) => c.change !== 'command')?.change
-  if (last) parts.push(last === 'took' ? 'has control' : 'handed back')
+  if (took) parts.push('has control')
   const text = parts.join(', ')
   return text[0]!.toUpperCase() + text.slice(1)
+}
+
+/**
+ * A person handed the thread back: to whom, their note, and what they did while they had
+ * control (files changed, commands run) folded under a line.
+ */
+function HandbackCard({
+  teammate,
+  note,
+  files,
+  commands,
+}: {
+  teammate?: string
+  note: string
+  files: string[]
+  commands: string[]
+}) {
+  const did = [
+    files.length > 0 && plural(files.length, '1 file changed', 'files changed'),
+    commands.length > 0 && plural(commands.length, '1 command', 'commands'),
+  ].filter(Boolean)
+  return (
+    <div className="flex min-w-0 flex-col gap-2 rounded-xl border bg-card px-3.5 py-3 text-sm">
+      <p className="flex items-center gap-2 font-medium">
+        <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden>
+          <span className="size-2 rounded-full bg-primary" />
+        </span>
+        Handed back{teammate ? ` to ${teammate}` : ''}
+      </p>
+      {note && (
+        <p className="ml-6 border-l-2 border-primary pl-3 leading-relaxed wrap-anywhere whitespace-pre-wrap">
+          {note}
+        </p>
+      )}
+      {did.length > 0 && (
+        <Collapsible className="ml-6 flex min-w-0 flex-col">
+          <CollapsibleTrigger className="group flex items-center gap-1.5 self-start text-left text-muted-foreground hover:text-foreground">
+            {did.join(' · ')}
+            <ChevronDown
+              className="size-3.5 transition-transform group-data-[state=open]:rotate-180"
+              aria-hidden
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 flex flex-col gap-0.5 font-mono text-xs wrap-anywhere text-muted-foreground">
+            {files.map((file) => (
+              <span key={file}>{file}</span>
+            ))}
+            {commands.map((command, i) => (
+              <span
+                key={i}
+                className={cn('whitespace-pre-wrap', i === 0 && files.length > 0 && 'mt-2')}
+              >
+                $ {command}
+              </span>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+    </div>
+  )
 }
 
 /** A long turn's work before its answer, folded under how long it took. */
@@ -1761,6 +1867,12 @@ export function ThreadItems({
             </div>
           )
         }
+        if (item.handback)
+          return (
+            <div key={item.key} data-seq={item.seq} className="min-w-0">
+              <HandbackCard teammate={teammate?.name} {...item.handback} />
+            </div>
+          )
         // A wake-up, a schedule's run…: a line saying what it is, what it says folded under it.
         if (item.note)
           return (
@@ -2168,9 +2280,17 @@ export function ThreadItems({
           >
             $ {item.command}
           </div>
+        ) : item.change === 'handed' ? (
+          <HandbackCard
+            key={item.key}
+            teammate={teammate?.name}
+            note=""
+            files={[]}
+            commands={item.commands ?? []}
+          />
         ) : (
           <div key={item.key} className="text-sm text-muted-foreground">
-            {item.change === 'took' ? 'A person took over' : 'Control handed back'}
+            A person took over
           </div>
         )
       case 'preview':

@@ -131,6 +131,18 @@ export class Terminals {
   }
 }
 
+/** Folders that hold what tools generate, not what a person changed: dependencies, builds, caches. */
+const GENERATED = [
+  '.git',
+  'node_modules',
+  '.next',
+  '.turbo',
+  '.cache',
+  '.preview',
+  '.venv',
+  '__pycache__',
+]
+
 /** Files in the thread's directory modified since a time, as the teammate's user. */
 export async function changedFilesSince(spec: ThreadSpec, since: number): Promise<string[]> {
   const user = teammateUser(spec.teammate.id)
@@ -142,13 +154,17 @@ export async function changedFilesSince(spec: ThreadSpec, since: number): Promis
     user,
     'find',
     dir,
+    // Not even walked: node_modules alone can hold hundreds of thousands of files.
+    '(',
+    ...GENERATED.flatMap((name, i) => [...(i ? ['-o'] : []), '-name', name]),
+    ')',
+    '-prune',
+    '-o',
     '-type',
     'f',
     '-newermt',
     `@${seconds}`,
-    '-not',
-    '-path',
-    '*/.git/*',
+    '-print',
   ])
   return stdout
     .split('\n')
