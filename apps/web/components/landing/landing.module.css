@@ -480,64 +480,216 @@ svg.i {
   top: 0;
 }
 
-/* =================== 2 · Plan band =================== */
-.plan-band {
+/* =================== 2 · Bring your own AI (plans.tsx) =================== */
+.byo-sec {
   border-top: 2px solid var(--foreground);
-  border-bottom: 1px solid var(--border);
 }
-.plan-band .wrap {
+.byo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 80px;
+  align-items: center;
+}
+.byo-copy .h2 {
+  font-size: 48px;
+}
+.byo-pts {
+  margin-top: 44px;
+  display: grid;
+  gap: 28px;
+}
+.byo-pts li {
   display: flex;
-  align-items: center;
-  gap: 48px;
-  padding-top: 30px;
-  padding-bottom: 30px;
+  gap: 18px;
 }
-.pb-t {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1.15;
-  max-width: 330px;
-}
-.marks {
-  display: flex;
-  align-items: center;
-  gap: 36px;
-}
-.mark-l {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-}
-.mark-l svg {
-  width: 30px;
-  height: 30px;
+.byo-pts .n {
+  font: 500 13px var(--font-mono);
+  color: var(--primary);
+  letter-spacing: 0;
+  padding-top: 5px;
   flex: none;
 }
-.pb-s {
-  margin-left: auto;
-  display: flex;
-  gap: 8px;
+.byo-pts h3 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
 }
-.pill {
+.byo-pts p {
+  margin-top: 6px;
+  font-size: 15.5px;
+  color: var(--muted-foreground);
+  max-width: 460px;
+}
+.byo-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+  font-size: 13px;
+}
+.byo-panel svg:not(.i) {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.rl-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rl-head .tx {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  min-width: 0;
+}
+.rl-head .tx span {
+  color: var(--muted-foreground);
+}
+.rl-head .badge {
+  margin-left: auto;
+}
+.rl {
+  position: relative;
+  margin-top: 22px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--secondary);
+  --at: 49%;
+}
+.rl-axis {
+  position: relative;
+  height: 16px;
+  margin-left: 150px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.rl-axis span {
+  position: absolute;
+  top: 0;
+}
+.rl-axis span:first-child {
+  left: 0;
+}
+.rl-axis span:last-child {
+  right: 0;
+}
+.rl-axis .rl-at {
+  left: var(--at);
+  transform: translateX(-50%);
+  color: var(--warning);
+  font-weight: 600;
+}
+.rl-lane {
+  display: flex;
+  align-items: center;
+  height: 40px;
+}
+.rl-acc {
+  width: 150px;
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: var(--secondary);
-  font-size: 13.5px;
   font-weight: 600;
-  white-space: nowrap;
 }
-.pill svg {
-  width: 15px;
-  height: 15px;
+.rl-acc em {
+  margin-left: 4px;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 11.5px;
   color: var(--muted-foreground);
+}
+.rl-track {
+  position: relative;
+  flex: 1;
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--foreground) 7%, transparent);
+}
+.rl-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  transform-origin: left center;
+}
+.rl-bar.a {
+  left: 0;
+  width: var(--at);
+  background: color-mix(in oklch, var(--warning) 70%, var(--card));
+}
+.rl-bar.b {
+  left: var(--at);
+  right: 0;
+  background: var(--primary);
+}
+.rl-cap {
+  position: absolute;
+  left: var(--at);
+  top: 50%;
+  transform: translate(8px, -50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--warning);
+}
+/* The handoff: one line down the lanes at the moment the account ran out. */
+.rl-switch {
+  position: absolute;
+  top: 34px;
+  bottom: 14px;
+  left: calc(16px + 150px + (100% - 32px - 150px) * 0.49);
+  border-left: 2px dashed var(--warning);
+}
+.rl-log {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+.rl-ln {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rl-ln .mono {
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+  width: 38px;
+  flex: none;
+}
+.rl-i {
+  display: inline-flex;
+  color: var(--primary);
+}
+.rl-i.warn {
+  color: var(--warning);
+}
+.rl-i.ok {
+  color: var(--success);
+}
+.rl-i svg {
+  width: 14px;
+  height: 14px;
+}
+.rl-models {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.rl-m {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-weight: 500;
+}
+.rl-m .sp {
+  flex: 1;
+}
+.rl-m b {
+  font-weight: 600;
 }
 
 /* =================== Sections =================== */
@@ -5073,6 +5225,46 @@ svg.i {
 .ln.lg3 {
   animation: lg3 9s ease-in-out infinite;
 }
+/* Bring your own AI: ada@ fills up, the handoff line appears, ops@ carries on. */
+.rl-bar.a {
+  animation: rla 9s ease-in-out infinite;
+}
+.rl-switch,
+.rl-cap {
+  animation: rls 9s ease-in-out infinite;
+}
+.rl-bar.b {
+  animation: rlb 9s ease-in-out infinite;
+}
+@keyframes rla {
+  0% {
+    transform: scaleX(0);
+  }
+  40%,
+  100% {
+    transform: none;
+  }
+}
+@keyframes rls {
+  0%,
+  40% {
+    opacity: 0;
+  }
+  46%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes rlb {
+  0%,
+  46% {
+    transform: scaleX(0);
+  }
+  88%,
+  100% {
+    transform: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .page *,
   .page *::before,
@@ -5093,17 +5285,11 @@ svg.i {
   .hero .sub {
     font-size: 17.5px;
   }
-  .plan-band .wrap {
-    gap: 32px;
+  .byo {
+    gap: 48px;
   }
-  .pb-t {
-    font-size: 21px;
-  }
-  .marks {
-    gap: 24px;
-  }
-  .mark-l {
-    font-size: 20px;
+  .byo-copy .h2 {
+    font-size: 40px;
   }
   .msg-stage .phone {
     transform: scale(0.78);
@@ -5194,29 +5380,31 @@ svg.i {
     font-size: 13px;
   }
 
-  .plan-band .wrap {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
-    padding-top: 28px;
-    padding-bottom: 28px;
+  .byo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
   }
-  .pb-t {
-    font-size: 22px;
+  .byo-copy .h2 {
+    font-size: 36px;
   }
-  .marks {
-    gap: 26px;
+  .byo-pts {
+    margin-top: 32px;
   }
-  .mark-l {
-    font-size: 20px;
+  .byo-panel {
+    padding: 18px;
   }
-  .mark-l svg {
-    width: 26px;
-    height: 26px;
+  .rl {
+    padding: 14px 12px;
   }
-  .pb-s {
-    margin-left: 0;
-    flex-wrap: wrap;
+  .rl-acc {
+    width: 118px;
+  }
+  .rl-axis {
+    margin-left: 118px;
+  }
+  .rl-switch {
+    top: 32px;
+    left: calc(12px + 118px + (100% - 24px - 118px) * 0.49);
   }
 
   .message .wrap {

@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import { BuiltBy, Download, Faq, FinalCall, Footer, Pricing } from '@/components/landing/closing'
 import { Control } from '@/components/landing/control'
-import { Header, Hero, PlanBand } from '@/components/landing/hero'
+import { Header, Hero } from '@/components/landing/hero'
 import { Jobs } from '@/components/landing/jobs'
 import { LiveDemo } from '@/components/landing/live-demo'
 import { PauseOffscreen } from '@/components/landing/in-view'
 import { c } from '@/components/landing/parts'
+import { Plans } from '@/components/landing/plans'
 import { Bridge, Message, Tiles } from '@/components/landing/sections'
 import { RedirectIfSignedIn } from '@/components/redirect-if-signed-in'
 import { getProofNumbers } from '@/lib/github-proof'
@@ -67,7 +68,7 @@ export default function Landing() {
       <main>
         <Hero />
         <LiveDemo />
-        <PlanBand />
+        <Plans />
         <Message />
         <Bridge />
         <Tiles />
