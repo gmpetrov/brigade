@@ -12,10 +12,12 @@ import { python } from '@codemirror/lang-python'
 import { yaml } from '@codemirror/lang-yaml'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { EditorState, type Extension } from '@codemirror/state'
+import { openSearchPanel } from '@codemirror/search'
 import { EditorView, keymap } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 import { basicSetup } from 'codemirror'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type RefObject } from 'react'
+import { codeSearch } from '@/components/code-search'
 
 /** The language of a file, by its extension. */
 function language(path: string): Extension {
@@ -108,7 +110,6 @@ const theme = EditorView.theme({
   '&.cm-focused .cm-matchingBracket': {
     backgroundColor: 'color-mix(in oklch, var(--primary) 18%, transparent)',
   },
-  '.cm-searchMatch': { backgroundColor: 'color-mix(in oklch, var(--warning) 30%, transparent)' },
   '.cm-panels': {
     backgroundColor: 'var(--card)',
     color: 'var(--foreground)',
@@ -132,6 +133,7 @@ export default function CodeEditor({
   line,
   onChange,
   onSave,
+  controls,
 }: {
   /** For its language. */
   path: string
@@ -142,6 +144,8 @@ export default function CodeEditor({
   onChange: (text: string) => void
   /** Mod-S. */
   onSave: () => void
+  /** What the panel's header does in it: open its search bar. */
+  controls?: RefObject<{ search: () => void } | null>
 }) {
   const host = useRef<HTMLDivElement>(null)
   const latest = useRef({ onChange, onSave })
@@ -164,7 +168,9 @@ export default function CodeEditor({
             },
             indentWithTab,
           ]),
-          // Line numbers, undo, search, brackets, folding, completion from the file's words.
+          // Before basicSetup: its search bar, not CodeMirror's.
+          codeSearch,
+          // Line numbers, undo, search keys, brackets, folding, completion from the file's words.
           basicSetup,
           language(path),
           syntaxHighlighting(highlight),
@@ -183,7 +189,11 @@ export default function CodeEditor({
       })
       view.focus()
     }
-    return () => view.destroy()
+    if (controls) controls.current = { search: () => openSearchPanel(view) }
+    return () => {
+      if (controls) controls.current = null
+      view.destroy()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one editor per file; a new key starts another
   }, [])
 

@@ -12,7 +12,7 @@ import {
   type SaveThreadFile,
   type ThreadFile,
 } from '@brigade/contracts'
-import { Check, Copy, Download, FileText, Library, Palette, Pencil, X } from 'lucide-react'
+import { Check, Copy, Download, FileText, Library, Palette, Pencil, Search, X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -155,6 +155,7 @@ function ThreadFilePanel({
   const [loads, setLoads] = useState(0)
   const documents = useDocumentPanel()
   const edit = useEdit(threadId, file)
+  const editor = useRef<{ search: () => void } | null>(null)
   const name = path
     .replace(/:\d+(:\d+)?$/, '')
     .split('/')
@@ -264,6 +265,18 @@ function ThreadFilePanel({
             onClick={() => edit.setOpen(true)}
           >
             <Pencil aria-hidden />
+          </Button>
+        )}
+        {editing && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Find in the file"
+            title={`Find in the file (${typeof navigator !== 'undefined' && /Mac|iP/.test(navigator.platform) ? '⌘' : 'Ctrl+'}F)`}
+            onClick={() => editor.current?.search()}
+          >
+            <Search aria-hidden />
           </Button>
         )}
         {editing && (
@@ -385,6 +398,7 @@ function ThreadFilePanel({
             line={line}
             onChange={edit.change}
             onSave={() => void edit.save()}
+            controls={editor}
           />
         ) : file.contentType === 'text/markdown' ? (
           // Its own relative links open next to it.
