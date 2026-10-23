@@ -221,6 +221,9 @@ const FullContext = createContext<{ full: boolean; setFull: (full: boolean) => v
 const FULL =
   'inset-0 z-50 h-auto rounded-none border-0 xl:inset-0 xl:left-0 xl:z-50 xl:w-auto xl:border-l-0'
 
+/** Whether the panel around it is laid over the whole window (PanelExpandButton). */
+export const usePanelFull = () => useContext(FullContext)?.full ?? false
+
 /** For a panel's header: lays it over the whole window, and back. Escape brings it back too. */
 export function PanelExpandButton() {
   const context = useContext(FullContext)

@@ -2,6 +2,9 @@ import { randomUUID } from 'node:crypto'
 import {
   clipReport,
   CODE_EDIT_PROTOCOL,
+  CODE_TREE_PROTOCOL,
+  CodeHashes,
+  type CodeEntry,
   FILE_VIEW_MAX,
   FindSource,
   SaveThreadFile,
@@ -69,6 +72,7 @@ import {
   eventsWaitingSince,
   isOnline,
   isRestarting,
+  codeFiles,
   findSource,
   readThreadFile,
   runnerProtocol,
@@ -83,6 +87,7 @@ import {
   requireMayPrompt,
   specFor,
   teammateIn,
+  type LoadedThread,
 } from '../thread-spec.js'
 import { movePublic, requestMove } from '../move.js'
 import {
@@ -154,13 +159,30 @@ function mayPrompt(
 const isAdmin = (scope: WorkspaceScope) => scope.role === 'owner' || scope.role === 'admin'
 
 /** Editing code needs the computer on, with a runner that writes files (CODE_EDIT_PROTOCOL). */
-function requireCodeEdit(computerId: string) {
+function requireCodeEdit(computerId: string, needs = CODE_EDIT_PROTOCOL) {
   const protocol = runnerProtocol(computerId)
   if (protocol === undefined) throw new HTTPException(409, { message: 'The computer is offline' })
-  if (protocol < CODE_EDIT_PROTOCOL)
+  if (protocol < needs)
     throw new HTTPException(409, {
       message: 'Update Brigade on this computer to edit code from here',
     })
+}
+
+/** The teammate of the thread whose working folder the code panel shows: one of its own. */
+function codeTeammate(thread: LoadedThread, teammateId: string | undefined) {
+  if (!teammateId || !thread.teammates.some((t) => t.teammateId === teammateId))
+    throw new HTTPException(400, { message: 'That teammate is not in this thread' })
+  requireCodeEdit(thread.computerId, CODE_TREE_PROTOCOL)
+  return teammateId
+}
+
+/** A code panel answer from the runner, or the HTTP error that says why not. */
+function codeAnswer(result: Awaited<ReturnType<typeof codeFiles>>) {
+  if (!result.ok)
+    throw new HTTPException(result.error === 'not_found' ? 404 : 409, {
+      message: result.error === 'not_found' ? 'No such folder' : (result.error ?? 'Could not read'),
+    })
+  return result
 }
 
 /** Edits already told to their thread, by thread, file and member: when. */
@@ -650,6 +672,56 @@ export const threads = new Hono<AppEnv>()
       })
     await noteEdit(db, scope, thread.id, input.path)
     return c.json({ hash: result.hash } satisfies SavedThreadFile)
+  })
+
+  /**
+   * The code panel's tree: a folder of a teammate's working folder for the thread
+   * (`path` relative to it, '' for itself), folders first. Any member who can see
+   * the thread, as for its files.
+   */
+  .get('/:id/code', async (c) => {
+    const thread = await loadThread(c.var.db, c.req.param('id'))
+    const teammateId = codeTeammate(thread, c.req.query('teammateId'))
+    const result = codeAnswer(
+      await codeFiles(thread.computerId, {
+        sessionId: thread.id,
+        teammateId,
+        op: 'list',
+        path: (c.req.query('path') ?? '').replace(/^\.?\/+|\/+$/g, '').slice(0, 1000),
+      }),
+    )
+    return c.json({ entries: result.entries ?? [], more: result.more ?? false } satisfies {
+      entries: CodeEntry[]
+      more: boolean
+    })
+  })
+
+  /** Files of a teammate's working folder by name (find), or lines holding a text (grep). */
+  .get('/:id/code/:op{find|grep}', async (c) => {
+    const thread = await loadThread(c.var.db, c.req.param('id'))
+    const teammateId = codeTeammate(thread, c.req.query('teammateId'))
+    const query = (c.req.query('q') ?? '').trim().slice(0, 200)
+    const op = c.req.param('op') as 'find' | 'grep'
+    const result = codeAnswer(
+      await codeFiles(thread.computerId, { sessionId: thread.id, teammateId, op, query }),
+    )
+    return c.json(op === 'find' ? { files: result.files ?? [] } : { matches: result.matches ?? [] })
+  })
+
+  /** Open files' hashes, to see when the teammate changed one (null: gone, or not text to edit). */
+  .post('/:id/code/hashes', async (c) => {
+    const thread = await loadThread(c.var.db, c.req.param('id'))
+    const input = await parseBody(c.req.raw, CodeHashes)
+    const teammateId = codeTeammate(thread, input.teammateId)
+    const result = codeAnswer(
+      await codeFiles(thread.computerId, {
+        sessionId: thread.id,
+        teammateId,
+        op: 'hashes',
+        paths: input.paths,
+      }),
+    )
+    return c.json({ hashes: result.hashes ?? {} })
   })
 
   /**

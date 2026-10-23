@@ -11,13 +11,14 @@ import { markdown } from '@codemirror/lang-markdown'
 import { python } from '@codemirror/lang-python'
 import { yaml } from '@codemirror/lang-yaml'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
-import { EditorState, type Extension } from '@codemirror/state'
+import { Annotation, EditorState, Transaction, type Extension } from '@codemirror/state'
 import { openSearchPanel } from '@codemirror/search'
 import { EditorView, keymap } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 import { basicSetup } from 'codemirror'
 import { useEffect, useRef, type RefObject } from 'react'
 import { codeSearch } from '@/components/code-search'
+import { textChange } from '@/lib/text-diff'
 
 /** The language of a file, by its extension. */
 function language(path: string): Extension {
@@ -127,6 +128,18 @@ const theme = EditorView.theme({
   },
 })
 
+/** What the editor's owner does in it: its search bar, a line, the file as changed elsewhere. */
+export type CodeEditorControls = {
+  search: () => void
+  /** Puts the cursor on a line and shows it. */
+  goto: (line: number) => void
+  /** The file as it is now on the computer: one change, so the cursor and scroll stay. */
+  replace: (text: string) => void
+}
+
+/** Changes that come from the computer, not from typing: not reported as edits, nor undone. */
+const fromComputer = Annotation.define<boolean>()
+
 export default function CodeEditor({
   path,
   initial,
@@ -134,6 +147,7 @@ export default function CodeEditor({
   onChange,
   onSave,
   controls,
+  readOnly = false,
 }: {
   /** For its language. */
   path: string
@@ -144,8 +158,9 @@ export default function CodeEditor({
   onChange: (text: string) => void
   /** Mod-S. */
   onSave: () => void
-  /** What the panel's header does in it: open its search bar. */
-  controls?: RefObject<{ search: () => void } | null>
+  controls?: RefObject<CodeEditorControls | null>
+  /** Shown, not edited: for whoever may not write to the thread. */
+  readOnly?: boolean
 }) {
   const host = useRef<HTMLDivElement>(null)
   const latest = useRef({ onChange, onSave })
@@ -175,13 +190,19 @@ export default function CodeEditor({
           language(path),
           syntaxHighlighting(highlight),
           theme,
+          EditorState.readOnly.of(readOnly),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) latest.current.onChange(update.state.doc.toString())
+            if (
+              update.docChanged &&
+              update.transactions.some((tr) => tr.docChanged && !tr.annotation(fromComputer))
+            )
+              latest.current.onChange(update.state.doc.toString())
           }),
         ],
       }),
     })
-    if (line && line <= view.state.doc.lines) {
+    const goto = (line: number) => {
+      if (line < 1 || line > view.state.doc.lines) return
       const at = view.state.doc.line(line).from
       view.dispatch({
         selection: { anchor: at },
@@ -189,7 +210,20 @@ export default function CodeEditor({
       })
       view.focus()
     }
-    if (controls) controls.current = { search: () => openSearchPanel(view) }
+    if (line) goto(line)
+    if (controls)
+      controls.current = {
+        search: () => openSearchPanel(view),
+        goto,
+        replace: (text) => {
+          const change = textChange(view.state.doc.toString(), text)
+          if (change.from === change.to && !change.insert) return
+          view.dispatch({
+            changes: change,
+            annotations: [fromComputer.of(true), Transaction.addToHistory.of(false)],
+          })
+        },
+      }
     return () => {
       if (controls) controls.current = null
       view.destroy()

@@ -33,6 +33,7 @@ import { Accounts, machineLogins } from './accounts.js'
 import { Attachments } from './attachments.js'
 import { Connection } from './connection.js'
 import { describeProject } from './describe.js'
+import { codeFiles } from './code-files.js'
 import { findSource, readThreadFile, writeThreadFile } from './files.js'
 import { Folders, ThreadGone, type FolderName } from './folders.js'
 import { Library } from './library.js'
@@ -635,6 +636,19 @@ async function start() {
             (error) =>
               connection.send({
                 type: 'thread.file.written',
+                requestId: message.requestId,
+                ok: false,
+                error: String(error),
+              }),
+          )
+      case 'thread.code':
+        return folderReady(message.sessionId, [message.teammateId])
+          .then(() => codeFiles(message))
+          .then(
+            (result) => connection.send(result),
+            (error) =>
+              connection.send({
+                type: 'thread.code.result',
                 requestId: message.requestId,
                 ok: false,
                 error: String(error),
