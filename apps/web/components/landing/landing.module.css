@@ -2312,9 +2312,14 @@ svg.i {
 }
 .foot nav {
   display: flex;
-  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 24px;
   margin-left: auto;
   align-items: center;
+}
+.foot nav > * {
+  white-space: nowrap;
 }
 
 .foot-name {
@@ -2347,23 +2352,16 @@ svg.i {
   background-size: 220px 220px;
   opacity: 0.09;
 }
-/* Tiny pebbles from the logo, at low contrast, behind the footer's large name. */
-.foot-name {
-  position: relative;
-}
-.foot-name::before {
-  content: '';
-  position: absolute;
-  inset: -0.2em 0 0;
-  background: var(--foreground);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='124'%3E%3Cg transform='translate(10 8) scale(.34)'%3E%3Cpath d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3Cg transform='translate(78 66) scale(.26) rotate(24 50 50)'%3E%3Cpath d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3C/svg%3E")
-    0 0 / 140px 124px repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='124'%3E%3Cg transform='translate(10 8) scale(.34)'%3E%3Cpath d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3Cg transform='translate(78 66) scale(.26) rotate(24 50 50)'%3E%3Cpath d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3C/svg%3E")
-    0 0 / 140px 124px repeat;
-  opacity: 0.06;
-}
+/* The large name, filled with tiny pebbles from the logo, a shade off the ink: the letters
+ * frame the pattern, so nothing is cut at random. Grey pebbles read on black and on white. */
 .foot-name span {
-  position: relative;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='124'%3E%3Cg transform='translate(10 8) scale(.34)'%3E%3Cpath fill='%23808080' fill-opacity='.22' d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3Cg transform='translate(78 66) scale(.26) rotate(24 50 50)'%3E%3Cpath fill='%23808080' fill-opacity='.22' d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3C/svg%3E")
+      0 0 / 0.26em 0.23em repeat,
+    var(--foreground);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* ANIM:BEGIN (generated loops; each element's static style is its final frame) */
