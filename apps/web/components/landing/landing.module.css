@@ -2338,20 +2338,6 @@ svg.i {
   margin-left: -0.04em;
 }
 
-/* Film grain on the dark bands (tiles, pricing): a printed, tactile feel. */
-.tiles {
-  position: relative;
-}
-.tiles::after,
-.pricing::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 220px 220px;
-  opacity: 0.09;
-}
 /* The large name in glossy black, like the apple on a space black MacBook: a shade off the
  * page with a soft sheen across it that slides by now and then. Mixed in oklab (oklch swings
  * the hue between the grey ink and the cool page), then set to a cool hue. */
