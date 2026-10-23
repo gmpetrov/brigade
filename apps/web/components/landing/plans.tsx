@@ -1,4 +1,4 @@
-import { c, Icon } from './parts'
+import { c } from './parts'
 
 function ClaudeMark() {
   return (
@@ -29,7 +29,7 @@ function ChatGptMark() {
  * the models are the product's own (packages/contracts/src/models.ts). */
 export function Plans() {
   return (
-    <section aria-labelledby="plans-title" className={c('sec byo-sec')} data-anim>
+    <section aria-labelledby="plans-title" className={c('sec')} data-anim>
       <div className={c('wrap byo')}>
         <div className={c('byo-copy')}>
           <h2 className={c('h2')} id="plans-title">
@@ -88,7 +88,7 @@ export function Plans() {
                 </span>
               </div>
             </div>
-            <p className={c('cp-l warn cp-relay')}>Same plan, next account · continuing</p>
+            <p className={c('cp-l warn cp-relay')}>Next account takes over, mid-task</p>
             <div className={c('acct')}>
               <div className={c('acct-t')}>
                 <ClaudeMark />

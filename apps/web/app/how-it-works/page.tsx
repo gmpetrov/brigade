@@ -35,7 +35,7 @@ export default function HowItWorks() {
               already pay for, on your Mac or Brigade&apos;s cloud computer.
             </p>
             <Link className={c('btn pri lg')} href={SIGN_UP}>
-              Start free on your Mac
+              Sign up
             </Link>
           </div>
         </section>

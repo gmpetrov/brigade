@@ -316,12 +316,6 @@ svg.i {
 .hero .cta-row {
   justify-content: center;
 }
-.fine {
-  margin-top: 18px;
-  font: 13px var(--font-mono);
-  color: var(--muted-foreground);
-  letter-spacing: 0;
-}
 
 .blk {
   position: absolute;
@@ -456,9 +450,6 @@ svg.i {
 }
 
 /* =================== 2 · Bring your own AI (plans.tsx) =================== */
-.byo-sec {
-  border-top: 2px solid var(--foreground);
-}
 .byo {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
@@ -4700,12 +4691,6 @@ a.lgr:hover .tt {
   display: grid;
   place-items: center;
   background: oklch(0 0 0 / 0.18);
-}
-.demo-note {
-  margin-top: 18px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--muted-foreground);
 }
 @media (max-width: 899px) {
   .demo-view {

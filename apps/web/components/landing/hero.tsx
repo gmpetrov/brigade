@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { BrigadeMark } from '@/components/brigade-mark'
-import { REPO_URL } from '@/lib/github-proof'
-import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
+import { c, SIGN_IN, SIGN_UP } from './parts'
 
 export function Header() {
   return (
@@ -14,16 +13,9 @@ export function Header() {
         <a className={c('hide-m')} href="/#pricing">
           Pricing
         </a>
-        <a className={c('hide-m')} href="/#download">
-          Download
-        </a>
-        <a className={c('hide-m')} href={REPO_URL}>
-          <Icon name="github" />
-          GitHub
-        </a>
         <Link href={SIGN_IN}>Sign in</Link>
         <Link className={c('btn pri')} href={SIGN_UP}>
-          Start free on your Mac
+          Sign up
         </Link>
       </nav>
     </header>
@@ -35,7 +27,6 @@ export function Hero() {
     <section className={c('hero')} aria-labelledby="hero-title">
       <div className={c('wrap')}>
         <div className={c('hero-copy')}>
-          <p className={c('eyebrow')}>The operating system for AI-native companies</p>
           <h1 id="hero-title">
             <em>One team</em> builds it, sells it and supports it.
           </h1>
@@ -46,10 +37,9 @@ export function Hero() {
           </p>
           <div className={c('cta-row')}>
             <Link className={c('btn pri lg')} href={SIGN_UP}>
-              Start free on your Mac
+              Sign up
             </Link>
           </div>
-          <p className={c('fine')}>Open source · Free on your Mac</p>
         </div>
       </div>
     </section>
