@@ -622,15 +622,29 @@ svg.i {
   width: calc(var(--r) * 2);
   height: calc(var(--r) * 2);
   margin: calc(var(--r) * -1) 0 0 calc(var(--r) * -1);
-  border: 1px solid var(--border);
-  border-radius: 50%;
 }
 .orbit.o1 {
   --r: 345px;
 }
 .orbit.o2 {
   --r: 450px;
-  border-style: dashed;
+}
+/* Four hairline rings, fading out toward the edges of the section. */
+.ap-rings {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: radial-gradient(circle at center, #000 45%, transparent 75%);
+  mask-image: radial-gradient(circle at center, #000 45%, transparent 75%);
+}
+.ap-rings span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--r) * 2);
+  height: calc(var(--r) * 2);
+  margin: calc(var(--r) * -1) 0 0 calc(var(--r) * -1);
+  border: 1px solid var(--border);
+  border-radius: 50%;
 }
 .app-t {
   position: absolute;
@@ -654,6 +668,35 @@ svg.i {
 .app-t svg {
   width: 28px;
   height: 28px;
+}
+/* The beam from an App in use to the thread: from the logo's edge to the center, the
+ * thread's card hiding its far end. */
+.app-t::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--r) - 36px);
+  height: 3px;
+  margin-top: -1.5px;
+  transform-origin: 0 50%;
+  transform: rotate(calc(var(--a) + 180deg)) translateX(36px);
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--primary),
+    color-mix(in oklch, var(--primary) 15%, transparent) 60%
+  );
+  opacity: 0;
+}
+/* The ripple out of an App in use. */
+.app-i::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  opacity: 0;
 }
 .app-t::after {
   content: '';
@@ -4158,17 +4201,33 @@ svg.i {
 .ap5 {
   animation: k-ap5 14s ease-out infinite;
 }
-.app-t.g0::after {
+.app-t.g0::after,
+.app-t.g0::before {
   animation: k-g0 14s ease-in-out infinite;
 }
-.app-t.g1::after {
+.app-t.g0 .app-i::before {
+  animation: k-r0 14s ease-out infinite;
+}
+.app-t.g1::after,
+.app-t.g1::before {
   animation: k-g1 14s ease-in-out infinite;
 }
-.app-t.g2::after {
+.app-t.g1 .app-i::before {
+  animation: k-r1 14s ease-out infinite;
+}
+.app-t.g2::after,
+.app-t.g2::before {
   animation: k-g2 14s ease-in-out infinite;
 }
-.app-t.g3::after {
+.app-t.g2 .app-i::before {
+  animation: k-r2 14s ease-out infinite;
+}
+.app-t.g3::after,
+.app-t.g3::before {
   animation: k-g3 14s ease-in-out infinite;
+}
+.app-t.g3 .app-i::before {
+  animation: k-r3 14s ease-out infinite;
 }
 @keyframes k-ap1 {
   0%,
@@ -4302,6 +4361,22 @@ svg.i {
     transform: none;
   }
 }
+@keyframes k-r0 {
+  0%,
+  13% {
+    opacity: 0;
+    transform: none;
+  }
+  14% {
+    opacity: 0.7;
+    transform: none;
+  }
+  22%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
 @keyframes k-g0 {
   0%,
   13%,
@@ -4312,6 +4387,22 @@ svg.i {
   15%,
   24% {
     opacity: 1;
+  }
+}
+@keyframes k-r1 {
+  0%,
+  25% {
+    opacity: 0;
+    transform: none;
+  }
+  26% {
+    opacity: 0.7;
+    transform: none;
+  }
+  34%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
   }
 }
 @keyframes k-g1 {
@@ -4326,6 +4417,22 @@ svg.i {
     opacity: 1;
   }
 }
+@keyframes k-r2 {
+  0%,
+  37% {
+    opacity: 0;
+    transform: none;
+  }
+  38% {
+    opacity: 0.7;
+    transform: none;
+  }
+  46%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
 @keyframes k-g2 {
   0%,
   37%,
@@ -4336,6 +4443,22 @@ svg.i {
   39%,
   48% {
     opacity: 1;
+  }
+}
+@keyframes k-r3 {
+  0%,
+  49% {
+    opacity: 0;
+    transform: none;
+  }
+  50% {
+    opacity: 0.7;
+    transform: none;
+  }
+  58%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
   }
 }
 @keyframes k-g3 {
@@ -5111,6 +5234,10 @@ a.lgr:hover .tt {
   }
   .orbit {
     display: contents;
+  }
+  .ap-rings,
+  .app-t::before {
+    display: none;
   }
   .orbit .app-i {
     animation: none;

@@ -4,8 +4,9 @@ import { c, Icon } from './parts'
 
 type Tile = { kind: ProviderKind | 'github'; name: string; angle: string; glow?: string }
 
-// Two rings that turn slowly around the chat. The Apps the use case calls sit on the
-// inner one and glow in turn, one class per step (g0 to g3).
+// Two orbits that turn slowly around the thread, on the middle two of four fading rings. The
+// Apps the use case calls sit on the inner one: in turn, each glows, ripples and sends a beam
+// to the thread, one class per step (g0 to g3).
 const inner: Tile[] = [
   { kind: 'google_calendar', name: 'Google Calendar', angle: '-150deg', glow: 'g0' },
   { kind: 'gmail', name: 'Gmail', angle: '160deg', glow: 'g1' },
@@ -64,6 +65,12 @@ export function Apps() {
         </div>
 
         <div className={c('apps-stage')} aria-hidden="true">
+          <div className={c('ap-rings')}>
+            <span style={{ '--r': '230px' } as CSSProperties}></span>
+            <span style={{ '--r': '345px' } as CSSProperties}></span>
+            <span style={{ '--r': '450px' } as CSSProperties}></span>
+            <span style={{ '--r': '555px' } as CSSProperties}></span>
+          </div>
           {[
             { cls: 'orbit o1', tiles: inner },
             { cls: 'orbit o2', tiles: outer },
