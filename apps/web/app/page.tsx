@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Apps } from '@/components/landing/apps'
 import { BuiltBy, Download, Faq, FinalCall, Footer, Pricing } from '@/components/landing/closing'
 import { Control } from '@/components/landing/control'
 import { Header, Hero } from '@/components/landing/hero'
@@ -69,6 +70,7 @@ export default function Landing() {
         <Hero />
         <LiveDemo />
         <Plans />
+        <Apps />
         <Tiles />
         <Jobs />
         <Control />

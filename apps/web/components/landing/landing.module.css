@@ -605,6 +605,114 @@ svg.i {
   margin-left: auto;
 }
 
+/* =================== Apps (apps.tsx) =================== */
+.apps-head {
+  margin: 0 auto 48px;
+  text-align: center;
+}
+.apps-stage {
+  position: relative;
+  height: 560px;
+  border-radius: var(--radius-xl);
+  background: var(--sidebar);
+  overflow: hidden;
+}
+/* An App's logo, placed around the chat by --x and --y. */
+.app-t {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 64px;
+  height: 64px;
+  margin: 0 0 0 -32px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.app-t svg {
+  width: 30px;
+  height: 30px;
+}
+.app-t::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 22px;
+  border: 2px solid var(--primary);
+  opacity: 0;
+}
+.ap-chat {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(520px, 56%);
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  font-size: 14px;
+}
+.ap-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+.ap-msg.ap-me {
+  align-self: end;
+  justify-self: end;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--secondary);
+  font-weight: 500;
+}
+.ap-msg.ap-me .av {
+  background: var(--foreground);
+  color: var(--background);
+}
+.ap-steps {
+  display: grid;
+  gap: 6px;
+  padding-left: 30px;
+}
+.ap-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.ap-step svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.ap-step > span:nth-child(2) {
+  flex: 1;
+}
+.ap-ok {
+  display: inline-flex;
+  color: var(--success);
+}
+.apps-list {
+  max-width: 900px;
+  margin: 32px auto 0;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--muted-foreground);
+}
+
 /* =================== Sections =================== */
 .sec {
   padding: 120px 0;
@@ -3976,6 +4084,181 @@ svg.i {
     transform: none;
   }
 }
+/* Apps: Ada asks, the teammate calls four Apps in turn (each glows), then answers. */
+.ap0 {
+  animation: k-ap0 14s ease-out infinite;
+}
+.ap1 {
+  animation: k-ap1 14s ease-out infinite;
+}
+.ap2 {
+  animation: k-ap2 14s ease-out infinite;
+}
+.ap3 {
+  animation: k-ap3 14s ease-out infinite;
+}
+.ap4 {
+  animation: k-ap4 14s ease-out infinite;
+}
+.ap5 {
+  animation: k-ap5 14s ease-out infinite;
+}
+.app-t.g0::after {
+  animation: k-g0 14s ease-in-out infinite;
+}
+.app-t.g1::after {
+  animation: k-g1 14s ease-in-out infinite;
+}
+.app-t.g2::after {
+  animation: k-g2 14s ease-in-out infinite;
+}
+.app-t.g3::after {
+  animation: k-g3 14s ease-in-out infinite;
+}
+@keyframes k-ap0 {
+  0%,
+  2% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  5%,
+  94% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-ap1 {
+  0%,
+  14% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  17%,
+  94% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-ap2 {
+  0%,
+  26% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  29%,
+  94% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-ap3 {
+  0%,
+  38% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  41%,
+  94% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-ap4 {
+  0%,
+  50% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  53%,
+  94% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-ap5 {
+  0%,
+  64% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  67%,
+  94% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-g0 {
+  0%,
+  13%,
+  26%,
+  100% {
+    opacity: 0;
+  }
+  15%,
+  24% {
+    opacity: 1;
+  }
+}
+@keyframes k-g1 {
+  0%,
+  25%,
+  38%,
+  100% {
+    opacity: 0;
+  }
+  27%,
+  36% {
+    opacity: 1;
+  }
+}
+@keyframes k-g2 {
+  0%,
+  37%,
+  50%,
+  100% {
+    opacity: 0;
+  }
+  39%,
+  48% {
+    opacity: 1;
+  }
+}
+@keyframes k-g3 {
+  0%,
+  49%,
+  62%,
+  100% {
+    opacity: 0;
+  }
+  51%,
+  60% {
+    opacity: 1;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .page *,
   .page *::before,
@@ -4705,5 +4988,45 @@ a.lgr:hover .tt {
 @media (max-width: 640px) {
   .live-demo {
     padding-bottom: 64px;
+  }
+}
+
+/* Apps: below 1000px the logos wrap above the chat instead of circling it. */
+@media (max-width: 1000px) {
+  .apps-stage {
+    height: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+  .app-t {
+    position: relative;
+    left: auto;
+    top: auto;
+    margin: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+  }
+  .app-t svg {
+    width: 24px;
+    height: 24px;
+  }
+  .app-t::after {
+    border-radius: 18px;
+  }
+  .ap-chat {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    width: 100%;
+    margin-top: 10px;
+    padding: 14px;
+  }
+  .ap-steps {
+    padding-left: 0;
   }
 }
