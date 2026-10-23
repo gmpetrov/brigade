@@ -996,7 +996,7 @@ function TeammateThreads({ teammate }: { teammate: Teammate }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
+      <div ref={scroller} className="scroll-fade scroll-fade-y min-h-0 flex-1 overflow-y-auto">
         <div className={cn(column, 'flex min-h-full flex-col justify-end pb-12')}>
           {list ? (
             <>

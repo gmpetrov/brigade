@@ -203,9 +203,10 @@
   }
 
   /* A scrolling list whose top and bottom fade out where more of it is hidden
-   * (the sidebar): each edge fades in over the first 3rem of scroll toward it,
-   * so a list at its start, or one that does not scroll, shows no top fade.
-   * Without scroll-driven animations, no fade. */
+   * (the sidebar, a thread's conversation): each edge fades in over the first
+   * 3rem of scroll toward it, so a list at its start, or one that does not
+   * scroll, shows no top fade. Without scroll-driven animations, no fade; with
+   * .scroll-fade beside it, that one's bottom fade instead. */
   @supports (animation-timeline: scroll()) {
     .scroll-fade-y {
       mask-image: linear-gradient(
