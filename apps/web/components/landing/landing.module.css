@@ -2195,6 +2195,34 @@ svg.i {
   transform: scaleY(var(--esy, 1));
   transition: transform 0.12s ease-in-out;
 }
+/* Each eye is the logo's smile or an open pill, one fading and squashing into the other. */
+.pb-smile,
+.pb-open {
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+  transition:
+    opacity 0.18s ease,
+    transform 0.22s cubic-bezier(0.3, 1.4, 0.6, 1);
+}
+.pb-open {
+  stroke-width: 7.5;
+}
+.e0 .pb-smile {
+  opacity: var(--h0, 1);
+  transform: scaleY(calc(0.2 + 0.8 * var(--h0, 1)));
+}
+.e1 .pb-smile {
+  opacity: var(--h1, 1);
+  transform: scaleY(calc(0.2 + 0.8 * var(--h1, 1)));
+}
+.e0 .pb-open {
+  opacity: calc(1 - var(--h0, 1));
+  transform: scaleY(calc(var(--o0, 1) * (1 - 0.8 * var(--h0, 1))));
+}
+.e1 .pb-open {
+  opacity: calc(1 - var(--h1, 1));
+  transform: scaleY(calc(var(--o1, 1) * (1 - 0.8 * var(--h1, 1))));
+}
 /* A soft light on the surface, sliding the other way as the head turns. */
 .pb-light {
   transform: translate(var(--hx, 0), var(--hy, 0));

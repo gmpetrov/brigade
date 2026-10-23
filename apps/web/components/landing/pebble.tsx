@@ -11,6 +11,59 @@ const rad = (deg: number) => (deg * Math.PI) / 180
 // sphere, so the far one slides less and narrows more than the near one.
 const R = 48
 const EYES = [-9.5, 9.5].map((x) => Math.asin(x / R))
+// Its moods, as each eye's smile (1: the logo's happy arcs, 0: open) and how tall it opens.
+const MOODS: { weight: number; eyes: [smile: number, open: number][] }[] = [
+  {
+    weight: 40,
+    eyes: [
+      [0, 1],
+      [0, 1],
+    ],
+  }, // open
+  {
+    weight: 30,
+    eyes: [
+      [1, 1],
+      [1, 1],
+    ],
+  }, // smiling
+  {
+    weight: 10,
+    eyes: [
+      [0, 1.35],
+      [0, 1.35],
+    ],
+  }, // wide open
+  {
+    weight: 8,
+    eyes: [
+      [0, 0.45],
+      [0, 0.45],
+    ],
+  }, // squinting
+  {
+    weight: 6,
+    eyes: [
+      [1, 1],
+      [0, 1],
+    ],
+  }, // winking
+  {
+    weight: 6,
+    eyes: [
+      [0, 1],
+      [1, 1],
+    ],
+  },
+]
+const pickMood = () => {
+  let n = random(
+    0,
+    MOODS.reduce((sum, m) => sum + m.weight, 0),
+  )
+  return MOODS.find((m) => (n -= m.weight) < 0) ?? MOODS[0]!
+}
+
 const SHAPE = 'M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'
 
 export function Pebble() {
@@ -58,6 +111,16 @@ export function Pebble() {
       later(drift, random(2500, 5000))
     }
 
+    const mood = () => {
+      if (visible)
+        pickMood().eyes.forEach(([smile, open], i) => {
+          set(`--h${i}`, `${smile}`)
+          set(`--o${i}`, `${open}`)
+        })
+      // A wink or a squint doesn't last; a mood does, for a while.
+      later(mood, random(1800, 6500))
+    }
+
     const observer = new IntersectionObserver(([entry]) => {
       visible = entry?.isIntersecting ?? false
     })
@@ -65,6 +128,7 @@ export function Pebble() {
     // Once the observer has said whether it shows.
     later(look, 300)
     later(drift, 300)
+    later(mood, random(1500, 3000))
     return () => {
       observer.disconnect()
       timers.forEach(clearTimeout)
@@ -89,11 +153,14 @@ export function Pebble() {
             <circle className={c('pb-light')} cx="36" cy="30" r="46" fill="url(#pb-light)" />
           </g>
           {[
-            { cls: 'pb-eye e0', d: 'M34.5 44Q40.5 28 46.5 44' },
-            { cls: 'pb-eye e1', d: 'M53.5 44Q59.5 28 65.5 44' },
+            { cls: 'pb-eye e0', smile: 'M34.5 44Q40.5 28 46.5 44', open: 'M40.5 34V45' },
+            { cls: 'pb-eye e1', smile: 'M53.5 44Q59.5 28 65.5 44', open: 'M59.5 34V45' },
           ].map((eye) => (
             <g key={eye.cls} className={c(eye.cls)}>
-              <path className={c('pb-lid')} d={eye.d} />
+              <g className={c('pb-lid')}>
+                <path className={c('pb-smile')} d={eye.smile} />
+                <path className={c('pb-open')} d={eye.open} />
+              </g>
             </g>
           ))}
         </g>
