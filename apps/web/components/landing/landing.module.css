@@ -612,35 +612,54 @@ svg.i {
 }
 .apps-stage {
   position: relative;
-  height: 560px;
-  border-radius: var(--radius-xl);
-  background: var(--sidebar);
-  overflow: hidden;
+  height: 860px;
 }
-/* An App's logo, placed around the chat by --x and --y. */
+/* A ring centered on the chat, of radius --r; each App sits on it at its angle --a. */
+.orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--r) * 2);
+  height: calc(var(--r) * 2);
+  margin: calc(var(--r) * -1) 0 0 calc(var(--r) * -1);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+.orbit.o1 {
+  --r: 290px;
+}
+.orbit.o2 {
+  --r: 395px;
+  border-style: dashed;
+}
 .app-t {
   position: absolute;
-  left: var(--x);
-  top: var(--y);
-  width: 64px;
-  height: 64px;
-  margin: 0 0 0 -32px;
-  display: grid;
-  place-items: center;
-  border-radius: 18px;
+  left: 50%;
+  top: 50%;
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  transform: rotate(var(--a)) translate(var(--r)) rotate(calc(var(--a) * -1));
+  border-radius: 50%;
   background: var(--card);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
 }
+.app-i {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
 .app-t svg {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
 }
 .app-t::after {
   content: '';
   position: absolute;
   inset: -6px;
-  border-radius: 22px;
+  border-radius: 50%;
   border: 2px solid var(--primary);
   opacity: 0;
 }
@@ -648,15 +667,13 @@ svg.i {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: min(520px, 56%);
+  width: 440px;
   transform: translate(-50%, -50%);
   display: grid;
   gap: 12px;
-  padding: 20px;
-  border-radius: var(--radius);
-  background: var(--card);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
+  padding: 24px 8px;
+  background: var(--background);
+  border-radius: 50%;
   font-size: 14px;
 }
 .ap-msg {
@@ -703,14 +720,6 @@ svg.i {
 .ap-ok {
   display: inline-flex;
   color: var(--success);
-}
-.apps-list {
-  max-width: 900px;
-  margin: 32px auto 0;
-  text-align: center;
-  font-size: 14px;
-  line-height: 1.8;
-  color: var(--muted-foreground);
 }
 
 /* =================== Sections =================== */
@@ -4259,6 +4268,24 @@ svg.i {
     opacity: 1;
   }
 }
+/* Apps: the rings turn slowly; each logo turns back so it stays upright. */
+.orbit.o1 {
+  animation: k-spin 90s linear infinite;
+}
+.orbit.o2 {
+  animation: k-spin 140s linear infinite reverse;
+}
+.orbit.o1 .app-i {
+  animation: k-spin 90s linear infinite reverse;
+}
+.orbit.o2 .app-i {
+  animation: k-spin 140s linear infinite;
+}
+@keyframes k-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .page *,
   .page *::before,
@@ -4995,11 +5022,16 @@ a.lgr:hover .tt {
 @media (max-width: 1000px) {
   .apps-stage {
     height: auto;
-    padding: 20px 16px;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 10px;
+  }
+  .orbit {
+    display: contents;
+  }
+  .orbit .app-i {
+    animation: none;
   }
   .app-t {
     position: relative;
@@ -5008,14 +5040,11 @@ a.lgr:hover .tt {
     margin: 0;
     width: 48px;
     height: 48px;
-    border-radius: 14px;
+    transform: none;
   }
   .app-t svg {
     width: 24px;
     height: 24px;
-  }
-  .app-t::after {
-    border-radius: 18px;
   }
   .ap-chat {
     position: relative;
@@ -5023,8 +5052,9 @@ a.lgr:hover .tt {
     top: auto;
     transform: none;
     width: 100%;
-    margin-top: 10px;
-    padding: 14px;
+    margin-top: 16px;
+    padding: 0;
+    border-radius: 0;
   }
   .ap-steps {
     padding-left: 0;

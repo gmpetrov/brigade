@@ -2,45 +2,24 @@ import type { CSSProperties } from 'react'
 import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
 import { c, Icon } from './parts'
 
-type Tile = { kind: ProviderKind | 'github'; name: string; x: string; y: string; glow?: string }
+type Tile = { kind: ProviderKind | 'github'; name: string; angle: string; glow?: string }
 
-// Around the chat: the Apps the use case calls glow in turn, one class per step (g0 to g3).
-const tiles: Tile[] = [
-  { kind: 'google_calendar', name: 'Google Calendar', x: '4%', y: '10%', glow: 'g0' },
-  { kind: 'gmail', name: 'Gmail', x: '13%', y: '42%', glow: 'g1' },
-  { kind: 'notion', name: 'Notion', x: '3%', y: '74%' },
-  { kind: 'google_drive', name: 'Google Drive', x: '17%', y: '86%' },
-  { kind: 'linear', name: 'Linear', x: '18%', y: '4%' },
-  { kind: 'stripe', name: 'Stripe', x: '84%', y: '12%', glow: 'g2' },
-  { kind: 'mixpanel', name: 'Mixpanel', x: '90%', y: '44%', glow: 'g3' },
-  { kind: 'github', name: 'GitHub', x: '79%', y: '84%' },
-  { kind: 'posthog', name: 'PostHog', x: '94%', y: '76%' },
-  { kind: 'google_sheets', name: 'Google Sheets', x: '77%', y: '0%' },
+// Two rings that turn slowly around the chat. The Apps the use case calls sit on the
+// inner one and glow in turn, one class per step (g0 to g3).
+const inner: Tile[] = [
+  { kind: 'google_calendar', name: 'Google Calendar', angle: '-150deg', glow: 'g0' },
+  { kind: 'gmail', name: 'Gmail', angle: '160deg', glow: 'g1' },
+  { kind: 'stripe', name: 'Stripe', angle: '-30deg', glow: 'g2' },
+  { kind: 'mixpanel', name: 'Mixpanel', angle: '20deg', glow: 'g3' },
+  { kind: 'notion', name: 'Notion', angle: '90deg' },
 ]
-
-// Every App Brigade has built in (apps/api/src/connectors/index.ts).
-const names = [
-  'Gmail',
-  'Google Calendar',
-  'Google Drive',
-  'Google Docs',
-  'Google Sheets',
-  'Google Analytics',
-  'Search Console',
-  'Stripe',
-  'GitHub',
-  'Linear',
-  'Notion',
-  'Jira & Confluence',
-  'Mixpanel',
-  'PostHog',
-  'Supabase',
-  'Neon',
-  'Cloudflare',
-  'Google Cloud',
-  'Resend',
-  'Replicate',
-  'OpenRouter',
+const outer: Tile[] = [
+  { kind: 'linear', name: 'Linear', angle: '-110deg' },
+  { kind: 'google_sheets', name: 'Google Sheets', angle: '-60deg' },
+  { kind: 'github', name: 'GitHub', angle: '0deg' },
+  { kind: 'posthog', name: 'PostHog', angle: '55deg' },
+  { kind: 'google_drive', name: 'Google Drive', angle: '125deg' },
+  { kind: 'supabase', name: 'Supabase', angle: '185deg' },
 ]
 
 const steps = [
@@ -58,7 +37,7 @@ function Logo({ kind }: { kind: Tile['kind'] }) {
   return kind === 'github' ? <Icon name="github" /> : <ProviderLogo kind={kind} />
 }
 
-/** Apps: the tools teammates work in, and one request that uses four of them. */
+/** Apps: the tools teammates work in, on two rings around one request that uses four of them. */
 export function Apps() {
   return (
     <section aria-labelledby="apps-title" className={c('sec apps-sec')} data-anim>
@@ -74,15 +53,24 @@ export function Apps() {
         </div>
 
         <div className={c('apps-stage')} aria-hidden="true">
-          {tiles.map((t) => (
-            <span
-              key={t.kind}
-              className={c(t.glow ? `app-t ${t.glow}` : 'app-t')}
-              style={{ '--x': t.x, '--y': t.y } as CSSProperties}
-              title={t.name}
-            >
-              <Logo kind={t.kind} />
-            </span>
+          {[
+            { cls: 'orbit o1', tiles: inner },
+            { cls: 'orbit o2', tiles: outer },
+          ].map((ring) => (
+            <div key={ring.cls} className={c(ring.cls)}>
+              {ring.tiles.map((t) => (
+                <span
+                  key={t.kind}
+                  className={c(t.glow ? `app-t ${t.glow}` : 'app-t')}
+                  style={{ '--a': t.angle } as CSSProperties}
+                  title={t.name}
+                >
+                  <span className={c('app-i')}>
+                    <Logo kind={t.kind} />
+                  </span>
+                </span>
+              ))}
+            </div>
           ))}
 
           <div className={c('ap-chat')}>
@@ -110,11 +98,6 @@ export function Apps() {
             </div>
           </div>
         </div>
-
-        <p className={c('apps-list')}>
-          {names.join(' · ')}
-          <span> · and a custom App for any service that sends webhooks</span>
-        </p>
       </div>
     </section>
   )
