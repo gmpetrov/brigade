@@ -34,13 +34,15 @@ import {
   SquareMousePointer,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { PanelExpandButton, SidePanel } from '@/components/side-panel'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { CodeWorkspace } from '@/components/code-workspace'
+import { PanelExpandButton, SidePanel, usePanelFull } from '@/components/side-panel'
 
 /** The preview's name among the panels beside a page. */
 export const PREVIEW_PANEL = 'preview'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
+import { openCodeTab, setCodePanel, useCodePanel } from '@/lib/code-tabs'
 import { cn } from '@/lib/utils'
 
 export type ThreadPreview = PreviewInfo & { teammateId?: string }
@@ -179,7 +181,7 @@ function LivePreviewPanel({
   onAsk,
   onPick,
   picked = 0,
-  onOpenCode,
+  code: codeOptions,
   expectedCommit,
 }: {
   threadId: string
@@ -204,8 +206,11 @@ function LivePreviewPanel({
   onPick?: PickHandlers
   /** How many picked elements wait in the composer. */
   picked?: number
-  /** Open a file of the teammate's working folder, at a line: an element's code. Without it, none opens. */
-  onOpenCode?: (file: { path: string; teammateId?: string }) => void
+  /**
+   * The code panel under or beside the preview (components/code-workspace.tsx): the files
+   * of the copy it runs, to edit and see at once. Without it, none.
+   */
+  code?: { mayEdit: boolean; teammateName: (id: string) => string }
   /** The commit it should run (a pull request's head): when it runs another, the panel says so. */
   expectedCommit?: string
 }) {
@@ -219,12 +224,16 @@ function LivePreviewPanel({
   const [lastLine, setLastLine] = useState<string>()
   const running = preview.status === 'running'
   const phase = previewPhase(preview)
-  const code = useOpenCode(threadId, preview, onOpenCode)
+  // The code beside it: of the copy it runs, the teammate's who started it.
+  const coding = codeOptions && preview.teammateId ? codeOptions : undefined
+  const codePanel = useCodePanel(threadId)
+  const showCode = !!coding && codePanel.open
+  const code = useOpenCode(threadId, preview)
   const select = usePreviewSelect(
     view?.url,
     preview.previewId,
     onPick,
-    onOpenCode && preview.teammateId ? code.find : undefined,
+    coding ? code.find : undefined,
   )
 
   // The address, once per run of the preview.
@@ -316,7 +325,7 @@ function LivePreviewPanel({
     <SidePanel aria-label="Preview" name={PREVIEW_PANEL} onClose={onClose}>
       <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
         <AppWindow aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <strong className="flex min-w-0 items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
             <span className={cn('size-2 shrink-0 rounded-full', status.dot)} aria-hidden />
             Preview
@@ -350,29 +359,6 @@ function LivePreviewPanel({
                 onClick={() => select.set(select.on === 'mention' ? false : 'mention')}
               >
                 <SquareMousePointer aria-hidden />
-              </Button>
-            )}
-            {select.available && onOpenCode && preview.teammateId && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-pressed={select.on === 'code'}
-                aria-label={select.on === 'code' ? 'Stop selecting' : 'Open the code of an element'}
-                title={
-                  select.on === 'code'
-                    ? 'Stop selecting (Esc)'
-                    : 'Click an element in the page to open its code and edit it'
-                }
-                className={cn(
-                  select.on === 'code' && 'bg-primary/12 text-primary hover:text-primary',
-                )}
-                onClick={() => {
-                  code.clear()
-                  select.set(select.on === 'code' ? false : 'code')
-                }}
-              >
-                <CodeXml aria-hidden />
               </Button>
             )}
             <Button
@@ -414,6 +400,27 @@ function LivePreviewPanel({
             </Button>
           </>
         )}
+        {coding && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-pressed={showCode}
+            aria-label={showCode ? 'Hide the code' : 'Show the code'}
+            title={
+              showCode
+                ? 'Hide the code'
+                : 'Show the code beside the preview: what you save shows in it'
+            }
+            className={cn(showCode && 'bg-primary/12 text-primary hover:text-primary')}
+            onClick={() => {
+              if (showCode && select.on === 'code') select.set(false)
+              setCodePanel(threadId, { open: !showCode })
+            }}
+          >
+            <CodeXml aria-hidden />
+          </Button>
+        )}
         <Button
           type="button"
           variant="ghost"
@@ -440,158 +447,185 @@ function LivePreviewPanel({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {running && view ? (
-          <>
-            {otherCommit && (
-              <Notice icon={<GitCommitHorizontal aria-hidden className="size-4 shrink-0" />}>
-                It runs <span className="font-mono">{short(preview.commit!)}</span>; the pull
-                request is at <span className="font-mono">{short(expectedCommit)}</span>.
-                {onAsk && (
-                  <NoticeAction
-                    onClick={() =>
-                      onAsk(
-                        `Please update your checkout to the latest commit of the pull request (${short(expectedCommit)}) and start its preview again.`,
-                      )
-                    }
-                  >
-                    Ask {teammateName} to update it
-                  </NoticeAction>
-                )}
-              </Notice>
-            )}
-            {phase === 'checking' && (
-              <Notice icon={<LoaderCircle aria-hidden className="size-4 shrink-0 animate-spin" />}>
-                Checking its pages as a person would open them…
-              </Notice>
-            )}
-            {phase === 'attention' && (
-              <Notice
-                tone="destructive"
-                icon={<CircleAlert aria-hidden className="size-4 shrink-0" />}
-              >
-                {failedPages.length
-                  ? `The check found problems on ${failedPages.join(', ')}.`
-                  : 'The check found problems.'}
-                {onAsk && (
-                  <NoticeAction
-                    onClick={() =>
-                      onAsk(
-                        `The preview's check found problems${failedPages.length ? ` on ${failedPages.join(', ')}` : ''}. Please fix them and check it again.`,
-                      )
-                    }
-                  >
-                    Ask {teammateName} to fix it
-                  </NoticeAction>
-                )}
-              </Notice>
-            )}
-            {select.on === 'mention' && (
-              <Notice icon={<SquareMousePointer aria-hidden className="size-4 shrink-0" />}>
-                Click an element to add it to your message
-                {picked > 0 && ` · ${picked} added`}. Esc to stop.
-              </Notice>
-            )}
-            {select.on === 'code' && (
-              <Notice icon={<CodeXml aria-hidden className="size-4 shrink-0" />}>
-                Click an element to open its code. Esc to stop.
-              </Notice>
-            )}
-            {code.state && (
-              <CodeNotice state={code.state} onOpen={code.open} onClose={code.clear} />
-            )}
-            {view.local && (
-              <p className="border-b px-3 py-1.5 text-xs text-muted-foreground">
-                The app runs on {computerName}, so it opens there only, at{' '}
-                <span className="font-mono text-foreground">{address}</span>.
-              </p>
-            )}
-            <iframe
-              ref={select.frame}
-              key={`${preview.previewId}:${frame}`}
-              src={view.url}
-              title={`Preview of the app ${teammateName} runs`}
-              className="min-h-0 w-full flex-1 border-0 bg-white"
-              // Its own origin, apart from the dashboard's: scripts and forms run as they would in a tab,
-              // and what it opens (a sign-in tab) is a plain tab, without the frame's sandbox.
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"
-              allow="clipboard-read; clipboard-write; fullscreen"
-              referrerPolicy="no-referrer"
-            />
-          </>
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
-            {preview.status === 'starting' ? (
-              <>
-                <LoaderCircle aria-hidden className="size-5 animate-spin" />
-                <p className="font-medium text-foreground">
-                  {preview.reason ?? (phase === 'setup' ? 'Running its setup' : 'Starting the app')}
-                  {elapsed && (
-                    <span className="font-normal text-muted-foreground"> · {elapsed}</span>
-                  )}
-                </p>
-                {phase === 'setup' && (
-                  <p className="max-w-xs">
-                    Installing, starting its services and adding sample data. The first start can
-                    take a few minutes; later ones are quicker.
-                  </p>
-                )}
-                {lastLine && (
-                  <p
-                    className="max-w-full truncate rounded bg-muted px-2 py-1 font-mono text-xs"
-                    title={lastLine}
-                  >
-                    {lastLine}
-                  </p>
-                )}
-              </>
-            ) : running && !view && !error ? (
-              <>
-                <LoaderCircle aria-hidden className="size-5 animate-spin" />
-                <p>Opening the preview…</p>
-              </>
-            ) : running ? null : (
-              <>
-                <p className="max-w-sm font-medium text-foreground">
-                  {endedText(preview.status as 'failed' | 'stopped', preview.reason)}
-                </p>
-                {waking && (
-                  <p className="max-w-xs">
-                    Starting the cloud computer first. It takes a minute or so; the preview starts
-                    once it is up.
-                  </p>
-                )}
-                <div className="flex flex-wrap justify-center gap-2">
-                  {mayControl && onStart ? (
-                    <Button size="sm" disabled={starting} onClick={onStart}>
-                      {starting ? (
-                        <LoaderCircle aria-hidden className="animate-spin" />
-                      ) : (
-                        <Play aria-hidden />
-                      )}
-                      Start again
-                    </Button>
-                  ) : (
-                    !mayControl && <p>Ask {teammateName} to start it again.</p>
-                  )}
-                  {preview.status === 'failed' && onAsk && (
-                    <Button
-                      size="sm"
-                      variant="outline"
+        <PreviewSplit
+          code={
+            showCode && coding ? (
+              <CodeWorkspace
+                threadId={threadId}
+                teammateId={preview.teammateId!}
+                teammateName={coding.teammateName}
+                mayEdit={coding.mayEdit}
+                cwd={preview.cwd}
+                picking={select.on === 'code'}
+                onPick={
+                  select.available
+                    ? () => {
+                        code.clear()
+                        select.set(select.on === 'code' ? false : 'code')
+                      }
+                    : undefined
+                }
+                className="min-h-0 flex-1"
+              />
+            ) : null
+          }
+        >
+          {running && view ? (
+            <>
+              {otherCommit && (
+                <Notice icon={<GitCommitHorizontal aria-hidden className="size-4 shrink-0" />}>
+                  It runs <span className="font-mono">{short(preview.commit!)}</span>; the pull
+                  request is at <span className="font-mono">{short(expectedCommit)}</span>.
+                  {onAsk && (
+                    <NoticeAction
                       onClick={() =>
                         onAsk(
-                          `The preview failed${preview.reason ? `: ${preview.reason}` : ''}. Please fix it and start it again.`,
+                          `Please update your checkout to the latest commit of the pull request (${short(expectedCommit)}) and start its preview again.`,
+                        )
+                      }
+                    >
+                      Ask {teammateName} to update it
+                    </NoticeAction>
+                  )}
+                </Notice>
+              )}
+              {phase === 'checking' && (
+                <Notice
+                  icon={<LoaderCircle aria-hidden className="size-4 shrink-0 animate-spin" />}
+                >
+                  Checking its pages as a person would open them…
+                </Notice>
+              )}
+              {phase === 'attention' && (
+                <Notice
+                  tone="destructive"
+                  icon={<CircleAlert aria-hidden className="size-4 shrink-0" />}
+                >
+                  {failedPages.length
+                    ? `The check found problems on ${failedPages.join(', ')}.`
+                    : 'The check found problems.'}
+                  {onAsk && (
+                    <NoticeAction
+                      onClick={() =>
+                        onAsk(
+                          `The preview's check found problems${failedPages.length ? ` on ${failedPages.join(', ')}` : ''}. Please fix them and check it again.`,
                         )
                       }
                     >
                       Ask {teammateName} to fix it
-                    </Button>
+                    </NoticeAction>
                   )}
-                </div>
-              </>
-            )}
-            {error && <p className="text-destructive-text">{error}</p>}
-          </div>
-        )}
+                </Notice>
+              )}
+              {select.on === 'mention' && (
+                <Notice icon={<SquareMousePointer aria-hidden className="size-4 shrink-0" />}>
+                  Click an element to add it to your message
+                  {picked > 0 && ` · ${picked} added`}. Esc to stop.
+                </Notice>
+              )}
+              {select.on === 'code' && (
+                <Notice icon={<CodeXml aria-hidden className="size-4 shrink-0" />}>
+                  Click an element to open its code. Esc to stop.
+                </Notice>
+              )}
+              {code.state && (
+                <CodeNotice state={code.state} onOpen={code.open} onClose={code.clear} />
+              )}
+              {view.local && (
+                <p className="border-b px-3 py-1.5 text-xs text-muted-foreground">
+                  The app runs on {computerName}, so it opens there only, at{' '}
+                  <span className="font-mono text-foreground">{address}</span>.
+                </p>
+              )}
+              <iframe
+                ref={select.frame}
+                key={`${preview.previewId}:${frame}`}
+                src={view.url}
+                title={`Preview of the app ${teammateName} runs`}
+                className="min-h-0 w-full flex-1 border-0 bg-white"
+                // Its own origin, apart from the dashboard's: scripts and forms run as they would in a tab,
+                // and what it opens (a sign-in tab) is a plain tab, without the frame's sandbox.
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"
+                allow="clipboard-read; clipboard-write; fullscreen"
+                referrerPolicy="no-referrer"
+              />
+            </>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
+              {preview.status === 'starting' ? (
+                <>
+                  <LoaderCircle aria-hidden className="size-5 animate-spin" />
+                  <p className="font-medium text-foreground">
+                    {preview.reason ??
+                      (phase === 'setup' ? 'Running its setup' : 'Starting the app')}
+                    {elapsed && (
+                      <span className="font-normal text-muted-foreground"> · {elapsed}</span>
+                    )}
+                  </p>
+                  {phase === 'setup' && (
+                    <p className="max-w-xs">
+                      Installing, starting its services and adding sample data. The first start can
+                      take a few minutes; later ones are quicker.
+                    </p>
+                  )}
+                  {lastLine && (
+                    <p
+                      className="max-w-full truncate rounded bg-muted px-2 py-1 font-mono text-xs"
+                      title={lastLine}
+                    >
+                      {lastLine}
+                    </p>
+                  )}
+                </>
+              ) : running && !view && !error ? (
+                <>
+                  <LoaderCircle aria-hidden className="size-5 animate-spin" />
+                  <p>Opening the preview…</p>
+                </>
+              ) : running ? null : (
+                <>
+                  <p className="max-w-sm font-medium text-foreground">
+                    {endedText(preview.status as 'failed' | 'stopped', preview.reason)}
+                  </p>
+                  {waking && (
+                    <p className="max-w-xs">
+                      Starting the cloud computer first. It takes a minute or so; the preview starts
+                      once it is up.
+                    </p>
+                  )}
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {mayControl && onStart ? (
+                      <Button size="sm" disabled={starting} onClick={onStart}>
+                        {starting ? (
+                          <LoaderCircle aria-hidden className="animate-spin" />
+                        ) : (
+                          <Play aria-hidden />
+                        )}
+                        Start again
+                      </Button>
+                    ) : (
+                      !mayControl && <p>Ask {teammateName} to start it again.</p>
+                    )}
+                    {preview.status === 'failed' && onAsk && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          onAsk(
+                            `The preview failed${preview.reason ? `: ${preview.reason}` : ''}. Please fix it and start it again.`,
+                          )
+                        }
+                      >
+                        Ask {teammateName} to fix it
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
+              {error && <p className="text-destructive-text">{error}</p>}
+            </div>
+          )}
+        </PreviewSplit>
 
         {showLogs && (
           <div className="flex max-h-[40%] min-h-32 flex-col border-t">
@@ -755,23 +789,21 @@ type CodeState =
  * The code of an element picked in the preview: its text searched in the preview's
  * folder, by the runner. One file holding it opens at once; several, the person picks.
  */
-function useOpenCode(
-  threadId: string,
-  preview: ThreadPreview,
-  onOpenCode: ((file: { path: string; teammateId?: string }) => void) | undefined,
-) {
+function useOpenCode(threadId: string, preview: ThreadPreview) {
   const [state, setState] = useState<CodeState>()
-  const latest = useRef({ preview, onOpenCode })
-  latest.current = { preview, onOpenCode }
+  const latest = useRef({ preview })
+  latest.current = { preview }
   const asked = useRef(0)
 
-  const open = useCallback((match: SourceMatch) => {
-    setState(undefined)
-    latest.current.onOpenCode?.({
-      path: `${match.path}:${match.line}`,
-      teammateId: latest.current.preview.teammateId,
-    })
-  }, [])
+  // In a tab of the code beside the preview, which shows.
+  const open = useCallback(
+    (match: SourceMatch) => {
+      setState(undefined)
+      const { teammateId } = latest.current.preview
+      if (teammateId) openCodeTab(threadId, { teammateId, path: match.path, line: match.line })
+    },
+    [threadId],
+  )
 
   const find = useCallback(
     (element: PreviewElement) => {
@@ -880,6 +912,165 @@ function CodeNotice({
           </li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+/** Matches a media query, as the window changes. */
+function useMediaQuery(query: string) {
+  return useSyncExternalStore(
+    (change) => {
+      const list = window.matchMedia(query)
+      list.addEventListener('change', change)
+      return () => list.removeEventListener('change', change)
+    },
+    () => window.matchMedia(query).matches,
+    () => true,
+  )
+}
+
+/** The preview's share of the split, by layout, remembered in this browser. */
+const SPLIT_KEY = 'brigade:preview-split'
+const readSplit = (): { rows: number; cols: number } => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SPLIT_KEY) ?? 'null') as {
+      rows?: number
+      cols?: number
+    } | null
+    return { rows: saved?.rows ?? 0.5, cols: saved?.cols ?? 0.5 }
+  } catch {
+    return { rows: 0.5, cols: 0.5 }
+  }
+}
+const clampSplit = (share: number) => Math.min(0.85, Math.max(0.15, share))
+
+/**
+ * The preview with the code beside it. In the panel, which is narrow and tall, the code
+ * goes under the preview; laid over the whole window, the code goes left and the
+ * preview right, as in an editor; on a phone, one at a time. A bar between them sets
+ * their shares. The frame stays the same element whatever the layout: the page in it
+ * never reloads when the code shows or hides.
+ */
+function PreviewSplit({ children, code }: { children: React.ReactNode; code: React.ReactNode }) {
+  const full = usePanelFull()
+  const wide = useMediaQuery('(min-width: 1280px)')
+  const side = full && wide
+  const [split, setSplit] = useState(readSplit)
+  const [dragging, setDragging] = useState(false)
+  const [phoneShows, setPhoneShows] = useState<'preview' | 'code'>('code')
+  const box = useRef<HTMLDivElement>(null)
+  const share = side ? split.cols : split.rows
+  const setShare = (next: number) => {
+    const value = clampSplit(next)
+    setSplit((s) => {
+      const updated = side ? { ...s, cols: value } : { ...s, rows: value }
+      try {
+        localStorage.setItem(SPLIT_KEY, JSON.stringify(updated))
+      } catch {
+        // No storage: for this page only.
+      }
+      return updated
+    })
+  }
+  // The code just opened on a phone: it shows.
+  const hasCode = !!code
+  useEffect(() => {
+    if (hasCode) setPhoneShows('code')
+  }, [hasCode])
+
+  const phone = !wide
+  const previewHidden = hasCode && phone && phoneShows === 'code'
+  const move = (e: React.PointerEvent) => {
+    const rect = box.current?.getBoundingClientRect()
+    if (!rect) return
+    // Side by side the code is on the left: the preview has what is right of the bar.
+    setShare(side ? 1 - (e.clientX - rect.left) / rect.width : (e.clientY - rect.top) / rect.height)
+  }
+
+  return (
+    <div ref={box} className={cn('relative flex min-h-0 flex-1', side ? 'flex-row' : 'flex-col')}>
+      {hasCode && phone && (
+        <div key="switch" className="flex shrink-0 gap-1 border-b p-1.5" role="tablist">
+          {(['preview', 'code'] as const).map((which) => (
+            <button
+              key={which}
+              type="button"
+              role="tab"
+              aria-selected={phoneShows === which}
+              className={cn(
+                'flex-1 rounded-md py-1 text-xs font-medium',
+                phoneShows === which ? 'bg-muted text-foreground' : 'text-muted-foreground',
+              )}
+              onClick={() => setPhoneShows(which)}
+            >
+              {which === 'preview' ? 'Preview' : 'Code'}
+            </button>
+          ))}
+        </div>
+      )}
+      <div
+        key="frame"
+        className={cn(
+          'flex min-h-0 min-w-0 flex-col',
+          // The frame would take the pointer from the bar while it moves.
+          dragging && 'pointer-events-none select-none',
+          previewHidden && 'hidden',
+        )}
+        style={{ order: side ? 3 : 1, flex: hasCode && !phone ? `${share} 1 0px` : '1 1 0px' }}
+      >
+        {children}
+      </div>
+      {hasCode && !phone && (
+        <div
+          key="bar"
+          role="separator"
+          aria-orientation={side ? 'vertical' : 'horizontal'}
+          aria-label="Resize the preview and the code"
+          aria-valuenow={Math.round(share * 100)}
+          aria-valuemin={15}
+          aria-valuemax={85}
+          tabIndex={0}
+          className={cn(
+            'relative z-10 shrink-0 bg-border outline-none hover:bg-primary/50 focus-visible:bg-primary',
+            dragging && 'bg-primary',
+            side ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize',
+            // A wider grip than the line it draws.
+            side
+              ? 'before:absolute before:inset-y-0 before:-right-1.5 before:-left-1.5'
+              : 'before:absolute before:inset-x-0 before:-top-1.5 before:-bottom-1.5',
+          )}
+          style={{ order: 2 }}
+          onPointerDown={(e) => {
+            e.preventDefault()
+            e.currentTarget.setPointerCapture(e.pointerId)
+            setDragging(true)
+          }}
+          onPointerMove={(e) => dragging && move(e)}
+          onPointerUp={() => setDragging(false)}
+          onPointerCancel={() => setDragging(false)}
+          onDoubleClick={() => setShare(0.5)}
+          onKeyDown={(e) => {
+            const step = { ArrowUp: -0.05, ArrowLeft: 0.05, ArrowDown: 0.05, ArrowRight: -0.05 }[
+              e.key
+            ]
+            if (step === undefined) return
+            e.preventDefault()
+            setShare(share + step)
+          }}
+        />
+      )}
+      {hasCode && (
+        <div
+          key="code"
+          className={cn(
+            'flex min-h-0 min-w-0 flex-col',
+            phone && phoneShows !== 'code' && 'hidden',
+          )}
+          style={{ order: side ? 1 : 3, flex: phone ? '1 1 0px' : `${1 - share} 1 0px` }}
+        >
+          {code}
+        </div>
+      )}
     </div>
   )
 }

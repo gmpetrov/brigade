@@ -88,7 +88,7 @@ test('a save writes the file while it is as it was read, and refuses once it cha
   assert.equal(await readFile(join(dir, path), 'utf8'), hero)
 })
 
-test('saves of one file from the same base: the first is written, the others conflict', async () => {
+test('saves of one file from the same base: one is written, the others conflict', async () => {
   const path = 'race.txt'
   await writeFile(join(dir, path), 'original')
   for (let round = 0; round < 10; round++) {
@@ -106,12 +106,13 @@ test('saves of one file from the same base: the first is written, the others con
         }),
       ),
     )
-    assert.deepEqual(
-      results.map((r) => r.ok),
-      [true, false, false],
-    )
-    assert.ok(results.slice(1).every((r) => r.conflict))
-    assert.equal(await readFile(join(dir, path), 'utf8'), 'Alice')
+    // One at a time, in whatever order they reach the file: one is written, the others
+    // find it changed, and the file is the one written, whole.
+    const won = results.filter((r) => r.ok)
+    assert.equal(won.length, 1)
+    assert.ok(results.filter((r) => !r.ok).every((r) => r.conflict))
+    const winner = ['Alice', 'Bob', 'Carol'][results.indexOf(won[0]!)]
+    assert.equal(await readFile(join(dir, path), 'utf8'), winner)
   }
 })
 

@@ -229,6 +229,8 @@ const sourceFinds = new Map<
   string,
   { computerId: string; settle: (result: SourceResult) => void }
 >()
+type CodeResult = Extract<RunnerToApi, { type: 'thread.code.result' }>
+const codeReads = new Map<string, { computerId: string; settle: (result: CodeResult) => void }>()
 
 /** Ask a computer's runner and wait for its answer by request id, or settle with an error. */
 function ask<R extends { requestId: string; ok: boolean; error?: string }>(
@@ -283,6 +285,22 @@ export const findSource = (
     (requestId, error) => ({ type: 'thread.source.result', requestId, ok: false, error }),
     // Each of up to six searches may take up to 15 s on the runner.
     30_000,
+  )
+
+/**
+ * The code panel's view of a teammate's working folder: a folder's entries, files by
+ * name, lines by text, open files' hashes (CODE_TREE_PROTOCOL). Never wakes a stopped computer.
+ */
+export const codeFiles = (
+  computerId: string,
+  request: Omit<Extract<ApiToRunner, { type: 'thread.code' }>, 'type' | 'requestId'>,
+) =>
+  ask<CodeResult>(
+    codeReads,
+    computerId,
+    (requestId) => ({ type: 'thread.code', requestId, ...request }),
+    (requestId, error) => ({ type: 'thread.code.result', requestId, ok: false, error }),
+    20_000,
   )
 
 /** Commands for cloud computers that are starting, or runners restarting, sent when their runner connects. */
@@ -880,6 +898,11 @@ export function runnerSocket(runner: {
     if (message.type === 'thread.source.result') {
       const find = sourceFinds.get(message.requestId)
       if (find?.computerId === runner.computerId) find.settle(message)
+      return
+    }
+    if (message.type === 'thread.code.result') {
+      const read = codeReads.get(message.requestId)
+      if (read?.computerId === runner.computerId) read.settle(message)
       return
     }
 

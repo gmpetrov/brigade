@@ -11,6 +11,10 @@ import {
   MemoryEdit,
   MemoryFileRef,
   NO_MEMORY_EDIT,
+  CODE_FIND_MAX,
+  CODE_HASHES_MAX,
+  CODE_LIST_MAX,
+  CodeEntry,
   SourceMatch,
 } from './library.js'
 import { MemoryLayout } from './memory.js'
@@ -294,6 +298,22 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     ok: z.boolean(),
     error: z.string().optional(),
     matches: z.array(SourceMatch).max(20).optional(),
+  }),
+  /** What thread.code found, or why not. */
+  z.object({
+    type: z.literal('thread.code.result'),
+    requestId: z.string(),
+    ok: z.boolean(),
+    error: z.string().optional(),
+    /** list: the folder's entries, folders first; `more` when cut at CODE_LIST_MAX. */
+    entries: z.array(CodeEntry).max(CODE_LIST_MAX).optional(),
+    more: z.boolean().optional(),
+    /** find: files whose path holds the query, best first. */
+    files: z.array(z.string()).max(CODE_FIND_MAX).optional(),
+    /** grep: lines holding the query. */
+    matches: z.array(SourceMatch).max(CODE_FIND_MAX).optional(),
+    /** hashes: each path's SHA-256, null when it is gone or no longer a text file to edit. */
+    hashes: z.record(z.string(), z.string().nullable()).optional(),
   }),
   /** A thread handed over after thread.release: its folders archived and gone from here, or why not. */
   z.object({
@@ -637,6 +657,22 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     cwd: z.string().max(500),
     text: z.string().min(1).max(500),
     components: z.array(z.string().max(100)).max(8).optional(),
+  }),
+  /**
+   * The code panel's view of a teammate's working folder for the thread
+   * (CODE_TREE_PROTOCOL): a folder's entries (list, `path` relative to it, '' for
+   * itself), files by name (find), lines by text (grep), or open files' hashes, to
+   * see when one changed (hashes). Never outside the working folder.
+   */
+  z.object({
+    type: z.literal('thread.code'),
+    requestId: z.string(),
+    sessionId: z.string(),
+    teammateId: z.string(),
+    op: z.enum(['list', 'find', 'grep', 'hashes']),
+    path: z.string().max(1000).optional(),
+    query: z.string().max(200).optional(),
+    paths: z.array(z.string().max(1000)).max(CODE_HASHES_MAX).optional(),
   }),
   /**
    * A person restarts or stops a thread's preview; touch: someone has it open,

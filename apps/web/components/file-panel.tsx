@@ -2,20 +2,31 @@
 // A file the thread mentions, beside it: from the library, the thread's
 // attachments, or the teammate's working folder on its computer. Takes the
 // desktop panel's place. Text shows as text, images and PDFs as themselves.
-// A text file of the working folder opens in a code editor for whoever may write
-// to the thread (Markdown once they ask to edit it), and saves back to the computer.
+// A text file of the working folder opens in the code editor (components/code-file.tsx),
+// to edit for whoever may write to the thread (Markdown once they ask to edit it).
+// While the thread's preview runs, it opens beside it too; when the preview runs
+// another teammate's copy, the panel says that edits here will not show in it.
 import {
   designFolderOf,
   designOptionsOf,
   type DesignWhere,
-  type SavedThreadFile,
-  type SaveThreadFile,
   type ThreadFile,
 } from '@brigade/contracts'
-import { Check, Copy, Download, FileText, Library, Palette, Pencil, X } from 'lucide-react'
-import dynamic from 'next/dynamic'
+import {
+  AppWindow,
+  Check,
+  Copy,
+  Download,
+  FileText,
+  Library,
+  Palette,
+  Pencil,
+  TriangleAlert,
+  X,
+} from 'lucide-react'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { CodeFile, editableFile } from '@/components/code-file'
 import { DesignPanel } from '@/components/design-view'
 import { FileLinksProvider, type OpenFile } from '@/components/file-links'
 import { FilePreview, PdfView } from '@/components/file-preview'
@@ -24,17 +35,11 @@ import { Badge } from '@/components/ui/badge'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
-import { api, ApiError, attachmentUrl, threadImageUrl } from '@/lib/api'
-import { draftKey, getDraft, setDraft as keepDraft } from '@/lib/code-drafts'
+import { api, attachmentUrl, threadImageUrl } from '@/lib/api'
+import { draftKey, getDraft, setDraft } from '@/lib/code-drafts'
 import { API_URL } from '@/lib/config'
 
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
-
-// Its own chunk: only a file opened to edit loads it.
-const CodeEditor = dynamic(() => import('@/components/code-editor'), {
-  ssr: false,
-  loading: () => <p className="p-4 text-sm text-muted-foreground">Opening the editor…</p>,
-})
 
 function size(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -50,6 +55,11 @@ type FilePanelProps = {
   teammateName: (id: string | undefined) => string
   /** The person may write to the thread: a text file of a working folder opens to edit. */
   mayEdit?: boolean
+  /**
+   * The thread's running preview: whose copy it runs, and how to open a path of it in
+   * the code beside it. A file of another copy says its edits will not show there.
+   */
+  previewCopy?: { teammateId: string; name: string; open: (path: string) => void }
   onOpen: OpenFile
   onClose: () => void
 }
@@ -144,6 +154,7 @@ function ThreadFilePanel({
   teammateId,
   teammateName,
   mayEdit = false,
+  previewCopy,
   onOpen,
   onClose: close,
 }: FilePanelProps) {
@@ -152,21 +163,21 @@ function ThreadFilePanel({
   const [design, setDesign] = useState<string>()
   const [error, setError] = useState<string>()
   const [copied, setCopied] = useState(false)
-  const [loads, setLoads] = useState(0)
+  const [editOpen, setEditOpen] = useState(false)
   const documents = useDocumentPanel()
-  const edit = useEdit(threadId, file)
   const name = path
     .replace(/:\d+(:\d+)?$/, '')
     .split('/')
     .pop()
+  const draft = file?.teammateId ? draftKey(threadId, file.teammateId, file.path) : undefined
   // Unsaved edits are not dropped without asking.
   const onClose = useCallback(() => {
-    if (edit.dirty) {
+    if (draft && getDraft(draft)) {
       if (!window.confirm(`Discard your unsaved changes to ${name}?`)) return
-      edit.reset()
+      setDraft(draft, undefined)
     }
     close()
-  }, [edit, name, close])
+  }, [draft, name, close])
 
   useEffect(() => {
     let live = true
@@ -195,7 +206,7 @@ function ThreadFilePanel({
       live = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per file, not when callbacks change
-  }, [threadId, path, teammateId, loads])
+  }, [threadId, path, teammateId])
 
   if (design) return <DesignPanel folder={design} threadId={threadId} onClose={onClose} />
 
@@ -214,9 +225,16 @@ function ThreadFilePanel({
   const pdf = file?.contentType === 'application/pdf' ? own : undefined
   // `src/app.tsx:42` opens at line 42.
   const line = Number(/:(\d+)(?::\d+)?$/.exec(path)?.[1]) || undefined
-  const editable = mayEdit && !!file?.hash && file.text !== undefined
+  const code = editableFile(file)
+  const editable = mayEdit && code
   const markdown = file?.contentType === 'text/markdown'
-  const editing = editable && (!markdown || edit.open)
+  // Markdown shows rendered, until edited (or left with unsaved edits).
+  const editing = code && (!markdown || editOpen || (!!draft && !!getDraft(draft)))
+  // Another teammate's copy than the one the preview runs: edits here will not show in it.
+  const otherCopy =
+    previewCopy && file?.source === 'thread' && file.teammateId !== previewCopy.teammateId
+      ? previewCopy
+      : undefined
 
   return (
     <SidePanel aria-label={`File ${shown}`} onClose={onClose} raiseKey={shown}>
@@ -261,21 +279,21 @@ function ThreadFilePanel({
             size="icon-sm"
             aria-label="Edit"
             title="Edit the file"
-            onClick={() => edit.setOpen(true)}
+            onClick={() => setEditOpen(true)}
           >
             <Pencil aria-hidden />
           </Button>
         )}
-        {editing && (
+        {previewCopy && !otherCopy && code && file && (
           <Button
             type="button"
-            size="sm"
-            variant={edit.dirty ? 'default' : 'ghost'}
-            disabled={!edit.dirty || edit.saving}
-            title={`Save it on the computer (${typeof navigator !== 'undefined' && /Mac|iP/.test(navigator.platform) ? '⌘' : 'Ctrl+'}S)`}
-            onClick={() => void edit.save()}
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Open it with the preview"
+            title="Open it in the code beside the preview, to see your edits as you save"
+            onClick={() => previewCopy.open(file.path)}
           >
-            {edit.saving ? 'Saving…' : edit.dirty ? 'Save' : edit.saved ? 'Saved' : 'Save'}
+            <AppWindow aria-hidden />
           </Button>
         )}
         {content && (
@@ -306,39 +324,23 @@ function ThreadFilePanel({
           <X aria-hidden />
         </Button>
       </div>
-      {editing && edit.conflict && (
+      {otherCopy && file && (
         <div
-          role="alert"
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b bg-destructive/8 px-3 py-2 text-xs text-destructive-text"
+          role="status"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b bg-warning/8 px-3 py-2 text-xs"
         >
+          <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" />
           <span className="min-w-0 flex-1">
-            The file changed on the computer since you opened it, maybe by{' '}
-            {teammateName(file?.teammateId)}.
+            The preview runs {otherCopy.name}&rsquo;s copy: edits here won&rsquo;t show in it.
           </span>
           <button
             type="button"
             className="font-medium underline-offset-2 hover:underline"
-            onClick={() => {
-              if (!window.confirm('Drop your changes and open the file as it is now?')) return
-              edit.reset()
-              setLoads((n) => n + 1)
-            }}
+            onClick={() => otherCopy.open(file.path)}
           >
-            Reload theirs
-          </button>
-          <button
-            type="button"
-            className="font-medium underline-offset-2 hover:underline"
-            onClick={() => void edit.save(true)}
-          >
-            Keep mine
+            Open {otherCopy.name}&rsquo;s copy
           </button>
         </div>
-      )}
-      {editing && edit.error && (
-        <p role="alert" className="border-b px-3 py-2 text-xs text-destructive-text">
-          {edit.error}
-        </p>
       )}
       <div className={editing ? 'min-h-0 flex-1 overflow-hidden' : 'min-h-0 flex-1 overflow-auto'}>
         {error ? (
@@ -377,14 +379,16 @@ function ThreadFilePanel({
               )}
             </p>
           )
-        ) : editing ? (
-          <CodeEditor
-            key={`${loads}:${file.hash}`}
+        ) : editing && file.teammateId ? (
+          <CodeFile
+            threadId={threadId}
+            teammateId={file.teammateId}
             path={file.path}
-            initial={edit.initial ?? file.text}
+            file={file}
+            teammateName={teammateName(file.teammateId)}
+            mayEdit={editable}
             line={line}
-            onChange={edit.change}
-            onSave={() => void edit.save()}
+            className="h-full"
           />
         ) : file.contentType === 'text/markdown' ? (
           // Its own relative links open next to it.
@@ -404,92 +408,4 @@ function ThreadFilePanel({
       </div>
     </SidePanel>
   )
-}
-
-/**
- * Editing a text file of a teammate's working folder: what was typed, saved
- * against the hash it was opened at, so a change made since on the computer
- * (by the teammate, most likely) is not written over without asking. Unsaved
- * edits outlive the panel (lib/code-drafts.ts): the file opens again with them.
- */
-function useEdit(threadId: string, file: ThreadFile | undefined) {
-  const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState<string>()
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [conflict, setConflict] = useState(false)
-  const [error, setError] = useState<string>()
-  const key = file?.teammateId ? draftKey(threadId, file.teammateId, file.path) : undefined
-  /** What a save expects to find: the hash the edits started from. */
-  const base = useRef<string>(undefined)
-  // Read as the file comes, not after: the editor starts from it as it mounts.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- once per file read
-  const initial = useMemo(() => (key ? getDraft(key)?.text : undefined), [file])
-
-  // A file opened (again): with the edits left unsaved in it, if any.
-  useEffect(() => {
-    const kept = key ? getDraft(key) : undefined
-    base.current = kept ? kept.base : file?.hash
-    setDraft(kept?.text)
-    if (kept) setOpen(true)
-    setConflict(false)
-    setError(undefined)
-    setSaved(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per file read
-  }, [file])
-
-  const update = (text: string | undefined) => {
-    setDraft(text)
-    if (key) keepDraft(key, text === undefined ? undefined : { text, base: base.current })
-  }
-
-  const save = async (force = false) => {
-    if (!file?.teammateId || draft === undefined || saving) return
-    setSaving(true)
-    setError(undefined)
-    const text = draft
-    try {
-      const { hash } = await api<SavedThreadFile>(`/threads/${threadId}/file`, {
-        method: 'PUT',
-        body: {
-          path: file.path,
-          teammateId: file.teammateId,
-          text,
-          ...(force ? {} : { base: base.current }),
-        } satisfies SaveThreadFile,
-      })
-      base.current = hash
-      setConflict(false)
-      setSaved(true)
-      // Typed on while it saved: still to save, from the new base.
-      const now = key ? getDraft(key)?.text : undefined
-      update(now === undefined || now === text ? undefined : now)
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 409 && /changed since/.test(e.message))
-        setConflict(true)
-      else setError((e as Error).message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const dirty = draft !== undefined
-  return {
-    open,
-    setOpen,
-    dirty,
-    saving,
-    saved: saved && !dirty,
-    conflict,
-    error,
-    /** The unsaved edits it opened with, for the editor to start from; else the file. */
-    initial,
-    change: (text: string) => {
-      update(text)
-      setSaved(false)
-    },
-    save,
-    /** Drops the unsaved edits. */
-    reset: () => update(undefined),
-  }
 }

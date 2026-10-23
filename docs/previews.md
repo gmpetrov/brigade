@@ -80,6 +80,31 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
     The thread gets a note (`thread.note`), once per file and person in 15
     minutes, so its teammates know at their next turn that the file changed and
     is not committed.
+  - **The code beside the preview.** The panel's `</>` button shows the code of
+    the copy the preview runs (the teammate's who started it) with the preview
+    (`apps/web/components/code-workspace.tsx`): under it in the side panel, left
+    of it once the panel is laid over the window, one at a time on a phone (a
+    Preview / Code switch). A bar between them sets their shares, kept in the
+    browser. The frame stays the same element in every layout, so showing or
+    hiding the code never reloads the page in it. Files open as tabs (their
+    editors stay while another is in front, for undo; a dot marks unsaved edits),
+    kept per thread for the browser tab's session (`apps/web/lib/code-tabs.ts`),
+    and the working folder's tree is left of the editor, over it when the panel
+    is narrow. Its filter finds files by name, or with `?` first, lines holding a
+    text (`GET /threads/:id/code`, `/code/find`, `/code/grep`, then `thread.code`
+    from runners at `CODE_TREE_PROTOCOL`; `find`, and `git grep` leaving out what
+    git ignores, skipping dependencies and builds). The crosshair in the code's
+    bar picks an element of the page to open its code in a tab.
+  - **Live with the computer.** While a file shows, its hash is asked every 2.5
+    seconds (`POST /threads/:id/code/hashes`). Changed on the computer, most
+    likely by the teammate: with nothing typed, the new text comes in as one
+    change, so the cursor and scroll stay ("Updated from the computer"); with
+    unsaved edits, the panel says so at once rather than at the save. A file
+    gone, or no longer text, says so too.
+  - **Which copy.** A file opened from a message comes from its author's folder.
+    While the preview runs another teammate's copy, the file panel says edits
+    there won't show in it and opens the same path in the preview's copy; with
+    the same copy, a button opens it beside the preview.
 - **Crashes restart.** An app that stops after it answered starts again after
   1, 3 and 10 seconds; a fourth stop within 10 minutes fails the preview. An app
   that never answered fails at once, as before: its command is wrong, and the

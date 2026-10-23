@@ -102,6 +102,7 @@ import {
   type Teammate,
   type Thread,
 } from '@/lib/api'
+import { openCodeTab } from '@/lib/code-tabs'
 import { useLive } from '@/lib/use-live'
 import {
   preloadThreadEvents,
@@ -359,11 +360,6 @@ export function ThreadConversation({
     if (!expanded) onExpand()
     documents.close()
     setPreviewing(false)
-    setFile(f)
-  }
-  // The code of what was picked in the preview: closing it brings the preview back.
-  const openCode = (f: { path: string; teammateId?: string }) => {
-    documents.close()
     setFile(f)
   }
   const openPreview = () => {
@@ -992,6 +988,19 @@ export function ThreadConversation({
             people.find((p) => p.id === teammateId)?.name ?? t.teammate.name
           }
           mayEdit={t.mayPrompt}
+          previewCopy={
+            live && preview?.teammateId
+              ? {
+                  teammateId: preview.teammateId,
+                  name: people.find((p) => p.id === preview.teammateId)?.name ?? answering.name,
+                  // In the code beside the preview, the file of the copy it runs.
+                  open: (path) => {
+                    openCodeTab(t.id, { teammateId: preview.teammateId!, path })
+                    openPreview()
+                  },
+                }
+              : undefined
+          }
           onOpen={openFile}
           onClose={() => setFile(undefined)}
         />
@@ -1009,9 +1018,12 @@ export function ThreadConversation({
           starting={previewStart.busy}
           waking={previewStart.waking}
           onAsk={t.mayPrompt ? askInComposer : undefined}
-          {...(t.mayPrompt
-            ? { onPick: pickElement, picked: elements.length, onOpenCode: openCode }
-            : {})}
+          code={{
+            mayEdit: t.mayPrompt,
+            teammateName: (teammateId) =>
+              people.find((p) => p.id === teammateId)?.name ?? t.teammate.name,
+          }}
+          {...(t.mayPrompt ? { onPick: pickElement, picked: elements.length } : {})}
         />
       )}
       {expanded && computerOpen && t.computer.kind === 'cloud' && (
