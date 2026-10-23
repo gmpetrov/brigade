@@ -47,7 +47,8 @@ function Mention({ kind, name }: { kind: ProviderKind; name: string }) {
   )
 }
 
-/** Apps: the tools teammates work in, on two rings around one request that uses four of them. */
+/** Apps: the tools teammates work in, on two rings around a thread whose request uses four of
+ * them. Its four steps are there from the start, greyed, and tick off as each App glows. */
 export function Apps() {
   return (
     <section aria-labelledby="apps-title" className={c('sec apps-sec')} data-anim>
@@ -84,7 +85,15 @@ export function Apps() {
           ))}
 
           <div className={c('ap-chat')}>
-            <div className={c('ap-msg ap-me ap0')}>
+            <div className={c('ap-head')}>
+              <span className={c('av xs sam')}>S</span>
+              <b>Sam</b>
+              <span className={c('ap-state')}>
+                <span className={c('dot run')}></span>
+                working
+              </span>
+            </div>
+            <div className={c('ap-msg ap-me')}>
               <span className={c('av xs')}>A</span>
               <span>
                 Prep me for tomorrow&apos;s call with Northwind. Check{' '}

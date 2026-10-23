@@ -612,7 +612,7 @@ svg.i {
 }
 .apps-stage {
   position: relative;
-  height: 860px;
+  height: 980px;
 }
 /* A ring centered on the chat, of radius --r; each App sits on it at its angle --a. */
 .orbit {
@@ -626,10 +626,10 @@ svg.i {
   border-radius: 50%;
 }
 .orbit.o1 {
-  --r: 290px;
+  --r: 345px;
 }
 .orbit.o2 {
-  --r: 395px;
+  --r: 450px;
   border-style: dashed;
 }
 .app-t {
@@ -667,14 +667,33 @@ svg.i {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 440px;
+  width: 460px;
   transform: translate(-50%, -50%);
   display: grid;
   gap: 12px;
-  padding: 24px 8px;
-  background: var(--background);
-  border-radius: 50%;
+  padding: 0 20px 20px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
   font-size: 14px;
+}
+/* The thread's header: the teammate and its state. */
+.ap-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -20px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.ap-state {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted-foreground);
 }
 .ap-msg {
   display: flex;
@@ -4111,21 +4130,30 @@ svg.i {
     transform: none;
   }
 }
-/* Apps: Ada asks, the teammate calls four Apps in turn (each glows), then answers. */
-.ap0 {
-  animation: k-ap0 14s ease-out infinite;
-}
+/* Apps: the four steps tick off in turn while their App glows, then the teammate answers. */
 .ap1 {
   animation: k-ap1 14s ease-out infinite;
+}
+.ap1 .ap-ok {
+  animation: k-ok1 14s ease-out infinite;
 }
 .ap2 {
   animation: k-ap2 14s ease-out infinite;
 }
+.ap2 .ap-ok {
+  animation: k-ok2 14s ease-out infinite;
+}
 .ap3 {
   animation: k-ap3 14s ease-out infinite;
 }
+.ap3 .ap-ok {
+  animation: k-ok3 14s ease-out infinite;
+}
 .ap4 {
   animation: k-ap4 14s ease-out infinite;
+}
+.ap4 .ap-ok {
+  animation: k-ok4 14s ease-out infinite;
 }
 .ap5 {
   animation: k-ap5 14s ease-out infinite;
@@ -4142,30 +4170,27 @@ svg.i {
 .app-t.g3::after {
   animation: k-g3 14s ease-in-out infinite;
 }
-@keyframes k-ap0 {
-  0%,
-  2% {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  5%,
-  94% {
-    opacity: 1;
-    transform: none;
-  }
-  100% {
-    opacity: 0;
-    transform: none;
-  }
-}
 @keyframes k-ap1 {
   0%,
   14% {
-    opacity: 0;
-    transform: translateY(6px);
+    opacity: 0.4;
   }
   17%,
-  94% {
+  96% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+@keyframes k-ok1 {
+  0%,
+  14% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  17%,
+  96% {
     opacity: 1;
     transform: none;
   }
@@ -4177,11 +4202,24 @@ svg.i {
 @keyframes k-ap2 {
   0%,
   26% {
-    opacity: 0;
-    transform: translateY(6px);
+    opacity: 0.4;
   }
   29%,
-  94% {
+  96% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+@keyframes k-ok2 {
+  0%,
+  26% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  29%,
+  96% {
     opacity: 1;
     transform: none;
   }
@@ -4193,11 +4231,24 @@ svg.i {
 @keyframes k-ap3 {
   0%,
   38% {
-    opacity: 0;
-    transform: translateY(6px);
+    opacity: 0.4;
   }
   41%,
-  94% {
+  96% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+@keyframes k-ok3 {
+  0%,
+  38% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  41%,
+  96% {
     opacity: 1;
     transform: none;
   }
@@ -4209,11 +4260,24 @@ svg.i {
 @keyframes k-ap4 {
   0%,
   50% {
-    opacity: 0;
-    transform: translateY(6px);
+    opacity: 0.4;
   }
   53%,
-  94% {
+  96% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+@keyframes k-ok4 {
+  0%,
+  50% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  53%,
+  96% {
     opacity: 1;
     transform: none;
   }
@@ -5036,8 +5100,8 @@ a.lgr:hover .tt {
   }
 }
 
-/* Apps: below 1000px the logos wrap above the chat instead of circling it. */
-@media (max-width: 1000px) {
+/* Apps: below 1100px the logos wrap above the thread instead of circling it. */
+@media (max-width: 1100px) {
   .apps-stage {
     height: auto;
     display: flex;
@@ -5071,8 +5135,11 @@ a.lgr:hover .tt {
     transform: none;
     width: 100%;
     margin-top: 16px;
-    padding: 0;
-    border-radius: 0;
+    padding: 0 14px 14px;
+  }
+  .ap-head {
+    margin: 0 -14px;
+    padding: 10px 14px;
   }
   .ap-steps {
     padding-left: 0;
