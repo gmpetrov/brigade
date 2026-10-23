@@ -54,6 +54,28 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
     text, with no new field for the API or runner to pass on, and the thread
     shows the chip in its place. Esc in the page turns select mode off; it stays
     on across the page's navigations.
+  - **Opening an element's code.** The panel's second select button (`</>`, for
+    whoever may write to the thread, from runners at `CODE_EDIT_PROTOCOL`) uses
+    the same script, but a click looks the element's text up in the preview's
+    folder instead (`POST /threads/:id/source`, then `thread.source.find`):
+    `git grep --no-index --exclude-standard -i -F` for the whole text, then its
+    clauses longest first, since markup or line breaks may split it in the
+    source and CSS may change its case. Source files outside tests come first,
+    then those named after one of its components. One file holding it opens in
+    the file panel at its line; several, the person picks. Text that comes from
+    data or is put together is not found, and says so.
+  - **Editing it.** A text file of a teammate's working folder (never the
+    library mirror, nor a file cut at 1 MB) opens in a CodeMirror editor
+    (`apps/web/components/code-editor.tsx`, its own chunk) for whoever may write
+    to the thread; Markdown shows rendered until they press Edit. A read gives
+    the file's SHA-256 (`hash`), and ⌘S saves with it (`PUT /threads/:id/file`,
+    then `thread.file.write`): the runner writes the file in place, as the
+    teammate's user on a cloud computer, only while it still has that hash.
+    Otherwise the panel says it changed on the computer, and the person reloads
+    it or keeps theirs. The dev server sees the change, so the preview reloads.
+    The thread gets a note (`thread.note`), once per file and person in 15
+    minutes, so its teammates know at their next turn that the file changed and
+    is not committed.
 - **Crashes restart.** An app that stops after it answered starts again after
   1, 3 and 10 seconds; a fourth stop within 10 minutes fails the preview. An app
   that never answered fails at once, as before: its command is wrong, and the
@@ -232,7 +254,8 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
 - **Picking elements** sees only the page's DOM: its picture is the DOM drawn
   again (cross-origin images without CORS and some CSS, like backdrop filters,
   can be missing from it), and there is no source file (React 19 no longer
-  exposes `_debugSource`), only its components' names. A page whose CSP forbids `'self'` scripts, or a compressed
+  exposes `_debugSource`), only its components' names: opening its code finds
+  it by its text. A page whose CSP forbids `'self'` scripts, or a compressed
   page the app sends whatever it is asked, gets no select button.
 - **Cookies set by scripts** (`document.cookie`) do not pass the proxy. Rare for
   sessions; storage (`localStorage`, as Supabase and Firebase use) works in the

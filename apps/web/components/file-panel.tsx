@@ -154,12 +154,15 @@ function ThreadFilePanel({
   const [loads, setLoads] = useState(0)
   const documents = useDocumentPanel()
   const edit = useEdit(threadId, file)
+  const name = path
+    .replace(/:\d+(:\d+)?$/, '')
+    .split('/')
+    .pop()
   // Unsaved edits are not dropped without asking.
   const onClose = useCallback(() => {
-    if (edit.dirty && !window.confirm(`Discard your unsaved changes to ${path.split('/').pop()}?`))
-      return
+    if (edit.dirty && !window.confirm(`Discard your unsaved changes to ${name}?`)) return
     close()
-  }, [edit.dirty, path, close])
+  }, [edit.dirty, name, close])
 
   useEffect(() => {
     let live = true

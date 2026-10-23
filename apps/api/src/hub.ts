@@ -225,7 +225,10 @@ export function readThreadFile(
 type FileWritten = Extract<RunnerToApi, { type: 'thread.file.written' }>
 type SourceResult = Extract<RunnerToApi, { type: 'thread.source.result' }>
 const fileWrites = new Map<string, { computerId: string; settle: (result: FileWritten) => void }>()
-const sourceFinds = new Map<string, { computerId: string; settle: (result: SourceResult) => void }>()
+const sourceFinds = new Map<
+  string,
+  { computerId: string; settle: (result: SourceResult) => void }
+>()
 
 /** Ask a computer's runner and wait for its answer by request id, or settle with an error. */
 function ask<R extends { requestId: string; ok: boolean; error?: string }>(
@@ -237,7 +240,10 @@ function ask<R extends { requestId: string; ok: boolean; error?: string }>(
 ) {
   return new Promise<R>((resolve) => {
     const requestId = randomUUID()
-    const timer = setTimeout(() => settle(failed(requestId, 'The computer did not answer')), timeoutMs)
+    const timer = setTimeout(
+      () => settle(failed(requestId, 'The computer did not answer')),
+      timeoutMs,
+    )
     const settle = (result: R) => {
       clearTimeout(timer)
       pending.delete(requestId)

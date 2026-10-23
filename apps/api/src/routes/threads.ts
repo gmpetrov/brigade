@@ -156,8 +156,7 @@ const isAdmin = (scope: WorkspaceScope) => scope.role === 'owner' || scope.role 
 /** Editing code needs the computer on, with a runner that writes files (CODE_EDIT_PROTOCOL). */
 function requireCodeEdit(computerId: string) {
   const protocol = runnerProtocol(computerId)
-  if (protocol === undefined)
-    throw new HTTPException(409, { message: 'The computer is offline' })
+  if (protocol === undefined) throw new HTTPException(409, { message: 'The computer is offline' })
   if (protocol < CODE_EDIT_PROTOCOL)
     throw new HTTPException(409, {
       message: 'Update Brigade on this computer to edit code from here',
