@@ -403,7 +403,7 @@ export function FinalCall() {
       <div className={c('wrap')}>
         <h2 id="final-title">Meet your first teammate.</h2>
         <p className={c('lead')}>
-          Start on your Mac today. Move to the cloud when you want them working through the night.
+          They do the work. You make the calls.
         </p>
         <Link className={c('btn pri lg')} href={SIGN_UP}>
           Sign up
