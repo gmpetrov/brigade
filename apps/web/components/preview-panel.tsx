@@ -325,7 +325,12 @@ function LivePreviewPanel({
   const failedPages = preview.check?.failed ?? []
 
   return (
-    <SidePanel aria-label="Preview" name={PREVIEW_PANEL} onClose={onClose}>
+    <SidePanel
+      aria-label="Preview"
+      name={PREVIEW_PANEL}
+      onClose={onClose}
+      rememberFull={`brigade:preview-full:${threadId}`}
+    >
       <div className="flex flex-nowrap items-center gap-1 border-b px-3 py-2.5">
         {/* One bar for the page: where it stands, its address and commit, and its tools. */}
         <div className="@container/bar flex h-8 min-w-0 flex-1 items-center gap-0.5 rounded-lg border bg-card pr-0.5 pl-2.5">
