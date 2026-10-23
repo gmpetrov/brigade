@@ -5239,7 +5239,9 @@ a.lgr:hover .tt {
   .app-t::before {
     display: none;
   }
-  .orbit .app-i {
+  .orbit,
+  .orbit.o1 .app-i,
+  .orbit.o2 .app-i {
     animation: none;
   }
   .app-t {
