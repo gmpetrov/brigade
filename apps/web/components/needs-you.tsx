@@ -65,7 +65,7 @@ function From({
           {teammate && <span aria-hidden>·</span>}
           <Link
             href={`/app/threads/${thread.id}`}
-            className="truncate underline-offset-4 hover:text-foreground hover:underline"
+            className="min-w-0 truncate underline-offset-4 hover:text-foreground hover:underline"
           >
             {thread.title}
           </Link>
@@ -74,7 +74,10 @@ function From({
       {note && (
         <>
           <span aria-hidden>·</span>
-          <span className="shrink-0">{note}</span>
+          {/* Shrinks with the title, so a long note never widens the page on a phone. */}
+          <span className="min-w-0 truncate" title={note}>
+            {note}
+          </span>
         </>
       )}
     </p>
