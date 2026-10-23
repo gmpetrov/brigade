@@ -4,7 +4,7 @@ import { BrigadeMark } from '@/components/brigade-mark'
 import { formatCount, mergeDate, type ProofNumbers, REPO, REPO_URL } from '@/lib/github-proof'
 import { MAC_APP_URL } from '@/lib/mac-app'
 import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
-import { Pebble } from './pebble'
+import { Team } from './team'
 
 /** Brigade's own team as proof: the GitHub numbers read at build (lib/github-proof.ts), and
  * the last pull requests merged. A number GitHub did not give back leaves out what needs it. */
@@ -399,7 +399,7 @@ export function Faq() {
 export function FinalCall() {
   return (
     <section aria-labelledby="final-title" className={c('final')} data-anim>
-      <Pebble />
+      <Team />
       <div className={c('wrap')}>
         <h2 id="final-title">Meet your first teammate.</h2>
         <p className={c('lead')}>
