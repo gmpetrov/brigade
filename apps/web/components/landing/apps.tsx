@@ -2,94 +2,25 @@ import type { CSSProperties } from 'react'
 import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
 import { c, Icon } from './parts'
 
-type Tile = {
-  kind: ProviderKind | 'github'
-  name: string
-  x: string
-  y: string
-  path: string
-  glow?: string
-}
+type Tile = { kind: ProviderKind | 'github'; name: string; angle: string; glow?: string }
 
-// The Apps on a wide oval around the thread, each with a dotted path to it (in the stage's
-// 1168×640 box, ending under the thread's card). The four the use case calls glow in turn and
-// send a pulse down their path, one class per step (g0 to g3).
-const tiles: Tile[] = [
-  {
-    kind: 'google_calendar',
-    name: 'Google Calendar',
-    x: '37.2%',
-    y: '8%',
-    path: 'M435 51 C491 51 547 152 547 253',
-    glow: 'g0',
-  },
-  { kind: 'linear', name: 'Linear', x: '62.8%', y: '8%', path: 'M733 51 C677 51 621 152 621 253' },
-  {
-    kind: 'google_sheets',
-    name: 'Google Sheets',
-    x: '84.3%',
-    y: '21.3%',
-    path: 'M985 137 C834 137 684 205 684 274',
-  },
-  {
-    kind: 'stripe',
-    name: 'Stripe',
-    x: '94.9%',
-    y: '43.8%',
-    path: 'M1109 280 C912 280 715 295 715 310',
-    glow: 'g2',
-  },
-  {
-    kind: 'mixpanel',
-    name: 'Mixpanel',
-    x: '91.3%',
-    y: '68.2%',
-    path: 'M1066 436 C885 436 705 393 705 349',
-    glow: 'g3',
-  },
-  {
-    kind: 'github',
-    name: 'GitHub',
-    x: '74.5%',
-    y: '86.8%',
-    path: 'M871 556 C763 556 656 467 656 379',
-  },
-  {
-    kind: 'posthog',
-    name: 'PostHog',
-    x: '50%',
-    y: '93.8%',
-    path: 'M584 600 C584 600 584 495 584 390',
-  },
-  {
-    kind: 'supabase',
-    name: 'Supabase',
-    x: '25.5%',
-    y: '86.8%',
-    path: 'M297 556 C405 556 512 467 512 379',
-  },
-  {
-    kind: 'google_drive',
-    name: 'Google Drive',
-    x: '8.7%',
-    y: '68.2%',
-    path: 'M102 436 C283 436 463 393 463 349',
-  },
-  {
-    kind: 'notion',
-    name: 'Notion',
-    x: '5.1%',
-    y: '43.8%',
-    path: 'M59 280 C256 280 453 295 453 310',
-  },
-  {
-    kind: 'gmail',
-    name: 'Gmail',
-    x: '15.7%',
-    y: '21.3%',
-    path: 'M183 137 C334 137 484 205 484 274',
-    glow: 'g1',
-  },
+// Two orbits that turn slowly around the thread, on the middle two of four fading rings. The
+// Apps the use case calls sit on the inner one: in turn, each glows, ripples and sends a beam
+// to the thread, one class per step (g0 to g3).
+const inner: Tile[] = [
+  { kind: 'google_calendar', name: 'Google Calendar', angle: '-150deg', glow: 'g0' },
+  { kind: 'gmail', name: 'Gmail', angle: '160deg', glow: 'g1' },
+  { kind: 'stripe', name: 'Stripe', angle: '-30deg', glow: 'g2' },
+  { kind: 'mixpanel', name: 'Mixpanel', angle: '20deg', glow: 'g3' },
+  { kind: 'notion', name: 'Notion', angle: '90deg' },
+]
+const outer: Tile[] = [
+  { kind: 'linear', name: 'Linear', angle: '-110deg' },
+  { kind: 'google_sheets', name: 'Google Sheets', angle: '-60deg' },
+  { kind: 'github', name: 'GitHub', angle: '0deg' },
+  { kind: 'posthog', name: 'PostHog', angle: '55deg' },
+  { kind: 'google_drive', name: 'Google Drive', angle: '125deg' },
+  { kind: 'supabase', name: 'Supabase', angle: '185deg' },
 ]
 
 const steps = [
@@ -117,8 +48,8 @@ function Mention({ kind, name }: { kind: ProviderKind; name: string }) {
   )
 }
 
-/** Apps: the tools teammates work in, around a thread whose request uses four of them. Its
- * four steps are there from the start, greyed, and tick off as each App sends its pulse. */
+/** Apps: the tools teammates work in, on two rings around a thread whose request uses four of
+ * them. Its four steps are there from the start, greyed, and tick off as each App glows. */
 export function Apps() {
   return (
     <section aria-labelledby="apps-title" className={c('sec apps-sec')} data-anim>
@@ -134,32 +65,30 @@ export function Apps() {
         </div>
 
         <div className={c('apps-stage')} aria-hidden="true">
-          <svg className={c('ap-paths')} viewBox="0 0 1168 640" preserveAspectRatio="none">
-            {tiles.map((t) => (
-              <path key={t.kind} d={t.path} pathLength={100} />
-            ))}
-            {tiles.map((t) =>
-              t.glow ? (
-                <path
+          <div className={c('ap-rings')}>
+            <span style={{ '--r': '230px' } as CSSProperties}></span>
+            <span style={{ '--r': '345px' } as CSSProperties}></span>
+            <span style={{ '--r': '450px' } as CSSProperties}></span>
+            <span style={{ '--r': '555px' } as CSSProperties}></span>
+          </div>
+          {[
+            { cls: 'orbit o1', tiles: inner },
+            { cls: 'orbit o2', tiles: outer },
+          ].map((ring) => (
+            <div key={ring.cls} className={c(ring.cls)}>
+              {ring.tiles.map((t) => (
+                <span
                   key={t.kind}
-                  className={c(`ap-pulse ${t.glow}`)}
-                  d={t.path}
-                  pathLength={100}
-                />
-              ) : null,
-            )}
-          </svg>
-          {tiles.map((t) => (
-            <span
-              key={t.kind}
-              className={c(t.glow ? `app-t ${t.glow}` : 'app-t')}
-              style={{ '--x': t.x, '--y': t.y } as CSSProperties}
-              title={t.name}
-            >
-              <span className={c('app-i')}>
-                <Logo kind={t.kind} />
-              </span>
-            </span>
+                  className={c(t.glow ? `app-t ${t.glow}` : 'app-t')}
+                  style={{ '--a': t.angle } as CSSProperties}
+                  title={t.name}
+                >
+                  <span className={c('app-i')}>
+                    <Logo kind={t.kind} />
+                  </span>
+                </span>
+              ))}
+            </div>
           ))}
 
           <div className={c('ap-chat')}>

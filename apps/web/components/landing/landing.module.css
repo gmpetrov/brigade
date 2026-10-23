@@ -612,40 +612,48 @@ svg.i {
 }
 .apps-stage {
   position: relative;
-  height: 640px;
+  height: 980px;
 }
-/* The dotted paths from each App to the thread, stretched to the stage's width. */
-.ap-paths {
+/* A ring centered on the chat, of radius --r; each App sits on it at its angle --a. */
+.orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--r) * 2);
+  height: calc(var(--r) * 2);
+  margin: calc(var(--r) * -1) 0 0 calc(var(--r) * -1);
+}
+.orbit.o1 {
+  --r: 345px;
+}
+.orbit.o2 {
+  --r: 450px;
+}
+/* Four hairline rings, fading out toward the edges of the section. */
+.ap-rings {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+  -webkit-mask-image: radial-gradient(circle at center, #000 45%, transparent 75%);
+  mask-image: radial-gradient(circle at center, #000 45%, transparent 75%);
 }
-.ap-paths path {
-  fill: none;
-  stroke: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-dasharray: 0.1 1.6;
-  vector-effect: non-scaling-stroke;
+.ap-rings span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--r) * 2);
+  height: calc(var(--r) * 2);
+  margin: calc(var(--r) * -1) 0 0 calc(var(--r) * -1);
+  border: 1px solid var(--border);
+  border-radius: 50%;
 }
-/* A pulse of light down an App's path while the teammate uses it. */
-.ap-paths .ap-pulse {
-  stroke: var(--primary);
-  stroke-width: 3;
-  stroke-dasharray: 14 120;
-  stroke-dashoffset: 14;
-  opacity: 0;
-}
-/* An App, placed on the oval by --x and --y. */
 .app-t {
   position: absolute;
-  left: var(--x);
-  top: var(--y);
+  left: 50%;
+  top: 50%;
   width: 60px;
   height: 60px;
   margin: -30px 0 0 -30px;
+  transform: rotate(var(--a)) translate(var(--r)) rotate(calc(var(--a) * -1));
   border-radius: 50%;
   background: var(--card);
   border: 1px solid var(--border);
@@ -660,6 +668,26 @@ svg.i {
 .app-t svg {
   width: 28px;
   height: 28px;
+}
+/* The beam from an App in use to the thread: from the logo's edge to the center, the
+ * thread's card hiding its far end. */
+.app-t::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--r) - 36px);
+  height: 3px;
+  margin-top: -1.5px;
+  transform-origin: 0 50%;
+  transform: rotate(calc(var(--a) + 180deg)) translateX(36px);
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--primary),
+    color-mix(in oklch, var(--primary) 15%, transparent) 60%
+  );
+  opacity: 0;
 }
 /* The ripple out of an App in use. */
 .app-i::before {
@@ -4173,41 +4201,33 @@ svg.i {
 .ap5 {
   animation: k-ap5 14s ease-out infinite;
 }
-.app-t.g0::after {
+.app-t.g0::after,
+.app-t.g0::before {
   animation: k-g0 14s ease-in-out infinite;
 }
 .app-t.g0 .app-i::before {
   animation: k-r0 14s ease-out infinite;
 }
-.ap-pulse.g0 {
-  animation: k-p0 14s linear infinite;
-}
-.app-t.g1::after {
+.app-t.g1::after,
+.app-t.g1::before {
   animation: k-g1 14s ease-in-out infinite;
 }
 .app-t.g1 .app-i::before {
   animation: k-r1 14s ease-out infinite;
 }
-.ap-pulse.g1 {
-  animation: k-p1 14s linear infinite;
-}
-.app-t.g2::after {
+.app-t.g2::after,
+.app-t.g2::before {
   animation: k-g2 14s ease-in-out infinite;
 }
 .app-t.g2 .app-i::before {
   animation: k-r2 14s ease-out infinite;
 }
-.ap-pulse.g2 {
-  animation: k-p2 14s linear infinite;
-}
-.app-t.g3::after {
+.app-t.g3::after,
+.app-t.g3::before {
   animation: k-g3 14s ease-in-out infinite;
 }
 .app-t.g3 .app-i::before {
   animation: k-r3 14s ease-out infinite;
-}
-.ap-pulse.g3 {
-  animation: k-p3 14s linear infinite;
 }
 @keyframes k-ap1 {
   0%,
@@ -4453,85 +4473,22 @@ svg.i {
     opacity: 1;
   }
 }
-/* Apps: a pulse runs down the path of the App in use, toward the thread. */
-@keyframes k-p0 {
-  0%,
-  13% {
-    opacity: 0;
-    stroke-dashoffset: 14;
-  }
-  14% {
-    opacity: 1;
-    stroke-dashoffset: 14;
-  }
-  20% {
-    opacity: 1;
-    stroke-dashoffset: -100;
-  }
-  21%,
-  100% {
-    opacity: 0;
-    stroke-dashoffset: -100;
-  }
+/* Apps: the rings turn slowly; each logo turns back so it stays upright. */
+.orbit.o1 {
+  animation: k-spin 90s linear infinite;
 }
-@keyframes k-p1 {
-  0%,
-  25% {
-    opacity: 0;
-    stroke-dashoffset: 14;
-  }
-  26% {
-    opacity: 1;
-    stroke-dashoffset: 14;
-  }
-  32% {
-    opacity: 1;
-    stroke-dashoffset: -100;
-  }
-  33%,
-  100% {
-    opacity: 0;
-    stroke-dashoffset: -100;
-  }
+.orbit.o2 {
+  animation: k-spin 140s linear infinite reverse;
 }
-@keyframes k-p2 {
-  0%,
-  37% {
-    opacity: 0;
-    stroke-dashoffset: 14;
-  }
-  38% {
-    opacity: 1;
-    stroke-dashoffset: 14;
-  }
-  44% {
-    opacity: 1;
-    stroke-dashoffset: -100;
-  }
-  45%,
-  100% {
-    opacity: 0;
-    stroke-dashoffset: -100;
-  }
+.orbit.o1 .app-i {
+  animation: k-spin 90s linear infinite reverse;
 }
-@keyframes k-p3 {
-  0%,
-  49% {
-    opacity: 0;
-    stroke-dashoffset: 14;
-  }
-  50% {
-    opacity: 1;
-    stroke-dashoffset: 14;
-  }
-  56% {
-    opacity: 1;
-    stroke-dashoffset: -100;
-  }
-  57%,
-  100% {
-    opacity: 0;
-    stroke-dashoffset: -100;
+.orbit.o2 .app-i {
+  animation: k-spin 140s linear infinite;
+}
+@keyframes k-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -5266,7 +5223,7 @@ a.lgr:hover .tt {
   }
 }
 
-/* Apps: below 1100px the logos wrap above the thread, without paths. */
+/* Apps: below 1100px the logos wrap above the thread instead of circling it. */
 @media (max-width: 1100px) {
   .apps-stage {
     height: auto;
@@ -5275,8 +5232,15 @@ a.lgr:hover .tt {
     justify-content: center;
     gap: 10px;
   }
-  .ap-paths {
+  .orbit {
+    display: contents;
+  }
+  .ap-rings,
+  .app-t::before {
     display: none;
+  }
+  .orbit .app-i {
+    animation: none;
   }
   .app-t {
     position: relative;
@@ -5285,6 +5249,7 @@ a.lgr:hover .tt {
     margin: 0;
     width: 48px;
     height: 48px;
+    transform: none;
   }
   .app-t svg {
     width: 24px;
