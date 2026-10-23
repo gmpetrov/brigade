@@ -55,7 +55,7 @@ const SHAPE = 'M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 4
 /**
  * Brigade's pebble, large, in the page's ink. It looks around at random, turning its head in
  * 3D (eyes on a sphere, a light sliding the other way), changes mood and blinks, with no
- * loop. It smiles while the pointer is on Sign up, dozes off when the visitor does nothing
+ * loop. It turns to Sign up and smiles while the pointer is on it, dozes off when the visitor does nothing
  * and wakes with a start. Each move only sets CSS variables that transitions ease. It keeps
  * still under reduced motion.
  */
@@ -105,7 +105,7 @@ export function Pebble() {
 
     // On its own: looks somewhere at random, holds it for a random while.
     const look = () => {
-      if (visible && !asleep) {
+      if (visible && !asleep && !hovering) {
         turn(rad(random(-38, 38)), rad(random(-22, 16)))
         if (Math.random() < 0.22) blink(Math.random() < 0.3)
       }
@@ -151,8 +151,16 @@ export function Pebble() {
     }
 
     const button = el.closest('section')?.querySelector('a')
+    // On Sign up, it turns to the button, as far as a head turns, and smiles.
     const onEnter = () => {
       hovering = true
+      if (button) {
+        const b = button.getBoundingClientRect()
+        const box = el.getBoundingClientRect()
+        const dx = b.left + b.width / 2 - (box.left + box.width * 0.5)
+        const dy = b.top + b.height / 2 - (box.top + box.height * 0.42)
+        turn(rad(Math.max(-40, Math.min(40, dx / 14))), rad(Math.max(-24, Math.min(18, dy / 14))))
+      }
       setEyes(1, 1)
     }
     const onLeave = () => {
