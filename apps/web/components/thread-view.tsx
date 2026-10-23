@@ -3428,6 +3428,12 @@ export type ReplyPreview = {
   start: (words: string) => void
 }
 
+/**
+ * Brigade's own buttons keep Brigade's words, in English as the rest of the app,
+ * whatever the teammate wrote after `[merge]` or `[preview]`.
+ */
+const PREVIEW_LABEL = 'Start the preview'
+
 /** Answers a teammate suggested under its reply: a click sends one as the person's message. */
 function SuggestedReplyButtons({
   replies,
@@ -3466,7 +3472,7 @@ function SuggestedReplyButtons({
                   key={`${a.action}:${a.label}`}
                   repository={pull.repository}
                   number={pull.number}
-                  label={a.label}
+                  label={`Merge #${pull.number}`}
                 />
               )
             : preview &&
@@ -3477,14 +3483,14 @@ function SuggestedReplyButtons({
                   size="sm"
                   className="rounded-full"
                   disabled={preview.busy || sending !== undefined}
-                  onClick={() => preview.start(a.label)}
+                  onClick={() => preview.start(PREVIEW_LABEL)}
                 >
                   {preview.busy ? (
                     <LoaderCircle aria-hidden className="animate-spin" />
                   ) : (
                     <Eye aria-hidden />
                   )}
-                  {a.label}
+                  {PREVIEW_LABEL}
                 </Button>
               ),
         )}

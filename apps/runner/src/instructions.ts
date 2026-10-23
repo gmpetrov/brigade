@@ -525,7 +525,7 @@ const REPLIES =
   "becomes Brigade's own merge button, shown only while the pull request can merge and to someone allowed " +
   'to merge it, and the thread tells you once it is merged.\n\n' +
   "When the next step is trying the app in this thread's preview, write that line as `[preview] Start the " +
-  "preview`, in the person's language: it becomes Brigade's own button, shown only while no preview runs, " +
+  "preview`: it becomes Brigade's own button, shown only while no preview runs, " +
   'which starts it as Preview at the top of the thread does, without you. When it cannot start by itself ' +
   '(nothing saved to start it from, or it needs your credentials), the click comes to you as their message.\n\n' +
   'To let the person pick among alternatives you made (designs, approaches, drafts), end your reply instead with ' +
