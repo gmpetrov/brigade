@@ -2353,11 +2353,20 @@ svg.i {
   opacity: 0.09;
 }
 /* The large name in glossy black, like the apple on a space black MacBook: a shade off the
- * page with a soft sheen across it that slides by now and then. Mixed in oklab: oklch would
- * swing the hue between the grey ink and the cool page, and tint it brown. */
+ * page with a soft sheen across it that slides by now and then. Mixed in oklab (oklch swings
+ * the hue between the grey ink and the cool page), then set to a cool hue. */
 .foot-name span {
-  --gloss-base: color-mix(in oklab, var(--foreground) 7%, var(--background));
-  --gloss-shine: color-mix(in oklab, var(--foreground) 26%, var(--background));
+  /* Greys pulled a touch toward blue, like the page: a neutral grey beside a cool page reads
+   * warm, almost brown. */
+  --gloss-top: oklch(
+    from color-mix(in oklab, var(--foreground) 12%, var(--background)) l 0.014 265
+  );
+  --gloss-base: oklch(
+    from color-mix(in oklab, var(--foreground) 7%, var(--background)) l 0.012 265
+  );
+  --gloss-shine: oklch(
+    from color-mix(in oklab, var(--foreground) 26%, var(--background)) l 0.016 265
+  );
   background:
     linear-gradient(
         112deg,
@@ -2368,11 +2377,7 @@ svg.i {
         transparent 57%
       )
       0 0 / 300% 100% no-repeat,
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--foreground) 12%, var(--background)),
-      var(--gloss-base) 60%
-    );
+    linear-gradient(180deg, var(--gloss-top), var(--gloss-base) 60%);
   background-position:
     100% 0,
     0 0;
