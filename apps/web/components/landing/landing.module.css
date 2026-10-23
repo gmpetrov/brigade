@@ -2333,6 +2333,39 @@ svg.i {
   margin-left: -0.04em;
 }
 
+/* Film grain on the dark bands (tiles, pricing): a printed, tactile feel. */
+.tiles {
+  position: relative;
+}
+.tiles::after,
+.pricing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+  opacity: 0.09;
+}
+/* Tiny pebbles from the logo, at low contrast, behind the footer's large name. */
+.foot-name {
+  position: relative;
+}
+.foot-name::before {
+  content: '';
+  position: absolute;
+  inset: -0.2em 0 0;
+  background: var(--foreground);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='124'%3E%3Cg transform='translate(10 8) scale(.34)'%3E%3Cpath d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3Cg transform='translate(78 66) scale(.26) rotate(24 50 50)'%3E%3Cpath d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3C/svg%3E")
+    0 0 / 140px 124px repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='124'%3E%3Cg transform='translate(10 8) scale(.34)'%3E%3Cpath d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3Cg transform='translate(78 66) scale(.26) rotate(24 50 50)'%3E%3Cpath d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3C/svg%3E")
+    0 0 / 140px 124px repeat;
+  opacity: 0.06;
+}
+.foot-name span {
+  position: relative;
+}
+
 /* ANIM:BEGIN (generated loops; each element's static style is its final frame) */
 /* Shared: stacked layers that cross-fade, named cursors */
 .xg {
