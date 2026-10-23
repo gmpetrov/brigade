@@ -33,7 +33,7 @@ import { Accounts, machineLogins } from './accounts.js'
 import { Attachments } from './attachments.js'
 import { Connection } from './connection.js'
 import { describeProject } from './describe.js'
-import { readThreadFile } from './files.js'
+import { findSource, readThreadFile, writeThreadFile } from './files.js'
 import { Folders, ThreadGone, type FolderName } from './folders.js'
 import { Library } from './library.js'
 import { BROWSER_START_PAGE, ensureBrowser, focusThreadTab } from './browsers.js'
@@ -622,6 +622,32 @@ async function start() {
             (error) =>
               connection.send({
                 type: 'thread.file.result',
+                requestId: message.requestId,
+                ok: false,
+                error: String(error),
+              }),
+          )
+      case 'thread.file.write':
+        return folderReady(message.sessionId, [message.teammateId])
+          .then(() => writeThreadFile(message))
+          .then(
+            (result) => connection.send(result),
+            (error) =>
+              connection.send({
+                type: 'thread.file.written',
+                requestId: message.requestId,
+                ok: false,
+                error: String(error),
+              }),
+          )
+      case 'thread.source.find':
+        return folderReady(message.sessionId, [message.teammateId])
+          .then(() => findSource(message))
+          .then(
+            (result) => connection.send(result),
+            (error) =>
+              connection.send({
+                type: 'thread.source.result',
                 requestId: message.requestId,
                 ok: false,
                 error: String(error),

@@ -106,8 +106,10 @@
     --desktop-w: clamp(26rem, 34vw, 40rem);
   }
 
-  /* Code highlighting (rehype-highlight's hljs classes, components/markdown.tsx). */
-  .hljs {
+  /* Code highlighting (rehype-highlight's hljs classes, components/markdown.tsx; the
+   * code editor, components/code-editor.tsx). */
+  .hljs,
+  .code-editor {
     --code-key: oklch(0.5 0.19 287);
     --code-string: oklch(0.5 0.13 155);
     --code-number: oklch(0.55 0.15 50);
@@ -115,7 +117,8 @@
     --code-title: oklch(0.5 0.16 255);
     --code-comment: var(--muted-foreground);
   }
-  .dark .hljs {
+  .dark .hljs,
+  .dark .code-editor {
     --code-key: oklch(0.78 0.13 287);
     --code-string: oklch(0.8 0.15 152);
     --code-number: oklch(0.8 0.13 65);

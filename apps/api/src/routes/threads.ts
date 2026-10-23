@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import {
   clipReport,
+  CODE_EDIT_PROTOCOL,
   FILE_VIEW_MAX,
+  FindSource,
+  SaveThreadFile,
+  type SavedThreadFile,
+  type SourceMatch,
   FOCUS_PROTOCOL,
   REPORT_START,
   RETRY_PROTOCOL,
@@ -54,7 +59,7 @@ import { ensureRunning, hostedPort } from '../cloud.js'
 import { applyPick, checkPick } from '../designs.js'
 import { watchDesktop } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
-import type { ScopedDb } from '../db.js'
+import { prisma, type ScopedDb } from '../db.js'
 import {
   broadcastSchedule,
   broadcastTask,
@@ -64,9 +69,11 @@ import {
   eventsWaitingSince,
   isOnline,
   isRestarting,
+  findSource,
   readThreadFile,
   runnerProtocol,
   sendToRunner,
+  writeThreadFile,
 } from '../hub.js'
 import { contentTypeFor, isText } from '../library.js'
 import { projectWhere, usableProject } from '../projects.js'
@@ -97,6 +104,7 @@ import { cancelWakeup } from '../wakeups.js'
 import { surface } from '../playbooks.js'
 import { runLog } from '../timeline.js'
 import { historyContext, pageEvents, pageStart } from '../thread-history.js'
+import { noteInThread } from '../thread-notes.js'
 import {
   parseBody,
   requireUser,
@@ -144,6 +152,38 @@ function mayPrompt(
 }
 
 const isAdmin = (scope: WorkspaceScope) => scope.role === 'owner' || scope.role === 'admin'
+
+/** Editing code needs the computer on, with a runner that writes files (CODE_EDIT_PROTOCOL). */
+function requireCodeEdit(computerId: string) {
+  const protocol = runnerProtocol(computerId)
+  if (protocol === undefined) throw new HTTPException(409, { message: 'The computer is offline' })
+  if (protocol < CODE_EDIT_PROTOCOL)
+    throw new HTTPException(409, {
+      message: 'Update Brigade on this computer to edit code from here',
+    })
+}
+
+/** Edits already told to their thread, by thread, file and member: when. */
+const editsNoted = new Map<string, number>()
+const EDIT_NOTE_MS = 15 * 60_000
+
+/**
+ * "Ada edited `src/app.tsx`.": a line in the thread, and what its teammates read at their
+ * next turn. Once per file and person in a while, not at each save.
+ */
+async function noteEdit(db: ScopedDb, scope: WorkspaceScope, threadId: string, path: string) {
+  const key = `${threadId}\0${path}\0${scope.memberId}`
+  const now = Date.now()
+  if (now - (editsNoted.get(key) ?? 0) < EDIT_NOTE_MS) return
+  for (const [k, at] of editsNoted) if (now - at >= EDIT_NOTE_MS) editsNoted.delete(k)
+  editsNoted.set(key, now)
+  const user = await prisma.user.findFirst({ where: { id: scope.userId }, select: { name: true } })
+  await noteInThread(
+    db,
+    threadId,
+    `${user?.name || 'A member'} edited \`${path}\` in the code editor. The change is saved in the working folder, not committed.`,
+  )
+}
 
 /** Renaming and archiving a thread is for who may write in it, and admins. */
 function mayChange(
@@ -575,7 +615,64 @@ export const threads = new Hono<AppEnv>()
       ...(result.text === undefined ? {} : { text: result.text }),
       truncated: result.truncated ?? false,
       ...(result.teammateId ? { teammateId: result.teammateId } : {}),
+      ...(result.hash ? { hash: result.hash } : {}),
     } satisfies ThreadFile)
+  })
+
+  /**
+   * Save a text file of a teammate's working folder that a person edited in the file
+   * panel: whoever may write to the thread. Refused (409) when it changed since it was
+   * opened, unless the save has no `base`. The thread is told once in a while who
+   * edited what, so its teammates know at their next turn.
+   */
+  .put('/:id/file', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    requireMayPrompt(scope, thread)
+    const input = await parseBody(c.req.raw, SaveThreadFile)
+    if (!thread.teammates.some((t) => t.teammateId === input.teammateId))
+      throw new HTTPException(400, { message: 'That teammate is not in this thread' })
+    requireCodeEdit(thread.computerId)
+    const result = await writeThreadFile(thread.computerId, {
+      sessionId: thread.id,
+      teammateId: input.teammateId,
+      path: input.path,
+      text: input.text,
+      ...(input.base ? { base: input.base } : {}),
+    })
+    if (!result.ok || !result.hash)
+      throw new HTTPException(result.conflict ? 409 : result.error === 'not_found' ? 404 : 409, {
+        message: result.conflict
+          ? 'The file changed since you opened it'
+          : result.error === 'not_found'
+            ? `No file "${input.path}" in the teammate's folder`
+            : (result.error ?? 'Could not save the file'),
+      })
+    await noteEdit(db, scope, thread.id, input.path)
+    return c.json({ hash: result.hash } satisfies SavedThreadFile)
+  })
+
+  /**
+   * Where an element picked in the thread's preview is written: files of the
+   * preview's folder holding its text, best first, to open in the file panel.
+   */
+  .post('/:id/source', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    requireMayPrompt(scope, thread)
+    const input = await parseBody(c.req.raw, FindSource)
+    if (!thread.teammates.some((t) => t.teammateId === input.teammateId))
+      throw new HTTPException(400, { message: 'That teammate is not in this thread' })
+    requireCodeEdit(thread.computerId)
+    const result = await findSource(thread.computerId, {
+      sessionId: thread.id,
+      teammateId: input.teammateId,
+      cwd: input.cwd,
+      text: input.text,
+      ...(input.components ? { components: input.components } : {}),
+    })
+    if (!result.ok) throw new HTTPException(409, { message: result.error ?? 'Could not search' })
+    return c.json({ matches: result.matches ?? [] } satisfies { matches: SourceMatch[] })
   })
 
   /**

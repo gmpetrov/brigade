@@ -517,5 +517,47 @@ export const ThreadFile = z.object({
   truncated: z.boolean().default(false),
   /** Whose working folder it is in. */
   teammateId: z.string().optional(),
+  /**
+   * The SHA-256 of a whole text file in a teammate's working folder, from runners that
+   * write files (CODE_EDIT_PROTOCOL): it can be edited, and a save names it to catch
+   * a change made since it was opened.
+   */
+  hash: z.string().optional(),
 })
 export type ThreadFile = z.infer<typeof ThreadFile>
+
+/** A person saves a text file of a teammate's working folder, as read with its `hash`. */
+export const SaveThreadFile = z.object({
+  path: z.string().min(1).max(1000),
+  teammateId: z.string().min(1),
+  text: z.string().max(FILE_VIEW_MAX),
+  /** The hash it was opened at; unset to write over whatever is there. */
+  base: z.string().optional(),
+})
+export type SaveThreadFile = z.infer<typeof SaveThreadFile>
+
+/** A saved file's new hash. A file changed since it was opened answers 409 instead. */
+export const SavedThreadFile = z.object({
+  hash: z.string(),
+})
+export type SavedThreadFile = z.infer<typeof SavedThreadFile>
+
+/** Where an element of a thread's preview is written, found by its text. */
+export const FindSource = z.object({
+  teammateId: z.string().min(1),
+  /** The preview's folder, relative to the teammate's working folder. */
+  cwd: z.string().max(500),
+  text: z.string().min(1).max(500),
+  /** React components around it, outermost first: files named after them come first. */
+  components: z.array(z.string().max(100)).max(8).optional(),
+})
+export type FindSource = z.infer<typeof FindSource>
+
+export const SourceMatch = z.object({
+  /** Relative to the teammate's working folder. */
+  path: z.string(),
+  line: z.number().int().positive(),
+  /** The line, trimmed and clipped. */
+  preview: z.string(),
+})
+export type SourceMatch = z.infer<typeof SourceMatch>

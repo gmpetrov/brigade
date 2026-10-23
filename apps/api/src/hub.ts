@@ -222,6 +222,69 @@ export function readThreadFile(
   })
 }
 
+type FileWritten = Extract<RunnerToApi, { type: 'thread.file.written' }>
+type SourceResult = Extract<RunnerToApi, { type: 'thread.source.result' }>
+const fileWrites = new Map<string, { computerId: string; settle: (result: FileWritten) => void }>()
+const sourceFinds = new Map<
+  string,
+  { computerId: string; settle: (result: SourceResult) => void }
+>()
+
+/** Ask a computer's runner and wait for its answer by request id, or settle with an error. */
+function ask<R extends { requestId: string; ok: boolean; error?: string }>(
+  pending: Map<string, { computerId: string; settle: (result: R) => void }>,
+  computerId: string,
+  message: (requestId: string) => ApiToRunner,
+  failed: (requestId: string, error: string) => R,
+  timeoutMs: number,
+) {
+  return new Promise<R>((resolve) => {
+    const requestId = randomUUID()
+    const timer = setTimeout(
+      () => settle(failed(requestId, 'The computer did not answer')),
+      timeoutMs,
+    )
+    const settle = (result: R) => {
+      clearTimeout(timer)
+      pending.delete(requestId)
+      resolve(result)
+    }
+    pending.set(requestId, { computerId, settle })
+    if (!sendToRunner(computerId, message(requestId)))
+      settle(failed(requestId, 'The computer is offline'))
+  })
+}
+
+/**
+ * Save a text file of a teammate's working folder that a person edited
+ * (CODE_EDIT_PROTOCOL). Never wakes a stopped computer.
+ */
+export const writeThreadFile = (
+  computerId: string,
+  request: Omit<Extract<ApiToRunner, { type: 'thread.file.write' }>, 'type' | 'requestId'>,
+) =>
+  ask<FileWritten>(
+    fileWrites,
+    computerId,
+    (requestId) => ({ type: 'thread.file.write', requestId, ...request }),
+    (requestId, error) => ({ type: 'thread.file.written', requestId, ok: false, error }),
+    15_000,
+  )
+
+/** Where an element of a thread's preview is written, by its text (CODE_EDIT_PROTOCOL). */
+export const findSource = (
+  computerId: string,
+  request: Omit<Extract<ApiToRunner, { type: 'thread.source.find' }>, 'type' | 'requestId'>,
+) =>
+  ask<SourceResult>(
+    sourceFinds,
+    computerId,
+    (requestId) => ({ type: 'thread.source.find', requestId, ...request }),
+    (requestId, error) => ({ type: 'thread.source.result', requestId, ok: false, error }),
+    // Each of up to six searches may take up to 15 s on the runner.
+    30_000,
+  )
+
 /** Commands for cloud computers that are starting, or runners restarting, sent when their runner connects. */
 const queued = new Map<string, { message: ApiToRunner; at: number }[]>()
 const QUEUE_TTL_MS = 10 * 60_000
@@ -807,6 +870,16 @@ export function runnerSocket(runner: {
     if (message.type === 'thread.file.result') {
       const read = fileReads.get(message.requestId)
       if (read?.computerId === runner.computerId) read.settle(message)
+      return
+    }
+    if (message.type === 'thread.file.written') {
+      const write = fileWrites.get(message.requestId)
+      if (write?.computerId === runner.computerId) write.settle(message)
+      return
+    }
+    if (message.type === 'thread.source.result') {
+      const find = sourceFinds.get(message.requestId)
+      if (find?.computerId === runner.computerId) find.settle(message)
       return
     }
 
