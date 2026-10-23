@@ -124,7 +124,14 @@ export async function readThreadFile(request: Request): Promise<Result> {
       return {
         ...base,
         ok: true,
-        path: inside(dir, path) && !isAbsolute(request.path) ? request.path : target,
+        // As asked when relative; a file of the working folder by its path in it, however
+        // it was named, so its save and the code panel's watch name it the same way.
+        path:
+          !isAbsolute(request.path) && inside(dir, path)
+            ? request.path
+            : own && inside(own, target)
+              ? relative(own, target)
+              : target,
         teammateId,
         size,
         ...(text === undefined ? {} : { text }),

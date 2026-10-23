@@ -78,10 +78,9 @@ export async function codeFiles(request: Request): Promise<Result> {
   const { user, dir } = workDir(request.teammateId, request.sessionId)
   const own = await real(dir, user)
   if (!own) return { ...base, ok: false, error: 'not_found' }
-  /** A path of the working folder, resolved; undefined when it is not one. */
+  /** A path of the working folder (relative to it, or absolute), resolved; undefined when it is not one. */
   const resolve = async (path: string) => {
-    if (isAbsolute(path)) return undefined
-    const target = await real(join(own, path), user)
+    const target = await real(isAbsolute(path) ? path : join(own, path), user)
     return target && inside(own, target) ? target : undefined
   }
   try {

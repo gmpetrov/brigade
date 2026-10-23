@@ -8,6 +8,7 @@ import { test } from 'node:test'
 const home = await mkdtemp(join(tmpdir(), 'brigade-code-'))
 process.env.BRIGADE_HOME = home
 const { codeFiles, matchFiles } = await import('../src/code-files.js')
+const { readThreadFile } = await import('../src/files.js')
 
 const dir = join(home, 'teammates', 'riley', 'threads', 'thread1')
 const web = join(dir, 'brigade', 'apps', 'web')
@@ -74,6 +75,24 @@ test('lines by text, case aside, leaving out what git ignores', async () => {
     },
   ])
   assert.deepEqual((await codeFiles({ ...ids, op: 'grep', query: 'nowhere at all' })).matches, [])
+})
+
+test('a file read by its absolute path comes back by its path in the folder, which the watch knows', async () => {
+  const absolute = join(dir, 'brigade', 'apps', 'web', 'Zeta.md')
+  const read = await readThreadFile({
+    type: 'thread.file.read',
+    requestId: 'r',
+    sessionId: 'thread1',
+    teammateIds: ['riley'],
+    path: absolute,
+  })
+  assert.equal(read.path, 'brigade/apps/web/Zeta.md')
+  assert.ok(read.hash)
+  const watched = await codeFiles({ ...ids, op: 'hashes', paths: [read.path!, absolute] })
+  assert.deepEqual(watched.hashes, { [read.path!]: read.hash, [absolute]: read.hash })
+  // Absolute, but outside: nothing.
+  const outside = await codeFiles({ ...ids, op: 'hashes', paths: [join(home, 'secret.txt')] })
+  assert.deepEqual(outside.hashes, { [join(home, 'secret.txt')]: null })
 })
 
 test('hashes of open files; null once one is gone or outside', async () => {

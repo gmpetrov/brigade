@@ -25,6 +25,8 @@ const CodeEditor = dynamic(() => import('@/components/code-editor'), {
 const WATCH_MS = 2500
 /** How long "Updated" shows after a change came in. */
 const UPDATED_MS = 4000
+/** How long watching waits after the computer did not answer (offline, restarting). */
+const OFFLINE_PAUSE_MS = 15_000
 
 export const MOD =
   typeof navigator !== 'undefined' && /Mac|iP/.test(navigator.platform) ? '⌘' : 'Ctrl+'
@@ -53,6 +55,8 @@ function useEdit(threadId: string, file: ThreadFile | undefined) {
   const base = useRef<string>(undefined)
   /** Counts saves, so a check for changes that a save overtook is not taken for one. */
   const saves = useRef(0)
+  /** Counts edits, so the file read while someone typed does not replace what they typed. */
+  const edits = useRef(0)
   // Read as the file comes, not after: the editor starts from it as it mounts.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- once per file read
   const initial = useMemo(() => (key ? getDraft(key)?.text : undefined), [file])
@@ -114,9 +118,11 @@ function useEdit(threadId: string, file: ThreadFile | undefined) {
     error,
     base,
     saves,
+    edits,
     /** The unsaved edits it opened with, for the editor to start from; else the file. */
     initial,
     change: (text: string) => {
+      edits.current++
       update(text)
       setSaved(false)
     },
@@ -191,17 +197,23 @@ export function CodeFile({
 
   /**
    * The file as it is now on the computer, in place of what shows, as one change: the
-   * cursor and scroll stay. Through a ref, so the watch below calls this render's,
-   * whose edit knows the file (one from before it was read would keep the draft).
+   * cursor and scroll stay. Not when someone typed or saved while it was read: what they
+   * typed stays, and the next check finds the file changed under their edits. Whether it
+   * came in. Through a ref, so the watch below calls this render's, whose edit knows the
+   * file (one from before it was read would keep the draft).
    */
   const takeTheirs = async () => {
+    const edits = edit.edits.current
+    const saves = edit.saves.current
     const now = await readCodeFile(threadId, teammateId, path)
-    if (now.text === undefined || !now.hash) return
+    if (now.text === undefined || !now.hash) return false
+    if (edits !== edit.edits.current || saves !== edit.saves.current) return false
     editor.current?.replace(now.text)
     edit.base.current = now.hash
     edit.reset()
     edit.setConflict(false)
     setGone(false)
+    return true
   }
   const latestTakeTheirs = useRef(takeTheirs)
   latestTakeTheirs.current = takeTheirs
@@ -212,8 +224,10 @@ export function CodeFile({
   useEffect(() => {
     if (!visible || !watched) return
     let stopped = false
+    /** The computer did not answer: a while before asking again, or until the window comes back. */
+    let pausedUntil = 0
     const check = async () => {
-      if (document.visibilityState !== 'visible' || edit.saving) return
+      if (document.visibilityState !== 'visible' || edit.saving || Date.now() < pausedUntil) return
       const saves = edit.saves.current
       try {
         const { hashes } = await api<{ hashes: Record<string, string | null> }>(
@@ -227,15 +241,19 @@ export function CodeFile({
         if (now === null) return setGone(true)
         setGone(false)
         if (dirty) return edit.setConflict(true)
-        await latestTakeTheirs.current()
-        if (!stopped) setUpdatedAt(Date.now())
+        if ((await latestTakeTheirs.current()) && !stopped) setUpdatedAt(Date.now())
       } catch (e) {
-        // A runner that cannot tell (too old, offline): no watching, and nothing to say.
-        if (e instanceof ApiError && e.status === 409) stopped = true
+        if (!(e instanceof ApiError) || e.status !== 409) return
+        // A runner too old to tell: no watching. Offline or restarting: again in a while.
+        if (/Update Brigade/.test(e.message)) stopped = true
+        else pausedUntil = Date.now() + OFFLINE_PAUSE_MS
       }
     }
     const timer = setInterval(() => !stopped && void check(), WATCH_MS)
-    const onFocus = () => !stopped && void check()
+    const onFocus = () => {
+      pausedUntil = 0
+      if (!stopped) void check()
+    }
     window.addEventListener('focus', onFocus)
     return () => {
       stopped = true
