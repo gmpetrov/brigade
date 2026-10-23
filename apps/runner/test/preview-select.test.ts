@@ -102,6 +102,12 @@ function framedPage(path: string) {
   }
   const at = new URL(path, 'https://box.example')
   const location = {
+    get href() {
+      return at.href
+    },
+    get origin() {
+      return at.origin
+    },
     get pathname() {
       return at.pathname
     },
@@ -129,6 +135,7 @@ function framedPage(path: string) {
     location,
     history,
     document: { currentScript: null },
+    URL,
     addEventListener: (type: string, listener: (e: unknown) => void) =>
       listeners.set(type, [...(listeners.get(type) ?? []), listener]),
   }
@@ -160,6 +167,7 @@ test('the page tells the panel where it is, and opens the path typed there', () 
   page.fromPanel({ source: 'brigade', type: 'navigate', page: '/login' })
   // Only a path on its own address.
   page.fromPanel({ source: 'brigade', type: 'navigate', page: '//evil.example/x' })
+  page.fromPanel({ source: 'brigade', type: 'navigate', page: '/\\evil.example/' })
   page.fromPanel({ source: 'brigade', type: 'navigate', page: 'javascript:alert(1)' })
-  assert.deepEqual(page.location.assigned, ['/login'])
+  assert.deepEqual(page.location.assigned, ['https://box.example/login'])
 })

@@ -341,9 +341,16 @@ export const SELECT_SCRIPT = String.raw`(() => {
       origin = e.origin
       shown = null
       report()
-    } else if (data.type === 'navigate' && typeof data.page === 'string' && data.page[0] === '/' && data.page[1] !== '/') {
-      // A path the person typed in the panel's bar, on this page's own address.
-      location.assign(data.page)
+    } else if (data.type === 'navigate' && typeof data.page === 'string') {
+      // A path the person typed in the panel's bar, only on this page's own address
+      // (a browser reads '//host' and '/\host' as another one).
+      let to = null
+      try {
+        to = new URL(data.page, location.href)
+      } catch (error) {
+        return
+      }
+      if (to.origin === location.origin) location.assign(to.href)
     }
   })
   // Here, for the panel to show its button and turn select mode back on after a navigation.

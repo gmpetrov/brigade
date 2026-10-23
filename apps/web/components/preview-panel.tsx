@@ -860,15 +860,16 @@ function usePreviewSelect(
     },
     [send],
   )
-  /** Open a path in the page, as a link in it would; false when the page has no script to ask. */
+  /** Open a path in the page, as a link in it would; false when the page cannot be asked. */
   const navigate = useCallback(
     (path: string) => {
       const target = frame.current?.contentWindow
-      if (!available || !origin || !target) return false
+      // Only a page that said where it is opens a path: older scripts say ready, not that.
+      if (page === undefined || !origin || !target) return false
       target.postMessage({ source: 'brigade', type: 'navigate', page: path }, origin)
       return true
     },
-    [available, origin],
+    [page, origin],
   )
   return {
     frame,
