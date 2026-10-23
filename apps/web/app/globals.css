@@ -203,7 +203,7 @@
   }
 
   /* A scrolling list whose top and bottom fade out where more of it is hidden
-   * (the sidebar): each edge fades in over the first 1.5rem of scroll toward it,
+   * (the sidebar): each edge fades in over the first 3rem of scroll toward it,
    * so a list at its start, or one that does not scroll, shows no top fade.
    * Without scroll-driven animations, no fade. */
   @supports (animation-timeline: scroll()) {
@@ -220,18 +220,18 @@
         scroll-fade-bottom linear both;
       animation-timeline: scroll(self), scroll(self);
       animation-range:
-        0 1.5rem,
-        calc(100% - 1.5rem) 100%;
+        0 3rem,
+        calc(100% - 3rem) 100%;
     }
   }
   @keyframes scroll-fade-top {
     to {
-      --fade-top: 1.5rem;
+      --fade-top: 3rem;
     }
   }
   @keyframes scroll-fade-bottom {
     from {
-      --fade-bottom: 1.5rem;
+      --fade-bottom: 3rem;
     }
   }
 
