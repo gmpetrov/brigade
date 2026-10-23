@@ -2352,13 +2352,13 @@ svg.i {
   background-size: 220px 220px;
   opacity: 0.09;
 }
-/* The large name, filled with tiny pebbles from the logo, a shade off the ink: the letters
- * frame the pattern, so nothing is cut at random. Grey pebbles read on black and on white. */
+/* The large name, a shade off the page so it almost melts into it, filled with tiny pebbles
+ * from the logo: the letters frame the pattern, so nothing is cut at random. Grey pebbles read on black and on white. */
 .foot-name span {
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='124'%3E%3Cg transform='translate(10 8) scale(.34)'%3E%3Cpath fill='%23808080' fill-opacity='.22' d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3Cg transform='translate(78 66) scale(.26) rotate(24 50 50)'%3E%3Cpath fill='%23808080' fill-opacity='.22' d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3C/svg%3E")
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='124'%3E%3Cg transform='translate(10 8) scale(.34)'%3E%3Cpath fill='%23808080' fill-opacity='.1' d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3Cg transform='translate(78 66) scale(.26) rotate(24 50 50)'%3E%3Cpath fill='%23808080' fill-opacity='.1' d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3C/svg%3E")
       0 0 / 0.26em 0.23em repeat,
-    var(--foreground);
+    color-mix(in oklch, var(--foreground) 9%, var(--background));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
