@@ -169,6 +169,14 @@ export function CodeFile({
   const [updatedAt, setUpdatedAt] = useState<number>()
   const editor = useRef<CodeEditorControls | null>(null)
   const edit = useEdit(threadId, file)
+  /** Still on screen: a read that ends after it closed changes nothing. */
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   const editable = mayEdit && editableFile(file)
 
   useEffect(() => {
@@ -205,9 +213,19 @@ export function CodeFile({
   const takeTheirs = async () => {
     const edits = edit.edits.current
     const saves = edit.saves.current
+    // The unsaved edits as they were: another editor of the file (this one closed and
+    // opened again) may have typed some while it read.
+    const key = draftKey(threadId, teammateId, path)
+    const draft = getDraft(key)?.text
     const now = await readCodeFile(threadId, teammateId, path)
     if (now.text === undefined || !now.hash) return false
-    if (edits !== edit.edits.current || saves !== edit.saves.current) return false
+    if (
+      !mounted.current ||
+      edits !== edit.edits.current ||
+      saves !== edit.saves.current ||
+      getDraft(key)?.text !== draft
+    )
+      return false
     editor.current?.replace(now.text)
     edit.base.current = now.hash
     edit.reset()
