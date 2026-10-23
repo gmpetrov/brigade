@@ -97,6 +97,18 @@
 }
 
 /* App-specific pieces that can't take Tailwind classes. */
+/* The edges of .scroll-fade-y, animated with its scroll (below). */
+@property --fade-top {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --fade-bottom {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
 @layer components {
   /* Side panel (the desktop, or a file): on wide screens it is fixed to the
    * right of the window; the content column makes room (below, unlayered).
@@ -188,6 +200,39 @@
    * the last item clears the fade once scrolled to the end. */
   .scroll-fade {
     mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent);
+  }
+
+  /* A scrolling list whose top and bottom fade out where more of it is hidden
+   * (the sidebar): each edge fades in over the first 1.5rem of scroll toward it,
+   * so a list at its start, or one that does not scroll, shows no top fade.
+   * Without scroll-driven animations, no fade. */
+  @supports (animation-timeline: scroll()) {
+    .scroll-fade-y {
+      mask-image: linear-gradient(
+        to bottom,
+        transparent,
+        #000 var(--fade-top),
+        #000 calc(100% - var(--fade-bottom)),
+        transparent
+      );
+      animation:
+        scroll-fade-top linear both,
+        scroll-fade-bottom linear both;
+      animation-timeline: scroll(self), scroll(self);
+      animation-range:
+        0 1.5rem,
+        calc(100% - 1.5rem) 100%;
+    }
+  }
+  @keyframes scroll-fade-top {
+    to {
+      --fade-top: 1.5rem;
+    }
+  }
+  @keyframes scroll-fade-bottom {
+    from {
+      --fade-bottom: 1.5rem;
+    }
   }
 
   /* A thread's new title, streaming in a piece at a time as a model's answer does
