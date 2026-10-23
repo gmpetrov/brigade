@@ -431,7 +431,7 @@ export function Footer() {
         </nav>
       </div>
       {/* The name, as large as the page is wide, cut by the bottom edge. */}
-      <div className={c('foot-name')} aria-hidden="true">
+      <div className={c('foot-name')} aria-hidden="true" data-anim>
         <span>Brigade</span>
       </div>
     </footer>

@@ -2352,13 +2352,33 @@ svg.i {
   background-size: 220px 220px;
   opacity: 0.09;
 }
-/* The large name, a shade off the page so it almost melts into it, filled with tiny pebbles
- * from the logo: the letters frame the pattern, so nothing is cut at random. Grey pebbles read on black and on white. */
+/* The large name in glossy black, like the apple on a space black MacBook: a shade off the
+ * page with a soft sheen across it that slides by now and then, and tiny pebbles from the
+ * logo under the gloss. The letters frame it all, so nothing is cut at random. */
 .foot-name span {
+  --gloss-base: color-mix(in oklch, var(--foreground) 7%, var(--background));
+  --gloss-shine: color-mix(in oklch, var(--foreground) 26%, var(--background));
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='124'%3E%3Cg transform='translate(10 8) scale(.34)'%3E%3Cpath fill='%23808080' fill-opacity='.1' d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3Cg transform='translate(78 66) scale(.26) rotate(24 50 50)'%3E%3Cpath fill='%23808080' fill-opacity='.1' d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3C/svg%3E")
       0 0 / 0.26em 0.23em repeat,
-    color-mix(in oklch, var(--foreground) 9%, var(--background));
+    linear-gradient(
+        112deg,
+        transparent 43%,
+        color-mix(in oklch, var(--gloss-shine) 60%, transparent) 48%,
+        var(--gloss-shine) 50%,
+        color-mix(in oklch, var(--gloss-shine) 60%, transparent) 52%,
+        transparent 57%
+      )
+      0 0 / 300% 100% no-repeat,
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--foreground) 12%, var(--background)),
+      var(--gloss-base) 60%
+    );
+  background-position:
+    0 0,
+    100% 0,
+    0 0;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -4684,6 +4704,26 @@ svg.i {
   100% {
     opacity: 0;
     stroke-dashoffset: -100;
+  }
+}
+/* The footer's name: a sheen slides across the gloss every few seconds. */
+.foot-name span {
+  animation: k-sheen 9s ease-in-out infinite;
+}
+@keyframes k-sheen {
+  0%,
+  55% {
+    background-position:
+      0 0,
+      100% 0,
+      0 0;
+  }
+  85%,
+  100% {
+    background-position:
+      0 0,
+      0% 0,
+      0 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
