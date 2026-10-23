@@ -2353,14 +2353,11 @@ svg.i {
   opacity: 0.09;
 }
 /* The large name in glossy black, like the apple on a space black MacBook: a shade off the
- * page with a soft sheen across it that slides by now and then, and tiny pebbles from the
- * logo under the gloss. The letters frame it all, so nothing is cut at random. */
+ * page with a soft sheen across it that slides by now and then. */
 .foot-name span {
   --gloss-base: color-mix(in oklch, var(--foreground) 7%, var(--background));
   --gloss-shine: color-mix(in oklch, var(--foreground) 26%, var(--background));
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='124'%3E%3Cg transform='translate(10 8) scale(.34)'%3E%3Cpath fill='%23808080' fill-opacity='.1' d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3Cg transform='translate(78 66) scale(.26) rotate(24 50 50)'%3E%3Cpath fill='%23808080' fill-opacity='.1' d='M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'/%3E%3C/g%3E%3C/svg%3E")
-      0 0 / 0.26em 0.23em repeat,
     linear-gradient(
         112deg,
         transparent 43%,
@@ -2376,7 +2373,6 @@ svg.i {
       var(--gloss-base) 60%
     );
   background-position:
-    0 0,
     100% 0,
     0 0;
   -webkit-background-clip: text;
@@ -4714,14 +4710,12 @@ svg.i {
   0%,
   55% {
     background-position:
-      0 0,
       100% 0,
       0 0;
   }
   85%,
   100% {
     background-position:
-      0 0,
       0% 0,
       0 0;
   }
