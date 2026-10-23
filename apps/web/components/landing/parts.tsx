@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
 import s from './landing.module.css'
 
 export { s }
@@ -158,3 +159,12 @@ export function Icon({ name, style }: { name: IconName; style?: CSSProperties })
 
 export const SIGN_UP = '/sign-up'
 export const SIGN_IN = '/sign-in'
+
+/** A built-in App's own logo in a small tile, where the page names the Apps a job uses. */
+export function AppLogo({ kind }: { kind: ProviderKind | 'github' }) {
+  return (
+    <span className={c('tile sm app-logo')}>
+      {kind === 'github' ? <Icon name="github" /> : <ProviderLogo kind={kind} />}
+    </span>
+  )
+}
