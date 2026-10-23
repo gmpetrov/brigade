@@ -2,9 +2,9 @@ import Link from 'next/link'
 import type { CSSProperties } from 'react'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { formatCount, mergeDate, type ProofNumbers, REPO, REPO_URL } from '@/lib/github-proof'
-import { MAC_APP_URL } from '@/lib/mac-app'
 import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
 import { Pebble } from './pebble'
+import { PebbleRain } from './pebble-rain'
 
 /** Brigade's own team as proof: the GitHub numbers read at build (lib/github-proof.ts), and
  * the last pull requests merged. A number GitHub did not give back leaves out what needs it. */
@@ -89,32 +89,14 @@ export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
   )
 }
 
-/** Pricing, on a band in the dark theme whatever the page's theme: the night the cloud computer works through. */
+/** Pricing, on a band in the dark theme whatever the page's theme, where pebbles fall on Start with Cloud. */
 export function Pricing() {
   return (
     <section aria-labelledby="pricing-title" className={c('pricing dark')} id="pricing">
-      <div className={c('night')} aria-hidden="true">
-        <div className={c('blk slab')}>
-          <span className={c('msg')}>
-            <span className={c('when')}>02:14</span>Riley{' '}
-            <span className={c('k')}>· fixed the export bug</span>
-          </span>
-          <span className={c('msg r')}>
-            <span className={c('when')}>03:40</span>Sam{' '}
-            <span className={c('k')}>· drafted 9 replies</span>
-          </span>
-          <span className={c('msg')}>
-            <span className={c('when')}>07:00</span>Sam{' '}
-            <span className={c('k')}>· inbox triaged</span>
-          </span>
-        </div>
-        <div className={c('moon')}></div>
-        <div className={c('blk b-green')}></div>
-      </div>
       <div className={c('wrap')}>
         <div className={c('pr-head')}>
           <h2 className={c('h2')} id="pricing-title">
-            Free on your Mac. Pay only for the cloud computer.
+            Simple Pricing
           </h2>
         </div>
         <div className={c('plans')}>
@@ -144,7 +126,7 @@ export function Pricing() {
               Sign up
             </Link>
           </div>
-          <div className={c('plan cloud')}>
+          <div className={c('plan cloud')} data-pebble-card>
             <div className={c('plan-n')}>
               <Icon name="cloud" />
               Cloud
@@ -167,120 +149,11 @@ export function Pricing() {
                 Everything in Free, plus Brigade&apos;s cloud computer
               </li>
             </ul>
-            <Link className={c('btn pri lg')} href={SIGN_UP}>
+            <Link className={c('btn pri lg')} href={SIGN_UP} data-pebble-target>
               Start with Cloud
             </Link>
-            <p className={c('quiet')}>Runs up to 4 threads at once</p>
           </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-export function Download() {
-  return (
-    <section aria-labelledby="download-title" className={c('sec download')} id="download">
-      <div className={c('wrap')}>
-        <div className={c('sec-head')}>
-          <h2 className={c('h2')} id="download-title">
-            One team, on your desk and in your pocket.
-          </h2>
-          <p className={c('lead')}>
-            Install Brigade.app and sign in with the Claude or ChatGPT account you already use. Then
-            follow your teammates from any browser or your iPhone.
-          </p>
-        </div>
-        <div className={c('dl-grid')}>
-          <div className={c('dl')}>
-            <div className={c('dl-art tint')} aria-hidden="true">
-              <div className={c('mb')}>
-                <div className={c('mb-bar')}>
-                  <span>Mon 9:41</span>
-                  <span className={c('bb')}></span>
-                </div>
-                <div className={c('mb-menu')}>
-                  <div className={c('r')}>
-                    <span className={c('dot ok')}></span>Runner online
-                  </div>
-                  <div className={c('r')}>
-                    <span className={c('dot run')}></span>3 threads running
-                  </div>
-                  <div className={c('r m')}>Set up Brigade…</div>
-                </div>
-              </div>
-            </div>
-            <div className={c('dl-body')}>
-              <h3>Brigade.app for Mac</h3>
-              <p>
-                Lives in your menu bar. It checks each setup step and fixes what&apos;s missing.
-              </p>
-              <a className={c('btn pri')} href={MAC_APP_URL}>
-                <Icon name="download" />
-                Download for Mac
-              </a>
-            </div>
-          </div>
-          <div className={c('dl')}>
-            <div className={c('dl-art green')} aria-hidden="true">
-              <div className={c('brw2')}>
-                <div className={c('brw-bar')}>
-                  <span>www.brigade.lol</span>
-                </div>
-                <div className={c('brw2-b')}>
-                  <div className={c('sb')}>
-                    <i className={c('y')}></i>
-                    <i></i>
-                    <i></i>
-                    <i></i>
-                  </div>
-                  <div className={c('mn')}>
-                    <div className={c('h')}></div>
-                    <div className={c('w')}></div>
-                    <div className={c('g')}></div>
-                    <div className={c('g')} style={{ width: '70%' } as CSSProperties}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className={c('dl-body')}>
-              <h3>On the web</h3>
-              <p>Every thread and every decision, from any browser.</p>
-              <Link className={c('btn')} href={SIGN_IN}>
-                Open Brigade
-              </Link>
-            </div>
-          </div>
-          <div className={c('dl')}>
-            <div className={c('dl-art orange')} aria-hidden="true">
-              <div className={c('iph')}>
-                <div className={c('sc')}>
-                  <div className={c('ic')}>
-                    <i></i>
-                    <i></i>
-                    <i className={c('b')}></i>
-                    <i></i>
-                    <i></i>
-                    <i></i>
-                    <i></i>
-                    <i></i>
-                  </div>
-                  <div className={c('lbl')}>Brigade on your Home Screen</div>
-                </div>
-              </div>
-            </div>
-            <div className={c('dl-body')}>
-              <h3>On your iPhone</h3>
-              <p>
-                Open Brigade in Safari and add it to your Home Screen. Its badge counts what needs
-                you.
-              </p>
-              <p className={c('dl-hint')}>
-                <Icon name="share" />
-                Add to Home Screen from Safari
-              </p>
-            </div>
-          </div>
+          <PebbleRain />
         </div>
       </div>
     </section>
