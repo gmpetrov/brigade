@@ -184,6 +184,9 @@ export class PreviewProxy {
         agent: this.agent,
       },
       (response) => {
+        // The browser left before the app answered (a reload, a page left): nobody to answer.
+        // Piping to it now would throw (Node 24), out of any handler, and stop the runner.
+        if (res.destroyed) return void response.destroy()
         const headers = withoutHopHeaders(response.headers)
         const tagged =
           page &&

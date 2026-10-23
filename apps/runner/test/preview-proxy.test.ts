@@ -94,3 +94,52 @@ test('a request to a frozen app waits for it to wake, then gets its answer', asy
   assert.equal((await get(at)).status, 200)
   assert.equal(woken, 5)
 })
+
+test('a page the browser left before the app answered does not stop the proxy', async (t) => {
+  // An app slow to render its page, as a dev server compiling after an edit.
+  const server = http.createServer((req, res) => {
+    setTimeout(() => {
+      res.writeHead(200, { 'content-type': 'text/html' })
+      res.end('<html><head></head><body>page</body></html>')
+    }, 200)
+  })
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
+  t.after(() => server.close())
+  const proxy = new PreviewProxy({
+    port: (server.address() as { port: number }).port,
+    ports: [],
+    crossSiteCookies: false,
+    state: () => 'running',
+    onUse: () => undefined,
+  })
+  t.after(() => proxy.close())
+  const at = await proxy.listen(20_000 + Math.floor(Math.random() * 20_000), [])
+
+  // A reload or a navigation away: the browser closes the request before the page comes.
+  const left = http.get({
+    host: '127.0.0.1',
+    port: at,
+    path: '/',
+    agent: false,
+    headers: { 'sec-fetch-mode': 'navigate', accept: 'text/html' },
+  })
+  left.on('error', () => undefined)
+  await sleep(50)
+  left.destroy()
+  await sleep(300)
+
+  // Still answering, with the select script in the page.
+  const page = await new Promise<string>((done, fail) => {
+    http
+      .get(
+        { host: '127.0.0.1', port: at, path: '/', agent: false, headers: { accept: 'text/html' } },
+        (res) => {
+          let body = ''
+          res.on('data', (d: Buffer) => (body += d.toString()))
+          res.on('end', () => done(body))
+        },
+      )
+      .on('error', fail)
+  })
+  assert.match(page, /page/)
+})
