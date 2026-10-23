@@ -561,3 +561,24 @@ export const SourceMatch = z.object({
   preview: z.string(),
 })
 export type SourceMatch = z.infer<typeof SourceMatch>
+
+/** An entry of a folder of a teammate's working folder, for the code panel's tree. */
+export const CodeEntry = z.object({
+  name: z.string(),
+  dir: z.boolean(),
+})
+export type CodeEntry = z.infer<typeof CodeEntry>
+
+/** Most entries a folder lists in the tree; past it, `more`. */
+export const CODE_LIST_MAX = 2000
+/** Most files a tree's filter or search answers with. */
+export const CODE_FIND_MAX = 50
+/** Most open files whose hashes one request asks for. */
+export const CODE_HASHES_MAX = 20
+
+/** The hashes of open files, to see when one changed on the computer. */
+export const CodeHashes = z.object({
+  teammateId: z.string().min(1),
+  paths: z.array(z.string().min(1).max(1000)).min(1).max(CODE_HASHES_MAX),
+})
+export type CodeHashes = z.infer<typeof CodeHashes>

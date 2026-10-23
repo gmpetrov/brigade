@@ -22,7 +22,7 @@ import { run as runAs } from './repos.js'
 import { teammateHome, teammateUser } from './teammates.js'
 
 const run = promisify(execFile)
-const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
+export const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
 
 type Request = Extract<ApiToRunner, { type: 'thread.file.read' }>
 type Result = Extract<RunnerToApi, { type: 'thread.file.result' }>
@@ -31,10 +31,10 @@ type WriteResult = Extract<RunnerToApi, { type: 'thread.file.written' }>
 type FindRequest = Extract<ApiToRunner, { type: 'thread.source.find' }>
 type FindResult = Extract<RunnerToApi, { type: 'thread.source.result' }>
 
-const sha256 = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex')
+export const sha256 = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex')
 
 /** The teammate's working folder for the thread, and the user to act as on a cloud computer. */
-function workDir(teammateId: string, sessionId: string) {
+export function workDir(teammateId: string, sessionId: string) {
   const user = CLOUD ? teammateUser(teammateId) : undefined
   const dir = user
     ? `${teammateHome(user)}/threads/${sessionId}`
@@ -42,7 +42,7 @@ function workDir(teammateId: string, sessionId: string) {
   return { user, dir }
 }
 
-const inside = (root: string, path: string) => {
+export const inside = (root: string, path: string) => {
   const rel = relative(root, path)
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
 }
@@ -81,7 +81,7 @@ export async function readStart(path: string, user?: string, max = FILE_VIEW_MAX
   return { size: Number(sizeText.trim()), bytes: stdout }
 }
 
-function asText(bytes: Buffer) {
+export function asText(bytes: Buffer) {
   if (bytes.subarray(0, 8000).includes(0)) return undefined
   try {
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes)

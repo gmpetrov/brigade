@@ -70,10 +70,14 @@ export * from './triggers.js'
  *     answer connector.pending while an admin decides.
  * 39: people edit text files of a teammate's working folder (thread.file.write, the hash in
  *     thread.file.result) and find where a preview's element is written (thread.source.find).
+ * 40: the code panel lists, finds and searches a teammate's working folder, and watches open
+ *     files' hashes (thread.code).
  */
-export const PROTOCOL_VERSION = 39
+export const PROTOCOL_VERSION = 40
 /** Runners from this version on write files people edit and find a preview element's source. */
 export const CODE_EDIT_PROTOCOL = 39
+/** Runners from this version on list, find and search a working folder for the code panel (thread.code). */
+export const CODE_TREE_PROTOCOL = 40
 /** Runners from this version on say when their disk is still full (disk). */
 export const DISK_PROTOCOL = 34
 /** Runners from this version on try a failed turn again when a person asks (thread.retry). */
