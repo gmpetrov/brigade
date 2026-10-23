@@ -928,13 +928,15 @@ export function ThreadConversation({
       </div>
     </div>
   )
-  // Preview is the computer's one action.
-  const computerActions = offersPreview && (
-    <div className="flex flex-wrap gap-2">
+  // Top right of the expanded thread, across from the sidebar's toggle: the app it builds is
+  // the thread's, not its computer's, and stays in reach with the details closed.
+  const previewButton = offersPreview && top && (
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-end px-3">
       <Button
         type="button"
         variant="outline"
         size="sm"
+        className="pointer-events-auto h-9 rounded-full bg-card/90 shadow-sm backdrop-blur"
         aria-pressed={previewing}
         disabled={previewStart.busy}
         onClick={() => {
@@ -955,14 +957,17 @@ export function ThreadConversation({
         ) : (
           <AppWindow aria-hidden />
         )}
-        {/* What a click does, not only what it is about. */}
-        {previewStart.busy
-          ? 'Starting…'
-          : previewing
-            ? 'Hide preview'
-            : live
-              ? 'Open preview'
-              : 'Start preview'}
+        {/* What a click does, not only what it is about; only the icon and its dot when the
+            conversation is too narrow to keep it clear of the title's pill. */}
+        <span className="@max-2xl/thread:sr-only">
+          {previewStart.busy
+            ? 'Starting…'
+            : previewing
+              ? 'Hide preview'
+              : live
+                ? 'Preview'
+                : 'Start preview'}
+        </span>
         {preview && live && (
           <span
             className={cn('size-1.5 rounded-full', PHASE[previewPhase(preview)].dot)}
@@ -1055,18 +1060,18 @@ export function ThreadConversation({
           outputs={outputs}
           onOpenFile={openFile}
           details={details}
-          actions={computerActions}
           onChange={() => void thread.reload()}
         />
       )}
 
       <div
-        className="relative flex min-h-0 flex-1 flex-col"
+        className="@container/thread relative flex min-h-0 flex-1 flex-col"
         // Files dropped anywhere on the conversation go with the next message.
         {...(t.mayPrompt && !t.controlledByMemberId ? drop.props : {})}
       >
         {drop.dragging && <DropOverlay />}
         {top}
+        {previewButton}
         <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
           <div className={cn(column, top ? 'pt-16' : expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
             {t.parent && (

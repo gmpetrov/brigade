@@ -387,7 +387,6 @@ export function ComputerPanel({
   outputs,
   onOpenFile,
   details,
-  actions,
   onChange,
 }: {
   thread: Thread
@@ -400,8 +399,6 @@ export function ComputerPanel({
   onOpenFile: OpenFile
   /** The thread's details, below its computer: who is in it, its project and task, who started it. */
   details: ReactNode
-  /** Below the computer: Preview, the shell, the run log. */
-  actions: ReactNode
   /** Something here changed the thread (a wake-up cancelled): fetch it again. */
   onChange: () => void
 }) {
@@ -438,7 +435,6 @@ export function ComputerPanel({
             Runs on {thread.computer.name}, a member&apos;s machine: its screen is not shared here.
           </p>
         )}
-        {actions}
       </Section>
 
       {/* The thread's own: pin, rename, archive or delete it here too, as it may be out of the
