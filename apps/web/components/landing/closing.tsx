@@ -402,9 +402,7 @@ export function FinalCall() {
       <Pebble />
       <div className={c('wrap')}>
         <h2 id="final-title">Meet your first teammate.</h2>
-        <p className={c('lead')}>
-          It does the work. You make the calls.
-        </p>
+        <p className={c('lead')}>He does the work. You make the calls.</p>
         <Link className={c('btn pri lg')} href={SIGN_UP}>
           Sign up
         </Link>
@@ -431,6 +429,10 @@ export function Footer() {
           <span>MIT license</span>
           <span>© 2026</span>
         </nav>
+      </div>
+      {/* The name, as large as the page is wide, cut by the bottom edge. */}
+      <div className={c('foot-name')} aria-hidden="true">
+        <span>Brigade</span>
       </div>
     </footer>
   )

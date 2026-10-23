@@ -2317,6 +2317,22 @@ svg.i {
   align-items: center;
 }
 
+.foot-name {
+  height: 0.62em;
+  overflow: hidden;
+  font-size: 27.5vw;
+  font-weight: 800;
+  letter-spacing: -0.065em;
+  line-height: 0.82;
+  text-align: center;
+  color: var(--foreground);
+  user-select: none;
+}
+.foot-name span {
+  display: block;
+  margin-left: -0.04em;
+}
+
 /* ANIM:BEGIN (generated loops; each element's static style is its final frame) */
 /* Shared: stacked layers that cross-fade, named cursors */
 .xg {
