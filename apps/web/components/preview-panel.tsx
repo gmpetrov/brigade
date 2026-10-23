@@ -42,6 +42,7 @@ export const PREVIEW_PANEL = 'preview'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { openCodeTab, setCodePanel, useCodePanel } from '@/lib/code-tabs'
+import { typedPath, withPath } from '@/lib/preview-path'
 import { cn } from '@/lib/utils'
 
 export type ThreadPreview = PreviewInfo & { teammateId?: string }
@@ -216,6 +217,8 @@ function LivePreviewPanel({
   const [view, setView] = useState<PreviewView>()
   const [error, setError] = useState<string>()
   const [frame, setFrame] = useState(0)
+  // A path typed in the bar, opened by loading the frame there when its page cannot be asked.
+  const [opened, setOpened] = useState<{ path: string; url: string }>()
   const [copied, setCopied] = useState(false)
   const [busy, setBusy] = useState(false)
   const [logs, setLogs] = useState<string>()
@@ -237,6 +240,7 @@ function LivePreviewPanel({
 
   // The address, once per run of the preview.
   useEffect(() => {
+    setOpened(undefined)
     if (!running) return setView(undefined)
     let live = true
     setError(undefined)
@@ -340,15 +344,25 @@ function LivePreviewPanel({
               <RotateCw aria-hidden />
             </BarButton>
           )}
-          <span
-            className={cn(
-              'min-w-0 flex-1 truncate px-1 text-xs',
-              view ? 'font-mono text-muted-foreground' : status.text,
-            )}
-            title={`${preview.cwd ? `${preview.cwd}$ ` : ''}${preview.command} (port ${preview.port})`}
-          >
-            {view ? address : status.label}
-          </span>
+          {view ? (
+            <PathField
+              key={preview.previewId}
+              page={select.page ?? opened?.path ?? new URL(view.url).pathname}
+              onOpen={(path) => {
+                if (!select.navigate(path)) {
+                  setOpened({ path, url: withPath(view.url, path) })
+                  setFrame((n) => n + 1)
+                }
+              }}
+            />
+          ) : (
+            <span
+              className={cn('min-w-0 flex-1 truncate px-1 text-xs', status.text)}
+              title={`${preview.cwd ? `${preview.cwd}$ ` : ''}${preview.command} (port ${preview.port})`}
+            >
+              {status.label}
+            </span>
+          )}
           {(preview.repository || preview.commit) && (
             <span
               className="hidden shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.6875rem] whitespace-nowrap text-muted-foreground @[22rem]/bar:inline"
@@ -536,7 +550,7 @@ function LivePreviewPanel({
               <iframe
                 ref={select.frame}
                 key={`${preview.previewId}:${frame}`}
-                src={view.url}
+                src={opened?.url ?? view.url}
                 title={`Preview of the app ${teammateName} runs`}
                 className="min-h-0 w-full flex-1 border-0 bg-white"
                 // Its own origin, apart from the dashboard's: scripts and forms run as they would in a tab,
@@ -689,6 +703,45 @@ export type PickHandlers = {
 /** What a click in select mode does: mention the element, or open its code. */
 type SelectMode = 'mention' | 'code'
 
+/**
+ * The page's path in the bar (`/`, `/app`), not the preview's host, which says
+ * nothing to a person. Clicked, it can be edited: Enter opens the path, Esc puts it back.
+ */
+function PathField({ page, onOpen }: { page: string; onOpen: (path: string) => void }) {
+  const [draft, setDraft] = useState<string>()
+  return (
+    <input
+      type="text"
+      aria-label="Page path"
+      // Esc here puts the path back, and leaves the panel open.
+      data-keyboard
+      title="The page's path: edit it and press Enter to open another"
+      spellCheck={false}
+      autoComplete="off"
+      className="h-6 min-w-0 flex-1 truncate rounded-md bg-transparent px-1 font-mono text-xs text-muted-foreground outline-none hover:text-foreground focus:bg-muted focus:text-foreground"
+      value={draft ?? page}
+      onFocus={(e) => {
+        setDraft(page)
+        e.currentTarget.select()
+      }}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => setDraft(undefined)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          const path = typedPath(draft ?? page)
+          onOpen(path)
+          setDraft(undefined)
+          e.currentTarget.blur()
+        } else if (e.key === 'Escape') {
+          setDraft(undefined)
+          e.currentTarget.blur()
+        }
+      }}
+    />
+  )
+}
+
 /** A tool in the preview's bar: a small icon button, tinted while it is on. */
 function BarButton({
   label,
@@ -732,6 +785,8 @@ function usePreviewSelect(
   const frame = useRef<HTMLIFrameElement>(null)
   const [available, setAvailable] = useState(false)
   const [on, setOn] = useState<SelectMode | false>(false)
+  // The path the page is at, as it says: for the address bar.
+  const [page, setPage] = useState<string>()
   const latest = useRef({ on, onPick, onCode })
   latest.current = { on, onPick, onCode }
   const origin = url ? new URL(url).origin : undefined
@@ -739,6 +794,7 @@ function usePreviewSelect(
   useEffect(() => {
     setAvailable(false)
     setOn(false)
+    setPage(undefined)
   }, [previewId, origin])
 
   const send = useCallback(
@@ -753,7 +809,7 @@ function usePreviewSelect(
 
   const picking = !!onPick || !!onCode
   useEffect(() => {
-    if (!origin || !picking) return
+    if (!origin) return
     const listen = (e: MessageEvent) => {
       const data = e.data as {
         source?: string
@@ -761,6 +817,7 @@ function usePreviewSelect(
         id?: unknown
         element?: unknown
         image?: unknown
+        page?: unknown
       } | null
       if (
         e.origin !== origin ||
@@ -770,8 +827,11 @@ function usePreviewSelect(
         return
       if (data.type === 'ready') {
         setAvailable(true)
-        // A page it navigated to starts with select mode off.
+        // A page it navigated to starts with select mode off; either way it then says where it is.
         if (latest.current.on) send(true)
+        else frame.current?.contentWindow?.postMessage({ source: 'brigade', type: 'hello' }, origin)
+      } else if (data.type === 'location') {
+        if (typeof data.page === 'string') setPage(data.page)
       } else if (data.type === 'stopped') setOn(false)
       else if (typeof data.id !== 'string') return
       else if (data.type === 'selected') {
@@ -791,7 +851,7 @@ function usePreviewSelect(
     }
     window.addEventListener('message', listen)
     return () => window.removeEventListener('message', listen)
-  }, [origin, picking, send])
+  }, [origin, send])
 
   const set = useCallback(
     (value: SelectMode | false) => {
@@ -800,12 +860,24 @@ function usePreviewSelect(
     },
     [send],
   )
+  /** Open a path in the page, as a link in it would; false when the page has no script to ask. */
+  const navigate = useCallback(
+    (path: string) => {
+      const target = frame.current?.contentWindow
+      if (!available || !origin || !target) return false
+      target.postMessage({ source: 'brigade', type: 'navigate', page: path }, origin)
+      return true
+    },
+    [available, origin],
+  )
   return {
     frame,
     /** The page can pick: to mention (onPick) or to open code (onCode). */
     available: available && picking,
     on: picking ? on : false,
     set,
+    page,
+    navigate,
   }
 }
 

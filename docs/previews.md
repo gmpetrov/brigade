@@ -54,6 +54,15 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
     text, with no new field for the API or runner to pass on, and the thread
     shows the chip in its place. Esc in the page turns select mode off; it stays
     on across the page's navigations.
+  - **The page's path in the bar.** The panel's bar shows the path the page is
+    at (`/`, `/app?tab=2`), never the preview's host. Once the panel answers the
+    page's `ready` (`hello`), the same script says its `location`, and again on
+    each `pushState`, `replaceState`, Back or `#hash` change. The path is
+    editable: Enter sends `navigate`, and the page opens it with
+    `location.assign`, only when it is a path on its own address (`/…`, not
+    `//…`). From a runner without it, the bar shows the address's path and Enter
+    loads the frame there, with the address's query (its token)
+    (`apps/web/lib/preview-path.ts`).
   - **Opening an element's code.** The panel's second select button (`</>`, for
     whoever may write to the thread, from runners at `CODE_EDIT_PROTOCOL`) uses
     the same script, but a click looks the element's text up in the preview's
