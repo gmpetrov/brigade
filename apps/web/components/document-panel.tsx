@@ -325,24 +325,26 @@ function DocumentTabs() {
   }, [active])
 
   return (
-    <div className="flex flex-nowrap items-stretch border-b bg-muted/40">
+    <div className="flex h-10 shrink-0 flex-nowrap items-center gap-1 border-b pr-1.5">
       <div
         ref={row}
         role="tablist"
         aria-label="Open documents"
-        className="flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]"
+        className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto px-1.5 [scrollbar-width:none]"
       >
         {tabs.map((t) => {
           const key = keyOf(t.target)
           const selected = key === active
+          const changed = isChanged(t)
+          const Icon = t.target.kind === 'library' ? FileText : BookOpen
           return (
             <div
               key={key}
               className={cn(
-                'group/tab flex max-w-44 min-w-0 shrink-0 items-center border-r text-xs',
+                'group flex h-7 shrink-0 items-center gap-1 rounded-md pr-1 pl-2 text-xs',
                 selected
-                  ? 'bg-background text-foreground shadow-[inset_0_-2px_0_var(--primary)]'
-                  : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
               )}
             >
               <button
@@ -355,23 +357,33 @@ function DocumentTabs() {
                 onAuxClick={(e) => {
                   if (e.button === 1) remove(t.target)
                 }}
-                className="flex min-w-0 items-center gap-1.5 py-2 pl-3 outline-none focus-visible:underline"
+                className="flex min-w-0 items-center gap-1.5 outline-none focus-visible:underline"
               >
-                {isChanged(t) && <ChangedDot />}
-                <span className="truncate">{t.title}</span>
-                {isChanged(t) && <span className="sr-only">, changed</span>}
+                <Icon aria-hidden className="size-3.5 shrink-0" />
+                <span className="max-w-40 truncate">{t.title}</span>
+                {changed && <span className="sr-only">, changed</span>}
               </button>
               <button
                 type="button"
                 aria-label={`Close ${t.title}`}
                 title="Close"
                 onClick={() => remove(t.target)}
-                className={cn(
-                  'mr-1 ml-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm hover:bg-accent focus-visible:opacity-100',
-                  selected ? 'opacity-70' : 'opacity-0 group-hover/tab:opacity-70',
-                )}
+                className="grid size-4 shrink-0 place-items-center rounded-sm hover:bg-foreground/10"
               >
-                <X aria-hidden className="size-3" />
+                {/* Changed: a dot, which turns into the close button under the pointer. */}
+                {changed ? (
+                  <>
+                    <span className="flex group-hover:hidden">
+                      <ChangedDot />
+                    </span>
+                    <X aria-hidden className="hidden size-3 group-hover:block" />
+                  </>
+                ) : (
+                  <X
+                    aria-hidden
+                    className={cn('size-3', !selected && 'opacity-0 group-hover:opacity-100')}
+                  />
+                )}
               </button>
             </div>
           )
@@ -379,19 +391,21 @@ function DocumentTabs() {
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label="All open documents"
             title="All open documents"
-            className="relative flex w-8 shrink-0 items-center justify-center border-l text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="relative"
           >
-            <ChevronDown aria-hidden className="size-4" />
+            <ChevronDown aria-hidden />
             {tabs.some((t) => isChanged(t)) && (
-              <span className="absolute top-1.5 right-1.5">
+              <span className="absolute top-1 right-1 flex">
                 <ChangedDot />
               </span>
             )}
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
           {tabs.map((t) => (
