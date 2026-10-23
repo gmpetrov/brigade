@@ -88,6 +88,33 @@ test('a save writes the file while it is as it was read, and refuses once it cha
   assert.equal(await readFile(join(dir, path), 'utf8'), hero)
 })
 
+test('saves of one file from the same base: the first is written, the others conflict', async () => {
+  const path = 'race.txt'
+  await writeFile(join(dir, path), 'original')
+  for (let round = 0; round < 10; round++) {
+    await writeFile(join(dir, path), 'original')
+    const results = await Promise.all(
+      ['Alice', 'Bob', 'Carol'].map((text, i) =>
+        writeThreadFile({
+          type: 'thread.file.write',
+          requestId: String(i),
+          sessionId: 'thread1',
+          teammateId: 'riley',
+          path,
+          text,
+          base: sha('original'),
+        }),
+      ),
+    )
+    assert.deepEqual(
+      results.map((r) => r.ok),
+      [true, false, false],
+    )
+    assert.ok(results.slice(1).every((r) => r.conflict))
+    assert.equal(await readFile(join(dir, path), 'utf8'), 'Alice')
+  }
+})
+
 test('a save never leaves the working folder, nor makes a file', async () => {
   for (const path of ['../../../../outside.txt', join(home, 'outside.txt'), 'link.txt', 'new.ts']) {
     const result = await writeThreadFile({

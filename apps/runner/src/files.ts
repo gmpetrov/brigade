@@ -138,6 +138,21 @@ export async function readThreadFile(request: Request): Promise<Result> {
   return { ...base, ok: false, error: 'not_found' }
 }
 
+/** Saves under way, by file: one at a time, so a save checks the file the one before wrote. */
+const saving = new Map<string, Promise<unknown>>()
+
+/** Runs `work` once the saves of `file` queued before it are done. */
+function oneAtATime<T>(file: string, work: () => Promise<T>): Promise<T> {
+  const before = saving.get(file) ?? Promise.resolve()
+  const done = before.then(work, work)
+  const settled = done.catch(() => undefined)
+  saving.set(file, settled)
+  void settled.then(() => {
+    if (saving.get(file) === settled) saving.delete(file)
+  })
+  return done
+}
+
 /**
  * Save a text file of a teammate's working folder for the thread, as a person edited
  * it. Only a file that is there already, and with `base`, only while it is as it was
@@ -153,20 +168,25 @@ export async function writeThreadFile(request: WriteRequest): Promise<WriteResul
   if (!own || !target) return { ...base, ok: false, error: 'not_found' }
   if (!inside(own, target) || target === own)
     return { ...base, ok: false, error: "Only files in the teammate's folder can be saved" }
-  try {
-    const { bytes } = await readStart(target, user)
-    if (bytes.length > FILE_VIEW_MAX) return { ...base, ok: false, error: 'The file is too large' }
-    if (asText(bytes) === undefined) return { ...base, ok: false, error: 'Not a text file' }
-    if (request.base !== undefined && sha256(bytes) !== request.base)
-      return { ...base, ok: false, conflict: true, error: 'The file changed since it was opened' }
-    const data = Buffer.from(request.text, 'utf8')
-    // In place: the file keeps its owner and mode, and the dev server sees one change.
-    if (user) await runAs('sh', ['-c', 'cat > "$1"', 'sh', target], { runAs: user, input: data })
-    else await writeFile(target, data)
-    return { ...base, ok: true, hash: sha256(data) }
-  } catch (error) {
-    return { ...base, ok: false, error: `Could not save it: ${String(error)}` }
-  }
+  // Checked and written with no other save of it in between: two saves from the same
+  // base would both pass the check, and their writes could mix.
+  return oneAtATime(target, async () => {
+    try {
+      const { bytes } = await readStart(target, user)
+      if (bytes.length > FILE_VIEW_MAX)
+        return { ...base, ok: false, error: 'The file is too large' }
+      if (asText(bytes) === undefined) return { ...base, ok: false, error: 'Not a text file' }
+      if (request.base !== undefined && sha256(bytes) !== request.base)
+        return { ...base, ok: false, conflict: true, error: 'The file changed since it was opened' }
+      const data = Buffer.from(request.text, 'utf8')
+      // In place: the file keeps its owner and mode, and the dev server sees one change.
+      if (user) await runAs('sh', ['-c', 'cat > "$1"', 'sh', target], { runAs: user, input: data })
+      else await writeFile(target, data)
+      return { ...base, ok: true, hash: sha256(data) }
+    } catch (error) {
+      return { ...base, ok: false, error: `Could not save it: ${String(error)}` }
+    }
+  })
 }
 
 /** Source files first: what a person means by "the code" of what they see. */

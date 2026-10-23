@@ -15,7 +15,7 @@ import {
 import { Check, Copy, Download, FileText, Library, Palette, Pencil, X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DesignPanel } from '@/components/design-view'
 import { FileLinksProvider, type OpenFile } from '@/components/file-links'
 import { FilePreview, PdfView } from '@/components/file-preview'
@@ -25,6 +25,7 @@ import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import { api, ApiError, attachmentUrl, threadImageUrl } from '@/lib/api'
+import { draftKey, getDraft, setDraft as keepDraft } from '@/lib/code-drafts'
 import { API_URL } from '@/lib/config'
 
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
@@ -160,9 +161,12 @@ function ThreadFilePanel({
     .pop()
   // Unsaved edits are not dropped without asking.
   const onClose = useCallback(() => {
-    if (edit.dirty && !window.confirm(`Discard your unsaved changes to ${name}?`)) return
+    if (edit.dirty) {
+      if (!window.confirm(`Discard your unsaved changes to ${name}?`)) return
+      edit.reset()
+    }
     close()
-  }, [edit.dirty, name, close])
+  }, [edit, name, close])
 
   useEffect(() => {
     let live = true
@@ -377,7 +381,7 @@ function ThreadFilePanel({
           <CodeEditor
             key={`${loads}:${file.hash}`}
             path={file.path}
-            initial={file.text}
+            initial={edit.initial ?? file.text}
             line={line}
             onChange={edit.change}
             onSave={() => void edit.save()}
@@ -405,33 +409,39 @@ function ThreadFilePanel({
 /**
  * Editing a text file of a teammate's working folder: what was typed, saved
  * against the hash it was opened at, so a change made since on the computer
- * (by the teammate, most likely) is not written over without asking.
+ * (by the teammate, most likely) is not written over without asking. Unsaved
+ * edits outlive the panel (lib/code-drafts.ts): the file opens again with them.
  */
 function useEdit(threadId: string, file: ThreadFile | undefined) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<string>()
-  const [base, setBase] = useState<string>()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [conflict, setConflict] = useState(false)
   const [error, setError] = useState<string>()
+  const key = file?.teammateId ? draftKey(threadId, file.teammateId, file.path) : undefined
+  /** What a save expects to find: the hash the edits started from. */
+  const base = useRef<string>(undefined)
+  // Read as the file comes, not after: the editor starts from it as it mounts.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- once per file read
+  const initial = useMemo(() => (key ? getDraft(key)?.text : undefined), [file])
 
-  // A file opened (again): its hash is what a save expects to find.
+  // A file opened (again): with the edits left unsaved in it, if any.
   useEffect(() => {
-    setBase(file?.hash)
-    setDraft(undefined)
+    const kept = key ? getDraft(key) : undefined
+    base.current = kept ? kept.base : file?.hash
+    setDraft(kept?.text)
+    if (kept) setOpen(true)
     setConflict(false)
     setError(undefined)
     setSaved(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per file read
   }, [file])
 
-  const dirty = draft !== undefined
-  useEffect(() => {
-    if (!dirty) return
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [dirty])
+  const update = (text: string | undefined) => {
+    setDraft(text)
+    if (key) keepDraft(key, text === undefined ? undefined : { text, base: base.current })
+  }
 
   const save = async (force = false) => {
     if (!file?.teammateId || draft === undefined || saving) return
@@ -445,14 +455,15 @@ function useEdit(threadId: string, file: ThreadFile | undefined) {
           path: file.path,
           teammateId: file.teammateId,
           text,
-          ...(force ? {} : { base }),
+          ...(force ? {} : { base: base.current }),
         } satisfies SaveThreadFile,
       })
-      setBase(hash)
+      base.current = hash
       setConflict(false)
       setSaved(true)
-      // Typed on while it saved: still to save.
-      setDraft((now) => (now === text ? undefined : now))
+      // Typed on while it saved: still to save, from the new base.
+      const now = key ? getDraft(key)?.text : undefined
+      update(now === undefined || now === text ? undefined : now)
     } catch (e) {
       if (e instanceof ApiError && e.status === 409 && /changed since/.test(e.message))
         setConflict(true)
@@ -462,6 +473,7 @@ function useEdit(threadId: string, file: ThreadFile | undefined) {
     }
   }
 
+  const dirty = draft !== undefined
   return {
     open,
     setOpen,
@@ -470,11 +482,14 @@ function useEdit(threadId: string, file: ThreadFile | undefined) {
     saved: saved && !dirty,
     conflict,
     error,
+    /** The unsaved edits it opened with, for the editor to start from; else the file. */
+    initial,
     change: (text: string) => {
-      setDraft(text)
+      update(text)
       setSaved(false)
     },
     save,
-    reset: () => setDraft(undefined),
+    /** Drops the unsaved edits. */
+    reset: () => update(undefined),
   }
 }
