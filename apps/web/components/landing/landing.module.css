@@ -605,6 +605,175 @@ svg.i {
   margin-left: auto;
 }
 
+/* =================== Apps (apps.tsx) =================== */
+.apps-head {
+  margin: 0 auto 48px;
+  text-align: center;
+}
+.apps-stage {
+  position: relative;
+  height: 640px;
+}
+/* The dotted paths from each App to the thread, stretched to the stage's width. */
+.ap-paths {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.ap-paths path {
+  fill: none;
+  stroke: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 0.1 1.6;
+  vector-effect: non-scaling-stroke;
+}
+/* A pulse of light down an App's path while the teammate uses it. */
+.ap-paths .ap-pulse {
+  stroke: var(--primary);
+  stroke-width: 3;
+  stroke-dasharray: 14 120;
+  stroke-dashoffset: 14;
+  opacity: 0;
+}
+/* An App, placed on the oval by --x and --y. */
+.app-t {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.app-i {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.app-t svg {
+  width: 28px;
+  height: 28px;
+}
+/* The ripple out of an App in use. */
+.app-i::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  opacity: 0;
+}
+.app-t::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  opacity: 0;
+}
+.ap-chat {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 460px;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 12px;
+  padding: 0 20px 20px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  font-size: 14px;
+}
+/* The thread's header: the teammate and its state. */
+.ap-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -20px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.ap-state {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted-foreground);
+}
+.ap-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+.ap-msg.ap-me {
+  align-self: end;
+  justify-self: end;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--secondary);
+  font-weight: 500;
+  line-height: 1.9;
+}
+/* An App mention in Ada's message, like the composer's chip. */
+.ap-men {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border-radius: 7px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.ap-men svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+.ap-msg.ap-me .av {
+  background: var(--foreground);
+  color: var(--background);
+}
+.ap-steps {
+  display: grid;
+  gap: 6px;
+  padding-left: 30px;
+}
+.ap-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.ap-step svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.ap-step > span:nth-child(2) {
+  flex: 1;
+}
+.ap-ok {
+  display: inline-flex;
+  color: var(--success);
+}
+
 /* =================== Sections =================== */
 .sec {
   padding: 120px 0;
@@ -3976,6 +4145,404 @@ svg.i {
     transform: none;
   }
 }
+/* Apps: the four steps tick off in turn while their App glows, then the teammate answers. */
+.ap1 {
+  animation: k-ap1 14s ease-out infinite;
+}
+.ap1 .ap-ok {
+  animation: k-ok1 14s ease-out infinite;
+}
+.ap2 {
+  animation: k-ap2 14s ease-out infinite;
+}
+.ap2 .ap-ok {
+  animation: k-ok2 14s ease-out infinite;
+}
+.ap3 {
+  animation: k-ap3 14s ease-out infinite;
+}
+.ap3 .ap-ok {
+  animation: k-ok3 14s ease-out infinite;
+}
+.ap4 {
+  animation: k-ap4 14s ease-out infinite;
+}
+.ap4 .ap-ok {
+  animation: k-ok4 14s ease-out infinite;
+}
+.ap5 {
+  animation: k-ap5 14s ease-out infinite;
+}
+.app-t.g0::after {
+  animation: k-g0 14s ease-in-out infinite;
+}
+.app-t.g0 .app-i::before {
+  animation: k-r0 14s ease-out infinite;
+}
+.ap-pulse.g0 {
+  animation: k-p0 14s linear infinite;
+}
+.app-t.g1::after {
+  animation: k-g1 14s ease-in-out infinite;
+}
+.app-t.g1 .app-i::before {
+  animation: k-r1 14s ease-out infinite;
+}
+.ap-pulse.g1 {
+  animation: k-p1 14s linear infinite;
+}
+.app-t.g2::after {
+  animation: k-g2 14s ease-in-out infinite;
+}
+.app-t.g2 .app-i::before {
+  animation: k-r2 14s ease-out infinite;
+}
+.ap-pulse.g2 {
+  animation: k-p2 14s linear infinite;
+}
+.app-t.g3::after {
+  animation: k-g3 14s ease-in-out infinite;
+}
+.app-t.g3 .app-i::before {
+  animation: k-r3 14s ease-out infinite;
+}
+.ap-pulse.g3 {
+  animation: k-p3 14s linear infinite;
+}
+@keyframes k-ap1 {
+  0%,
+  14% {
+    opacity: 0.4;
+  }
+  17%,
+  96% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+@keyframes k-ok1 {
+  0%,
+  14% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  17%,
+  96% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-ap2 {
+  0%,
+  26% {
+    opacity: 0.4;
+  }
+  29%,
+  96% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+@keyframes k-ok2 {
+  0%,
+  26% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  29%,
+  96% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-ap3 {
+  0%,
+  38% {
+    opacity: 0.4;
+  }
+  41%,
+  96% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+@keyframes k-ok3 {
+  0%,
+  38% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  41%,
+  96% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-ap4 {
+  0%,
+  50% {
+    opacity: 0.4;
+  }
+  53%,
+  96% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+@keyframes k-ok4 {
+  0%,
+  50% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  53%,
+  96% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-ap5 {
+  0%,
+  64% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  67%,
+  94% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes k-r0 {
+  0%,
+  13% {
+    opacity: 0;
+    transform: none;
+  }
+  14% {
+    opacity: 0.7;
+    transform: none;
+  }
+  22%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+@keyframes k-g0 {
+  0%,
+  13%,
+  26%,
+  100% {
+    opacity: 0;
+  }
+  15%,
+  24% {
+    opacity: 1;
+  }
+}
+@keyframes k-r1 {
+  0%,
+  25% {
+    opacity: 0;
+    transform: none;
+  }
+  26% {
+    opacity: 0.7;
+    transform: none;
+  }
+  34%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+@keyframes k-g1 {
+  0%,
+  25%,
+  38%,
+  100% {
+    opacity: 0;
+  }
+  27%,
+  36% {
+    opacity: 1;
+  }
+}
+@keyframes k-r2 {
+  0%,
+  37% {
+    opacity: 0;
+    transform: none;
+  }
+  38% {
+    opacity: 0.7;
+    transform: none;
+  }
+  46%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+@keyframes k-g2 {
+  0%,
+  37%,
+  50%,
+  100% {
+    opacity: 0;
+  }
+  39%,
+  48% {
+    opacity: 1;
+  }
+}
+@keyframes k-r3 {
+  0%,
+  49% {
+    opacity: 0;
+    transform: none;
+  }
+  50% {
+    opacity: 0.7;
+    transform: none;
+  }
+  58%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+@keyframes k-g3 {
+  0%,
+  49%,
+  62%,
+  100% {
+    opacity: 0;
+  }
+  51%,
+  60% {
+    opacity: 1;
+  }
+}
+/* Apps: the dots of every path flow toward the thread. */
+.ap-paths path:not(.ap-pulse) {
+  animation: k-flow 1.6s linear infinite;
+}
+@keyframes k-flow {
+  to {
+    stroke-dashoffset: -1.7;
+  }
+}
+/* Apps: a pulse runs down the path of the App in use, toward the thread. */
+@keyframes k-p0 {
+  0%,
+  13% {
+    opacity: 0;
+    stroke-dashoffset: 14;
+  }
+  14% {
+    opacity: 1;
+    stroke-dashoffset: 14;
+  }
+  20% {
+    opacity: 1;
+    stroke-dashoffset: -100;
+  }
+  21%,
+  100% {
+    opacity: 0;
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes k-p1 {
+  0%,
+  25% {
+    opacity: 0;
+    stroke-dashoffset: 14;
+  }
+  26% {
+    opacity: 1;
+    stroke-dashoffset: 14;
+  }
+  32% {
+    opacity: 1;
+    stroke-dashoffset: -100;
+  }
+  33%,
+  100% {
+    opacity: 0;
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes k-p2 {
+  0%,
+  37% {
+    opacity: 0;
+    stroke-dashoffset: 14;
+  }
+  38% {
+    opacity: 1;
+    stroke-dashoffset: 14;
+  }
+  44% {
+    opacity: 1;
+    stroke-dashoffset: -100;
+  }
+  45%,
+  100% {
+    opacity: 0;
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes k-p3 {
+  0%,
+  49% {
+    opacity: 0;
+    stroke-dashoffset: 14;
+  }
+  50% {
+    opacity: 1;
+    stroke-dashoffset: 14;
+  }
+  56% {
+    opacity: 1;
+    stroke-dashoffset: -100;
+  }
+  57%,
+  100% {
+    opacity: 0;
+    stroke-dashoffset: -100;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .page *,
   .page *::before,
@@ -4705,5 +5272,47 @@ a.lgr:hover .tt {
 @media (max-width: 640px) {
   .live-demo {
     padding-bottom: 64px;
+  }
+}
+
+/* Apps: below 1100px the logos wrap above the thread, without paths. */
+@media (max-width: 1100px) {
+  .apps-stage {
+    height: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+  .ap-paths {
+    display: none;
+  }
+  .app-t {
+    position: relative;
+    left: auto;
+    top: auto;
+    margin: 0;
+    width: 48px;
+    height: 48px;
+  }
+  .app-t svg {
+    width: 24px;
+    height: 24px;
+  }
+  .ap-chat {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    width: 100%;
+    margin-top: 16px;
+    padding: 0 14px 14px;
+  }
+  .ap-head {
+    margin: 0 -14px;
+    padding: 10px 14px;
+  }
+  .ap-steps {
+    padding-left: 0;
   }
 }
