@@ -172,10 +172,6 @@ export function Pricing() {
             <p className={c('quiet')}>Runs up to 4 threads at once</p>
           </div>
         </div>
-        <p className={c('pr-foot')}>
-          You bring the AI plan, so we never charge you for AI usage. Open source under the MIT
-          license.
-        </p>
       </div>
     </section>
   )
@@ -401,21 +397,18 @@ export function Faq() {
 
 export function FinalCall() {
   return (
-    <section aria-labelledby="final-title" className={c('final')}>
-      <div className={c('art')} aria-hidden="true">
-        <div className={c('blk b-tint')}></div>
-        <div className={c('blk slab')}>
-          <span className={c('fmsg')} style={{ left: '22px', top: '36px' } as CSSProperties}>
-            <span className={c('av')}>R</span>Riley <span className={c('k')}>· shipped by Ada</span>
-          </span>
-          <span className={c('fmsg')} style={{ left: '52px', top: '96px' } as CSSProperties}>
-            <span className={c('av sam')}>S</span>Sam{' '}
-            <span className={c('k')}>· 3 replies sent</span>
-          </span>
-        </div>
-        <div className={c('blk b-green')}></div>
-        <div className={c('blk b-orange')}></div>
-        <div className={c('blk b-ink')}></div>
+    <section aria-labelledby="final-title" className={c('final')} data-anim>
+      {/* Brigade's pebble, large and in the page's ink, cropped by the section's edges. */}
+      <div className={c('art pebble')} aria-hidden="true">
+        <svg viewBox="0 0 100 100">
+          <g className={c('pb-body')}>
+            <path d="M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z" />
+            <g className={c('pb-eyes')}>
+              <path d="M34.5 44Q40.5 28 46.5 44" />
+              <path d="M53.5 44Q59.5 28 65.5 44" />
+            </g>
+          </g>
+        </svg>
       </div>
       <div className={c('wrap')}>
         <h2 id="final-title">Meet your first teammate.</h2>
@@ -440,7 +433,6 @@ export function Footer() {
         </span>
         <nav aria-label="Footer">
           <a href="/#pricing">Pricing</a>
-          <a href="/#download">Download</a>
           <Link href="/how-it-works">How it works</Link>
           <a href={REPO_URL}>GitHub</a>
           <Link href={SIGN_IN}>Sign in</Link>

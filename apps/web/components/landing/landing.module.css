@@ -2151,6 +2151,33 @@ svg.i {
   width: 600px;
   height: 560px;
 }
+/* The pebble: larger than the section, so it overflows and shows only in part. */
+.final .pebble {
+  top: -90px;
+  right: -150px;
+  width: 760px;
+  height: 760px;
+}
+.final .pebble svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.pb-body {
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+}
+.pb-body > path {
+  fill: var(--foreground);
+}
+.pb-eyes {
+  fill: none;
+  stroke: var(--background);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+}
 .final .slab {
   left: 60px;
   top: 120px;
@@ -4543,6 +4570,33 @@ svg.i {
     stroke-dashoffset: -100;
   }
 }
+/* The pebble: it sways slowly, breathes, and blinks now and then. */
+.pb-body {
+  animation: k-sway 9s ease-in-out infinite;
+}
+.pb-eyes {
+  animation: k-blink 6s ease-in-out infinite;
+}
+@keyframes k-sway {
+  0%,
+  100% {
+    transform: rotate(-4deg) scale(1);
+  }
+  50% {
+    transform: rotate(4deg) scale(1.03) translateY(-2%);
+  }
+}
+@keyframes k-blink {
+  0%,
+  44%,
+  50%,
+  100% {
+    transform: none;
+  }
+  47% {
+    transform: scaleY(0.1);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .page *,
   .page *::before,
@@ -4872,6 +4926,12 @@ svg.i {
   .final .art {
     width: 390px;
     height: 280px;
+  }
+  .final .pebble {
+    top: -100px;
+    right: -80px;
+    width: 340px;
+    height: 340px;
   }
   .final .slab {
     left: 20px;
