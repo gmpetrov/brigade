@@ -8,7 +8,7 @@
 import type { SavedThreadFile, SaveThreadFile, ThreadFile } from '@brigade/contracts'
 import { Search } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CodeEditorControls } from '@/components/code-editor'
 import { Button } from '@/components/ui/button'
 import { api, ApiError } from '@/lib/api'
@@ -189,8 +189,12 @@ export function CodeFile({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- each time it is asked
   }, [lineKey])
 
-  /** The file as it is now on the computer, in place of what shows: nothing typed is lost. */
-  const takeTheirs = useCallback(async () => {
+  /**
+   * The file as it is now on the computer, in place of what shows, as one change: the
+   * cursor and scroll stay. Through a ref, so the watch below calls this render's,
+   * whose edit knows the file (one from before it was read would keep the draft).
+   */
+  const takeTheirs = async () => {
     const now = await readCodeFile(threadId, teammateId, path)
     if (now.text === undefined || !now.hash) return
     editor.current?.replace(now.text)
@@ -198,8 +202,9 @@ export function CodeFile({
     edit.reset()
     edit.setConflict(false)
     setGone(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- edit's refs and setters
-  }, [threadId, teammateId, path])
+  }
+  const latestTakeTheirs = useRef(takeTheirs)
+  latestTakeTheirs.current = takeTheirs
 
   // While it shows: has it changed on the computer?
   const dirty = edit.dirty
@@ -222,7 +227,7 @@ export function CodeFile({
         if (now === null) return setGone(true)
         setGone(false)
         if (dirty) return edit.setConflict(true)
-        await takeTheirs()
+        await latestTakeTheirs.current()
         if (!stopped) setUpdatedAt(Date.now())
       } catch (e) {
         // A runner that cannot tell (too old, offline): no watching, and nothing to say.
@@ -238,7 +243,7 @@ export function CodeFile({
       window.removeEventListener('focus', onFocus)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- edit's refs; dirty and saving restart it
-  }, [visible, watched, dirty, edit.saving, threadId, teammateId, path, takeTheirs])
+  }, [visible, watched, dirty, edit.saving, threadId, teammateId, path])
 
   useEffect(() => {
     if (!updatedAt) return

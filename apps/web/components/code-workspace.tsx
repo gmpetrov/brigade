@@ -1,9 +1,9 @@
 'use client'
 // The code panel beside a thread's preview: the files open as tabs, the one in front
-// in the code editor, and the tree of the working folder the preview runs from, so
+// in the code editor, and left of it the tree of the working folder the preview runs from, so
 // what is saved here shows in the preview. Its state is the thread's
 // (lib/code-tabs.ts); tabs keep their editors while another is in front, for undo.
-import { Crosshair, FileCode2, PanelRight, X } from 'lucide-react'
+import { Crosshair, FileCode2, PanelLeft, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { CodeFile } from '@/components/code-file'
 import { CodeTree } from '@/components/code-tree'
@@ -63,6 +63,12 @@ export function CodeWorkspace({
   }, [])
 
   const active = state.tabs.find((t) => tabKey(t) === state.active)
+  // A file brought in front (picked in the page, opened from a message), or the panel
+  // found narrow: over the editor, the tree makes way for the file.
+  useEffect(() => {
+    if (!wide && state.active) setCodePanel(threadId, { tree: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- when the tab in front, or the width, changes
+  }, [state.active, wide])
   const tree = state.tree || state.tabs.length === 0
   const open = (file: { path: string; line?: number }) => {
     openCodeTab(threadId, { teammateId, ...file })
@@ -170,7 +176,7 @@ export function CodeWorkspace({
           title={state.tree ? 'Hide the files' : 'Show the files'}
           onClick={() => setCodePanel(threadId, { tree: !state.tree })}
         >
-          <PanelRight aria-hidden />
+          <PanelLeft aria-hidden />
         </Button>
         <Button
           type="button"
@@ -214,9 +220,10 @@ export function CodeWorkspace({
         {tree && (
           <div
             className={cn(
-              'flex min-h-0 w-60 shrink-0 flex-col border-l bg-card',
-              !wide && state.tabs.length > 0 && 'absolute inset-y-0 right-0 z-10 shadow-lg',
-              !wide && state.tabs.length === 0 && 'w-full border-l-0',
+              // Left of the editor, as in an editor: never between the code and the preview.
+              'order-first flex min-h-0 w-60 shrink-0 flex-col border-r bg-card',
+              !wide && state.tabs.length > 0 && 'absolute inset-y-0 left-0 z-10 shadow-lg',
+              !wide && state.tabs.length === 0 && 'w-full border-r-0',
             )}
           >
             <p className="truncate px-3 pt-2 text-[11px] text-muted-foreground">
