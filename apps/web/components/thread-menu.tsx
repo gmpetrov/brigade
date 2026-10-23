@@ -8,7 +8,7 @@ import {
   ArchiveRestore,
   Clock,
   EllipsisVertical,
-  MonitorPlay,
+  Eye,
   Pencil,
   Pin,
   PinOff,
@@ -96,7 +96,7 @@ export function useThreadMenu({
     {
       action: 'preview',
       label: 'Open preview',
-      icon: <MonitorPlay />,
+      icon: <Eye />,
       key: 'O',
       show: !!thread.previewRunning,
     },

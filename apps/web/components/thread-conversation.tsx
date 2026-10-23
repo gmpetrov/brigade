@@ -5,7 +5,7 @@
 // beside it (a file, the preview, the computer) need the room, so asking for one
 // expands it first.
 import {
-  AppWindow,
+  Eye,
   ArrowDown,
   ArrowUp,
   CalendarClock,
@@ -928,14 +928,25 @@ export function ThreadConversation({
       </div>
     </div>
   )
-  // Preview is the computer's one action.
-  const computerActions = offersPreview && (
-    <div className="flex flex-wrap gap-2">
+  // Top right of the expanded thread, across from the sidebar's toggle and round like it: the
+  // app it builds is the thread's, not its computer's, and stays in reach with the details closed.
+  // What a click does, not only what it is about: its label, on hover and for screen readers.
+  const previewLabel = previewStart.busy
+    ? 'Starting the preview…'
+    : previewing
+      ? 'Hide preview'
+      : live
+        ? 'Open preview'
+        : 'Start preview'
+  const previewButton = offersPreview && top && (
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-end px-3">
       <Button
         type="button"
         variant="outline"
-        size="sm"
+        size="icon"
+        className="pointer-events-auto relative rounded-full bg-card/90 shadow-sm backdrop-blur"
         aria-pressed={previewing}
+        aria-label={previewLabel}
         disabled={previewStart.busy}
         onClick={() => {
           if (previewing) return setPreviewing(false)
@@ -945,27 +956,24 @@ export function ThreadConversation({
           void previewStart.start()
         }}
         title={
-          live
-            ? `Opens the app ${previewTeammate?.name ?? answering.name} runs, so you can try it`
-            : 'Runs the app this thread builds, so you can try it'
+          previewStart.busy || previewing
+            ? previewLabel
+            : live
+              ? `${previewLabel}: the app ${previewTeammate?.name ?? answering.name} runs, to try it`
+              : `${previewLabel}: runs the app this thread builds, to try it`
         }
       >
         {previewStart.busy ? (
           <LoaderCircle aria-hidden className="animate-spin" />
         ) : (
-          <AppWindow aria-hidden />
+          <Eye aria-hidden />
         )}
-        {/* What a click does, not only what it is about. */}
-        {previewStart.busy
-          ? 'Starting…'
-          : previewing
-            ? 'Hide preview'
-            : live
-              ? 'Open preview'
-              : 'Start preview'}
         {preview && live && (
           <span
-            className={cn('size-1.5 rounded-full', PHASE[previewPhase(preview)].dot)}
+            className={cn(
+              'absolute top-0.5 right-0.5 size-2 rounded-full ring-2 ring-card',
+              PHASE[previewPhase(preview)].dot,
+            )}
             aria-label={PHASE[previewPhase(preview)].label}
             role="img"
           />
@@ -1055,7 +1063,6 @@ export function ThreadConversation({
           outputs={outputs}
           onOpenFile={openFile}
           details={details}
-          actions={computerActions}
           onChange={() => void thread.reload()}
         />
       )}
@@ -1067,6 +1074,7 @@ export function ThreadConversation({
       >
         {drop.dragging && <DropOverlay />}
         {top}
+        {previewButton}
         <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
           <div className={cn(column, top ? 'pt-16' : expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
             {t.parent && (

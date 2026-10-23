@@ -18,7 +18,7 @@ import {
   type ThreadPreviewState,
 } from '@brigade/contracts'
 import {
-  AppWindow,
+  Eye,
   Check,
   CircleAlert,
   CodeXml,
@@ -324,7 +324,7 @@ function LivePreviewPanel({
   return (
     <SidePanel aria-label="Preview" name={PREVIEW_PANEL} onClose={onClose}>
       <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
-        <AppWindow aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        <Eye aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <strong className="flex min-w-0 items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
             <span className={cn('size-2 shrink-0 rounded-full', status.dot)} aria-hidden />

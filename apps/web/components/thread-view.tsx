@@ -49,7 +49,7 @@ import {
   type TriggerEventMessage,
 } from '@brigade/contracts'
 import {
-  AppWindow,
+  Eye,
   ChevronDown,
   Check,
   ChevronRight,
@@ -2179,7 +2179,7 @@ export function ThreadItems({
             key={item.key}
             className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground"
           >
-            <AppWindow aria-hidden className="size-4 shrink-0" />
+            <Eye aria-hidden className="size-4 shrink-0" />
             <span>
               {item.status === 'ready'
                 ? `Preview ready${item.repository ? ` · ${item.repository}` : ''}`
@@ -3482,7 +3482,7 @@ function SuggestedReplyButtons({
                   {preview.busy ? (
                     <LoaderCircle aria-hidden className="animate-spin" />
                   ) : (
-                    <AppWindow aria-hidden />
+                    <Eye aria-hidden />
                   )}
                   {a.label}
                 </Button>
