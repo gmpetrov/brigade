@@ -2169,23 +2169,44 @@ svg.i {
   transform: translate(var(--bx, 0), var(--by, 0)) rotate(var(--br, 0deg));
   transition: transform 3.5s cubic-bezier(0.45, 0, 0.25, 1);
 }
-/* Where the eyes look: a quick dart that overshoots a little, as eyes do. */
-.pb-look {
-  transform: translate(var(--ex, 0), var(--ey, 0));
-  transition: transform 0.22s cubic-bezier(0.3, 1.5, 0.6, 1);
-}
 .pb-body > path {
   fill: var(--foreground);
 }
-.pb-eyes {
+/* An eye, moved and narrowed along the sphere by --eNx and --eNs: a quick turn that
+ * overshoots a little, as eyes do. */
+.pb-eye {
   fill: none;
   stroke: var(--background);
   stroke-width: 6;
   stroke-linecap: round;
   transform-origin: 50% 50%;
   transform-box: fill-box;
-  transform: scale(var(--esx, 1), var(--esy, 1));
+  transition: transform 0.24s cubic-bezier(0.3, 1.45, 0.6, 1);
+}
+.pb-eye.e0 {
+  transform: translate(var(--e0x, 0), var(--ey, 0)) scale(var(--e0s, 1), var(--esq, 1));
+}
+.pb-eye.e1 {
+  transform: translate(var(--e1x, 0), var(--ey, 0)) scale(var(--e1s, 1), var(--esq, 1));
+}
+.pb-lid {
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+  transform: scaleY(var(--esy, 1));
   transition: transform 0.12s ease-in-out;
+}
+/* A soft light on the surface, sliding the other way as the head turns. */
+.pb-light {
+  transform: translate(var(--hx, 0), var(--hy, 0));
+  transition: transform 0.5s cubic-bezier(0.3, 1.2, 0.6, 1);
+}
+.pb-light-in {
+  stop-color: var(--background);
+  stop-opacity: 0.16;
+}
+.pb-light-out {
+  stop-color: var(--background);
+  stop-opacity: 0;
 }
 .final .slab {
   left: 60px;

@@ -4,13 +4,15 @@ import { useEffect, useRef } from 'react'
 import { c } from './parts'
 
 const random = (min: number, max: number) => min + Math.random() * (max - min)
+const rad = (deg: number) => (deg * Math.PI) / 180
 
-/**
- * Brigade's pebble, large, in the page's ink. It has no loop: its eyes dart to a random
- * point, hold it for a random while, squash as they look aside and blink now and then, while
- * the body drifts slowly. Each move only sets CSS variables that transitions ease. It keeps
- * still under reduced motion and while it is off screen.
- */
+// The face is drawn on a sphere seen from the front: R is its radius in the drawing's units,
+// and each eye sits at an angle from its middle. Turning the head moves each eye along the
+// sphere, so the far one slides less and narrows more than the near one.
+const R = 48
+const EYES = [-9.5, 9.5].map((x) => Math.asin(x / R))
+const SHAPE = 'M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'
+
 export function Pebble() {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -24,12 +26,17 @@ export function Pebble() {
 
     const look = () => {
       if (visible) {
-        const x = random(-9, 9)
-        const y = random(-6, 5)
-        set('--ex', `${x}px`)
-        set('--ey', `${y}px`)
-        // Eyes looking aside narrow, as a face turning would show them.
-        set('--esx', `${1 - Math.abs(x) / 30}`)
+        const yaw = rad(random(-38, 38))
+        const pitch = rad(random(-22, 16))
+        EYES.forEach((eye, i) => {
+          set(`--e${i}x`, `${R * (Math.sin(eye + yaw) - Math.sin(eye))}px`)
+          set(`--e${i}s`, `${Math.cos(eye + yaw) / Math.cos(eye)}`)
+        })
+        set('--ey', `${R * Math.sin(pitch) * 0.7}px`)
+        set('--esq', `${Math.cos(pitch)}`)
+        // The light stays put while the surface turns under it.
+        set('--hx', `${-R * Math.sin(yaw) * 0.5}px`)
+        set('--hy', `${-R * Math.sin(pitch) * 0.5}px`)
         if (Math.random() < 0.22) blink(Math.random() < 0.3)
       }
       later(look, Math.random() < 0.3 ? random(150, 450) : random(700, 3200))
@@ -67,14 +74,28 @@ export function Pebble() {
   return (
     <div ref={ref} className={c('art pebble')} aria-hidden="true">
       <svg viewBox="0 0 100 100">
+        <defs>
+          <clipPath id="pb-shape">
+            <path d={SHAPE} />
+          </clipPath>
+          <radialGradient id="pb-light">
+            <stop offset="0" className={c('pb-light-in')} />
+            <stop offset="1" className={c('pb-light-out')} />
+          </radialGradient>
+        </defs>
         <g className={c('pb-body')}>
-          <path d="M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z" />
-          <g className={c('pb-look')}>
-            <g className={c('pb-eyes')}>
-              <path d="M34.5 44Q40.5 28 46.5 44" />
-              <path d="M53.5 44Q59.5 28 65.5 44" />
-            </g>
+          <path d={SHAPE} />
+          <g clipPath="url(#pb-shape)">
+            <circle className={c('pb-light')} cx="36" cy="30" r="46" fill="url(#pb-light)" />
           </g>
+          {[
+            { cls: 'pb-eye e0', d: 'M34.5 44Q40.5 28 46.5 44' },
+            { cls: 'pb-eye e1', d: 'M53.5 44Q59.5 28 65.5 44' },
+          ].map((eye) => (
+            <g key={eye.cls} className={c(eye.cls)}>
+              <path className={c('pb-lid')} d={eye.d} />
+            </g>
+          ))}
         </g>
       </svg>
     </div>
