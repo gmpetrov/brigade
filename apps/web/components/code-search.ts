@@ -84,7 +84,9 @@ function searchBar(view: EditorView): Panel {
     button.addEventListener('mousedown', (e) => e.preventDefault())
     button.addEventListener('click', () => {
       commit({ [key]: !query[key] })
+      // Back to typing, at the end of what is there.
       input.focus()
+      input.setSelectionRange(input.value.length, input.value.length)
     })
     return button
   }
