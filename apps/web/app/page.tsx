@@ -7,7 +7,7 @@ import { LiveDemo } from '@/components/landing/live-demo'
 import { PauseOffscreen } from '@/components/landing/in-view'
 import { c } from '@/components/landing/parts'
 import { Plans } from '@/components/landing/plans'
-import { Bridge, Message, Tiles } from '@/components/landing/sections'
+import { Tiles } from '@/components/landing/sections'
 import { RedirectIfSignedIn } from '@/components/redirect-if-signed-in'
 import { getProofNumbers } from '@/lib/github-proof'
 
@@ -69,8 +69,6 @@ export default function Landing() {
         <Hero />
         <LiveDemo />
         <Plans />
-        <Message />
-        <Bridge />
         <Tiles />
         <Jobs />
         <Control />

@@ -24,7 +24,7 @@ function ChatGptMark() {
   )
 }
 
-/** Bring your own AI: the plans members already pay for, stacked, with a model per teammate.
+/** Bring your own sub: the plans members already pay for, the accounts in use, the relay to the next one, and a model per teammate.
  * The relay is between accounts of one provider (runner: harness/index.ts, account.switched);
  * the models are the product's own (packages/contracts/src/models.ts). */
 export function Plans() {
@@ -32,9 +32,8 @@ export function Plans() {
     <section aria-labelledby="plans-title" className={c('sec byo-sec')} data-anim>
       <div className={c('wrap byo')}>
         <div className={c('byo-copy')}>
-          <p className={c('eyebrow')}>Bring your own AI</p>
           <h2 className={c('h2')} id="plans-title">
-            Your Claude and ChatGPT plans, working as a team.
+            Bring your own sub.
           </h2>
           <ol className={c('byo-pts')}>
             <li>
@@ -60,7 +59,7 @@ export function Plans() {
             <li>
               <span className={c('n')}>03</span>
               <div>
-                <h3>A model per teammate</h3>
+                <h3>A different model per teammate</h3>
                 <p>
                   Opus for your engineer, Sonnet for support, GPT for marketing. Pick it on each
                   teammate&apos;s page.
@@ -71,97 +70,75 @@ export function Plans() {
         </div>
 
         <div className={c('byo-panel')} aria-hidden="true">
-          <div className={c('rl-head')}>
-            <span className={c('av')}>R</span>
-            <div className={c('tx')}>
-              <b>Riley</b>
-              <span>Fix the refund rounding bug</span>
-            </div>
-            <span className={c('badge run')}>working</span>
+          <div className={c('cp-head')}>
+            <span className={c('cp-l')}>Connected plans</span>
           </div>
-
-          <div className={c('rl')}>
-            <div className={c('rl-axis mono')}>
-              <span>13:40</span>
-              <span className={c('rl-at')}>14:02</span>
-              <span>14:25</span>
-            </div>
-            <div className={c('rl-lane')}>
-              <span className={c('rl-acc')}>
+          <div className={c('cp-body')}>
+            <p className={c('cp-l')}>In use · 3 accounts</p>
+            <div className={c('acct full')}>
+              <div className={c('acct-t')}>
                 <ClaudeMark />
-                <span>
-                  Claude Max <em className={c('mono')}>ada@</em>
+                <b>Claude Max · account 1</b>
+                <span className={c('cp-l warn')}>At limit</span>
+              </div>
+              <div className={c('acct-m')}>
+                <span className={c('mono')}>Opus 5.5</span>
+                <span className={c('acct-bar')}>
+                  <span className={c('acct-f a')}></span>
                 </span>
-              </span>
-              <span className={c('rl-track')}>
-                <span className={c('rl-bar a')}></span>
-                <span className={c('rl-cap')}>limit</span>
-              </span>
+              </div>
             </div>
-            <div className={c('rl-lane')}>
-              <span className={c('rl-acc')}>
+            <p className={c('cp-l warn cp-relay')}>Same plan, next account · continuing</p>
+            <div className={c('acct')}>
+              <div className={c('acct-t')}>
                 <ClaudeMark />
-                <span>
-                  Claude Max <em className={c('mono')}>ops@</em>
+                <b>Claude Max · account 2</b>
+                <span className={c('cp-l')}>Working</span>
+              </div>
+              <div className={c('acct-m')}>
+                <span className={c('mono')}>Opus 5.5</span>
+                <span className={c('acct-bar')}>
+                  <span className={c('acct-f b')}></span>
                 </span>
-              </span>
-              <span className={c('rl-track')}>
-                <span className={c('rl-bar b')}></span>
+              </div>
+            </div>
+            <div className={c('acct')}>
+              <div className={c('acct-t')}>
+                <ChatGptMark />
+                <b>ChatGPT Pro</b>
+                <span className={c('cp-l')}>In use</span>
+              </div>
+              <div className={c('acct-m')}>
+                <span className={c('mono')}>GPT-6.1 Sol</span>
+                <span className={c('acct-bar')}>
+                  <span className={c('acct-f c')}></span>
+                </span>
+              </div>
+            </div>
+            <p className={c('cp-l cp-sep')}>Model per teammate</p>
+            <div className={c('cp-tm')}>
+              <span className={c('av')}>R</span>
+              Riley
+              <span className={c('cp-l')}>
+                <ClaudeMark />
+                Opus 5.5
               </span>
             </div>
-            <div className={c('rl-switch')}></div>
-          </div>
-
-          <div className={c('rl-log')}>
-            <div className={c('rl-ln')}>
-              <span className={c('mono')}>14:02</span>
-              <span className={c('rl-i warn')}>
-                <Icon name="clock" />
-              </span>
-              <span>
-                <b>ada@</b> reached its usage limit
+            <div className={c('cp-tm')}>
+              <span className={c('av sam')}>S</span>
+              Sam
+              <span className={c('cp-l')}>
+                <ClaudeMark />
+                Sonnet 5.5
               </span>
             </div>
-            <div className={c('rl-ln')}>
-              <span className={c('mono')}>14:02</span>
-              <span className={c('rl-i')}>
-                <Icon name="swap" />
+            <div className={c('cp-tm')}>
+              <span className={c('av mark')}>M</span>
+              Mark
+              <span className={c('cp-l')}>
+                <ChatGptMark />
+                GPT-6.1 Sol
               </span>
-              <span>
-                Same task, same files, now on <b>ops@</b>
-              </span>
-            </div>
-            <div className={c('rl-ln')}>
-              <span className={c('mono')}>14:25</span>
-              <span className={c('rl-i ok')}>
-                <Icon name="check" />
-              </span>
-              <span>Opened a pull request</span>
-            </div>
-          </div>
-
-          <div className={c('rl-models')}>
-            <p className={c('ovl')}>A model per teammate</p>
-            <div className={c('rl-m')}>
-              <span className={c('av xs')}>R</span>
-              <b>Riley</b>
-              <span className={c('sp')}></span>
-              <ClaudeMark />
-              Opus 5.5
-            </div>
-            <div className={c('rl-m')}>
-              <span className={c('av xs sam')}>S</span>
-              <b>Sam</b>
-              <span className={c('sp')}></span>
-              <ClaudeMark />
-              Sonnet 5.5
-            </div>
-            <div className={c('rl-m')}>
-              <span className={c('av xs mark')}>M</span>
-              <b>Mark</b>
-              <span className={c('sp')}></span>
-              <ChatGptMark />
-              GPT-6.1 Sol
             </div>
           </div>
         </div>
