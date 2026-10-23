@@ -2320,9 +2320,9 @@ svg.i {
 .foot-name {
   height: 0.62em;
   overflow: hidden;
-  font-size: 27.5vw;
+  font-size: 24.5vw;
   font-weight: 800;
-  letter-spacing: -0.065em;
+  letter-spacing: -0.015em;
   line-height: 0.82;
   text-align: center;
   color: var(--foreground);
