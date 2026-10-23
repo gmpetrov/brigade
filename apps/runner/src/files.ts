@@ -3,7 +3,7 @@
 // mirror, after resolving links; as the teammate's user on a cloud computer.
 // A person may also save a text file of the working folder (never the library
 // mirror), and find where an element of the thread's preview is written.
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { open, realpath, stat, writeFile } from 'node:fs/promises'
 import { extname, isAbsolute, join, normalize, relative, resolve } from 'node:path'
@@ -20,6 +20,7 @@ import { CLOUD, paths } from './config.js'
 import { libraryDirFor } from './library.js'
 import { run as runAs } from './repos.js'
 import { teammateHome, teammateUser } from './teammates.js'
+import { asTeammate, threadNet } from './thread-net.js'
 
 const run = promisify(execFile)
 export const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
@@ -187,12 +188,41 @@ export async function writeThreadFile(request: WriteRequest): Promise<WriteResul
         return { ...base, ok: false, conflict: true, error: 'The file changed since it was opened' }
       const data = Buffer.from(request.text, 'utf8')
       // In place: the file keeps its owner and mode, and the dev server sees one change.
-      if (user) await runAs('sh', ['-c', 'cat > "$1"', 'sh', target], { runAs: user, input: data })
+      if (user) await writeInThread(request.sessionId, user, target, data)
       else await writeFile(target, data)
       return { ...base, ok: true, hash: sha256(data) }
     } catch (error) {
       return { ...base, ok: false, error: `Could not save it: ${String(error)}` }
     }
+  })
+}
+
+/**
+ * Write a file as the teammate, in its thread's namespaces where it has them: where
+ * its preview's dev server and its harness run, through the same view of the folder.
+ * The views can differ: a thread whose namespaces started in the first minutes after
+ * a cloud computer was restored keeps its home through the restore's lazy FUSE layer,
+ * after the runner's view went back to the real disk (the thread's mount namespace is
+ * a private copy). Written from the runner's view, a save reached the disk but sent
+ * the dev server's watcher no event, so the preview never showed it; written from the
+ * thread's, as the teammate's own edits are, it does.
+ */
+async function writeInThread(sessionId: string, user: string, target: string, data: Buffer) {
+  const as = asTeammate(user, await threadNet(sessionId))
+  await new Promise<void>((done, fail) => {
+    const child = spawn(as.file, [...as.args, 'sh', '-c', 'cat > "$1"', 'sh', target], {
+      cwd: '/',
+      stdio: ['pipe', 'ignore', 'pipe'],
+    })
+    let stderr = ''
+    child.stderr.on('data', (d: Buffer) => (stderr = (stderr + d.toString()).slice(-2000)))
+    child.on('error', fail)
+    child.on('close', (code) =>
+      code === 0 ? done() : fail(new Error(stderr.trim() || `cat exited with ${code}`)),
+    )
+    // A writer that stops reading early fails above, not here.
+    child.stdin.on('error', () => undefined)
+    child.stdin.end(data)
   })
 }
 

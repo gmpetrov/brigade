@@ -70,7 +70,9 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
     to the thread; Markdown shows rendered until they press Edit. A read gives
     the file's SHA-256 (`hash`), and ⌘S saves with it (`PUT /threads/:id/file`,
     then `thread.file.write`): the runner writes the file in place, as the
-    teammate's user on a cloud computer, only while it still has that hash.
+    teammate's user in the thread's namespaces on a cloud computer (through the
+    same view of the folder as the preview's dev server, whose watcher must see
+    the change), only while it still has that hash.
     Otherwise the panel says it changed on the computer, and the person reloads
     it or keeps theirs. Saves of one file run one at a time on the runner, so two
     from the same hash cannot both pass. Unsaved edits are kept outside the panel
