@@ -361,6 +361,11 @@ export function ThreadConversation({
     setPreviewing(false)
     setFile(f)
   }
+  // The code of what was picked in the preview: closing it brings the preview back.
+  const openCode = (f: { path: string; teammateId?: string }) => {
+    documents.close()
+    setFile(f)
+  }
   const openPreview = () => {
     if (!expanded) onExpand()
     documents.close()
@@ -986,6 +991,7 @@ export function ThreadConversation({
           teammateName={(teammateId) =>
             people.find((p) => p.id === teammateId)?.name ?? t.teammate.name
           }
+          mayEdit={t.mayPrompt}
           onOpen={openFile}
           onClose={() => setFile(undefined)}
         />
@@ -1003,7 +1009,9 @@ export function ThreadConversation({
           starting={previewStart.busy}
           waking={previewStart.waking}
           onAsk={t.mayPrompt ? askInComposer : undefined}
-          {...(t.mayPrompt ? { onPick: pickElement, picked: elements.length } : {})}
+          {...(t.mayPrompt
+            ? { onPick: pickElement, picked: elements.length, onOpenCode: openCode }
+            : {})}
         />
       )}
       {expanded && computerOpen && t.computer.kind === 'cloud' && (

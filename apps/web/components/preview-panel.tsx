@@ -14,12 +14,14 @@ import {
   type PreviewInfo,
   type PreviewView,
   type SequencedEvent,
+  type SourceMatch,
   type ThreadPreviewState,
 } from '@brigade/contracts'
 import {
   AppWindow,
   Check,
   CircleAlert,
+  CodeXml,
   Copy,
   ExternalLink,
   GitCommitHorizontal,
@@ -177,6 +179,7 @@ function LivePreviewPanel({
   onAsk,
   onPick,
   picked = 0,
+  onOpenCode,
   expectedCommit,
 }: {
   threadId: string
@@ -201,6 +204,8 @@ function LivePreviewPanel({
   onPick?: PickHandlers
   /** How many picked elements wait in the composer. */
   picked?: number
+  /** Open a file of the teammate's working folder, at a line: an element's code. Without it, none opens. */
+  onOpenCode?: (file: { path: string; teammateId?: string }) => void
   /** The commit it should run (a pull request's head): when it runs another, the panel says so. */
   expectedCommit?: string
 }) {
@@ -214,7 +219,13 @@ function LivePreviewPanel({
   const [lastLine, setLastLine] = useState<string>()
   const running = preview.status === 'running'
   const phase = previewPhase(preview)
-  const select = usePreviewSelect(view?.url, preview.previewId, onPick)
+  const code = useOpenCode(threadId, preview, onOpenCode)
+  const select = usePreviewSelect(
+    view?.url,
+    preview.previewId,
+    onPick,
+    onOpenCode && preview.teammateId ? code.find : undefined,
+  )
 
   // The address, once per run of the preview.
   useEffect(() => {
@@ -321,22 +332,47 @@ function LivePreviewPanel({
         </div>
         {view && (
           <>
-            {select.available && (
+            {select.available && onPick && (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-pressed={select.on}
-                aria-label={select.on ? 'Stop selecting' : 'Select an element'}
+                aria-pressed={select.on === 'mention'}
+                aria-label={select.on === 'mention' ? 'Stop selecting' : 'Select an element'}
                 title={
-                  select.on
+                  select.on === 'mention'
                     ? 'Stop selecting (Esc)'
                     : 'Select an element in the page to mention it in your message'
                 }
-                className={cn(select.on && 'bg-primary/12 text-primary hover:text-primary')}
-                onClick={() => select.set(!select.on)}
+                className={cn(
+                  select.on === 'mention' && 'bg-primary/12 text-primary hover:text-primary',
+                )}
+                onClick={() => select.set(select.on === 'mention' ? false : 'mention')}
               >
                 <SquareMousePointer aria-hidden />
+              </Button>
+            )}
+            {select.available && onOpenCode && preview.teammateId && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-pressed={select.on === 'code'}
+                aria-label={select.on === 'code' ? 'Stop selecting' : 'Open the code of an element'}
+                title={
+                  select.on === 'code'
+                    ? 'Stop selecting (Esc)'
+                    : 'Click an element in the page to open its code and edit it'
+                }
+                className={cn(
+                  select.on === 'code' && 'bg-primary/12 text-primary hover:text-primary',
+                )}
+                onClick={() => {
+                  code.clear()
+                  select.set(select.on === 'code' ? false : 'code')
+                }}
+              >
+                <CodeXml aria-hidden />
               </Button>
             )}
             <Button
@@ -449,11 +485,19 @@ function LivePreviewPanel({
                 )}
               </Notice>
             )}
-            {select.on && (
+            {select.on === 'mention' && (
               <Notice icon={<SquareMousePointer aria-hidden className="size-4 shrink-0" />}>
                 Click an element to add it to your message
                 {picked > 0 && ` · ${picked} added`}. Esc to stop.
               </Notice>
+            )}
+            {select.on === 'code' && (
+              <Notice icon={<CodeXml aria-hidden className="size-4 shrink-0" />}>
+                Click an element to open its code. Esc to stop.
+              </Notice>
+            )}
+            {code.state && (
+              <CodeNotice state={code.state} onOpen={code.open} onClose={code.clear} />
             )}
             {view.local && (
               <p className="border-b px-3 py-1.5 text-xs text-muted-foreground">
@@ -612,16 +656,20 @@ export type PickHandlers = {
   picture: (id: string, image?: Blob) => void
 }
 
+/** What a click in select mode does: mention the element, or open its code. */
+type SelectMode = 'mention' | 'code'
+
 function usePreviewSelect(
   url: string | undefined,
   previewId: string,
   onPick: PickHandlers | undefined,
+  onCode: ((element: PreviewElement) => void) | undefined,
 ) {
   const frame = useRef<HTMLIFrameElement>(null)
   const [available, setAvailable] = useState(false)
-  const [on, setOn] = useState(false)
-  const latest = useRef({ on, onPick })
-  latest.current = { on, onPick }
+  const [on, setOn] = useState<SelectMode | false>(false)
+  const latest = useRef({ on, onPick, onCode })
+  latest.current = { on, onPick, onCode }
   const origin = url ? new URL(url).origin : undefined
 
   useEffect(() => {
@@ -639,7 +687,7 @@ function usePreviewSelect(
     [origin],
   )
 
-  const picking = !!onPick
+  const picking = !!onPick || !!onCode
   useEffect(() => {
     if (!origin || !picking) return
     const listen = (e: MessageEvent) => {
@@ -664,9 +712,15 @@ function usePreviewSelect(
       else if (typeof data.id !== 'string') return
       else if (data.type === 'selected') {
         const element = PreviewElement.safeParse(data.element)
-        if (element.success) latest.current.onPick?.element(data.id, element.data)
-      } else if (data.type === 'captured')
-        latest.current.onPick?.picture(
+        if (!element.success) return
+        if (latest.current.on === 'code') {
+          // One element's code at a time: its file opens over the preview.
+          setOn(false)
+          send(false)
+          latest.current.onCode?.(element.data)
+        } else latest.current.onPick?.element(data.id, element.data)
+      } else if (data.type === 'captured' && latest.current.onPick)
+        latest.current.onPick.picture(
           data.id,
           data.image instanceof Blob && data.image.type === 'image/png' ? data.image : undefined,
         )
@@ -676,23 +730,171 @@ function usePreviewSelect(
   }, [origin, picking, send])
 
   const set = useCallback(
-    (value: boolean) => {
+    (value: SelectMode | false) => {
       setOn(value)
-      send(value)
+      send(!!value)
     },
     [send],
   )
-  return { frame, available: available && picking, on: on && picking, set }
+  return {
+    frame,
+    /** The page can pick: to mention (onPick) or to open code (onCode). */
+    available: available && picking,
+    on: picking ? on : false,
+    set,
+  }
+}
+
+type CodeState =
+  | { kind: 'searching' }
+  | { kind: 'none'; text?: string }
+  | { kind: 'many'; matches: SourceMatch[] }
+  | { kind: 'error'; message: string }
+
+/**
+ * The code of an element picked in the preview: its text searched in the preview's
+ * folder, by the runner. One file holding it opens at once; several, the person picks.
+ */
+function useOpenCode(
+  threadId: string,
+  preview: ThreadPreview,
+  onOpenCode: ((file: { path: string; teammateId?: string }) => void) | undefined,
+) {
+  const [state, setState] = useState<CodeState>()
+  const latest = useRef({ preview, onOpenCode })
+  latest.current = { preview, onOpenCode }
+  const asked = useRef(0)
+
+  const open = useCallback((match: SourceMatch) => {
+    setState(undefined)
+    latest.current.onOpenCode?.({
+      path: `${match.path}:${match.line}`,
+      teammateId: latest.current.preview.teammateId,
+    })
+  }, [])
+
+  const find = useCallback(
+    (element: PreviewElement) => {
+      const { preview } = latest.current
+      const text = element.text?.replace(/…$/, '').trim()
+      if (!text || !preview.teammateId) return setState({ kind: 'none' })
+      const ask = ++asked.current
+      setState({ kind: 'searching' })
+      api<{ matches: SourceMatch[] }>(`/threads/${threadId}/source`, {
+        body: {
+          teammateId: preview.teammateId,
+          cwd: preview.cwd,
+          text: text.slice(0, 500),
+          ...(element.components?.length ? { components: element.components } : {}),
+        },
+      }).then(
+        ({ matches }) => {
+          if (ask !== asked.current) return
+          const files = new Set(matches.map((m) => m.path))
+          if (files.size === 1) open(matches[0]!)
+          else if (matches.length) setState({ kind: 'many', matches })
+          else setState({ kind: 'none', text })
+        },
+        (e: Error) => ask === asked.current && setState({ kind: 'error', message: e.message }),
+      )
+    },
+    [threadId, open],
+  )
+
+  const clear = useCallback(() => {
+    asked.current++
+    setState(undefined)
+  }, [])
+
+  return { state, find, open, clear }
+}
+
+/** What looking for an element's code found, above the frame. */
+function CodeNotice({
+  state,
+  onOpen,
+  onClose,
+}: {
+  state: CodeState
+  onOpen: (match: SourceMatch) => void
+  onClose: () => void
+}) {
+  const dismiss = (
+    <button
+      type="button"
+      aria-label="Dismiss"
+      className="shrink-0 text-muted-foreground hover:text-foreground"
+      onClick={onClose}
+    >
+      <X aria-hidden className="size-3.5" />
+    </button>
+  )
+  if (state.kind === 'searching')
+    return (
+      <Notice icon={<LoaderCircle aria-hidden className="size-4 shrink-0 animate-spin" />}>
+        Looking for its code…
+      </Notice>
+    )
+  if (state.kind === 'error')
+    return (
+      <Notice
+        tone="destructive"
+        icon={<CircleAlert aria-hidden className="size-4 shrink-0" />}
+        end={dismiss}
+      >
+        {state.message}
+      </Notice>
+    )
+  if (state.kind === 'none')
+    return (
+      <Notice icon={<CodeXml aria-hidden className="size-4 shrink-0" />} end={dismiss}>
+        {state.text
+          ? 'Its text is not written as such in the code: it may come from data or be put together.'
+          : 'It has no text to look for in the code. Pick an element with text.'}
+      </Notice>
+    )
+  return (
+    <div role="status" className="border-b px-3 py-2 text-xs">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <CodeXml aria-hidden className="size-4 shrink-0" />
+        <span className="min-w-0 flex-1">
+          Its text is in {new Set(state.matches.map((m) => m.path)).size} files. Which one?
+        </span>
+        {dismiss}
+      </div>
+      <ul className="mt-1.5 flex max-h-40 flex-col overflow-y-auto">
+        {state.matches.map((m) => (
+          <li key={`${m.path}:${m.line}`}>
+            <button
+              type="button"
+              className="flex w-full min-w-0 items-baseline gap-2 rounded px-1.5 py-1 text-left hover:bg-muted"
+              onClick={() => onOpen(m)}
+            >
+              <span className="shrink-0 font-mono text-foreground">
+                {m.path.split('/').pop()}:{m.line}
+              </span>
+              <span className="truncate font-mono text-muted-foreground" title={m.path}>
+                {m.preview}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 /** A line above the frame: what the check found, or that it runs another commit. */
 function Notice({
   icon,
   tone,
+  end,
   children,
 }: {
   icon: React.ReactNode
   tone?: 'destructive'
+  /** After the text, at the end of the line: a button to dismiss it. */
+  end?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
@@ -707,6 +909,7 @@ function Notice({
     >
       {icon}
       <span className="min-w-0 flex-1">{children}</span>
+      {end}
     </div>
   )
 }

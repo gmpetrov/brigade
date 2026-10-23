@@ -2,15 +2,20 @@
 // A file the thread mentions, beside it: from the library, the thread's
 // attachments, or the teammate's working folder on its computer. Takes the
 // desktop panel's place. Text shows as text, images and PDFs as themselves.
+// A text file of the working folder opens in a code editor for whoever may write
+// to the thread (Markdown once they ask to edit it), and saves back to the computer.
 import {
   designFolderOf,
   designOptionsOf,
   type DesignWhere,
+  type SavedThreadFile,
+  type SaveThreadFile,
   type ThreadFile,
 } from '@brigade/contracts'
-import { Check, Copy, Download, FileText, Library, Palette, X } from 'lucide-react'
+import { Check, Copy, Download, FileText, Library, Palette, Pencil, X } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { DesignPanel } from '@/components/design-view'
 import { FileLinksProvider, type OpenFile } from '@/components/file-links'
 import { FilePreview, PdfView } from '@/components/file-preview'
@@ -19,10 +24,16 @@ import { Badge } from '@/components/ui/badge'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
-import { api, attachmentUrl, threadImageUrl } from '@/lib/api'
+import { api, ApiError, attachmentUrl, threadImageUrl } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
+
+// Its own chunk: only a file opened to edit loads it.
+const CodeEditor = dynamic(() => import('@/components/code-editor'), {
+  ssr: false,
+  loading: () => <p className="p-4 text-sm text-muted-foreground">Opening the editor…</p>,
+})
 
 function size(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -36,6 +47,8 @@ type FilePanelProps = {
   teammateId?: string
   /** Names whose working folder a file came from. */
   teammateName: (id: string | undefined) => string
+  /** The person may write to the thread: a text file of a working folder opens to edit. */
+  mayEdit?: boolean
   onOpen: OpenFile
   onClose: () => void
 }
@@ -129,21 +142,33 @@ function ThreadFilePanel({
   path,
   teammateId,
   teammateName,
+  mayEdit = false,
   onOpen,
-  onClose,
+  onClose: close,
 }: FilePanelProps) {
   const [file, setFile] = useState<ThreadFile>()
   /** A file of a library design: the design shows instead. */
   const [design, setDesign] = useState<string>()
   const [error, setError] = useState<string>()
   const [copied, setCopied] = useState(false)
+  const [loads, setLoads] = useState(0)
   const documents = useDocumentPanel()
+  const edit = useEdit(threadId, file)
+  // Unsaved edits are not dropped without asking.
+  const onClose = useCallback(() => {
+    if (edit.dirty && !window.confirm(`Discard your unsaved changes to ${path.split('/').pop()}?`))
+      return
+    close()
+  }, [edit.dirty, path, close])
 
   useEffect(() => {
     let live = true
     setFile(undefined)
     setError(undefined)
-    const query = new URLSearchParams({ path, ...(teammateId ? { teammateId } : {}) })
+    const query = new URLSearchParams({
+      path: path.replace(/:\d+(:\d+)?$/, ''),
+      ...(teammateId ? { teammateId } : {}),
+    })
     api<ThreadFile>(`/threads/${threadId}/file?${query}`).then(
       (f) => {
         if (!live) return
@@ -163,7 +188,7 @@ function ThreadFilePanel({
       live = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per file, not when callbacks change
-  }, [threadId, path, teammateId])
+  }, [threadId, path, teammateId, loads])
 
   if (design) return <DesignPanel folder={design} threadId={threadId} onClose={onClose} />
 
@@ -180,6 +205,11 @@ function ThreadFilePanel({
   const own = file && (content ?? threadImageUrl(threadId, file.path, file.teammateId))
   const image = file && IMAGE.test(file.contentType) ? own : undefined
   const pdf = file?.contentType === 'application/pdf' ? own : undefined
+  // `src/app.tsx:42` opens at line 42.
+  const line = Number(/:(\d+)(?::\d+)?$/.exec(path)?.[1]) || undefined
+  const editable = mayEdit && !!file?.hash && file.text !== undefined
+  const markdown = file?.contentType === 'text/markdown'
+  const editing = editable && (!markdown || edit.open)
 
   return (
     <SidePanel aria-label={`File ${shown}`} onClose={onClose} raiseKey={shown}>
@@ -217,6 +247,30 @@ function ThreadFilePanel({
         >
           {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
         </Button>
+        {editable && !editing && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Edit"
+            title="Edit the file"
+            onClick={() => edit.setOpen(true)}
+          >
+            <Pencil aria-hidden />
+          </Button>
+        )}
+        {editing && (
+          <Button
+            type="button"
+            size="sm"
+            variant={edit.dirty ? 'default' : 'ghost'}
+            disabled={!edit.dirty || edit.saving}
+            title={`Save it on the computer (${typeof navigator !== 'undefined' && /Mac|iP/.test(navigator.platform) ? '⌘' : 'Ctrl+'}S)`}
+            onClick={() => void edit.save()}
+          >
+            {edit.saving ? 'Saving…' : edit.dirty ? 'Save' : edit.saved ? 'Saved' : 'Save'}
+          </Button>
+        )}
         {content && (
           <Button asChild variant="ghost" size="icon-sm" title="Download">
             <a href={`${content}?download`} aria-label="Download">
@@ -245,7 +299,41 @@ function ThreadFilePanel({
           <X aria-hidden />
         </Button>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">
+      {editing && edit.conflict && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b bg-destructive/8 px-3 py-2 text-xs text-destructive-text"
+        >
+          <span className="min-w-0 flex-1">
+            The file changed on the computer since you opened it, maybe by{' '}
+            {teammateName(file?.teammateId)}.
+          </span>
+          <button
+            type="button"
+            className="font-medium underline-offset-2 hover:underline"
+            onClick={() => {
+              if (!window.confirm('Drop your changes and open the file as it is now?')) return
+              edit.reset()
+              setLoads((n) => n + 1)
+            }}
+          >
+            Reload theirs
+          </button>
+          <button
+            type="button"
+            className="font-medium underline-offset-2 hover:underline"
+            onClick={() => void edit.save(true)}
+          >
+            Keep mine
+          </button>
+        </div>
+      )}
+      {editing && edit.error && (
+        <p role="alert" className="border-b px-3 py-2 text-xs text-destructive-text">
+          {edit.error}
+        </p>
+      )}
+      <div className={editing ? 'min-h-0 flex-1 overflow-hidden' : 'min-h-0 flex-1 overflow-auto'}>
         {error ? (
           <p className="p-4 text-sm text-destructive-text">{error}</p>
         ) : !file ? (
@@ -282,6 +370,15 @@ function ThreadFilePanel({
               )}
             </p>
           )
+        ) : editing ? (
+          <CodeEditor
+            key={`${loads}:${file.hash}`}
+            path={file.path}
+            initial={file.text}
+            line={line}
+            onChange={edit.change}
+            onSave={() => void edit.save()}
+          />
         ) : file.contentType === 'text/markdown' ? (
           // Its own relative links open next to it.
           <FileLinksProvider value={{ open: onOpen, base: folder, teammateId: file.teammateId }}>
@@ -300,4 +397,81 @@ function ThreadFilePanel({
       </div>
     </SidePanel>
   )
+}
+
+/**
+ * Editing a text file of a teammate's working folder: what was typed, saved
+ * against the hash it was opened at, so a change made since on the computer
+ * (by the teammate, most likely) is not written over without asking.
+ */
+function useEdit(threadId: string, file: ThreadFile | undefined) {
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState<string>()
+  const [base, setBase] = useState<string>()
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [conflict, setConflict] = useState(false)
+  const [error, setError] = useState<string>()
+
+  // A file opened (again): its hash is what a save expects to find.
+  useEffect(() => {
+    setBase(file?.hash)
+    setDraft(undefined)
+    setConflict(false)
+    setError(undefined)
+    setSaved(false)
+  }, [file])
+
+  const dirty = draft !== undefined
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
+
+  const save = async (force = false) => {
+    if (!file?.teammateId || draft === undefined || saving) return
+    setSaving(true)
+    setError(undefined)
+    const text = draft
+    try {
+      const { hash } = await api<SavedThreadFile>(`/threads/${threadId}/file`, {
+        method: 'PUT',
+        body: {
+          path: file.path,
+          teammateId: file.teammateId,
+          text,
+          ...(force ? {} : { base }),
+        } satisfies SaveThreadFile,
+      })
+      setBase(hash)
+      setConflict(false)
+      setSaved(true)
+      // Typed on while it saved: still to save.
+      setDraft((now) => (now === text ? undefined : now))
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409 && /changed since/.test(e.message))
+        setConflict(true)
+      else setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return {
+    open,
+    setOpen,
+    dirty,
+    saving,
+    saved: saved && !dirty,
+    conflict,
+    error,
+    change: (text: string) => {
+      setDraft(text)
+      setSaved(false)
+    },
+    save,
+    reset: () => setDraft(undefined),
+  }
 }
