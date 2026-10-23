@@ -1075,7 +1075,7 @@ export function ThreadConversation({
         {drop.dragging && <DropOverlay />}
         {top}
         {previewButton}
-        <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
+        <div ref={scroller} className="scroll-fade scroll-fade-y min-h-0 flex-1 overflow-y-auto">
           <div className={cn(column, top ? 'pt-16' : expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
             {t.parent && (
               <ParentLink

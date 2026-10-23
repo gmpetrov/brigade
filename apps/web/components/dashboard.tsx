@@ -449,7 +449,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 </SidebarMenu>
               </SidebarHeader>
 
-              <SidebarContent>
+              <SidebarContent className="scroll-fade-y">
                 {/* Home, first: what waits and what runs. It scrolls with the threads below. */}
                 <SidebarGroup className="py-0">
                   <SidebarMenu>
