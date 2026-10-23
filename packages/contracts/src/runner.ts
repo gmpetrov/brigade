@@ -4,7 +4,15 @@ import { ThreadAttachmentRef } from './attachments.js'
 import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
 import { QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
-import { LibraryAccess, LibraryPath, MemoryEdit, MemoryFileRef, NO_MEMORY_EDIT } from './library.js'
+import {
+  FILE_VIEW_MAX,
+  LibraryAccess,
+  LibraryPath,
+  MemoryEdit,
+  MemoryFileRef,
+  NO_MEMORY_EDIT,
+  SourceMatch,
+} from './library.js'
 import { MemoryLayout } from './memory.js'
 import {
   PROJECT_LOGO_CANDIDATES_MAX,
@@ -267,6 +275,25 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     /** An image's bytes, base64, when asked for one. */
     data: z.string().optional(),
     truncated: z.boolean().optional(),
+    /** A whole text file's SHA-256 (CODE_EDIT_PROTOCOL), for a save to name. */
+    hash: z.string().optional(),
+  }),
+  /** A file written for thread.file.write, or why not: `conflict` when it changed since `base`. */
+  z.object({
+    type: z.literal('thread.file.written'),
+    requestId: z.string(),
+    ok: z.boolean(),
+    error: z.string().optional(),
+    conflict: z.boolean().optional(),
+    hash: z.string().optional(),
+  }),
+  /** Where thread.source.find found the text, best first. */
+  z.object({
+    type: z.literal('thread.source.result'),
+    requestId: z.string(),
+    ok: z.boolean(),
+    error: z.string().optional(),
+    matches: z.array(SourceMatch).max(20).optional(),
   }),
   /** A thread handed over after thread.release: its folders archived and gone from here, or why not. */
   z.object({
@@ -583,6 +610,33 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     teammateIds: z.array(z.string()).min(1).max(10),
     path: z.string().min(1).max(1000),
     image: z.boolean().optional(),
+  }),
+  /**
+   * A person saves a text file of a teammate's working folder for the thread
+   * (CODE_EDIT_PROTOCOL): relative to it, or an absolute path inside it, never the
+   * library mirror. With `base`, only while the file's SHA-256 is still that.
+   */
+  z.object({
+    type: z.literal('thread.file.write'),
+    requestId: z.string(),
+    sessionId: z.string(),
+    teammateId: z.string(),
+    path: z.string().min(1).max(1000),
+    text: z.string().max(FILE_VIEW_MAX),
+    base: z.string().optional(),
+  }),
+  /**
+   * Find where an element of the thread's preview is written (CODE_EDIT_PROTOCOL):
+   * its text, searched in the preview's folder of the teammate's working folder.
+   */
+  z.object({
+    type: z.literal('thread.source.find'),
+    requestId: z.string(),
+    sessionId: z.string(),
+    teammateId: z.string(),
+    cwd: z.string().max(500),
+    text: z.string().min(1).max(500),
+    components: z.array(z.string().max(100)).max(8).optional(),
   }),
   /**
    * A person restarts or stops a thread's preview; touch: someone has it open,
