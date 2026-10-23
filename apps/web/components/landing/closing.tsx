@@ -403,7 +403,7 @@ export function FinalCall() {
       <div className={c('wrap')}>
         <h2 id="final-title">Meet your first teammate.</h2>
         <p className={c('lead')}>
-          They do the work. You make the calls.
+          It does the work. You make the calls.
         </p>
         <Link className={c('btn pri lg')} href={SIGN_UP}>
           Sign up
