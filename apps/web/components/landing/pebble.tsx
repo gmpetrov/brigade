@@ -118,6 +118,7 @@ export function Pebble() {
     const look = () => {
       const now = performance.now()
       if (visible && !asleep && now - lastPointer > POINTER_HOLD) {
+        delete el.dataset.follow
         turn(rad(random(-38, 38)), rad(random(-22, 16)))
         if (Math.random() < 0.22) blink(Math.random() < 0.3)
       }
@@ -162,10 +163,20 @@ export function Pebble() {
       later(() => setEyes(0, 1), 900)
     }
 
+    // Following the pointer: once a frame, with short transitions (data-follow), since a
+    // long eased one restarted at each move lags behind it.
+    let frame = 0
+    let pointer = { x: 0, y: 0 }
     const onPointer = (e: PointerEvent) => {
       wake()
       lastPointer = performance.now()
-      if (visible) lookAt(e.clientX, e.clientY)
+      pointer = { x: e.clientX, y: e.clientY }
+      if (!visible || frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        el.dataset.follow = ''
+        lookAt(pointer.x, pointer.y)
+      })
     }
     const button = el.closest('section')?.querySelector('a')
     const onEnter = () => {
@@ -199,6 +210,7 @@ export function Pebble() {
       button?.removeEventListener('pointerenter', onEnter)
       button?.removeEventListener('pointerleave', onLeave)
       timers.forEach(clearTimeout)
+      cancelAnimationFrame(frame)
     }
   }, [])
 

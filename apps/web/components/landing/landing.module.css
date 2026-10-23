@@ -2163,6 +2163,13 @@ svg.i {
   height: 100%;
   overflow: visible;
 }
+/* While it follows the pointer, it keeps up with it. */
+[data-follow] .pb-eye {
+  transition: transform 0.09s ease-out;
+}
+[data-follow] .pb-light {
+  transition: transform 0.2s ease-out;
+}
 /* Its start when it wakes up. */
 .pb-hop {
   transform: translateY(var(--hop, 0));
