@@ -2163,13 +2163,6 @@ svg.i {
   height: 100%;
   overflow: visible;
 }
-/* While it follows the pointer, it keeps up with it. */
-[data-follow] .pb-eye {
-  transition: transform 0.09s ease-out;
-}
-[data-follow] .pb-light {
-  transition: transform 0.2s ease-out;
-}
 /* Its start when it wakes up. */
 .pb-hop {
   transform: translateY(var(--hop, 0));
@@ -2253,88 +2246,6 @@ svg.i {
 .pb-light-out {
   stop-color: var(--background);
   stop-opacity: 0;
-}
-/* The team: three pebbles peeking in from the edge (team.tsx). */
-.final .team {
-  width: 640px;
-}
-.tm {
-  position: absolute;
-}
-.tm-face {
-  position: absolute;
-  inset: 0;
-  left: var(--pebble-eye-x);
-  transform: translate(var(--lx, 0), var(--ly, 0));
-  transition: transform 0.26s cubic-bezier(0.3, 1.4, 0.6, 1);
-}
-[data-follow] .tm-face {
-  transition: transform 0.1s ease-out;
-}
-/* Pill eyes that blink, or squash into the avatars' happy arcs when it smiles. */
-.tm-pill,
-.tm-smile {
-  position: absolute;
-  transition:
-    opacity 0.18s ease,
-    transform 0.2s cubic-bezier(0.3, 1.4, 0.6, 1);
-}
-.tm-pill {
-  inset: 0;
-  border-radius: 999px;
-  background: var(--pebble-eye);
-}
-.tm-smile {
-  left: -35%;
-  top: 30%;
-  width: 170%;
-  height: 55%;
-  border: max(1px, 2.6cqw) solid var(--pebble-eye);
-  border-bottom: 0;
-  border-radius: 999px 999px 0 0;
-  opacity: 0;
-  transform: translateY(30%) scaleY(0.4);
-}
-.tm[data-blink] .tm-pill {
-  transform: scaleY(0.1);
-}
-.tm[data-smile] .tm-pill {
-  opacity: 0;
-  transform: scaleY(0.15);
-}
-.tm[data-smile] .tm-smile {
-  opacity: 1;
-  transform: none;
-}
-/* The task one passes to another. */
-.tm-card {
-  position: absolute;
-  left: 0;
-  top: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: var(--background);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
-  font-size: 14px;
-  font-weight: 600;
-  transform: translate(calc(var(--cx, 0) - 50%), calc(var(--cy, 0) - 50%)) scale(0.6);
-  opacity: 0;
-  transition:
-    transform 0.95s cubic-bezier(0.5, 0, 0.2, 1),
-    opacity 0.25s ease;
-  z-index: 3;
-}
-.tm-card svg {
-  color: var(--success);
-}
-.tm-card[data-show] {
-  opacity: 1;
-  transform: translate(calc(var(--cx, 0) - 50%), calc(var(--cy, 0) - 50%)) scale(1);
 }
 .final .slab {
   left: 60px;
@@ -5063,13 +4974,6 @@ svg.i {
     right: -80px;
     width: 340px;
     height: 340px;
-  }
-  .final .team {
-    width: 640px;
-    height: 560px;
-    transform: scale(0.44);
-    transform-origin: top right;
-    top: -30px;
   }
   .final .slab {
     left: 20px;

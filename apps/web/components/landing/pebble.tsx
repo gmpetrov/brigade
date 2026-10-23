@@ -53,17 +53,15 @@ const pickMood = () => {
 const SHAPE = 'M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z'
 
 /**
- * Brigade's pebble, large, in the page's ink, reacting to the visitor. Its eyes follow the
- * pointer, turning its head in 3D (eyes on a sphere, a light sliding the other way); it
- * smiles while the pointer is on Sign up; it dozes off when nobody moves and wakes with a
- * start. Left alone it looks around at random, changes mood and blinks, with no loop. Each
- * move only sets CSS variables that transitions ease. It keeps still under reduced motion.
+ * Brigade's pebble, large, in the page's ink. It looks around at random, turning its head in
+ * 3D (eyes on a sphere, a light sliding the other way), changes mood and blinks, with no
+ * loop. It smiles while the pointer is on Sign up, dozes off when the visitor does nothing
+ * and wakes with a start. Each move only sets CSS variables that transitions ease. It keeps
+ * still under reduced motion.
  */
 
-// How long without a move of the visitor before it dozes off, and how long its eyes keep
-// following the pointer after it stopped.
+// How long without a move of the visitor before it dozes off.
 const SLEEP_AFTER = 9000
-const POINTER_HOLD = 2500
 
 export function Pebble() {
   const ref = useRef<HTMLDivElement>(null)
@@ -74,7 +72,6 @@ export function Pebble() {
     let visible = false
     let asleep = false
     let hovering = false
-    let lastPointer = 0
     let lastActivity = performance.now()
     const timers: number[] = []
     const later = (fn: () => void, ms: number) => timers.push(window.setTimeout(fn, ms))
@@ -97,14 +94,6 @@ export function Pebble() {
       set('--hx', `${-R * Math.sin(yaw) * 0.5}px`)
       set('--hy', `${-R * Math.sin(pitch) * 0.5}px`)
     }
-    // Looks at a point of the page, as far as a head turns.
-    const lookAt = (x: number, y: number) => {
-      const box = el.getBoundingClientRect()
-      const dx = x - (box.left + box.width * 0.5)
-      const dy = y - (box.top + box.height * 0.42)
-      turn(rad(Math.max(-40, Math.min(40, dx / 14))), rad(Math.max(-24, Math.min(18, dy / 14))))
-    }
-
     const blink = (twice: boolean) => {
       set('--esy', '0.08')
       later(() => set('--esy', '1'), 130)
@@ -116,9 +105,7 @@ export function Pebble() {
 
     // On its own: looks somewhere at random, holds it for a random while.
     const look = () => {
-      const now = performance.now()
-      if (visible && !asleep && now - lastPointer > POINTER_HOLD) {
-        delete el.dataset.follow
+      if (visible && !asleep) {
         turn(rad(random(-38, 38)), rad(random(-22, 16)))
         if (Math.random() < 0.22) blink(Math.random() < 0.3)
       }
@@ -163,21 +150,6 @@ export function Pebble() {
       later(() => setEyes(0, 1), 900)
     }
 
-    // Following the pointer: once a frame, with short transitions (data-follow), since a
-    // long eased one restarted at each move lags behind it.
-    let frame = 0
-    let pointer = { x: 0, y: 0 }
-    const onPointer = (e: PointerEvent) => {
-      wake()
-      lastPointer = performance.now()
-      pointer = { x: e.clientX, y: e.clientY }
-      if (!visible || frame) return
-      frame = requestAnimationFrame(() => {
-        frame = 0
-        el.dataset.follow = ''
-        lookAt(pointer.x, pointer.y)
-      })
-    }
     const button = el.closest('section')?.querySelector('a')
     const onEnter = () => {
       hovering = true
@@ -192,7 +164,7 @@ export function Pebble() {
       visible = entry?.isIntersecting ?? false
     })
     observer.observe(el)
-    window.addEventListener('pointermove', onPointer, { passive: true })
+    window.addEventListener('pointermove', wake, { passive: true })
     window.addEventListener('scroll', wake, { passive: true })
     window.addEventListener('keydown', wake)
     button?.addEventListener('pointerenter', onEnter)
@@ -204,13 +176,12 @@ export function Pebble() {
     later(doze, 1000)
     return () => {
       observer.disconnect()
-      window.removeEventListener('pointermove', onPointer)
+      window.removeEventListener('pointermove', wake)
       window.removeEventListener('scroll', wake)
       window.removeEventListener('keydown', wake)
       button?.removeEventListener('pointerenter', onEnter)
       button?.removeEventListener('pointerleave', onLeave)
       timers.forEach(clearTimeout)
-      cancelAnimationFrame(frame)
     }
   }, [])
 
