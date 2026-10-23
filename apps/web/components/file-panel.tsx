@@ -13,7 +13,7 @@ import {
   type ThreadFile,
 } from '@brigade/contracts'
 import {
-  AppWindow,
+  Eye,
   Check,
   Copy,
   Download,
@@ -293,7 +293,7 @@ function ThreadFilePanel({
             title="Open it in the code beside the preview, to see your edits as you save"
             onClick={() => previewCopy.open(file.path)}
           >
-            <AppWindow aria-hidden />
+            <Eye aria-hidden />
           </Button>
         )}
         {content && (

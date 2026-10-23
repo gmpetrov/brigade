@@ -1,11 +1,11 @@
 'use client'
-import { AppWindow, Monitor, SquareTerminal, X } from 'lucide-react'
+import { Eye, Monitor, SquareTerminal, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SIGN_UP_URL } from '@/lib/demo/flag'
 
 const WHAT = {
   preview: {
-    Icon: AppWindow,
+    Icon: Eye,
     title: 'The app preview runs on a real computer',
     text: 'In your workspace, a teammate starts the app it is building and you try it right here, then ask for changes in the thread.',
   },
