@@ -2163,6 +2163,17 @@ svg.i {
   height: 100%;
   overflow: visible;
 }
+/* Its start when it wakes up. */
+.pb-hop {
+  transform: translateY(var(--hop, 0));
+  transition: transform 0.18s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+/* Falling asleep is slow: the eyes close and the head drops over a couple of seconds. */
+[data-asleep] .pb-eye,
+[data-asleep] .pb-open,
+[data-asleep] .pb-smile {
+  transition-duration: 2s;
+}
 .pb-body {
   transform-origin: 50% 50%;
   transform-box: fill-box;
