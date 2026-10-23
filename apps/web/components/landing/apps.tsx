@@ -37,6 +37,16 @@ function Logo({ kind }: { kind: Tile['kind'] }) {
   return kind === 'github' ? <Icon name="github" /> : <ProviderLogo kind={kind} />
 }
 
+/** An App mentioned in a message, as the composer shows it: its logo and its name. */
+function Mention({ kind, name }: { kind: ProviderKind; name: string }) {
+  return (
+    <span className={c('ap-men')}>
+      <ProviderLogo kind={kind} />
+      {name}
+    </span>
+  )
+}
+
 /** Apps: the tools teammates work in, on two rings around one request that uses four of them. */
 export function Apps() {
   return (
@@ -76,7 +86,13 @@ export function Apps() {
           <div className={c('ap-chat')}>
             <div className={c('ap-msg ap-me ap0')}>
               <span className={c('av xs')}>A</span>
-              Prep me for tomorrow&apos;s call with Northwind.
+              <span>
+                Prep me for tomorrow&apos;s call with Northwind. Check{' '}
+                <Mention kind="google_calendar" name="Google Calendar" /> and{' '}
+                <Mention kind="gmail" name="Gmail" />, their plan in{' '}
+                <Mention kind="stripe" name="Stripe" /> and their usage in{' '}
+                <Mention kind="mixpanel" name="Mixpanel" />.
+              </span>
             </div>
             <div className={c('ap-steps')}>
               {steps.map((s) => (

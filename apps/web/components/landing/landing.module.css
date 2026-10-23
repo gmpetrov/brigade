@@ -689,6 +689,24 @@ svg.i {
   border-radius: 16px;
   background: var(--secondary);
   font-weight: 500;
+  line-height: 1.9;
+}
+/* An App mention in Ada's message, like the composer's chip. */
+.ap-men {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border-radius: 7px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.ap-men svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
 }
 .ap-msg.ap-me .av {
   background: var(--foreground);
