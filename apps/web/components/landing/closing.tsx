@@ -140,7 +140,7 @@ export function Pricing() {
               </li>
             </ul>
             <Link className={c('btn lg')} href={SIGN_UP}>
-              Start free on your Mac
+              Sign up
             </Link>
           </div>
           <div className={c('plan cloud')}>
@@ -423,7 +423,7 @@ export function FinalCall() {
           Start on your Mac today. Move to the cloud when you want them working through the night.
         </p>
         <Link className={c('btn pri lg')} href={SIGN_UP}>
-          Start free on your Mac
+          Sign up
         </Link>
       </div>
     </section>

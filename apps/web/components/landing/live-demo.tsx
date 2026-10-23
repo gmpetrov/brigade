@@ -65,10 +65,6 @@ export function LiveDemo() {
             )}
           </div>
         </div>
-        <p className={c('demo-note')}>
-          This is Acme, a demo workspace on the real Brigade dashboard. Click around: approve,
-          merge, write to a teammate. Nothing here is real.
-        </p>
       </div>
     </section>
   )
