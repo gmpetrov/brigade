@@ -244,6 +244,27 @@ export function PanelExpandButton() {
   )
 }
 
+/** Panels laid over the window, by the key they remember it under: for this tab only. */
+const fullListeners = new Set<() => void>()
+function subscribeFull(listener: () => void) {
+  fullListeners.add(listener)
+  return () => void fullListeners.delete(listener)
+}
+function readFull(key: string) {
+  try {
+    return sessionStorage.getItem(key) === '1'
+  } catch {
+    return false
+  }
+}
+function writeFull(key: string, full: boolean) {
+  try {
+    if (full) sessionStorage.setItem(key, '1')
+    else sessionStorage.removeItem(key)
+  } catch {}
+  for (const listener of fullListeners) listener()
+}
+
 /**
  * A panel beside the page. Put a header row and a scrolling body inside.
  * Expanded, the same panel takes the page's place instead: in the page's flow,
@@ -256,6 +277,7 @@ export function SidePanel({
   expanded = false,
   name,
   raiseKey,
+  rememberFull,
   style,
   ...props
 }: ComponentProps<'aside'> & {
@@ -267,16 +289,34 @@ export function SidePanel({
   name?: string
   /** Changes each time what it shows does: it comes in front again. */
   raiseKey?: unknown
+  /**
+   * Opens laid over the window again when it was so as it closed: remembered under
+   * this key for the browser tab (the preview, per thread). Without it, it opens as a panel.
+   */
+  rememberFull?: string
 }) {
   const panel = useRef<HTMLElement>(null)
   const stack = usePanelStack(!expanded, name, raiseKey)
-  const [full, setFull] = useState(false)
+  const [own, setOwn] = useState(false)
+  const remembered = useSyncExternalStore(
+    subscribeFull,
+    () => (rememberFull ? readFull(rememberFull) : false),
+    () => false,
+  )
+  const full = rememberFull ? remembered : own
+  const setFull = useCallback(
+    (next: boolean) => (rememberFull ? writeFull(rememberFull, next) : setOwn(next)),
+    [rememberFull],
+  )
   const over = full && !expanded
-  const back = useCallback(() => setFull(false), [])
+  const back = useCallback(() => setFull(false), [setFull])
   // Another panel brought in front: it goes back, so it does not hide that one.
+  // Only once it was in front: as it opens, it is not yet.
+  const wasFront = useRef(false)
   useEffect(() => {
-    if (!stack.front) setFull(false)
-  }, [stack.front])
+    if (wasFront.current && !stack.front) setFull(false)
+    wasFront.current = stack.front
+  }, [stack.front, setFull])
   // Laid over the window, Escape brings it back to the panel first.
   useEscapeToClose(panel, stack.front ? (over ? back : onClose) : undefined)
   return (
