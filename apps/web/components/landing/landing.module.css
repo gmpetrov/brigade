@@ -4453,6 +4453,15 @@ svg.i {
     opacity: 1;
   }
 }
+/* Apps: the dots of every path flow toward the thread. */
+.ap-paths path:not(.ap-pulse) {
+  animation: k-flow 1.6s linear infinite;
+}
+@keyframes k-flow {
+  to {
+    stroke-dashoffset: -1.7;
+  }
+}
 /* Apps: a pulse runs down the path of the App in use, toward the thread. */
 @keyframes k-p0 {
   0%,
