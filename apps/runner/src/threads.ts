@@ -13,6 +13,7 @@ import {
   attachmentLines,
   bareToolName,
   commandPrompt,
+  handbackMessage,
   mayChangeQueued,
   memoryFilePath,
   mentionedIds,
@@ -546,15 +547,7 @@ export class Threads {
     const files = await changedFiles(takeover.since).catch(() => [])
     const at = new Date().toISOString()
     if (!note.trim() && files.length === 0) return
-    const text = [
-      'A person took over this thread and has now handed it back to you.',
-      note.trim() && `Their note: ${note.trim()}`,
-      files.length > 0
-        ? `Files changed while they had control:\n${files.map((f) => `- ${f}`).join('\n')}`
-        : 'They changed no files in this directory.',
-    ]
-      .filter(Boolean)
-      .join('\n\n')
+    const text = handbackMessage({ note, files })
     this.options.emit(spec.sessionId, { at, type: 'message.user', text, memberId })
     thread.handoffs = 0
     const upTo = this.note(spec, null, 'A member', text)
