@@ -18,7 +18,6 @@ import {
   type ThreadPreviewState,
 } from '@brigade/contracts'
 import {
-  Eye,
   Check,
   CircleAlert,
   CodeXml,
@@ -132,15 +131,15 @@ export function previewPhase(preview: ThreadPreview): PreviewPhase {
   return previewReady(preview) ? 'ready' : 'running'
 }
 
-export const PHASE: Record<PreviewPhase, { label: string; dot: string }> = {
-  setup: { label: 'Setting up', dot: 'bg-warning animate-pulse' },
-  starting: { label: 'Starting', dot: 'bg-warning animate-pulse' },
-  checking: { label: 'Checking', dot: 'bg-warning animate-pulse' },
-  ready: { label: 'Ready', dot: 'bg-success' },
-  attention: { label: 'Needs a fix', dot: 'bg-destructive' },
-  running: { label: 'Running', dot: 'bg-success' },
-  failed: { label: 'Failed', dot: 'bg-destructive' },
-  stopped: { label: 'Stopped', dot: 'bg-muted-foreground' },
+export const PHASE: Record<PreviewPhase, { label: string; dot: string; text: string }> = {
+  setup: { label: 'Setting up', dot: 'bg-warning animate-pulse', text: 'text-warning' },
+  starting: { label: 'Starting', dot: 'bg-warning animate-pulse', text: 'text-warning' },
+  checking: { label: 'Checking', dot: 'bg-warning animate-pulse', text: 'text-warning' },
+  ready: { label: 'Ready', dot: 'bg-success', text: 'text-success' },
+  attention: { label: 'Needs a fix', dot: 'bg-destructive', text: 'text-destructive-text' },
+  running: { label: 'Running', dot: 'bg-success', text: 'text-success' },
+  failed: { label: 'Failed', dot: 'bg-destructive', text: 'text-destructive-text' },
+  stopped: { label: 'Stopped', dot: 'bg-muted-foreground', text: 'text-muted-foreground' },
 }
 
 /** 12m 05s since it started. */
@@ -323,116 +322,113 @@ function LivePreviewPanel({
 
   return (
     <SidePanel aria-label="Preview" name={PREVIEW_PANEL} onClose={onClose}>
-      <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
-        <Eye aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <strong className="flex min-w-0 items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
-            <span className={cn('size-2 shrink-0 rounded-full', status.dot)} aria-hidden />
-            Preview
-            <span className="truncate font-normal text-muted-foreground">· {status.label}</span>
-          </strong>
+      <div className="flex flex-nowrap items-center gap-1 border-b px-3 py-2.5">
+        {/* One bar for the page: where it stands, its address and commit, and its tools. */}
+        <div className="@container/bar flex h-8 min-w-0 flex-1 items-center gap-0.5 rounded-lg border bg-card pr-0.5 pl-2.5">
           <span
-            className="truncate text-xs text-muted-foreground"
-            title={`${preview.cwd ? `${preview.cwd}$ ` : ''}${preview.command} (port ${preview.port})`}
-          >
-            {preview.repository ?? preview.command}
-            {preview.commit && <span className="font-mono"> · {short(preview.commit)}</span>}
-          </span>
-        </div>
-        {view && (
-          <>
-            {select.available && onPick && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-pressed={select.on === 'mention'}
-                aria-label={select.on === 'mention' ? 'Stop selecting' : 'Select an element'}
-                title={
-                  select.on === 'mention'
-                    ? 'Stop selecting (Esc)'
-                    : 'Select an element in the page to mention it in your message'
-                }
-                className={cn(
-                  select.on === 'mention' && 'bg-primary/12 text-primary hover:text-primary',
-                )}
-                onClick={() => select.set(select.on === 'mention' ? false : 'mention')}
-              >
-                <SquareMousePointer aria-hidden />
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Reload"
+            role="img"
+            aria-label={`Preview: ${status.label}`}
+            title={status.label}
+            className={cn('mr-1 size-2 shrink-0 rounded-full', status.dot)}
+          />
+          {view && (
+            <BarButton
+              label="Reload"
               title="Reload the page"
               onClick={() => setFrame((n) => n + 1)}
             >
               <RotateCw aria-hidden />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={copied ? 'Copied' : 'Copy link'}
-              title={
-                copied ? 'Copied' : 'Copy link: anyone with it can open the preview while it runs'
-              }
-              onClick={() =>
-                void navigator.clipboard.writeText(view.url).then(() => {
-                  setCopied(true)
-                  setTimeout(() => setCopied(false), 1500)
-                })
-              }
-            >
-              {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
-            </Button>
-            <Button asChild variant="ghost" size="icon-sm" title="Open in a new tab">
-              <a
-                href={view.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Open in a new tab"
-              >
-                <ExternalLink aria-hidden />
-              </a>
-            </Button>
-          </>
-        )}
-        {coding && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-pressed={showCode}
-            aria-label={showCode ? 'Hide the code' : 'Show the code'}
-            title={
-              showCode
-                ? 'Hide the code'
-                : 'Show the code beside the preview: what you save shows in it'
-            }
-            className={cn(showCode && 'bg-primary/12 text-primary hover:text-primary')}
-            onClick={() => {
-              if (showCode && select.on === 'code') select.set(false)
-              setCodePanel(threadId, { open: !showCode })
-            }}
+            </BarButton>
+          )}
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate px-1 text-xs',
+              view ? 'font-mono text-muted-foreground' : status.text,
+            )}
+            title={`${preview.cwd ? `${preview.cwd}$ ` : ''}${preview.command} (port ${preview.port})`}
           >
-            <CodeXml aria-hidden />
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-pressed={showLogs}
-          aria-label={showLogs ? 'Hide output' : 'Show output'}
-          title={showLogs ? 'Hide output' : "Show the app's output"}
-          disabled={!live}
-          onClick={() => setShowLogs(!showLogs)}
-        >
-          <ScrollText aria-hidden />
-        </Button>
+            {view ? address : status.label}
+          </span>
+          {(preview.repository || preview.commit) && (
+            <span
+              className="hidden shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.6875rem] whitespace-nowrap text-muted-foreground @[22rem]/bar:inline"
+              title={[preview.repository, preview.commit].filter(Boolean).join(' · ')}
+            >
+              {[preview.repository?.split('/').pop(), preview.commit && short(preview.commit)]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+          )}
+          {view && (
+            <>
+              <BarButton
+                label={copied ? 'Copied' : 'Copy link'}
+                title={
+                  copied ? 'Copied' : 'Copy link: anyone with it can open the preview while it runs'
+                }
+                onClick={() =>
+                  void navigator.clipboard.writeText(view.url).then(() => {
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 1500)
+                  })
+                }
+              >
+                {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+              </BarButton>
+              <Button asChild variant="ghost" size="icon-xs" title="Open in a new tab">
+                <a
+                  href={view.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Open in a new tab"
+                >
+                  <ExternalLink aria-hidden className="size-3.5" />
+                </a>
+              </Button>
+            </>
+          )}
+          <span aria-hidden className="mx-1 h-4 w-px shrink-0 bg-border" />
+          {view && select.available && onPick && (
+            <BarButton
+              label={select.on === 'mention' ? 'Stop selecting' : 'Select an element'}
+              title={
+                select.on === 'mention'
+                  ? 'Stop selecting (Esc)'
+                  : 'Select an element in the page to mention it in your message'
+              }
+              pressed={select.on === 'mention'}
+              onClick={() => select.set(select.on === 'mention' ? false : 'mention')}
+            >
+              <SquareMousePointer aria-hidden />
+            </BarButton>
+          )}
+          {coding && (
+            <BarButton
+              label={showCode ? 'Hide the code' : 'Show the code'}
+              title={
+                showCode
+                  ? 'Hide the code'
+                  : 'Show the code beside the preview: what you save shows in it'
+              }
+              pressed={showCode}
+              onClick={() => {
+                if (showCode && select.on === 'code') select.set(false)
+                setCodePanel(threadId, { open: !showCode })
+              }}
+            >
+              <CodeXml aria-hidden />
+            </BarButton>
+          )}
+          <BarButton
+            label={showLogs ? 'Hide output' : 'Show output'}
+            title={showLogs ? 'Hide output' : "Show the app's output"}
+            pressed={showLogs}
+            disabled={!live}
+            onClick={() => setShowLogs(!showLogs)}
+          >
+            <ScrollText aria-hidden />
+          </BarButton>
+        </div>
         <PanelExpandButton />
         <Button
           type="button"
@@ -692,6 +688,40 @@ export type PickHandlers = {
 
 /** What a click in select mode does: mention the element, or open its code. */
 type SelectMode = 'mention' | 'code'
+
+/** A tool in the preview's bar: a small icon button, tinted while it is on. */
+function BarButton({
+  label,
+  title,
+  pressed,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string
+  title: string
+  /** A toggle: whether it is on. */
+  pressed?: boolean
+  disabled?: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-xs"
+      aria-label={label}
+      aria-pressed={pressed}
+      title={title}
+      disabled={disabled}
+      className={cn('[&_svg]:size-3.5', pressed && 'bg-primary/12 text-primary hover:text-primary')}
+      onClick={onClick}
+    >
+      {children}
+    </Button>
+  )
+}
 
 function usePreviewSelect(
   url: string | undefined,
