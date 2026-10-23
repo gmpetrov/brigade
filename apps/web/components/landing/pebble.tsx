@@ -41,20 +41,6 @@ const MOODS: { weight: number; eyes: [smile: number, open: number][] }[] = [
       [0, 0.45],
     ],
   }, // squinting
-  {
-    weight: 6,
-    eyes: [
-      [1, 1],
-      [0, 1],
-    ],
-  }, // winking
-  {
-    weight: 6,
-    eyes: [
-      [0, 1],
-      [1, 1],
-    ],
-  },
 ]
 const pickMood = () => {
   let n = random(
@@ -117,7 +103,7 @@ export function Pebble() {
           set(`--h${i}`, `${smile}`)
           set(`--o${i}`, `${open}`)
         })
-      // A wink or a squint doesn't last; a mood does, for a while.
+      // A mood lasts a while, never the same length.
       later(mood, random(1800, 6500))
     }
 
