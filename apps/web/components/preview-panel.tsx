@@ -705,40 +705,44 @@ type SelectMode = 'mention' | 'code'
 
 /**
  * The page's path in the bar (`/`, `/app`), not the preview's host, which says
- * nothing to a person. Clicked, it can be edited: Enter opens the path, Esc puts it back.
+ * nothing to a person. Clicked, it can be edited after its fixed leading `/`:
+ * Enter opens the path, Esc puts it back.
  */
 function PathField({ page, onOpen }: { page: string; onOpen: (path: string) => void }) {
   const [draft, setDraft] = useState<string>()
+  const shown = page.replace(/^\/+/, '')
   return (
-    <input
-      type="text"
-      aria-label="Page path"
-      // Esc here puts the path back, and leaves the panel open.
-      data-keyboard
-      title="The page's path: edit it and press Enter to open another"
-      spellCheck={false}
-      autoComplete="off"
-      className="h-6 min-w-0 flex-1 truncate rounded-md bg-transparent px-1 font-mono text-xs text-muted-foreground outline-none hover:text-foreground focus:bg-muted focus:text-foreground"
-      value={draft ?? page}
-      onFocus={(e) => {
-        setDraft(page)
-        e.currentTarget.select()
-      }}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => setDraft(undefined)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          const path = typedPath(draft ?? page)
-          onOpen(path)
-          setDraft(undefined)
-          e.currentTarget.blur()
-        } else if (e.key === 'Escape') {
-          setDraft(undefined)
-          e.currentTarget.blur()
-        }
-      }}
-    />
+    <label className="flex h-6 min-w-0 flex-1 cursor-text items-center rounded-md px-1 font-mono text-xs text-muted-foreground hover:text-foreground focus-within:bg-muted focus-within:text-foreground">
+      <span aria-hidden>/</span>
+      <input
+        type="text"
+        aria-label="Page path"
+        // Esc here puts the path back, and leaves the panel open.
+        data-keyboard
+        title="The page's path: edit it and press Enter to open another"
+        spellCheck={false}
+        autoComplete="off"
+        className="h-full min-w-0 flex-1 truncate bg-transparent outline-none"
+        value={draft ?? shown}
+        onFocus={(e) => {
+          setDraft(shown)
+          e.currentTarget.select()
+        }}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => setDraft(undefined)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            onOpen(typedPath(draft ?? shown))
+            setDraft(undefined)
+            e.currentTarget.blur()
+          } else if (e.key === 'Escape') {
+            setDraft(undefined)
+            e.currentTarget.blur()
+          }
+        }}
+      />
+    </label>
   )
 }
 
