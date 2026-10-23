@@ -4,6 +4,7 @@ import { BrigadeMark } from '@/components/brigade-mark'
 import { formatCount, mergeDate, type ProofNumbers, REPO, REPO_URL } from '@/lib/github-proof'
 import { MAC_APP_URL } from '@/lib/mac-app'
 import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
+import { Pebble } from './pebble'
 
 /** Brigade's own team as proof: the GitHub numbers read at build (lib/github-proof.ts), and
  * the last pull requests merged. A number GitHub did not give back leaves out what needs it. */
@@ -398,18 +399,7 @@ export function Faq() {
 export function FinalCall() {
   return (
     <section aria-labelledby="final-title" className={c('final')} data-anim>
-      {/* Brigade's pebble, large and in the page's ink, cropped by the section's edges. */}
-      <div className={c('art pebble')} aria-hidden="true">
-        <svg viewBox="0 0 100 100">
-          <g className={c('pb-body')}>
-            <path d="M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z" />
-            <g className={c('pb-eyes')}>
-              <path d="M34.5 44Q40.5 28 46.5 44" />
-              <path d="M53.5 44Q59.5 28 65.5 44" />
-            </g>
-          </g>
-        </svg>
-      </div>
+      <Pebble />
       <div className={c('wrap')}>
         <h2 id="final-title">Meet your first teammate.</h2>
         <p className={c('lead')}>

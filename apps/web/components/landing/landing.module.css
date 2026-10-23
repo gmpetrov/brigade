@@ -2166,6 +2166,13 @@ svg.i {
 .pb-body {
   transform-origin: 50% 50%;
   transform-box: fill-box;
+  transform: translate(var(--bx, 0), var(--by, 0)) rotate(var(--br, 0deg));
+  transition: transform 3.5s cubic-bezier(0.45, 0, 0.25, 1);
+}
+/* Where the eyes look: a quick dart that overshoots a little, as eyes do. */
+.pb-look {
+  transform: translate(var(--ex, 0), var(--ey, 0));
+  transition: transform 0.22s cubic-bezier(0.3, 1.5, 0.6, 1);
 }
 .pb-body > path {
   fill: var(--foreground);
@@ -2177,6 +2184,8 @@ svg.i {
   stroke-linecap: round;
   transform-origin: 50% 50%;
   transform-box: fill-box;
+  transform: scale(var(--esx, 1), var(--esy, 1));
+  transition: transform 0.12s ease-in-out;
 }
 .final .slab {
   left: 60px;
@@ -4568,33 +4577,6 @@ svg.i {
   100% {
     opacity: 0;
     stroke-dashoffset: -100;
-  }
-}
-/* The pebble: it sways slowly, breathes, and blinks now and then. */
-.pb-body {
-  animation: k-sway 9s ease-in-out infinite;
-}
-.pb-eyes {
-  animation: k-blink 6s ease-in-out infinite;
-}
-@keyframes k-sway {
-  0%,
-  100% {
-    transform: rotate(-4deg) scale(1);
-  }
-  50% {
-    transform: rotate(4deg) scale(1.03) translateY(-2%);
-  }
-}
-@keyframes k-blink {
-  0%,
-  44%,
-  50%,
-  100% {
-    transform: none;
-  }
-  47% {
-    transform: scaleY(0.1);
   }
 }
 @media (prefers-reduced-motion: reduce) {
