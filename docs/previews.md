@@ -72,7 +72,11 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
     then `thread.file.write`): the runner writes the file in place, as the
     teammate's user on a cloud computer, only while it still has that hash.
     Otherwise the panel says it changed on the computer, and the person reloads
-    it or keeps theirs. The dev server sees the change, so the preview reloads.
+    it or keeps theirs. Saves of one file run one at a time on the runner, so two
+    from the same hash cannot both pass. Unsaved edits are kept outside the panel
+    (`apps/web/lib/code-drafts.ts`) while another file, the preview or a page takes
+    its place, and come back with the file; closing it asks before dropping them.
+    The dev server sees the change, so the preview reloads.
     The thread gets a note (`thread.note`), once per file and person in 15
     minutes, so its teammates know at their next turn that the file changed and
     is not committed.
