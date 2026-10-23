@@ -219,6 +219,19 @@ svg.i {
   border-radius: 5px;
   font-size: 9.5px;
 }
+/* An App's logo on a white tile, so its own colors read on both themes. */
+.tile.app-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid var(--border);
+}
+.tile.app-logo svg {
+  width: 14px;
+  height: 14px;
+  color: #000;
+}
 .ok-i {
   color: var(--success);
 }
@@ -315,30 +328,6 @@ svg.i {
 }
 .hero .cta-row {
   justify-content: center;
-}
-
-.blk {
-  position: absolute;
-}
-.slab {
-  background: var(--primary);
-  border-radius: var(--block-radius);
-}
-.b-green {
-  background: var(--block-accent);
-  border-radius: 999px;
-}
-.b-orange {
-  background: var(--chart-3);
-  border-radius: 50%;
-}
-.b-ink {
-  background: var(--foreground);
-  border-radius: var(--block-radius);
-}
-.b-tint {
-  background: var(--accent);
-  border-radius: var(--block-radius);
 }
 
 /* Thread window (product look) */
@@ -987,27 +976,6 @@ svg.i {
 .shot-h .meta {
   font-size: 12px;
   color: var(--muted-foreground);
-}
-.brw-bar {
-  height: 28px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px;
-  background: var(--muted);
-  border-bottom: 1px solid var(--border);
-  font: 11px var(--font-mono);
-  color: var(--muted-foreground);
-  letter-spacing: 0;
-}
-.brw-bar span {
-  background: var(--card);
-  border-radius: 999px;
-  padding: 1px 10px;
-}
-.brw-bar b {
-  margin-left: auto;
-  font-weight: 500;
 }
 .skills {
   display: flex;
@@ -1658,76 +1626,119 @@ svg.i {
   overflow: hidden;
   padding: 132px 0 120px;
 }
-.night {
+/* Pebbles falling on the Cloud plan's Start with Cloud (pebble-rain.tsx): it moves them, this only
+   draws them, and their glance, blink and wince once they're there. */
+.rain {
   position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.rain-p {
+  position: absolute;
+  left: 0;
   top: 0;
-  right: 0;
-  width: 640px;
-  height: 420px;
+  opacity: 0;
+  transform-origin: center;
+  will-change: transform;
 }
-.night .slab {
-  right: 236px;
-  top: -40px;
-  width: 340px;
-  height: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 92px 22px 0;
+.rain-p[data-on] {
+  opacity: 1;
 }
-.night .msg {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  height: 40px;
-  padding: 0 18px 0 6px;
-  border-radius: 999px;
-  background: oklch(1 0 0);
-  color: oklch(0 0 0);
-  font-size: 13.5px;
-  font-weight: 600;
-  white-space: nowrap;
-  align-self: flex-start;
+.rain-p[data-off] {
+  display: none;
 }
-.night .msg.r {
-  align-self: flex-end;
+.rain-p svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
-.night .msg .k {
-  color: oklch(0.44 0 0);
-  font-weight: 500;
+/* Each one, from the moment it lands: it stands up and dances, smiling. */
+.rain-p[data-dance] .rain-d {
+  animation: k-rain-dance 0.9s ease-in-out calc(var(--i) * -0.12s) infinite;
 }
-.night .msg .when {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: oklch(0.5393 0.2713 286.7462);
-  font-size: 12.5px;
-  padding-left: 10px;
-  letter-spacing: 0;
+.rain-d {
+  overflow: visible;
+  transform-origin: 50% 100%;
 }
-.moon {
-  position: absolute;
-  right: 30px;
-  top: 60px;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background: var(--foreground);
+.pl-eye.joy,
+.rain-p[data-dance] .pl-eye.open {
+  opacity: 0;
 }
-.moon::after {
-  content: '';
-  position: absolute;
-  left: -46px;
-  top: -22px;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background: var(--background);
+.rain-p[data-dance] .pl-eye.joy {
+  opacity: 1;
 }
-.night .b-green {
-  right: -90px;
-  top: 250px;
-  width: 260px;
-  height: 96px;
+@keyframes k-rain-dance {
+  0%,
+  100% {
+    transform: none;
+  }
+  15% {
+    transform: scale(1.08, 0.9);
+  }
+  32% {
+    transform: translateY(-16%) scale(0.94, 1.06) rotate(-7deg);
+  }
+  48% {
+    transform: scale(1.06, 0.94);
+  }
+  64% {
+    transform: none;
+  }
+  80% {
+    transform: translateY(-8%) rotate(7deg);
+  }
+}
+.pl-hit {
+  transform-box: fill-box;
+  transform-origin: 50% 60%;
+  transition: transform 0.12s ease-out;
+}
+.rain-p[data-hit] .pl-hit {
+  transform: scaleY(0.3);
+}
+.pl-look {
+  animation: k-pile-look var(--l) ease-in-out infinite;
+}
+.pl-lid {
+  transform-box: fill-box;
+  transform-origin: 50% 60%;
+  animation: k-pile-blink var(--b) linear infinite;
+}
+.pl-eye {
+  fill: none;
+  stroke: oklch(0.2 0.06 295);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.pl-eye.open {
+  stroke-width: 6;
+}
+@keyframes k-pile-look {
+  0%,
+  18%,
+  78%,
+  100% {
+    transform: translate(0, 0);
+  }
+  24%,
+  45% {
+    transform: translate(-6px, -2px);
+  }
+  52%,
+  70% {
+    transform: translate(5px, 1px);
+  }
+}
+@keyframes k-pile-blink {
+  0%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.1);
+  }
 }
 .pr-head {
   position: relative;
@@ -1806,251 +1817,19 @@ svg.i {
 .plan .btn.lg {
   align-self: flex-start;
 }
+/* Room for the pebbles landing on it (pebble-rain.tsx sets it when they do). */
+.plan [data-pebble-target] {
+  margin-top: var(--rain-room, 0px);
+}
 .plan .quiet {
   margin-top: 14px;
   font: 12.5px var(--font-mono);
   color: var(--muted-foreground);
   letter-spacing: 0;
 }
-.pr-foot {
-  margin-top: 40px;
-  font-size: 15px;
-  color: var(--muted-foreground);
-  text-align: center;
-}
 
 /* =================== 10 · Download =================== */
-.dl-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
-}
-.dl {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.dl-art {
-  height: 220px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 32px 32px 0;
-  position: relative;
-  overflow: hidden;
-}
-.dl-art.tint {
-  background: var(--accent);
-}
-.dl-art.green {
-  background: var(--block-accent);
-}
-.dl-art.orange {
-  background: var(--chart-3);
-}
-.dl-body {
-  padding: 26px 28px 28px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-.dl h3 {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.035em;
-}
-.dl p {
-  margin-top: 6px;
-  font-size: 15px;
-  color: var(--muted-foreground);
-  flex: 1;
-}
-.dl .btn {
-  margin-top: 22px;
-  align-self: flex-start;
-}
-.mb {
-  width: 100%;
-  max-width: 300px;
-}
-.mb-bar {
-  height: 26px;
-  background: var(--foreground);
-  border-radius: 10px 10px 0 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 0 12px;
-  color: var(--background);
-  font-size: 11px;
-  font-weight: 600;
-}
 /* The menu-bar icon, one colour like the bar's text, as macOS draws it. */
-.mb-bar .bb {
-  width: 15px;
-  height: 15px;
-  background: currentColor;
-  mask: url(/icons/mark-mono.svg) center / contain no-repeat;
-}
-.mb-menu {
-  margin: 6px 0 0 auto;
-  width: 210px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px 12px 0 0;
-  border-bottom: 0;
-  box-shadow: var(--shadow-lg);
-  padding: 10px 12px;
-  font-size: 12.5px;
-}
-.mb-menu .r {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 0;
-}
-.mb-menu .r .dot {
-  width: 7px;
-  height: 7px;
-}
-.mb-menu .r.m {
-  color: var(--muted-foreground);
-}
-.brw2 {
-  width: 100%;
-  max-width: 300px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-bottom: 0;
-  border-radius: 14px 14px 0 0;
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-}
-.brw2 .brw-bar {
-  border-radius: 0;
-}
-.brw2-b {
-  display: grid;
-  grid-template-columns: 70px 1fr;
-  height: 132px;
-}
-.brw2-b .sb {
-  background: var(--sidebar);
-  border-right: 1px solid var(--border);
-  padding: 10px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.brw2-b .sb i {
-  display: block;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--border);
-}
-.brw2-b .sb i.y {
-  background: var(--yellow);
-}
-.brw2-b .mn {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.brw2-b .mn .h {
-  height: 12px;
-  width: 60%;
-  border-radius: 4px;
-  background: var(--foreground);
-}
-.brw2-b .mn .w {
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in oklch, var(--warning) 45%, transparent);
-  background: color-mix(in oklch, var(--warning) 6%, var(--card));
-}
-.brw2-b .mn .g {
-  height: 8px;
-  border-radius: 4px;
-  background: var(--secondary);
-}
-.iph {
-  width: 150px;
-  height: 220px;
-  border-radius: 30px 30px 0 0;
-  background: var(--foreground);
-  padding: 8px 8px 0;
-  margin-bottom: -28px;
-}
-.iph .sc {
-  height: 100%;
-  border-radius: 23px 23px 0 0;
-  background: var(--background);
-  padding: 30px 10px 0;
-  position: relative;
-}
-.iph .sc::before {
-  content: '';
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  margin-left: -24px;
-  width: 48px;
-  height: 14px;
-  border-radius: 999px;
-  background: var(--foreground);
-}
-.iph .ic {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-.iph .ic i {
-  display: block;
-  aspect-ratio: 1;
-  border-radius: 8px;
-  background: var(--secondary);
-}
-.iph .ic i.b {
-  background: var(--foreground);
-  position: relative;
-}
-.iph .ic i.b::after {
-  content: 'B';
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: var(--background);
-  font: 800 12px var(--font-sans);
-  font-style: normal;
-}
-.iph .ic i.b::before {
-  content: '2';
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: var(--destructive);
-  color: #fff;
-  font: 700 9px var(--font-sans);
-  display: grid;
-  place-items: center;
-  z-index: 1;
-}
-.iph .lbl {
-  margin-top: 12px;
-  font-size: 10.5px;
-  color: var(--muted-foreground);
-  text-align: center;
-}
 
 /* =================== 11 · FAQ + final =================== */
 .faq .wrap {
@@ -2151,52 +1930,101 @@ svg.i {
   width: 600px;
   height: 560px;
 }
-.final .slab {
-  left: 60px;
-  top: 120px;
-  width: 300px;
-  height: 520px;
+/* The pebble: larger than the section, so it overflows and shows only in part. */
+.final .pebble {
+  top: -90px;
+  right: -150px;
+  width: 760px;
+  height: 760px;
 }
-.final .b-green {
-  left: 380px;
-  top: -50px;
-  width: 300px;
-  height: 120px;
+.final .pebble svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
-.final .b-orange {
-  left: 390px;
-  top: 110px;
-  width: 130px;
-  height: 130px;
+/* Its start when it wakes up. */
+.pb-hop {
+  transform: translateY(var(--hop, 0));
+  transition: transform 0.18s cubic-bezier(0.3, 1.6, 0.6, 1);
 }
-.final .b-ink {
-  left: 380px;
-  top: 280px;
-  width: 260px;
-  height: 320px;
+/* Falling asleep is slow: the eyes close and the head drops over a couple of seconds. */
+[data-asleep] .pb-eye,
+[data-asleep] .pb-open,
+[data-asleep] .pb-smile {
+  transition-duration: 2s;
 }
-.final .b-tint {
-  left: 60px;
-  top: -60px;
-  width: 300px;
-  height: 160px;
+.pb-body {
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+  transform: translate(var(--bx, 0), var(--by, 0)) rotate(var(--br, 0deg));
+  transition: transform 3.5s cubic-bezier(0.45, 0, 0.25, 1);
 }
-.final .fmsg {
-  position: absolute;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  height: 44px;
-  padding: 0 18px 0 8px;
-  border-radius: 999px;
-  background: var(--primary-foreground);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
+.pb-body > path {
+  fill: var(--foreground);
 }
-.final .fmsg .k {
-  color: var(--muted-foreground);
-  font-weight: 500;
+/* An eye, moved and narrowed along the sphere by --eNx and --eNs: a quick turn that
+ * overshoots a little, as eyes do. */
+.pb-eye {
+  fill: none;
+  stroke: var(--background);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+  transition: transform 0.24s cubic-bezier(0.3, 1.45, 0.6, 1);
+}
+.pb-eye.e0 {
+  transform: translate(var(--e0x, 0), var(--ey, 0)) scale(var(--e0s, 1), var(--esq, 1));
+}
+.pb-eye.e1 {
+  transform: translate(var(--e1x, 0), var(--ey, 0)) scale(var(--e1s, 1), var(--esq, 1));
+}
+.pb-lid {
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+  transform: scaleY(var(--esy, 1));
+  transition: transform 0.12s ease-in-out;
+}
+/* Each eye is the logo's smile or an open pill, one fading and squashing into the other. */
+.pb-smile,
+.pb-open {
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+  transition:
+    opacity 0.18s ease,
+    transform 0.22s cubic-bezier(0.3, 1.4, 0.6, 1);
+}
+.pb-open {
+  stroke-width: 7.5;
+}
+.e0 .pb-smile {
+  opacity: var(--h0, 1);
+  transform: scaleY(calc(0.2 + 0.8 * var(--h0, 1)));
+}
+.e1 .pb-smile {
+  opacity: var(--h1, 1);
+  transform: scaleY(calc(0.2 + 0.8 * var(--h1, 1)));
+}
+.e0 .pb-open {
+  opacity: calc(1 - var(--h0, 1));
+  transform: scaleY(calc(var(--o0, 1) * (1 - 0.8 * var(--h0, 1))));
+}
+.e1 .pb-open {
+  opacity: calc(1 - var(--h1, 1));
+  transform: scaleY(calc(var(--o1, 1) * (1 - 0.8 * var(--h1, 1))));
+}
+/* A soft light on the surface, sliding the other way as the head turns. */
+.pb-light {
+  transform: translate(var(--hx, 0), var(--hy, 0));
+  transition: transform 0.5s cubic-bezier(0.3, 1.2, 0.6, 1);
+}
+.pb-light-in {
+  stop-color: var(--background);
+  stop-opacity: 0.16;
+}
+.pb-light-out {
+  stop-color: var(--background);
+  stop-opacity: 0;
 }
 
 .foot {
@@ -2216,9 +2044,64 @@ svg.i {
 }
 .foot nav {
   display: flex;
-  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 24px;
   margin-left: auto;
   align-items: center;
+}
+.foot nav > * {
+  white-space: nowrap;
+}
+
+.foot-name {
+  height: 0.62em;
+  overflow: hidden;
+  font-size: 24.5vw;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 0.82;
+  text-align: center;
+  color: var(--foreground);
+  user-select: none;
+}
+.foot-name span {
+  display: block;
+  margin-left: -0.04em;
+}
+
+/* The large name in glossy black, like the apple on a space black MacBook: a shade off the
+ * page with a soft sheen across it that slides by now and then. Mixed in oklab (oklch swings
+ * the hue between the grey ink and the cool page), then set to a cool hue. */
+.foot-name span {
+  /* Greys pulled a touch toward blue, like the page: a neutral grey beside a cool page reads
+   * warm, almost brown. */
+  --gloss-top: oklch(
+    from color-mix(in oklab, var(--foreground) 12%, var(--background)) l 0.014 265
+  );
+  --gloss-base: oklch(
+    from color-mix(in oklab, var(--foreground) 7%, var(--background)) l 0.012 265
+  );
+  --gloss-shine: oklch(
+    from color-mix(in oklab, var(--foreground) 26%, var(--background)) l 0.016 265
+  );
+  background:
+    linear-gradient(
+        112deg,
+        transparent 43%,
+        color-mix(in oklab, var(--gloss-shine) 60%, transparent) 48%,
+        var(--gloss-shine) 50%,
+        color-mix(in oklab, var(--gloss-shine) 60%, transparent) 52%,
+        transparent 57%
+      )
+      0 0 / 300% 100% no-repeat,
+    linear-gradient(180deg, var(--gloss-top), var(--gloss-base) 60%);
+  background-position:
+    100% 0,
+    0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* ANIM:BEGIN (generated loops; each element's static style is its final frame) */
@@ -4543,6 +4426,24 @@ svg.i {
     stroke-dashoffset: -100;
   }
 }
+/* The footer's name: a sheen slides across the gloss every few seconds. */
+.foot-name span {
+  animation: k-sheen 9s ease-in-out infinite;
+}
+@keyframes k-sheen {
+  0%,
+  55% {
+    background-position:
+      100% 0,
+      0 0;
+  }
+  85%,
+  100% {
+    background-position:
+      0% 0,
+      0 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .page *,
   .page *::before,
@@ -4785,38 +4686,7 @@ svg.i {
   }
 
   .pricing {
-    padding: 300px 0 80px;
-  }
-  .night {
-    width: 390px;
-    height: 280px;
-  }
-  .night .slab {
-    right: 90px;
-    top: -40px;
-    width: 296px;
-    height: 290px;
-    padding-top: 70px;
-    gap: 12px;
-  }
-  .night .msg {
-    height: 38px;
-    font-size: 13px;
-  }
-  .moon {
-    right: -34px;
-    top: 70px;
-    width: 120px;
-    height: 120px;
-  }
-  .moon::after {
-    width: 120px;
-    height: 120px;
-    left: -38px;
-    top: -18px;
-  }
-  .night .b-green {
-    display: none;
+    padding: 88px 0 80px;
   }
   .pr-head {
     margin-bottom: 40px;
@@ -4835,17 +4705,6 @@ svg.i {
     font-size: 15px;
   }
   .plan .btn.lg {
-    align-self: stretch;
-  }
-
-  .dl-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
-  }
-  .dl-art {
-    height: 190px;
-  }
-  .dl .btn {
     align-self: stretch;
   }
 
@@ -4873,28 +4732,11 @@ svg.i {
     width: 390px;
     height: 280px;
   }
-  .final .slab {
-    left: 20px;
-    top: -80px;
-    width: 210px;
-    height: 320px;
-  }
-  .final .b-green {
-    left: 250px;
-    top: -40px;
-    width: 200px;
-    height: 100px;
-  }
-  .final .b-orange {
-    left: 250px;
-    top: 90px;
-    width: 100px;
-    height: 100px;
-  }
-  .final .b-ink,
-  .final .b-tint,
-  .final .fmsg {
-    display: none;
+  .final .pebble {
+    top: -100px;
+    right: -80px;
+    width: 340px;
+    height: 340px;
   }
   .final h2 {
     font-size: 44px;
@@ -5085,18 +4927,6 @@ svg.i {
 
 /* =================== Not in the design: what the code adds =================== */
 /* The iPhone card's way in is a step to take in Safari, not a link. */
-.dl-hint {
-  margin-top: 22px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--foreground);
-}
-.dl-hint svg {
-  color: var(--muted-foreground);
-}
 /* Rows of the merged-PR log are links to the pull requests. */
 a.lgr:hover {
   background: var(--muted);

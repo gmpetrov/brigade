@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { c, Icon } from './parts'
+import { AppLogo, c, Icon } from './parts'
 
 export function Control() {
   return (
@@ -38,7 +38,8 @@ export function Control() {
                   <b>Sam wants to send a reply</b>
                 </div>
                 <div className={c('tk-meta')}>
-                  <span className={c('tile sm')}>G</span>Gmail · to jo@northwind.io
+                  <AppLogo kind="gmail" />
+                  Gmail · to jo@northwind.io
                 </div>
                 <div className={c('tk-act xg blk-g')}>
                   <div className={c('acts c-a')}>
@@ -113,7 +114,7 @@ export function Control() {
                   <span className={c('acc-h')}>set by Ada · admin</span>
                 </div>
                 <div className={c('acc-row')}>
-                  <span className={c('tile sm')}>G</span>
+                  <AppLogo kind="gmail" />
                   <span className={c('nm')}>Gmail</span>
                   <span className={c('seg2 rw')}>
                     <span className={c('thumb')}></span>
@@ -122,7 +123,7 @@ export function Control() {
                   </span>
                 </div>
                 <div className={c('acc-row')}>
-                  <span className={c('tile sm')}>S</span>
+                  <AppLogo kind="stripe" />
                   <span className={c('nm')}>Stripe</span>
                   <span className={c('seg2')}>
                     <span className={c('thumb ac-thumb')}></span>
@@ -131,7 +132,7 @@ export function Control() {
                   </span>
                 </div>
                 <div className={c('acc-row')}>
-                  <span className={c('tile sm')}>GH</span>
+                  <AppLogo kind="github" />
                   <span className={c('nm')}>GitHub</span>
                   <span className={c('acc-h')}>no access</span>
                 </div>

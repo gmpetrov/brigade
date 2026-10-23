@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { JobTabs, type Job } from './job-tabs'
-import { c, Icon } from './parts'
+import { AppLogo, c, Icon } from './parts'
 
 const jobs: Job[] = [
   {
@@ -24,8 +24,9 @@ const jobs: Job[] = [
             before it sends.
           </h3>
           <div className={c('apps')}>
-            <span className={c('tile sm')}>G</span>
-            <span className={c('tile sm')}>N</span>Gmail · Notion help center
+            <AppLogo kind="gmail" />
+            <AppLogo kind="notion" />
+            Gmail · Notion help center
           </div>
         </div>
         <div className={c('pn-art orange')} aria-hidden="true">
@@ -94,8 +95,9 @@ const jobs: Job[] = [
             and waits for your approval.
           </h3>
           <div className={c('apps')}>
-            <span className={c('tile sm')}>GH</span>
-            <span className={c('tile sm')}>L</span>GitHub · Linear
+            <AppLogo kind="github" />
+            <AppLogo kind="linear" />
+            GitHub · Linear
           </div>
         </div>
         <div className={c('pn-art violet')} aria-hidden="true">
@@ -155,8 +157,9 @@ const jobs: Job[] = [
           </div>
           <h3>Every Friday, Mark turns what shipped into release notes your customers can read.</h3>
           <div className={c('apps')}>
-            <span className={c('tile sm')}>GH</span>
-            <span className={c('tile sm')}>N</span>GitHub · Notion
+            <AppLogo kind="github" />
+            <AppLogo kind="notion" />
+            GitHub · Notion
           </div>
         </div>
         <div className={c('pn-art green')} aria-hidden="true">
@@ -216,8 +219,9 @@ const jobs: Job[] = [
             yes.
           </h3>
           <div className={c('apps')}>
-            <span className={c('tile sm')}>G</span>
-            <span className={c('tile sm')}>GS</span>Gmail · Google Sheets
+            <AppLogo kind="gmail" />
+            <AppLogo kind="google_sheets" />
+            Gmail · Google Sheets
           </div>
         </div>
         <div className={c('pn-art tint')} aria-hidden="true">
@@ -283,8 +287,9 @@ const jobs: Job[] = [
           </div>
           <h3>Revenue, refunds and signups on one page, in your inbox every Monday.</h3>
           <div className={c('apps')}>
-            <span className={c('tile sm')}>S</span>
-            <span className={c('tile sm')}>P</span>Stripe · PostHog
+            <AppLogo kind="stripe" />
+            <AppLogo kind="posthog" />
+            Stripe · PostHog
           </div>
         </div>
         <div className={c('pn-art ink')} aria-hidden="true">
