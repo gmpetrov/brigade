@@ -274,6 +274,12 @@ test('several repositories: their base said only when each compares to one', asy
       { path: 'other/a.txt', status: 'M', base: 'main' },
     ],
   )
+  const reverted = await codeFiles({
+    ...ids,
+    op: 'revert',
+    paths: ['other/a.txt', 'brigade/apps/web/landing/hero.tsx'],
+  })
+  assert.equal(reverted.base, 'their default branch (their last commit without one)')
   git('update-ref', 'refs/remotes/origin/main', git('rev-parse', 'HEAD~1').trim())
   assert.equal((await changes()).base, 'main')
 })

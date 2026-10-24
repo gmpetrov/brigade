@@ -452,9 +452,12 @@ export async function codeFiles(request: Request): Promise<Result> {
           ...base,
           ok: true,
           // As on a default branch, when all were: the thread is told so.
-          ...(bases.size && !bases.has('')
-            ? { base: bases.size === 1 ? [...bases][0]! : 'their default branch' }
-            : {}),
+          // Some as on their default branch, the others as in their last commit: said too.
+          ...(bases.size === 1 && !bases.has('')
+            ? { base: [...bases][0]! }
+            : bases.size > 1
+              ? { base: 'their default branch (their last commit without one)' }
+              : {}),
         }
       }
     }
