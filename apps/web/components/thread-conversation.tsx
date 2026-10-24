@@ -931,6 +931,7 @@ export function ThreadConversation({
   // Top right of the expanded thread, across from the sidebar's toggle and round like it: the
   // app it builds is the thread's, not its computer's, and stays in reach with the details closed.
   // What a click does, not only what it is about: its label, on hover and for screen readers.
+  // As far in as the toggle (left-2), so the pill bar's px-12 leaves the same gap on each side.
   const previewLabel = previewStart.busy
     ? 'Starting the preview…'
     : previewing
@@ -939,7 +940,7 @@ export function ThreadConversation({
         ? 'Open preview'
         : 'Start preview'
   const previewButton = offersPreview && top && (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-end px-3">
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-end px-2">
       <Button
         type="button"
         variant="outline"
