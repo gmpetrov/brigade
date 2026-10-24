@@ -173,6 +173,7 @@ export const ConnectorKind = {
   openrouter: 'openrouter',
   posthog: 'posthog',
   dataforseo: 'dataforseo',
+  ahrefs: 'ahrefs',
   mcp: 'mcp',
   google_search_console: 'google_search_console',
   google_analytics: 'google_analytics'
