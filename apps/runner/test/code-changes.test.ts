@@ -241,3 +241,28 @@ test('on a branch off the default branch: what changed since it left, committed 
     ],
   )
 })
+
+test('several repositories: their base said only when each compares to one', async () => {
+  const other = join(dir, 'other')
+  const inOther = (...args: string[]) =>
+    execFileSync('git', ['-C', other, ...args], {
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: 'T',
+        GIT_AUTHOR_EMAIL: 't@example.com',
+        GIT_COMMITTER_NAME: 'T',
+        GIT_COMMITTER_EMAIL: 't@example.com',
+      },
+    }).toString()
+  await mkdir(other, { recursive: true })
+  inOther('init', '-q')
+  await writeFile(join(other, 'a.txt'), 'a\n')
+  inOther('add', '.')
+  inOther('commit', '-q', '-m', 'first')
+  inOther('update-ref', 'refs/remotes/origin/main', inOther('rev-parse', 'HEAD').trim())
+  inOther('checkout', '-q', '-b', 'brigade/riley')
+  // brigade/ has no default branch since the test before: its last commit.
+  assert.equal((await changes()).base, undefined)
+  git('update-ref', 'refs/remotes/origin/main', git('rev-parse', 'HEAD~1').trim())
+  assert.equal((await changes()).base, 'main')
+})

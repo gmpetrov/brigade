@@ -329,6 +329,7 @@ export async function codeFiles(request: Request): Promise<Result> {
       case 'changes': {
         const changes: CodeChange[] = []
         const heads: string[] = []
+        /** What each repository compares to: its default branch's name, or '' for its last commit. */
         const bases = new Set<string>()
         for (const top of await repositories(own, user)) {
           const [status, head, from] = await Promise.all([
@@ -370,7 +371,10 @@ export async function codeFiles(request: Request): Promise<Result> {
               ...uncommitted.filter((c) => c.status === 'A' && !seen.has(c.path)),
             )
             bases.add(from.name)
-          } else changes.push(...uncommitted)
+          } else {
+            changes.push(...uncommitted)
+            bases.add('')
+          }
           heads.push(
             `${prefix}:${head?.toString('utf8').trim() ?? ''}${sinceBase ? `:${from.commit}` : ''}`,
           )
@@ -383,7 +387,7 @@ export async function codeFiles(request: Request): Promise<Result> {
           ...(changes.length > CODE_CHANGES_MAX ? { more: true } : {}),
           head: heads.join(' '),
           // What they compare to, when each repository compares to its default branch.
-          ...(bases.size && bases.size === heads.length
+          ...(bases.size && !bases.has('')
             ? { base: bases.size === 1 ? [...bases][0]! : 'the default branch' }
             : {}),
         }
