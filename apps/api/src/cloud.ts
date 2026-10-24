@@ -21,10 +21,17 @@ import {
   setupScript,
 } from './cloud-bootstrap.js'
 import { restored } from './cloud-restore.js'
+import { throughGateway } from './preview-gateway.js'
 import { issueLinkCode } from './link-codes.js'
 import { runnerBundle } from './routes/runner-install.js'
 
 const provider = providerFromEnv(process.env)
+
+/** The previews' own site, in front of the provider's addresses (src/preview-gateway.ts). */
+const gateway =
+  env.PREVIEW_GATEWAY_URL && env.PREVIEW_GATEWAY_SECRET
+    ? { url: env.PREVIEW_GATEWAY_URL, secret: env.PREVIEW_GATEWAY_SECRET }
+    : null
 
 export const cloudAvailable = () => provider !== null
 
@@ -371,13 +378,15 @@ export async function hostedPort(computer: { providerRef: unknown }, port: numbe
   const ref = refOf(computer)
   if (!provider || !ref)
     throw new HTTPException(409, { message: 'No cloud provider for this computer' })
+  let hosted: { origin: string; url: string }
   try {
-    return await provider.hostPort(ref, port)
+    hosted = await provider.hostPort(ref, port)
   } catch (error) {
     throw new HTTPException(503, {
       message: `The cloud computer's provider did not host the preview: ${await providerReason(error)}`,
     })
   }
+  return throughGateway(hosted, gateway)
 }
 
 /** The setup last tried per computer, so a failing one is not retried on every connect. */

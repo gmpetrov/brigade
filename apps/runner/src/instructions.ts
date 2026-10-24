@@ -605,7 +605,7 @@ const PREVIEW_SKILL: ThreadSkill = {
     "want none of Brigade's files). If it fails, read `preview_logs`. " +
     'People reach it at one address: its other ports (an API) are paths on it, at `BRIGADE_PREVIEW_URL_<port>`, and ' +
     "its cookies are adapted so signing in works in the thread's preview pane. Signing in with Google or GitHub, " +
-    'and Safari, need it opened in a new tab (a button on the pane). ' +
+    'and signing in to the app in Safari (an iPhone), need it opened in a new tab (a button on the pane). ' +
     'In your reply, say how it started, what its check found, and that it is saved.',
   files: [],
   refs: [],

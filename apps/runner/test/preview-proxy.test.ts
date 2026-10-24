@@ -143,3 +143,58 @@ test('a page the browser left before the app answered does not stop the proxy', 
   })
   assert.match(page, /page/)
 })
+
+test("behind the preview gateway, the app is asked for the gateway's host, WebSockets too", async (t) => {
+  const seen: { host?: string; forwarded?: string }[] = []
+  const server = http.createServer((req, res) => {
+    seen.push({ host: req.headers.host, forwarded: req.headers['x-forwarded-host'] as string })
+    res.end('ok')
+  })
+  server.on('upgrade', (req, socket) => {
+    seen.push({ host: req.headers.host, forwarded: req.headers['x-forwarded-host'] as string })
+    socket.end(
+      'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n',
+    )
+  })
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
+  t.after(() => server.close())
+  const proxy = new PreviewProxy({
+    port: (server.address() as { port: number }).port,
+    ports: [],
+    crossSiteCookies: true,
+    publicHost: 'abc.brigade.surf',
+    state: () => 'running',
+    onUse: () => undefined,
+  })
+  t.after(() => proxy.close())
+  const at = await proxy.listen(20_000 + Math.floor(Math.random() * 20_000), [])
+  // As the provider forwards it: its own host in both.
+  const provider = { host: 'box-1.on.boat.dev', 'x-forwarded-host': 'box-1.on.boat.dev' }
+
+  await new Promise<void>((done, fail) => {
+    http
+      .get({ host: '127.0.0.1', port: at, path: '/', agent: false, headers: provider }, (res) =>
+        res.resume().on('end', done),
+      )
+      .on('error', fail)
+  })
+  await new Promise<void>((done, fail) => {
+    http
+      .get({
+        host: '127.0.0.1',
+        port: at,
+        path: '/hmr',
+        agent: false,
+        headers: { ...provider, connection: 'Upgrade', upgrade: 'websocket' },
+      })
+      .on('upgrade', (_res, socket) => {
+        socket.destroy()
+        done()
+      })
+      .on('error', fail)
+  })
+  assert.deepEqual(seen, [
+    { host: 'abc.brigade.surf', forwarded: 'abc.brigade.surf' },
+    { host: 'abc.brigade.surf', forwarded: 'abc.brigade.surf' },
+  ])
+})

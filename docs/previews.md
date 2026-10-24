@@ -11,6 +11,26 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   them: on the dashboard's site it could set the dashboard's cookies and send it
   requests with a person's session. The cost is that the frame is a third party
   to its own app.
+- **The previews' own site in front of the provider** (`apps/preview-gateway`, the
+  Worker `brigade-preview-gateway`). The provider lets a request in with its
+  token, once in the address (`?_token=`), which it trades for a cookie
+  (`_port_auth`, `SameSite=None`, not partitioned). Safari, and so every browser
+  on an iPhone, drops that cookie in the dashboard's frame: the page came, its
+  scripts and styles got 403, and the pane stayed white (reproduced in
+  Playwright's WebKit on October 24, 2026). So people open
+  `https://<id>.brigade.surf`, and the Worker adds the token to each request:
+  the browser needs no cookie of the provider's. The API registers the
+  provider's address with the shared secret (`PREVIEW_GATEWAY_URL`,
+  `PREVIEW_GATEWAY_SECRET`, `src/preview-gateway.ts`) and hands out the
+  gateway's address, also as `BRIGADE_PREVIEW_URL`; without them, or when the
+  gateway does not answer, the provider's. The id is an HMAC of the provider's
+  address (130 bits): it is what lets a person in, as the token in the
+  provider's address did. The runner's proxy gives the app the gateway's host
+  as `Host` and `X-Forwarded-Host`, as a real deploy would. On one level of
+  `brigade.surf`, which Cloudflare's free certificate covers (`*.brigade.surf`);
+  `<id>.preview.brigade.surf` would need Advanced Certificate Manager. Costs:
+  Workers requests (a dev server's page can make hundreds) and a D1 read per
+  preview per isolate.
 - **A proxy in front of every preview** (`apps/runner/src/preview-proxy.ts`). The
   provider hosts the proxy's port (`publicPort`), not the app's. It fixes what
   apps cannot be asked to change:
@@ -287,8 +307,10 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
 
 ## Known limits
 
-- **Safari** blocks third-party cookies, and may not keep partitioned ones: not
-  tested. Sign-in there needs the new tab.
+- **Safari** blocks third-party cookies, partitioned ones too (Playwright's
+  WebKit dropped an app's rewritten session cookie in the frame): pages load in
+  the pane through the gateway, but signing in to the app there needs the new
+  tab.
 - **Google, GitHub and Microsoft sign-in** refuse to load in a frame on another
   site, whatever the cookies.
 - **Picking elements** sees only the page's DOM: its picture is the DOM drawn
@@ -300,8 +322,8 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
 - **Cookies set by scripts** (`document.cookie`) do not pass the proxy. Rare for
   sessions; storage (`localStorage`, as Supabase and Firebase use) works in the
   frame, kept for it.
-- **The provider's own token cookie** must also work in a cross-site frame
-  (`SameSite=None`, ideally `Partitioned`). It does in Chrome today.
+- **The provider's own token cookie** works in a cross-site frame in Chrome only:
+  without the gateway, Safari's pane stays white.
 - **Rootless Docker** cannot bind ports under 1024 and keeps images in each
   teammate's home: a project that publishes port 80, or many large images, needs
   changing. Until October 22, 2026, a thread's Docker never started on a cloud
@@ -326,16 +348,14 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
 
 ## Before customers use it
 
-1. **A preview domain Brigade owns** (e.g. `brigade-preview.app`), one subdomain
-   per preview, served by the provider or a gateway in front of it. Today
-   previews are on `*.on.boat.dev`.
+1. **A preview domain Brigade owns**: `brigade.surf`, one subdomain per preview,
+   through the preview gateway (above).
 2. **That domain on the Public Suffix List** (github.com/publicsuffix/list), as
    `vercel.app`, `netlify.app`, `github.io` and `csb.app` are. Without it every
    preview is the same site as every other, and one customer's preview can set
-   cookies another's receives. `boat.dev` is not on the list. Inclusion takes
+   cookies another's receives. Neither `brigade.surf` nor `boat.dev` is on the list. Inclusion takes
    weeks: start early.
-3. **Test in Safari and Firefox**: signing in to an app in the pane, and the
-   provider's token cookie in the frame.
+3. **Test in Safari and Firefox**: signing in to an app in the pane.
 4. **Check the teammates' Docker on a cloud computer** after deploying the API
    and the runner (the root setup runs again by itself, its stamp changed).
    Run on a test boat VM on October 22, 2026 (Ubuntu 24.04, Docker 29.7,

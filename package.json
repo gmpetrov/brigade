@@ -22,6 +22,8 @@
     "cf:deploy:collab": "scripts/deploy/workers.sh deploy collab",
     "cf:build:demo": "scripts/deploy/workers.sh build demo",
     "cf:deploy:demo": "scripts/deploy/workers.sh deploy demo",
+    "cf:build:preview-gateway": "scripts/deploy/workers.sh build preview-gateway",
+    "cf:deploy:preview-gateway": "scripts/deploy/workers.sh deploy preview-gateway",
     "demo:record": "scripts/demo/record.sh"
   },
   "devDependencies": {
