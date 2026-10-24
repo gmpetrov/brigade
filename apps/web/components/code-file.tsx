@@ -236,14 +236,19 @@ export function CodeFile({
     }
   }, [diffed, head, threadId, teammateId, path])
 
-  // Reverted: the file as it is now, whatever was typed (who reverted was asked).
+  // Reverted: the file as it is now, whatever was typed before (who reverted was asked).
+  // Not over what is typed or saved while it reads: then the watch finds the file
+  // changed under those edits, and asks.
   useEffect(() => {
     if (!reloadKey) return
     let live = true
     edit.reset()
+    const edits = edit.edits.current
+    const saves = edit.saves.current
     readCodeFile(threadId, teammateId, path).then(
       (now) => {
         if (!live || !mounted.current) return
+        if (edits !== edit.edits.current || saves !== edit.saves.current) return
         if (now.text === undefined || !now.hash) return setGone(true)
         editor.current?.replace(now.text)
         edit.base.current = now.hash

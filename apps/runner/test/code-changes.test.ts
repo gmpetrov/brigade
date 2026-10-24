@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -53,7 +53,7 @@ test('the status against the last commit, from git status', () => {
   assert.equal(changeStatus('??'), 'A')
   assert.equal(changeStatus('A '), 'A')
   assert.equal(changeStatus('AM'), 'A')
-  assert.equal(changeStatus('AD'), undefined)
+  assert.equal(changeStatus('AD'), 'A')
   assert.equal(changeStatus(' M'), 'M')
   assert.equal(changeStatus('MM'), 'M')
   assert.equal(changeStatus('UU'), 'M')
@@ -131,6 +131,37 @@ test('a new file staged, then reverted, leaves the index too', async () => {
     paths: ['brigade/apps/web/landing/fresh/a.tsx'],
   })
   assert.equal(result.ok, true, result.error)
+  assert.equal(git('status', '--porcelain'), '')
+})
+
+test('a staged file deleted from the folder still shows, and reverting leaves the index', async () => {
+  await writeFile(join(landing, 'staged-gone.tsx'), 'gone\n')
+  git('add', 'apps/web/landing/staged-gone.tsx')
+  await rm(join(landing, 'staged-gone.tsx'))
+  assert.deepEqual((await changes()).changes, [
+    { path: 'brigade/apps/web/landing/staged-gone.tsx', status: 'A' },
+  ])
+  const result = await codeFiles({
+    ...ids,
+    op: 'revert',
+    paths: ['brigade/apps/web/landing/staged-gone.tsx'],
+  })
+  assert.equal(result.ok, true, result.error)
+  assert.equal(git('status', '--porcelain'), '')
+})
+
+test('a new link leading nowhere is reverted: gone', async () => {
+  await symlink(join(landing, 'nowhere'), join(landing, 'dangling.tsx'))
+  assert.deepEqual((await changes()).changes, [
+    { path: 'brigade/apps/web/landing/dangling.tsx', status: 'A' },
+  ])
+  const result = await codeFiles({
+    ...ids,
+    op: 'revert',
+    paths: ['brigade/apps/web/landing/dangling.tsx'],
+  })
+  assert.equal(result.ok, true, result.error)
+  await assert.rejects(lstat(join(landing, 'dangling.tsx')))
   assert.equal(git('status', '--porcelain'), '')
 })
 

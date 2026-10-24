@@ -84,8 +84,8 @@ const REPO_DEPTH = 4
 export function changeStatus(xy: string): CodeChange['status'] | undefined {
   const [x, y] = [xy[0], xy[1]]
   if (xy === '??') return 'A'
-  // Added, then deleted before any commit: nothing against the last one.
-  if (x === 'A') return y === 'D' ? undefined : 'A'
+  // Added, even when then deleted from the folder only: what is staged would be committed.
+  if (x === 'A') return 'A'
   if (x === 'D' || y === 'D') return 'D'
   return 'M'
 }
@@ -353,8 +353,8 @@ export async function codeFiles(request: Request): Promise<Result> {
             '--',
             where.rel,
           ])
-          if (await real(where.file, user))
-            await inThread(request.sessionId, user, ['rm', '-f', '--', where.file])
+          // Whatever is there, a link leading nowhere too (-f: or nothing).
+          await inThread(request.sessionId, user, ['rm', '-f', '--', where.file])
         }
         return { ...base, ok: true }
       }
