@@ -311,6 +311,12 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   WebKit dropped an app's rewritten session cookie in the frame): pages load in
   the pane through the gateway, but signing in to the app there needs the new
   tab.
+- **The gateway's host is what lets people in**, for as long as the provider
+  keeps the preview's address. The gateway answers `Referrer-Policy:
+same-origin` (over the app's own), so links, images and fonts do not send it
+  to other sites; a page's `<meta name="referrer">` can still loosen that, and a
+  cross-origin request with CORS (a font from Google Fonts, an API the app
+  calls) sends it as its `Origin`.
 - **Google, GitHub and Microsoft sign-in** refuse to load in a frame on another
   site, whatever the cookies.
 - **Picking elements** sees only the page's DOM: its picture is the DOM drawn

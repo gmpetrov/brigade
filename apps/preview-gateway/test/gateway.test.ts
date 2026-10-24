@@ -122,3 +122,36 @@ test('the provider down answers 502', async () => {
   }) as typeof fetch
   assert.equal((await call(env, `${origin}/`)).status, 502)
 })
+
+test('a path that starts with // stays on the provider, with the cookies', async () => {
+  const { db } = fakeDb()
+  const env = envWith(db)
+  const { origin } = (await (await register(env, `${UPSTREAM}?_token=tok`)).json()) as {
+    origin: string
+  }
+  const seen: string[] = []
+  globalThis.fetch = (async (input: URL) => {
+    seen.push(String(input))
+    return new Response('ok')
+  }) as typeof fetch
+  await call(env, `${origin}//attacker.example/collect?x=1`, { headers: { cookie: 'sid=1' } })
+  assert.equal(new URL(seen[0]!).origin, UPSTREAM)
+  assert.equal(seen[0], `${UPSTREAM}//attacker.example/collect?x=1`)
+})
+
+test('answers keep the host out of Referers, whatever the app says; other redirects stay', async () => {
+  const { db } = fakeDb()
+  const env = envWith(db)
+  const { origin } = (await (await register(env, `${UPSTREAM}?_token=tok`)).json()) as {
+    origin: string
+  }
+  const lookalike = `${UPSTREAM}.evil.example/x`
+  globalThis.fetch = (async () =>
+    new Response(null, {
+      status: 302,
+      headers: { location: lookalike, 'referrer-policy': 'unsafe-url' },
+    })) as typeof fetch
+  const response = await call(env, `${origin}/`)
+  assert.equal(response.headers.get('referrer-policy'), 'same-origin')
+  assert.equal(response.headers.get('location'), lookalike)
+})

@@ -122,6 +122,15 @@ async function register(request: Request, env: Env) {
   return Response.json({ origin: `https://${id}.${env.DOMAIN}` })
 }
 
+/** Where a request goes at the provider: its path and query on the route's origin, never another host. */
+export function upstreamUrl(request: URL, origin: string) {
+  // Not new URL(path, origin): a path like //attacker.example/x would be another host.
+  const url = new URL(origin)
+  url.pathname = request.pathname
+  url.search = request.search
+  return url
+}
+
 async function forward(request: Request, target: Route) {
   const url = new URL(request.url)
   const headers = new Headers(request.headers)
@@ -130,7 +139,7 @@ async function forward(request: Request, target: Route) {
   headers.set('cookie', withToken(request.headers.get('cookie'), target.token))
   let response: Response
   try {
-    response = await fetch(new URL(url.pathname + url.search, target.origin), {
+    response = await fetch(upstreamUrl(url, target.origin), {
       method: request.method,
       headers,
       body: request.body,
@@ -141,14 +150,18 @@ async function forward(request: Request, target: Route) {
   }
   // A WebSocket's answer goes back as it is.
   if (response.webSocket) return response
+  const answer = new Response(response.body, response)
+  // The host is what lets people in: no other site gets it as the Referer of a link, an
+  // image or a font. (A cross-origin fetch with CORS still sends it as its Origin.)
+  answer.headers.set('referrer-policy', 'same-origin')
   // A redirect to the provider's address stays here, where the browser needs no cookie.
   const location = response.headers.get('location')
-  if (location?.startsWith(target.origin)) {
-    const rewritten = new Response(response.body, response)
-    rewritten.headers.set('location', `${url.origin}${location.slice(target.origin.length)}`)
-    return rewritten
+  if (location) {
+    const to = URL.canParse(location) ? new URL(location) : null
+    if (to?.origin === target.origin)
+      answer.headers.set('location', `${url.origin}${to.pathname}${to.search}${to.hash}`)
   }
-  return response
+  return answer
 }
 
 export default {
