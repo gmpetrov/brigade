@@ -551,7 +551,11 @@ export class Threads {
     this.options.emit(spec.sessionId, { at, type: 'message.user', text, memberId })
     thread.handoffs = 0
     const upTo = this.note(spec, null, 'A member', text)
-    this.enqueue(spec, 'prompt', () => upTo)
+    // Its teammate waits on a person (a ticket still open): no turn now, which would only
+    // fail. It reads the message with its next one.
+    this.enqueue(spec, 'prompt', async () =>
+      (await this.harness(thread, spec).harness.awaitingPerson()) ? null : upTo,
+    )
   }
 
   /**
