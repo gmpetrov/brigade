@@ -132,6 +132,7 @@ export const ConnectMcp = z.object({
     'replicate',
     'openrouter',
     'posthog',
+    'dataforseo',
     'stripe',
   ]),
   /** For an App with a server per data region (Mixpanel): the region's id. Default: the first. */

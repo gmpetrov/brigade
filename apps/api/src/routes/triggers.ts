@@ -36,6 +36,7 @@ const KINDS: ConnectorKind[] = [
   'replicate',
   'openrouter',
   'posthog',
+  'dataforseo',
   'mcp',
   'webhook',
 ]

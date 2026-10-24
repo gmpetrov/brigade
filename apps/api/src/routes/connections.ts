@@ -100,6 +100,7 @@ type OAuthState = {
     | 'replicate'
     | 'openrouter'
     | 'posthog'
+    | 'dataforseo'
     | 'stripe'
     | 'mcp'
   /** mcp: the App of the server added by its URL. */
@@ -515,6 +516,7 @@ export const connections = new Hono<AppEnv>()
         replicate: true,
         openrouter: true,
         posthog: true,
+        dataforseo: true,
         mcp: true,
         webhook: true,
       },

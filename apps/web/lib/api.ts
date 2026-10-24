@@ -597,6 +597,7 @@ export type Connection = {
     | 'replicate'
     | 'openrouter'
     | 'posthog'
+    | 'dataforseo'
     | 'mcp'
   label: string
   externalAccount: string | null
