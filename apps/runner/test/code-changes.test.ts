@@ -198,10 +198,10 @@ test('on a branch off the default branch: what changed since it left, committed 
   const result = await changes()
   assert.equal(result.base, 'main')
   assert.deepEqual(result.changes, [
-    { path: 'brigade/apps/web/landing/closing.tsx', status: 'M' },
-    { path: 'brigade/apps/web/landing/committed.tsx', status: 'A' },
-    { path: 'brigade/apps/web/landing/hero.tsx', status: 'M' },
-    { path: 'brigade/apps/web/landing/untracked.tsx', status: 'A' },
+    { path: 'brigade/apps/web/landing/closing.tsx', status: 'M', base: 'main' },
+    { path: 'brigade/apps/web/landing/committed.tsx', status: 'A', base: 'main' },
+    { path: 'brigade/apps/web/landing/hero.tsx', status: 'M', base: 'main' },
+    { path: 'brigade/apps/web/landing/untracked.tsx', status: 'A', base: 'main' },
   ])
   assert.match(result.head ?? '', new RegExp(`:${left}$`))
   // As on the default branch, not as in the branch's last commit.
@@ -262,7 +262,18 @@ test('several repositories: their base said only when each compares to one', asy
   inOther('update-ref', 'refs/remotes/origin/main', inOther('rev-parse', 'HEAD').trim())
   inOther('checkout', '-q', '-b', 'brigade/riley')
   // brigade/ has no default branch since the test before: its last commit.
-  assert.equal((await changes()).base, undefined)
+  await writeFile(join(other, 'a.txt'), 'changed\n')
+  await writeFile(join(landing, 'hero.tsx'), 'changed\n')
+  const mixed = await changes()
+  assert.equal(mixed.base, undefined)
+  // Each file says what its own repository compares to.
+  assert.deepEqual(
+    mixed.changes?.filter((c) => /hero|a\.txt/.test(c.path)),
+    [
+      { path: 'brigade/apps/web/landing/hero.tsx', status: 'M' },
+      { path: 'other/a.txt', status: 'M', base: 'main' },
+    ],
+  )
   git('update-ref', 'refs/remotes/origin/main', git('rev-parse', 'HEAD~1').trim())
   assert.equal((await changes()).base, 'main')
 })

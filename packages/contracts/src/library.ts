@@ -588,6 +588,8 @@ export const CodeChange = z.object({
   /** Relative to the teammate's working folder. */
   path: z.string(),
   status: z.enum(['M', 'A', 'D']),
+  /** The default branch its repository compares to ("main"); unset: its last commit. */
+  base: z.string().optional(),
 })
 export type CodeChange = z.infer<typeof CodeChange>
 

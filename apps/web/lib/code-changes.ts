@@ -104,6 +104,14 @@ export function useCodeChanges(threadId: string, teammateId: string, shown: bool
 export const statusByPath = (data: CodeChanges | undefined) =>
   new Map((data?.changes ?? []).map((c) => [c.path, c.status]))
 
+/** Each changed file's base (its repository's default branch), by path; unset: its last commit. */
+export const baseByPath = (data: CodeChanges | undefined) =>
+  new Map((data?.changes ?? []).map((c) => [c.path, c.base]))
+
+/** Repositories comparing to different things (a default branch, a last commit): no one word for all. */
+export const mixedBases = (data: CodeChanges | undefined) =>
+  !!data && !data.base && data.changes.some((c) => c.base)
+
 /**
  * How many files changed, for the thread's Outputs: read once, and again each time
  * `key` changes (a turn ended), not every few seconds as the open panel does.

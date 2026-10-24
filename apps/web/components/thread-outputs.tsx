@@ -48,7 +48,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { pullHref, type CheckRun, type PullRequestState } from '@/lib/api'
-import type { CodeChanges } from '@/lib/code-changes'
+import { mixedBases, type CodeChanges } from '@/lib/code-changes'
 import {
   blockedBecause,
   canMerge,
@@ -459,7 +459,9 @@ function ChangedFilesRow({ data, error, onOpen }: ChangedFiles) {
       : undefined
     : data.base
       ? `On this branch, against ${data.base}`
-      : 'Since the last commit'
+      : mixedBases(data)
+        ? 'On their branches, or since the last commit'
+        : 'Since the last commit'
   return (
     <li>
       <button

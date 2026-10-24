@@ -367,8 +367,10 @@ export async function codeFiles(request: Request): Promise<Result> {
             // files: changed since the last commit, a file put back as on the base is not.
             const seen = new Set(sinceBase.map((c) => c.path))
             changes.push(
-              ...sinceBase,
-              ...uncommitted.filter((c) => c.status === 'A' && !seen.has(c.path)),
+              ...[
+                ...sinceBase,
+                ...uncommitted.filter((c) => c.status === 'A' && !seen.has(c.path)),
+              ].map((c) => ({ ...c, base: from.name })),
             )
             bases.add(from.name)
           } else {

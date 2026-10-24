@@ -70,7 +70,9 @@ export function CodeChanges({
                   <button
                     type="button"
                     disabled={deleted}
-                    title={deleted ? `${change.path}, deleted ${against.since}` : change.path}
+                    title={
+                      deleted ? `${change.path}, deleted ${comparedTo(change).since}` : change.path
+                    }
                     className="flex min-w-0 flex-1 items-baseline gap-2 py-1 pr-1 pl-2 text-left disabled:cursor-default"
                     onClick={() => onOpen({ path: change.path })}
                   >
@@ -97,8 +99,8 @@ export function CodeChanges({
                       aria-label={`Revert ${name}`}
                       title={
                         change.status === 'A'
-                          ? `Delete it: it is new ${against.since}`
-                          : `Put it back ${against.as}`
+                          ? `Delete it: it is new ${comparedTo(change).since}`
+                          : `Put it back ${comparedTo(change).as}`
                       }
                       className="mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-foreground/10 hover:text-foreground disabled:opacity-40"
                       onClick={() => onRevert([change.path])}

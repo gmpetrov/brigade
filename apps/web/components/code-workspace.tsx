@@ -13,7 +13,13 @@ import { CodeFile } from '@/components/code-file'
 import { CodeTree } from '@/components/code-tree'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
-import { comparedTo, statusByPath, useCodeChanges } from '@/lib/code-changes'
+import {
+  baseByPath,
+  comparedTo,
+  mixedBases,
+  statusByPath,
+  useCodeChanges,
+} from '@/lib/code-changes'
 import { draftKey, setDraft, useDraftKeys } from '@/lib/code-drafts'
 import {
   closeCodeTab,
@@ -68,6 +74,7 @@ export function CodeWorkspace({
   const [wide, setWide] = useState(true)
   const changes = useCodeChanges(threadId, teammateId, shown)
   const statuses = statusByPath(changes.data)
+  const bases = baseByPath(changes.data)
   const changed = changes.data?.changes.length ?? 0
   const against = comparedTo(changes.data)
   const [reverting, setReverting] = useState(false)
@@ -105,17 +112,26 @@ export function CodeWorkspace({
    * Why not, if it failed.
    */
   const revert = async (paths: string[]) => {
-    const files = paths.map((path) => ({ path, status: statuses.get(path) ?? 'M' }))
+    const files = paths.map((path) => ({
+      path,
+      status: statuses.get(path) ?? 'M',
+      base: bases.get(path),
+    }))
+    // Each file as its own repository compares it: one word when they all share it.
+    const one = comparedTo({ base: files[0]?.base })
+    const shared = files.every((f) => f.base === files[0]?.base)
     const name = (path: string) => path.split('/').pop()
     const fresh = files.filter((f) => f.status === 'A').length
     const question =
       files.length === 1
         ? files[0]!.status === 'A'
-          ? `Delete ${name(files[0]!.path)}? It is new ${against.since}.`
+          ? `Delete ${name(files[0]!.path)}? It is new ${one.since}.`
           : files[0]!.status === 'D'
-            ? `Restore ${name(files[0]!.path)} ${against.as}?`
-            : `Revert ${name(files[0]!.path)} to ${against.to}? Its changes are lost.`
-        : `Revert ${files.length} files to ${against.to}? Their changes are lost${
+            ? `Restore ${name(files[0]!.path)} ${one.as}?`
+            : `Revert ${name(files[0]!.path)} to ${one.to}? Its changes are lost.`
+        : `Revert ${files.length} files to ${
+            shared ? one.to : 'their default branch, or their last commit without one'
+          }? Their changes are lost${
             fresh
               ? `, and ${fresh === 1 ? 'the new file is' : `${fresh} new files are`} deleted`
               : ''
@@ -256,7 +272,7 @@ export function CodeWorkspace({
             state.tree
               ? 'Hide the files'
               : changed
-                ? `Show the files: ${changed} changed ${against.since}`
+                ? `Show the files: ${changed} changed${mixedBases(changes.data) ? '' : ` ${against.since}`}`
                 : 'Show the files'
           }
           className="relative"
@@ -301,7 +317,7 @@ export function CodeWorkspace({
                 {...(tab.teammateId === teammateId && changes.data
                   ? {
                       head: changes.data.head,
-                      base: changes.data.base,
+                      base: bases.get(tab.path),
                       status: statuses.get(tab.path),
                       reloadKey: reverted[tab.path],
                       onRevert: () => revert([tab.path]),
