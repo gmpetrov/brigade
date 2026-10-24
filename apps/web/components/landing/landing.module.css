@@ -282,6 +282,7 @@ svg.i {
 /* =================== 1 · Hero =================== */
 .hero {
   position: relative;
+  z-index: 1;
   padding: 56px 0 48px;
 }
 /* Centered, with the live demo right under it (live-demo.tsx). */
@@ -5054,7 +5055,28 @@ a.lgr:hover .tt {
 .live-demo {
   padding: 0 0 96px;
 }
+/* A violet light rising from behind the demo window, as if the product lit the page. The
+   hero sits above it (.hero's z-index), so it never tints the title or the button. */
+.live-demo .wrap {
+  position: relative;
+}
+.live-demo .wrap::before {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: -140px;
+  height: 460px;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    color-mix(in oklab, var(--primary) 50%, transparent),
+    transparent 72%
+  );
+  filter: blur(40px);
+  pointer-events: none;
+}
 .demo-win {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--card);
