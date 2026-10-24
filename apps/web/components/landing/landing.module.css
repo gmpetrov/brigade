@@ -315,6 +315,7 @@ svg.i {
 .dance-word {
   position: relative;
   display: inline-block;
+  isolation: isolate;
 }
 .dn-base {
   display: inline-block;
@@ -324,6 +325,8 @@ svg.i {
 .dancers {
   position: absolute;
   inset: 0;
+  /* Behind the letters: they pop out of the word, and stand on it without covering it. */
+  z-index: -1;
   pointer-events: none;
   opacity: 0;
 }
