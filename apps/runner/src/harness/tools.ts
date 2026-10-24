@@ -268,6 +268,7 @@ export const openTicketTool = tool({
                     'openrouter',
                     'posthog',
                     'dataforseo',
+                    'ahrefs',
                     'mcp',
                   ],
                 },

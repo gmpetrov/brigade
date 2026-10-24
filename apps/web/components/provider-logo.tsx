@@ -12,7 +12,7 @@ export type ProviderKind = Connection['kind']
  * four-color cloud, Neon's square N, Supabase's bolt, Atlassian's two-part A, Notion's
  * black-on-white cube, Linear's violet mark, Mixpanel's violet x, Resend's R on black, Replicate's
  * bars on black, OpenRouter's arrows on white, PostHog's ramps and hog, DataForSEO's Q on blue
- * and yellow, GitHub's
+ * and yellow, Ahrefs' a on blue, GitHub's
  * Invertocat (in the text color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
@@ -358,6 +358,20 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
           fill="#fff"
           d="M17.922 15.977 21.402 19.457A12 12 0 0 1 19.457 21.402L15.977 17.922Z"
         />
+      </svg>
+    )
+  if (kind === 'ahrefs')
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        {/* Ahrefs' app icon: a white a on its blue tile, its stem in orange. */}
+        <rect width="24" height="24" rx="5.5" fill="#3a57fc" />
+        <g transform="translate(6.3 5.25) scale(0.0264)">
+          <path
+            fill="#fff"
+            d="M47.6 0v95.3l256-.2v107.3l-142.4.2C58.4 202.6 0 256.5 0 355.2S58.4 512 161.3 512h7.4c56.7 0 100.4-22.8 134.9-56.5v44.6h125V0Zm153.1 419.3c-52.6 0-76.5-20.6-76.5-64.1s23.9-62.5 76.5-63.3h103.7c0 71.5-32.9 123.3-103.7 127.4Z"
+          />
+          <rect x="303.6" width="125" height="500" fill="#ff8d00" />
+        </g>
       </svg>
     )
   if (kind === 'stripe')

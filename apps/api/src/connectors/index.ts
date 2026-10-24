@@ -17,6 +17,7 @@ import { replicate } from './replicate.js'
 import { openrouter } from './openrouter.js'
 import { posthog } from './posthog.js'
 import { dataforseo } from './dataforseo.js'
+import { ahrefs } from './ahrefs.js'
 import { googleSearchConsole } from './google-search-console.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
@@ -44,6 +45,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   openrouter,
   posthog,
   dataforseo,
+  ahrefs,
 }
 
 /**
@@ -94,6 +96,7 @@ export const triggerCatalog = () =>
         'openrouter',
         'posthog',
         'dataforseo',
+        'ahrefs',
         'mcp',
         'webhook',
       ] as const
@@ -305,6 +308,15 @@ export const appCatalog: Record<
     developer: 'DataForSEO',
     category: 'Marketing',
     // A DataForSEO sign-in spends its account's balance on every request: kept to its member's threads until they share it.
+    personal: true,
+  },
+  ahrefs: {
+    name: 'Ahrefs',
+    description:
+      'Research keywords, backlinks, competitors, rankings, site audits and AI search visibility in Ahrefs, with Ahrefs’ MCP server.',
+    developer: 'Ahrefs',
+    category: 'Marketing',
+    // An Ahrefs sign-in spends its workspace's monthly API units on most calls: kept to its member's threads until they share it.
     personal: true,
   },
   mcp: {

@@ -19,6 +19,7 @@ const { replicateAccountName } = await import('../src/connectors/replicate.js')
 const { openrouterAccountName } = await import('../src/connectors/openrouter.js')
 const { posthog, posthogAccountName } = await import('../src/connectors/posthog.js')
 const { dataforseoAccountName, dataforseoTarget } = await import('../src/connectors/dataforseo.js')
+const { ahrefs } = await import('../src/connectors/ahrefs.js')
 const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
@@ -282,6 +283,18 @@ test('a DataForSEO request shows its method and route', () => {
     'GET https://api.dataforseo.com/v3/appendix/user_data',
   )
   assert.equal(dataforseoTarget('docs_search', { url: '/v3/serp/' }), null)
+})
+
+test('Ahrefs tools that change something are writes, as its server marks them', () => {
+  // Its server marks every other tool readOnlyHint, even those that spend API units.
+  const tools = Object.entries(ahrefs.mcp!.tools)
+  assert.equal(tools.length, 157)
+  for (const [name, tool] of tools)
+    assert.equal(
+      tool.write,
+      /-(create|update|delete|add)$|^management-update-project$/.test(name),
+      name,
+    )
 })
 
 test("a Mixpanel account keeps its region's server", async () => {

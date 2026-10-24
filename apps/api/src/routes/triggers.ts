@@ -37,6 +37,7 @@ const KINDS: ConnectorKind[] = [
   'openrouter',
   'posthog',
   'dataforseo',
+  'ahrefs',
   'mcp',
   'webhook',
 ]

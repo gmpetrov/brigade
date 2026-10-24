@@ -101,6 +101,7 @@ type OAuthState = {
     | 'openrouter'
     | 'posthog'
     | 'dataforseo'
+    | 'ahrefs'
     | 'stripe'
     | 'mcp'
   /** mcp: the App of the server added by its URL. */
@@ -517,6 +518,7 @@ export const connections = new Hono<AppEnv>()
         openrouter: true,
         posthog: true,
         dataforseo: true,
+        ahrefs: true,
         mcp: true,
         webhook: true,
       },
