@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { BrigadeMark } from '@/components/brigade-mark'
+import { Dancers } from './dancers'
 import { c, SIGN_IN, SIGN_UP } from './parts'
 
 export function Header() {
@@ -28,12 +29,16 @@ export function Hero() {
       <div className={c('wrap')}>
         <div className={c('hero-copy')}>
           <h1 id="hero-title">
-            <em>One team</em> builds it, sells it and supports it.
+            <em className={c('dance-word')}>
+              AI teammates
+              <Dancers />
+            </em>{' '}
+            that run your whole company
           </h1>
           <p className={c('sub')}>
-            AI teammates write your code, answer your customers, run your marketing and chase your
-            leads, all in one place. They run on the Claude or ChatGPT plan you already pay for, and
-            every decision that needs you lands in one list on your phone.
+            They write your code, answer your customers, handle your marketing and chase your leads,
+            on the Claude or ChatGPT plan you already pay for. Every decision that needs you lands
+            in one list on your phone.
           </p>
           <div className={c('cta-row')}>
             <Link className={c('btn pri lg')} href={SIGN_UP}>

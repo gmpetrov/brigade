@@ -13,7 +13,7 @@ import { RedirectIfSignedIn } from '@/components/redirect-if-signed-in'
 import { getProofNumbers } from '@/lib/github-proof'
 
 const SITE_URL = 'https://www.brigade.lol/'
-const title = 'Brigade · The operating system for AI-native companies'
+const title = 'Brigade · AI teammates that run your whole company'
 const description =
   'AI teammates that write your code, answer your customers, run your marketing and chase your leads, on the Claude or ChatGPT plan you already pay for. Free on your Mac, open source.'
 
