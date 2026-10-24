@@ -1000,6 +1000,8 @@ enum ConnectorKind {
   openrouter
   /// PostHog, through PostHog's own MCP server and its OAuth.
   posthog
+  /// DataForSEO, through DataForSEO's own MCP server and its OAuth.
+  dataforseo
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
   /// Search Console and Analytics (GA4), on Brigade's Google client like Gmail.

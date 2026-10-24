@@ -18,6 +18,7 @@ const { resendAccountName } = await import('../src/connectors/resend.js')
 const { replicateAccountName } = await import('../src/connectors/replicate.js')
 const { openrouterAccountName } = await import('../src/connectors/openrouter.js')
 const { posthog, posthogAccountName } = await import('../src/connectors/posthog.js')
+const { dataforseoAccountName, dataforseoTarget } = await import('../src/connectors/dataforseo.js')
 const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
@@ -232,6 +233,55 @@ test('a PostHog account shows as its organizations', () => {
   assert.equal(posthogAccountName([{ id: '1', name: 'Acme' }]), 'Acme')
   assert.equal(posthogAccountName('[0]{id,name,slug,membership_level}:'), null)
   assert.equal(posthogAccountName('Failed to get organizations'), null)
+})
+
+test('a DataForSEO account shows as its login', () => {
+  // GET /v3/appendix/user_data's reply, trimmed (its money, rates and price are long).
+  const reply = {
+    version: '0.1.20250526',
+    status_code: 20000,
+    status_message: 'Ok.',
+    cost: 0,
+    tasks_count: 1,
+    tasks_error: 0,
+    tasks: [
+      {
+        id: '10241900-0000-0000-0000-000000000000',
+        status_code: 20000,
+        status_message: 'Ok.',
+        cost: 0,
+        result_count: 1,
+        path: ['v3', 'appendix', 'user_data'],
+        data: { api: 'appendix', function: 'user_data' },
+        result: [{ login: 'seo@acme.com', timezone: 'UTC', money: { total: 50, balance: 49.2 } }],
+      },
+    ],
+  }
+  assert.equal(dataforseoAccountName(reply), 'seo@acme.com')
+  assert.equal(
+    dataforseoAccountName({ status_code: 40100, status_message: 'Not authorized.', tasks: null }),
+    null,
+  )
+  assert.equal(dataforseoAccountName(null), null)
+})
+
+test('a DataForSEO request shows its method and route', () => {
+  assert.equal(
+    dataforseoTarget('api_request', {
+      method: 'POST',
+      path: '/v3/serp/google/organic/live/regular',
+      data: [{ keyword: 'crm', location_code: 2840 }],
+    }),
+    'POST /v3/serp/google/organic/live/regular [{"keyword":"crm","location_code":2840}]',
+  )
+  assert.equal(
+    dataforseoTarget('api_request', {
+      method: 'GET',
+      url: 'https://api.dataforseo.com/v3/appendix/user_data',
+    }),
+    'GET https://api.dataforseo.com/v3/appendix/user_data',
+  )
+  assert.equal(dataforseoTarget('docs_search', { url: '/v3/serp/' }), null)
 })
 
 test("a Mixpanel account keeps its region's server", async () => {

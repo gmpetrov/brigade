@@ -125,7 +125,8 @@ export function AppSheet({
           kind === 'resend' ||
           kind === 'replicate' ||
           kind === 'openrouter' ||
-          kind === 'posthog'
+          kind === 'posthog' ||
+          kind === 'dataforseo'
         ? 'mcp'
         : kind === 'github'
           ? 'github'

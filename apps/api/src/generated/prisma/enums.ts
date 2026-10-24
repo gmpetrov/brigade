@@ -172,6 +172,7 @@ export const ConnectorKind = {
   replicate: 'replicate',
   openrouter: 'openrouter',
   posthog: 'posthog',
+  dataforseo: 'dataforseo',
   mcp: 'mcp',
   google_search_console: 'google_search_console',
   google_analytics: 'google_analytics'

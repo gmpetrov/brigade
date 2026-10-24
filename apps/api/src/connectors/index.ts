@@ -16,6 +16,7 @@ import { resend } from './resend.js'
 import { replicate } from './replicate.js'
 import { openrouter } from './openrouter.js'
 import { posthog } from './posthog.js'
+import { dataforseo } from './dataforseo.js'
 import { googleSearchConsole } from './google-search-console.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
@@ -42,6 +43,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   replicate,
   openrouter,
   posthog,
+  dataforseo,
 }
 
 /**
@@ -91,6 +93,7 @@ export const triggerCatalog = () =>
         'replicate',
         'openrouter',
         'posthog',
+        'dataforseo',
         'mcp',
         'webhook',
       ] as const
@@ -293,6 +296,15 @@ export const appCatalog: Record<
     developer: 'PostHog',
     category: 'Analytics',
     // A PostHog sign-in reaches its person's organizations and projects: kept to their threads until they share it.
+    personal: true,
+  },
+  dataforseo: {
+    name: 'DataForSEO',
+    description:
+      'Research keywords, search results, backlinks, competitors and AI search visibility, and audit pages, with DataForSEO’s MCP server.',
+    developer: 'DataForSEO',
+    category: 'Marketing',
+    // A DataForSEO sign-in spends its account's balance on every request: kept to its member's threads until they share it.
     personal: true,
   },
   mcp: {

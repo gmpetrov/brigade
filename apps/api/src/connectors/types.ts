@@ -67,6 +67,7 @@ export type ConnectorKind =
   | 'replicate'
   | 'openrouter'
   | 'posthog'
+  | 'dataforseo'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
