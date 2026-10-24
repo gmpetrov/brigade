@@ -598,6 +598,7 @@ export type Connection = {
     | 'openrouter'
     | 'posthog'
     | 'dataforseo'
+    | 'ahrefs'
     | 'mcp'
   label: string
   externalAccount: string | null

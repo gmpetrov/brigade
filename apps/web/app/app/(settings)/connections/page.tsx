@@ -60,6 +60,7 @@ const BUILT_IN: Kind[] = [
   'openrouter',
   'posthog',
   'dataforseo',
+  'ahrefs',
   'stripe',
 ]
 
