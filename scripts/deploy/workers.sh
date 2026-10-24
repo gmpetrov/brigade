@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build or deploy one of Brigade's Workers:
-#   scripts/deploy/workers.sh build|deploy api|api-front|web|collab|demo
+#   scripts/deploy/workers.sh build|deploy api|api-front|web|collab|demo|preview-gateway
 # Each Worker's Workers Build runs it on a push to main (the cf:* scripts in the root
 # package.json), after installing dependencies. Deploying the API migrates the database
 # first, with DATABASE_URL from the environment (a build secret on Cloudflare). A deploy
@@ -107,8 +107,16 @@ build:collab)
 deploy:collab)
   pnpm --filter @brigade/collab exec wrangler deploy --var "API_URL:$API_URL"
   ;;
+build:preview-gateway)
+  # Nothing: wrangler bundles it when deploying.
+  ;;
+deploy:preview-gateway)
+  # The previews' own site, brigade.surf (apps/preview-gateway): its table first.
+  pnpm --filter @brigade/preview-gateway exec wrangler d1 migrations apply brigade-preview-gateway --remote
+  pnpm --filter @brigade/preview-gateway exec wrangler deploy
+  ;;
 *)
-  echo "Usage: $0 build|deploy api|api-front|web|collab|demo" >&2
+  echo "Usage: $0 build|deploy api|api-front|web|collab|demo|preview-gateway" >&2
   exit 1
   ;;
 esac

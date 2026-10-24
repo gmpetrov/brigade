@@ -38,6 +38,11 @@ export type PreviewProxyOptions = {
   ports: number[]
   /** Rewrite cookies for a cross-site frame: the address people open is HTTPS. */
   crossSiteCookies: boolean
+  /**
+   * The host people open (the preview gateway's, apps/preview-gateway): the app gets it as
+   * the Host it was asked for, not the provider's that forwarded it, as on a real deploy.
+   */
+  publicHost?: string
   /** What the app is doing, for the page shown while it does not answer. */
   state: () => ProxyState
   /** Someone used the preview. */
@@ -178,6 +183,10 @@ export class PreviewProxy {
         method: req.method,
         headers: {
           ...withoutHopHeaders(req.headers),
+          ...(this.options.publicHost && {
+            host: this.options.publicHost,
+            'x-forwarded-host': this.options.publicHost,
+          }),
           ...(target.prefix && { 'x-forwarded-prefix': target.prefix }),
           ...(page && { 'accept-encoding': 'identity' }),
         },
@@ -227,8 +236,12 @@ export class PreviewProxy {
     if (!target) return void socket.destroy()
     const upstream = net.connect(target.port, this.options.host ?? '127.0.0.1', () => {
       const lines = [`${req.method} ${target.path} HTTP/${req.httpVersion}`]
-      for (let i = 0; i < req.rawHeaders.length; i += 2)
-        lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`)
+      const publicHost = this.options.publicHost
+      for (let i = 0; i < req.rawHeaders.length; i += 2) {
+        const name = req.rawHeaders[i]!
+        const own = publicHost && /^(host|x-forwarded-host)$/i.test(name)
+        lines.push(`${name}: ${own ? publicHost : req.rawHeaders[i + 1]}`)
+      }
       upstream.write(`${lines.join('\r\n')}\r\n\r\n`)
       if (head.length) upstream.write(head)
       upstream.pipe(socket).pipe(upstream)

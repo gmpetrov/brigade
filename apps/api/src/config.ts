@@ -84,6 +84,16 @@ const Env = z.object({
    * development: browsers send it to this computer, as another site than localhost.
    */
   DESIGN_URL: z.preprocess((v) => v || undefined, z.url().optional()),
+  /**
+   * The previews' own site (apps/preview-gateway, a Cloudflare Worker), e.g.
+   * https://brigade.surf: each preview at https://<id>.brigade.surf, which carries the
+   * provider's token itself. Safari, and every browser on an iPhone, drops the provider's
+   * token cookie in the dashboard's frame, so its previews stayed white there. Without
+   * both, previews are at the provider's address.
+   */
+  PREVIEW_GATEWAY_URL: z.preprocess((v) => v || undefined, z.url().optional()),
+  /** Shared with the preview gateway (its SECRET): registers previews there. */
+  PREVIEW_GATEWAY_SECRET: z.string().min(32).optional(),
   /** Shared with the collab server: signs editors' tokens and authenticates its calls. */
   COLLAB_SECRET: z.string().min(32).optional(),
   /**

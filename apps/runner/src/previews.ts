@@ -907,6 +907,7 @@ export class Previews {
       port: input.port,
       ports,
       crossSiteCookies: false,
+      publicHost: undefined as string | undefined,
       state: (): ProxyState => {
         if (!preview || preview.info.status === 'running') return 'running'
         if (preview.restarting) return 'restarting'
@@ -937,6 +938,8 @@ export class Previews {
     origin = origin.replace(/\/+$/, '')
     // In the dashboard's frame (another site), only these cookies are kept; they need HTTPS.
     proxyOptions.crossSiteCookies = origin.startsWith('https:')
+    // Behind the preview gateway, the app is asked for the gateway's host, not the provider's.
+    if (proxyOptions.crossSiteCookies) proxyOptions.publicHost = new URL(origin).host
     const origins: Record<number, string> = Object.fromEntries([
       [input.port, origin],
       ...ports.map((p) => [p, `${origin}${PORTS_PREFIX}${p}`]),

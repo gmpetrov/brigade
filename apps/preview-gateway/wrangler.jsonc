@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The previews' own site (src/index.ts): <id>.brigade.surf in front of each preview's
+  // address at the provider. Deploy with scripts/deploy/workers.sh deploy preview-gateway.
+  "name": "brigade-preview-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "routes": [
+    // The API registers previews here.
+    { "pattern": "brigade.surf", "custom_domain": true },
+    // The previews. Needs a proxied wildcard DNS record (* AAAA 100::) on the zone.
+    { "pattern": "*.brigade.surf/*", "zone_name": "brigade.surf" },
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "brigade-preview-gateway",
+      "database_id": "08a9277e-59f9-423b-a937-480c879813f7",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "vars": {
+    "DOMAIN": "brigade.surf",
+    // The only addresses it forwards to: the provider's.
+    "UPSTREAM_SUFFIX": ".on.boat.dev",
+  },
+  // SECRET: the API's PREVIEW_GATEWAY_SECRET, with `wrangler secret put SECRET`.
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+}
