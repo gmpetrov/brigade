@@ -310,6 +310,59 @@ svg.i {
   font-style: normal;
   color: var(--primary);
 }
+/* Pebbles dancing on "AI teammates" (dancers.tsx): it moves them, standing on the letters'
+   tops; this only draws them, and their blinks. Hidden until placed. */
+.dance-word {
+  position: relative;
+  display: inline-block;
+}
+.dn-base {
+  display: inline-block;
+  width: 0;
+  height: 0;
+}
+.dancers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+.dancers[data-ready] {
+  opacity: 1;
+}
+.dancer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+.dancer svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.dn-eye {
+  fill: none;
+  stroke: oklch(0.2 0.06 295);
+  stroke-width: 6.5;
+  stroke-linecap: round;
+}
+.dn-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: k-dn-blink 4s linear infinite;
+}
+@keyframes k-dn-blink {
+  0%,
+  91%,
+  100% {
+    transform: scaleY(1);
+  }
+  94% {
+    transform: scaleY(0.1);
+  }
+}
 .hero .sub {
   margin: 30px auto 0;
   font-size: 19px;
@@ -4514,8 +4567,9 @@ svg.i {
   .hero {
     padding: 28px 0 72px;
   }
+  /* Room for the pebbles dancing on the title, so they don't jump into the header. */
   .hero-copy {
-    padding-top: 8px;
+    padding-top: 40px;
   }
   .eyebrow {
     font-size: 11.5px;

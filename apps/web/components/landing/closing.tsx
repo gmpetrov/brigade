@@ -133,7 +133,7 @@ export function Pricing() {
             </div>
             <div className={c('price')}>
               <span className={c('amt')}>$99</span>
-              <span className={c('per')}>/ month per workspace</span>
+              <span className={c('per')}>/ month</span>
             </div>
             <ul className={c('feat')}>
               <li>
@@ -274,7 +274,7 @@ export function FinalCall() {
     <section aria-labelledby="final-title" className={c('final')} data-anim>
       <Pebble />
       <div className={c('wrap')}>
-        <h2 id="final-title">Meet your first teammate.</h2>
+        <h2 id="final-title">Meet your first teammate</h2>
         <p className={c('lead')}>He does the work. You make the calls.</p>
         <Link className={c('btn pri lg')} href={SIGN_UP}>
           Sign up
