@@ -46,8 +46,8 @@ const random = (min: number, max: number) => min + Math.random() * (max - min)
  * its own outline against the glyphs' tops, measured from the font, so one sits lower on an
  * "e" than on a "t" and always touches. Each jumps on its own at random, small hops mostly
  * and a bigger one now and then, falls back under gravity, squashes on landing and springs
- * back, and leans as it moves. They bump into each other and never overlap; a soft pull
- * brings each back to its spot. When the page opens, they rain down one at a time from above
+ * back, and leans as it moves. They bump into each other and never overlap; one off its spot
+ * hops back to it, never slides. When the page opens, they rain down one at a time from above
  * the page and land on the letters. They sit behind the word's ink, so they never cover it.
  * It runs only while the title shows; under reduced motion they stand still on the letters.
  */
@@ -219,11 +219,17 @@ export function Dancers() {
           continue
         }
         d.next -= dt
+        // Off its spot (a bounce or a neighbour moved it), it hops back soon rather than slide.
+        const away = d.home - d.x
+        if (d.grounded && Math.abs(away) > 0.06 * em) d.next = Math.min(d.next, random(0.12, 0.35))
         if (d.grounded && d.next <= 0) {
-          // Mostly small hops, a bigger one now and then, a little to one side.
+          // Mostly small hops, a bigger one now and then. Each one aims to land near its
+          // spot: back onto it when it is off, a little to either side when it is on it.
           const h = (Math.random() < 0.2 ? random(0.35, 0.6) : random(0.08, 0.25)) * em
           d.vy = -Math.sqrt(2 * g * h)
-          d.vx = random(-1, 1) * 0.35 * em
+          const air = (2 * -d.vy) / g
+          const target = Math.abs(away) > 0.06 * em ? away : random(-1, 1) * 0.12 * em
+          d.vx = target / air
           d.grounded = false
           // A push off the ground stretches it a little.
           d.qv -= 2
@@ -245,9 +251,8 @@ export function Dancers() {
             d.vx *= 0.4
           }
         } else {
-          // Standing: slide back toward its spot, following the letters under it.
-          d.vx += (d.home - d.x) * 24 * dt - d.vx * 8 * dt
-          d.x += d.vx * dt
+          // Standing: it stays put on the letters under it; it only moves by hopping.
+          d.vx = 0
           d.y = rest(d.x, d.size)
         }
         // The squash spring, and the lean following the sideways speed.
