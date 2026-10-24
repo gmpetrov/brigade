@@ -170,7 +170,7 @@ const theme = EditorView.theme({
   },
 })
 
-/** A change's button: Revert, back as in the last commit (an edit, undone like any). No Accept. */
+/** A change's button: Revert, back as it was (an edit, undone like any). No Accept. */
 function chunkButton(type: 'accept' | 'reject', action: (e: MouseEvent) => void) {
   if (type === 'accept') {
     const none = document.createElement('span')
@@ -181,7 +181,7 @@ function chunkButton(type: 'accept' | 'reject', action: (e: MouseEvent) => void)
   button.type = 'button'
   button.className = 'cm-revert'
   button.textContent = '↶ Revert'
-  button.title = 'Put this back as in the last commit'
+  button.title = 'Put this back as it was'
   button.onmousedown = action
   return button
 }

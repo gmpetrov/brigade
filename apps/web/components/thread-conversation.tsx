@@ -83,6 +83,7 @@ import {
 } from '@/components/thread-children'
 import { TicketRow } from '@/components/ticket-row'
 import { useThreadOutputs } from '@/components/thread-outputs'
+import { ChangesPanel } from '@/components/changes-panel'
 import { useThreadPanel } from '@/components/thread-panel'
 import { ThreadSkeleton } from '@/components/thread-skeleton'
 import { ThreadItems, useThreadItems, type ComputerDown } from '@/components/thread-view'
@@ -102,7 +103,8 @@ import {
   type Teammate,
   type Thread,
 } from '@/lib/api'
-import { openCodeTab } from '@/lib/code-tabs'
+import { useChangesCount } from '@/lib/code-changes'
+import { openCodeTab, setCodePanel } from '@/lib/code-tabs'
 import { useLive } from '@/lib/use-live'
 import {
   preloadThreadEvents,
@@ -237,6 +239,13 @@ export function ThreadConversation({
   // Preview is offered once there is something to preview: a preview it had, or code it checked out.
   const repositories = useThreadRepositories(events)
   const offersPreview = !!preview || repositories.length > 0
+  // Whose code its Changes show: the teammate that last checked out code here.
+  const codeTeammateId = useMemo(() => {
+    const event = events.findLast(
+      (e) => e.event.type === 'repositories.changed' && e.event.repositories.length > 0,
+    )?.event
+    return event?.type === 'repositories.changed' ? event.teammateId : undefined
+  }, [events])
   const [error, setError] = useState<string>()
   // The turn asked to stop, until it ends: a tool can take a moment to give up.
   const [stopping, setStopping] = useState<string>()
@@ -346,6 +355,8 @@ export function ThreadConversation({
   const [file, setFile] = useState<{ path: string; teammateId?: string }>()
   // The app the teammate runs, beside the thread in the desktop's place.
   const [previewing, setPreviewing] = useState(false)
+  // The files it changed, beside the thread in the desktop's place, without a preview.
+  const [changesOpen, setChangesOpen] = useState(false)
   // The computer expanded over the thread from its details, which it hides until it closes.
   const [computerOpen, setComputerOpen] = useState(false)
   // Teach a task: the computer over the window, recording the person doing it.
@@ -360,18 +371,21 @@ export function ThreadConversation({
     if (!expanded) onExpand()
     documents.close()
     setPreviewing(false)
+    setChangesOpen(false)
     setFile(f)
   }
   const openPreview = () => {
     if (!expanded) onExpand()
     documents.close()
     setFile(undefined)
+    setChangesOpen(false)
     setPreviewing(true)
   }
   useEffect(() => {
     if (documents.current) {
       setFile(undefined)
       setPreviewing(false)
+      setChangesOpen(false)
     }
   }, [documents.current])
   // The bar's computer button brings the teammate's panel back in front of a file or preview.
@@ -379,12 +393,13 @@ export function ThreadConversation({
     if (!revealKey) return
     setFile(undefined)
     setPreviewing(false)
+    setChangesOpen(false)
   }, [revealKey])
   // And it shows pressed only while the panel is the one in front.
   useEffect(() => {
-    setCovered(!!file || previewing)
+    setCovered(!!file || previewing || changesOpen)
     return () => setCovered(false)
-  }, [file, previewing, setCovered])
+  }, [file, previewing, changesOpen, setCovered])
   // A preview a person started, or asked the teammate for: its panel opens once it starts.
   const [awaitingPreview, setAwaitingPreview] = useState(false)
   const live = previewLive(preview)
@@ -539,6 +554,12 @@ export function ThreadConversation({
     reconnect()
     void thread.reload()
   }
+  // Outputs' changed files: of the teammate that checked out code, read again as its status
+  // changes (a turn starts or ends).
+  const changesTeammate = repositories.length
+    ? (codeTeammateId ?? thread.data?.teammate.id)
+    : undefined
+  const changedFiles = useChangesCount(thread.data?.id, changesTeammate, status)
   if (!thread.data)
     return thread.error ? (
       <p className={cn(column, 'pt-6 text-sm text-destructive-text')}>{thread.error.message}</p>
@@ -932,6 +953,19 @@ export function ThreadConversation({
   // app it builds is the thread's, not its computer's, and stays in reach with the details closed.
   // What a click does, not only what it is about: its label, on hover and for screen readers.
   // As far in as the toggle (left-2), so the pill bar's px-12 leaves the same gap on each side.
+  const openChanges = () => {
+    if (!changesTeammate) return
+    // A preview running this copy: the code beside it, on Changes.
+    if (live && preview?.teammateId === changesTeammate) {
+      setCodePanel(t.id, { open: true, side: 'changes', tree: true })
+      return openPreview()
+    }
+    if (!expanded) onExpand()
+    documents.close()
+    setFile(undefined)
+    setPreviewing(false)
+    setChangesOpen(true)
+  }
   const previewLabel = previewStart.busy
     ? 'Starting the preview…'
     : previewing
@@ -1035,6 +1069,17 @@ export function ThreadConversation({
           {...(t.mayPrompt ? { onPick: pickElement, picked: elements.length } : {})}
         />
       )}
+      {expanded && !file && !documents.current && !previewing && changesOpen && changesTeammate && (
+        <ChangesPanel
+          threadId={t.id}
+          teammateId={changesTeammate}
+          teammateName={(teammateId) =>
+            people.find((p) => p.id === teammateId)?.name ?? t.teammate.name
+          }
+          mayEdit={t.mayPrompt}
+          onClose={() => setChangesOpen(false)}
+        />
+      )}
       {expanded && computerOpen && t.computer.kind === 'cloud' && (
         <ExpandedComputer
           thread={t}
@@ -1054,19 +1099,30 @@ export function ThreadConversation({
           onClose={() => setTeaching(false)}
         />
       )}
-      {expanded && !computerOpen && !file && !documents.current && !previewing && watching && (
-        <ComputerPanel
-          thread={t}
-          memberId={me.memberId ?? ''}
-          // Expanded where it is: the thread stays the page.
-          onOpenComputer={() => setComputerOpen(true)}
-          onClose={() => setWatching(false)}
-          outputs={outputs}
-          onOpenFile={openFile}
-          details={details}
-          onChange={() => void thread.reload()}
-        />
-      )}
+      {expanded &&
+        !computerOpen &&
+        !file &&
+        !documents.current &&
+        !previewing &&
+        !changesOpen &&
+        watching && (
+          <ComputerPanel
+            thread={t}
+            memberId={me.memberId ?? ''}
+            // Expanded where it is: the thread stays the page.
+            onOpenComputer={() => setComputerOpen(true)}
+            onClose={() => setWatching(false)}
+            outputs={outputs}
+            onOpenFile={openFile}
+            changes={
+              changesTeammate && !changedFiles.unsupported
+                ? { data: changedFiles.data, error: changedFiles.error, onOpen: openChanges }
+                : undefined
+            }
+            details={details}
+            onChange={() => void thread.reload()}
+          />
+        )}
 
       <div
         className="relative flex min-h-0 flex-1 flex-col"

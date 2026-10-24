@@ -1,10 +1,11 @@
 'use client'
 // The code panel's Changes: the files of the teammate's working folder that differ
-// from the last commit of their repository (lib/code-changes.ts), to open with what
+// from where their branch left its default branch, or from their last commit
+// (lib/code-changes.ts), to open with what
 // changed shown in the editor, and to revert one by one or all at once.
 import type { CodeChange } from '@brigade/contracts'
 import { Undo2 } from 'lucide-react'
-import type { CodeChanges as Changes } from '@/lib/code-changes'
+import { comparedTo, type CodeChanges as Changes } from '@/lib/code-changes'
 import { cn } from '@/lib/utils'
 
 const STATUS: Record<CodeChange['status'], { label: string; className: string }> = {
@@ -37,6 +38,7 @@ export function CodeChanges({
   className?: string
 }) {
   const changes = data?.changes ?? []
+  const against = comparedTo(data)
   return (
     <div className={cn('flex min-h-0 flex-col text-xs', className)}>
       <div className="min-h-0 flex-1 overflow-y-auto px-1 py-1">
@@ -49,7 +51,7 @@ export function CodeChanges({
             {error ?? 'Looking…'}
           </p>
         ) : changes.length === 0 ? (
-          <p className="px-2 py-1 text-muted-foreground">No changes since the last commit.</p>
+          <p className="px-2 py-1 text-muted-foreground">No changes {against.since}.</p>
         ) : (
           <>
             {changes.map((change) => {
@@ -68,7 +70,9 @@ export function CodeChanges({
                   <button
                     type="button"
                     disabled={deleted}
-                    title={deleted ? `${change.path}, deleted since the last commit` : change.path}
+                    title={
+                      deleted ? `${change.path}, deleted ${comparedTo(change).since}` : change.path
+                    }
                     className="flex min-w-0 flex-1 items-baseline gap-2 py-1 pr-1 pl-2 text-left disabled:cursor-default"
                     onClick={() => onOpen({ path: change.path })}
                   >
@@ -95,8 +99,8 @@ export function CodeChanges({
                       aria-label={`Revert ${name}`}
                       title={
                         change.status === 'A'
-                          ? 'Delete it: it is new since the last commit'
-                          : 'Put it back as in the last commit'
+                          ? `Delete it: it is new ${comparedTo(change).since}`
+                          : `Put it back ${comparedTo(change).as}`
                       }
                       className="mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-foreground/10 hover:text-foreground disabled:opacity-40"
                       onClick={() => onRevert([change.path])}

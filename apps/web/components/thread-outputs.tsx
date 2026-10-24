@@ -3,7 +3,8 @@
 // documents, images, pull requests, emails, schedules and skills proposed. Read from the event
 // log; a file made again keeps one row, and one saved to the library shows only as its library
 // row. Open pull requests lead, then the rest newest first under a line for each day. A pull request's row says how its checks went, and an owner or
-// admin merges it from there.
+// admin merges it from there. Above them, once it checked out code, the files it changed on its
+// branch, which open beside the thread without a preview (components/changes-panel.tsx).
 import {
   bareToolName as bare,
   designName,
@@ -21,6 +22,7 @@ import {
   Copy,
   EllipsisVertical,
   ExternalLink,
+  FileDiff,
   FileText,
   GitCompareArrows,
   GitMerge,
@@ -46,6 +48,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { pullHref, type CheckRun, type PullRequestState } from '@/lib/api'
+import { mixedBases, type CodeChanges } from '@/lib/code-changes'
 import {
   blockedBecause,
   canMerge,
@@ -328,7 +331,18 @@ const time = (at: string) =>
 /** What a pull request's row learned of it, to place it: open ones lead, a merged one goes by its merge. */
 type PullPlace = { open: boolean; at: string }
 
-export function ThreadOutputs({ outputs, onOpen }: { outputs: ThreadOutput[]; onOpen: OpenFile }) {
+/** The files changed in the teammate's working folder, as last read (lib/code-changes.ts). */
+export type ChangedFiles = { data?: CodeChanges; error?: string; onOpen: () => void }
+
+export function ThreadOutputs({
+  outputs,
+  onOpen,
+  changes,
+}: {
+  outputs: ThreadOutput[]
+  onOpen: OpenFile
+  changes?: ChangedFiles
+}) {
   const [all, setAll] = useState(false)
   const [pulls, setPulls] = useState<Record<string, PullPlace>>({})
   const place = useCallback(
@@ -404,6 +418,7 @@ export function ThreadOutputs({ outputs, onOpen }: { outputs: ThreadOutput[]; on
   return (
     <div className="flex flex-col gap-1">
       <ul className="flex flex-col">
+        {changes && <ChangedFilesRow {...changes} />}
         {open.length > 0 && heading('Open')}
         {open.map((output) => item(output))}
         {rest.map(({ output, at }, i) => {
@@ -427,6 +442,42 @@ export function ThreadOutputs({ outputs, onOpen }: { outputs: ThreadOutput[]; on
         </button>
       )}
     </div>
+  )
+}
+
+/** The thread's changed files: how many, against what; a click opens them with what changed. */
+function ChangedFilesRow({ data, error, onOpen }: ChangedFiles) {
+  const count = data?.changes.length ?? 0
+  const label = !data
+    ? 'Changed files'
+    : count
+      ? `${count}${data.more ? '+' : ''} changed ${count === 1 && !data.more ? 'file' : 'files'}`
+      : 'No changed files'
+  const detail = !data
+    ? error
+      ? 'The computer did not answer'
+      : undefined
+    : data.base
+      ? `On this branch, against ${data.base}`
+      : mixedBases(data)
+        ? 'On their branches, or since the last commit'
+        : 'Since the last commit'
+  return (
+    <li>
+      <button
+        type="button"
+        className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-secondary/60"
+        title="See the files changed and what changed in each, without a preview"
+        onClick={onOpen}
+      >
+        <FileDiff className="size-4 flex-none text-muted-foreground" aria-hidden />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-sm font-medium">{label}</span>
+          {detail && <span className="truncate text-xs text-muted-foreground">{detail}</span>}
+        </span>
+        {count > 0 && <span aria-hidden className="size-1.5 flex-none rounded-full bg-primary" />}
+      </button>
+    </li>
   )
 }
 

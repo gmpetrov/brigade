@@ -580,17 +580,20 @@ export const CODE_HASHES_MAX = 20
 export const CODE_CHANGES_MAX = 500
 
 /**
- * A file of a teammate's working folder that differs from the last commit of its
- * repository: modified, new (added or not yet tracked) or deleted.
+ * A file of a teammate's working folder that differs from where its repository's
+ * branch left its default branch, or from its last commit: modified, new (added or
+ * not yet tracked) or deleted.
  */
 export const CodeChange = z.object({
   /** Relative to the teammate's working folder. */
   path: z.string(),
   status: z.enum(['M', 'A', 'D']),
+  /** The default branch its repository compares to ("main"); unset: its last commit. */
+  base: z.string().optional(),
 })
 export type CodeChange = z.infer<typeof CodeChange>
 
-/** Files to put back as they are in the last commit: new ones are deleted. */
+/** Files to put back as changes compares them to: new ones are deleted. */
 export const RevertCode = z.object({
   teammateId: z.string().min(1),
   paths: z.array(z.string().min(1).max(1000)).min(1).max(CODE_CHANGES_MAX),

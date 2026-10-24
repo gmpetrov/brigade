@@ -182,3 +182,104 @@ test('a commit changes the head', async () => {
   git('commit', '-q', '-am', 'second')
   assert.notEqual((await changes()).head, before)
 })
+
+test('on a branch off the default branch: what changed since it left, committed or not', async () => {
+  // The default branch, as last fetched, where the branch leaves it.
+  const left = git('rev-parse', 'HEAD').trim()
+  git('update-ref', 'refs/remotes/origin/main', left)
+  git('symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/main')
+  git('checkout', '-q', '-b', 'brigade/riley')
+  await writeFile(join(landing, 'hero.tsx'), '<h1>Three teams</h1>\n')
+  await writeFile(join(landing, 'committed.tsx'), 'committed\n')
+  git('add', '.')
+  git('commit', '-q', '-m', 'on the branch')
+  await writeFile(join(landing, 'closing.tsx'), '<p>Not yet committed.</p>\n')
+  await writeFile(join(landing, 'untracked.tsx'), 'untracked\n')
+  const result = await changes()
+  assert.equal(result.base, 'main')
+  assert.deepEqual(result.changes, [
+    { path: 'brigade/apps/web/landing/closing.tsx', status: 'M', base: 'main' },
+    { path: 'brigade/apps/web/landing/committed.tsx', status: 'A', base: 'main' },
+    { path: 'brigade/apps/web/landing/hero.tsx', status: 'M', base: 'main' },
+    { path: 'brigade/apps/web/landing/untracked.tsx', status: 'A', base: 'main' },
+  ])
+  assert.match(result.head ?? '', new RegExp(`:${left}$`))
+  // As on the default branch, not as in the branch's last commit.
+  const original = await codeFiles({
+    ...ids,
+    op: 'original',
+    path: 'brigade/apps/web/landing/hero.tsx',
+  })
+  assert.equal(original.original, '<h1>Two teams</h1>\n')
+
+  const reverted = await codeFiles({
+    ...ids,
+    op: 'revert',
+    paths: ['brigade/apps/web/landing/hero.tsx', 'brigade/apps/web/landing/committed.tsx'],
+  })
+  assert.equal(reverted.ok, true, reverted.error)
+  assert.equal(reverted.base, 'main')
+  assert.equal(await readFile(join(landing, 'hero.tsx'), 'utf8'), '<h1>Two teams</h1>\n')
+  await assert.rejects(stat(join(landing, 'committed.tsx')))
+  assert.deepEqual(
+    (await changes()).changes?.map((c) => c.path),
+    ['brigade/apps/web/landing/closing.tsx', 'brigade/apps/web/landing/untracked.tsx'],
+  )
+
+  // With nothing to compare to, the last commit again.
+  git('symbolic-ref', '--delete', 'refs/remotes/origin/HEAD')
+  git('update-ref', '-d', 'refs/remotes/origin/main')
+  const alone = await changes()
+  assert.equal(alone.base, undefined)
+  assert.deepEqual(
+    alone.changes?.map((c) => c.path),
+    [
+      'brigade/apps/web/landing/closing.tsx',
+      'brigade/apps/web/landing/committed.tsx',
+      'brigade/apps/web/landing/hero.tsx',
+      'brigade/apps/web/landing/untracked.tsx',
+    ],
+  )
+})
+
+test('several repositories: their base said only when each compares to one', async () => {
+  const other = join(dir, 'other')
+  const inOther = (...args: string[]) =>
+    execFileSync('git', ['-C', other, ...args], {
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: 'T',
+        GIT_AUTHOR_EMAIL: 't@example.com',
+        GIT_COMMITTER_NAME: 'T',
+        GIT_COMMITTER_EMAIL: 't@example.com',
+      },
+    }).toString()
+  await mkdir(other, { recursive: true })
+  inOther('init', '-q')
+  await writeFile(join(other, 'a.txt'), 'a\n')
+  inOther('add', '.')
+  inOther('commit', '-q', '-m', 'first')
+  inOther('update-ref', 'refs/remotes/origin/main', inOther('rev-parse', 'HEAD').trim())
+  inOther('checkout', '-q', '-b', 'brigade/riley')
+  // brigade/ has no default branch since the test before: its last commit.
+  await writeFile(join(other, 'a.txt'), 'changed\n')
+  await writeFile(join(landing, 'hero.tsx'), 'changed\n')
+  const mixed = await changes()
+  assert.equal(mixed.base, undefined)
+  // Each file says what its own repository compares to.
+  assert.deepEqual(
+    mixed.changes?.filter((c) => /hero|a\.txt/.test(c.path)),
+    [
+      { path: 'brigade/apps/web/landing/hero.tsx', status: 'M' },
+      { path: 'other/a.txt', status: 'M', base: 'main' },
+    ],
+  )
+  const reverted = await codeFiles({
+    ...ids,
+    op: 'revert',
+    paths: ['other/a.txt', 'brigade/apps/web/landing/hero.tsx'],
+  })
+  assert.equal(reverted.base, 'their default branch (their last commit without one)')
+  git('update-ref', 'refs/remotes/origin/main', git('rev-parse', 'HEAD~1').trim())
+  assert.equal((await changes()).base, 'main')
+})
