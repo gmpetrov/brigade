@@ -155,3 +155,30 @@ test('answers keep the host out of Referers, whatever the app says; other redire
   assert.equal(response.headers.get('referrer-policy'), 'same-origin')
   assert.equal(response.headers.get('location'), lookalike)
 })
+
+test("a WebSocket from the preview's own page goes with the provider's origin; another is refused", async () => {
+  const { db } = fakeDb()
+  const env = envWith(db)
+  const { origin } = (await (await register(env, `${UPSTREAM}?_token=tok`)).json()) as {
+    origin: string
+  }
+  // The headers only: Node wants a streamed body's duplex, which Workers do not.
+  const seen: { headers: Headers }[] = []
+  globalThis.fetch = (async (_input: URL, init: RequestInit) => {
+    seen.push({ headers: new Headers(init.headers) })
+    return new Response('ok')
+  }) as typeof fetch
+  const ws = { upgrade: 'websocket', connection: 'Upgrade' }
+  await call(env, `${origin}/_next/hmr`, { headers: { ...ws, origin } })
+  assert.equal(seen[0]!.headers.get('origin'), UPSTREAM)
+
+  const refused = await call(env, `${origin}/_next/hmr`, {
+    headers: { ...ws, origin: 'https://evil.example' },
+  })
+  assert.equal(refused.status, 403)
+  assert.equal(seen.length, 1)
+
+  // Not a WebSocket: its origin as it came (the provider checks none).
+  await call(env, `${origin}/api`, { method: 'POST', headers: { origin }, body: '{}' })
+  assert.equal(seen[1]!.headers.get('origin'), origin)
+})

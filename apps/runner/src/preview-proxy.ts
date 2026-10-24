@@ -237,10 +237,16 @@ export class PreviewProxy {
     const upstream = net.connect(target.port, this.options.host ?? '127.0.0.1', () => {
       const lines = [`${req.method} ${target.path} HTTP/${req.httpVersion}`]
       const publicHost = this.options.publicHost
+      // The preview gateway sends a WebSocket with the provider's origin, which refuses any
+      // other: the page's, at the public host, is what the app checks (Next's dev origins).
+      const providerOrigin = `https://${req.headers.host}`
       for (let i = 0; i < req.rawHeaders.length; i += 2) {
         const name = req.rawHeaders[i]!
-        const own = publicHost && /^(host|x-forwarded-host)$/i.test(name)
-        lines.push(`${name}: ${own ? publicHost : req.rawHeaders[i + 1]}`)
+        let value = req.rawHeaders[i + 1]!
+        if (publicHost && /^(host|x-forwarded-host)$/i.test(name)) value = publicHost
+        else if (publicHost && /^origin$/i.test(name) && value === providerOrigin)
+          value = `https://${publicHost}`
+        lines.push(`${name}: ${value}`)
       }
       upstream.write(`${lines.join('\r\n')}\r\n\r\n`)
       if (head.length) upstream.write(head)

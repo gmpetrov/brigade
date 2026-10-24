@@ -145,13 +145,17 @@ test('a page the browser left before the app answered does not stop the proxy', 
 })
 
 test("behind the preview gateway, the app is asked for the gateway's host, WebSockets too", async (t) => {
-  const seen: { host?: string; forwarded?: string }[] = []
+  const seen: { host?: string; forwarded?: string; origin?: string }[] = []
   const server = http.createServer((req, res) => {
     seen.push({ host: req.headers.host, forwarded: req.headers['x-forwarded-host'] as string })
     res.end('ok')
   })
   server.on('upgrade', (req, socket) => {
-    seen.push({ host: req.headers.host, forwarded: req.headers['x-forwarded-host'] as string })
+    seen.push({
+      host: req.headers.host,
+      forwarded: req.headers['x-forwarded-host'] as string,
+      origin: req.headers.origin,
+    })
     socket.end(
       'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n',
     )
@@ -185,7 +189,13 @@ test("behind the preview gateway, the app is asked for the gateway's host, WebSo
         port: at,
         path: '/hmr',
         agent: false,
-        headers: { ...provider, connection: 'Upgrade', upgrade: 'websocket' },
+        // The gateway sends it with the provider's origin, the only one the provider lets in.
+        headers: {
+          ...provider,
+          origin: 'https://box-1.on.boat.dev',
+          connection: 'Upgrade',
+          upgrade: 'websocket',
+        },
       })
       .on('upgrade', (_res, socket) => {
         socket.destroy()
@@ -195,6 +205,6 @@ test("behind the preview gateway, the app is asked for the gateway's host, WebSo
   })
   assert.deepEqual(seen, [
     { host: 'abc.brigade.surf', forwarded: 'abc.brigade.surf' },
-    { host: 'abc.brigade.surf', forwarded: 'abc.brigade.surf' },
+    { host: 'abc.brigade.surf', forwarded: 'abc.brigade.surf', origin: 'https://abc.brigade.surf' },
   ])
 })
