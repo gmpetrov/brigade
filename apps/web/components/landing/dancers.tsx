@@ -237,10 +237,11 @@ export function Dancers() {
           if (d.y >= floor && d.vy > 0) {
             d.y = floor
             const impact = d.vy / em
-            // A small bounce off the letter, and a squash as hard as the landing.
-            d.vy = impact > 4 ? -d.vy * 0.2 : 0
+            // A light bounce off the letter, a smaller one after it until it settles, and a
+            // squash as hard as the landing.
+            d.vy = impact > 1.5 ? -d.vy * 0.28 : 0
             d.grounded = d.vy === 0
-            d.qv += Math.min(impact, 12) * 0.7
+            d.qv += Math.min(impact, 12) * 0.5
             d.vx *= 0.4
           }
         } else {
@@ -296,7 +297,12 @@ export function Dancers() {
           }
         }
       }
-      for (const d of dancers) if (d.grounded) d.y = rest(d.x, d.size)
+      // Nothing ends up below the letters: a push from a neighbour can't sink one into them.
+      for (const d of dancers) {
+        if (d.wait > 0) continue
+        const floor = rest(d.x, d.size)
+        if (d.grounded || d.y > floor) d.y = floor
+      }
     }
 
     let frame = 0
@@ -337,17 +343,21 @@ export function Dancers() {
       else stop()
     })
     observer.observe(word)
-    let width = window.innerWidth
-    const onResize = () => {
-      if (window.innerWidth === width) return
-      width = window.innerWidth
-      setup()
-    }
-    window.addEventListener('resize', onResize)
+    // The word changing size (the title's font swapping in, the window or frame resizing)
+    // moves its letters: measure them again, so nobody floats or sinks into them.
+    let size = ''
+    const resized = new ResizeObserver(([entry]) => {
+      const next = `${entry?.contentRect.width}x${entry?.contentRect.height}`
+      if (next === size) return
+      const first = !size
+      size = next
+      if (!first) setup()
+    })
+    resized.observe(word)
     return () => {
       stop()
       observer.disconnect()
-      window.removeEventListener('resize', onResize)
+      resized.disconnect()
     }
   }, [])
 
