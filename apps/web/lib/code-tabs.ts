@@ -1,5 +1,5 @@
 // The code panel beside a thread's preview: whether it shows, the files open in it as
-// tabs and the one in front, and whether its tree shows. Per thread, outside the
+// tabs and the one in front, and whether its tree (or its Changes) shows. Per thread, outside the
 // panels (the preview's panel unmounts when a file or document takes its place),
 // and kept for the browser tab's session, so a reload opens the same files.
 import { useCallback, useSyncExternalStore } from 'react'
@@ -20,6 +20,8 @@ export type CodePanelState = {
   /** tabKey of the tab in front. */
   active?: string
   tree: boolean
+  /** What the side shows: the folder's tree, or the files changed since the last commit. */
+  side?: 'files' | 'changes'
 }
 
 export const tabKey = (tab: Pick<CodeTab, 'teammateId' | 'path'>) =>

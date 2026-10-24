@@ -3,11 +3,16 @@
 // in the code editor, and left of it the tree of the working folder the preview runs from, so
 // what is saved here shows in the preview. Its state is the thread's
 // (lib/code-tabs.ts); tabs keep their editors while another is in front, for undo.
+// Beside the tree, Changes: the files changed since the last commit, which the
+// editor shows against it, each to revert.
 import { Crosshair, FileCode2, PanelLeft, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { CodeChanges } from '@/components/code-changes'
 import { CodeFile } from '@/components/code-file'
 import { CodeTree } from '@/components/code-tree'
 import { Button } from '@/components/ui/button'
+import { api } from '@/lib/api'
+import { statusByPath, useCodeChanges } from '@/lib/code-changes'
 import { draftKey, setDraft, useDraftKeys } from '@/lib/code-drafts'
 import {
   closeCodeTab,
@@ -51,6 +56,13 @@ export function CodeWorkspace({
   const drafts = useDraftKeys()
   const root = useRef<HTMLDivElement>(null)
   const [wide, setWide] = useState(true)
+  const changes = useCodeChanges(threadId, teammateId, shown)
+  const statuses = statusByPath(changes.data)
+  const changed = changes.data?.changes.length ?? 0
+  const [reverting, setReverting] = useState(false)
+  const [revertError, setRevertError] = useState<string>()
+  /** Files reverted, by path: a count each open one reads its file again at. */
+  const [reverted, setReverted] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const el = root.current
@@ -70,11 +82,56 @@ export function CodeWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- when the tab in front, or the width, changes
   }, [state.active, wide])
   const tree = state.tree || state.tabs.length === 0
+  const showChanges = state.side === 'changes' && !changes.unsupported
   const open = (file: { path: string; line?: number }) => {
     openCodeTab(threadId, { teammateId, ...file })
     // Over the editor, the tree makes way for the file.
     if (!wide) setCodePanel(threadId, { tree: false })
   }
+  /**
+   * Puts files back as in the last commit, once asked: new ones are deleted, and
+   * their tabs close; open ones show the file as it is then, unsaved edits dropped.
+   * Why not, if it failed.
+   */
+  const revert = async (paths: string[]) => {
+    const files = paths.map((path) => ({ path, status: statuses.get(path) ?? 'M' }))
+    const name = (path: string) => path.split('/').pop()
+    const fresh = files.filter((f) => f.status === 'A').length
+    const question =
+      files.length === 1
+        ? files[0]!.status === 'A'
+          ? `Delete ${name(files[0]!.path)}? It is new since the last commit.`
+          : files[0]!.status === 'D'
+            ? `Restore ${name(files[0]!.path)} as in the last commit?`
+            : `Revert ${name(files[0]!.path)} to the last commit? Its changes since are lost.`
+        : `Revert ${files.length} files to the last commit? Their changes since are lost${
+            fresh
+              ? `, and ${fresh === 1 ? 'the new file is' : `${fresh} new files are`} deleted`
+              : ''
+          }.`
+    if (!window.confirm(question)) return
+    setReverting(true)
+    setRevertError(undefined)
+    try {
+      await api(`/threads/${threadId}/code/revert`, { body: { teammateId, paths } })
+    } catch (e) {
+      setRevertError((e as Error).message)
+      return (e as Error).message
+    } finally {
+      setReverting(false)
+      changes.refresh()
+    }
+    for (const f of files) {
+      setDraft(draftKey(threadId, teammateId, f.path), undefined)
+      if (f.status === 'A') closeCodeTab(threadId, tabKey({ teammateId, path: f.path }))
+    }
+    setReverted((was) => {
+      const next = { ...was }
+      for (const f of files) next[f.path] = (next[f.path] ?? 0) + 1
+      return next
+    })
+  }
+
   const close = (tab: CodeTab) => {
     const key = draftKey(threadId, tab.teammateId, tab.path)
     if (drafts.has(key)) {
@@ -96,6 +153,7 @@ export function CodeWorkspace({
             const name = tab.path.split('/').pop()
             const other = tab.teammateId !== teammateId
             const dirty = drafts.has(draftKey(threadId, tab.teammateId, tab.path))
+            const status = other ? undefined : statuses.get(tab.path)
             return (
               <div
                 key={key}
@@ -120,7 +178,17 @@ export function CodeWorkspace({
                   onAuxClick={(e) => e.button === 1 && close(tab)}
                 >
                   <FileCode2 aria-hidden className="size-3.5 shrink-0" />
-                  <span className={cn('max-w-40 truncate', other && 'italic')}>{name}</span>
+                  <span
+                    className={cn(
+                      'max-w-40 truncate',
+                      other && 'italic',
+                      // Changed since the last commit, as the Changes list says.
+                      status === 'M' && 'text-warning',
+                      status === 'A' && 'text-success',
+                    )}
+                  >
+                    {name}
+                  </span>
                   {other && (
                     <span className="rounded bg-warning/15 px-1 text-[10px] text-warning not-italic">
                       {teammateName(tab.teammateId)}
@@ -173,10 +241,21 @@ export function CodeWorkspace({
           size="icon-sm"
           aria-pressed={state.tree}
           aria-label={state.tree ? 'Hide the files' : 'Show the files'}
-          title={state.tree ? 'Hide the files' : 'Show the files'}
+          title={
+            state.tree
+              ? 'Hide the files'
+              : changed
+                ? `Show the files: ${changed} changed since the last commit`
+                : 'Show the files'
+          }
+          className="relative"
           onClick={() => setCodePanel(threadId, { tree: !state.tree })}
         >
           <PanelLeft aria-hidden />
+          {/* Files changed since the last commit, while the list is hidden. */}
+          {!tree && changed > 0 && (
+            <span className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />
+          )}
         </Button>
         <Button
           type="button"
@@ -207,6 +286,15 @@ export function CodeWorkspace({
                 visible={shown && front}
                 breadcrumb
                 className={front ? undefined : 'hidden'}
+                {...(tab.teammateId === teammateId && changes.data
+                  ? {
+                      head: changes.data.head,
+                      status: statuses.get(tab.path),
+                      reloadKey: reverted[tab.path],
+                      onRevert: () => revert([tab.path]),
+                      onSaved: changes.refresh,
+                    }
+                  : {})}
               />
             )
           })}
@@ -229,6 +317,59 @@ export function CodeWorkspace({
             <p className="truncate px-3 pt-2 text-[11px] text-muted-foreground">
               {teammateName(teammateId)}&rsquo;s copy, the one the preview runs
             </p>
+            {!changes.unsupported && (
+              <div role="tablist" className="flex shrink-0 gap-1 px-2 pt-2 text-xs">
+                {(['files', 'changes'] as const).map((side) => (
+                  <button
+                    key={side}
+                    type="button"
+                    role="tab"
+                    aria-selected={(state.side ?? 'files') === side}
+                    className={cn(
+                      'flex h-7 flex-1 items-center justify-center gap-1.5 rounded-md',
+                      (state.side ?? 'files') === side
+                        ? 'bg-muted text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                    )}
+                    onClick={() => setCodePanel(threadId, { side })}
+                  >
+                    {side === 'files' ? 'Files' : 'Changes'}
+                    {side === 'changes' && changes.data && (
+                      <span
+                        className={cn(
+                          'min-w-4 rounded px-1 text-[10px] leading-4 tabular-nums',
+                          changed
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted-foreground/15 text-muted-foreground',
+                        )}
+                      >
+                        {changes.data.more ? `${changed}+` : changed}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            {showChanges && (
+              <>
+                {revertError && (
+                  <p role="alert" className="px-3 pt-2 text-xs text-destructive-text">
+                    {revertError}
+                  </p>
+                )}
+                <CodeChanges
+                  data={changes.data}
+                  error={changes.error}
+                  active={active?.teammateId === teammateId ? active.path : undefined}
+                  mayEdit={mayEdit}
+                  reverting={reverting}
+                  onOpen={open}
+                  onRevert={(paths) => void revert(paths)}
+                  className="min-h-0 flex-1"
+                />
+              </>
+            )}
+            {/* Kept while Changes shows: its open folders stay as they were. */}
             <CodeTree
               key={teammateId}
               threadId={threadId}
@@ -236,7 +377,7 @@ export function CodeWorkspace({
               reveal={[...(cwd ? [cwd] : []), ...(active ? [active.path] : [])]}
               active={active?.teammateId === teammateId ? active.path : undefined}
               onOpen={open}
-              className="min-h-0 flex-1"
+              className={cn('min-h-0 flex-1', showChanges && 'hidden')}
             />
           </div>
         )}

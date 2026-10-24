@@ -1,12 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import {
   clipReport,
+  CODE_CHANGES_PROTOCOL,
   CODE_EDIT_PROTOCOL,
   CODE_TREE_PROTOCOL,
   CodeHashes,
+  type CodeChange,
   type CodeEntry,
   FILE_VIEW_MAX,
   FindSource,
+  RevertCode,
   SaveThreadFile,
   type SavedThreadFile,
   type SourceMatch,
@@ -169,10 +172,14 @@ function requireCodeEdit(computerId: string, needs = CODE_EDIT_PROTOCOL) {
 }
 
 /** The teammate of the thread whose working folder the code panel shows: one of its own. */
-function codeTeammate(thread: LoadedThread, teammateId: string | undefined) {
+function codeTeammate(
+  thread: LoadedThread,
+  teammateId: string | undefined,
+  needs = CODE_TREE_PROTOCOL,
+) {
   if (!teammateId || !thread.teammates.some((t) => t.teammateId === teammateId))
     throw new HTTPException(400, { message: 'That teammate is not in this thread' })
-  requireCodeEdit(thread.computerId, CODE_TREE_PROTOCOL)
+  requireCodeEdit(thread.computerId, needs)
   return teammateId
 }
 
@@ -722,6 +729,73 @@ export const threads = new Hono<AppEnv>()
       }),
     )
     return c.json({ hashes: result.hashes ?? {} })
+  })
+
+  /**
+   * The files of a teammate's working folder that differ from the last commit of
+   * their repository, for the code panel's Changes, and those commits (`head`), so
+   * the panel sees when one is made. Any member who can see the thread.
+   */
+  .get('/:id/code/changes', async (c) => {
+    const thread = await loadThread(c.var.db, c.req.param('id'))
+    const teammateId = codeTeammate(thread, c.req.query('teammateId'), CODE_CHANGES_PROTOCOL)
+    const result = codeAnswer(
+      await codeFiles(thread.computerId, { sessionId: thread.id, teammateId, op: 'changes' }),
+    )
+    return c.json({
+      changes: result.changes ?? [],
+      more: result.more ?? false,
+      head: result.head ?? '',
+    } satisfies { changes: CodeChange[]; more: boolean; head: string })
+  })
+
+  /** A file as in the last commit of its repository, for the editor to show what changed; null: in none. */
+  .get('/:id/code/original', async (c) => {
+    const thread = await loadThread(c.var.db, c.req.param('id'))
+    const teammateId = codeTeammate(thread, c.req.query('teammateId'), CODE_CHANGES_PROTOCOL)
+    const path = (c.req.query('path') ?? '').trim()
+    if (!path || path.length > 1000) throw new HTTPException(400, { message: 'Which file?' })
+    const result = codeAnswer(
+      await codeFiles(thread.computerId, {
+        sessionId: thread.id,
+        teammateId,
+        op: 'original',
+        path,
+      }),
+    )
+    return c.json({ text: result.original ?? null } satisfies { text: string | null })
+  })
+
+  /**
+   * Put files of a teammate's working folder back as they are in the last commit
+   * (new ones are deleted): whoever may write to the thread. The thread is told,
+   * so its teammates know at their next turn.
+   */
+  .post('/:id/code/revert', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    requireMayPrompt(scope, thread)
+    const input = await parseBody(c.req.raw, RevertCode)
+    const teammateId = codeTeammate(thread, input.teammateId, CODE_CHANGES_PROTOCOL)
+    const paths = [...new Set(input.paths)]
+    codeAnswer(
+      await codeFiles(thread.computerId, { sessionId: thread.id, teammateId, op: 'revert', paths }),
+    )
+    const user = await prisma.user.findFirst({
+      where: { id: scope.userId },
+      select: { name: true },
+    })
+    const named = paths
+      .slice(0, 5)
+      .map((p) => `\`${p}\``)
+      .join(', ')
+    const more = paths.length > 5 ? ` and ${paths.length - 5} more` : ''
+    await noteInThread(
+      db,
+      thread.id,
+      `${user?.name || 'A member'} reverted ${named}${more} to the last commit in the code editor. Their changes since are undone, and new files deleted.`,
+    )
+    return c.json({ ok: true })
   })
 
   /**
