@@ -746,7 +746,8 @@ export const threads = new Hono<AppEnv>()
       changes: result.changes ?? [],
       more: result.more ?? false,
       head: result.head ?? '',
-    } satisfies { changes: CodeChange[]; more: boolean; head: string })
+      ...(result.base ? { base: result.base } : {}),
+    } satisfies { changes: CodeChange[]; more: boolean; head: string; base?: string })
   })
 
   /** A file as in the last commit of its repository, for the editor to show what changed; null: in none. */

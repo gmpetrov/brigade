@@ -315,11 +315,16 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     matches: z.array(SourceMatch).max(CODE_FIND_MAX).optional(),
     /** hashes: each path's SHA-256, null when it is gone or no longer a text file to edit. */
     hashes: z.record(z.string(), z.string().nullable()).optional(),
-    /** changes: files that differ from their repository's last commit; `more` when cut at CODE_CHANGES_MAX. */
+    /**
+     * changes: files that differ from where their repository's branch left its default
+     * branch (`base`), else from its last commit; `more` when cut at CODE_CHANGES_MAX.
+     */
     changes: z.array(CodeChange).max(CODE_CHANGES_MAX).optional(),
-    /** changes: the last commits of the folder's repositories, to see when one is made. */
+    /** changes: the last commits of the folder's repositories (and their bases), to see when one is made. */
     head: z.string().optional(),
-    /** original: the file as in its repository's last commit; null when it is in none. */
+    /** changes: the default branch they compare to ("main"); unset: their last commits. */
+    base: z.string().optional(),
+    /** original: the file as changes compares it to; null when it is in none. */
     original: z.string().nullable().optional(),
   }),
   /** A thread handed over after thread.release: its folders archived and gone from here, or why not. */
@@ -671,7 +676,8 @@ export const ApiToRunner = z.discriminatedUnion('type', [
    * itself), files by name (find), lines by text (grep), or open files' hashes, to
    * see when one changed (hashes). From CODE_CHANGES_PROTOCOL on, the files that
    * differ from the last commit of their repository (changes), a file as in that
-   * commit (original), and files put back as they are in it (revert). Never
+   * commit (original), and files put back as they are in it (revert); newer runners
+   * compare to where the branch left its default branch instead, and say so (base). Never
    * outside the working folder.
    */
   z.object({

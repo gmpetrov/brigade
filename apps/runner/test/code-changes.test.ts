@@ -182,3 +182,61 @@ test('a commit changes the head', async () => {
   git('commit', '-q', '-am', 'second')
   assert.notEqual((await changes()).head, before)
 })
+
+test('on a branch off the default branch: what changed since it left, committed or not', async () => {
+  // The default branch, as last fetched, where the branch leaves it.
+  const left = git('rev-parse', 'HEAD').trim()
+  git('update-ref', 'refs/remotes/origin/main', left)
+  git('symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/main')
+  git('checkout', '-q', '-b', 'brigade/riley')
+  await writeFile(join(landing, 'hero.tsx'), '<h1>Three teams</h1>\n')
+  await writeFile(join(landing, 'committed.tsx'), 'committed\n')
+  git('add', '.')
+  git('commit', '-q', '-m', 'on the branch')
+  await writeFile(join(landing, 'closing.tsx'), '<p>Not yet committed.</p>\n')
+  await writeFile(join(landing, 'untracked.tsx'), 'untracked\n')
+  const result = await changes()
+  assert.equal(result.base, 'main')
+  assert.deepEqual(result.changes, [
+    { path: 'brigade/apps/web/landing/closing.tsx', status: 'M' },
+    { path: 'brigade/apps/web/landing/committed.tsx', status: 'A' },
+    { path: 'brigade/apps/web/landing/hero.tsx', status: 'M' },
+    { path: 'brigade/apps/web/landing/untracked.tsx', status: 'A' },
+  ])
+  assert.match(result.head ?? '', new RegExp(`:${left}$`))
+  // As on the default branch, not as in the branch's last commit.
+  const original = await codeFiles({
+    ...ids,
+    op: 'original',
+    path: 'brigade/apps/web/landing/hero.tsx',
+  })
+  assert.equal(original.original, '<h1>Two teams</h1>\n')
+
+  const reverted = await codeFiles({
+    ...ids,
+    op: 'revert',
+    paths: ['brigade/apps/web/landing/hero.tsx', 'brigade/apps/web/landing/committed.tsx'],
+  })
+  assert.equal(reverted.ok, true, reverted.error)
+  assert.equal(await readFile(join(landing, 'hero.tsx'), 'utf8'), '<h1>Two teams</h1>\n')
+  await assert.rejects(stat(join(landing, 'committed.tsx')))
+  assert.deepEqual(
+    (await changes()).changes?.map((c) => c.path),
+    ['brigade/apps/web/landing/closing.tsx', 'brigade/apps/web/landing/untracked.tsx'],
+  )
+
+  // With nothing to compare to, the last commit again.
+  git('symbolic-ref', '--delete', 'refs/remotes/origin/HEAD')
+  git('update-ref', '-d', 'refs/remotes/origin/main')
+  const alone = await changes()
+  assert.equal(alone.base, undefined)
+  assert.deepEqual(
+    alone.changes?.map((c) => c.path),
+    [
+      'brigade/apps/web/landing/closing.tsx',
+      'brigade/apps/web/landing/committed.tsx',
+      'brigade/apps/web/landing/hero.tsx',
+      'brigade/apps/web/landing/untracked.tsx',
+    ],
+  )
+})
