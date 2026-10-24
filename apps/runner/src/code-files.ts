@@ -399,11 +399,15 @@ export async function codeFiles(request: Request): Promise<Result> {
         }
       }
       case 'revert': {
+        /** What they were put back as: a default branch's name, or '' for a last commit. */
+        const bases = new Set<string>()
         for (const path of request.paths ?? []) {
           const where = await inRepository(own, path, user)
           if (!where) return { ...base, ok: false, error: `${path} is in no repository` }
           // As where the branch left its default branch, as Changes compares to.
-          const rev = (await branchBase(where.top, user))?.commit ?? 'HEAD'
+          const from = await branchBase(where.top, user)
+          bases.add(from?.name ?? '')
+          const rev = from?.commit ?? 'HEAD'
           const known = await git(['-C', where.top, 'cat-file', '-e', `${rev}:${where.rel}`], user)
             .then(() => true)
             .catch(() => false)
@@ -438,7 +442,14 @@ export async function codeFiles(request: Request): Promise<Result> {
           // Whatever is there, a link leading nowhere too (-f: or nothing).
           await inThread(request.sessionId, user, ['rm', '-f', '--', where.file])
         }
-        return { ...base, ok: true }
+        return {
+          ...base,
+          ok: true,
+          // As on a default branch, when all were: the thread is told so.
+          ...(bases.size && !bases.has('')
+            ? { base: bases.size === 1 ? [...bases][0]! : 'their default branch' }
+            : {}),
+        }
       }
     }
   } catch (error) {

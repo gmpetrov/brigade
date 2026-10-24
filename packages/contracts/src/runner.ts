@@ -322,7 +322,7 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     changes: z.array(CodeChange).max(CODE_CHANGES_MAX).optional(),
     /** changes: the last commits of the folder's repositories (and their bases), to see when one is made. */
     head: z.string().optional(),
-    /** changes: the default branch they compare to ("main"); unset: their last commits. */
+    /** changes, revert: the default branch they compare to, or were put back as ("main"); unset: their last commits. */
     base: z.string().optional(),
     /** original: the file as changes compares it to; null when it is in none. */
     original: z.string().nullable().optional(),

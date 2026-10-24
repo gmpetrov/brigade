@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CodeEditorControls } from '@/components/code-editor'
 import { Button } from '@/components/ui/button'
 import { api, ApiError } from '@/lib/api'
+import { comparedTo } from '@/lib/code-changes'
 import { draftKey, getDraft, setDraft as keepDraft } from '@/lib/code-drafts'
 import { cn } from '@/lib/utils'
 
@@ -146,6 +147,7 @@ export function CodeFile({
   visible = true,
   breadcrumb = false,
   head,
+  base,
   status,
   reloadKey,
   onRevert,
@@ -173,11 +175,13 @@ export function CodeFile({
    * what changed since shows, read again once another commit is made.
    */
   head?: string
-  /** How it differs from the last commit, if it does: it can be reverted. */
+  /** The default branch it compares to ("main"); unset: the last commit. */
+  base?: string
+  /** How it differs from that, if it does: it can be reverted. */
   status?: CodeChange['status']
   /** Reverted: each time it changes, the file is read again, unsaved edits dropped. */
   reloadKey?: number
-  /** Revert it to the last commit, once asked; why not, if it failed. */
+  /** Revert it to that, once asked; why not, if it failed. */
   onRevert?: () => Promise<string | undefined>
   onSaved?: () => void
   className?: string
@@ -403,8 +407,8 @@ export function CodeFile({
             size="xs"
             title={
               status === 'A'
-                ? 'Delete it: it is new since the last commit'
-                : 'Put it back as in the last commit'
+                ? `Delete it: it is new ${comparedTo({ base }).since}`
+                : `Put it back ${comparedTo({ base }).as}`
             }
             onClick={() => {
               setRevertError(undefined)

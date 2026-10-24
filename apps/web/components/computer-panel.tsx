@@ -16,7 +16,7 @@ import type { OpenFile } from '@/components/file-links'
 import { describeCron } from '@/components/schedules'
 import { Terminal } from '@/components/terminal'
 import { ThreadMenu } from '@/components/thread-menu'
-import { ThreadOutputs, type ThreadOutput } from '@/components/thread-outputs'
+import { ThreadOutputs, type ChangedFiles, type ThreadOutput } from '@/components/thread-outputs'
 import { ProviderLogo } from '@/components/provider-logo'
 import { PanelResizeHandle, useEscapeToClose, usePanelStack } from '@/components/side-panel'
 import { ChildrenList } from '@/components/thread-children'
@@ -386,6 +386,7 @@ export function ComputerPanel({
   onClose,
   outputs,
   onOpenFile,
+  changes,
   details,
   onChange,
 }: {
@@ -397,6 +398,8 @@ export function ComputerPanel({
   /** What the thread made, newest first. */
   outputs: ThreadOutput[]
   onOpenFile: OpenFile
+  /** The files changed in the code it checked out, first among its outputs; unset: none checked out. */
+  changes?: ChangedFiles
   /** The thread's details, below its computer: who is in it, its project and task, who started it. */
   details: ReactNode
   /** Something here changed the thread (a wake-up cancelled): fetch it again. */
@@ -453,9 +456,9 @@ export function ComputerPanel({
         </Section>
       )}
 
-      {outputs.length > 0 && (
-        <Section title={`Outputs · ${outputs.length}`}>
-          <ThreadOutputs outputs={outputs} onOpen={onOpenFile} />
+      {(outputs.length > 0 || changes) && (
+        <Section title={outputs.length ? `Outputs · ${outputs.length}` : 'Outputs'}>
+          <ThreadOutputs outputs={outputs} onOpen={onOpenFile} changes={changes} />
         </Section>
       )}
       {/* The teammate's routines and settings are beside its thread list, not each thread. */}

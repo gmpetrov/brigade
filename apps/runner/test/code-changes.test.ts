@@ -218,6 +218,7 @@ test('on a branch off the default branch: what changed since it left, committed 
     paths: ['brigade/apps/web/landing/hero.tsx', 'brigade/apps/web/landing/committed.tsx'],
   })
   assert.equal(reverted.ok, true, reverted.error)
+  assert.equal(reverted.base, 'main')
   assert.equal(await readFile(join(landing, 'hero.tsx'), 'utf8'), '<h1>Two teams</h1>\n')
   await assert.rejects(stat(join(landing, 'committed.tsx')))
   assert.deepEqual(

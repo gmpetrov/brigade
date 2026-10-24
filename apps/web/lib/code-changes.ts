@@ -1,6 +1,7 @@
-// The files of a teammate's working folder that differ from the last commit of their
-// repository, for the code panel's Changes and its editor's tabs: read again every few
-// seconds while the panel shows, and at once after a save or a revert.
+// The files of a teammate's working folder that differ from where their repository's
+// branch left its default branch (or, from older runners and with no default branch, from
+// its last commit), for the code panel's Changes and its editor's tabs: read again every
+// few seconds while the panel shows, and at once after a save or a revert.
 import type { CodeChange } from '@brigade/contracts'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '@/lib/api'
@@ -9,8 +10,18 @@ export type CodeChanges = {
   changes: CodeChange[]
   /** Cut at CODE_CHANGES_MAX. */
   more: boolean
-  /** The last commits of the folder's repositories: another one, and files compare to it. */
+  /** The last commits of the folder's repositories (and their bases): another one, and files compare to it again. */
   head: string
+  /** The default branch they compare to ("main"); unset: their last commits. */
+  base?: string
+}
+
+/** What the changes compare to, in words: on this branch, against main; else since the last commit. */
+export function comparedTo(data: Pick<CodeChanges, 'base'> | undefined) {
+  const base = data?.base
+  return base
+    ? { since: 'on this branch', as: `as on ${base}`, to: base }
+    : { since: 'since the last commit', as: 'as in the last commit', to: 'the last commit' }
 }
 
 /** How often the changes are read while the panel shows. */
@@ -92,3 +103,41 @@ export function useCodeChanges(threadId: string, teammateId: string, shown: bool
 /** Each changed file's status, by path. */
 export const statusByPath = (data: CodeChanges | undefined) =>
   new Map((data?.changes ?? []).map((c) => [c.path, c.status]))
+
+/**
+ * How many files changed, for the thread's Outputs: read once, and again each time
+ * `key` changes (a turn ended), not every few seconds as the open panel does.
+ * Undefined until read, or when the computer did not answer; `unsupported` for a runner too old.
+ */
+export function useChangesCount(
+  threadId: string | undefined,
+  teammateId: string | undefined,
+  key: unknown,
+) {
+  const [data, setData] = useState<CodeChanges>()
+  const [error, setError] = useState<string>()
+  const [unsupported, setUnsupported] = useState(false)
+  useEffect(() => {
+    if (!threadId || !teammateId || unsupported) return
+    let live = true
+    api<CodeChanges>(
+      `/threads/${threadId}/code/changes?${new URLSearchParams({ teammateId })}`,
+    ).then(
+      (next) => {
+        if (!live) return
+        setError(undefined)
+        setData(next)
+      },
+      (e: unknown) => {
+        if (!live) return
+        if (e instanceof ApiError && e.status === 409 && /Update Brigade/.test(e.message))
+          return setUnsupported(true)
+        setError((e as Error).message)
+      },
+    )
+    return () => {
+      live = false
+    }
+  }, [threadId, teammateId, key, unsupported])
+  return { data, error, unsupported }
+}

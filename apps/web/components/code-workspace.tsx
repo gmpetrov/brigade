@@ -3,16 +3,17 @@
 // in the code editor, and left of it the tree of the working folder the preview runs from, so
 // what is saved here shows in the preview. Its state is the thread's
 // (lib/code-tabs.ts); tabs keep their editors while another is in front, for undo.
-// Beside the tree, Changes: the files changed since the last commit, which the
-// editor shows against it, each to revert.
+// Beside the tree, Changes: the files changed on the branch (or since the last commit),
+// which the editor shows against it, each to revert. Without a preview, the same panel
+// opens on its own beside the thread (components/changes-panel.tsx).
 import { Crosshair, FileCode2, PanelLeft, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { CodeChanges } from '@/components/code-changes'
 import { CodeFile } from '@/components/code-file'
 import { CodeTree } from '@/components/code-tree'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
-import { statusByPath, useCodeChanges } from '@/lib/code-changes'
+import { comparedTo, statusByPath, useCodeChanges } from '@/lib/code-changes'
 import { draftKey, setDraft, useDraftKeys } from '@/lib/code-drafts'
 import {
   closeCodeTab,
@@ -36,6 +37,9 @@ export function CodeWorkspace({
   shown = true,
   picking,
   onPick,
+  inPreview = true,
+  onClose,
+  actions,
   className,
 }: {
   threadId: string
@@ -50,6 +54,12 @@ export function CodeWorkspace({
   /** Picking an element in the page to open its code. */
   picking?: boolean
   onPick?: () => void
+  /** Beside the preview, whose copy it shows; else on its own beside the thread. */
+  inPreview?: boolean
+  /** Its ×: the code panel closes beside the preview, unless this does something else. */
+  onClose?: () => void
+  /** Before its ×: the panel's own buttons, when it is one. */
+  actions?: ReactNode
   className?: string
 }) {
   const state = useCodePanel(threadId)
@@ -59,6 +69,7 @@ export function CodeWorkspace({
   const changes = useCodeChanges(threadId, teammateId, shown)
   const statuses = statusByPath(changes.data)
   const changed = changes.data?.changes.length ?? 0
+  const against = comparedTo(changes.data)
   const [reverting, setReverting] = useState(false)
   const [revertError, setRevertError] = useState<string>()
   /** Files reverted, by path: a count each open one reads its file again at. */
@@ -89,7 +100,7 @@ export function CodeWorkspace({
     if (!wide) setCodePanel(threadId, { tree: false })
   }
   /**
-   * Puts files back as in the last commit, once asked: new ones are deleted, and
+   * Puts files back as Changes compares them to, once asked: new ones are deleted, and
    * their tabs close; open ones show the file as it is then, unsaved edits dropped.
    * Why not, if it failed.
    */
@@ -100,11 +111,11 @@ export function CodeWorkspace({
     const question =
       files.length === 1
         ? files[0]!.status === 'A'
-          ? `Delete ${name(files[0]!.path)}? It is new since the last commit.`
+          ? `Delete ${name(files[0]!.path)}? It is new ${against.since}.`
           : files[0]!.status === 'D'
-            ? `Restore ${name(files[0]!.path)} as in the last commit?`
-            : `Revert ${name(files[0]!.path)} to the last commit? Its changes since are lost.`
-        : `Revert ${files.length} files to the last commit? Their changes since are lost${
+            ? `Restore ${name(files[0]!.path)} ${against.as}?`
+            : `Revert ${name(files[0]!.path)} to ${against.to}? Its changes are lost.`
+        : `Revert ${files.length} files to ${against.to}? Their changes are lost${
             fresh
               ? `, and ${fresh === 1 ? 'the new file is' : `${fresh} new files are`} deleted`
               : ''
@@ -161,7 +172,7 @@ export function CodeWorkspace({
                 aria-selected={key === state.active}
                 title={
                   other
-                    ? `${tab.path}, in ${teammateName(tab.teammateId)}'s copy: not the one the preview runs`
+                    ? `${tab.path}, in ${teammateName(tab.teammateId)}'s copy${inPreview ? ': not the one the preview runs' : ''}`
                     : tab.path
                 }
                 className={cn(
@@ -182,7 +193,7 @@ export function CodeWorkspace({
                     className={cn(
                       'max-w-40 truncate',
                       other && 'italic',
-                      // Changed since the last commit, as the Changes list says.
+                      // Changed, as the Changes list says.
                       status === 'M' && 'text-warning',
                       status === 'A' && 'text-success',
                     )}
@@ -245,25 +256,26 @@ export function CodeWorkspace({
             state.tree
               ? 'Hide the files'
               : changed
-                ? `Show the files: ${changed} changed since the last commit`
+                ? `Show the files: ${changed} changed ${against.since}`
                 : 'Show the files'
           }
           className="relative"
           onClick={() => setCodePanel(threadId, { tree: !state.tree })}
         >
           <PanelLeft aria-hidden />
-          {/* Files changed since the last commit, while the list is hidden. */}
+          {/* Files changed, while the list is hidden. */}
           {!tree && changed > 0 && (
             <span className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />
           )}
         </Button>
+        {actions}
         <Button
           type="button"
           variant="ghost"
           size="icon-sm"
           aria-label="Close the code"
           title="Close the code"
-          onClick={() => setCodePanel(threadId, { open: false })}
+          onClick={onClose ?? (() => setCodePanel(threadId, { open: false }))}
         >
           <X aria-hidden />
         </Button>
@@ -289,6 +301,7 @@ export function CodeWorkspace({
                 {...(tab.teammateId === teammateId && changes.data
                   ? {
                       head: changes.data.head,
+                      base: changes.data.base,
                       status: statuses.get(tab.path),
                       reloadKey: reverted[tab.path],
                       onRevert: () => revert([tab.path]),
@@ -315,7 +328,7 @@ export function CodeWorkspace({
             )}
           >
             <p className="truncate px-3 pt-2 text-[11px] text-muted-foreground">
-              {teammateName(teammateId)}&rsquo;s copy, the one the preview runs
+              {teammateName(teammateId)}&rsquo;s copy{inPreview && ', the one the preview runs'}
             </p>
             {!changes.unsupported && (
               <div role="tablist" className="flex shrink-0 gap-1 px-2 pt-2 text-xs">

@@ -20,7 +20,7 @@ export type CodePanelState = {
   /** tabKey of the tab in front. */
   active?: string
   tree: boolean
-  /** What the side shows: the folder's tree, or the files changed since the last commit. */
+  /** What the side shows: the folder's tree, or the files changed (lib/code-changes.ts). */
   side?: 'files' | 'changes'
 }
 

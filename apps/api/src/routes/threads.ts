@@ -732,9 +732,10 @@ export const threads = new Hono<AppEnv>()
   })
 
   /**
-   * The files of a teammate's working folder that differ from the last commit of
-   * their repository, for the code panel's Changes, and those commits (`head`), so
-   * the panel sees when one is made. Any member who can see the thread.
+   * The files of a teammate's working folder that differ from where their repository's
+   * branch left its default branch (`base`, from newer runners), else from its last commit,
+   * for the code panel's Changes, and those commits (`head`), so the panel sees when one
+   * is made. Any member who can see the thread.
    */
   .get('/:id/code/changes', async (c) => {
     const thread = await loadThread(c.var.db, c.req.param('id'))
@@ -750,7 +751,7 @@ export const threads = new Hono<AppEnv>()
     } satisfies { changes: CodeChange[]; more: boolean; head: string; base?: string })
   })
 
-  /** A file as in the last commit of its repository, for the editor to show what changed; null: in none. */
+  /** A file as Changes compares it to, for the editor to show what changed; null: in none. */
   .get('/:id/code/original', async (c) => {
     const thread = await loadThread(c.var.db, c.req.param('id'))
     const teammateId = codeTeammate(thread, c.req.query('teammateId'), CODE_CHANGES_PROTOCOL)
@@ -768,8 +769,8 @@ export const threads = new Hono<AppEnv>()
   })
 
   /**
-   * Put files of a teammate's working folder back as they are in the last commit
-   * (new ones are deleted): whoever may write to the thread. The thread is told,
+   * Put files of a teammate's working folder back as Changes compares them to (new
+   * ones are deleted): whoever may write to the thread. The thread is told,
    * so its teammates know at their next turn.
    */
   .post('/:id/code/revert', async (c) => {
@@ -779,7 +780,7 @@ export const threads = new Hono<AppEnv>()
     const input = await parseBody(c.req.raw, RevertCode)
     const teammateId = codeTeammate(thread, input.teammateId, CODE_CHANGES_PROTOCOL)
     const paths = [...new Set(input.paths)]
-    codeAnswer(
+    const { base } = codeAnswer(
       await codeFiles(thread.computerId, { sessionId: thread.id, teammateId, op: 'revert', paths }),
     )
     const user = await prisma.user.findFirst({
@@ -794,7 +795,9 @@ export const threads = new Hono<AppEnv>()
     await noteInThread(
       db,
       thread.id,
-      `${user?.name || 'A member'} reverted ${named}${more} to the last commit in the code editor. Their changes since are undone, and new files deleted.`,
+      base
+        ? `${user?.name || 'A member'} reverted ${named}${more} in the code editor to how they are on ${base}, where this branch left it. Their changes on the branch are undone and new files deleted, in the folder and the index: commit that to keep it.`
+        : `${user?.name || 'A member'} reverted ${named}${more} to the last commit in the code editor. Their changes since are undone, and new files deleted.`,
     )
     return c.json({ ok: true })
   })
