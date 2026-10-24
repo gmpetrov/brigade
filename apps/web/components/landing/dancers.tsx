@@ -35,6 +35,8 @@ type Dancer = {
   lean: number
   grounded: boolean
   next: number
+  // Seconds until it pops out of the word, on the way in; 0 once out.
+  wait: number
 }
 
 const random = (min: number, max: number) => min + Math.random() * (max - min)
@@ -45,7 +47,8 @@ const random = (min: number, max: number) => min + Math.random() * (max - min)
  * "e" than on a "t" and always touches. Each jumps on its own at random, small hops mostly
  * and a bigger one now and then, falls back under gravity, squashes on landing and springs
  * back, and leans as it moves. They bump into each other and never overlap; a soft pull
- * brings each back to its spot.
+ * brings each back to its spot. When the page opens, they rain down one at a time from above
+ * the page and land on the letters. They sit behind the word's ink, so they never cover it.
  * It runs only while the title shows; under reduced motion they stand still on the letters.
  */
 export function Dancers() {
@@ -65,6 +68,10 @@ export function Dancers() {
     let start = 0
     let tops = new Float32Array(0)
     let dancers: Dancer[] = []
+    // Those that have fallen already, and whether the font has loaded: until then the
+    // letters' outline is not final, so none falls yet.
+    const fallen = new Set<number>()
+    let fontReady = false
 
     // Draws the word in a canvas with the title's font and reads, column by column, where
     // its ink starts: the true outline of each glyph, the t's cross and the a's curve
@@ -152,23 +159,36 @@ export function Dancers() {
       const widths = DANCERS.map((d) => d.size * em)
       const row = widths.reduce((sum, w) => sum + w * PACK, 0)
       let x = start + (end - start - row) / 2
+      // How far the word sits from the top of the page, to drop them from above it.
+      const top = box.getBoundingClientRect().top + window.scrollY
+      // On the way in, they fall one at a time, in a shuffled order. Measuring again (the
+      // font loading, the frame resizing) lands those already down on their spot and lets
+      // the others still fall.
+      const order = DANCERS.map((_, i) => i)
+        .filter((i) => !still && !fallen.has(i))
+        .sort(() => Math.random() - 0.5)
       dancers = DANCERS.map((d, i) => {
         const w = widths[i]!
         const home = x
         x += w * PACK
         els[i]!.style.width = `${w}px`
+        const turn = order.indexOf(i)
+        const wait = turn < 0 ? 0 : fontReady ? 0.3 + turn * 0.2 + random(0, 0.08) : Infinity
+        els[i]!.style.opacity = wait ? '0' : '1'
         return {
           home,
           x: home,
-          y: rest(home, w),
+          // Waiting, it is above the top of the page, out of sight.
+          y: wait ? -(top + w * 1.5) : rest(home, w),
           vx: 0,
           vy: 0,
           size: w,
           q: 0,
           qv: 0,
           lean: 0,
-          grounded: true,
-          next: random(0.2, 1.6),
+          grounded: !wait,
+          next: random(0.6, 2),
+          wait,
         }
       })
     }
@@ -183,7 +203,21 @@ export function Dancers() {
 
     const step = (dt: number) => {
       const g = GRAVITY * em
-      for (const d of dancers) {
+      for (const [i, d] of dancers.entries()) {
+        if (d.wait > 0) {
+          d.wait -= dt
+          if (d.wait > 0) continue
+          // Its turn: it lets go and falls, drifting a hair to one side; gravity and the
+          // landing do the rest.
+          d.wait = 0
+          fallen.add(i)
+          d.vy = 0
+          d.vx = random(-1, 1) * 0.1 * em
+          d.grounded = false
+          const el = els[i]
+          if (el) el.style.opacity = '1'
+          continue
+        }
         d.next -= dt
         if (d.grounded && d.next <= 0) {
           // Mostly small hops, a bigger one now and then, a little to one side.
@@ -227,6 +261,7 @@ export function Dancers() {
         for (let j = i + 1; j < dancers.length; j++) {
           const a = dancers[i]!
           const b = dancers[j]!
+          if (a.wait > 0 || b.wait > 0) continue
           const ax = a.x + BODY.x * a.size
           const ay = a.y + BODY.y * a.size
           const bx = b.x + BODY.x * b.size
@@ -292,7 +327,10 @@ export function Dancers() {
     }
     setup()
     // The glyphs' tops depend on the font: measure again once it has loaded.
-    void document.fonts.ready.then(setup)
+    void document.fonts.ready.then(() => {
+      fontReady = true
+      setup()
+    })
     const observer = new IntersectionObserver(([entry]) => {
       visible = entry?.isIntersecting ?? false
       if (visible) run()
