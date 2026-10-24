@@ -137,6 +137,14 @@ async function forward(request: Request, target: Route) {
   // Its own: the provider's, from the address.
   headers.delete('host')
   headers.set('cookie', withToken(request.headers.get('cookie'), target.token))
+  // The provider refuses a WebSocket (a dev server's hot reload) from any page but its own
+  // address's. It is this address's here: the same check, then its own origin for the provider.
+  // The runner's proxy gives the app this one back (preview-proxy.ts).
+  const origin = request.headers.get('origin')
+  if (origin && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+    if (origin !== url.origin) return new Response('cross-origin websocket denied', { status: 403 })
+    headers.set('origin', target.origin)
+  }
   let response: Response
   try {
     response = await fetch(upstreamUrl(url, target.origin), {
@@ -145,7 +153,8 @@ async function forward(request: Request, target: Route) {
       body: request.body,
       redirect: 'manual',
     })
-  } catch {
+  } catch (error) {
+    console.error(`${request.method} ${url.pathname} at the provider: ${String(error)}`)
     return new Response('The preview does not answer', { status: 502 })
   }
   // A WebSocket's answer goes back as it is.
@@ -174,7 +183,13 @@ export default {
     const id = url.hostname.endsWith(`.${env.DOMAIN}`)
       ? url.hostname.slice(0, -env.DOMAIN.length - 1)
       : ''
-    const target = ID.test(id) ? await route(env, id) : null
+    let target: Route | null
+    try {
+      target = ID.test(id) ? await route(env, id) : null
+    } catch (error) {
+      console.error(`reading the route of ${id}: ${String(error)}`)
+      return new Response('The preview gateway could not read its routes', { status: 503 })
+    }
     if (!target)
       return new Response('This preview is not running, or its address changed.', {
         status: 404,
