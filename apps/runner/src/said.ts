@@ -24,3 +24,38 @@ export function said(e: LogEntry) {
   const text = e.text.replace(/<(\/?message\b)/gi, '‹$1')
   return `<message from="${name}" kind="${speakerOf(e)}">\n${text}\n</message>`
 }
+
+/** A log entry and its index since the thread began. */
+export type Indexed = LogEntry & { at: number }
+
+/** The most of the thread's first ask a teammate is told when it comes apart from the rest. */
+export const ASK_CHARS = 8_000
+
+const clip = (e: LogEntry, chars: number) =>
+  e.text.length > chars ? { ...e, text: `${e.text.slice(0, Math.max(0, chars))}…` } : e
+
+/**
+ * What a teammate is told of the messages it missed, oldest first: the newest
+ * that fit in `budget` characters, the newest one cut to fit when none does.
+ * `ask`, the thread's first ask when the teammate missed it: it comes first when
+ * the budget leaves it out, so a teammate joining a long thread still knows what
+ * it is for.
+ */
+export function missedLines(unseen: Indexed[], budget: number, ask?: Indexed): string[] {
+  let left = budget
+  let kept = unseen.length
+  while (kept > 0) {
+    const e = unseen[kept - 1]!
+    if (kept < unseen.length && e.text.length > left) break
+    kept -= 1
+    left -= e.text.length
+  }
+  const lines = unseen.slice(kept).map((e, i) => said(i === 0 ? clip(e, left + e.text.length) : e))
+  if (!ask || unseen.slice(kept).some((e) => e.at === ask.at)) return lines
+  // The ask goes on top of the budget: it is short next to it.
+  return [
+    said(clip(ask, ASK_CHARS)),
+    '(Messages between this one and the next are left out.)',
+    ...lines,
+  ]
+}

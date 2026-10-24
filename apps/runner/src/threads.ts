@@ -37,7 +37,7 @@ import type { Previews } from './previews.js'
 import { memoryRun } from './memory.js'
 import { memoryNews, threadMemory } from './memory-layers.js'
 import { tidyRun, type TidyFile } from './memory-tidy.js'
-import { MARKS_RULE, said, type LogEntry } from './said.js'
+import { MARKS_RULE, missedLines, type Indexed, type LogEntry } from './said.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
 import { keepReplyImages, type StoreImage } from './reply-images.js'
 import { CLOUD, paths } from './config.js'
@@ -55,7 +55,7 @@ const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
 /** Park an idle harness session after this long; the next message resumes it. */
 const PARK_AFTER_MS = 5 * 60_000
 /** How much of what others said a teammate is told at the start of its turn. */
-const CATCH_UP_CHARS = 40_000
+const CATCH_UP_CHARS = 100_000
 const LOG_ENTRIES = 200
 /** Teammates handing the thread to one another stop after this many handoffs without a member. */
 const MAX_HANDOFFS = 40
@@ -186,9 +186,29 @@ type Log = {
   entries: LogEntry[]
   /** Per teammate: the index up to which it has been told. */
   seen: Record<string, number>
+  /** The first thing a person said, kept once the entries are dropped past it. */
+  ask?: Indexed
   /** The index up to which memory was taken, and the thread's summary then. */
   memorized?: number
   summary?: string
+}
+
+/** The first thing a person said in the thread, when the log still knows it. */
+function firstAsk(log: Log): Indexed | undefined {
+  if (log.ask || log.start > 0) return log.ask
+  const i = log.entries.findIndex((e) => e.by === null && !e.note)
+  return i < 0 ? undefined : { ...log.entries[i]!, at: i }
+}
+
+/** Add to the log, dropping its oldest entries past LOG_ENTRIES but keeping the first ask. */
+function push(log: Log, entry: LogEntry) {
+  log.entries.push(entry)
+  const drop = log.entries.length - LOG_ENTRIES
+  if (drop > 0) {
+    log.ask = firstAsk(log)
+    log.entries.splice(0, drop)
+    log.start += drop
+  }
 }
 
 type Thread = {
@@ -1332,9 +1352,11 @@ export class Threads {
     const log = await thread.log
     const me = spec.teammate.id
     const known = me in log.seen
+    const told = log.seen[me] ?? 0
     const end = Math.min(upTo ?? Infinity, log.start + log.entries.length)
     const from = Math.max(log.seen[me] ?? 0, log.start)
     const unseen = log.entries
+      .map((e, i) => ({ ...e, at: log.start + i }))
       .slice(Math.max(0, from - log.start), Math.max(0, end - log.start))
       .filter((e) => e.by !== me)
     log.seen[me] = Math.max(log.seen[me] ?? 0, end)
@@ -1346,14 +1368,12 @@ export class Threads {
     if ((known || others.length === 0) && unseen.length === 1 && last?.by === null && !last.note)
       return last.text
 
-    let budget = CATCH_UP_CHARS
-    const lines: string[] = []
-    for (const e of [...unseen].reverse()) {
-      const clipped = e.text.length > budget ? { ...e, text: `${e.text.slice(0, budget)}…` } : e
-      if (lines.length > 0 && e.text.length > budget) break
-      lines.unshift(said(clipped))
-      budget -= e.text.length
-    }
+    const ask = firstAsk(log)
+    const lines = missedLines(
+      unseen,
+      CATCH_UP_CHARS,
+      ask && ask.at >= told && ask.at < end ? ask : undefined,
+    )
     return [
       others.length > 0 &&
         `You are ${spec.teammate.name}, one of the AI teammates in this thread, with ${others.join(', ')}. Each of you works in your own session and directory; here is what was said since your last turn. ` +
@@ -1373,12 +1393,7 @@ export class Threads {
   private note(spec: ThreadSpec, by: string | null, name: string, text: string) {
     const thread = this.thread(spec.sessionId)
     const log = thread.log.then((log) => {
-      log.entries.push({ by, name, text })
-      const drop = log.entries.length - LOG_ENTRIES
-      if (drop > 0) {
-        log.entries.splice(0, drop)
-        log.start += drop
-      }
+      push(log, { by, name, text })
       // What the speaker has seen moves only when it is told (catchUp): a message
       // that came in while it was replying is still unseen. Its own lines are skipped there.
       if (by && !(by in log.seen)) log.seen[by] = log.start + log.entries.length
@@ -1413,12 +1428,7 @@ export class Threads {
     })
     const thread = this.thread(sessionId)
     thread.log = thread.log.then((log) => {
-      log.entries.push({ by: null, name: 'Brigade', text, note: true })
-      const drop = log.entries.length - LOG_ENTRIES
-      if (drop > 0) {
-        log.entries.splice(0, drop)
-        log.start += drop
-      }
+      push(log, { by: null, name: 'Brigade', text, note: true })
       return log
     })
     await this.saveLog(sessionId)
