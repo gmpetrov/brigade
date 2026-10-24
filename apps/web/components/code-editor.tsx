@@ -2,6 +2,8 @@
 // A code editor (CodeMirror) for a text file of a teammate's working folder, in
 // the file panel. Loaded only when a file opens in it (components/file-panel.tsx).
 // Colors come from the dashboard's code tokens (globals.css), in light and dark.
+// Given the file as in the last commit, it shows what changed since, each change
+// with a button that reverts it (@codemirror/merge's unified view).
 import { indentWithTab } from '@codemirror/commands'
 import { css } from '@codemirror/lang-css'
 import { html } from '@codemirror/lang-html'
@@ -11,7 +13,14 @@ import { markdown } from '@codemirror/lang-markdown'
 import { python } from '@codemirror/lang-python'
 import { yaml } from '@codemirror/lang-yaml'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
-import { Annotation, EditorState, Transaction, type Extension } from '@codemirror/state'
+import { unifiedMergeView } from '@codemirror/merge'
+import {
+  Annotation,
+  Compartment,
+  EditorState,
+  Transaction,
+  type Extension,
+} from '@codemirror/state'
 import { openSearchPanel } from '@codemirror/search'
 import { EditorView, keymap } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
@@ -126,7 +135,68 @@ const theme = EditorView.theme({
     color: 'var(--muted-foreground)',
     border: 'none',
   },
+  // What changed since the last commit: over the merge view's own colors, which know
+  // no dark theme but CodeMirror's.
+  '.cm-changedLine, .cm-inlineChangedLine': {
+    backgroundColor: 'color-mix(in oklch, var(--success) 10%, transparent) !important',
+  },
+  '.cm-changedText': {
+    background: 'color-mix(in oklch, var(--success) 24%, transparent) !important',
+  },
+  '.cm-deletedChunk': {
+    // Its Revert button sits at its right, not the editor's top.
+    position: 'relative',
+    backgroundColor: 'color-mix(in oklch, var(--destructive-text) 10%, transparent) !important',
+  },
+  '.cm-deletedChunk .cm-deletedText': {
+    background: 'color-mix(in oklch, var(--destructive-text) 24%, transparent) !important',
+  },
+  '.cm-changedLineGutter': { background: 'var(--success) !important' },
+  '.cm-deletedLineGutter': { background: 'var(--destructive-text) !important' },
+  '.cm-deletedChunk .cm-chunkButtons': { top: '2px', insetInlineEnd: '8px', zIndex: '1' },
+  '.cm-deletedChunk .cm-chunkButtons button.cm-revert': {
+    fontFamily: 'var(--font-sans)',
+    fontSize: '11px',
+    lineHeight: '16px',
+    padding: '0 6px',
+    margin: '0',
+    border: '1px solid var(--border) !important',
+    borderRadius: '6px',
+    background: 'var(--card) !important',
+    color: 'var(--foreground) !important',
+  },
+  '.cm-deletedChunk .cm-chunkButtons button.cm-revert:hover': {
+    background: 'var(--muted) !important',
+  },
 })
+
+/** A change's button: Revert, back as in the last commit (an edit, undone like any). No Accept. */
+function chunkButton(type: 'accept' | 'reject', action: (e: MouseEvent) => void) {
+  if (type === 'accept') {
+    const none = document.createElement('span')
+    none.hidden = true
+    return none
+  }
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'cm-revert'
+  button.textContent = '↶ Revert'
+  button.title = 'Put this back as in the last commit'
+  button.onmousedown = action
+  return button
+}
+
+/** What changed since `original`, with its Revert buttons when it may be edited; none without one. */
+const changesSince = (original: string | null | undefined, readOnly: boolean): Extension =>
+  original == null
+    ? []
+    : unifiedMergeView({
+        original,
+        gutter: true,
+        highlightChanges: true,
+        syntaxHighlightDeletions: true,
+        mergeControls: readOnly ? false : chunkButton,
+      })
 
 /** What the editor's owner does in it: its search bar, a line, the file as changed elsewhere. */
 export type CodeEditorControls = {
@@ -148,6 +218,7 @@ export default function CodeEditor({
   onSave,
   controls,
   readOnly = false,
+  original,
 }: {
   /** For its language. */
   path: string
@@ -161,10 +232,14 @@ export default function CodeEditor({
   controls?: RefObject<CodeEditorControls | null>
   /** Shown, not edited: for whoever may not write to the thread. */
   readOnly?: boolean
+  /** The file as in the last commit, to show what changed since; null or unset: nothing shown. */
+  original?: string | null
 }) {
   const host = useRef<HTMLDivElement>(null)
   const latest = useRef({ onChange, onSave })
   latest.current = { onChange, onSave }
+  const editor = useRef<EditorView>(null)
+  const changes = useRef(new Compartment())
 
   useEffect(() => {
     const view = new EditorView({
@@ -191,6 +266,7 @@ export default function CodeEditor({
           syntaxHighlighting(highlight),
           theme,
           EditorState.readOnly.of(readOnly),
+          changes.current.of(changesSince(original, readOnly)),
           EditorView.updateListener.of((update) => {
             if (
               update.docChanged &&
@@ -211,6 +287,7 @@ export default function CodeEditor({
       view.focus()
     }
     if (line) goto(line)
+    editor.current = view
     if (controls)
       controls.current = {
         search: () => openSearchPanel(view),
@@ -226,10 +303,23 @@ export default function CodeEditor({
       }
     return () => {
       if (controls) controls.current = null
+      editor.current = null
       view.destroy()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one editor per file; a new key starts another
   }, [])
+
+  // A commit made since, or the last commit read after the editor opened: changes against it.
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) {
+      first.current = false
+      return
+    }
+    editor.current?.dispatch({
+      effects: changes.current.reconfigure(changesSince(original, readOnly)),
+    })
+  }, [original, readOnly])
 
   // data-keyboard: Escape stays the editor's (its search, its completions), never closes the panel.
   return <div ref={host} data-keyboard className="code-editor h-full min-h-0" />

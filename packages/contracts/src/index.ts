@@ -73,12 +73,16 @@ export * from './triggers.js'
  *     thread.file.result) and find where a preview's element is written (thread.source.find).
  * 40: the code panel lists, finds and searches a teammate's working folder, and watches open
  *     files' hashes (thread.code).
+ * 41: the code panel lists the files changed since the last commit, reads a file as in it and
+ *     puts files back as they are in it (thread.code's changes, original and revert).
  */
-export const PROTOCOL_VERSION = 40
+export const PROTOCOL_VERSION = 41
 /** Runners from this version on write files people edit and find a preview element's source. */
 export const CODE_EDIT_PROTOCOL = 39
 /** Runners from this version on list, find and search a working folder for the code panel (thread.code). */
 export const CODE_TREE_PROTOCOL = 40
+/** Runners from this version on show and revert the changes since the last commit (thread.code). */
+export const CODE_CHANGES_PROTOCOL = 41
 /** Runners from this version on say when their disk is still full (disk). */
 export const DISK_PROTOCOL = 34
 /** Runners from this version on try a failed turn again when a person asks (thread.retry). */

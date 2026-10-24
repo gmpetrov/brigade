@@ -576,6 +576,27 @@ export const CODE_FIND_MAX = 50
 /** Most open files whose hashes one request asks for. */
 export const CODE_HASHES_MAX = 20
 
+/** Most changed files the code panel's Changes list shows; past it, `more`. */
+export const CODE_CHANGES_MAX = 500
+
+/**
+ * A file of a teammate's working folder that differs from the last commit of its
+ * repository: modified, new (added or not yet tracked) or deleted.
+ */
+export const CodeChange = z.object({
+  /** Relative to the teammate's working folder. */
+  path: z.string(),
+  status: z.enum(['M', 'A', 'D']),
+})
+export type CodeChange = z.infer<typeof CodeChange>
+
+/** Files to put back as they are in the last commit: new ones are deleted. */
+export const RevertCode = z.object({
+  teammateId: z.string().min(1),
+  paths: z.array(z.string().min(1).max(1000)).min(1).max(CODE_CHANGES_MAX),
+})
+export type RevertCode = z.infer<typeof RevertCode>
+
 /** The hashes of open files, to see when one changed on the computer. */
 export const CodeHashes = z.object({
   teammateId: z.string().min(1),

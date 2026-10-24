@@ -12,8 +12,9 @@ import {
   MemoryFileRef,
   NO_MEMORY_EDIT,
   CODE_FIND_MAX,
-  CODE_HASHES_MAX,
+  CODE_CHANGES_MAX,
   CODE_LIST_MAX,
+  CodeChange,
   CodeEntry,
   SourceMatch,
 } from './library.js'
@@ -314,6 +315,12 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     matches: z.array(SourceMatch).max(CODE_FIND_MAX).optional(),
     /** hashes: each path's SHA-256, null when it is gone or no longer a text file to edit. */
     hashes: z.record(z.string(), z.string().nullable()).optional(),
+    /** changes: files that differ from their repository's last commit; `more` when cut at CODE_CHANGES_MAX. */
+    changes: z.array(CodeChange).max(CODE_CHANGES_MAX).optional(),
+    /** changes: the last commits of the folder's repositories, to see when one is made. */
+    head: z.string().optional(),
+    /** original: the file as in its repository's last commit; null when it is in none. */
+    original: z.string().nullable().optional(),
   }),
   /** A thread handed over after thread.release: its folders archived and gone from here, or why not. */
   z.object({
@@ -662,17 +669,20 @@ export const ApiToRunner = z.discriminatedUnion('type', [
    * The code panel's view of a teammate's working folder for the thread
    * (CODE_TREE_PROTOCOL): a folder's entries (list, `path` relative to it, '' for
    * itself), files by name (find), lines by text (grep), or open files' hashes, to
-   * see when one changed (hashes). Never outside the working folder.
+   * see when one changed (hashes). From CODE_CHANGES_PROTOCOL on, the files that
+   * differ from the last commit of their repository (changes), a file as in that
+   * commit (original), and files put back as they are in it (revert). Never
+   * outside the working folder.
    */
   z.object({
     type: z.literal('thread.code'),
     requestId: z.string(),
     sessionId: z.string(),
     teammateId: z.string(),
-    op: z.enum(['list', 'find', 'grep', 'hashes']),
+    op: z.enum(['list', 'find', 'grep', 'hashes', 'changes', 'original', 'revert']),
     path: z.string().max(1000).optional(),
     query: z.string().max(200).optional(),
-    paths: z.array(z.string().max(1000)).max(CODE_HASHES_MAX).optional(),
+    paths: z.array(z.string().max(1000)).max(CODE_CHANGES_MAX).optional(),
   }),
   /**
    * A person restarts or stops a thread's preview; touch: someone has it open,

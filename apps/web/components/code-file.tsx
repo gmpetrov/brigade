@@ -4,9 +4,10 @@
 // Saves go against the hash it was opened at, so a change made since on the computer
 // is not written over without asking. While it shows, it checks every few seconds
 // whether the file changed on the computer: with nothing typed, it takes the new
-// text in place (the cursor stays); with unsaved edits, it says so at once.
-import type { SavedThreadFile, SaveThreadFile, ThreadFile } from '@brigade/contracts'
-import { Search } from 'lucide-react'
+// text in place (the cursor stays); with unsaved edits, it says so at once. In the
+// code panel, it shows what changed since the last commit, to revert.
+import type { CodeChange, SavedThreadFile, SaveThreadFile, ThreadFile } from '@brigade/contracts'
+import { Search, Undo2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CodeEditorControls } from '@/components/code-editor'
@@ -44,7 +45,7 @@ export const editableFile = (file: ThreadFile | undefined) =>
  * against the hash it was opened at. Unsaved edits outlive the panel
  * (lib/code-drafts.ts): the file opens again with them.
  */
-function useEdit(threadId: string, file: ThreadFile | undefined) {
+function useEdit(threadId: string, file: ThreadFile | undefined, onSaved?: () => void) {
   const [draft, setDraft] = useState<string>()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -96,6 +97,7 @@ function useEdit(threadId: string, file: ThreadFile | undefined) {
       base.current = hash
       setConflict(false)
       setSaved(true)
+      onSaved?.()
       // Typed on while it saved: still to save, from the new base.
       const now = key ? getDraft(key)?.text : undefined
       update(now === undefined || now === text ? undefined : now)
@@ -143,6 +145,11 @@ export function CodeFile({
   lineKey,
   visible = true,
   breadcrumb = false,
+  head,
+  status,
+  reloadKey,
+  onRevert,
+  onSaved,
   className,
 }: {
   threadId: string
@@ -161,6 +168,18 @@ export function CodeFile({
   visible?: boolean
   /** Its folders above it, as in a tab of the code panel. */
   breadcrumb?: boolean
+  /**
+   * The last commits of the folder's repositories (lib/code-changes.ts): when set,
+   * what changed since shows, read again once another commit is made.
+   */
+  head?: string
+  /** How it differs from the last commit, if it does: it can be reverted. */
+  status?: CodeChange['status']
+  /** Reverted: each time it changes, the file is read again, unsaved edits dropped. */
+  reloadKey?: number
+  /** Revert it to the last commit, once asked; why not, if it failed. */
+  onRevert?: () => Promise<string | undefined>
+  onSaved?: () => void
   className?: string
 }) {
   const [file, setFile] = useState<ThreadFile | undefined>(given)
@@ -168,7 +187,10 @@ export function CodeFile({
   const [gone, setGone] = useState(false)
   const [updatedAt, setUpdatedAt] = useState<number>()
   const editor = useRef<CodeEditorControls | null>(null)
-  const edit = useEdit(threadId, file)
+  const edit = useEdit(threadId, file, onSaved)
+  /** The file as in the last commit; null: in none, or not known. */
+  const [original, setOriginal] = useState<string | null>(null)
+  const [revertError, setRevertError] = useState<string>()
   /** Still on screen: a read that ends after it closed changes nothing. */
   const mounted = useRef(true)
   useEffect(() => {
@@ -196,6 +218,46 @@ export function CodeFile({
       live = false
     }
   }, [threadId, teammateId, path, given, teammateName])
+
+  // As in the last commit, to show what changed since: again after another commit.
+  const diffed = head !== undefined && !!file
+  useEffect(() => {
+    if (!diffed) return setOriginal(null)
+    let live = true
+    api<{ text: string | null }>(
+      `/threads/${threadId}/code/original?${new URLSearchParams({ teammateId, path })}`,
+    ).then(
+      ({ text }) => live && setOriginal(text),
+      // Too large, not text, or the computer did not answer: no changes shown.
+      () => live && setOriginal(null),
+    )
+    return () => {
+      live = false
+    }
+  }, [diffed, head, threadId, teammateId, path])
+
+  // Reverted: the file as it is now, whatever was typed (who reverted was asked).
+  useEffect(() => {
+    if (!reloadKey) return
+    let live = true
+    edit.reset()
+    readCodeFile(threadId, teammateId, path).then(
+      (now) => {
+        if (!live || !mounted.current) return
+        if (now.text === undefined || !now.hash) return setGone(true)
+        editor.current?.replace(now.text)
+        edit.base.current = now.hash
+        edit.reset()
+        edit.setConflict(false)
+        setGone(false)
+      },
+      () => live && setGone(true),
+    )
+    return () => {
+      live = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- each time it is reverted
+  }, [reloadKey])
 
   // A line asked for again (an element picked a second time): there.
   useEffect(() => {
@@ -329,6 +391,25 @@ export function CodeFile({
         >
           <Search aria-hidden />
         </Button>
+        {editable && status && onRevert && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            title={
+              status === 'A'
+                ? 'Delete it: it is new since the last commit'
+                : 'Put it back as in the last commit'
+            }
+            onClick={() => {
+              setRevertError(undefined)
+              void onRevert().then(setRevertError)
+            }}
+          >
+            <Undo2 aria-hidden />
+            Revert file
+          </Button>
+        )}
         {editable && (
           <Button
             type="button"
@@ -374,9 +455,9 @@ export function CodeFile({
           </button>
         </div>
       )}
-      {edit.error && (
+      {(edit.error || revertError) && (
         <p role="alert" className="border-b px-3 py-2 text-xs text-destructive-text">
-          {edit.error}
+          {edit.error ?? revertError}
         </p>
       )}
       <div className="min-h-0 flex-1 overflow-hidden">
@@ -389,6 +470,7 @@ export function CodeFile({
           onSave={() => void edit.save()}
           controls={editor}
           readOnly={!editable}
+          original={original}
         />
       </div>
     </div>
