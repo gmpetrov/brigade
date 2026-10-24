@@ -544,18 +544,20 @@ export class Threads {
       controller: 'teammate',
       memberId,
     })
-    const files = await changedFiles(takeover.since).catch(() => [])
-    const at = new Date().toISOString()
-    if (!note.trim() && files.length === 0) return
-    const text = handbackMessage({ note, files })
-    this.options.emit(spec.sessionId, { at, type: 'message.user', text, memberId })
-    thread.handoffs = 0
-    const upTo = this.note(spec, null, 'A member', text)
-    // Its teammate waits on a person (a ticket still open): no turn now, which would only
-    // fail. It reads the message with its next one.
-    this.enqueue(spec, 'prompt', async () =>
-      (await this.harness(thread, spec).harness.awaitingPerson()) ? null : upTo,
-    )
+    // In the queue at once, ahead of a ticket answered with the hand back: it runs first,
+    // while its teammate still waits on that person, and then starts no turn, which would
+    // only fail. The teammate reads the message with its next turn.
+    this.enqueue(spec, 'prompt', async () => {
+      const waiting = await this.harness(thread, spec).harness.awaitingPerson()
+      const files = await changedFiles(takeover.since).catch(() => [])
+      if (!note.trim() && files.length === 0) return null
+      const text = handbackMessage({ note, files })
+      const at = new Date().toISOString()
+      this.options.emit(spec.sessionId, { at, type: 'message.user', text, memberId })
+      thread.handoffs = 0
+      const upTo = await this.note(spec, null, 'A member', text)
+      return waiting ? null : upTo
+    })
   }
 
   /**
