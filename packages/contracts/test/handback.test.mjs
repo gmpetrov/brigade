@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { handbackMessage, handbackNote } from '../dist/index.js'
+import { handbackAnswer, handbackMessage, handbackNote } from '../dist/index.js'
 
 test('a hand back message reads back as its note and files', () => {
   const both = {
@@ -32,4 +32,19 @@ test('another message is no hand back', () => {
     handbackNote('A person took over this thread and has now handed it back to you. Thanks'),
     null,
   )
+})
+
+test('handing back answers a ticket of browser actions, and only that', () => {
+  const browser = { id: 'a1', type: 'action', title: 'Verify', browser: true }
+  assert.deepEqual(handbackAnswer([browser], ' Passkey done '), {
+    action: 'answered',
+    replies: { a1: { type: 'action', done: true, note: 'Passkey done' } },
+  })
+  assert.deepEqual(handbackAnswer([browser], ''), {
+    action: 'answered',
+    replies: { a1: { type: 'action', done: true } },
+  })
+  assert.equal(handbackAnswer([{ ...browser, browser: undefined }], ''), undefined)
+  assert.equal(handbackAnswer([browser, { id: 'a2', type: 'input', title: 'Code' }], ''), undefined)
+  assert.equal(handbackAnswer([], ''), undefined)
 })

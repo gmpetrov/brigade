@@ -38,9 +38,11 @@ import {
   SetProject,
   StartThread,
   STORED_FILE_NAME,
+  handbackAnswer,
   UpdateThread,
   type ThreadFile,
   type ThreadSpec,
+  type Ask,
   type AgentEvent,
   type ApiToRunner,
   type PreviewView,
@@ -64,7 +66,7 @@ import {
 import { ensureRunning, hostedPort } from '../cloud.js'
 import { applyPick, checkPick } from '../designs.js'
 import { watchDesktop } from '../desktop-proxy.js'
-import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
+import { answerQuestion, answerTicket, mayAnswer, resolveTicket } from '../decide.js'
 import { prisma, type ScopedDb } from '../db.js'
 import {
   broadcastSchedule,
@@ -1522,7 +1524,14 @@ export const threads = new Hono<AppEnv>()
     if (thread.controlledByMemberId !== scope.memberId)
       throw new HTTPException(409, { message: 'You do not have control of this thread' })
     const { note } = await parseBody(c.req.raw, HandBack)
-    await handBack(db, scope, thread, note)
+    // The teammate waits on a ticket to do something in its browser: handing back answers it.
+    const ticket = await db.ticket.findFirst({
+      where: { sessionId: thread.id, type: 'request', status: 'open' },
+      orderBy: { createdAt: 'desc' },
+    })
+    const answer = handbackAnswer((ticket?.payload as { asks?: Ask[] } | null)?.asks ?? [], note)
+    if (ticket && answer && mayAnswer(scope, thread)) await answerTicket(scope, ticket.id, answer)
+    else await handBack(db, scope, thread, note)
     return c.json({ ok: true })
   })
 

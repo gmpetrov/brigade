@@ -101,6 +101,13 @@ export async function answerQuestion(
   return { ok: true as const, live: true }
 }
 
+/** Who may answer a thread's tickets: the member who started it, or an admin. */
+export function mayAnswer(scope: WorkspaceScope, thread: { startedByMemberId: string }) {
+  return (
+    scope.role === 'owner' || scope.role === 'admin' || thread.startedByMemberId === scope.memberId
+  )
+}
+
 /**
  * A person answers a ticket the teammate opened (open_ticket): every ask, or
  * a decline. The answers go to the teammate as the tool's result; changes to
@@ -115,8 +122,7 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
   const payload = ticket?.payload as TicketPayload | undefined
   if (!ticket?.sessionId || payload?.source !== 'harness' || !payload.requestId)
     throw new HTTPException(404, { message: 'Ticket not found or already answered' })
-  const isAdmin = scope.role === 'owner' || scope.role === 'admin'
-  if (!isAdmin && ticket.session?.startedByMemberId !== scope.memberId)
+  if (!ticket.session || !mayAnswer(scope, ticket.session))
     throw new HTTPException(403, {
       message: 'Only the member who started the thread, or an admin, can answer',
     })

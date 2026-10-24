@@ -1,3 +1,5 @@
+import type { Ask, TicketAnswer } from './events.js'
+
 /**
  * What a teammate is told when a person hands a thread back: their note and
  * the files they changed. The runner writes it as the person's message; the
@@ -42,4 +44,19 @@ export function handbackNote(text: string): Handback | null {
   rest = rest.trim()
   if (rest && !rest.startsWith(NOTE)) return null
   return { note: rest.slice(NOTE.length).trim(), files }
+}
+
+/**
+ * Handing back with a ticket open whose every ask is something to do in the teammate's
+ * browser: the hand back is its answer, done, with the person's note. Else undefined, and
+ * the ticket stays open.
+ */
+export function handbackAnswer(asks: Ask[], note: string): TicketAnswer | undefined {
+  if (asks.length === 0 || !asks.every((a) => a.type === 'action' && a.browser)) return undefined
+  const done = {
+    type: 'action' as const,
+    done: true,
+    ...(note.trim() ? { note: note.trim() } : {}),
+  }
+  return { action: 'answered', replies: Object.fromEntries(asks.map((a) => [a.id, done])) }
 }
