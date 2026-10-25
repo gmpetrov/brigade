@@ -204,7 +204,7 @@ export function preloaded<T>(path: string) {
 
 /**
  * Fetch on mount (taking the request sent ahead, if any); `reload` refetches, and so does each
- * dashboard socket message of a type in `live`.
+ * dashboard socket message of a type in `live`, and each time that socket is back after dropping.
  */
 export function useApi<T>(path: string | null, live?: readonly ApiToBrowser['type'][]) {
   const [data, setData] = useState<T | undefined>()
@@ -229,9 +229,12 @@ export function useApi<T>(path: string | null, live?: readonly ApiToBrowser['typ
   useEffect(() => {
     if (!path || !types) return
     const heard = types.split(' ')
-    return listen((message) => {
-      if (heard.includes(message.type)) void load(false)
-    })
+    return listen(
+      (message) => {
+        if (heard.includes(message.type)) void load(false)
+      },
+      () => void load(false),
+    )
   }, [path, types, load])
   return { data, error, reload, setData }
 }

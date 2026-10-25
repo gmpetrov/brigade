@@ -44,6 +44,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { api, ApiError, attachmentUrl, useApi } from '@/lib/api'
 import { API_URL } from '@/lib/config'
+import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
 type InboxList = { items: InboxItem[]; sources: InboxSourceView[]; next: string | null }
@@ -166,7 +167,7 @@ export function InboxView() {
   if (project) search.set('project', project)
   if (q) search.set('q', q)
   const path = `/inbox?${search}`
-  const list = useApi<InboxList>(path, ['mail.updated'])
+  const list = useApi<InboxList>(path)
   const reloadList = list.reload
 
   // Older pages, appended below the first: kept for the filters they were asked with.
@@ -180,12 +181,16 @@ export function InboxView() {
   )
   const next = more ? more.next : (list.data?.next ?? null)
 
+  // Counted up by each refresh: an older page asked for before it is dropped, not appended.
+  const generation = useRef(0)
   async function loadOlder() {
     if (!next) return
+    const asked = generation.current
     setLoadingOlder(true)
     setOlderError(undefined)
     try {
       const page = await api<InboxList>(`${path}&before=${encodeURIComponent(next)}`)
+      if (asked !== generation.current) return
       setOlder({ path, items: [...(more?.items ?? []), ...page.items], next: page.next })
     } catch (e) {
       setOlderError(message(e))
@@ -195,9 +200,22 @@ export function InboxView() {
   }
 
   const refresh = useCallback(async () => {
+    generation.current++
     setOlder(undefined)
     await Promise.all([reloadList(), reloadInboxCount()])
   }, [reloadList, reloadInboxCount])
+  // Live: a mail came or changed anywhere in the list (older pages too, so they go and come
+  // back on asking), or a mailbox came in or out of the Inbox. The sidebar's count follows
+  // the same messages by itself.
+  useLive(
+    (message) => {
+      if (message.type !== 'mail.updated' && message.type !== 'connections.updated') return
+      generation.current++
+      setOlder(undefined)
+      void reloadList()
+    },
+    () => void refresh(),
+  )
 
   const sources = list.data?.sources ?? []
   const brigade = sources.filter((s) => s.kind === 'email')

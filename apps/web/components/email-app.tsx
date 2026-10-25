@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils'
 export function EmailApp({ reload }: { reload: () => Promise<unknown> }) {
   const { me } = useDashboard()
   const admin = isAdmin(me)
-  const state = useApi<EmailState>('/email', ['mail.updated'])
+  const state = useApi<EmailState>('/email', ['mail.updated', 'connections.updated'])
   const [error, setError] = useState<string>()
   const [turning, setTurning] = useState(false)
 
@@ -377,7 +377,7 @@ export function AgentEmailRow({
   /** An owner or admin: turns it on or off. */
   editable: boolean
 }) {
-  const state = useApi<EmailState>('/email', ['mail.updated'])
+  const state = useApi<EmailState>('/email', ['mail.updated', 'connections.updated'])
   const [form, setForm] = useState(false)
   const suggestion = useApi<{ name: string; address: string; kept: boolean }>(
     form ? `/email/agents/${teammate.id}/suggestion` : null,

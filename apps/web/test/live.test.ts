@@ -56,3 +56,22 @@ test('a listener that comes back within a moment keeps the socket', async () => 
   await settle(1100)
   assert.equal(FakeSocket.opened.at(-1)!.closed, true)
 })
+
+test('a socket back after dropping tells listeners to fetch again, not on its first open', async () => {
+  let reconnected = 0
+  const stop = listen(
+    () => {},
+    () => reconnected++,
+  )
+  const first = FakeSocket.opened.at(-1)!
+  first.onopen?.()
+  assert.equal(reconnected, 0)
+  first.onclose?.()
+  await settle(2100)
+  const second = FakeSocket.opened.at(-1)!
+  assert.notEqual(second, first)
+  second.onopen?.()
+  assert.equal(reconnected, 1)
+  stop()
+  await settle(1100)
+})

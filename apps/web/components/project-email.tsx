@@ -180,7 +180,7 @@ export function ProjectEmail({
 }) {
   const { me } = useDashboard()
   const admin = isAdmin(me)
-  const email = useApi<EmailState>('/email', ['mail.updated'])
+  const email = useApi<EmailState>('/email', ['mail.updated', 'connections.updated'])
   const triggers = useApi<Rule[]>(`/triggers?project=${encodeURIComponent(projectId)}`)
   const state = email.data
   if (!state?.available) return null
