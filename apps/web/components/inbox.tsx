@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { fileSize, type Media, MediaPreview, mediaKind, Thumbnail } from '@/components/attachments'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { type EditedEmail, EmailDraftEditor, emailDraft } from '@/components/email-cards'
@@ -48,6 +48,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { api, ApiError, attachmentUrl, useApi } from '@/lib/api'
 import { API_URL } from '@/lib/config'
+import { draftFacts, reloadsInboxList } from '@/lib/inbox'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -225,11 +226,12 @@ export function InboxView() {
     await Promise.all([reloadList(), reloadInboxCount()])
   }, [reloadList, reloadInboxCount])
   // Live: a mail came or changed anywhere in the list (older pages too, so they go and come
-  // back on asking), or a mailbox came in or out of the Inbox. The sidebar's count follows
+  // back on asking), a mailbox came in or out of the Inbox, or a reply to approve opened or was
+  // decided (it moves its conversation in or out of To do). The sidebar's count follows
   // the same messages by itself.
   useLive(
     (message) => {
-      if (message.type !== 'mail.updated' && message.type !== 'connections.updated') return
+      if (!reloadsInboxList(message.type)) return
       generation.current++
       setOlder(undefined)
       void reloadList()
@@ -783,14 +785,22 @@ function DraftCard({
               Draft
             </span>
           </span>
-          <span className="truncate text-xs text-muted-foreground">
-            to {email?.to.join(', ') ?? '…'}
-          </span>
         </div>
         <span className="flex-none text-xs text-muted-foreground">
           {email?.sendAt ? `Leaves ${leavingLabel(email.sendAt)}` : 'Waiting for you'}
         </span>
       </div>
+      {/* Whom it goes to, its subject and files: all of what is approved, not only the words. */}
+      {email && (
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-sm">
+          {draftFacts(email).map(([label, value]) => (
+            <Fragment key={label}>
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className={cn('wrap-anywhere', label === 'Cc' && 'font-semibold')}>{value}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      )}
       {editing && email ? (
         <EmailDraftEditor
           draft={email}
