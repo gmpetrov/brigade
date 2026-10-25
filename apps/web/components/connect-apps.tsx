@@ -392,15 +392,6 @@ function Connected({
             })}
           </div>
         )}
-        {dialog && (
-          <Link
-            href="/app/connections"
-            onClick={onClose}
-            className="mt-6 inline-block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
-            Open Apps in Settings
-          </Link>
-        )}
       </div>
     </>
   )
