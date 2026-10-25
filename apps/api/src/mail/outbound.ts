@@ -152,16 +152,31 @@ export async function takeFromBox(
   sessionId: string,
   m: { box: string; conversationId: string; receivedAt: Date },
 ) {
-  await db.mailMessage.updateMany({
-    where: {
-      box: m.box,
-      conversationId: m.conversationId,
-      direction: 'in',
-      sessionId: null,
-      doneAt: null,
-      route: { in: ['box', 'cap', 'loop'] },
-      receivedAt: { lte: m.receivedAt },
+  const waiting = {
+    box: m.box,
+    conversationId: m.conversationId,
+    direction: 'in' as const,
+    sessionId: null,
+    doneAt: null,
+    route: { in: ['box', 'cap', 'loop'] },
+    receivedAt: { lte: m.receivedAt },
+  }
+  const rows = await db.mailMessage.findMany({
+    where: waiting,
+    select: {
+      id: true,
+      receivedAt: true,
+      alias: { select: { sessionId: true, waitUntil: true } },
     },
+  })
+  // Never another thread's sign-up mail (its code) that waited in the box: only what this
+  // thread may read (connectors/email.ts).
+  const ids = rows
+    .filter((r) => !r.alias || r.alias.sessionId === sessionId || r.receivedAt > r.alias.waitUntil)
+    .map((r) => r.id)
+  if (!ids.length) return
+  await db.mailMessage.updateMany({
+    where: { ...waiting, id: { in: ids } },
     // Kept with its thread, as a hand-over's: no longer the box's to clean up after 30 days.
     data: { sessionId, route: 'read', expiresAt: null },
   })
@@ -244,7 +259,6 @@ export async function sendDraft(
   // A new conversation is its own first mail's.
   if (!original)
     await db.mailMessage.updateMany({ where: { id: row.id }, data: { conversationId: row.id } })
-  else await takeFromBox(db, thread.id, original)
   const message: SendInput = {
     from: `${from.name.replace(/[<>"]/g, '')} <${from.address}>`,
     to: draft.to,
@@ -269,6 +283,8 @@ export async function sendDraft(
     })
     throw error
   }
+  // Answered once Resend has it: a reply that failed leaves the mail To do.
+  if (original) await takeFromBox(db, thread.id, original)
   for (const recipient of [...draft.to, ...(draft.cc ?? [])])
     await contactFor(db, recipient).catch(() => undefined)
   await audit({

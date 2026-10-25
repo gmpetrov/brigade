@@ -481,6 +481,87 @@ describe('receiving', { skip }, () => {
     assert.equal(of(later!.id).route, 'box')
   })
 
+  test('a reply that fails to leave leaves the mail it answers To do', async () => {
+    const db = scoped(a)
+    const session = await thread()
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { teammateId: riley.id },
+      include: { domain: true },
+    })
+    const [original] = await arrive(mail({ to: [to(base())] }))
+    const savedFetch = globalThis.fetch
+    globalThis.fetch = (async () => {
+      throw new Error('Resend unavailable')
+    }) as typeof fetch
+    try {
+      await assert.rejects(
+        outbound.sendDraft(db, a, {
+          address,
+          thread: session,
+          teammateId: riley.id,
+          draft: {
+            to: ['stranger@outside.test'],
+            subject: 'Re: Hello',
+            text: 'Answer',
+            replyTo: original!.id,
+          },
+          callId: randomUUID(),
+        }),
+        /Resend unavailable/,
+      )
+    } finally {
+      globalThis.fetch = savedFetch
+    }
+    const row = await db.mailMessage.findFirstOrThrow({ where: { id: original!.id } })
+    assert.equal(row.sessionId, null)
+    assert.equal(row.route, 'box')
+  })
+
+  test('reading a follow-up never takes another thread’s sign-up mail in its conversation', async () => {
+    const db = scoped(a)
+    const owner = await thread()
+    const reader = await thread()
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const alias = await addresses.newAlias(db, {
+      address,
+      projectId: null,
+      sessionId: owner.id,
+      teammateId: riley.id,
+      purpose: 'private sign-up',
+      waitMinutes: 60,
+    })
+    const [secret] = await arrive(mail({ to: [to(alias.local)], text: 'Code 123456' }))
+    // As delivery leaves it when the waiting thread cannot take it now.
+    await db.mailMessage.updateMany({
+      where: { id: secret!.id },
+      data: { sessionId: null, route: 'box' },
+    })
+    const [followUp] = await arrive(
+      mail({
+        to: [to(base())],
+        headers: { 'in-reply-to': secret!.messageId! },
+        text: 'Public follow-up',
+      }),
+    )
+    const { email } = await import('../src/connectors/email.js')
+    await email.operations.email_read!.run(
+      {
+        scope: a,
+        connectionId: address.connectionId!,
+        teammateId: riley.id,
+        thread: reader,
+        callId: randomUUID(),
+        fetch: globalThis.fetch,
+      } as never,
+      { id: followUp!.id } as never,
+    )
+    const rows = await prisma.mailMessage.findMany({
+      where: { id: { in: [secret!.id, followUp!.id] } },
+    })
+    assert.equal(rows.find((r) => r.id === secret!.id)!.sessionId, null)
+    assert.equal(rows.find((r) => r.id === followUp!.id)!.sessionId, reader.id)
+  })
+
   test('a sign-up code goes to the thread that made the address, and no rule sees it', async () => {
     const db = scoped(a)
     const session = await thread('member', { projectId })
