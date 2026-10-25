@@ -38,6 +38,7 @@ import { deleteTriggers, resync } from './routes/triggers.js'
 import { actionViews, recentAutoCalls } from './playbook-autonomy.js'
 import { dryRunView } from './playbook-dry-runs.js'
 import { playbookMetrics } from './playbook-metrics.js'
+import { updateView } from './playbook-updates.js'
 import { createSchedule, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { savePack, storeSkillFile } from './skills.js'
@@ -339,7 +340,10 @@ export async function resolveSettings(
 }
 
 /** Its owner, or an owner or admin: pause, resume, uninstall. */
-function requireManager(scope: WorkspaceScope, installation: { ownerMemberId: string }) {
+export function requireManager(
+  scope: { memberId: string; role: string },
+  installation: { ownerMemberId: string },
+) {
   if (installation.ownerMemberId !== scope.memberId && scope.role === 'member')
     throw new HTTPException(403, {
       message:
@@ -350,7 +354,7 @@ function requireManager(scope: WorkspaceScope, installation: { ownerMemberId: st
 export const isAdminRole = (role: string) => role === 'owner' || role === 'admin'
 
 /** A skill name not yet taken in the workspace: its own, else with -2, -3… */
-async function freeName(db: ScopedDb, name: string) {
+export async function freeName(db: ScopedDb, name: string) {
   for (let n = 1; ; n++) {
     const candidate = n === 1 ? name : `${name.slice(0, 60)}-${n}`
     if (!(await db.skill.findFirst({ where: { name: candidate }, select: { id: true } })))
@@ -1324,41 +1328,43 @@ async function toView(
 ): Promise<PlaybookInstallationView> {
   const manifest = row.manifest as PlaybookManifest
   const day = new Date(Date.now() - DAY_MS)
-  const [recent, runsToday, metrics, actions, autoCalls, dryRun, ticket] = await Promise.all([
-    db.playbookRun.findMany({
-      where: { installationId: row.id, dryRun: false },
-      orderBy: { startedAt: 'desc' },
-      take: runsTaken,
-      include: {
-        rootSession: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            // A fix it started or follows that has not reported: the run waits on it.
-            children: {
-              where: { report: { equals: Prisma.DbNull } },
-              select: { id: true },
-              take: 1,
+  const [recent, runsToday, metrics, actions, autoCalls, dryRun, ticket, update] =
+    await Promise.all([
+      db.playbookRun.findMany({
+        where: { installationId: row.id, dryRun: false },
+        orderBy: { startedAt: 'desc' },
+        take: runsTaken,
+        include: {
+          rootSession: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              // A fix it started or follows that has not reported: the run waits on it.
+              children: {
+                where: { report: { equals: Prisma.DbNull } },
+                select: { id: true },
+                take: 1,
+              },
+              following: { where: { deliveredAt: null }, select: { id: true }, take: 1 },
             },
-            following: { where: { deliveredAt: null }, select: { id: true }, take: 1 },
           },
         },
-      },
-    }),
-    db.playbookRun.count({
-      where: { installationId: row.id, dryRun: false, startedAt: { gte: day } },
-    }),
-    playbookMetrics(db, row),
-    actionViews(db, row, viewer),
-    recentAutoCalls(db, row.id, manifest),
-    db.playbookDryRun.findFirst({
-      where: { installationId: row.id },
-      orderBy: { startedAt: 'desc' },
-      select: { id: true },
-    }),
-    activationTicket(db, row.id),
-  ])
+      }),
+      db.playbookRun.count({
+        where: { installationId: row.id, dryRun: false, startedAt: { gte: day } },
+      }),
+      playbookMetrics(db, row),
+      actionViews(db, row, viewer),
+      recentAutoCalls(db, row.id, manifest),
+      db.playbookDryRun.findFirst({
+        where: { installationId: row.id },
+        orderBy: { startedAt: 'desc' },
+        select: { id: true },
+      }),
+      activationTicket(db, row.id),
+      updateView(db, row, viewer),
+    ])
   const settings = (row.settings ?? {}) as Record<string, string | number>
   const { missing } = withDefaults(manifest, settings)
   // Account settings show the account as its row does (the Gmail address), not its id.
@@ -1448,6 +1454,7 @@ async function toView(
     missing,
     dryRun: dryRun ? await dryRunView(db, dryRun.id) : null,
     activationTicketId: ticket?.id ?? null,
+    update,
     createdAt: row.createdAt.toISOString(),
     activatedAt: row.activatedAt?.toISOString() ?? null,
     pausedAt: row.pausedAt?.toISOString() ?? null,
