@@ -9,16 +9,7 @@ import type {
   InboxSourceView,
   InboxStatus,
 } from '@brigade/contracts'
-import {
-  ArrowLeft,
-  Check,
-  FileText,
-  Mail,
-  Search,
-  ShieldAlert,
-  ShieldCheck,
-  Undo2,
-} from 'lucide-react'
+import { ArrowLeft, Check, FileText, Mail, Search, ShieldAlert, Undo2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -513,6 +504,7 @@ function Row({ item, href, selected }: { item: InboxItem; href: string; selected
 
 /** One conversation, whole, and what a person can do with it. */
 function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> }) {
+  const router = useRouter()
   const detail = useApi<InboxDetail>(itemPath(id), ['mail.updated'])
   const [handing, setHanding] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -538,42 +530,93 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
     }
   }
 
+  // Handed in one click when it can only go to one teammate and needs nothing more (Gmail's
+  // mail asks for its project first); otherwise the form opens.
+  const only = d.handTo.length === 1 ? d.handTo[0]! : null
+  const oneClick = only && d.source.kind !== 'gmail'
+  async function handToOnly() {
+    if (!only) return
+    setBusy(true)
+    setError(undefined)
+    try {
+      const { threadId } = await api<{ threadId: string }>(`${itemPath(id)}/hand`, {
+        body: { teammateId: only.id },
+      })
+      void onChanged()
+      router.push(`/app/threads/${threadId}`)
+    } catch (e) {
+      setError(message(e))
+      setBusy(false)
+    }
+  }
+
   const last = d.messages.at(-1)?.id
+  const unowned = d.status === 'waiting' && !d.thread
+  const trouble = d.route === 'cap' || d.route === 'loop' || d.route === 'bounce'
+  const state = d.reason ? 'No teammate is on it' : destination(d)
+  const about = [d.teammate && `${d.teammate.name}’s mailbox`, d.project?.name]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <Card className="gap-4 px-5 py-5">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-start gap-2">
-          <ProviderLogo kind={d.source.kind} className="mt-1.5 size-4 flex-none" />
-          <h2 className="min-w-0 flex-1 text-xl font-bold wrap-anywhere">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+          <h2 className="min-w-0 flex-1 basis-48 text-xl font-bold wrap-anywhere">
             {d.hidden ? SIGN_UP : d.subject || '(No subject)'}
           </h2>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          <DestinationChip item={d} />
-          {d.teammate && <span className="text-xs text-muted-foreground">{d.teammate.name}</span>}
-          {d.project && <span className="text-xs text-muted-foreground">{d.project.name}</span>}
-          <span className="text-xs text-muted-foreground">{d.to}</span>
-        </div>
-        {d.reason ? (
-          <p className="text-sm text-muted-foreground">
-            {d.reason} No teammate is on it: hand it to one, or mark it done.
-          </p>
-        ) : (
-          d.routeNote && <p className="text-sm text-muted-foreground">{d.routeNote}</p>
-        )}
-        {d.reason && d.addRule && (
-          <div className="flex flex-col items-start gap-1.5">
-            <AddRule
-              connectionId={d.addRule.connectionId}
-              projectId={d.addRule.projectId}
-              teammateId={d.addRule.teammateId}
-              reload={detail.reload}
-            />
-            <p className="text-xs text-muted-foreground">
-              A rule starts a thread for the mail that comes next, not this one.
-            </p>
+          <div className="flex flex-none items-center gap-1.5">
+            {d.thread && (
+              <Button asChild size="sm" variant={unowned ? 'outline' : 'default'}>
+                <Link href={`/app/threads/${d.thread.id}`}>Open thread</Link>
+              </Button>
+            )}
+            {!d.hidden &&
+              (oneClick && unowned ? (
+                <Button size="sm" disabled={busy} onClick={() => void handToOnly()}>
+                  Hand to {only.name}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant={unowned ? 'default' : 'outline'}
+                  aria-expanded={handing}
+                  onClick={() => setHanding((h) => !h)}
+                >
+                  {unowned && only ? `Hand to ${only.name}` : 'Hand to…'}
+                </Button>
+              ))}
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8"
+              disabled={busy}
+              aria-label={done ? 'Not done' : 'Done'}
+              title={done ? 'Not done' : 'Done'}
+              onClick={() => void toggleDone()}
+            >
+              {done ? <Undo2 /> : <Check />}
+            </Button>
           </div>
+        </div>
+        <p
+          className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground"
+          title={d.reason ?? undefined}
+        >
+          <span
+            aria-hidden
+            className={cn(
+              'size-1.5 flex-none rounded-full',
+              trouble || unowned ? 'bg-warning' : done ? 'bg-muted-foreground/50' : 'bg-primary',
+            )}
+          />
+          <span className={cn(trouble ? 'text-warning' : 'text-foreground')}>{state}</span>
+          {about && <span>· {about}</span>}
+        </p>
+        {!d.reason && d.routeNote && <p className="text-xs text-muted-foreground">{d.routeNote}</p>}
+        {error && <p className="text-sm text-destructive-text">{error}</p>}
+        {handing && !d.hidden && (
+          <HandForm detail={d} onCancel={() => setHanding(false)} onHanded={onChanged} />
         )}
       </div>
 
@@ -589,30 +632,18 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
         ))}
       </ol>
 
-      <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-        {d.thread && (
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/app/threads/${d.thread.id}`}>Open thread</Link>
-          </Button>
-        )}
-        {!d.hidden && (
-          <Button
-            variant="outline"
-            size="sm"
-            aria-expanded={handing}
-            onClick={() => setHanding((h) => !h)}
-          >
-            Hand to…
-          </Button>
-        )}
-        <Button variant="outline" size="sm" disabled={busy} onClick={() => void toggleDone()}>
-          {done ? <Undo2 /> : <Check />}
-          {done ? 'Not done' : 'Done'}
-        </Button>
-      </div>
-      {error && <p className="text-sm text-destructive-text">{error}</p>}
-      {handing && !d.hidden && (
-        <HandForm detail={d} onCancel={() => setHanding(false)} onHanded={onChanged} />
+      {d.reason && d.addRule && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t pt-4">
+          <AddRule
+            connectionId={d.addRule.connectionId}
+            projectId={d.addRule.projectId}
+            teammateId={d.addRule.teammateId}
+            reload={detail.reload}
+          />
+          <p className="text-xs text-muted-foreground">
+            For the mail that comes next: a rule starts a thread for it.
+          </p>
+        </div>
       )}
     </Card>
   )
@@ -626,20 +657,31 @@ const SENT_LABEL: Record<NonNullable<InboxMessage['sent']>, string> = {
   failed: 'Not sent',
 }
 
+/** A mail's time: the hour today, the day this year, else the date. The whole date shows on hover. */
+function shortDate(at: string) {
+  const date = new Date(at)
+  const now = new Date()
+  if (date.toDateString() === now.toDateString())
+    return date.toLocaleTimeString(undefined, { timeStyle: 'short' })
+  if (date.getFullYear() === now.getFullYear())
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return date.toLocaleDateString(undefined, { dateStyle: 'medium' })
+}
+
 /** One mail of a conversation: folded to a line, or whole. */
 function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: () => void }) {
   const [quoteOpen, setQuoteOpen] = useState(false)
   const date = new Date(m.at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  const when = shortDate(m.at)
   const auth = m.authentication
   const verified = auth && (auth.dkim === 'pass' || auth.dmarc === 'pass')
   const sent = m.sent && m.sent !== 'sent' && m.sent !== 'delivered' ? SENT_LABEL[m.sent] : null
   const header = (
     <div className="flex w-full items-baseline gap-2 text-left">
       <span className="min-w-0 flex-1 truncate text-sm">
-        <span className="font-semibold">{m.fromName || m.from}</span>
-        {m.fromName && m.fromName !== m.from && (
-          <span className="text-muted-foreground"> &lt;{m.from}&gt;</span>
-        )}
+        <span className="font-semibold" title={m.from}>
+          {m.fromName || m.from}
+        </span>
       </span>
       {sent && (
         <span
@@ -653,8 +695,8 @@ function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: 
           {sent}
         </span>
       )}
-      <time dateTime={m.at} className="flex-none text-xs text-muted-foreground">
-        {date}
+      <time dateTime={m.at} title={date} className="flex-none text-xs text-muted-foreground">
+        {when}
       </time>
     </div>
   )
@@ -680,19 +722,10 @@ function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: 
         To {m.to.join(', ')}
         {m.cc.length > 0 && ` · Cc ${m.cc.join(', ')}`}
       </p>
-      {auth && (
-        <p
-          className={cn(
-            'flex items-center gap-1.5 text-xs',
-            verified ? 'text-muted-foreground' : 'text-warning',
-          )}
-        >
-          {verified ? (
-            <ShieldCheck aria-hidden className="size-3.5" />
-          ) : (
-            <ShieldAlert aria-hidden className="size-3.5" />
-          )}
-          {verified ? 'Verified by the mail server' : 'Not verified'}
+      {auth && !verified && (
+        <p className="flex items-center gap-1.5 text-xs text-warning">
+          <ShieldAlert aria-hidden className="size-3.5" />
+          Not verified by the mail server
         </p>
       )}
       {m.hidden ? (
