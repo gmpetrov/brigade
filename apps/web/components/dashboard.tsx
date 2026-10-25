@@ -257,12 +257,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Pull requests waiting on a person: with the tickets, what Home's Waiting on you counts.
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention', ['pulls.updated'])
   const reloadPulls = pulls.reload
-  // Mail nobody took, beside Inbox: live, and again when the window comes back (a phone that
-  // slept missed what its socket would have said).
+  // The Inbox's To do beside it (mail nobody took, replies to approve): live, and again when the
+  // window comes back (a phone that slept missed what its socket would have said).
   const inboxCount = useApi<{ waiting: number }>('/inbox/count', [
     'mail.updated',
     // A Gmail account put in the Inbox or taken out of it, an address released.
     'connections.updated',
+    // A teammate's reply asked for approval, or was decided.
+    'tickets.updated',
   ])
   const reloadInboxCount = inboxCount.reload
   const inboxWaiting = inboxCount.data?.waiting ?? 0
@@ -813,6 +815,8 @@ function TeammatesRailMenu({ teammates, admin }: { teammates: Teammate[]; admin:
  */
 function Inset({ children }: { children: ReactNode }) {
   const { expanded, computerPage } = useThreadPanel()
+  // The Inbox lays out its own columns, edge to edge, each the window's height.
+  const inboxPage = usePathname().startsWith('/app/inbox')
   return (
     // min-w-0: long unwrapped text inside a page must not widen it past the window.
     <SidebarInset className="min-w-0">
@@ -824,11 +828,11 @@ function Inset({ children }: { children: ReactNode }) {
       <ThreadPanel />
       <QuickThread />
       <DocumentPanel />
-      {/* A computer's screen takes the whole page, edge to edge. */}
+      {/* A computer's screen, and the Inbox, take the whole page, edge to edge. */}
       <div
         data-bleed={computerPage ? '' : undefined}
         className={cn(
-          computerPage
+          computerPage || inboxPage
             ? 'w-full min-w-0'
             : 'mx-auto w-full max-w-5xl min-w-0 px-4 pt-6 pb-16 md:px-10 md:pt-8',
           expanded && 'hidden',

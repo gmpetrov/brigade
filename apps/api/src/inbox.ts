@@ -12,7 +12,9 @@ import {
   triggerEventText,
   unmention,
   type InboxDetail,
+  type InboxDraft,
   type InboxItem,
+  type InboxNext,
   type MailRoute,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -23,6 +25,7 @@ import { authorisedFetch } from './connector-calls.js'
 import { attachmentLink } from './connectors/email.js'
 import { gmailFile } from './connectors/gmail.js'
 import { addressOf } from './mail/names.js'
+import { UNDO_SECONDS } from './mail/outbound.js'
 import { usableProject } from './projects.js'
 import { watchReplies } from './replies.js'
 import type { WorkspaceScope } from './scope.js'
@@ -37,7 +40,7 @@ export type InboxFilters = {
   source?: string
   teammateId?: string
   projectId?: string
-  status?: 'waiting' | 'handled' | 'done' | 'all'
+  status?: 'waiting' | 'handled' | 'scheduled' | 'done' | 'all'
   q?: string
   /** The previous page's last item, its time and id: mails of the same second are not lost. */
   before?: { at: Date; id: string }
@@ -130,14 +133,39 @@ const heads = (scope: WorkspaceScope, sources: InboxSource[]) => sql`
 const WAITING = sql`(h."doneAt" is null and h."sessionId" is null
   and (coalesce(h.route, '') in (${Prisma.join(WAITING_ROUTES)}) or h.status in ('pending', 'failed')))`
 
-const statusSql = (status: InboxFilters['status']) =>
+/**
+ * A teammate's reply in it waits for this member's approval (h: a head): an open email_send
+ * ticket answering one of its mails, in a thread they started, or any for an admin (decide.ts).
+ */
+const draftSql = (scope: WorkspaceScope) => sql`exists (select 1 from "Ticket" t
+  join "Session" s on s.id = t."sessionId"
+  where t."workspaceId" = ${scope.workspaceId} and t.status = 'open' and t.type = 'approval'
+    and t.payload->>'operation' like 'email_send%'
+    and t.payload->'input'->>'replyTo' in (select y.id from "MailMessage" y
+      where y."workspaceId" = ${scope.workspaceId}
+        and y.box = h.box and y."conversationId" = h."conversationId")
+    and ${admin(scope) ? sql`true` : sql`s."startedByMemberId" = ${scope.memberId}`})`
+
+/** Mail sent in it that waits to leave, past the window to cancel any mail (h: a head). */
+const scheduledSql = (scope: WorkspaceScope) => sql`exists (select 1 from "MailMessage" z
+  where z."workspaceId" = ${scope.workspaceId} and z.box = h.box
+    and z."conversationId" = h."conversationId" and z.direction = 'out'
+    and z.status = 'scheduled' and z."sendAt" > ${laterThan()})`
+
+/** A mail leaving after this is one set for later, not one in its window to cancel. */
+const laterThan = () => new Date(Date.now() + UNDO_SECONDS * 1000)
+
+/** To do: nobody took it, or a reply waits for this member. With a teammate: neither, not done. */
+const statusSql = (scope: WorkspaceScope, status: InboxFilters['status']) =>
   status === 'waiting'
-    ? WAITING
+    ? sql`(${WAITING} or (h."doneAt" is null and ${draftSql(scope)}))`
     : status === 'done'
       ? sql`h."doneAt" is not null`
       : status === 'handled'
-        ? sql`(h."doneAt" is null and not ${WAITING})`
-        : sql`true`
+        ? sql`(h."doneAt" is null and not ${WAITING} and not ${draftSql(scope)})`
+        : status === 'scheduled'
+          ? scheduledSql(scope)
+          : sql`true`
 
 /**
  * A conversation this member may read (h: its head): no sign-up mail of another's thread in it.
@@ -191,7 +219,7 @@ export async function listInbox(db: ScopedDb, scope: WorkspaceScope, filters: In
     ? await prisma.$queryRaw<{ id: string; receivedAt: Date }[]>`
         with h as (${heads(scope, wanted)})
         select h.id, h."receivedAt" from h
-        where ${statusSql(filters.status ?? 'waiting')}
+        where ${statusSql(scope, filters.status ?? 'waiting')}
           and ${before ? sql`(h."receivedAt" < ${before.at} or (h."receivedAt" = ${before.at} and h.id < ${before.id}))` : sql`true`}
           and ${matchSql(scope, filters)}
         order by h."receivedAt" desc, h.id desc
@@ -225,14 +253,17 @@ export function parseCursor(cursor: string) {
   return id && Number.isFinite(date.getTime()) ? { at: date, id } : null
 }
 
-/** What waits on a person, for the sidebar: conversations nobody took, of the last 30 days. */
+/**
+ * What waits on a person, for the sidebar: the To do of the last 30 days (conversations nobody
+ * took, or whose reply waits for this member's approval).
+ */
 export async function waitingCount(db: ScopedDb, scope: WorkspaceScope) {
   const sources = await inboxSources(db)
   if (!sources.length) return 0
   const [row] = await prisma.$queryRaw<{ n: number }[]>`
     with h as (${heads(scope, sources)})
     select count(*)::int as n from h
-    where ${WAITING} and h."receivedAt" > ${new Date(Date.now() - 30 * 86_400_000)}`
+    where ${statusSql(scope, 'waiting')} and h."receivedAt" > ${new Date(Date.now() - 30 * 86_400_000)}`
   return row?.n ?? 0
 }
 
@@ -242,7 +273,16 @@ const include = {
   alias: {
     select: { local: true, sessionId: true, session: { select: { startedByMemberId: true } } },
   },
-  session: { select: { id: true, title: true, teammateId: true, projectId: true } },
+  session: {
+    select: {
+      id: true,
+      title: true,
+      teammateId: true,
+      projectId: true,
+      startedByMemberId: true,
+      othersMayPrompt: true,
+    },
+  },
 } as const
 type Row = Prisma.MailMessageGetPayload<{ include: typeof include }>
 
@@ -260,7 +300,7 @@ const SHOWN: Prisma.MailMessageWhereInput = { status: { not: 'cancelled' } }
 
 async function toItems(db: ScopedDb, scope: WorkspaceScope, rows: Row[]): Promise<InboxItem[]> {
   const keys = rows.map((r) => ({ box: r.box, conversationId: r.conversationId }))
-  const [rules, teammates, projects, slugs, counts, signUps] = await Promise.all([
+  const [rules, teammates, projects, slugs, counts, signUps, mails] = await Promise.all([
     db.trigger.findMany({
       where: { id: { in: rows.map((r) => r.triggerId).filter((x): x is string => !!x) } },
       select: { id: true, label: true },
@@ -279,7 +319,24 @@ async function toItems(db: ScopedDb, scope: WorkspaceScope, rows: Row[]): Promis
     rows.length && !admin(scope)
       ? db.mailMessage.findMany({ where: { aliasId: { not: null }, OR: keys }, include })
       : [],
+    // Their mails, for what comes next: replies waiting for approval, or set to leave later.
+    rows.length
+      ? db.mailMessage.findMany({
+          where: { ...SHOWN, OR: keys },
+          select: {
+            id: true,
+            box: true,
+            conversationId: true,
+            sessionId: true,
+            direction: true,
+            status: true,
+            sendAt: true,
+          },
+        })
+      : [],
   ])
+  const drafts = await draftsOf(db, scope, mails)
+  const later = laterThan()
   return rows.map((m) => {
     const masked =
       hidden(scope, m) ||
@@ -319,8 +376,86 @@ async function toItems(db: ScopedDb, scope: WorkspaceScope, rows: Row[]): Promis
       count:
         counts.find((c) => c.box === m.box && c.conversationId === m.conversationId)?._count._all ??
         1,
+      next: masked ? null : nextOf(m, mails, drafts, later, teammates),
     }
   })
+}
+
+type ConversationMail = {
+  id: string
+  box: string
+  conversationId: string
+  sessionId: string | null
+  direction: 'in' | 'out'
+  status: string
+  sendAt: Date | null
+}
+type Draft = InboxDraft & { replyTo: string }
+
+/**
+ * The teammates' replies waiting for approval in these mails' conversations: open email_send
+ * tickets of their threads that answer one of their mails, oldest first.
+ */
+async function draftsOf(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  mails: ConversationMail[],
+): Promise<Draft[]> {
+  const sessions = [...new Set(mails.flatMap((m) => (m.sessionId ? [m.sessionId] : [])))]
+  if (!sessions.length) return []
+  const tickets = await db.ticket.findMany({
+    where: { status: 'open', type: 'approval', sessionId: { in: sessions } },
+    include: {
+      session: {
+        select: { startedByMemberId: true, teammate: { select: { id: true, name: true } } },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+  const ids = new Set(mails.map((m) => m.id))
+  return tickets.flatMap((t) => {
+    const payload = t.payload as { operation?: string; input?: Record<string, unknown> }
+    const input = payload.input ?? {}
+    const replyTo = typeof input.replyTo === 'string' ? input.replyTo : null
+    if (!/^email_send(_|$)/.test(payload.operation ?? '') || !replyTo || !ids.has(replyTo))
+      return []
+    return [
+      {
+        ticketId: t.id,
+        teammate: t.session?.teammate ?? null,
+        input,
+        canDecide: admin(scope) || t.session?.startedByMemberId === scope.memberId,
+        at: t.createdAt.toISOString(),
+        replyTo,
+      },
+    ]
+  })
+}
+
+/** A conversation's next step: a reply to approve first, else the next mail set to leave. */
+function nextOf(
+  head: { box: string; conversationId: string },
+  mails: ConversationMail[],
+  drafts: Draft[],
+  later: Date,
+  teammates: { id: string; name: string }[],
+): InboxNext | null {
+  const mine = mails.filter((x) => x.box === head.box && x.conversationId === head.conversationId)
+  const draft = drafts.find((d) => mine.some((x) => x.id === d.replyTo))
+  if (draft)
+    return {
+      kind: 'draft',
+      ticketId: draft.ticketId,
+      teammate: draft.teammate && (teammates.find((t) => t.id === draft.teammate!.id) ?? null),
+    }
+  const leaving = mine
+    .filter(
+      (x) => x.direction === 'out' && x.status === 'scheduled' && x.sendAt && x.sendAt > later,
+    )
+    .sort((a, b) => a.sendAt!.getTime() - b.sendAt!.getTime())[0]
+  return leaving
+    ? { kind: 'scheduled', id: `mail:${leaving.id}`, at: leaving.sendAt!.toISOString() }
+    : null
 }
 
 // ---------------------------------------------------------------------------
@@ -471,12 +606,25 @@ export async function readItem(
             ? ((m.authentication as InboxDetail['messages'][number]['authentication']) ?? null)
             : null,
         sent: m.direction === 'out' ? (m.status as InboxDetail['messages'][number]['sent']) : null,
+        sendAt:
+          m.direction === 'out' && m.status === 'scheduled'
+            ? (m.sendAt?.toISOString() ?? null)
+            : null,
+        // Cancelled by whoever may prompt its thread (src/routes/email.ts).
+        canCancel:
+          m.direction === 'out' &&
+          m.status === 'scheduled' &&
+          !!m.sendAt &&
+          m.sendAt > new Date() &&
+          !!m.session &&
+          (m.session.startedByMemberId === scope.memberId || m.session.othersMayPrompt),
         hidden: masked,
       }
     }),
     routeNote: head.routeNote,
     handTo: await handableTeammates(db, head.address?.connectionId ?? head.connectionId),
     doneAt: head.doneAt?.toISOString() ?? null,
+    drafts: item!.hidden ? [] : (await draftsOf(db, scope, mails)).map(({ replyTo: _, ...d }) => d),
   }
 }
 

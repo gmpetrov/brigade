@@ -1,9 +1,12 @@
 'use client'
 // The Inbox: every email the workspace's mailboxes received (Brigade's own addresses and
-// connected Gmail accounts), one row per conversation, with where it went; read one, mark it
-// done or hand it to a teammate. Filters and the open email live in the address, so links and back work.
+// connected Gmail accounts), one row per conversation with its next step; read one, approve a
+// teammate's reply (now or for later), mark it done or hand it to a teammate. The list and the
+// open conversation are two columns, each the window's height. Filters and the open email live
+// in the address, so links and back work.
 import type {
   InboxDetail,
+  InboxDraft,
   InboxItem,
   InboxMessage,
   InboxSourceView,
@@ -13,6 +16,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Check,
+  Clock,
   FileText,
   Mail,
   Search,
@@ -23,12 +27,12 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fileSize, type Media, MediaPreview, mediaKind, Thumbnail } from '@/components/attachments'
-import { timeAgo, useDashboard } from '@/components/dashboard'
+import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
+import { type EditedEmail, EmailDraftEditor, emailDraft } from '@/components/email-cards'
 import { AddRule } from '@/components/project-email'
 import { ProjectSelect } from '@/components/projects'
-import { ProviderLogo } from '@/components/provider-logo'
+import { leavingLabel, SendLaterMenu } from '@/components/send-later'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -48,18 +52,29 @@ import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
 type InboxList = { items: InboxItem[]; sources: InboxSourceView[]; next: string | null }
-type StatusFilter = InboxStatus | 'all'
 type Param = 'status' | 'source' | 'teammate' | 'project' | 'q' | 'item'
 
+type StatusFilter = InboxStatus | 'scheduled' | 'all'
+
+/** Its tabs, by what comes next: to do (nobody on it, or a reply to approve), and the rest. */
 const STATUSES: { value: StatusFilter; label: string }[] = [
-  { value: 'waiting', label: 'Unassigned' },
-  { value: 'handled', label: 'Assigned' },
+  { value: 'waiting', label: 'To do' },
+  { value: 'handled', label: 'With teammates' },
+  { value: 'scheduled', label: 'Scheduled' },
   { value: 'done', label: 'Done' },
   { value: 'all', label: 'All' },
 ]
 
+const EMPTY: Record<StatusFilter, string> = {
+  waiting: 'Nothing to do. Every email has a teammate, and no reply waits for you.',
+  handled: 'No conversation with a teammate right now.',
+  scheduled: 'No reply set to leave later.',
+  done: 'Nothing marked done yet.',
+  all: 'No email here.',
+}
+
 const ALL = '*'
-/** A filter picker in the status row: plain text until it is set. */
+/** A filter picker under the tabs: plain text until it is set. */
 const FILTER =
   'h-8 w-auto max-w-56 sm:w-auto border-transparent bg-transparent px-2.5 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground dark:bg-transparent dark:hover:bg-secondary'
 const FILTER_ON = 'bg-secondary text-foreground dark:bg-secondary'
@@ -106,22 +121,7 @@ export function destination(item: InboxItem): string {
   }
 }
 
-function DestinationChip({ item, className }: { item: InboxItem; className?: string }) {
-  const trouble = item.route === 'cap' || item.route === 'loop' || item.route === 'bounce'
-  return (
-    <span
-      className={cn(
-        'inline-flex max-w-full min-w-0 items-center rounded-full px-2 py-0.5 text-xs font-medium',
-        trouble ? 'bg-warning/15 text-warning' : 'bg-secondary text-muted-foreground',
-        className,
-      )}
-    >
-      <span className="truncate">{destination(item)}</span>
-    </span>
-  )
-}
-
-/** The page: filters, the list and the open email beside it (in its place on a phone). */
+/** The page: the list with its filters, and the open email beside it (in its place on a phone). */
 export function InboxView() {
   const params = useSearchParams()
   const router = useRouter()
@@ -165,9 +165,7 @@ export function InboxView() {
     return () => window.clearTimeout(timer)
   }, [query, q, href, router])
 
-  // Search: an icon until it is opened (or "/" is pressed), and open while it holds text.
-  const [searchOpen, setSearchOpen] = useState(!!q)
-  const searching = searchOpen || !!query
+  // "/" goes to the search box, from anywhere on the page but a field.
   const searchBox = useRef<HTMLInputElement>(null)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -175,13 +173,12 @@ export function InboxView() {
       const target = e.target as HTMLElement | null
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
       e.preventDefault()
-      setSearchOpen(true)
       searchBox.current?.focus()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
-  // The Unassigned count is the workspace's, so it shows only while nothing narrows the list.
+  // The To do count is the workspace's, so it shows only while nothing narrows the list.
   const filtered = !!(source || teammate || project || q)
 
   const search = new URLSearchParams({ status })
@@ -245,195 +242,172 @@ export function InboxView() {
   const gmail = sources.filter((s) => s.kind === 'gmail')
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className={cn('flex flex-col gap-1', item && 'hidden lg:flex')}>
-        <h1 className="text-3xl font-extrabold tracking-tight">Inbox</h1>
-        <p className="max-w-prose text-muted-foreground">
-          Every email your mailboxes received, and where it went.
-        </p>
-      </header>
-
-      <div className={cn('flex flex-wrap items-center gap-x-2 gap-y-3', item && 'hidden lg:flex')}>
-        <div
-          role="group"
-          aria-label="Status"
-          className="mr-2 inline-flex rounded-lg border bg-card p-0.5"
-        >
-          {STATUSES.map((s) => {
-            const count = s.value === 'waiting' && !filtered ? inboxWaiting : 0
-            return (
-              <button
-                key={s.value}
-                type="button"
-                aria-pressed={status === s.value}
-                onClick={() => go({ status: s.value === 'waiting' ? null : s.value })}
-                className={cn(
-                  'inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-sm transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                  status === s.value
-                    ? 'bg-secondary font-semibold text-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {s.label}
-                {count > 0 && (
-                  <span className="text-xs font-normal text-muted-foreground tabular-nums">
-                    {count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-        <Select value={source || ALL} onValueChange={(v) => go({ source: v === ALL ? null : v })}>
-          <SelectTrigger aria-label="Source" className={cn(FILTER, source && FILTER_ON)}>
-            <SelectValue>{source ? undefined : 'Sources'}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All sources</SelectItem>
-            {brigade.length > 0 && (
-              <>
-                <SelectSeparator />
-                <SelectGroup>
-                  <SelectLabel>Brigade addresses</SelectLabel>
-                  {brigade.map((s) => (
-                    <SourceItem key={s.id} source={s} />
-                  ))}
-                </SelectGroup>
-              </>
-            )}
-            {gmail.length > 0 && (
-              <>
-                <SelectSeparator />
-                <SelectGroup>
-                  <SelectLabel>Gmail</SelectLabel>
-                  {gmail.map((s) => (
-                    <SourceItem key={s.id} source={s} />
-                  ))}
-                </SelectGroup>
-              </>
-            )}
-          </SelectContent>
-        </Select>
-        {teammates.length > 0 && (
-          <Select
-            value={teammate || ALL}
-            onValueChange={(v) => go({ teammate: v === ALL ? null : v })}
+    <div className="flex min-w-0 lg:h-dvh">
+      <section
+        aria-label="Emails"
+        className={cn(
+          'flex w-full min-w-0 flex-col lg:w-[26rem] lg:flex-none lg:border-r xl:w-[28rem]',
+          item && 'hidden lg:flex',
+        )}
+      >
+        <header className="flex flex-col gap-3 border-b px-4 pt-6 pb-3 md:px-5">
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-2xl font-extrabold tracking-tight">Inbox</h1>
+            <span className="truncate text-sm text-muted-foreground">
+              Every email your mailboxes received
+            </span>
+          </div>
+          <div className="relative">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              ref={searchBox}
+              type="search"
+              aria-label="Search"
+              placeholder="Search email"
+              title="Search (/)"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Escape' && setQuery('')}
+              className="h-9 pl-9"
+            />
+          </div>
+          <div
+            role="group"
+            aria-label="Status"
+            className="-mx-1 flex gap-1 overflow-x-auto px-1 [scrollbar-width:none]"
           >
-            <SelectTrigger aria-label="Agent" className={cn(FILTER, teammate && FILTER_ON)}>
-              <SelectValue>{teammate ? undefined : 'Agents'}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All agents</SelectItem>
-              <SelectSeparator />
-              {teammates.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        {projects.length > 0 && (
-          <ProjectSelect
-            value={project}
-            onChange={(v) => go({ project: v || null })}
-            all
-            none={false}
-            allLabel="Projects"
-            className={cn(FILTER, project && FILTER_ON)}
-          />
-        )}
-        <div className="ml-auto flex items-center">
-          {searching ? (
-            <div className="relative w-56 max-sm:w-[calc(100vw-3rem)]">
-              <Search
-                aria-hidden
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            {STATUSES.map((s) => {
+              const count = s.value === 'waiting' && !filtered ? inboxWaiting : 0
+              return (
+                <button
+                  key={s.value}
+                  type="button"
+                  aria-pressed={status === s.value}
+                  onClick={() => go({ status: s.value === 'waiting' ? null : s.value, item: null })}
+                  className={cn(
+                    'inline-flex h-7 flex-none items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                    status === s.value
+                      ? 'bg-foreground text-background'
+                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                  )}
+                >
+                  {s.label}
+                  {count > 0 && <span className="text-xs font-normal tabular-nums">{count}</span>}
+                </button>
+              )
+            })}
+          </div>
+          <div className="-mx-2.5 flex flex-wrap items-center">
+            <Select
+              value={source || ALL}
+              onValueChange={(v) => go({ source: v === ALL ? null : v })}
+            >
+              <SelectTrigger aria-label="Source" className={cn(FILTER, source && FILTER_ON)}>
+                <SelectValue>{source ? undefined : 'Sources'}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All sources</SelectItem>
+                {brigade.length > 0 && (
+                  <>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>Brigade addresses</SelectLabel>
+                      {brigade.map((s) => (
+                        <SourceItem key={s.id} source={s} />
+                      ))}
+                    </SelectGroup>
+                  </>
+                )}
+                {gmail.length > 0 && (
+                  <>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>Gmail</SelectLabel>
+                      {gmail.map((s) => (
+                        <SourceItem key={s.id} source={s} />
+                      ))}
+                    </SelectGroup>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+            {teammates.length > 0 && (
+              <Select
+                value={teammate || ALL}
+                onValueChange={(v) => go({ teammate: v === ALL ? null : v })}
+              >
+                <SelectTrigger aria-label="Agent" className={cn(FILTER, teammate && FILTER_ON)}>
+                  <SelectValue>{teammate ? undefined : 'Agents'}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All agents</SelectItem>
+                  <SelectSeparator />
+                  {teammates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {projects.length > 0 && (
+              <ProjectSelect
+                value={project}
+                onChange={(v) => go({ project: v || null })}
+                all
+                none={false}
+                allLabel="Projects"
+                className={cn(FILTER, project && FILTER_ON)}
               />
-              <Input
-                ref={searchBox}
-                type="search"
-                aria-label="Search"
-                placeholder="Search"
-                autoFocus
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onBlur={() => !query.trim() && setSearchOpen(false)}
-                onKeyDown={(e) => {
-                  if (e.key !== 'Escape') return
-                  setQuery('')
-                  setSearchOpen(false)
-                }}
-                className="h-8 pl-9"
-              />
+            )}
+          </div>
+        </header>
+
+        <div className="flex min-h-0 flex-1 flex-col lg:overflow-y-auto">
+          {list.error && (
+            <p className="px-5 py-4 text-sm text-destructive-text">{list.error.message}</p>
+          )}
+          {!list.data && !list.error ? (
+            <p className="px-5 py-4 text-sm text-muted-foreground">Loading…</p>
+          ) : list.data && items.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+              <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                <Mail className="size-5" aria-hidden />
+              </span>
+              <p className="max-w-xs text-sm text-muted-foreground">{EMPTY[status]}</p>
             </div>
           ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Search"
-              title="Search (/)"
-              className="size-8 text-muted-foreground"
-              onClick={() => setSearchOpen(true)}
-            >
-              <Search />
-            </Button>
+            <ul className="divide-y border-b">
+              {items.map((i) => (
+                <li key={i.id}>
+                  <Row item={i} href={href({ item: i.id })} selected={i.id === item} />
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
-        <section
-          aria-label="Emails"
-          className={cn('flex min-w-0 flex-col gap-3', item && 'hidden lg:flex')}
-        >
-          {list.error && <p className="text-sm text-destructive-text">{list.error.message}</p>}
-          {!list.data && !list.error ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : list.data && items.length === 0 ? (
-            <section className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card px-6 py-16 text-center">
-              <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                <Mail className="size-6" aria-hidden />
-              </span>
-              <p className="max-w-md text-sm text-muted-foreground">
-                {status === 'waiting'
-                  ? 'Nothing unassigned. Every email went somewhere.'
-                  : 'No email here.'}
-              </p>
-            </section>
-          ) : (
-            items.length > 0 && (
-              <Card className="gap-0 overflow-hidden py-0">
-                <ul className="divide-y">
-                  {items.map((i) => (
-                    <li key={i.id}>
-                      <Row item={i} href={href({ item: i.id })} selected={i.id === item} />
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )
-          )}
-          {olderError && <p className="text-sm text-destructive-text">{olderError}</p>}
+          {olderError && <p className="px-5 py-3 text-sm text-destructive-text">{olderError}</p>}
           {next && (
             <Button
               variant="outline"
-              className="self-center"
+              size="sm"
+              className="my-4 self-center"
               disabled={loadingOlder}
               onClick={() => void loadOlder()}
             >
               {loadingOlder ? 'Loading…' : 'Load older'}
             </Button>
           )}
-        </section>
+        </div>
+      </section>
 
-        <section
-          aria-label="Email"
-          className={cn(
-            'min-w-0 flex-col gap-3 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto',
-            item ? 'flex' : 'hidden lg:flex',
-          )}
-        >
+      <section
+        aria-label="Email"
+        className={cn('min-w-0 flex-1 lg:overflow-y-auto', item ? 'block' : 'hidden lg:block')}
+      >
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 pt-6 pb-16 md:px-10 md:pt-8">
           {item ? (
             <>
               <Button asChild variant="ghost" size="sm" className="self-start lg:hidden">
@@ -444,12 +418,12 @@ export function InboxView() {
               <Reader key={item} id={item} onChanged={refresh} />
             </>
           ) : (
-            <p className="rounded-xl border border-dashed px-6 py-16 text-center text-sm text-muted-foreground">
+            <p className="py-24 text-center text-sm text-muted-foreground">
               Pick an email to read it.
             </p>
           )}
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
   )
 }
@@ -463,29 +437,94 @@ function SourceItem({ source }: { source: InboxSourceView }) {
   )
 }
 
+/** A sender's initial on a soft colour, the same for the same address. */
+function SenderAvatar({
+  name,
+  address,
+  className,
+}: {
+  name: string
+  address: string
+  className?: string
+}) {
+  const tones = [
+    'bg-chart-1/20',
+    'bg-chart-2/20',
+    'bg-chart-3/20',
+    'bg-chart-4/20',
+    'bg-chart-5/20',
+  ]
+  const tone = tones[[...address].reduce((sum, c) => sum + c.charCodeAt(0), 0) % tones.length]
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'flex size-9 flex-none items-center justify-center rounded-lg text-sm font-semibold text-foreground',
+        tone,
+        className,
+      )}
+    >
+      {(name || address).trim().charAt(0).toUpperCase() || '?'}
+    </span>
+  )
+}
+
+/** A conversation's next step, in a few words: what the row says under its words. */
+function NextStep({ item }: { item: InboxItem }) {
+  const trouble = item.route === 'cap' || item.route === 'loop' || item.route === 'bounce'
+  const who = item.next?.kind === 'draft' ? (item.next.teammate ?? item.teammate) : item.teammate
+  const step =
+    item.next?.kind === 'draft' ? (
+      <span className="font-semibold text-primary">Draft to approve</span>
+    ) : item.status === 'done' ? (
+      <span>Done</span>
+    ) : item.next?.kind === 'scheduled' ? (
+      <span className="inline-flex items-center gap-1">
+        <Clock aria-hidden className="size-3" />
+        Leaves {leavingLabel(item.next.at)}
+      </span>
+    ) : item.status === 'waiting' ? (
+      <span className="font-semibold text-warning">
+        {trouble ? destination(item) : 'No teammate on it'}
+      </span>
+    ) : null
+  return (
+    <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+      {item.status === 'waiting' && !item.next ? (
+        <span aria-hidden className="size-1.5 flex-none rounded-full bg-warning" />
+      ) : (
+        who && (
+          <>
+            <TeammateAvatar teammate={who} className="size-4" />
+            <span className="truncate">{who.name}</span>
+          </>
+        )
+      )}
+      {step}
+      {item.project && <span className="truncate">· {item.project.name}</span>}
+    </span>
+  )
+}
+
 function Row({ item, href, selected }: { item: InboxItem; href: string; selected: boolean }) {
-  const waiting = item.status === 'waiting'
-  const who = [item.teammate?.name, item.project?.name].filter(Boolean).join(' · ')
+  const todo = item.status === 'waiting' || item.next?.kind === 'draft'
   return (
     <Link
       href={href}
       scroll={false}
       aria-current={selected ? 'true' : undefined}
       className={cn(
-        'flex gap-3 px-4 py-3 outline-none hover:bg-secondary/50 focus-visible:bg-secondary/50',
+        'flex gap-3 px-4 py-3.5 outline-none hover:bg-secondary/50 focus-visible:bg-secondary/50 md:px-5',
         selected && 'bg-secondary hover:bg-secondary',
       )}
     >
-      <span className="flex w-2 flex-none justify-center pt-1.5" aria-hidden>
-        {waiting && <span className="size-2 rounded-full bg-primary" />}
-      </span>
-      <ProviderLogo kind={item.source.kind} className="mt-0.5 size-4 flex-none" />
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <SenderAvatar name={item.fromName} address={item.from} />
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-baseline gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm">
+          <span className={cn('min-w-0 flex-1 truncate text-sm', todo && 'font-semibold')}>
             {item.fromName || item.from}
             {item.count > 1 && (
-              <span className="ml-1.5 text-xs text-muted-foreground">
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                 {item.count}
                 <span className="sr-only"> emails</span>
               </span>
@@ -495,17 +534,13 @@ function Row({ item, href, selected }: { item: InboxItem; href: string; selected
             {timeAgo(item.at)}
           </time>
         </div>
-        <span className={cn('truncate text-sm', waiting && 'font-semibold')}>
+        <span className={cn('truncate text-sm', todo ? 'font-semibold' : 'text-foreground/90')}>
           {item.hidden ? SIGN_UP : item.subject || '(No subject)'}
-          {waiting && <span className="sr-only"> (unassigned)</span>}
         </span>
         {!item.hidden && item.snippet && (
           <span className="truncate text-sm text-muted-foreground">{item.snippet}</span>
         )}
-        <div className="mt-1 flex min-w-0 items-center gap-2">
-          <DestinationChip item={item} className="flex-none" />
-          {who && <span className="truncate text-xs text-muted-foreground">{who}</span>}
-        </div>
+        <NextStep item={item} />
       </div>
     </Link>
   )
@@ -514,7 +549,7 @@ function Row({ item, href, selected }: { item: InboxItem; href: string; selected
 /** One conversation, whole, and what a person can do with it. */
 function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> }) {
   const router = useRouter()
-  const detail = useApi<InboxDetail>(itemPath(id), ['mail.updated'])
+  const detail = useApi<InboxDetail>(itemPath(id), ['mail.updated', 'tickets.updated'])
   const [handing, setHanding] = useState(false)
   const [ruling, setRuling] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -567,7 +602,6 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
   const about = [d.teammate && `${d.teammate.name}’s mailbox`, d.project?.name]
     .filter(Boolean)
     .join(' · ')
-
   // Once a thread has it, handing it over starts a new thread: worth offering only when the
   // mailbox has another teammate than the one on it.
   const handOver = d.handTo.some((t) => t.id !== d.teammate?.id)
@@ -587,14 +621,23 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
         {primary && only ? `Hand to ${only.name}` : 'Hand to…'}
       </Button>
     )
+  const sender = d.fromName || d.from
+  const reload = async () => {
+    await Promise.all([detail.reload(), onChanged()])
+  }
 
   return (
-    <Card className="gap-4 px-5 py-5">
-      <div className="flex flex-col gap-2">
+    <article className="flex flex-col gap-4">
+      <header className="flex flex-col gap-3">
         <div className="flex items-start gap-3">
-          <h2 className="min-w-0 flex-1 text-xl font-bold wrap-anywhere">
-            {d.hidden ? SIGN_UP : d.subject || '(No subject)'}
-          </h2>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <h2 className="text-2xl font-bold tracking-tight wrap-anywhere">
+              {d.hidden ? SIGN_UP : d.subject || '(No subject)'}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              with {sender} · {d.messages.length} {d.messages.length === 1 ? 'message' : 'messages'}
+            </p>
+          </div>
           <Button
             variant="outline"
             size="icon"
@@ -610,7 +653,7 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
         {unowned ? (
           // Nobody is on it: what to do with it, and with the mail that comes next, together.
           <div
-            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2"
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-2.5"
             title={d.reason ?? undefined}
           >
             <span aria-hidden className="size-1.5 flex-none rounded-full bg-warning" />
@@ -671,20 +714,148 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
             onClose={() => setRuling(false)}
           />
         )}
-      </div>
+      </header>
 
-      <ol className="flex flex-col">
+      <ol className="flex flex-col gap-3">
         {d.messages.map((m) => (
-          <li key={m.id} className="border-t">
+          <li key={m.id}>
             <Message
               m={m}
-              open={m.id === last || opened.has(m.id)}
+              open={m.id === last || opened.has(m.id) || !!m.sendAt}
               onOpen={() => setOpened((o) => new Set(o).add(m.id))}
+              onChanged={reload}
             />
           </li>
         ))}
+        {d.drafts.map((draft) => (
+          <li key={draft.ticketId}>
+            <DraftCard draft={draft} thread={d.thread} onChanged={reload} />
+          </li>
+        ))}
       </ol>
-    </Card>
+    </article>
+  )
+}
+
+/**
+ * A teammate's reply waiting for approval, in its place in the conversation: approve it now or
+ * for later, change it, or turn it down (the thread's ticket, decided as in the thread).
+ */
+function DraftCard({
+  draft,
+  thread,
+  onChanged,
+}: {
+  draft: InboxDraft
+  thread: InboxDetail['thread']
+  onChanged: () => Promise<void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+  const email = emailDraft(draft.input)
+  const teammate = draft.teammate
+  async function decide(approved: boolean, edited?: EditedEmail) {
+    setBusy(true)
+    setError(undefined)
+    try {
+      await api(`/tickets/${draft.ticketId}/resolve`, {
+        body: { approved, ...(edited ? { edited } : {}) },
+      })
+      await onChanged()
+    } catch (e) {
+      setError(message(e))
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-primary/50 bg-card px-5 py-4">
+      <div className="flex items-start gap-3">
+        {teammate ? (
+          <TeammateAvatar teammate={teammate} className="size-9" />
+        ) : (
+          <SenderAvatar name="?" address="?" />
+        )}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            {teammate?.name ?? 'A teammate'}
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
+              Draft
+            </span>
+          </span>
+          <span className="truncate text-xs text-muted-foreground">
+            to {email?.to.join(', ') ?? '…'}
+          </span>
+        </div>
+        <span className="flex-none text-xs text-muted-foreground">
+          {email?.sendAt ? `Leaves ${leavingLabel(email.sendAt)}` : 'Waiting for you'}
+        </span>
+      </div>
+      {editing && email ? (
+        <EmailDraftEditor
+          draft={email}
+          onCancel={() => setEditing(false)}
+          onSend={(edited) => {
+            setEditing(false)
+            void decide(true, edited)
+          }}
+        />
+      ) : (
+        <p className="text-[15px] leading-relaxed whitespace-pre-wrap wrap-anywhere">
+          {email?.body ?? JSON.stringify(draft.input)}
+        </p>
+      )}
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+      {draft.canDecide ? (
+        !editing && (
+          <div className="flex flex-col gap-2 border-t pt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" disabled={busy} onClick={() => void decide(true)}>
+                <Check />
+                {email?.sendAt ? 'Approve' : 'Approve & send'}
+              </Button>
+              <SendLaterMenu disabled={busy} onPick={(sendAt) => void decide(true, { sendAt })} />
+              {email && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setEditing(true)}
+                >
+                  Edit
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="ml-auto text-muted-foreground"
+                disabled={busy}
+                onClick={() => void decide(false)}
+              >
+                Discard
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {email?.sendAt
+                ? 'It leaves at that time once approved, and can be cancelled until then.'
+                : 'It leaves 30 seconds after you approve it, and can be cancelled until then.'}
+            </p>
+          </div>
+        )
+      ) : (
+        <p className="border-t pt-3 text-xs text-muted-foreground">
+          Only the member who started{' '}
+          {thread ? (
+            <Link href={`/app/threads/${thread.id}`} className="underline underline-offset-4">
+              its thread
+            </Link>
+          ) : (
+            'its thread'
+          )}
+          , or an admin, can approve it.
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -707,22 +878,63 @@ function shortDate(at: string) {
   return date.toLocaleDateString(undefined, { dateStyle: 'medium' })
 }
 
-/** One mail of a conversation: folded to a line, or whole. */
-function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: () => void }) {
+/** One mail of a conversation, as a card: folded to a line, or whole. */
+function Message({
+  m,
+  open,
+  onOpen,
+  onChanged,
+}: {
+  m: InboxMessage
+  open: boolean
+  onOpen: () => void
+  onChanged: () => Promise<void>
+}) {
+  const { teammates } = useDashboard()
   const [quoteOpen, setQuoteOpen] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [error, setError] = useState<string>()
   const date = new Date(m.at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
   const when = shortDate(m.at)
   const auth = m.authentication
   const verified = auth && (auth.dkim === 'pass' || auth.dmarc === 'pass')
   const sent = m.sent && m.sent !== 'sent' && m.sent !== 'delivered' ? SENT_LABEL[m.sent] : null
+  // Sent by a teammate: its pebble, as everywhere else.
+  const teammate =
+    m.direction === 'out' ? (teammates.find((t) => t.name === m.fromName) ?? null) : null
+  const name = m.fromName || m.from
+  const avatar = teammate ? (
+    <TeammateAvatar teammate={teammate} className="size-9" />
+  ) : (
+    <SenderAvatar name={name} address={m.from} />
+  )
+  async function cancel() {
+    setCancelling(true)
+    setError(undefined)
+    try {
+      await api(`/email/messages/${encodeURIComponent(m.id.replace(/^mail:/, ''))}/cancel`, {
+        method: 'POST',
+      })
+      await onChanged()
+    } catch (e) {
+      setError(message(e))
+    } finally {
+      setCancelling(false)
+    }
+  }
   const header = (
-    <div className="flex w-full items-baseline gap-2 text-left">
-      <span className="min-w-0 flex-1 truncate text-sm">
-        <span className="font-semibold" title={m.from}>
-          {m.fromName || m.from}
+    <div className="flex w-full items-start gap-3 text-left">
+      {avatar}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm font-semibold" title={m.from}>
+          {name}
+        </span>
+        <span className="truncate text-xs text-muted-foreground">
+          to {m.to.join(', ')}
+          {m.cc.length > 0 && ` · Cc ${m.cc.join(', ')}`}
         </span>
       </span>
-      {sent && (
+      {sent && !m.sendAt && (
         <span
           className={cn(
             'flex-none text-xs',
@@ -745,22 +957,41 @@ function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: 
       <button
         type="button"
         onClick={onOpen}
-        className="flex w-full flex-col gap-0.5 py-3 outline-none hover:bg-secondary/50 focus-visible:bg-secondary/50"
+        className="flex w-full flex-col gap-2 rounded-xl border bg-card px-5 py-3.5 outline-none hover:bg-secondary/40 focus-visible:bg-secondary/40"
       >
         {header}
-        <span className="w-full truncate text-left text-sm text-muted-foreground">
+        <span className="w-full truncate pl-12 text-left text-sm text-muted-foreground">
           {m.hidden ? SIGN_UP : m.text.replace(/\s+/g, ' ') || 'No text.'}
         </span>
       </button>
     )
 
   return (
-    <div className="flex flex-col items-start gap-2 py-4">
+    <div
+      className={cn(
+        'flex flex-col items-start gap-3 rounded-xl border bg-card px-5 py-4',
+        m.sendAt && 'border-dashed',
+      )}
+    >
       {header}
-      <p className="text-xs text-muted-foreground wrap-anywhere">
-        To {m.to.join(', ')}
-        {m.cc.length > 0 && ` · Cc ${m.cc.join(', ')}`}
-      </p>
+      {m.sendAt && (
+        <div className="flex w-full flex-wrap items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm">
+          <Clock aria-hidden className="size-4 text-muted-foreground" />
+          <span className="flex-1">Leaves {leavingLabel(m.sendAt)}</span>
+          {m.canCancel && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7"
+              disabled={cancelling}
+              onClick={() => void cancel()}
+            >
+              Cancel sending
+            </Button>
+          )}
+        </div>
+      )}
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
       {auth && !verified && (
         <p className="flex items-center gap-1.5 text-xs text-warning">
           <ShieldAlert aria-hidden className="size-3.5" />

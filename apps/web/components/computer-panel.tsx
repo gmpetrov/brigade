@@ -451,9 +451,12 @@ function SentMail({ thread, onChange }: { thread: Thread; onChange: () => void }
                   title={m.error ?? `From ${m.fromAddress}`}
                 >
                   To {m.to.join(', ')} ·{' '}
-                  {left > 0
-                    ? `Leaves in ${left} s`
-                    : (SENT_STATUS[m.status] ?? (m.status === 'scheduled' ? 'Sent' : m.status))}
+                  {left > 120
+                    ? // Set to leave later: its day and time.
+                      `Leaves ${new Date(m.sendAt!).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                    : left > 0
+                      ? `Leaves in ${left} s`
+                      : (SENT_STATUS[m.status] ?? (m.status === 'scheduled' ? 'Sent' : m.status))}
                 </span>
               </span>
               {left > 0 && thread.mayPrompt && (

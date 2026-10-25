@@ -27,13 +27,19 @@ const [accounts, organized] = await Promise.all([
 ])
 if (accounts === emails.length && organized) {
   console.log('exists: the dev accounts and their organization')
-  // The sample's Inbox mail came after it: added to a sample without mail. Checked here first,
+  // The sample's Inbox mail came after it: added to a sample without it (its reply set to leave
+  // later marks the latest part). Checked here first,
   // since loading what adding takes costs seconds ('acme' is seed-workspace's SAMPLE_ORGANIZATION).
   const sample = await prisma.organization.findFirst({
     where: { slug: 'acme' },
     select: { id: true },
   })
-  if (sample && !(await prisma.mailMessage.count({ where: { organizationId: sample.id } })))
+  if (
+    sample &&
+    !(await prisma.mailMessage.count({
+      where: { organizationId: sample.id, direction: 'out', status: 'scheduled' },
+    }))
+  )
     await (await import('./seed-inbox.js')).seedInbox()
   await prisma.$disconnect()
   process.exit(0)

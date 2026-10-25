@@ -799,6 +799,53 @@ describe('sending', { skip }, () => {
       /cannot be cancelled/,
     )
   })
+
+  test('a mail set for later leaves then, can be cancelled until then, and is followed from then', async () => {
+    const db = scoped(a)
+    const session = await thread('member')
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { teammateId: riley.id },
+      include: { domain: true },
+    })
+    const send = (sendAt: Date) =>
+      outbound.sendDraft(db, a, {
+        address,
+        thread: { ...session, projectId: null },
+        teammateId: riley.id,
+        draft: { to: ['partner@outside.test'], subject: 'Monday', text: 'See you', sendAt },
+        callId: randomUUID(),
+      })
+    const monday = new Date(Date.now() + 3 * 86_400_000)
+    const before = resend.sent.length
+    const sent = await send(monday)
+    assert.equal(sent.sendAt.toISOString(), monday.toISOString())
+    assert.equal(resend.sent[before]!.body.scheduled_at, monday.toISOString())
+    // Its replies are followed from when it leaves, not from now.
+    assert.ok(sent.watch && sent.watch.until.getTime() > monday.getTime() + 86_400_000)
+    // A time already past leaves in its window to cancel, as one sent now.
+    const late = await send(new Date(Date.now() - 60_000))
+    assert.ok(late.sendAt.getTime() > Date.now() + 20_000)
+    assert.ok(late.sendAt.getTime() < Date.now() + 31_000)
+    // Days later, still cancelled.
+    assert.deepEqual(
+      await outbound.cancelMail(db, a, sent.id, { type: 'member', id: members[0]! }),
+      { cancelled: true },
+    )
+    // Further than Resend holds mail: refused before anyone is asked.
+    assert.match(
+      (await outbound.checkDraft(db, {
+        address,
+        thread: { ...session, projectId: null },
+        draft: {
+          to: ['partner@outside.test'],
+          subject: 'Too far',
+          text: 'Next year',
+          sendAt: new Date(Date.now() + 40 * 86_400_000),
+        },
+      })) ?? '',
+      /up to 30 days ahead/,
+    )
+  })
 })
 
 describe('the webhook route', { skip }, () => {

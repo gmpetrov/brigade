@@ -79,9 +79,12 @@ A reply in a conversation the thread has gives it the new words only; `email_rea
 
 A mail to anyone outside the workspace waits for a person (`Operation.asks`), unless the teammate's
 `permissionPolicy.emailSends` is `allow` or a playbook's action lets it go; the approval card lets
-the person edit the draft first (`ResolveApproval.edited`, `Operation.editable`). It is handed to
-Resend scheduled 30 seconds ahead: until then it can be cancelled from the thread's panel
-(`POST /api/email/messages/:id/cancel`) or with `email_cancel`. Resend's events (`email.sent`,
+the person edit the draft first (`ResolveApproval.edited`, `Operation.editable`), or approve it for
+later ("Send later", which sets `sendAt`). It is handed to Resend scheduled 30 seconds ahead, or at
+`sendAt` when later (the teammate's own, "send it Monday at 9", or the approver's; up to 30 days,
+`SEND_LATER_MAX_DAYS`, as Resend holds mail): until then it can be cancelled from the thread's panel
+or the Inbox (`POST /api/email/messages/:id/cancel`) or with `email_cancel`. Its replies are followed
+from when it leaves. Gmail cannot send later: its API has no scheduled send. Resend's events (`email.sent`,
 `delivered`, `bounced`, `failed`) give its `Message-ID` and its fate; a bounce wakes the thread.
 
 ## Gmail follows the same rules
@@ -116,8 +119,13 @@ has to keep its messages there.
   status is the head's, in the query (SQL, `DISTINCT ON` box and conversation, so paging is right
   whatever the view): `waiting` (nobody took it: `box`, `cap`, `loop`, or not delivered yet, and not
   done), `handled` (a thread has it, or its route needs nobody), `done` (`MailMessage.doneAt`, set on
-  all its received mails; its next mail waits again). The sidebar counts conversations that wait,
-  last 30 days.
+  all its received mails; its next mail waits again).
+- **Its next step** (`InboxItem.next`), on its row: a teammate's reply waiting for approval (an open
+  `email_send` ticket of its thread answering one of its mails), else the next reply set to leave
+  later (sent, `scheduled`, past the 30 seconds to cancel any mail).
+- **Tabs**: To do (`waiting`: nobody took it, or a reply waits for this member's approval: they
+  started its thread, or are an admin, as `decide.ts` says), With teammates (`handled`, but those),
+  Scheduled (a reply set for later), Done, All. The sidebar counts the To do, last 30 days.
 - **Filters**: source, agent, project, words; a conversation shows when any of its mails matches
   (words: its senders, or the words of its mails received or sent).
   Pages of 50, newest first.
@@ -136,8 +144,10 @@ has to keep its messages there.
   moment, for its text. A taker of a file whose copy is under way waits for it (a retryable 409
   after 20 seconds); a copy stopped halfway is made again. A copy no thread has goes after 30 days
   (`sweepUploads`), its bytes before its row, so a failed delete is tried again.
-- **Unassigned** (the page's word for `waiting`; `handled` shows as Assigned): the item says why
-  nobody took it (from outside the workspace with no rule matching, a rule over its cap, a loop,
+- **A reply to approve** shows at the end of its conversation, as the thread's approval card does:
+  approve and send, send later, edit, or discard (`POST /api/tickets/:id/resolve`). Who may not
+  decide sees it, and who may.
+- **Nobody on it** (a callout above the conversation): the item says why nobody took it (from outside the workspace with no rule matching, a rule over its cap, a loop,
   not delivered yet) and, for Brigade's mail, lets an owner or admin add a rule on its mailbox
   (its project's variant, its agent first picked) for the mail that comes next.
 - **Hand to**: a thread of the member with a teammate given the mailbox, in the item's project,
