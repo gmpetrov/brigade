@@ -440,6 +440,47 @@ describe('receiving', { skip }, () => {
     assert.ok(row!.expiresAt && row!.expiresAt.getTime() > Date.now() + 29 * 86_400_000)
   })
 
+  test('a mail of the box a thread reads is that thread’s, with what waited before it', async () => {
+    const db = scoped(a)
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const session = await thread('member')
+    const subject = `Welcome ${randomUUID()}`
+    const [first] = await arrive(mail({ to: [to(base())], subject }))
+    const [welcome] = await arrive(
+      mail({
+        to: [to(base())],
+        subject: `Re: ${subject}`,
+        headers: { 'in-reply-to': first!.messageId! },
+      }),
+    )
+    assert.equal(welcome!.conversationId, first!.conversationId)
+    const [later] = await arrive(mail({ to: [to(base())], subject: 'Unrelated' }))
+    const { email } = await import('../src/connectors/email.js')
+    await email.operations.email_read!.run(
+      {
+        scope: a,
+        connectionId: address.connectionId!,
+        teammateId: riley.id,
+        thread: session,
+        callId: randomUUID(),
+        fetch: globalThis.fetch,
+      } as never,
+      { id: welcome!.id } as never,
+    )
+    const rows = await prisma.mailMessage.findMany({
+      where: { id: { in: [first!.id, welcome!.id, later!.id] } },
+    })
+    const of = (id: string) => rows.find((r) => r.id === id)!
+    for (const id of [first!.id, welcome!.id]) {
+      assert.equal(of(id).sessionId, session.id)
+      assert.equal(of(id).route, 'read')
+      assert.equal(of(id).expiresAt, null)
+    }
+    // Another conversation still waits in the box.
+    assert.equal(of(later!.id).sessionId, null)
+    assert.equal(of(later!.id).route, 'box')
+  })
+
   test('a sign-up code goes to the thread that made the address, and no rule sees it', async () => {
     const db = scoped(a)
     const session = await thread('member', { projectId })

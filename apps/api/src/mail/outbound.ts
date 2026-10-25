@@ -142,6 +142,31 @@ export async function checkDraft(
   return null
 }
 
+/**
+ * A thread that reads or answers a mail left in its mailbox takes it: the Inbox shows it with that
+ * thread and its teammate, no longer To do. The mails of its conversation that waited until it go
+ * too; a later one waits on its own.
+ */
+export async function takeFromBox(
+  db: ScopedDb,
+  sessionId: string,
+  m: { box: string; conversationId: string; receivedAt: Date },
+) {
+  await db.mailMessage.updateMany({
+    where: {
+      box: m.box,
+      conversationId: m.conversationId,
+      direction: 'in',
+      sessionId: null,
+      doneAt: null,
+      route: { in: ['box', 'cap', 'loop'] },
+      receivedAt: { lte: m.receivedAt },
+    },
+    // Kept with its thread, as a hand-over's: no longer the box's to clean up after 30 days.
+    data: { sessionId, route: 'read', expiresAt: null },
+  })
+}
+
 /** Hand a checked (and maybe approved) mail to Resend, to leave in UNDO_SECONDS. */
 export async function sendDraft(
   db: ScopedDb,
@@ -219,6 +244,7 @@ export async function sendDraft(
   // A new conversation is its own first mail's.
   if (!original)
     await db.mailMessage.updateMany({ where: { id: row.id }, data: { conversationId: row.id } })
+  else await takeFromBox(db, thread.id, original)
   const message: SendInput = {
     from: `${from.name.replace(/[<>"]/g, '')} <${from.address}>`,
     to: draft.to,

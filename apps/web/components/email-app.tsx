@@ -271,6 +271,10 @@ function destination(e: MailJournalEntry) {
       return "A member's request"
     case 'rule':
       return e.rule ? `Rule "${e.rule.label}"` : 'A rule'
+    case 'handed':
+      return 'Handed to a teammate from the Inbox'
+    case 'read':
+      return 'Taken by the thread that read it'
     case 'box':
       return 'Left in the box'
     case 'duplicate':
