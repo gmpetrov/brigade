@@ -15,6 +15,10 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { Prisma, prisma, type ScopedDb } from './db.js'
+import { ingestExternal, PROGRAM } from './attachments.js'
+import { authorisedFetch } from './connector-calls.js'
+import { attachmentLink } from './connectors/email.js'
+import { gmailFile } from './connectors/gmail.js'
 import { addressOf } from './mail/names.js'
 import { usableProject } from './projects.js'
 import { watchReplies } from './replies.js'
@@ -345,17 +349,68 @@ async function conversationOf(db: ScopedDb, itemId: string) {
   return { head, mails }
 }
 
+type MailFile = {
+  id: string
+  filename: string
+  contentType: string
+  size?: number
+  inline?: boolean
+}
+
 const filesOf = (m: Row) =>
-  (
-    (m.attachments ?? []) as {
-      filename: string
-      contentType: string
-      size: number
-      inline?: boolean
-    }[]
-  )
+  ((m.attachments ?? []) as MailFile[])
     .filter((a) => !a.inline)
-    .map((a) => ({ name: a.filename, contentType: a.contentType, size: a.size }))
+    .map((a) => ({ id: a.id, name: a.filename, contentType: a.contentType, size: a.size ?? 0 }))
+
+/**
+ * A received mail's file, for a person to open, never held whole by Brigade: Brigade's address's
+ * from Resend's short-lived link; Gmail's, which has none, copied once to the bucket by the stream
+ * (as a trigger's thread takes it), then from the bucket. Programs and installers are not opened.
+ */
+export async function openFile(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  itemId: string,
+  fileId: string,
+): Promise<{ link: string } | { attachment: { id: string; name: string; contentType: string } }> {
+  const m = await load(db, itemId)
+  const shown = (await readItem(db, scope, itemId)).messages.find((x) => x.id === `mail:${m.id}`)
+  const file = ((m.attachments ?? []) as MailFile[]).find((a) => a.id === fileId)
+  if (!shown || shown.hidden || !file) throw new HTTPException(404, { message: 'No such file' })
+  if (PROGRAM.test(file.filename))
+    throw new HTTPException(403, {
+      message: 'A program or installer, which Brigade does not open from outside',
+    })
+  if (m.resendId) return { link: await attachmentLink(m.resendId, file.id) }
+  const connection =
+    m.connectionId && m.sourceId
+      ? await db.connection.findFirst({ where: { id: m.connectionId, status: { not: 'removed' } } })
+      : null
+  if (!connection) throw new HTTPException(410, { message: 'Its account is gone' })
+  const [id] = await ingestExternal(
+    db,
+    scope,
+    connection.id,
+    [
+      gmailFile(m.sourceId!, {
+        partId: file.id,
+        filename: file.filename,
+        mimeType: file.contentType,
+        size: file.size ?? 0,
+      }),
+    ],
+    { fetch: await authorisedFetch(db, scope, connection as never) },
+  )
+  const row = await db.attachment.findFirst({ where: { id: id! } })
+  if (row?.status !== 'ready')
+    throw new HTTPException(row?.status === 'pending' ? 409 : 422, {
+      message:
+        row?.status === 'pending'
+          ? 'It is on its way: try again'
+          : `Brigade did not keep it: ${row?.note ?? 'blocked'}`,
+    })
+  return { attachment: row }
+}
 
 /**
  * A conversation, whole: its latest mail in front (where it went, what a person can do), and each

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import pg from 'pg'
@@ -1265,5 +1265,139 @@ describe('a sign-up’s conversation after its box time', { skip }, () => {
     await prisma.session.delete({ where: { id: signup.id } })
     await sweepMail()
     assert.equal(await db.mailMessage.findFirst({ where: { id: code.id } }), null)
+  })
+})
+
+describe('a received mail’s files', { skip }, () => {
+  test('Brigade’s open from Resend’s link, never through the API; programs do not', async () => {
+    const db = scoped(scope)
+    const m = await mail(support, {
+      resendId: `re-files-${id}`,
+      attachments: [
+        { id: 'f1', filename: 'invoice.pdf', contentType: 'application/pdf', size: 10 },
+        { id: 'f2', filename: 'setup.exe', contentType: 'application/octet-stream', size: 10 },
+      ],
+    })
+    const beforeFetch = globalThis.fetch
+    const asked: string[] = []
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      asked.push(String(input))
+      return json({
+        id: 'f1',
+        filename: 'invoice.pdf',
+        download_url: 'https://resend.example/f1?signature',
+        expires_at: new Date(Date.now() + 3600_000).toISOString(),
+      })
+    }) as typeof fetch
+    try {
+      const detail = await inbox.readItem(db, as(0), `mail:${m.id}`)
+      assert.deepEqual(
+        detail.messages.at(-1)!.attachments.map((a) => a.id),
+        ['f1', 'f2'],
+      )
+      assert.deepEqual(await inbox.openFile(db, as(0), `mail:${m.id}`, 'f1'), {
+        link: 'https://resend.example/f1?signature',
+      })
+      assert.match(asked[0]!, new RegExp(`/emails/receiving/re-files-${id}/attachments/f1$`))
+      await assert.rejects(inbox.openFile(db, as(0), `mail:${m.id}`, 'f2'), /program/)
+      await assert.rejects(inbox.openFile(db, as(0), `mail:${m.id}`, 'f3'), /No such file/)
+    } finally {
+      globalThis.fetch = beforeFetch
+    }
+  })
+
+  test('Gmail’s are copied to the bucket once, as they stream, then opened from it', async () => {
+    const db = scoped(scope)
+    const connection = await prisma.connection.findUniqueOrThrow({ where: { id: gmailShared } })
+    const { keepGmail } = await import('../src/mail/gmail-inbox.js')
+    const content = `Quarterly report ${id}\n`.repeat(50)
+    const messageId = `g-files-${id}`
+    await keepGmail(
+      connection,
+      {
+        id: messageId,
+        threadId: `gt-files-${id}`,
+        from: 'Client <client@outside.test>',
+        to: connection.externalAccount ?? '',
+        subject: 'Report',
+        date: new Date().toUTCString(),
+        snippet: 'Report attached',
+        labels: ['INBOX'],
+        cc: undefined,
+        body: 'Report attached',
+        attachments: [
+          { partId: '2', filename: 'report.txt', mimeType: 'text/plain', size: content.length },
+          // Its size says more than comes: the copy fails, and nothing half-kept stays.
+          { partId: '3', filename: 'short.txt', mimeType: 'text/plain', size: content.length + 5 },
+        ],
+        automatic: false,
+      } as never,
+      { route: 'box' },
+    )
+    const m = await db.mailMessage.findFirstOrThrow({ where: { sourceId: messageId } })
+    const beforeFetch = globalThis.fetch
+    let calls = 0
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      calls++
+      const url = String(input)
+      if (url.includes('?format=full'))
+        return json({
+          id: messageId,
+          threadId: `gt-files-${id}`,
+          payload: {
+            mimeType: 'multipart/mixed',
+            parts: [
+              {
+                partId: '1',
+                mimeType: 'text/plain',
+                body: { size: 15, data: 'UmVwb3J0IGF0dGFjaGVk' },
+              },
+              ...['2', '3'].map((partId) => ({
+                partId,
+                mimeType: 'text/plain',
+                filename: partId === '2' ? 'report.txt' : 'short.txt',
+                body: {
+                  attachmentId: `att-${partId}`,
+                  size: content.length + (partId === '3' ? 5 : 0),
+                },
+              })),
+            ],
+          },
+        })
+      if (url.includes('/attachments/att-'))
+        return new Response(
+          `{\n  "size": ${content.length},\n  "data": "${Buffer.from(content).toString('base64url')}"\n}`,
+          { headers: { 'content-type': 'application/json' } },
+        )
+      throw new Error(`unexpected request ${url}`)
+    }) as typeof fetch
+    try {
+      const opened = await inbox.openFile(db, as(0), `mail:${m.id}`, '2')
+      assert.ok('attachment' in opened)
+      const row = await prisma.attachment.findUniqueOrThrow({ where: { id: opened.attachment.id } })
+      assert.equal(row.status, 'ready')
+      assert.equal(row.size, content.length)
+      assert.equal(row.sha256, createHash('sha256').update(content).digest('hex'))
+      assert.match(row.text, /Quarterly report/)
+      const { attachmentKey, getObject } = await import('../src/bucket.js')
+      assert.equal(
+        Buffer.from((await getObject(attachmentKey(scope, row.id)))!).toString(),
+        content,
+      )
+      // Opened again: from the bucket, Gmail not asked.
+      calls = 0
+      const again = await inbox.openFile(db, as(0), `mail:${m.id}`, '2')
+      assert.ok('attachment' in again && again.attachment.id === row.id)
+      assert.equal(calls, 0)
+      await assert.rejects(inbox.openFile(db, as(0), `mail:${m.id}`, '3'), /did not keep it/)
+      assert.equal(
+        await prisma.attachment.count({
+          where: { externalRef: `gmail:${messageId}:3`, status: { not: 'blocked' } },
+        }),
+        0,
+      )
+    } finally {
+      globalThis.fetch = beforeFetch
+    }
   })
 })

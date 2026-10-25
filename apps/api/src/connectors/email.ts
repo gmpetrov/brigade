@@ -22,6 +22,7 @@ import {
   type ConnectorContext,
   type ConnectorDefinition,
   type ExternalFile,
+  type OpenedFile,
   type VendorEvent,
 } from './types.js'
 
@@ -53,12 +54,28 @@ export function mailFiles(row: {
     size: a.size ?? 0,
     ...(a.inline ? { inline: true } : {}),
     download: async () => downloadAttachment(row.resendId!, a.id),
+    open: async () => openAttachment(row.resendId!, a.id),
   }))
 }
 
+/** A received email's file, from Resend's short-lived link to it. */
+export async function attachmentLink(resendId: string, attachmentId: string) {
+  return (await receivedAttachment(resendId, attachmentId)).download_url
+}
+
+/** A received email's file as it arrives from Resend, never held whole. */
+export async function openAttachment(resendId: string, attachmentId: string): Promise<OpenedFile> {
+  const response = await fetch(await attachmentLink(resendId, attachmentId))
+  const size = Number(response.headers.get('content-length'))
+  if (!response.ok || !response.body || !Number.isFinite(size)) {
+    await response.body?.cancel()
+    throw new ConnectorError(`The attachment could not be read (${response.status})`)
+  }
+  return { body: response.body, size }
+}
+
 async function downloadAttachment(resendId: string, attachmentId: string) {
-  const { download_url } = await receivedAttachment(resendId, attachmentId)
-  const response = await fetch(download_url)
+  const response = await fetch(await attachmentLink(resendId, attachmentId))
   if (!response.ok)
     throw new ConnectorError(`The attachment could not be read (${response.status})`)
   return new Uint8Array(await response.arrayBuffer())
@@ -396,6 +413,7 @@ export const email: ConnectorDefinition = {
           name: file.filename,
           contentType: file.contentType,
           bytes: () => downloadAttachment(m.resendId!, file.id),
+          open: () => openAttachment(m.resendId!, file.id),
         })
         if (ref.status !== 'ready')
           throw new ConnectorError(`Brigade did not keep ${ref.name}: ${ref.note ?? 'blocked'}`)

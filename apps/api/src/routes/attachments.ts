@@ -21,7 +21,7 @@ import { byteRange } from '../byte-range.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 /** Types the browser may show inline from the API's origin; anything else downloads. */
-const INLINE =
+export const INLINE =
   /^(text\/plain|text\/markdown|text\/csv|application\/json|application\/pdf|image\/(png|jpeg|gif|webp)|video\/(mp4|webm|quicktime))$/
 
 export const attachments = new Hono<AppEnv>()

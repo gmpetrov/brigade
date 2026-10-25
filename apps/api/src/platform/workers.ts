@@ -10,6 +10,12 @@ type Bindings = {
 }
 const bindings = env as unknown as Bindings
 
+/** A request body of exactly `size` bytes, sent with that length rather than in chunks. */
+export const fixedLength = (body: ReadableStream<Uint8Array>, size: number) => ({
+  body: body.pipeThrough(new FixedLengthStream(size)),
+  headers: {},
+})
+
 /**
  * Hono's upgradeWebSocket for Workers, which also calls onOpen (Hono's own
  * never does): the hub registers a browser and refuses one there.

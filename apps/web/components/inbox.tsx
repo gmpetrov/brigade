@@ -42,7 +42,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { api, ApiError, useApi } from '@/lib/api'
+import { api, ApiError, attachmentUrl, useApi } from '@/lib/api'
+import { API_URL } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
 type InboxList = { items: InboxItem[]; sources: InboxSourceView[]; next: string | null }
@@ -62,6 +63,11 @@ const SIGN_UP = 'Mail to a sign-up address'
 const message = (e: unknown) =>
   e instanceof ApiError || e instanceof Error ? e.message : String(e)
 const itemPath = (id: string) => `/inbox/items/${encodeURIComponent(id)}`
+/** A mail's file: a received one from its mailbox (through the Inbox), a sent one as Brigade keeps it. */
+const fileUrl = (m: InboxMessage, fileId: string) =>
+  m.direction === 'out'
+    ? attachmentUrl(fileId)
+    : `${API_URL}/api${itemPath(m.id)}/files/${encodeURIComponent(fileId)}`
 
 /** Where an email went, in plain words. */
 export function destination(item: InboxItem): string {
@@ -643,10 +649,21 @@ function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: 
       {m.attachments.length > 0 && (
         <ul className="flex w-full flex-col gap-1 pt-1 text-sm">
           {m.attachments.map((a, i) => (
-            <li key={`${a.name}-${i}`} className="flex items-center gap-2">
-              <Paperclip aria-hidden className="size-3.5 flex-none text-muted-foreground" />
-              <span className="min-w-0 truncate">{a.name}</span>
-              <span className="flex-none text-xs text-muted-foreground">{fileSize(a.size)}</span>
+            <li key={`${a.id}-${i}`}>
+              <a
+                href={fileUrl(m, a.id)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 rounded hover:underline focus-visible:underline"
+              >
+                <Paperclip aria-hidden className="size-3.5 flex-none text-muted-foreground" />
+                <span className="min-w-0 truncate">{a.name}</span>
+                {a.size > 0 && (
+                  <span className="flex-none text-xs text-muted-foreground">
+                    {fileSize(a.size)}
+                  </span>
+                )}
+              </a>
             </li>
           ))}
         </ul>
