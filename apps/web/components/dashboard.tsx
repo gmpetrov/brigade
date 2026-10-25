@@ -38,6 +38,7 @@ import {
   type ReactNode,
 } from 'react'
 import { AppLoader } from '@/components/app-loader'
+import { ConnectAppsDialog, openConnectApps } from '@/components/connect-apps'
 import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
 import { openShortcuts, ShortcutsDialog } from '@/components/help-menu'
 import { PebbleAvatar } from '@/components/pebble-avatar'
@@ -579,33 +580,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <Link
-                    href="/app/connections"
-                    title="Connect apps"
-                    className="group/apps @container/apps bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border text-[0.9375rem] font-medium outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
-                  >
-                    <Plug className="hidden size-4 group-data-[collapsible=icon]:block" />
-                    {/* Too narrow for the words: the logos alone, never a cut-off label. */}
-                    <span className="hidden truncate @[11rem]/apps:inline group-data-[collapsible=icon]:hidden">
-                      Connect apps
-                    </span>
-                    <span aria-hidden className="flex group-data-[collapsible=icon]:hidden">
-                      {APP_TILES.map(({ kind, fan }) => (
-                        <span
-                          key={kind}
-                          className={cn(
-                            'border-card -ml-1.5 flex size-5 items-center justify-center overflow-hidden rounded-[0.35rem] border bg-white text-[#181717] transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] first:ml-0 motion-reduce:transition-none',
-                            fan,
-                          )}
-                        >
-                          <ProviderLogo
-                            kind={kind}
-                            className={kind === 'stripe' ? 'size-full' : 'size-3.5'}
-                          />
-                        </span>
-                      ))}
-                    </span>
-                  </Link>
+                  <ConnectAppsButton />
                 </div>
               </SidebarFooter>
             </Sidebar>
@@ -614,6 +589,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </SidebarProvider>
           <SearchDialog open={searching} onOpenChange={setSearching} />
           <ShortcutsDialog />
+          <ConnectAppsDialog />
           <AppNotifications needsYou={badge.size} />
           <NewProjectDialog open={creatingProject} onOpenChange={setCreatingProject} />
         </ThreadPanelProvider>
@@ -636,6 +612,41 @@ const TICKET_ASKS: Partial<Record<Ticket['type'], string>> = {
   sign_in: 'sign in',
   cap: 'raise cap',
   usage_limit: 'usage limit',
+}
+
+/** The sidebar footer's Connect apps: opens the popup, over the sidebar on a phone. */
+function ConnectAppsButton() {
+  const { isMobile, setOpenMobile } = useSidebar()
+  return (
+    <button
+      type="button"
+      title="Connect apps"
+      onClick={() => {
+        if (isMobile) setOpenMobile(false)
+        openConnectApps()
+      }}
+      className="group/apps @container/apps bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border text-[0.9375rem] font-medium outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
+    >
+      <Plug className="hidden size-4 group-data-[collapsible=icon]:block" />
+      {/* Too narrow for the words: the logos alone, never a cut-off label. */}
+      <span className="hidden truncate @[11rem]/apps:inline group-data-[collapsible=icon]:hidden">
+        Connect apps
+      </span>
+      <span aria-hidden className="flex group-data-[collapsible=icon]:hidden">
+        {APP_TILES.map(({ kind, fan }) => (
+          <span
+            key={kind}
+            className={cn(
+              'border-card -ml-1.5 flex size-5 items-center justify-center overflow-hidden rounded-[0.35rem] border bg-white text-[#181717] transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] first:ml-0 motion-reduce:transition-none',
+              fan,
+            )}
+          >
+            <ProviderLogo kind={kind} className={kind === 'stripe' ? 'size-full' : 'size-3.5'} />
+          </span>
+        ))}
+      </span>
+    </button>
+  )
 }
 
 /** Decoration for Connect apps: the services' marks, which fan out while the pointer is over the button. */
