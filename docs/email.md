@@ -52,7 +52,8 @@ address's journal (`GET /api/email/addresses/:id/journal`):
 4. **The address's rules** (`rule`): triggers `email.email_received` in their order
    (`Trigger.position`, `PUT /api/email/rules/order`). The first that matches takes it; an agent's
    rule watches its project's variant only.
-5. **Its box** (`box`): read on demand with `email_list`; deleted after 30 days.
+5. **Its box** (`box`): read on demand with `email_list`; deleted after 30 days (`sweepMail`), but a
+   sign-up's mail whose conversation has mail that stays: it marks the conversation as its thread's.
 
 Before these: a copy of a reply a person sent from the mailbox itself (`own_copy`, its From is the
 inbox's public address), the same `Message-ID` already delivered from another address of the

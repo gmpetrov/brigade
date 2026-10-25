@@ -1198,3 +1198,72 @@ describe('sent mail in a conversation', { skip }, () => {
     )
   })
 })
+
+describe('a sign-up’s conversation after its box time', { skip }, () => {
+  test('its sign-up mail stays while the conversation does, so the replies stay its thread’s', async () => {
+    const db = scoped(scope)
+    const signup = await thread(riley.id)
+    const alias = await db.mailAlias.create({
+      data: {
+        local: `retention-${id}.0abc12`,
+        addressId: agent.id,
+        sessionId: signup.id,
+        teammateId: riley.id,
+        waitUntil: new Date(Date.now() - 1000),
+      } as never,
+    })
+    // A mail on an alias after its waiting window stays in the box, and its time is up.
+    const code = await mail(agent, {
+      aliasId: alias.id,
+      subject: 'Your private sign-up code is 482913',
+      text: 'Private sign-up code 482913',
+      expiresAt: new Date(Date.now() - 1000),
+      messageId: `<retention-${id}@service.test>`,
+    })
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { id: agent.id },
+      include: { domain: true },
+    })
+    const { sendDraft } = await import('../src/mail/outbound.js')
+    const beforeFetch = globalThis.fetch
+    globalThis.fetch = (async () => json({ id: `retention-out-${id}` })) as typeof fetch
+    try {
+      await sendDraft(db, scope, {
+        address,
+        thread: signup,
+        teammateId: riley.id,
+        callId: randomUUID(),
+        draft: {
+          to: [code.fromAddress],
+          subject: '',
+          text: 'Please help me sign in.\n\nOn Sunday, Service wrote:\n> Private sign-up code 482913',
+          replyTo: code.id,
+        },
+      })
+    } finally {
+      globalThis.fetch = beforeFetch
+    }
+    // The service answers the agent's own address: the sending thread keeps it, without alias.
+    const reply = await mail(agent, {
+      box: code.box,
+      conversationId: code.conversationId,
+      subject: 'Re: Sign-in help',
+      text: 'Try signing in again.',
+      sessionId: signup.id,
+      route: 'awaited',
+      receivedAt: new Date(),
+    })
+    const { sweepMail } = await import('../src/mail/jobs.js')
+    await sweepMail()
+    assert.ok(await db.mailMessage.findFirst({ where: { id: code.id } }))
+    const forBob = await inbox.readItem(db, as(1), `mail:${reply.id}`)
+    assert.equal(forBob.hidden, true)
+    assert.doesNotMatch(JSON.stringify(forBob.messages), /482913/)
+    const found = await inbox.listInbox(db, as(1), { status: 'all', q: 'Please help me sign in' })
+    assert.ok(!found.items.some((i) => i.id === `mail:${reply.id}`))
+    // Its thread gone (and the mail it held with it), the sign-up mail goes at the next sweep.
+    await prisma.session.delete({ where: { id: signup.id } })
+    await sweepMail()
+    assert.equal(await db.mailMessage.findFirst({ where: { id: code.id } }), null)
+  })
+})
