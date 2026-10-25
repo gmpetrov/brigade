@@ -321,6 +321,19 @@ export function NeedsYou({
   // Nothing waiting: the line under Home's greeting says so.
   if (!current && !sent) return null
 
+  // The last one decided: one calm line, no yellow. The line under Home's greeting
+  // already says nothing else is waiting.
+  if (sent && items.length === 0)
+    return (
+      <p
+        role="status"
+        className="flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm sm:px-5"
+      >
+        <Check className="size-4 flex-none text-success" aria-hidden />
+        {sent.label}
+      </p>
+    )
+
   const others = sent ? items : items.filter((i) => i.key !== current?.key)
   const listed = others.slice(0, LISTED)
   const moreTickets = others.slice(LISTED).filter((i) => !i.pull).length
@@ -377,17 +390,13 @@ export function NeedsYou({
             <Check className="size-4 text-success" aria-hidden />
             {sent.label}
           </p>
-          {items.length > 0 ? (
-            <Button
-              size="sm"
-              onClick={() => go(items.some((i) => i.key === sent.next) ? sent.next : items[0]?.key)}
-            >
-              Next
-              <ChevronRight aria-hidden />
-            </Button>
-          ) : (
-            <p className="text-sm text-muted-foreground">Nothing else is waiting on you.</p>
-          )}
+          <Button
+            size="sm"
+            onClick={() => go(items.some((i) => i.key === sent.next) ? sent.next : items[0]?.key)}
+          >
+            Next
+            <ChevronRight aria-hidden />
+          </Button>
         </Card>
       ) : current?.pull ? (
         <div className="flex flex-col gap-1.5">
