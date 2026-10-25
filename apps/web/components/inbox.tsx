@@ -50,7 +50,14 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { api, ApiError, attachmentUrl, useApi } from '@/lib/api'
 import { API_URL } from '@/lib/config'
-import { draftFacts, reloadsInboxList } from '@/lib/inbox'
+import {
+  draftFacts,
+  filtersKey,
+  filtersToRestore,
+  type KeptFilters,
+  keptFilters,
+  reloadsInboxList,
+} from '@/lib/inbox'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -158,7 +165,7 @@ export function destination(item: InboxItem): string {
 export function InboxView() {
   const params = useSearchParams()
   const router = useRouter()
-  const { teammates, projects, reloadInboxCount, inboxWaiting } = useDashboard()
+  const { me, teammates, projects, reloadInboxCount, inboxWaiting } = useDashboard()
   const status = (STATUSES.find((s) => s.value === params.get('status'))?.value ??
     'waiting') as StatusFilter
   const source = params.get('source') ?? ''
@@ -180,6 +187,35 @@ export function InboxView() {
   )
   const go = (patch: Partial<Record<Param, string | null>>) =>
     router.push(href(patch), { scroll: false })
+
+  // The tab and pickers are remembered in this browser, per workspace: arriving on the bare
+  // address puts them back (a link to a view, a search or an email wins). Until they are back,
+  // nothing is asked, so the default view does not flash first.
+  const workspaceId = me?.activeWorkspaceId ?? null
+  const [restore, setRestore] = useState<'checking' | 'done' | KeptFilters>('checking')
+  useEffect(() => {
+    if (restore !== 'checking' || !workspaceId) return
+    let saved: string | null = null
+    try {
+      saved = localStorage.getItem(filtersKey(workspaceId))
+    } catch {}
+    const back = filtersToRestore(new URLSearchParams(params.toString()), saved)
+    setRestore(back ?? 'done')
+    if (back) router.replace(href(back), { scroll: false })
+  }, [restore, workspaceId, params, href, router])
+  useEffect(() => {
+    if (!workspaceId || restore === 'checking') return
+    const kept = keptFilters(new URLSearchParams(params.toString()))
+    if (restore !== 'done') {
+      // Waiting for the address to take the filters put back (it was bare): once it says
+      // anything, they are back, or the member already went elsewhere.
+      if (!Object.keys(kept).length && !params.has('q') && !params.has('item')) return
+      setRestore('done')
+    }
+    try {
+      localStorage.setItem(filtersKey(workspaceId), JSON.stringify(kept))
+    } catch {}
+  }, [params, restore, workspaceId])
 
   // The search box: sent ~300 ms after the last key, and following back and forward.
   const [query, setQuery] = useState(q)
@@ -220,7 +256,7 @@ export function InboxView() {
   if (project) search.set('project', project)
   if (q) search.set('q', q)
   const path = `/inbox?${search}`
-  const list = useApi<InboxList>(path)
+  const list = useApi<InboxList>(restore === 'done' ? path : null)
   const reloadList = list.reload
 
   // Older pages, appended below the first: kept for the filters they were asked with.
@@ -297,6 +333,17 @@ export function InboxView() {
   const chosenSource = sources.find((s) => s.id === source)
   const chosenTeammate = teammates.find((t) => t.id === teammate)
   const chosenProject = projects.find((p) => p.id === project)
+  // A filter kept or linked to that is no more (a mailbox taken out, a teammate or project
+  // deleted) would show an empty list: it goes.
+  const stale = {
+    ...(source && list.data && !chosenSource ? { source: null } : {}),
+    ...(teammate && teammates.length && !chosenTeammate ? { teammate: null } : {}),
+    ...(project && projects.length && !chosenProject ? { project: null } : {}),
+  }
+  const staleKey = Object.keys(stale).join()
+  useEffect(() => {
+    if (staleKey) router.replace(href(stale), { scroll: false })
+  }, [staleKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const brigade = sources.filter((s) => s.kind === 'email')
   const gmail = sources.filter((s) => s.kind === 'gmail')
 
