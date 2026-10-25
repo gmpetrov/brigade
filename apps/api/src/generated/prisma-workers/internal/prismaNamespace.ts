@@ -438,6 +438,7 @@ export const ModelName = {
   Subscription: 'Subscription',
   Ticket: 'Ticket',
   Document: 'Document',
+  DocumentPin: 'DocumentPin',
   MemoryLine: 'MemoryLine',
   DocumentVersion: 'DocumentVersion',
   LibraryFolder: 'LibraryFolder',
@@ -483,7 +484,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle"
+    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3521,6 +3522,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    DocumentPin: {
+      payload: Prisma.$DocumentPinPayload<ExtArgs>
+      fields: Prisma.DocumentPinFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DocumentPinFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DocumentPinFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload>
+        }
+        findFirst: {
+          args: Prisma.DocumentPinFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DocumentPinFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload>
+        }
+        findMany: {
+          args: Prisma.DocumentPinFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload>[]
+        }
+        create: {
+          args: Prisma.DocumentPinCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload>
+        }
+        createMany: {
+          args: Prisma.DocumentPinCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DocumentPinCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload>[]
+        }
+        delete: {
+          args: Prisma.DocumentPinDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload>
+        }
+        update: {
+          args: Prisma.DocumentPinUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload>
+        }
+        deleteMany: {
+          args: Prisma.DocumentPinDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DocumentPinUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DocumentPinUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload>[]
+        }
+        upsert: {
+          args: Prisma.DocumentPinUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentPinPayload>
+        }
+        aggregate: {
+          args: Prisma.DocumentPinAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDocumentPin>
+        }
+        groupBy: {
+          args: Prisma.DocumentPinGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DocumentPinGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DocumentPinCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DocumentPinCountAggregateOutputType> | number
+        }
+      }
+    }
     MemoryLine: {
       payload: Prisma.$MemoryLinePayload<ExtArgs>
       fields: Prisma.MemoryLineFieldRefs
@@ -6510,6 +6585,17 @@ export const DocumentScalarFieldEnum = {
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
 
 
+export const DocumentPinScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  documentId: 'documentId',
+  pinnedAt: 'pinnedAt'
+} as const
+
+export type DocumentPinScalarFieldEnum = (typeof DocumentPinScalarFieldEnum)[keyof typeof DocumentPinScalarFieldEnum]
+
+
 export const MemoryLineScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -7940,6 +8026,7 @@ export type GlobalOmitConfig = {
   subscription?: Prisma.SubscriptionOmit
   ticket?: Prisma.TicketOmit
   document?: Prisma.DocumentOmit
+  documentPin?: Prisma.DocumentPinOmit
   memoryLine?: Prisma.MemoryLineOmit
   documentVersion?: Prisma.DocumentVersionOmit
   libraryFolder?: Prisma.LibraryFolderOmit

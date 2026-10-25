@@ -92,6 +92,7 @@ export const ModelName = {
   Subscription: 'Subscription',
   Ticket: 'Ticket',
   Document: 'Document',
+  DocumentPin: 'DocumentPin',
   MemoryLine: 'MemoryLine',
   DocumentVersion: 'DocumentVersion',
   LibraryFolder: 'LibraryFolder',
@@ -868,6 +869,17 @@ export const DocumentScalarFieldEnum = {
 } as const
 
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
+
+
+export const DocumentPinScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  documentId: 'documentId',
+  pinnedAt: 'pinnedAt'
+} as const
+
+export type DocumentPinScalarFieldEnum = (typeof DocumentPinScalarFieldEnum)[keyof typeof DocumentPinScalarFieldEnum]
 
 
 export const MemoryLineScalarFieldEnum = {

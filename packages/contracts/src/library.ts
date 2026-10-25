@@ -122,6 +122,8 @@ export type LibraryFolder = z.infer<typeof LibraryFolder>
 export const LibraryTree = z.object({
   files: z.array(LibraryFile),
   folders: z.array(LibraryFolder),
+  /** The files this member pinned, by id, in the order they pinned them. */
+  pinned: z.array(z.string()),
 })
 export type LibraryTree = z.infer<typeof LibraryTree>
 

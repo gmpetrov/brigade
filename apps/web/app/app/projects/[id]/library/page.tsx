@@ -103,6 +103,7 @@ export default function ProjectLibrary() {
       <LibraryBrowser
         tree={tree.data}
         folder={folder}
+        home={project.folder}
         setFolder={(path) => {
           setCreating(null)
           setFolder(path)

@@ -29,6 +29,8 @@ import {
   Library,
   Palette,
   Pencil,
+  Pin,
+  PinOff,
   Presentation,
   ShieldCheck,
   Trash2,
@@ -142,6 +144,7 @@ export function LibraryBrowser({
   tree,
   folder,
   setFolder,
+  home = '',
   focus,
   focusDesign,
   reload,
@@ -155,6 +158,8 @@ export function LibraryBrowser({
   /** The folder shown; '' for the top. */
   folder: string
   setFolder: (folder: string) => void
+  /** The folder the browser opens at: the member's pinned files in it show there, on top. */
+  home?: string
   /** A file asked for by the address: opened, and scrolled to. */
   focus?: string
   /** A design asked for by the address (its folder): opened beside the page. */
@@ -175,6 +180,19 @@ export function LibraryBrowser({
   const [error, setError] = useState<string>()
   const [over, setOver] = useState<string | null>(null)
   const [sort, setSort] = useState<'name' | 'updated'>('name')
+  // Each member's choice, kept in this browser.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SORT_KEY) === 'updated') setSort('updated')
+    } catch {}
+  }, [])
+  function chooseSort(next: 'name' | 'updated') {
+    setSort(next)
+    try {
+      localStorage.setItem(SORT_KEY, next)
+    } catch {}
+  }
+  const recent = sort === 'updated'
 
   const folders = useMemo(
     () => (tree ? allFolders(tree) : new Map<string, LibraryFolder>()),
@@ -186,9 +204,20 @@ export function LibraryBrowser({
     .sort((a, b) => a.path.localeCompare(b.path))
   const files = (tree?.files ?? [])
     .filter((f) => parentOf(f.path) === folder)
-    .sort((a, b) =>
-      sort === 'name' ? a.path.localeCompare(b.path) : b.updatedAt.localeCompare(a.updatedAt),
-    )
+    .sort((a, b) => a.path.localeCompare(b.path))
+  const entries = recent
+    ? recentIn(tree, folder, folders)
+    : [
+        ...subfolders.map((f) => ({ kind: 'folder' as const, folder: f })),
+        ...files.map((f) => ({ kind: 'file' as const, file: f })),
+      ]
+  const pinned = new Set(tree?.pinned)
+  const pinnedFiles =
+    folder === home
+      ? (tree?.pinned ?? [])
+          .map((id) => tree?.files.find((f) => f.id === id))
+          .filter((f): f is LibraryFile => !!f && (!home || f.path.startsWith(`${home}/`)))
+      : []
   const opened = tree?.files.find((f) => f.id === panel?.id)
 
   // A file asked for by the address: its folder, then the file itself.
@@ -305,8 +334,215 @@ export function LibraryBrowser({
 
   if (!tree) return <p className="text-sm text-muted-foreground">Loading…</p>
 
+  const folderRow = (f: LibraryFolder, flat = false) => {
+    const inside = tree.files.filter((file) => file.path.startsWith(`${f.path}/`)).length
+    const guarded = f.restricted || f.grants.length > 0
+    const isDesign = designFolderOf(f.path) === f.path
+    const Icon = isDesign ? Palette : guarded ? FolderLock : Folder
+    return (
+      <div key={f.path}>
+        <div
+          {...draggable({ kind: 'folder', path: f.path })}
+          {...dropTarget(f.path)}
+          className={cn(
+            'flex items-center gap-4 px-5 py-3',
+            over === f.path && 'bg-primary/10',
+            design === f.path && 'bg-primary/5',
+          )}
+        >
+          <span
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"
+          >
+            <Icon className="size-4" />
+          </span>
+          <button
+            type="button"
+            onClick={() => (isDesign ? openDesign(f.path) : setFolder(f.path))}
+            className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
+          >
+            <span className="truncate text-sm font-semibold hover:underline">
+              {isDesign ? designName(f.path) : nameOf(f.path)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {flat && `${parentOf(f.path) || 'Library'} · `}
+              {isDesign && 'Design · '}
+              {inside === 0 ? 'Empty' : `${inside} file${inside === 1 ? '' : 's'}`}
+              {isDesign && updatedIn(tree.files, f.path)}
+            </span>
+          </button>
+          {f.restricted ? (
+            <Badge variant="secondary">Restricted</Badge>
+          ) : (
+            f.grants.length > 0 && <Badge variant="secondary">Custom access</Badge>
+          )}
+          <RowMenu label={`Actions for folder ${nameOf(f.path)}`}>
+            {isDesign && (
+              <DropdownMenuItem onSelect={() => openDesign(f.path)}>
+                <Palette aria-hidden />
+                View design
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={() => setFolder(f.path)}>
+              <Folder aria-hidden />
+              {isDesign ? 'Its files' : 'Open'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setRenaming(`folder:${f.path}`)}>
+              <Pencil aria-hidden />
+              Rename or move
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setAccess(f.path)}>
+              <ShieldCheck aria-hidden />
+              Teammate access
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() =>
+                confirm(
+                  inside > 0
+                    ? `Move the ${inside} file${inside === 1 ? '' : 's'} in ${f.path} to the trash?` +
+                        (guarded ? ' Restored files follow the access of where they land.' : '')
+                    : `Remove the folder ${f.path}?`,
+                ) &&
+                void act(() =>
+                  api(`/library/folders?path=${encodeURIComponent(f.path)}`, {
+                    method: 'DELETE',
+                  }),
+                )
+              }
+            >
+              <Trash2 aria-hidden />
+              Delete
+            </DropdownMenuItem>
+          </RowMenu>
+        </div>
+        {renaming === `folder:${f.path}` && (
+          <Rename
+            path={f.path}
+            onCancel={() => setRenaming(undefined)}
+            onSave={(to) =>
+              act(async () => {
+                await api('/library/folders', {
+                  method: 'PATCH',
+                  body: { path: f.path, to },
+                })
+                setRenaming(undefined)
+              })
+            }
+          />
+        )}
+      </div>
+    )
+  }
+
+  const fileRow = (f: LibraryFile, where: 'list' | 'pinned', flat = false) => {
+    const Icon = fileIcon(f.contentType)
+    const isOpen =
+      panel?.id === f.id ||
+      (documents.current?.target.kind === 'library' && documents.current.target.id === f.id)
+    return (
+      <div
+        key={f.id}
+        id={where === 'list' ? `library-file-${f.id}` : undefined}
+        className={cn('scroll-mt-20', (f.id === focus || isOpen) && 'bg-primary/5')}
+      >
+        <div
+          {...draggable({ kind: 'file', id: f.id, path: f.path })}
+          className="flex items-center gap-4 px-5 py-3"
+        >
+          <span
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground"
+          >
+            <Icon className="size-4" />
+          </span>
+          <button
+            type="button"
+            onClick={() => open(f)}
+            className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
+          >
+            <span className="truncate text-sm font-semibold hover:underline">
+              {nameOf(f.path)}
+              {where === 'list' && pinned.has(f.id) && (
+                <Pin aria-label="Pinned" className="ml-1.5 inline size-3 text-muted-foreground" />
+              )}
+            </span>
+            <span className="truncate text-xs text-muted-foreground">
+              {flat && `${parentOf(f.path) || 'Library'} · `}
+              {size(f.size)} · {timeAgo(f.updatedAt)}
+              {f.updatedBy && (
+                <>
+                  {' by '}
+                  <ActorName actor={f.updatedBy} />
+                </>
+              )}
+              {!f.indexed && ' · not searchable'}
+            </span>
+          </button>
+          <RowMenu label={`Actions for ${nameOf(f.path)}`}>
+            <DropdownMenuItem onSelect={() => open(f)}>
+              <FileText aria-hidden />
+              Open
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => open(f, 'history')}>
+              <History aria-hidden />
+              History
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() =>
+                void act(() =>
+                  api(`/library/${f.id}/pin`, { method: pinned.has(f.id) ? 'DELETE' : 'POST' }),
+                )
+              }
+            >
+              {pinned.has(f.id) ? <PinOff aria-hidden /> : <Pin aria-hidden />}
+              {pinned.has(f.id) ? 'Unpin' : 'Pin to top'}
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href={contentUrl(f.id, true)}>
+                <Download aria-hidden />
+                Download
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setRenaming(`${where}:file:${f.id}`)}>
+              <Pencil aria-hidden />
+              Rename or move
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() =>
+                void act(async () => {
+                  await api(`/library/${f.id}`, { method: 'DELETE' })
+                  if (panel?.id === f.id) setPanel(undefined)
+                  documents.remove({ kind: 'library', id: f.id })
+                })
+              }
+            >
+              <Trash2 aria-hidden />
+              Move to trash
+            </DropdownMenuItem>
+          </RowMenu>
+        </div>
+        {renaming === `${where}:file:${f.id}` && (
+          <Rename
+            path={f.path}
+            onCancel={() => setRenaming(undefined)}
+            onSave={(path) =>
+              act(async () => {
+                await api(`/library/${f.id}`, { method: 'PATCH', body: { path } })
+                setRenaming(undefined)
+              })
+            }
+          />
+        )}
+      </div>
+    )
+  }
+
   const crumbs = folder ? folder.split('/') : []
-  const empty = subfolders.length === 0 && files.length === 0
+  const empty = entries.length === 0
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -344,7 +580,7 @@ export function LibraryBrowser({
             )
           })}
         </nav>
-        <Tabs value={sort} onValueChange={(v) => setSort(v as 'name' | 'updated')}>
+        <Tabs value={sort} onValueChange={(v) => chooseSort(v as 'name' | 'updated')}>
           <TabsList aria-label="Sort">
             <TabsTrigger value="name">Name</TabsTrigger>
             <TabsTrigger value="updated">Recent</TabsTrigger>
@@ -369,6 +605,15 @@ export function LibraryBrowser({
       )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
 
+      {pinnedFiles.length > 0 && (
+        <section aria-label="Pinned" className="flex flex-col gap-2">
+          <h2 className="text-xs font-medium text-muted-foreground">Pinned</h2>
+          <Card className="gap-0 divide-y py-0">
+            {pinnedFiles.map((f) => fileRow(f, 'pinned', true))}
+          </Card>
+        </section>
+      )}
+
       <div
         {...dropTarget(folder)}
         className={cn('rounded-xl', over === folder && 'ring-2 ring-primary/40')}
@@ -377,199 +622,9 @@ export function LibraryBrowser({
           <EmptyFolder top={!folder} />
         ) : (
           <Card className="gap-0 divide-y py-0">
-            {subfolders.map((f) => {
-              const inside = tree.files.filter((file) => file.path.startsWith(`${f.path}/`)).length
-              const guarded = f.restricted || f.grants.length > 0
-              const isDesign = designFolderOf(f.path) === f.path
-              const Icon = isDesign ? Palette : guarded ? FolderLock : Folder
-              return (
-                <div key={f.path}>
-                  <div
-                    {...draggable({ kind: 'folder', path: f.path })}
-                    {...dropTarget(f.path)}
-                    className={cn(
-                      'flex items-center gap-4 px-5 py-3',
-                      over === f.path && 'bg-primary/10',
-                      design === f.path && 'bg-primary/5',
-                    )}
-                  >
-                    <span
-                      aria-hidden
-                      className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"
-                    >
-                      <Icon className="size-4" />
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => (isDesign ? openDesign(f.path) : setFolder(f.path))}
-                      className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
-                    >
-                      <span className="truncate text-sm font-semibold hover:underline">
-                        {isDesign ? designName(f.path) : nameOf(f.path)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {isDesign && 'Design · '}
-                        {inside === 0 ? 'Empty' : `${inside} file${inside === 1 ? '' : 's'}`}
-                        {isDesign && updatedIn(tree.files, f.path)}
-                      </span>
-                    </button>
-                    {f.restricted ? (
-                      <Badge variant="secondary">Restricted</Badge>
-                    ) : (
-                      f.grants.length > 0 && <Badge variant="secondary">Custom access</Badge>
-                    )}
-                    <RowMenu label={`Actions for folder ${nameOf(f.path)}`}>
-                      {isDesign && (
-                        <DropdownMenuItem onSelect={() => openDesign(f.path)}>
-                          <Palette aria-hidden />
-                          View design
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem onSelect={() => setFolder(f.path)}>
-                        <Folder aria-hidden />
-                        {isDesign ? 'Its files' : 'Open'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setRenaming(`folder:${f.path}`)}>
-                        <Pencil aria-hidden />
-                        Rename or move
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setAccess(f.path)}>
-                        <ShieldCheck aria-hidden />
-                        Teammate access
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onSelect={() =>
-                          confirm(
-                            inside > 0
-                              ? `Move the ${inside} file${inside === 1 ? '' : 's'} in ${f.path} to the trash?` +
-                                  (guarded
-                                    ? ' Restored files follow the access of where they land.'
-                                    : '')
-                              : `Remove the folder ${f.path}?`,
-                          ) &&
-                          void act(() =>
-                            api(`/library/folders?path=${encodeURIComponent(f.path)}`, {
-                              method: 'DELETE',
-                            }),
-                          )
-                        }
-                      >
-                        <Trash2 aria-hidden />
-                        Delete
-                      </DropdownMenuItem>
-                    </RowMenu>
-                  </div>
-                  {renaming === `folder:${f.path}` && (
-                    <Rename
-                      path={f.path}
-                      onCancel={() => setRenaming(undefined)}
-                      onSave={(to) =>
-                        act(async () => {
-                          await api('/library/folders', {
-                            method: 'PATCH',
-                            body: { path: f.path, to },
-                          })
-                          setRenaming(undefined)
-                        })
-                      }
-                    />
-                  )}
-                </div>
-              )
-            })}
-            {files.map((f) => {
-              const Icon = fileIcon(f.contentType)
-              const isOpen =
-                panel?.id === f.id ||
-                (documents.current?.target.kind === 'library' &&
-                  documents.current.target.id === f.id)
-              return (
-                <div
-                  key={f.id}
-                  id={`library-file-${f.id}`}
-                  className={cn('scroll-mt-20', (f.id === focus || isOpen) && 'bg-primary/5')}
-                >
-                  <div
-                    {...draggable({ kind: 'file', id: f.id, path: f.path })}
-                    className="flex items-center gap-4 px-5 py-3"
-                  >
-                    <span
-                      aria-hidden
-                      className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground"
-                    >
-                      <Icon className="size-4" />
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => open(f)}
-                      className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
-                    >
-                      <span className="truncate text-sm font-semibold hover:underline">
-                        {nameOf(f.path)}
-                      </span>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {size(f.size)} · {timeAgo(f.updatedAt)}
-                        {f.updatedBy && (
-                          <>
-                            {' by '}
-                            <ActorName actor={f.updatedBy} />
-                          </>
-                        )}
-                        {!f.indexed && ' · not searchable'}
-                      </span>
-                    </button>
-                    <RowMenu label={`Actions for ${nameOf(f.path)}`}>
-                      <DropdownMenuItem onSelect={() => open(f)}>
-                        <FileText aria-hidden />
-                        Open
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => open(f, 'history')}>
-                        <History aria-hidden />
-                        History
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <a href={contentUrl(f.id, true)}>
-                          <Download aria-hidden />
-                          Download
-                        </a>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setRenaming(`file:${f.id}`)}>
-                        <Pencil aria-hidden />
-                        Rename or move
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onSelect={() =>
-                          void act(async () => {
-                            await api(`/library/${f.id}`, { method: 'DELETE' })
-                            if (panel?.id === f.id) setPanel(undefined)
-                            documents.remove({ kind: 'library', id: f.id })
-                          })
-                        }
-                      >
-                        <Trash2 aria-hidden />
-                        Move to trash
-                      </DropdownMenuItem>
-                    </RowMenu>
-                  </div>
-                  {renaming === `file:${f.id}` && (
-                    <Rename
-                      path={f.path}
-                      onCancel={() => setRenaming(undefined)}
-                      onSave={(path) =>
-                        act(async () => {
-                          await api(`/library/${f.id}`, { method: 'PATCH', body: { path } })
-                          setRenaming(undefined)
-                        })
-                      }
-                    />
-                  )}
-                </div>
-              )
-            })}
+            {entries.map((e) =>
+              e.kind === 'folder' ? folderRow(e.folder, recent) : fileRow(e.file, 'list', recent),
+            )}
           </Card>
         )}
       </div>
@@ -608,6 +663,39 @@ export function LibraryBrowser({
       )}
     </>
   )
+}
+
+const SORT_KEY = 'brigade.library.sort'
+
+type Entry = { kind: 'folder'; folder: LibraryFolder } | { kind: 'file'; file: LibraryFile }
+
+/**
+ * Everything under the folder, at any depth, newest change first: so a file is found
+ * without opening each folder on the way. A design counts as one entry, as of its
+ * newest file, unless the folder shown is inside it.
+ */
+function recentIn(
+  tree: LibraryTree | undefined,
+  folder: string,
+  folders: Map<string, LibraryFolder>,
+): Entry[] {
+  const under = folder ? `${folder}/` : ''
+  const designs = new Map<string, string>()
+  const entries: (Entry & { at: string })[] = []
+  for (const file of tree?.files ?? []) {
+    if (!file.path.startsWith(under)) continue
+    const design = designFolderOf(file.path)
+    if (design && design.startsWith(under) && design !== folder) {
+      if ((designs.get(design) ?? '') < file.updatedAt) designs.set(design, file.updatedAt)
+    } else entries.push({ kind: 'file', file, at: file.updatedAt })
+  }
+  for (const [path, at] of designs)
+    entries.push({
+      kind: 'folder',
+      folder: folders.get(path) ?? { path, explicit: false, restricted: false, grants: [] },
+      at,
+    })
+  return entries.sort((a, b) => b.at.localeCompare(a.at))
 }
 
 /** When a folder's newest file changed, as " · 5 minutes ago". */

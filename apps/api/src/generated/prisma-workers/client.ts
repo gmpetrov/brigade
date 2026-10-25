@@ -272,6 +272,12 @@ export type Ticket = Prisma.TicketModel
  */
 export type Document = Prisma.DocumentModel
 /**
+ * Model DocumentPin
+ * A library file a member pinned: it stays at the top of their Library. Each member's own,
+ * like a thread's pin. A file in the trash keeps its pin, which shows again once restored.
+ */
+export type DocumentPin = Prisma.DocumentPinModel
+/**
  * Model MemoryLine
  * A saved state of a library file. Its bytes are in the bucket under
  * <organization>/<workspace>/library-versions/<id>; the newest is also the file itself.
