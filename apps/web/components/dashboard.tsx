@@ -12,6 +12,7 @@ import {
   KeyRound,
   Library,
   LogOut,
+  Moon,
   Monitor,
   Plug,
   Plus,
@@ -19,11 +20,13 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
+  Sun,
   UserRound,
   UsersRound,
   FolderKanban,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useTheme } from 'next-themes'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   createContext,
@@ -153,6 +156,12 @@ export const SETTINGS_NAV = [
 
 export const NAV = [...WORK_NAV, ...SETTINGS_NAV]
 
+const THEMES = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'System', icon: Monitor },
+] as const
+
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
 
 /** A workspace's logo, or its first letter on a square of colour. */
@@ -227,6 +236,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const reloadProjects = projects.reload
   const [creatingProject, setCreatingProject] = useState(false)
   const mac = useIsMac()
+  const { theme = 'dark', setTheme } = useTheme()
+  const ThemeIcon = THEMES.find((t) => t.value === theme)?.icon ?? Monitor
   const [sidebarWidth, setSidebarWidth] = useSidebarWidth()
   // Tickets waiting on this member, refreshed as the member moves around.
   const tickets = useApi<Ticket[]>('/tickets')
@@ -486,7 +497,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        aria-label={`${data.user.name}: settings, usage, help and sign out`}
+                        aria-label={`${data.user.name}: settings, usage, theme, help and sign out`}
                         className="focus-visible:ring-sidebar-ring shrink-0 rounded-full outline-none focus-visible:ring-2"
                       >
                         <Avatar className="size-9 group-data-[collapsible=icon]:size-8">
@@ -522,6 +533,41 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                       <DropdownMenuSeparator />
                       <UsageMenu accounts={accounts.data} />
                       <DropdownMenuSeparator />
+                      {/* Theme on one row: three icon segments, kept open on pick so the change shows. */}
+                      <div
+                        role="group"
+                        aria-label="Theme"
+                        className="flex items-center gap-2 px-2 py-1 text-sm"
+                      >
+                        <ThemeIcon className="text-muted-foreground size-4" />
+                        Theme
+                        <div className="bg-muted ml-auto flex gap-0.5 rounded-md p-0.5">
+                          {THEMES.map(({ value, label, icon: Icon }) => (
+                            <DropdownMenuItem
+                              key={value}
+                              role="menuitemradio"
+                              aria-checked={theme === value}
+                              aria-label={label}
+                              title={label}
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                setTheme(value)
+                              }}
+                              className={cn(
+                                'rounded-sm px-1.5 py-1',
+                                theme === value && 'bg-card shadow-xs',
+                              )}
+                            >
+                              <Icon
+                                className={cn(
+                                  'size-3.5',
+                                  theme === value ? 'text-foreground' : 'text-muted-foreground',
+                                )}
+                              />
+                            </DropdownMenuItem>
+                          ))}
+                        </div>
+                      </div>
                       <DropdownMenuItem onSelect={openShortcuts}>
                         <Keyboard /> Keyboard shortcuts
                         <span className="text-muted-foreground ml-auto text-xs">
