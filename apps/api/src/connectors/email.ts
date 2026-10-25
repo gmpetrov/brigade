@@ -12,6 +12,7 @@ import {
   cancelMail,
   checkDraft,
   sendDraft,
+  takeFromBox,
   threadBox,
   UNDO_SECONDS,
   type Draft,
@@ -367,6 +368,7 @@ export const email: ConnectorDefinition = {
         })
         if (!m || !visible(thread.id, m))
           throw new ConnectorError(`No email ${i.id} in this thread’s mailbox`)
+        if (m.direction === 'in') await takeFromBox(db, thread.id, m)
         const conversation = await db.mailMessage.findMany({
           where: { box: box.key, conversationId: m.conversationId, NOT: { id: m.id } },
           include: { alias: true },

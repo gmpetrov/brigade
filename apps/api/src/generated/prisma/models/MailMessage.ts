@@ -3874,7 +3874,8 @@ export type $MailMessagePayload<ExtArgs extends runtime.Types.Extensions.Interna
     /**
      * in: where it went. awaited (a thread waiting on it), conversation (its conversation's
      * thread), member (a member's request), rule, box, duplicate, loop, cap, own_copy (a reply a
-     * person sent from Gmail), unknown_address. Null until delivered.
+     * person sent from Gmail), read (a thread read or answered it from the box), unknown_address.
+     * Null until delivered.
      */
     route: string | null
     routeNote: string | null

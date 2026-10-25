@@ -142,6 +142,46 @@ export async function checkDraft(
   return null
 }
 
+/**
+ * A thread that reads or answers a mail left in its mailbox takes it: the Inbox shows it with that
+ * thread and its teammate, no longer To do. The mails of its conversation that waited until it go
+ * too; a later one waits on its own.
+ */
+export async function takeFromBox(
+  db: ScopedDb,
+  sessionId: string,
+  m: { box: string; conversationId: string; receivedAt: Date },
+) {
+  const waiting = {
+    box: m.box,
+    conversationId: m.conversationId,
+    direction: 'in' as const,
+    sessionId: null,
+    doneAt: null,
+    route: { in: ['box', 'cap', 'loop'] },
+    receivedAt: { lte: m.receivedAt },
+  }
+  const rows = await db.mailMessage.findMany({
+    where: waiting,
+    select: {
+      id: true,
+      receivedAt: true,
+      alias: { select: { sessionId: true, waitUntil: true } },
+    },
+  })
+  // Never another thread's sign-up mail (its code) that waited in the box: only what this
+  // thread may read (connectors/email.ts).
+  const ids = rows
+    .filter((r) => !r.alias || r.alias.sessionId === sessionId || r.receivedAt > r.alias.waitUntil)
+    .map((r) => r.id)
+  if (!ids.length) return
+  await db.mailMessage.updateMany({
+    where: { ...waiting, id: { in: ids } },
+    // Kept with its thread, as a hand-over's: no longer the box's to clean up after 30 days.
+    data: { sessionId, route: 'read', expiresAt: null },
+  })
+}
+
 /** Hand a checked (and maybe approved) mail to Resend, to leave in UNDO_SECONDS. */
 export async function sendDraft(
   db: ScopedDb,
@@ -243,6 +283,8 @@ export async function sendDraft(
     })
     throw error
   }
+  // Answered once Resend has it: a reply that failed leaves the mail To do.
+  if (original) await takeFromBox(db, thread.id, original)
   for (const recipient of [...draft.to, ...(draft.cc ?? [])])
     await contactFor(db, recipient).catch(() => undefined)
   await audit({

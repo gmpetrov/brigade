@@ -51,6 +51,7 @@ export const MAIL_ROUTES = [
   'bounce',
   'test',
   'handed',
+  'read',
 ] as const
 export type MailRoute = (typeof MAIL_ROUTES)[number]
 
