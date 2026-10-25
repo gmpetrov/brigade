@@ -1932,6 +1932,55 @@ export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool>
           input,
         ),
     }),
+    update_playbook: tool({
+      description:
+        "Move an installed playbook to its template's newer version, in place: its runs, numbers, action levels " +
+        'and history are kept, and autonomy never grows. Without apply, it says what changes and which new ' +
+        'settings need an answer; with apply: true and those answers, it updates (or says what is still missing). ' +
+        'Give its installationId, or its playbookKey when only one is installed.',
+      inputSchema: jsonSchema<{
+        installationId?: string
+        playbookKey?: string
+        settings?: Record<string, string | number>
+        replaceSkills?: string[]
+        apply?: boolean
+      }>({
+        type: 'object',
+        properties: {
+          installationId: { type: 'string', description: 'The installed playbook' },
+          playbookKey: { type: 'string', description: 'e.g. brigade/support-bugs' },
+          settings: {
+            type: 'object',
+            description: 'Answers to its new settings by key, e.g. { "developer": "Sam" }',
+            additionalProperties: { type: ['string', 'number'] },
+          },
+          replaceSkills: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Skills the workspace edited that should take the new version anyway, by name',
+          },
+          apply: {
+            type: 'boolean',
+            description: 'Update it now; leave out to see what changes first',
+          },
+        },
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          {
+            name: 'update_playbook',
+            ...(input.installationId ? { installationId: input.installationId } : {}),
+            ...(input.playbookKey ? { playbookKey: input.playbookKey } : {}),
+            settings: input.settings ?? {},
+            ...(input.replaceSkills?.length ? { replaceSkills: input.replaceSkills } : {}),
+            apply: input.apply ?? false,
+          },
+          toolCallId,
+          'update_playbook',
+          input,
+        ),
+    }),
   }
 }
 

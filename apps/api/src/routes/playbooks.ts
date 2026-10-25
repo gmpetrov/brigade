@@ -3,10 +3,12 @@ import {
   InstallPlaybook,
   UpdatePlaybook,
   UpdatePlaybookAction,
+  UpgradePlaybook,
 } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { changeAction, flagCall } from '../playbook-autonomy.js'
 import { latestDryRun } from '../playbook-dry-runs.js'
+import { upgradePlaybook } from '../playbook-updates.js'
 import {
   activatePlaybook,
   getInstallation,
@@ -64,6 +66,15 @@ export const playbooks = new Hono<AppEnv>()
     const id = c.req.param('id')
     await changeAction(c.var.db, c.var.scope, id, c.req.param('key'), input)
     return c.json(await getInstallation(c.var.db, id, c.var.scope))
+  })
+
+  /**
+   * Onto its template's newer version, in place: its owner, an owner or an admin. Answers for its
+   * new settings in the body; one required and still unanswered changes nothing and comes back.
+   */
+  .post('/:id/update', async (c) => {
+    const input = await parseBody(c.req.raw, UpgradePlaybook)
+    return c.json(await upgradePlaybook(c.var.db, c.var.scope, c.req.param('id'), input))
   })
 
   /** A call it made on its own was wrong: its action goes back to asking first. */

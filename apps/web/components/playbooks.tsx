@@ -9,6 +9,8 @@ import {
   type PlaybookNumbers,
   type PlaybookRunView,
   type PlaybookTemplate,
+  type PlaybookUpdateQuestion,
+  type PlaybookUpgradeResult,
 } from '@brigade/contracts'
 import {
   ArrowLeft,
@@ -17,6 +19,7 @@ import {
   MoreHorizontal,
   Pause,
   Play,
+  RefreshCw,
   Trash2,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -30,6 +33,7 @@ import { describeCron, scheduleTime, zoneName } from '@/components/schedules'
 import { StatusDot } from '@/components/status-badge'
 import { NewThread, useThreadDraft } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenu,
@@ -41,6 +45,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, projectQuery, useApi } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
@@ -228,6 +241,216 @@ function InstallDialog({
           picker={teammates.length > 1 ? { teammates, onChange: setChosen } : undefined}
           placeholder={`Chat with ${teammate.name}`}
         />
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** The kinds of setting the update dialog asks itself; the others are answered in a chat. */
+const SIMPLE: PlaybookUpdateQuestion['type'][] = ['text', 'url', 'email', 'choice', 'amount']
+
+/**
+ * Updating to its template's newer version: what changes, what happens to autonomy (it never
+ * grows), the skills kept because the workspace edited them, then the Update button. New
+ * required settings of a simple kind are asked here; a teammate, account or repository is
+ * answered in a chat with the chief, its message ready to send.
+ */
+function UpdateDialog({
+  playbook: p,
+  onClose,
+  onUpdated,
+}: {
+  playbook: PlaybookInstallationView
+  onClose: () => void
+  onUpdated: () => Promise<void>
+}) {
+  const update = p.update!
+  const { teammates } = useDashboard()
+  const chief = teammates.find((t) => t.kind === 'chief') ?? teammates[0]
+  const draft = useThreadDraft()
+  const { setText } = draft
+  const [chat, setChat] = useState(false)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [replace, setReplace] = useState<string[]>([])
+  const [error, setError] = useState<string>()
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    if (chat) setText(`Update the playbook “${p.name}” to ${update.version}.`)
+  }, [chat, setText, p.name, update.version])
+
+  const required = update.newSettings.filter((s) => !s.optional)
+  const inChat = required.filter((s) => !SIMPLE.includes(s.type))
+  const unanswered = required.some((s) => SIMPLE.includes(s.type) && !answers[s.key]?.trim())
+
+  async function apply() {
+    setError(undefined)
+    setBusy(true)
+    try {
+      const result = await api<PlaybookUpgradeResult>(`/playbooks/${p.id}/update`, {
+        body: { settings: answers, ...(replace.length ? { replaceSkills: replace } : {}) },
+      })
+      if (!result.updated) {
+        setError(`Still needs an answer: ${result.missing.map((m) => m.ask).join(', ')}`)
+        return
+      }
+      await onUpdated()
+      onClose()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (chat && chief)
+    return (
+      <Dialog open onOpenChange={(open) => !open && onClose()}>
+        <DialogContent
+          showCloseButton={false}
+          className="top-[20%] translate-y-0 gap-0 p-0 sm:max-w-2xl"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <DialogTitle className="sr-only">Update {p.name} in a chat</DialogTitle>
+          <DialogDescription className="sr-only">
+            {chief.name} asks the new settings in a new thread, then updates it.
+          </DialogDescription>
+          <NewThread
+            layout="dialog"
+            teammate={chief}
+            rows={3}
+            draft={draft}
+            autoFocus
+            projectId={p.project?.id}
+            placeholder={`Chat with ${chief.name}`}
+          />
+        </DialogContent>
+      </Dialog>
+    )
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[85dvh] gap-5 overflow-y-auto sm:max-w-lg">
+        <div className="flex flex-col gap-1">
+          <DialogTitle>Update to {update.version}</DialogTitle>
+          <DialogDescription>
+            {p.name} moves from {p.version} to {update.version}.{' '}
+            {p.status === 'active' || p.status === 'paused'
+              ? `Its runs, numbers and history stay, and it stays ${STATUS_WORDS[p.status].toLowerCase()}.`
+              : 'Its answers are kept, and its triggers, schedules and skills are made again.'}
+          </DialogDescription>
+        </div>
+        {update.changes.length > 0 && (
+          <section className="flex flex-col gap-1.5">
+            <h3 className="text-sm font-medium">What changes</h3>
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
+              {update.changes.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {update.autonomy.length > 0 && (
+          <section className="flex flex-col gap-1.5">
+            <h3 className="text-sm font-medium">Autonomy</h3>
+            <p className="text-xs text-muted-foreground">An update never gives more.</p>
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
+              {update.autonomy.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {update.keptSkills.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">Skills you edited</h3>
+            <p className="text-xs text-muted-foreground">
+              Kept as they are, unless you take the new version.
+            </p>
+            {update.keptSkills.map((name) => (
+              <Label key={name} className="flex items-center gap-2 text-sm font-normal">
+                <Checkbox
+                  checked={replace.includes(name)}
+                  onCheckedChange={(checked) =>
+                    setReplace((list) =>
+                      checked ? [...list, name] : list.filter((n) => n !== name),
+                    )
+                  }
+                />
+                Take the new version of {name}
+              </Label>
+            ))}
+          </section>
+        )}
+        {required.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h3 className="text-sm font-medium">New settings</h3>
+            {required
+              .filter((s) => SIMPLE.includes(s.type))
+              .map((s) => (
+                <div key={s.key} className="flex flex-col gap-1.5">
+                  <Label htmlFor={`setting-${s.key}`} className="text-sm font-normal">
+                    {s.ask}
+                  </Label>
+                  {s.type === 'choice' ? (
+                    <Select
+                      value={answers[s.key]}
+                      onValueChange={(value) => setAnswers((a) => ({ ...a, [s.key]: value }))}
+                    >
+                      <SelectTrigger id={`setting-${s.key}`} className="w-full">
+                        <SelectValue placeholder="Choose one" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(s.options ?? []).map((o) => (
+                          <SelectItem key={o} value={o}>
+                            {o}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id={`setting-${s.key}`}
+                      type={
+                        s.type === 'url'
+                          ? 'url'
+                          : s.type === 'email'
+                            ? 'email'
+                            : s.type === 'amount'
+                              ? 'number'
+                              : 'text'
+                      }
+                      inputMode={s.type === 'amount' ? 'decimal' : undefined}
+                      value={answers[s.key] ?? ''}
+                      onChange={(e) => setAnswers((a) => ({ ...a, [s.key]: e.target.value }))}
+                    />
+                  )}
+                </div>
+              ))}
+            {inChat.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {inChat.map((s) => s.ask).join(' ')} {chief?.name ?? 'A teammate'} asks{' '}
+                {inChat.length === 1 ? 'it' : 'them'} in a chat, then updates it.
+              </p>
+            )}
+          </section>
+        )}
+        {(update.blocked || error) && (
+          <p className="text-sm text-destructive-text">{update.blocked ?? error}</p>
+        )}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="ghost" onClick={onClose}>
+            Not now
+          </Button>
+          {inChat.length > 0 ? (
+            <Button disabled={!!update.blocked || !chief} onClick={() => setChat(true)}>
+              Answer in a chat
+            </Button>
+          ) : (
+            <Button disabled={!!update.blocked || busy || unanswered} onClick={() => void apply()}>
+              {busy ? 'Updating…' : 'Update'}
+            </Button>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   )
@@ -523,6 +746,7 @@ export function PlaybookSheet({ id }: { id: string }) {
   const reload = playbook.reload
   const [error, setError] = useState<string>()
   const [confirm, setConfirm] = useState(false)
+  const [updating, setUpdating] = useState(false)
   useLive((message) => {
     if (message.type === 'thread.updated' || message.type === 'schedule.updated') void reload()
   })
@@ -600,8 +824,16 @@ export function PlaybookSheet({ id }: { id: string }) {
         <AppLogos apps={p.apps} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <h1 className="text-2xl font-extrabold tracking-tight">{p.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {p.source === 'brigade' ? 'Brigade' : p.source} · v{p.version}
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <span>
+              {p.source === 'brigade' ? 'Brigade' : p.source} · Version {p.version}
+              {p.update && ` · ${p.update.version} available`}
+            </span>
+            {p.update?.canUpdate && (
+              <Button size="xs" variant="outline" onClick={() => setUpdating(true)}>
+                Update
+              </Button>
+            )}
           </p>
           <p className="flex items-center gap-1.5 text-sm">
             <StatusDot status={STATUS_DOTS[p.status]} />
@@ -651,6 +883,12 @@ export function PlaybookSheet({ id }: { id: string }) {
                   {!waiting ? 'Resume' : isAdmin(me) ? 'Activate' : 'Ask to activate'}
                 </DropdownMenuItem>
               )}
+              {p.update?.canUpdate && (
+                <DropdownMenuItem onSelect={() => setUpdating(true)}>
+                  <RefreshCw aria-hidden />
+                  Update to {p.update.version}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={() => setConfirm(true)}>
                 <Trash2 aria-hidden />
@@ -660,6 +898,9 @@ export function PlaybookSheet({ id }: { id: string }) {
           </DropdownMenu>
         )}
       </header>
+      {updating && p.update && (
+        <UpdateDialog playbook={p} onClose={() => setUpdating(false)} onUpdated={reload} />
+      )}
       {confirm && (
         <p className="-mt-3 text-sm text-muted-foreground">
           Its triggers, schedules and skills go with it. Runs nobody took part in leave Threads.

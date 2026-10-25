@@ -29,3 +29,28 @@ those with no `teammate`, a child started with `start_child({ teammate: 'develop
 `developer` (`Session.playbookTeammate`). The same teammate may hold several; each thread is still
 kept to its own Apps, and git refuses a thread without GitHub. A template without teammate settings
 gives every thread every App, on the teammate it is installed for.
+
+## Versions and updates
+
+Raise `version` (semver) with every change to a template. An installation keeps the manifest it
+was installed with; when its template is newer, its sheet on Routines shows "Version 1.0.0 · 1.3.0
+available" and an Update button (its owner, an owner or an admin), and a person can also ask the
+chief in a chat (`update_playbook`). `src/playbook-updates.ts` compares the two versions and moves
+it in place (`POST /playbooks/:id/update`):
+
+- Its answers are kept and removed settings dropped. The setting its runs start with (`teammate`)
+  defaults to the teammate it runs for; any other new required setting needs an answer first, and
+  until it has one nothing changes.
+- An entry at the same index that is still the same trigger (same `app.event` and account), or
+  still a schedule, changes in place: a Gmail trigger keeps its id, so its inbox subscription and
+  cursor stay (no mail missed or replayed). Other entries are added or removed.
+- Its skills take the new version's content, except one the workspace edited since Brigade wrote
+  it (a `skill.updated` in the audit log): kept unless the person chooses the new one.
+- Autonomy never grows. An unchanged action keeps its level, conditions, caps and history; one whose
+  `tools` or `conditions` change goes back to asking (`demotedReason: update`) and its trust counts
+  again from then; a new one starts at its `start` but no higher than asking; a level above a
+  lowered `ceiling` is capped; a removed action goes.
+- Its runs, numbers, approvals and dry runs stay, and so does its status (active or paused).
+
+One still in setup or a dry run moves to the latest version by itself when its installation goes on
+in the chat, its parts made again.

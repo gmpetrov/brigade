@@ -401,6 +401,19 @@ export const PlaybookOperations = [
   }),
   z.object({ name: z.literal('dry_run_report'), installationId: z.string().trim().min(1) }),
   z.object({ name: z.literal('activate_playbook'), installationId: z.string().trim().min(1) }),
+  /**
+   * Move an installed playbook to its template's newer version: without `apply`, what changes and
+   * the new questions; with it, the update itself (or the questions still without an answer).
+   */
+  z.object({
+    name: z.literal('update_playbook'),
+    installationId: z.string().trim().min(1).optional(),
+    playbookKey: z.string().trim().min(1).optional(),
+    settings: SettingValues.default({}),
+    /** Skills the workspace edited that take the new version anyway, by name. */
+    replaceSkills: z.array(z.string().trim().min(1)).max(50).optional(),
+    apply: z.boolean().default(false),
+  }),
 ] as const
 
 /** The tools of the teammate that installs a playbook, by the operation each one is. */
@@ -410,6 +423,7 @@ export const PLAYBOOK_INSTALL_TOOLS = [
   'start_dry_run',
   'dry_run_report',
   'activate_playbook',
+  'update_playbook',
 ] as const
 export type PlaybookInstallTool = (typeof PLAYBOOK_INSTALL_TOOLS)[number]
 
@@ -484,6 +498,57 @@ export type InstallPlaybook = z.infer<typeof InstallPlaybook>
 export const UpdatePlaybook = z.object({
   paused: z.boolean().optional(),
 })
+
+/**
+ * POST /playbooks/:id/update: onto its template's latest version. Answers for its new settings,
+ * by key; skills the workspace edited are kept unless named in `replaceSkills`.
+ */
+export const UpgradePlaybook = z.object({
+  settings: SettingValues.default({}),
+  replaceSkills: z.array(z.string().trim().min(1)).max(50).optional(),
+})
+export type UpgradePlaybook = z.infer<typeof UpgradePlaybook>
+
+/** A setting a newer version asks for, as the update shows it. */
+export type PlaybookUpdateQuestion = {
+  key: string
+  type: PlaybookSettingType
+  ask: string
+  optional: boolean
+  /** A choice's values. */
+  options?: string[]
+  /** An account setting's App or role. */
+  app?: string
+}
+
+/** Its template has a newer version: what moving to it changes. */
+export type PlaybookUpdateView = {
+  version: string
+  /** What changes, in plain English: skills, entries, actions, Apps and settings. */
+  changes: string[]
+  /** What happens to its actions' autonomy; an update never gives more. */
+  autonomy: string[]
+  /** Skills the workspace edited since they were installed: kept as they are unless chosen. */
+  keptSkills: string[]
+  /** Its new settings without an answer; the required ones must have one before it updates. */
+  newSettings: PlaybookUpdateQuestion[]
+  /** Why it cannot update right now (a dry run under way), else null. */
+  blocked: string | null
+  /** Whether the person viewing may update it: its owner, an owner or an admin. */
+  canUpdate: boolean
+}
+
+/** POST /playbooks/:id/update's answer: updated, or the questions still without an answer. */
+export type PlaybookUpgradeResult = {
+  updated: boolean
+  from: string
+  to: string
+  /** Skills kept as the workspace edited them. */
+  keptSkills: string[]
+  /** When not updated: the required settings still without an answer. */
+  missing: PlaybookUpdateQuestion[]
+  playbook: PlaybookInstallationView
+}
 
 /** The Activate button: from the thread it was installed in, where a member's ticket goes. */
 export const ActivatePlaybook = z.object({ threadId: z.string().optional() })
@@ -722,6 +787,8 @@ export type PlaybookInstallationView = {
   dryRun: PlaybookDryRunView | null
   /** A member asked an owner or admin to activate it: the ticket that waits. */
   activationTicketId: string | null
+  /** Its template's newer version, when there is one. */
+  update: PlaybookUpdateView | null
   createdAt: string
   activatedAt: string | null
   pausedAt: string | null
