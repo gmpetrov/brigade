@@ -37,10 +37,15 @@ export async function setPublicAddress(
   addressId: string,
   given: string | null,
 ) {
-  const inbox = await db.mailAddress.findFirst({ where: { id: addressId, kind: 'inbox', releasedAt: null } })
+  const inbox = await db.mailAddress.findFirst({
+    where: { id: addressId, kind: 'inbox', releasedAt: null },
+  })
   if (!inbox) throw new HTTPException(404, { message: 'No such inbox' })
   if (!given) {
-    await db.mailAddress.update({ where: { id: inbox.id }, data: { publicAddress: null, domainId: null } })
+    await db.mailAddress.update({
+      where: { id: inbox.id },
+      data: { publicAddress: null, domainId: null },
+    })
     return null
   }
   const address = bareAddress(given)
@@ -67,7 +72,8 @@ async function claimDomain(db: ScopedDb, scope: WorkspaceScope, name: string) {
   const own = await db.mailDomain.findFirst({ where: { name } })
   if (own) return own
   const elsewhere = await prisma.mailDomain.findUnique({ where: { name }, select: { id: true } })
-  if (elsewhere) throw new HTTPException(409, { message: `${name} is used by another workspace on Brigade` })
+  if (elsewhere)
+    throw new HTTPException(409, { message: `${name} is used by another workspace on Brigade` })
   const created = await createDomain(name).catch(async (error: unknown) => {
     // Already in Resend's account (added by hand, or by another product on the shared account).
     throw new HTTPException(409, {

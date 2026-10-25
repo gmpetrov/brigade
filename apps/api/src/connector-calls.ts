@@ -162,7 +162,12 @@ export async function handleConnectorCall(
       }
     : {}
   const callContext = (extra: Partial<ConnectorContext> = {}) =>
-    ({ fetch: (url: string, init?: RequestInit) => fetch(url, init), callId: call.callId, ...own, ...extra }) as ConnectorContext
+    ({
+      fetch: (url: string, init?: RequestInit) => fetch(url, init),
+      callId: call.callId,
+      ...own,
+      ...extra,
+    }) as ConnectorContext
 
   // Grant and scope.
   const grant = await db.grant.findFirst({
@@ -223,9 +228,9 @@ export async function handleConnectorCall(
   }
   // What stops the call before anyone is asked (an email's recipients, a secret in it).
   if (operation.check) {
-    const problem = await operation.check(callContext(), input.data).catch((error: unknown) =>
-      error instanceof Error ? error.message : String(error),
-    )
+    const problem = await operation
+      .check(callContext(), input.data)
+      .catch((error: unknown) => (error instanceof Error ? error.message : String(error)))
     if (problem) {
       await record({ result: 'denied', target, error: problem.slice(0, 1000) })
       return result({ ok: false, error: problem })
@@ -290,7 +295,11 @@ export async function handleConnectorCall(
       ? verdict.level === 'ask'
       : policy === 'ask' ||
         (operation.asks
-          ? await operation.asks(callContext(), input.data, teammate.permissionPolicy as PermissionPolicy)
+          ? await operation.asks(
+              callContext(),
+              input.data,
+              teammate.permissionPolicy as PermissionPolicy,
+            )
           : false)
     let overCap: string | undefined
     if (verdict?.level === 'auto' && !cap) {
@@ -370,14 +379,23 @@ export async function handleConnectorCall(
         const edited = operation.input.safeParse({ ...(input.data as object), ...decided.input })
         const problem = edited.success
           ? operation.check
-            ? await operation.check(callContext(), edited.data).catch((error: unknown) =>
-                error instanceof Error ? error.message : String(error),
-              )
+            ? await operation
+                .check(callContext(), edited.data)
+                .catch((error: unknown) => (error instanceof Error ? error.message : String(error)))
             : null
           : edited.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')
         if (!edited.success || problem) {
-          await record({ result: 'denied', target, ticketId: ticket.id, error: `edited: ${problem}` })
-          return result({ ok: false, error: `The approved changes cannot go: ${problem}`, decision })
+          await record({
+            result: 'denied',
+            target,
+            ticketId: ticket.id,
+            error: `edited: ${problem}`,
+          })
+          return result({
+            ok: false,
+            error: `The approved changes cannot go: ${problem}`,
+            decision,
+          })
         }
         input = edited
         target = operation.target(edited.data)
@@ -675,7 +693,12 @@ export const awaitDecision = (ticketId: string) =>
 export async function decideTicket(
   scope: Scope & { memberId: string },
   ticketId: string,
-  decision: { approved: boolean; reason?: string; always?: boolean; input?: Record<string, unknown> },
+  decision: {
+    approved: boolean
+    reason?: string
+    always?: boolean
+    input?: Record<string, unknown>
+  },
 ): Promise<boolean> {
   const db = scoped(scope)
   const ticket = await db.ticket.findFirst({

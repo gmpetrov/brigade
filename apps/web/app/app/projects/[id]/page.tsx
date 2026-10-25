@@ -27,6 +27,7 @@ import {
   type Ticket,
 } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
+import type { EditedEmail } from '@/components/email-cards'
 
 const ACTIVE = new Set(['starting', 'running', 'waiting'])
 
@@ -86,9 +87,9 @@ export default function ProjectOverview() {
     if (message.type === 'pulls.updated') void pulls.reload()
   })
 
-  async function resolve(id: string, approved: boolean, always?: boolean) {
+  async function resolve(id: string, approved: boolean, always?: boolean, edited?: EditedEmail) {
     await api(`/tickets/${id}/resolve`, {
-      body: { approved, ...(always ? { always } : {}) },
+      body: { approved, ...(always ? { always } : {}), ...(edited ? { edited } : {}) },
     }).catch(() => undefined)
     await tickets.reload()
   }

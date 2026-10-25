@@ -170,21 +170,30 @@ export async function deliver(
 
   // A mailbox's rule: so many threads a day at most; past it the mail stays in its box.
   if (event.mailbox) {
-    const perDay = Number((trigger.options as Record<string, string>)?.perDay) || RULE_THREADS_PER_DAY
+    const perDay =
+      Number((trigger.options as Record<string, string>)?.perDay) || RULE_THREADS_PER_DAY
     const started = await db.session.count({
       where: { triggerId: trigger.id, createdAt: { gt: new Date(Date.now() - 86_400_000) } },
     })
     if (started >= perDay) {
       const message = `the rule "${trigger.label}" started its ${perDay} threads of the last 24 hours`
       const open = await db.ticket.count({
-        where: { type: 'question', status: 'open', payload: { path: ['capOfTriggerId'], equals: trigger.id } },
+        where: {
+          type: 'question',
+          status: 'open',
+          payload: { path: ['capOfTriggerId'], equals: trigger.id },
+        },
       })
       if (!open)
         await db.ticket.create({
           data: {
             type: 'question',
             title: `Rule "${trigger.label}" reached ${perDay} threads in a day: new mail stays in the box`,
-            payload: { capOfTriggerId: trigger.id, triggerId: trigger.id, memberId: trigger.createdByMemberId },
+            payload: {
+              capOfTriggerId: trigger.id,
+              triggerId: trigger.id,
+              memberId: trigger.createdByMemberId,
+            },
           } as never,
         })
       await received('', 'capped')
@@ -319,7 +328,8 @@ export async function dispatch(
     if (
       connection.kind === 'email' &&
       'projectId' in (event.payload ?? {}) &&
-      (trigger.projectId ?? null) !== ((event.payload as { projectId?: string | null }).projectId ?? null)
+      (trigger.projectId ?? null) !==
+        ((event.payload as { projectId?: string | null }).projectId ?? null)
     )
       continue
     const conversationKey = definition.conversation?.(event)
@@ -367,9 +377,12 @@ export async function dispatch(
     if ('ok' in delivery) started++
     // A mailbox's rules: the first that matched takes the mail, the others never see it.
     if (definition.exclusive) {
-      if ('ok' in delivery) return { started, failed, threadId: delivery.threadId, triggerId: trigger.id }
-      if ('capped' in delivery) return { started, failed, capped: delivery.capped, triggerId: trigger.id }
-      if ('duplicate' in delivery || 'error' in delivery) return { started, failed, triggerId: trigger.id }
+      if ('ok' in delivery)
+        return { started, failed, threadId: delivery.threadId, triggerId: trigger.id }
+      if ('capped' in delivery)
+        return { started, failed, capped: delivery.capped, triggerId: trigger.id }
+      if ('duplicate' in delivery || 'error' in delivery)
+        return { started, failed, triggerId: trigger.id }
     }
   }
   return { started, failed }
@@ -379,7 +392,11 @@ export async function dispatch(
 async function deliverToNobody(trigger: Trigger, reason: string) {
   const db = scoped({ organizationId: trigger.organizationId, workspaceId: trigger.workspaceId })
   const open = await db.ticket.count({
-    where: { type: 'question', status: 'open', payload: { path: ['triggerId'], equals: trigger.id } },
+    where: {
+      type: 'question',
+      status: 'open',
+      payload: { path: ['triggerId'], equals: trigger.id },
+    },
   })
   if (!open)
     await db.ticket.create({

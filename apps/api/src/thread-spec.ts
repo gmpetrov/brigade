@@ -165,7 +165,13 @@ export async function specFor(
     .filter((g) => g.connection.kind !== 'email' || mailAddress.has(g.connection.id))
     .map((g) =>
       g.connection.kind === 'email'
-        ? { ...g, connection: { ...g.connection, externalAccount: mailAddress.get(g.connection.id) || g.connection.externalAccount } }
+        ? {
+            ...g,
+            connection: {
+              ...g.connection,
+              externalAccount: mailAddress.get(g.connection.id) || g.connection.externalAccount,
+            },
+          }
         : g,
     )
     .flatMap((g) => {

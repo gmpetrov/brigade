@@ -2,7 +2,12 @@
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { isAdmin, timeAgo } from '@/components/dashboard'
-import { ToolInputPreview } from '@/components/email-cards'
+import {
+  EditableEmailPreview,
+  isEmailSend,
+  ToolInputPreview,
+  type EditedEmail,
+} from '@/components/email-cards'
 import { StatusBadge, type StatusTone } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -55,7 +60,13 @@ export function TicketRow({
 }: {
   ticket: Ticket
   me: Me
-  onResolve: (id: string, approved: boolean, always?: boolean) => Promise<void>
+  /** edited: an email's draft as the person changed it before approving it. */
+  onResolve: (
+    id: string,
+    approved: boolean,
+    always?: boolean,
+    edited?: EditedEmail,
+  ) => Promise<void>
 }) {
   const admin = isAdmin(me)
   const starter = t.session?.startedByMemberId === me.memberId
@@ -307,8 +318,18 @@ export function TicketRow({
               ? `${t.payload.toolName} (built-in tool)`
               : `${t.payload.operation} on ${t.payload.connection}: ${t.payload.target}`}
           </p>
-          {/* An email as it would go; any other call's arguments one per line. */}
-          <ToolInputPreview input={t.payload.input} />
+          {/* An email as it would go, which its approver may change; any other call's arguments one per line. */}
+          {open &&
+          t.type === 'approval' &&
+          isEmailSend(t.payload.operation ?? '') &&
+          (admin || starter) ? (
+            <EditableEmailPreview
+              input={t.payload.input}
+              onAllow={(edited) => void onResolve(t.id, true, false, edited)}
+            />
+          ) : (
+            <ToolInputPreview input={t.payload.input} />
+          )}
         </div>
       )}
       {/* Last, once all there is to read before deciding has been shown. */}

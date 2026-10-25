@@ -25,11 +25,7 @@ export type Operation<I extends z.ZodType = z.ZodType> = {
    * A write that asks a person even when the teammate's connector writes go without asking (an
    * email to someone outside the workspace), unless its own policy says otherwise.
    */
-  asks?: (
-    ctx: ConnectorContext,
-    input: z.infer<I>,
-    policy: PermissionPolicy,
-  ) => Promise<boolean>
+  asks?: (ctx: ConnectorContext, input: z.infer<I>, policy: PermissionPolicy) => Promise<boolean>
   /** A person approving the call may change its input (an email's draft) first. */
   editable?: boolean
 }

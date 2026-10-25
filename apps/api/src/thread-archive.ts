@@ -64,5 +64,7 @@ onScopedWrite((model, scope, operation, result) => {
         where: { id: row.sessionId, quiet: true, surfacedAt: null },
         data: { surfacedAt: new Date() },
       })
-      .catch((error) => console.warn(`thread-archive: ${row.sessionId} not surfaced: ${String(error)}`))
+      .catch((error) =>
+        console.warn(`thread-archive: ${row.sessionId} not surfaced: ${String(error)}`),
+      )
 })

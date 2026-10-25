@@ -1665,7 +1665,8 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
       description:
         'Be prompted again in this thread later, with this conversation, to check on something that is not ' +
         'ready yet: a deploy, a CI run, a site coming up ("check again in 10 minutes"). A reply to an email you ' +
-        'sent with Gmail from this thread wakes you by itself; set one for it only as a deadline. Give minutes ' +
+        'sent from this thread (Gmail, or email_send) and mail to a sign-up address you made wake you by ' +
+        'themselves; set one for those only as a deadline. Give minutes ' +
         `or at (${WAKEUP_MIN_MINUTES} minute to ${WAKEUP_MAX_DAYS} days ahead) and a note saying what to check; ` +
         'the note is the prompt you get back. Then end your turn: never sleep or poll in a loop to wait. ' +
         "Prefer what notifies you by itself (a child thread's report, such as a pull request's review, or a ticket) when there is one. " +

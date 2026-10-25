@@ -38,13 +38,22 @@ async function view(
     displayName: string | null
     releasedAt: Date | null
     createdAt: Date
-    domain: { id: string; name: string; status: string; records: unknown; checkedAt: Date | null } | null
+    domain: {
+      id: string
+      name: string
+      status: string
+      records: unknown
+      checkedAt: Date | null
+    } | null
   },
   names: { teammates: Map<string, string>; projects: Map<string, string> },
 ) {
   const variants =
     a.kind === 'agent'
-      ? await db.mailProject.findMany({ where: { projectId: { not: null } }, select: { slug: true, projectId: true } })
+      ? await db.mailProject.findMany({
+          where: { projectId: { not: null } },
+          select: { slug: true, projectId: true },
+        })
       : []
   return {
     id: a.id,
@@ -53,8 +62,12 @@ async function view(
     address: addressOf(a.name),
     on: !a.releasedAt && !!a.connectionId,
     connectionId: a.connectionId,
-    teammate: a.teammateId ? { id: a.teammateId, name: names.teammates.get(a.teammateId) ?? 'Archived teammate' } : null,
-    project: a.projectId ? { id: a.projectId, name: names.projects.get(a.projectId) ?? 'Deleted project' } : null,
+    teammate: a.teammateId
+      ? { id: a.teammateId, name: names.teammates.get(a.teammateId) ?? 'Archived teammate' }
+      : null,
+    project: a.projectId
+      ? { id: a.projectId, name: names.projects.get(a.projectId) ?? 'Deleted project' }
+      : null,
     /** An agent's address in each project it was used in. */
     variants: variants.map((v) => ({
       projectId: v.projectId!,
@@ -100,7 +113,10 @@ export const email = new Hono<AppEnv>()
   .get('/', async (c) => {
     const { db } = c.var
     const app = await db.app.findFirst({ where: { key: 'email' } })
-    const rows = await db.mailAddress.findMany({ include: { domain: true }, orderBy: { createdAt: 'asc' } })
+    const rows = await db.mailAddress.findMany({
+      include: { domain: true },
+      orderBy: { createdAt: 'asc' },
+    })
     const known = await names(db)
     return c.json({
       available: resendConfigured() && !unavailable('email'),
@@ -180,8 +196,13 @@ export const email = new Hono<AppEnv>()
     const input = await parseBody(c.req.raw, UpdateInbox)
     const inbox = await loadAddress(db, c.req.param('id'))
     if (inbox.kind !== 'inbox') throw new HTTPException(400, { message: 'Not an inbox' })
-    if (input.displayName) await db.mailAddress.update({ where: { id: inbox.id }, data: { displayName: input.displayName } })
-    if (input.publicAddress !== undefined) await setPublicAddress(db, scope, inbox.id, input.publicAddress)
+    if (input.displayName)
+      await db.mailAddress.update({
+        where: { id: inbox.id },
+        data: { displayName: input.displayName },
+      })
+    if (input.publicAddress !== undefined)
+      await setPublicAddress(db, scope, inbox.id, input.publicAddress)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
@@ -205,7 +226,11 @@ export const email = new Hono<AppEnv>()
   .post('/domains/:id/check', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
     const row = await checkDomain(c.var.db, c.req.param('id'))
-    return c.json({ status: row.status, records: row.records, checkedAt: row.checkedAt?.toISOString() ?? null })
+    return c.json({
+      status: row.status,
+      records: row.records,
+      checkedAt: row.checkedAt?.toISOString() ?? null,
+    })
   })
 
   /**
@@ -219,7 +244,10 @@ export const email = new Hono<AppEnv>()
       where: { addressId: address.id },
       orderBy: { receivedAt: 'desc' },
       take: Math.min(Number(c.req.query('limit')) || 50, 200),
-      include: { session: { select: { id: true, title: true } }, alias: { select: { local: true } } },
+      include: {
+        session: { select: { id: true, title: true } },
+        alias: { select: { local: true } },
+      },
     })
     const rules = await db.trigger.findMany({
       where: { id: { in: rows.map((r) => r.triggerId).filter((id): id is string => !!id) } },
@@ -228,7 +256,9 @@ export const email = new Hono<AppEnv>()
     const slugs = await db.mailProject.findMany({ select: { slug: true, projectId: true } })
     const local = (row: (typeof rows)[number]) =>
       row.alias?.local ??
-      (row.projectId ? `${address.name}.${slugs.find((s) => s.projectId === row.projectId)?.slug ?? ''}` : address.name)
+      (row.projectId
+        ? `${address.name}.${slugs.find((s) => s.projectId === row.projectId)?.slug ?? ''}`
+        : address.name)
     const entries: MailJournalEntry[] = rows.map((row) => ({
       id: row.id,
       direction: row.direction,
@@ -264,9 +294,17 @@ export const email = new Hono<AppEnv>()
       orderBy: { receivedAt: 'desc' },
     })
     if (!row) return c.json({ found: false })
-    const code = row.text.match(/(?:confirmation code|code de confirmation)\D{0,20}(\d{6,12})/i)?.[1] ?? null
-    const link = row.text.match(/https:\/\/mail(?:-settings)?\.google\.com\/mail\/[^\s<>)]+/)?.[0] ?? null
-    return c.json({ found: true, at: row.receivedAt.toISOString(), subject: row.subject, code, link })
+    const code =
+      row.text.match(/(?:confirmation code|code de confirmation)\D{0,20}(\d{6,12})/i)?.[1] ?? null
+    const link =
+      row.text.match(/https:\/\/mail(?:-settings)?\.google\.com\/mail\/[^\s<>)]+/)?.[0] ?? null
+    return c.json({
+      found: true,
+      at: row.receivedAt.toISOString(),
+      subject: row.subject,
+      code,
+      link,
+    })
   })
 
   /**
@@ -279,15 +317,17 @@ export const email = new Hono<AppEnv>()
     requireRole(scope, 'owner', 'admin')
     const address = await loadAddress(db, c.req.param('id'))
     if (address.releasedAt) throw new HTTPException(409, { message: 'This address is turned off' })
-    const to = c.req.query('public') === '1' && address.publicAddress ? address.publicAddress : addressOf(address.name)
+    const to =
+      c.req.query('public') === '1' && address.publicAddress
+        ? address.publicAddress
+        : addressOf(address.name)
     const token = `${address.id}.${Date.now()}`
     await sendEmail(
       {
         from: `Brigade <${addressOf('noreply')}>`,
         to: [to],
         subject: `Brigade test mail for ${addressOf(address.name)}`,
-        text:
-          'This is a test from Brigade, to check that mail to this address arrives. It goes to no rule and starts no thread.',
+        text: 'This is a test from Brigade, to check that mail to this address arrives. It goes to no rule and starts no thread.',
         headers: { 'X-Brigade-Test': token },
       },
       `brigade-test-${token}`,
@@ -307,7 +347,10 @@ export const email = new Hono<AppEnv>()
     const { db, scope } = c.var
     requireRole(scope, 'owner', 'admin')
     const { triggerIds } = await parseBody(c.req.raw, OrderRules)
-    const rows = await db.trigger.findMany({ where: { id: { in: triggerIds } }, select: { id: true, connectionId: true } })
+    const rows = await db.trigger.findMany({
+      where: { id: { in: triggerIds } },
+      select: { id: true, connectionId: true },
+    })
     if (rows.length !== triggerIds.length || new Set(rows.map((r) => r.connectionId)).size !== 1)
       throw new HTTPException(400, { message: 'Give the rules of one account, each once' })
     for (const [position, id] of triggerIds.entries())
@@ -329,10 +372,13 @@ export const email = new Hono<AppEnv>()
   .post('/rules/preview', async (c) => {
     const { db } = c.var
     const input = await parseBody(c.req.raw, PreviewRule)
-    const connection = await db.connection.findFirst({ where: { id: input.connectionId, status: { not: 'removed' } } })
+    const connection = await db.connection.findFirst({
+      where: { id: input.connectionId, status: { not: 'removed' } },
+    })
     if (!connection) throw new HTTPException(404, { message: 'No such account' })
     const definition = triggersOf(connection.kind).email_received
-    if (!definition?.replay) throw new HTTPException(400, { message: 'This account’s rules cannot be tried on past mail' })
+    if (!definition?.replay)
+      throw new HTTPException(400, { message: 'This account’s rules cannot be tried on past mail' })
     const fetch = (url: string, init?: RequestInit) => globalThis.fetch(url, init)
     let past: Awaited<ReturnType<NonNullable<typeof definition.replay>>>
     if (connection.kind === 'email') {
@@ -340,10 +386,18 @@ export const email = new Hono<AppEnv>()
       past = await definition.replay({}, { fetch, connectionId: connection.id }, 20)
       const address = await db.mailAddress.findFirst({ where: { connectionId: connection.id } })
       if (address?.kind === 'agent')
-        past = past.filter((e) => ((e.payload as { projectId?: string | null }).projectId ?? null) === (input.projectId ?? null))
+        past = past.filter(
+          (e) =>
+            ((e.payload as { projectId?: string | null }).projectId ?? null) ===
+            (input.projectId ?? null),
+        )
     } else {
       const { authorisedFetch } = await import('../connector-calls.js')
-      past = await definition.replay({}, { fetch: await authorisedFetch(db, c.var.scope, connection) }, 20)
+      past = await definition.replay(
+        {},
+        { fetch: await authorisedFetch(db, c.var.scope, connection) },
+        20,
+      )
     }
     const results = []
     for (const e of past) {
@@ -353,7 +407,9 @@ export const email = new Hono<AppEnv>()
         from: p.from ?? '',
         subject: p.subject ?? '',
         at: e.at,
-        matches: definition.matches ? await definition.matches(e, input.options, { fetch, connectionId: connection.id }) : true,
+        matches: definition.matches
+          ? await definition.matches(e, input.options, { fetch, connectionId: connection.id })
+          : true,
       })
     }
     return c.json({ results })
@@ -362,11 +418,12 @@ export const email = new Hono<AppEnv>()
   /** Cancel a mail a thread sent, in its window: whoever may prompt the thread. */
   .post('/messages/:id/cancel', async (c) => {
     const { db, scope } = c.var
-    const row = await db.mailMessage.findFirst({ where: { id: c.req.param('id'), direction: 'out' } })
+    const row = await db.mailMessage.findFirst({
+      where: { id: c.req.param('id'), direction: 'out' },
+    })
     if (!row?.sessionId) throw new HTTPException(404, { message: 'No such email' })
     const thread = await db.session.findFirst({ where: { id: row.sessionId } })
     if (!thread) throw new HTTPException(404, { message: 'No such email' })
     requireMayPrompt(scope, { ...thread, controlledByMemberId: null })
     return c.json(await cancelMail(db, scope, row.id, { type: 'member', id: scope.memberId }))
   })
-

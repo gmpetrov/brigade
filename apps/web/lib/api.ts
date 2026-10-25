@@ -385,6 +385,26 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   project: ProjectSummary | null
   /** When its teammates asked to be prompted here again, soonest first. */
   wakeups: { id: string; teammateId: string; note: string; wakeAt: string }[]
+  /** Sign-up addresses it made (Email App) whose mail still comes to it alone, until waitUntil. */
+  mailAliases: {
+    id: string
+    local: string
+    address: string
+    purpose: string
+    waitUntil: string
+    teammateId: string | null
+  }[]
+  /** Its latest emails sent from Brigade's addresses; a scheduled one can be cancelled until sendAt. */
+  mailMessages: {
+    id: string
+    to: string[]
+    subject: string
+    status: 'scheduled' | 'sent' | 'delivered' | 'bounced' | 'cancelled' | string
+    sendAt: string | null
+    error: string | null
+    fromAddress: string
+    createdAt: string
+  }[]
   /** Emails sent from it whose replies wake it, until `until`; the latest sent first. */
   replyWatches: {
     id: string
@@ -599,6 +619,7 @@ export type Connection = {
     | 'posthog'
     | 'dataforseo'
     | 'ahrefs'
+    | 'email'
     | 'mcp'
   label: string
   externalAccount: string | null
@@ -1085,3 +1106,48 @@ export type ProjectDetail = ProjectSummary & {
 /** `?project=` for a list: a project's id, "none", or nothing for all. */
 export const projectQuery = (project: string | undefined, join: '?' | '&' = '?') =>
   project ? `${join}project=${encodeURIComponent(project)}` : ''
+
+/** One of Brigade's own addresses (the Email App): an agent's, or a project's inbox. */
+export type MailAddress = {
+  id: string
+  kind: 'agent' | 'inbox'
+  name: string
+  address: string
+  on: boolean
+  connectionId: string | null
+  teammate: { id: string; name: string } | null
+  project: { id: string; name: string } | null
+  /** An agent's address in each project it was used in: riley.lovarank@… */
+  variants: { projectId: string; project: string; address: string }[]
+  /** inbox: the address customers write to, forwarded here, and replies go out from once verified. */
+  publicAddress: string | null
+  displayName: string | null
+  domain: {
+    id: string
+    name: string
+    status: 'pending' | 'verified' | 'failed' | string
+    records: {
+      record: string
+      type: string
+      name: string
+      value: string
+      priority?: number
+      status: string
+    }[]
+    checkedAt: string | null
+  } | null
+  createdAt: string
+}
+
+export type EmailState = {
+  /** Whether this Brigade server can run the Email App (Resend configured). */
+  available: boolean
+  unavailable: string | null
+  domain: string
+  /** Whether the workspace turned it on (an owner or admin). */
+  enabled: boolean
+  appId: string | null
+  addresses: MailAddress[]
+}
+
+export type { MailJournalEntry } from '@brigade/contracts'

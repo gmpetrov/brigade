@@ -374,6 +374,108 @@ function AwaitedReplies({ thread, onChange }: { thread: Thread; onChange: () => 
   )
 }
 
+/** Sign-up addresses the thread made (Email App): their mail comes to it alone, for now. */
+function AwaitedMail({ thread }: { thread: Thread }) {
+  return (
+    <Section title="Waiting for email">
+      <ul className="flex flex-col">
+        {thread.mailAliases.map((a) => (
+          <li key={a.id} className="flex items-center gap-3 rounded-md px-2 py-1.5">
+            <ProviderLogo kind="email" className="size-4 flex-none" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-medium" title={a.purpose}>
+                {a.purpose || 'Sign-up'}
+              </span>
+              <span className="truncate text-xs text-muted-foreground" title={a.address}>
+                {a.address} · until <time dateTime={a.waitUntil}>{wakeTime(a.waitUntil)}</time>
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  )
+}
+
+const SENT_STATUS: Record<string, string> = {
+  scheduled: 'Leaving soon',
+  sent: 'Sent',
+  delivered: 'Delivered',
+  bounced: 'Not delivered',
+  cancelled: 'Cancelled',
+}
+
+/** Emails the thread sent from Brigade's addresses; one still in its window can be cancelled. */
+function SentMail({ thread, onChange }: { thread: Thread; onChange: () => void }) {
+  const [busy, setBusy] = useState<string>()
+  const [error, setError] = useState<string>()
+  // The window closes on its own: redrawn each second while one is open.
+  const [now, setNow] = useState(() => Date.now())
+  const open = thread.mailMessages.some(
+    (m) => m.status === 'scheduled' && m.sendAt && Date.parse(m.sendAt) > now,
+  )
+  useEffect(() => {
+    if (!open) return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [open])
+  const cancel = async (id: string) => {
+    setBusy(id)
+    setError(undefined)
+    try {
+      await api(`/email/messages/${id}/cancel`, { method: 'POST' })
+      onChange()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(undefined)
+    }
+  }
+  return (
+    <Section title="Emails sent">
+      <ul className="flex flex-col">
+        {thread.mailMessages.map((m) => {
+          const left =
+            m.status === 'scheduled' && m.sendAt
+              ? Math.ceil((Date.parse(m.sendAt) - now) / 1000)
+              : 0
+          return (
+            <li key={m.id} className="flex items-center gap-3 rounded-md px-2 py-1.5">
+              <ProviderLogo kind="email" className="size-4 flex-none" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-sm font-medium" title={m.subject}>
+                  {m.subject || '(no subject)'}
+                </span>
+                <span
+                  className={`truncate text-xs ${m.status === 'bounced' ? 'text-destructive' : 'text-muted-foreground'}`}
+                  title={m.error ?? `From ${m.fromAddress}`}
+                >
+                  To {m.to.join(', ')} ·{' '}
+                  {left > 0
+                    ? `Leaves in ${left} s`
+                    : (SENT_STATUS[m.status] ?? (m.status === 'scheduled' ? 'Sent' : m.status))}
+                </span>
+              </span>
+              {left > 0 && thread.mayPrompt && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy === m.id}
+                  onClick={() => void cancel(m.id)}
+                >
+                  Cancel
+                </Button>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </Section>
+  )
+}
+
 /**
  * Beside an expanded thread, everything that is not the conversation: its
  * computer (a thumbnail of the screen that opens it, Preview, the shell, the run
@@ -449,6 +551,10 @@ export function ComputerPanel({
       {thread.wakeups.length > 0 && <Wakeups thread={thread} onChange={onChange} />}
 
       {thread.replyWatches.length > 0 && <AwaitedReplies thread={thread} onChange={onChange} />}
+
+      {thread.mailAliases?.length > 0 && <AwaitedMail thread={thread} />}
+
+      {thread.mailMessages?.length > 0 && <SentMail thread={thread} onChange={onChange} />}
 
       {thread.children.length > 0 && (
         <Section title={`Child threads · ${thread.children.length}`}>

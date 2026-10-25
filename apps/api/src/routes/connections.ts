@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
+import { unavailable } from '../subscriptions/index.js'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { env } from '../config.js'
@@ -519,6 +520,7 @@ export const connections = new Hono<AppEnv>()
         posthog: true,
         dataforseo: true,
         ahrefs: true,
+        email: !unavailable('email'),
         mcp: true,
         webhook: true,
       },
@@ -844,6 +846,12 @@ async function disconnect(
   db: ScopedDb,
   connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null; appId: string },
 ) {
+  // One of Brigade's own addresses: it stops receiving; its name stays reserved for good.
+  if (connection.kind === 'email')
+    await db.mailAddress.updateMany({
+      where: { connectionId: connection.id },
+      data: { releasedAt: new Date(), connectionId: null },
+    })
   // Unsubscribe at the vendor while the credential still works: Stripe endpoints, Gmail watches,
   // Calendar channels.
   await syncConnection(scope, connection.id, { removing: true }).catch((error) =>

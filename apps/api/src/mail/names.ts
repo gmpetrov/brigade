@@ -81,7 +81,10 @@ export const addressOf = (local: string) => `${local}@${mailDomain()}`
 /** The bare, lower-cased address in "Name <a@b>" or "a@b". */
 export function bareAddress(value: string) {
   const inAngles = value.match(/<([^<>\s]+@[^<>\s]+)>/)
-  return (inAngles?.[1] ?? value).trim().replace(/^mailto:/i, '').toLowerCase()
+  return (inAngles?.[1] ?? value)
+    .trim()
+    .replace(/^mailto:/i, '')
+    .toLowerCase()
 }
 
 /** The part before the @ when the address is on Brigade's mail domain, else null. */

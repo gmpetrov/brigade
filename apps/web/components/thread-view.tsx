@@ -80,7 +80,13 @@ import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
 import { CredentialForm } from '@/components/credential-form'
 import { BrigadeNoteLine, brigadeNote, type BrigadeNote } from '@/components/brigade-notes'
-import { ReceivedEmailCard, ToolInputPreview } from '@/components/email-cards'
+import {
+  EditableEmailPreview,
+  isEmailSend,
+  ReceivedEmailCard,
+  ToolInputPreview,
+  type EditedEmail,
+} from '@/components/email-cards'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { contentUrl } from '@/components/library-browser'
@@ -1731,7 +1737,13 @@ export function ThreadItems({
 }: {
   threadId: string
   items: Item[]
-  onApproval: (approvalId: string, approved: boolean, always?: boolean) => void
+  /** edited: an email's draft as the person changed it before allowing it. */
+  onApproval: (
+    approvalId: string,
+    approved: boolean,
+    always?: boolean,
+    edited?: EditedEmail,
+  ) => void
   onAnswer: (questionId: string, answer: QuestionAnswer) => Promise<void>
   onTicket: (requestId: string, answer: TicketAnswer) => Promise<void>
   /** Sends a choice someone clicked as their message, with the option's design it picks. Unset when they cannot send one now. */
@@ -2133,7 +2145,15 @@ export function ThreadItems({
               )}
             </div>
             {item.reason && <p className="text-sm text-muted-foreground">{item.reason}</p>}
-            <ToolInputPreview input={item.input} />
+            {/* An email may be changed before it is allowed. */}
+            {!item.resolved && canApprove && isEmailSend(item.toolName) ? (
+              <EditableEmailPreview
+                input={item.input}
+                onAllow={(edited) => onApproval(item.approvalId, true, false, edited)}
+              />
+            ) : (
+              <ToolInputPreview input={item.input} />
+            )}
             {item.resolved ? null : (adminsOnly ? admin : canApprove) ? (
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => onApproval(item.approvalId, true)}>

@@ -631,8 +631,9 @@ const schedules = (spec: ThreadSpec) =>
     : '\n\n' +
       'To check on something later in this same thread (a deploy, a CI run, a site coming up), set a wake-up with ' +
       '`set_wakeup` and end your turn, instead of waiting or polling: you are prompted again here with your note, ' +
-      'with this conversation. A reply to an email you send with Gmail from this thread wakes you here by itself, ' +
-      'with the reply: no wake-up is needed to check for it.')
+      'with this conversation. A reply to an email you send from this thread (with Gmail, or with email_send from ' +
+      'your own address) wakes you here by itself, with the reply, and so does mail to a sign-up address you made ' +
+      'with email_new_address: no wake-up is needed to check for it.')
 
 /** Child threads: in a child, how to report; elsewhere, when to start one. */
 const children = (spec: ThreadSpec) =>

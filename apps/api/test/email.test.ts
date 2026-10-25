@@ -26,7 +26,10 @@ process.env.RESEND_WEBHOOK_SECRET = `whsec_${WEBHOOK_KEY}`
 process.env.MAIL_DOMAIN = 'mails.brigade.test'
 
 async function reachable() {
-  const client = new pg.Client({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 2_000 })
+  const client = new pg.Client({
+    connectionString: process.env.DATABASE_URL,
+    connectionTimeoutMillis: 2_000,
+  })
   try {
     await client.connect()
     await client.query('select 1 from "MailMessage" limit 1')
@@ -69,7 +72,10 @@ describe('names', () => {
     assert.equal(names.localOn('Riley <Riley.Lovarank@MAILS.brigade.test>'), 'riley.lovarank')
     assert.equal(names.localOn('riley@mails.brigade.test.evil.com'), null)
     assert.equal(names.localOn('riley@other.test'), null)
-    assert.deepEqual(names.partsOf('riley.lovarank.0k3f9a'), { name: 'riley', rest: ['lovarank', '0k3f9a'] })
+    assert.deepEqual(names.partsOf('riley.lovarank.0k3f9a'), {
+      name: 'riley',
+      rest: ['lovarank', '0k3f9a'],
+    })
   })
 
   test('a sign-up token starts with a digit, so it never reads as a project', () => {
@@ -85,17 +91,54 @@ describe('webhook signature (Svix)', () => {
     const now = Date.now()
     const ts = String(Math.floor(now / 1000))
     const body = '{"type":"email.received"}'
-    assert.equal(verifyWebhook(body, { id: 'msg_1', timestamp: ts, signature: sign('msg_1', ts, body) }, secret, now), true)
-    // One of several signatures, as during a secret's rotation.
     assert.equal(
-      verifyWebhook(body, { id: 'msg_1', timestamp: ts, signature: `v1,AAAA ${sign('msg_1', ts, body)}` }, secret, now),
+      verifyWebhook(
+        body,
+        { id: 'msg_1', timestamp: ts, signature: sign('msg_1', ts, body) },
+        secret,
+        now,
+      ),
       true,
     )
-    assert.equal(verifyWebhook(`${body} `, { id: 'msg_1', timestamp: ts, signature: sign('msg_1', ts, body) }, secret, now), false)
+    // One of several signatures, as during a secret's rotation.
+    assert.equal(
+      verifyWebhook(
+        body,
+        { id: 'msg_1', timestamp: ts, signature: `v1,AAAA ${sign('msg_1', ts, body)}` },
+        secret,
+        now,
+      ),
+      true,
+    )
+    assert.equal(
+      verifyWebhook(
+        `${body} `,
+        { id: 'msg_1', timestamp: ts, signature: sign('msg_1', ts, body) },
+        secret,
+        now,
+      ),
+      false,
+    )
     const old = String(Math.floor(now / 1000) - 600)
-    assert.equal(verifyWebhook(body, { id: 'msg_1', timestamp: old, signature: sign('msg_1', old, body) }, secret, now), false)
+    assert.equal(
+      verifyWebhook(
+        body,
+        { id: 'msg_1', timestamp: old, signature: sign('msg_1', old, body) },
+        secret,
+        now,
+      ),
+      false,
+    )
     assert.equal(verifyWebhook(body, { id: 'msg_1', timestamp: ts }, secret, now), false)
-    assert.equal(verifyWebhook(body, { id: 'msg_1', timestamp: ts, signature: sign('msg_1', ts, body) }, '', now), false)
+    assert.equal(
+      verifyWebhook(
+        body,
+        { id: 'msg_1', timestamp: ts, signature: sign('msg_1', ts, body) },
+        '',
+        now,
+      ),
+      false,
+    )
   })
 })
 
@@ -120,17 +163,27 @@ describe('text', () => {
     assert.equal(text.automaticHeaders({ 'list-id': '<news.acme.test>' }), true)
     assert.equal(text.automaticHeaders({ 'auto-submitted': 'no' }), false)
     assert.equal(text.bounceOf('MAILER-DAEMON@mx.test', {}), true)
-    assert.equal(text.bounceOf('a@b.test', { 'content-type': 'multipart/report; report-type=delivery-status' }), true)
+    assert.equal(
+      text.bounceOf('a@b.test', {
+        'content-type': 'multipart/report; report-type=delivery-status',
+      }),
+      true,
+    )
     assert.equal(text.bounceOf('a@b.test', {}), false)
   })
   test('Gmail’s DKIM counts only when it signed for the From domain', () => {
     assert.equal(
-      gmailAuthentication('mx.google.com; dkim=pass header.i=@acme.test; spf=pass; dmarc=pass', 'Ada <ada@acme.test>')
-        ?.dkim,
+      gmailAuthentication(
+        'mx.google.com; dkim=pass header.i=@acme.test; spf=pass; dmarc=pass',
+        'Ada <ada@acme.test>',
+      )?.dkim,
       'pass',
     )
     assert.equal(
-      gmailAuthentication('mx.google.com; dkim=pass header.i=@evil.test; spf=pass; dmarc=fail', 'ada@acme.test')?.dkim,
+      gmailAuthentication(
+        'mx.google.com; dkim=pass header.i=@evil.test; spf=pass; dmarc=fail',
+        'ada@acme.test',
+      )?.dkim,
       'gray',
     )
   })
@@ -188,10 +241,15 @@ const ws = (scope: Scope, role: 'owner' | 'admin' | 'member' = 'owner') => ({
 before(async () => {
   if (skip) return
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
-    const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url)
+    const url = new URL(
+      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+    )
     if (url.host !== 'api.resend.com') throw new Error(`unexpected request ${url}`)
     const received = /^\/emails\/receiving\/([^/]+)$/.exec(url.pathname)?.[1]
-    if (received) return resend.received.has(received) ? json(resend.received.get(received)) : json({ message: 'Not found' }, 404)
+    if (received)
+      return resend.received.has(received)
+        ? json(resend.received.get(received))
+        : json({ message: 'Not found' }, 404)
     if (url.pathname === '/emails' && init?.method === 'POST') {
       resend.sent.push({ body: JSON.parse(String(init.body)) })
       return json({ id: `sent-${randomUUID()}` })
@@ -207,9 +265,15 @@ before(async () => {
   for (const [i, org] of orgs.entries()) {
     await prisma.organization.create({ data: { id: org, name: `Mail ${i}`, slug: org } })
     await prisma.user.create({
-      data: { id: users[i]!, name: i === 0 ? 'Ada' : 'Bob', email: i === 0 ? adaEmail : `bob-${id}@acme.test` },
+      data: {
+        id: users[i]!,
+        name: i === 0 ? 'Ada' : 'Bob',
+        email: i === 0 ? adaEmail : `bob-${id}@acme.test`,
+      },
     })
-    await prisma.member.create({ data: { id: members[i]!, organizationId: org, userId: users[i]!, role: 'owner' } })
+    await prisma.member.create({
+      data: { id: members[i]!, organizationId: org, userId: users[i]!, role: 'owner' },
+    })
   }
   const wa = await prisma.workspace.create({ data: { organizationId: orgs[0]!, name: 'Mail A' } })
   const wb = await prisma.workspace.create({ data: { organizationId: orgs[1]!, name: 'Mail B' } })
@@ -218,9 +282,20 @@ before(async () => {
   // Names are unique across Brigade: these tests' own, so another run's never collide.
   riley = await prisma.teammate.create({ data: { ...a, name: `Riley ${id}` } })
   rileyB = await prisma.teammate.create({ data: { ...b, name: `Riley ${id}` } })
-  computerId = (await prisma.computer.create({ data: { ...a, kind: 'member_machine', memberId: members[0]!, name: 'Laptop' } })).id
+  computerId = (
+    await prisma.computer.create({
+      data: { ...a, kind: 'member_machine', memberId: members[0]!, name: 'Laptop' },
+    })
+  ).id
   await prisma.account.create({
-    data: { ...a, memberId: members[0]!, computerId, provider: 'claude_code', label: 'Claude', status: 'ready' },
+    data: {
+      ...a,
+      memberId: members[0]!,
+      computerId,
+      provider: 'claude_code',
+      label: 'Claude',
+      status: 'ready',
+    },
   })
   projectId = (await prisma.project.create({ data: { ...a, name: 'Lovarank' } })).id
 })
@@ -321,7 +396,10 @@ describe('addresses', { skip }, () => {
     assert.equal(again.name, base())
     assert.notEqual(again.connectionId, mine.connectionId)
     const grants = await prisma.grant.findMany({ where: { connectionId: again.connectionId! } })
-    assert.deepEqual(grants.map((g) => [g.teammateId, g.scope]), [[riley.id, 'read_write']])
+    assert.deepEqual(
+      grants.map((g) => [g.teammateId, g.scope]),
+      [[riley.id, 'read_write']],
+    )
   })
 
   test('a recipient means one box: the address, a project’s variant, a sign-up address, or none', async () => {
@@ -398,7 +476,9 @@ describe('receiving', { skip }, () => {
     )
     assert.equal(row!.route, 'awaited')
     assert.equal(row!.sessionId, session.id)
-    const wakeup = await prisma.wakeup.findFirstOrThrow({ where: { sessionId: session.id, kind: 'reply' } })
+    const wakeup = await prisma.wakeup.findFirstOrThrow({
+      where: { sessionId: session.id, kind: 'reply' },
+    })
     assert.match(wakeup.note, /482913/)
     assert.match(wakeup.note, /Notion sign-up/)
     assert.equal(await prisma.session.count({ where: { triggerId: rule.id } }), 0)
@@ -425,10 +505,22 @@ describe('receiving', { skip }, () => {
 
   test('a member’s verified mail to an agent is their request; an unverified one is a stranger’s', async () => {
     const before = await prisma.session.count({ where: { ...a, startedByMemberId: members[0]! } })
-    const [forged] = await arrive(mail({ to: [to(base())], from: adaEmail, subject: 'Forged', dkim: 'fail' }))
+    const [forged] = await arrive(
+      mail({ to: [to(base())], from: adaEmail, subject: 'Forged', dkim: 'fail' }),
+    )
     assert.equal(forged!.sender, 'unknown')
-    assert.equal(await prisma.session.count({ where: { ...a, startedByMemberId: members[0]! } }), before)
-    await arrive(mail({ to: [to(`${base()}.lovarank`)], from: adaEmail, subject: 'Please look at the SEO report', dkim: 'pass' }))
+    assert.equal(
+      await prisma.session.count({ where: { ...a, startedByMemberId: members[0]! } }),
+      before,
+    )
+    await arrive(
+      mail({
+        to: [to(`${base()}.lovarank`)],
+        from: adaEmail,
+        subject: 'Please look at the SEO report',
+        dkim: 'pass',
+      }),
+    )
     const started = await prisma.session.findFirst({
       where: { ...a, title: 'Please look at the SEO report' },
     })
@@ -461,7 +553,9 @@ describe('receiving', { skip }, () => {
     const tickets = (triggerId: string) =>
       prisma.ticket.count({ where: { ...a, payload: { path: ['triggerId'], equals: triggerId } } })
     // The computer is offline: the rule that took it says so in a ticket, and the mail waits.
-    const [first] = await arrive(mail({ to: [to(`${base()}.lovarank`)], subject: 'Your invoice for October' }))
+    const [first] = await arrive(
+      mail({ to: [to(`${base()}.lovarank`)], subject: 'Your invoice for October' }),
+    )
     assert.equal(first!.status, 'pending')
     assert.equal(await tickets(invoices.id), 1)
     assert.equal(await tickets(rest.id), 0)
@@ -479,7 +573,10 @@ describe('receiving', { skip }, () => {
   test('a reply to mail a thread sent wakes that thread, and its bounce too', async () => {
     const db = scoped(a)
     const session = await thread('member')
-    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id }, include: { domain: true } })
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { teammateId: riley.id },
+      include: { domain: true },
+    })
     const sent = await outbound.sendDraft(db, a, {
       address,
       thread: { ...session, projectId: null },
@@ -493,7 +590,10 @@ describe('receiving', { skip }, () => {
     assert.ok(Date.parse(String(body.scheduled_at)) > Date.now() + 20_000)
     // Resend tells its Message-ID once it has left.
     const out = await prisma.mailMessage.findUniqueOrThrow({ where: { id: sent.id } })
-    await outbound.statusChanged('email.sent', { email_id: out.resendId!, message_id: '<proposal-1@ses.test>' })
+    await outbound.statusChanged('email.sent', {
+      email_id: out.resendId!,
+      message_id: '<proposal-1@ses.test>',
+    })
     const [answer] = await arrive(
       mail({
         to: [to(base())],
@@ -505,13 +605,20 @@ describe('receiving', { skip }, () => {
     )
     assert.equal(answer!.route, 'awaited')
     assert.equal(answer!.conversationId, sent.conversationId)
-    const wakeup = await prisma.wakeup.findFirstOrThrow({ where: { sessionId: session.id, kind: 'reply' } })
+    const wakeup = await prisma.wakeup.findFirstOrThrow({
+      where: { sessionId: session.id, kind: 'reply' },
+    })
     assert.match(wakeup.note, /Yes!/)
     // Only the new part: the quote stays in email_read.
     assert.doesNotMatch(wakeup.note, /Shall we\?/)
     // A bounce of what it sent comes back to it too.
-    await outbound.statusChanged('email.bounced', { email_id: out.resendId!, bounce: { message: 'No such user' } })
-    const bounced = await prisma.wakeup.findFirstOrThrow({ where: { sessionId: session.id, sourceId: `email-status:${sent.id}` } })
+    await outbound.statusChanged('email.bounced', {
+      email_id: out.resendId!,
+      bounce: { message: 'No such user' },
+    })
+    const bounced = await prisma.wakeup.findFirstOrThrow({
+      where: { sessionId: session.id, sourceId: `email-status:${sent.id}` },
+    })
     assert.match(bounced.note, /No such user/)
   })
 
@@ -520,7 +627,10 @@ describe('receiving', { skip }, () => {
     const inbox = await addresses.createInbox(db, ws(a), { projectId, label: 'Support' })
     // Its project may have been renamed Lovarank SEO above: a new name takes the new name.
     assert.match(inbox.name, /^support-lovarank(-seo)?-[a-z0-9]{4}$/)
-    await prisma.mailAddress.update({ where: { id: inbox.id }, data: { publicAddress: `support-${id}@lovarank.test` } })
+    await prisma.mailAddress.update({
+      where: { id: inbox.id },
+      data: { publicAddress: `support-${id}@lovarank.test` },
+    })
     const rows = await arrive(mail({ to: [to(base()), to(inbox.name)], subject: 'Twice' }))
     assert.deepEqual(rows.map((r) => r.route).sort(), ['box', 'box'])
     const once = mail({ to: [to(inbox.name)], subject: 'Same', messageId: '<same-1@x.test>' })
@@ -528,7 +638,16 @@ describe('receiving', { skip }, () => {
     const session = await thread('member')
     // The first goes to a thread (here, one waiting on its conversation), the copy does not.
     await prisma.replyWatch.create({
-      data: { ...a, sessionId: session.id, teammateId: riley.id, connectionId: inbox.connectionId!, conversationKey: 'conv-same', to: 'x', subject: 'x', until: new Date(Date.now() + 3600_000) },
+      data: {
+        ...a,
+        sessionId: session.id,
+        teammateId: riley.id,
+        connectionId: inbox.connectionId!,
+        conversationKey: 'conv-same',
+        to: 'x',
+        subject: 'x',
+        until: new Date(Date.now() + 3600_000),
+      },
     })
     // Kept as the webhook keeps it, already read, in the conversation the thread waits on.
     const first = await prisma.mailMessage.create({
@@ -548,12 +667,23 @@ describe('receiving', { skip }, () => {
       },
     })
     await inbound.processMail(first.id)
-    assert.equal((await prisma.mailMessage.findUniqueOrThrow({ where: { id: first.id } })).route, 'awaited')
+    assert.equal(
+      (await prisma.mailMessage.findUniqueOrThrow({ where: { id: first.id } })).route,
+      'awaited',
+    )
     const [copy] = await arrive(twice)
     assert.equal(copy!.route, 'duplicate')
-    const [own] = await arrive(mail({ to: [to(inbox.name)], from: `support-${id}@lovarank.test`, subject: 'Re: Same' }))
+    const [own] = await arrive(
+      mail({ to: [to(inbox.name)], from: `support-${id}@lovarank.test`, subject: 'Re: Same' }),
+    )
     assert.equal(own!.route, 'own_copy')
-    const [testMail] = await arrive(mail({ to: [to(inbox.name)], from: 'noreply@mails.brigade.test', headers: { 'x-brigade-test': 'x' } }))
+    const [testMail] = await arrive(
+      mail({
+        to: [to(inbox.name)],
+        from: 'noreply@mails.brigade.test',
+        headers: { 'x-brigade-test': 'x' },
+      }),
+    )
     assert.equal(testMail!.route, 'test')
   })
 
@@ -563,10 +693,25 @@ describe('receiving', { skip }, () => {
     const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
     for (let i = 0; i < 8; i++)
       await prisma.mailMessage.create({
-        data: { ...a, addressId: address.id, box: `${address.id}:-`, direction: 'in', status: 'done', conversationId: 'conv-loop', fromAddress: 'bot@outside.test', messageId: `<loop-${i}@x.test>`, sessionId: session.id, route: 'awaited' },
+        data: {
+          ...a,
+          addressId: address.id,
+          box: `${address.id}:-`,
+          direction: 'in',
+          status: 'done',
+          conversationId: 'conv-loop',
+          fromAddress: 'bot@outside.test',
+          messageId: `<loop-${i}@x.test>`,
+          sessionId: session.id,
+          route: 'awaited',
+        },
       })
     const [row] = await arrive(
-      mail({ to: [to(base())], from: 'bot@outside.test', headers: { 'in-reply-to': '<loop-7@x.test>' } }),
+      mail({
+        to: [to(base())],
+        from: 'bot@outside.test',
+        headers: { 'in-reply-to': '<loop-7@x.test>' },
+      }),
     )
     assert.equal(row!.conversationId, 'conv-loop')
     assert.equal(row!.route, 'loop')
@@ -577,23 +722,57 @@ describe('sending', { skip }, () => {
   test('checks: recipients of the conversation only, no secret, no second answer after a person’s', async () => {
     const db = scoped(a)
     const session = await thread('member')
-    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id }, include: { domain: true } })
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { teammateId: riley.id },
+      include: { domain: true },
+    })
     const box = `${address.id}:-`
     const original = await prisma.mailMessage.create({
-      data: { ...a, addressId: address.id, box, direction: 'in', status: 'done', conversationId: 'conv-check', fromAddress: 'client@outside.test', to: [`${base()}@mails.brigade.test`], messageId: '<c1@x.test>', subject: 'Help', receivedAt: new Date(Date.now() - 60_000) },
+      data: {
+        ...a,
+        addressId: address.id,
+        box,
+        direction: 'in',
+        status: 'done',
+        conversationId: 'conv-check',
+        fromAddress: 'client@outside.test',
+        to: [`${base()}@mails.brigade.test`],
+        messageId: '<c1@x.test>',
+        subject: 'Help',
+        receivedAt: new Date(Date.now() - 60_000),
+      },
     })
     const check = (draft: Partial<Parameters<typeof outbound.checkDraft>[1]['draft']>) =>
       outbound.checkDraft(db, {
         address,
         thread: { ...session, projectId: null },
-        draft: { to: ['client@outside.test'], subject: '', text: 'Here you go', replyTo: original.id, ...draft },
+        draft: {
+          to: ['client@outside.test'],
+          subject: '',
+          text: 'Here you go',
+          replyTo: original.id,
+          ...draft,
+        },
       })
     assert.equal(await check({}), null)
     assert.match((await check({ to: ['someone@else.test'] })) ?? '', /not in this conversation/)
     assert.equal(await check({ to: ['someone@else.test'], newRecipients: true }), null)
-    assert.match((await check({ text: 'key: sk_live_0123456789abcdef' })) ?? '', /Stripe secret key/)
+    assert.match(
+      (await check({ text: 'key: sk_live_0123456789abcdef' })) ?? '',
+      /Stripe secret key/,
+    )
     await prisma.mailMessage.create({
-      data: { ...a, addressId: address.id, box, direction: 'in', status: 'done', conversationId: 'conv-check', fromAddress: 'support@lovarank.test', route: 'own_copy', subject: 'Re: Help' },
+      data: {
+        ...a,
+        addressId: address.id,
+        box,
+        direction: 'in',
+        status: 'done',
+        conversationId: 'conv-check',
+        fromAddress: 'support@lovarank.test',
+        route: 'own_copy',
+        subject: 'Re: Help',
+      },
     })
     assert.match((await check({})) ?? '', /already replied/)
   })
@@ -601,7 +780,10 @@ describe('sending', { skip }, () => {
   test('a mail can be cancelled in its window, not after', async () => {
     const db = scoped(a)
     const session = await thread('member')
-    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id }, include: { domain: true } })
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { teammateId: riley.id },
+      include: { domain: true },
+    })
     const sent = await outbound.sendDraft(db, a, {
       address,
       thread: { ...session, projectId: null },
@@ -609,9 +791,15 @@ describe('sending', { skip }, () => {
       draft: { to: [adaEmail], subject: 'Note', text: 'For you' },
       callId: randomUUID(),
     })
-    assert.deepEqual(await outbound.cancelMail(db, a, sent.id, { type: 'member', id: members[0]! }), { cancelled: true })
+    assert.deepEqual(
+      await outbound.cancelMail(db, a, sent.id, { type: 'member', id: members[0]! }),
+      { cancelled: true },
+    )
     assert.equal(resend.cancelled.length, 1)
-    await assert.rejects(outbound.cancelMail(db, a, sent.id, { type: 'member', id: members[0]! }), /cannot be cancelled/)
+    await assert.rejects(
+      outbound.cancelMail(db, a, sent.id, { type: 'member', id: members[0]! }),
+      /cannot be cancelled/,
+    )
   })
 })
 
@@ -619,12 +807,24 @@ describe('the webhook route', { skip }, () => {
   test('Resend’s signed delivery is kept; an unsigned one is refused', async () => {
     const { events } = await import('../src/routes/events.js')
     const event = mail({ to: [`${base()}@mails.brigade.test`], subject: 'Through the route' })
-    const body = JSON.stringify({ type: 'email.received', created_at: new Date().toISOString(), data: event })
+    const body = JSON.stringify({
+      type: 'email.received',
+      created_at: new Date().toISOString(),
+      data: event,
+    })
     const ts = String(Math.floor(Date.now() / 1000))
     const signature = `v1,${createHmac('sha256', Buffer.from(WEBHOOK_KEY, 'base64')).update(`msg_x.${ts}.${body}`).digest('base64')}`
-    const refused = await events.request('/resend', { method: 'POST', body, headers: { 'svix-id': 'msg_x', 'svix-timestamp': ts, 'svix-signature': 'v1,AAAA' } })
+    const refused = await events.request('/resend', {
+      method: 'POST',
+      body,
+      headers: { 'svix-id': 'msg_x', 'svix-timestamp': ts, 'svix-signature': 'v1,AAAA' },
+    })
     assert.equal(refused.status, 401)
-    const ok = await events.request('/resend', { method: 'POST', body, headers: { 'svix-id': 'msg_x', 'svix-timestamp': ts, 'svix-signature': signature } })
+    const ok = await events.request('/resend', {
+      method: 'POST',
+      body,
+      headers: { 'svix-id': 'msg_x', 'svix-timestamp': ts, 'svix-signature': signature },
+    })
     assert.equal(ok.status, 200)
     assert.equal(await prisma.mailMessage.count({ where: { resendId: event.email_id } }), 1)
   })
@@ -635,21 +835,43 @@ describe('rules on any mailbox', { skip }, () => {
     const db = scoped(a)
     const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
     const rule = await prisma.trigger.create({
-      data: { ...a, connectionId: address.connectionId!, teammateId: riley.id, label: 'Support', event: 'email_received', createdByMemberId: members[0]! },
+      data: {
+        ...a,
+        connectionId: address.connectionId!,
+        teammateId: riley.id,
+        label: 'Support',
+        event: 'email_received',
+        createdByMemberId: members[0]!,
+      },
     })
-    const held = await thread('trigger', { triggerId: rule.id, conversationKey: 'conv-held', controlledByMemberId: members[0]! })
-    const before = await prisma.session.count({ where: { triggerId: rule.id } })
-    const got = await deliver({ ...rule, teammate: await prisma.teammate.findUniqueOrThrow({ where: { id: riley.id } }), connection: await prisma.connection.findUniqueOrThrow({ where: { id: address.connectionId! } }) }, {
-      eventId: `evt-${randomUUID()}`,
-      eventType: 'email',
-      title: 'Re: help',
-      text: 'The customer answered',
+    const held = await thread('trigger', {
+      triggerId: rule.id,
       conversationKey: 'conv-held',
-      mailbox: true,
+      controlledByMemberId: members[0]!,
     })
+    const before = await prisma.session.count({ where: { triggerId: rule.id } })
+    const got = await deliver(
+      {
+        ...rule,
+        teammate: await prisma.teammate.findUniqueOrThrow({ where: { id: riley.id } }),
+        connection: await prisma.connection.findUniqueOrThrow({
+          where: { id: address.connectionId! },
+        }),
+      },
+      {
+        eventId: `evt-${randomUUID()}`,
+        eventType: 'email',
+        title: 'Re: help',
+        text: 'The customer answered',
+        conversationKey: 'conv-held',
+        mailbox: true,
+      },
+    )
     assert.deepEqual(got, { ok: true, threadId: held.id, paused: true })
     assert.equal(await prisma.session.count({ where: { triggerId: rule.id } }), before)
-    const waiting = await prisma.wakeup.findFirstOrThrow({ where: { sessionId: held.id, status: 'pending' } })
+    const waiting = await prisma.wakeup.findFirstOrThrow({
+      where: { sessionId: held.id, status: 'pending' },
+    })
     assert.equal(waiting.note, 'The customer answered')
     await prisma.trigger.delete({ where: { id: rule.id } })
   })
@@ -658,15 +880,41 @@ describe('rules on any mailbox', { skip }, () => {
     const db = scoped(a)
     const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
     const rule = await prisma.trigger.create({
-      data: { ...a, connectionId: address.connectionId!, teammateId: riley.id, label: 'Capped', event: 'email_received', options: { perDay: '1' }, createdByMemberId: members[0]! },
+      data: {
+        ...a,
+        connectionId: address.connectionId!,
+        teammateId: riley.id,
+        label: 'Capped',
+        event: 'email_received',
+        options: { perDay: '1' },
+        createdByMemberId: members[0]!,
+      },
     })
     await thread('trigger', { triggerId: rule.id, conversationKey: 'conv-cap-0' })
-    const full = { ...rule, teammate: await prisma.teammate.findUniqueOrThrow({ where: { id: riley.id } }), connection: await prisma.connection.findUniqueOrThrow({ where: { id: address.connectionId! } }) }
+    const full = {
+      ...rule,
+      teammate: await prisma.teammate.findUniqueOrThrow({ where: { id: riley.id } }),
+      connection: await prisma.connection.findUniqueOrThrow({
+        where: { id: address.connectionId! },
+      }),
+    }
     for (let i = 1; i <= 2; i++) {
-      const got = await deliver(full, { eventId: `evt-cap-${i}-${id}`, eventType: 'email', title: 't', text: 't', conversationKey: `conv-cap-${i}`, mailbox: true })
+      const got = await deliver(full, {
+        eventId: `evt-cap-${i}-${id}`,
+        eventType: 'email',
+        title: 't',
+        text: 't',
+        conversationKey: `conv-cap-${i}`,
+        mailbox: true,
+      })
       assert.ok('capped' in got)
     }
-    assert.equal(await prisma.ticket.count({ where: { ...a, payload: { path: ['capOfTriggerId'], equals: rule.id } } }), 1)
+    assert.equal(
+      await prisma.ticket.count({
+        where: { ...a, payload: { path: ['capOfTriggerId'], equals: rule.id } },
+      }),
+      1,
+    )
     await prisma.trigger.delete({ where: { id: rule.id } })
   })
 })

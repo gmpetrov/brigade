@@ -6,14 +6,7 @@ import { appFor } from '../apps.js'
 import { audit } from '../audit.js'
 import { prisma, type Scope, type ScopedDb } from '../db.js'
 import type { WorkspaceScope } from '../scope.js'
-import {
-  addressOf,
-  aliasToken,
-  candidates,
-  nameProblem,
-  partsOf,
-  slugOf,
-} from './names.js'
+import { addressOf, aliasToken, candidates, nameProblem, partsOf, slugOf } from './names.js'
 
 export type Box = {
   address: {

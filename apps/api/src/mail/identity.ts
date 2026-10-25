@@ -8,7 +8,8 @@ import { bareAddress, localOn } from './names.js'
 export type Authentication = { spf?: string; dkim?: string; dmarc?: string } | null | undefined
 
 /** The receiving server proved the From domain: an aligned DKIM signature, or DMARC. */
-export const authenticated = (auth: Authentication) => auth?.dkim === 'pass' || auth?.dmarc === 'pass'
+export const authenticated = (auth: Authentication) =>
+  auth?.dkim === 'pass' || auth?.dmarc === 'pass'
 
 /**
  * Gmail's own Authentication-Results header ("dkim=pass header.i=@acme.com; … dmarc=pass"),
@@ -17,8 +18,11 @@ export const authenticated = (auth: Authentication) => auth?.dkim === 'pass' || 
 export function gmailAuthentication(header: string | undefined, from: string): Authentication {
   if (!header) return null
   const domain = bareAddress(from).split('@')[1] ?? ''
-  const result = (name: string) => header.match(new RegExp(`\\b${name}=(\\w+)`, 'i'))?.[1]?.toLowerCase()
-  const dkimDomain = header.match(/\bdkim=pass[^;]*header\.(?:i|d)=@?([^\s;]+)/i)?.[1]?.toLowerCase()
+  const result = (name: string) =>
+    header.match(new RegExp(`\\b${name}=(\\w+)`, 'i'))?.[1]?.toLowerCase()
+  const dkimDomain = header
+    .match(/\bdkim=pass[^;]*header\.(?:i|d)=@?([^\s;]+)/i)?.[1]
+    ?.toLowerCase()
   const aligned = !!dkimDomain && (dkimDomain === domain || domain.endsWith(`.${dkimDomain}`))
   return {
     spf: result('spf'),
@@ -48,9 +52,13 @@ export async function senderOf(
   auth: Authentication,
 ): Promise<Sender> {
   const address = bareAddress(from)
-  if (localOn(address)) return { kind: 'brigade', line: `${address}, one of Brigade's own addresses` }
+  if (localOn(address))
+    return { kind: 'brigade', line: `${address}, one of Brigade's own addresses` }
   const member = await prisma.member.findFirst({
-    where: { organizationId: scope.organizationId, user: { email: { equals: address, mode: 'insensitive' } } },
+    where: {
+      organizationId: scope.organizationId,
+      user: { email: { equals: address, mode: 'insensitive' } },
+    },
     include: { user: { select: { name: true } } },
   })
   if (member && authenticated(auth))
@@ -62,7 +70,10 @@ export async function senderOf(
     }
   const handle = await db.contactHandle.findFirst({ where: { kind: 'email', value: address } })
   if (handle) {
-    await db.contactHandle.updateMany({ where: { id: handle.id }, data: { lastSeenAt: new Date() } })
+    await db.contactHandle.updateMany({
+      where: { id: handle.id },
+      data: { lastSeenAt: new Date() },
+    })
     return {
       kind: 'contact',
       contactId: handle.contactId,
@@ -91,11 +102,15 @@ export async function contactFor(db: ScopedDb, address: string, name = '') {
   if (handle) return handle.contactId
   const contact = await db.contact.create({ data: { name: name.slice(0, 200) } as never })
   try {
-    await db.contactHandle.create({ data: { contactId: contact.id, kind: 'email', value } as never })
+    await db.contactHandle.create({
+      data: { contactId: contact.id, kind: 'email', value } as never,
+    })
     return contact.id
   } catch {
     await db.contact.deleteMany({ where: { id: contact.id } })
-    return (await db.contactHandle.findFirst({ where: { kind: 'email', value } }))?.contactId ?? null
+    return (
+      (await db.contactHandle.findFirst({ where: { kind: 'email', value } }))?.contactId ?? null
+    )
   }
 }
 
@@ -115,6 +130,9 @@ export async function historyOf(db: ScopedDb, contactId: string | undefined, exc
   })
   if (!earlier.length) return ''
   return `Earlier threads with them: ${earlier
-    .map((m) => `"${m.subject || '(no subject)'}" (thread ${m.sessionId}, ${m.receivedAt.toISOString().slice(0, 10)})`)
+    .map(
+      (m) =>
+        `"${m.subject || '(no subject)'}" (thread ${m.sessionId}, ${m.receivedAt.toISOString().slice(0, 10)})`,
+    )
     .join('; ')}.`
 }

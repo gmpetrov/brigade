@@ -25,7 +25,8 @@ const ENTITIES: Record<string, string> = {
 export function decodeEntities(text: string) {
   return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, code: string) => {
     if (code[0] === '#') {
-      const n = code[1] === 'x' || code[1] === 'X' ? parseInt(code.slice(2), 16) : Number(code.slice(1))
+      const n =
+        code[1] === 'x' || code[1] === 'X' ? parseInt(code.slice(2), 16) : Number(code.slice(1))
       return Number.isFinite(n) && n > 0 && n < 0x110000 ? String.fromCodePoint(n) : whole
     }
     return ENTITIES[code.toLowerCase()] ?? whole
@@ -38,16 +39,19 @@ export function htmlToText(html: string | null | undefined) {
   const text = html
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<(style|script|head|title)[^>]*>[\s\S]*?<\/\1>/gi, '')
-    .replace(/<a\b[^>]*?href\s*=\s*("([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a>/gi, (_, __, dq, sq, inner) => {
-      const href = decodeEntities(String(dq ?? sq ?? '')).trim()
-      const label = String(inner)
-        .replace(/<[^>]+>/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-      if (!href || /^(mailto:|#)/i.test(href)) return label
-      // In parentheses: angle brackets would read as a tag below.
-      return label && decodeEntities(label) !== href ? `${label} (${href})` : href
-    })
+    .replace(
+      /<a\b[^>]*?href\s*=\s*("([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a>/gi,
+      (_, __, dq, sq, inner) => {
+        const href = decodeEntities(String(dq ?? sq ?? '')).trim()
+        const label = String(inner)
+          .replace(/<[^>]+>/g, '')
+          .replace(/\s+/g, ' ')
+          .trim()
+        if (!href || /^(mailto:|#)/i.test(href)) return label
+        // In parentheses: angle brackets would read as a tag below.
+        return label && decodeEntities(label) !== href ? `${label} (${href})` : href
+      },
+    )
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li|tr|h[1-6]|blockquote|section|table)>/gi, '\n')
     .replace(/<li\b[^>]*>/gi, '- ')
@@ -66,7 +70,10 @@ export function messageIds(value: string | string[] | undefined | null) {
 }
 
 /** A header's value from Resend's headers object, whatever its case; several values joined. */
-export function headerOf(headers: Record<string, string | string[]> | null | undefined, name: string) {
+export function headerOf(
+  headers: Record<string, string | string[]> | null | undefined,
+  name: string,
+) {
   if (!headers) return undefined
   const key = Object.keys(headers).find((k) => k.toLowerCase() === name)
   if (!key) return undefined

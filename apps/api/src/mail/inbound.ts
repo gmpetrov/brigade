@@ -6,7 +6,14 @@
 //   4. the address's rules, in their order: the first that matches takes it;
 //   5. else its box, read on demand, for 30 days.
 // Each step's outcome stays on the message (route), which is the address's journal.
-import { WAKEUPS_IN_A_ROW, mailbox, splitQuoted, triggerEventText } from '@brigade/contracts'
+import {
+  AWAITED_EMAIL,
+  EMAIL_IN_CONVERSATION,
+  WAKEUPS_IN_A_ROW,
+  mailbox,
+  splitQuoted,
+  triggerEventText,
+} from '@brigade/contracts'
 import { audit } from '../audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
 import { serially } from '../subscriptions/common.js'
@@ -74,7 +81,12 @@ type ReceivedEvent = {
 export async function received(event: ReceivedEvent) {
   const recipients = [
     ...new Set(
-      [...(event.to ?? []), ...(event.cc ?? []), ...(event.bcc ?? []), ...(event.received_for ?? [])]
+      [
+        ...(event.to ?? []),
+        ...(event.cc ?? []),
+        ...(event.bcc ?? []),
+        ...(event.received_for ?? []),
+      ]
         .map((a) => localOn(a))
         .filter((l): l is string => !!l),
     ),
@@ -152,7 +164,12 @@ export const processMail = (id: string) =>
         },
       })
       // Someone whose mail went to a thread is a contact from now on.
-      if (outcome.sessionId && read.sender !== 'member' && read.sender !== 'brigade' && !read.contactId) {
+      if (
+        outcome.sessionId &&
+        read.sender !== 'member' &&
+        read.sender !== 'brigade' &&
+        !read.contactId
+      ) {
         const contactId = await contactFor(db, read.fromAddress, read.fromName)
         if (contactId)
           await db.mailMessage.updateMany({ where: { id: row.id }, data: { contactId } })
@@ -197,7 +214,8 @@ async function readMail(db: ScopedDb, scope: Scope, row: Row): Promise<Row> {
     filename: a.filename,
     contentType: a.content_type,
     size: a.size ?? 0,
-    ...(a.content_disposition === 'inline' || (a.content_id && a.content_disposition !== 'attachment')
+    ...(a.content_disposition === 'inline' ||
+    (a.content_id && a.content_disposition !== 'attachment')
       ? { inline: true }
       : {}),
   }))
@@ -240,7 +258,9 @@ async function conversationOf(db: ScopedDb, row: Row, ids: (string | null)[]) {
       select: { messageId: true, conversationId: true },
     })
     for (const id of [wanted[0]!, ...wanted.slice(1).reverse()]) {
-      const match = earlier.find((m) => m.messageId === id && !m.conversationId.startsWith('pending:'))
+      const match = earlier.find(
+        (m) => m.messageId === id && !m.conversationId.startsWith('pending:'),
+      )
       if (match) return match.conversationId
     }
   }
@@ -317,7 +337,10 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
       target: { type: 'mail_message', id: row.id },
       data: { conversationId: row.conversationId, recent },
     })
-    return { route: 'loop', note: `${recent} mails of this conversation went to threads within the hour` }
+    return {
+      route: 'loop',
+      note: `${recent} mails of this conversation went to threads within the hour`,
+    }
   }
 
   const bounce = bounceOf(row.fromAddress, row.headers as Record<string, string>)
@@ -331,11 +354,25 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
   // 1. A reply to mail a thread sent from this address.
   if (connection) {
     const watches = await db.replyWatch.findMany({
-      where: { connectionId: connection.id, conversationKey: row.conversationId, until: { gt: now } },
+      where: {
+        connectionId: connection.id,
+        conversationKey: row.conversationId,
+        until: { gt: now },
+      },
     })
     for (const watch of watches) {
       if (row.automatic && !bounce) break
-      if (await handTo(db, scope, watch.sessionId, row, sender, bounce ? 'bounce' : 'reply', watch.teammateId))
+      if (
+        await handTo(
+          db,
+          scope,
+          watch.sessionId,
+          row,
+          sender,
+          bounce ? 'bounce' : 'reply',
+          watch.teammateId,
+        )
+      )
         return { route: bounce ? 'bounce' : 'awaited', sessionId: watch.sessionId }
     }
   }
@@ -380,8 +417,10 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
       history: await historyOf(db, row.contactId ?? undefined, row.conversationId),
     }
     const delivered = await dispatch(connection, { id: row.id, type: 'email', payload })
-    if (delivered.threadId) return { route: 'rule', sessionId: delivered.threadId, triggerId: delivered.triggerId }
-    if (delivered.capped) return { route: 'cap', note: delivered.capped, triggerId: delivered.triggerId }
+    if (delivered.threadId)
+      return { route: 'rule', sessionId: delivered.threadId, triggerId: delivered.triggerId }
+    if (delivered.capped)
+      return { route: 'cap', note: delivered.capped, triggerId: delivered.triggerId }
     if (delivered.failed) throw new Error('A rule could not start its thread yet')
   }
 
@@ -413,7 +452,10 @@ export async function mailPayload(db: ScopedDb, row: Row, sender?: Sender) {
     projectId: row.projectId ?? row.address.projectId ?? null,
     attachments: row.attachments,
     automatic: row.automatic,
-    sender: { kind: sender?.kind ?? row.sender ?? 'unknown', line: sender?.line ?? `<${row.fromAddress}>` },
+    sender: {
+      kind: sender?.kind ?? row.sender ?? 'unknown',
+      line: sender?.line ?? `<${row.fromAddress}>`,
+    },
     ...(row.authentication ? { authentication: row.authentication } : {}),
   }
 }
@@ -430,7 +472,9 @@ const HOW_TO_READ =
 
 /** The few lines a thread reads above the raw email. */
 async function summaryOf(db: ScopedDb, row: Row, sender: Sender, kind: string) {
-  const files = (row.attachments as { filename: string; inline?: boolean }[]).filter((a) => !a.inline)
+  const files = (row.attachments as { filename: string; inline?: boolean }[]).filter(
+    (a) => !a.inline,
+  )
   return [
     kind === 'awaited'
       ? `An email came to ${row.alias?.local ?? 'the address'} you made for "${row.alias?.purpose || 'a sign-up'}".`
@@ -441,7 +485,9 @@ async function summaryOf(db: ScopedDb, row: Row, sender: Sender, kind: string) {
           : 'A new email came in the conversation this thread is handling.',
     `From: ${sender.line}.`,
     await historyOf(db, row.contactId ?? undefined, row.conversationId),
-    files.length ? `It has ${files.length} file${files.length > 1 ? 's' : ''}: ${files.map((f) => f.filename).join(', ')} (email_read_attachment).` : '',
+    files.length
+      ? `It has ${files.length} file${files.length > 1 ? 's' : ''}: ${files.map((f) => f.filename).join(', ')} (email_read_attachment).`
+      : '',
     HOW_TO_READ,
   ]
     .filter(Boolean)
@@ -488,7 +534,7 @@ async function handTo(
   const payload = await mailPayload(db, row, sender)
   const note = triggerEventText({
     summary: await summaryOf(db, row, sender, kind),
-    trigger: kind === 'conversation' ? 'Email in this conversation' : AWAITED_EMAIL,
+    trigger: kind === 'conversation' ? EMAIL_IN_CONVERSATION : AWAITED_EMAIL,
     definition:
       kind === 'awaited'
         ? 'Email on an address made in this thread'
@@ -520,9 +566,6 @@ async function handTo(
   }
   return true
 }
-
-/** The trigger name of mail a thread waits on (a sign-up address, a reply), like Gmail's AWAITED_REPLY. */
-export const AWAITED_EMAIL = 'Awaited email'
 
 /**
  * A member's mail to an agent: their message in a thread with that agent, as if typed in the

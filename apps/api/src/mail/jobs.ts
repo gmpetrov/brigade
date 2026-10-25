@@ -16,15 +16,22 @@ async function tick() {
   ticking = true
   try {
     const due = await prisma.mailMessage.findMany({
-      where: { direction: 'in', status: 'pending', updatedAt: { lt: new Date(Date.now() - RETRY_AFTER_MS) } },
+      where: {
+        direction: 'in',
+        status: 'pending',
+        updatedAt: { lt: new Date(Date.now() - RETRY_AFTER_MS) },
+      },
       orderBy: { createdAt: 'asc' },
       take: 20,
       select: { id: true, attempts: true, updatedAt: true },
     })
     for (const row of due) {
       // Each try waits longer: 1, 2, 4… minutes.
-      if (Date.now() - row.updatedAt.getTime() < RETRY_AFTER_MS * 2 ** Math.min(row.attempts, 6)) continue
-      await processMail(row.id).catch((error) => console.warn(`mail ${row.id}: still not delivered`, error))
+      if (Date.now() - row.updatedAt.getTime() < RETRY_AFTER_MS * 2 ** Math.min(row.attempts, 6))
+        continue
+      await processMail(row.id).catch((error) =>
+        console.warn(`mail ${row.id}: still not delivered`, error),
+      )
     }
     await fillMessageIds()
     await checkDomains()
@@ -42,8 +49,14 @@ export async function sweepMail(now = new Date()) {
 }
 
 export function watchMail() {
-  setTimeout(() => void tick().catch((error) => console.warn(`mail tick failed: ${String(error)}`)), 15_000)
-  setInterval(() => void tick().catch((error) => console.warn(`mail tick failed: ${String(error)}`)), 60_000)
+  setTimeout(
+    () => void tick().catch((error) => console.warn(`mail tick failed: ${String(error)}`)),
+    15_000,
+  )
+  setInterval(
+    () => void tick().catch((error) => console.warn(`mail tick failed: ${String(error)}`)),
+    60_000,
+  )
   setInterval(
     () => void sweepMail().catch((error) => console.warn(`mail sweep failed: ${String(error)}`)),
     60 * 60_000,

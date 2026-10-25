@@ -128,14 +128,21 @@ export async function createTrigger(
   let projectId = (await usableProject(db, input.projectId)) ?? null
   if (connection.kind === 'email') {
     const address = await db.mailAddress.findFirst({ where: { connectionId: connection.id } })
-    if (!address || address.releasedAt) throw new HTTPException(404, { message: 'This address is turned off' })
+    if (!address || address.releasedAt)
+      throw new HTTPException(404, { message: 'This address is turned off' })
     if (address.kind === 'agent' && address.teammateId !== teammate.id)
       throw new HTTPException(400, { message: `Only ${connection.label} answers its own address` })
     if (address.kind === 'inbox') {
       projectId = address.projectId
-      if (!(await db.grant.count({ where: { teammateId: teammate.id, connectionId: connection.id } })))
+      if (
+        !(await db.grant.count({ where: { teammateId: teammate.id, connectionId: connection.id } }))
+      )
         await db.grant.create({
-          data: { teammateId: teammate.id, connectionId: connection.id, scope: 'read_write' } as never,
+          data: {
+            teammateId: teammate.id,
+            connectionId: connection.id,
+            scope: 'read_write',
+          } as never,
         })
     }
   }

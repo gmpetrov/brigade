@@ -4,7 +4,9 @@
 // sent from the thread, and one a teammate asks to send (an approval's arguments). The raw
 // event or arguments fold under Details.
 import {
+  AWAITED_EMAIL,
   AWAITED_REPLY,
+  EMAIL_IN_CONVERSATION,
   mailbox,
   splitQuoted,
   type MessageAttachment,
@@ -15,7 +17,10 @@ import { ChevronRight, Reply, Zap } from 'lucide-react'
 import { Fragment, useState, type ReactNode } from 'react'
 import { MessageAttachments } from '@/components/attachments'
 import { ProviderLogo } from '@/components/provider-logo'
+import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
 const json = (value: unknown) =>
@@ -141,17 +146,22 @@ export function ReceivedEmailCard({
 }) {
   const from = mailbox(email.from)
   const at = when(email.date, event.received)
-  // A reply to an email sent from this thread, rather than a trigger's event.
-  const awaited = event.trigger === AWAITED_REPLY
+  // Mail the thread waited on (a reply to its email, a sign-up's code) or in a conversation it
+  // handles, rather than a trigger's event.
+  const awaited = [AWAITED_REPLY, AWAITED_EMAIL, EMAIL_IN_CONVERSATION].includes(event.trigger)
   const labels = email.labels.map((l) => LABELS[l]).filter(Boolean)
+  const payload = (event.payload ?? {}) as { provider?: string; sender?: { kind?: string } }
+  const sender = SENDERS[payload.sender?.kind ?? '']
   return (
     <article className="min-w-0 overflow-hidden rounded-xl border bg-card text-sm shadow-xs">
       <div className="flex items-center gap-2 border-b px-4 py-2 text-xs text-muted-foreground">
-        <ProviderLogo kind="gmail" className="size-4" />
+        <ProviderLogo kind={payload.provider === 'email' ? 'email' : 'gmail'} className="size-4" />
         {awaited ? (
           <>
             <span className="min-w-0 flex-1 truncate">
-              Reply to the email sent from this thread
+              {event.trigger === AWAITED_REPLY
+                ? 'Reply to the email sent from this thread'
+                : event.definition}
             </span>
             <Reply aria-hidden className="size-3.5 flex-none" />
           </>
@@ -213,6 +223,7 @@ export function ReceivedEmailCard({
               ? ['Mailbox', event.source]
               : ['Trigger', `${event.trigger} · ${event.definition} on ${event.source}`],
             ['Received', event.received, true],
+            ...(sender ? [['Sender', sender] as [string, string]] : []),
             ...(labels.length ? [['Labels', labels.join(' · ')] as [string, string]] : []),
             ...(email.id ? [['Message id', email.id, true] as [string, string, boolean]] : []),
             ...(email.threadId
@@ -224,6 +235,14 @@ export function ReceivedEmailCard({
       </Details>
     </article>
   )
+}
+
+/** Who wrote a mail to Brigade's own addresses, as the card says it. */
+const SENDERS: Record<string, string> = {
+  member: 'A member of this workspace (verified by the mail server)',
+  contact: 'A known contact',
+  unknown: 'Someone this workspace has not exchanged mail with',
+  brigade: 'One of Brigade’s own addresses',
 }
 
 const strings = (value: unknown) =>
@@ -255,7 +274,10 @@ export function emailDraft(input: unknown): EmailDraft | null {
     cc: strings(i.cc),
     subject: i.subject,
     body,
-    replying: typeof i.replyToMessageId === 'string' || typeof i.inReplyTo === 'string',
+    replying:
+      typeof i.replyToMessageId === 'string' ||
+      typeof i.inReplyTo === 'string' ||
+      typeof i.replyTo === 'string',
     files: strings(i.attachments).map((path) => path.split('/').pop() ?? path),
   }
 }
@@ -307,6 +329,117 @@ export function EmailDraftView({
     </div>
   )
 }
+
+/** What a person changed in an email's draft before approving it (the Email App's email_send). */
+export type EditedEmail = { to: string[]; cc?: string[]; subject: string; text: string }
+
+const list = (value: string) =>
+  value
+    .split(/[,;\s]+/)
+    .map((a) => a.trim())
+    .filter(Boolean)
+
+/** An email's draft, changed in place before it is approved: recipients, subject and words. */
+export function EmailDraftEditor({
+  draft,
+  onCancel,
+  onSend,
+}: {
+  draft: EmailDraft
+  onCancel: () => void
+  onSend: (edited: EditedEmail) => void
+}) {
+  const [to, setTo] = useState(draft.to.join(', '))
+  const [cc, setCc] = useState(draft.cc.join(', '))
+  const [subject, setSubject] = useState(draft.subject)
+  const [body, setBody] = useState(draft.body)
+  const recipients = list(to)
+  const row = (label: string, value: string, set: (v: string) => void) => (
+    <label className="flex items-center gap-2">
+      <span className="w-14 shrink-0 text-muted-foreground">{label}</span>
+      <Input
+        value={value}
+        onChange={(e) => set(e.target.value)}
+        aria-label={label}
+        className="h-8"
+      />
+    </label>
+  )
+  return (
+    <form
+      className="flex min-w-0 flex-col gap-2 rounded-lg border bg-background px-3.5 py-3 text-sm"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!recipients.length || !body.trim()) return
+        onSend({
+          to: recipients,
+          ...(list(cc).length ? { cc: list(cc) } : {}),
+          subject,
+          text: body,
+        })
+      }}
+    >
+      {row('To', to, setTo)}
+      {row('Cc', cc, setCc)}
+      {row('Subject', subject, setSubject)}
+      <Textarea
+        className="min-h-40 leading-relaxed"
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        aria-label="Email"
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="sm" disabled={!recipients.length || !body.trim()}>
+          Allow with these changes
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+/**
+ * An email waiting for approval, which the person may change before it goes: the draft, with
+ * "Edit" opening it in place; approving the changes is approving the email.
+ */
+export function EditableEmailPreview({
+  input,
+  onAllow,
+}: {
+  input: unknown
+  onAllow: (edited: EditedEmail) => void
+}) {
+  const draft = emailDraft(input)
+  const [editing, setEditing] = useState(false)
+  if (!draft) return <ToolInputPreview input={input} />
+  if (editing)
+    return (
+      <EmailDraftEditor
+        draft={draft}
+        onCancel={() => setEditing(false)}
+        onSend={(edited) => {
+          setEditing(false)
+          onAllow(edited)
+        }}
+      />
+    )
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <EmailDraftView draft={draft} />
+      <div>
+        <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+          Edit before allowing
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/** The Email App's send, whatever its name carries (email_send, or email_send_<account>). */
+export const isEmailSend = (toolName: string) =>
+  /^email_send(_|$)/.test(toolName.replace(/^mcp__.+?__/, ''))
 
 /** Any other tool's arguments: one per line, text with its line breaks, an amount first. */
 export function ToolArguments({ input, className }: { input: unknown; className?: string }) {
