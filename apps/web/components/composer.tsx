@@ -694,6 +694,18 @@ export function Composer({
             new Plugin({
               key: new PluginKey('suggestion'),
               props: {
+                // A click on the grey words would put the caret in them, where nothing can be
+                // written; it goes before them, so typing writes over the suggestion.
+                handleDOMEvents: {
+                  mousedown: (view, event) => {
+                    if (!latest.current.suggestion || !editor.isEditable) return false
+                    if (!blank(view.state) || event.button !== 0) return false
+                    if ((event.target as Element | null)?.closest('button')) return false
+                    event.preventDefault()
+                    editor.commands.focus('start')
+                    return true
+                  },
+                },
                 decorations: (state) => {
                   const suggested = latest.current.suggestion
                   if (!suggested || !editor.isEditable || !blank(state)) return null
