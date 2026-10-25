@@ -48,7 +48,7 @@ const VIDEO = /^video\/(mp4|webm|quicktime)$/
 export type Media = { name: string; src: string; kind: 'image' | 'video' }
 
 /** How a file of this type shows over the page, if it does. */
-const mediaKind = (contentType: string) =>
+export const mediaKind = (contentType: string) =>
   IMAGE.test(contentType) ? 'image' : VIDEO.test(contentType) ? 'video' : undefined
 
 export function fileSize(bytes: number) {
@@ -467,7 +467,7 @@ export function UploadList({
 }
 
 /** An image or a video's first frame, filling its tile; a video has a play mark. */
-function Thumbnail({
+export function Thumbnail({
   src,
   kind,
   small = false,
@@ -504,7 +504,16 @@ function Thumbnail({
 }
 
 /** An image or a video at full size over the page; Esc, a click outside or × closes it. */
-export function MediaPreview({ media, onClose }: { media?: Media; onClose: () => void }) {
+export function MediaPreview({
+  media,
+  onClose,
+  unavailable = 'This image can’t be shown: it is no longer on the computer, or outside the teammate’s folder.',
+}: {
+  media?: Media
+  onClose: () => void
+  /** Why an image that does not load is missing. */
+  unavailable?: string
+}) {
   // The src that failed to load: a file gone from the computer, or one it does not show.
   const [failed, setFailed] = useState<string>()
   return (
@@ -529,8 +538,7 @@ export function MediaPreview({ media, onClose }: { media?: Media; onClose: () =>
           (failed === media.src ? (
             <p className="flex items-center gap-2 py-6 pr-14 pl-6 text-sm text-muted-foreground">
               <Ban aria-hidden className="size-4 shrink-0" />
-              This image can’t be shown: it is no longer on the computer, or outside the teammate’s
-              folder.
+              {unavailable}
             </p>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
