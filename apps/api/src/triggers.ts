@@ -78,7 +78,10 @@ export async function deliver(
     })
     if (seen) {
       const { threadId, outcome } = (seen.data ?? {}) as { threadId?: string; outcome?: string }
-      return { duplicate: true, ...(threadId && outcome !== 'loop' ? { threadId } : {}) }
+      // Unless that thread is gone since (deleted): then it went nowhere that still is.
+      const went =
+        threadId && outcome !== 'loop' && (await db.session.count({ where: { id: threadId } }))
+      return { duplicate: true, ...(went ? { threadId } : {}) }
     }
   }
 

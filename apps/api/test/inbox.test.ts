@@ -707,3 +707,148 @@ describe('a hand-over again, pages and the reader’s retries', { skip }, () => 
     )
   })
 })
+
+describe('hand-overs at once, and a thread deleted since', { skip }, () => {
+  test('overlapping Gmail handovers retain one live recipient', async () => {
+    const db = scoped(scope)
+    const connection = await db.connection.findFirstOrThrow({ where: { id: gmailShared } })
+    const { keepGmail } = await import('../src/mail/gmail-inbox.js')
+    await keepGmail(
+      connection,
+      {
+        id: `concurrent-review-${id}`,
+        threadId: `concurrent-review-conv-${id}`,
+        from: 'Client <client@outside.test>',
+        to: connection.externalAccount ?? '',
+        subject: 'Concurrent handover',
+        date: new Date().toUTCString(),
+        snippet: 'Help',
+        labels: ['INBOX'],
+        cc: undefined,
+        body: 'Help',
+        attachments: [],
+        automatic: false,
+      },
+      { route: 'box' },
+    )
+    const m = await db.mailMessage.findFirstOrThrow({
+      where: { connectionId: gmailShared, sourceId: `concurrent-review-${id}` },
+    })
+    globalThis.fetch = (async () => json({ historyId: '100' })) as typeof fetch
+    let created = 0
+    let release!: () => void
+    const bothCreated = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    // Exercise the valid overlap where both INSERTs finish before either retirement UPDATE.
+    const watches = new Proxy(db.replyWatch, {
+      get(target, property) {
+        if (property === 'create')
+          return async (args: Parameters<typeof db.replyWatch.create>[0]) => {
+            const result = await target.create(args)
+            if (++created === 2) release()
+            await bothCreated
+            return result
+          }
+        const value = Reflect.get(target, property)
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+    })
+    const racingDb = new Proxy(db, {
+      get(target, property) {
+        return property === 'replyWatch' ? watches : Reflect.get(target, property)
+      },
+    })
+    const results = await Promise.all([
+      inbox.handItem(racingDb, as(0), `mail:${m.id}`, { teammateId: cody.id }),
+      inbox.handItem(racingDb, as(0), `mail:${m.id}`, { teammateId: cody.id }),
+    ])
+    assert.equal(results.length, 2)
+    const active = await db.replyWatch.findMany({
+      where: {
+        connectionId: gmailShared,
+        conversationKey: m.conversationId,
+        until: { gt: new Date() },
+      },
+    })
+    assert.equal(
+      active.length,
+      1,
+      'both successful handovers ended each other’s new watch, leaving no recipient',
+    )
+  })
+
+  test('retry after the recorded thread was deleted does not block the Gmail reader', async () => {
+    const db = scoped(scope)
+    const connection = await db.connection.findFirstOrThrow({ where: { id: gmailShared } })
+    const { dispatch } = await import('../src/triggers.js')
+    const payload = {
+      id: `deleted-review-${id}`,
+      threadId: `deleted-review-conv-${id}`,
+      from: 'Client <client@outside.test>',
+      to: connection.externalAccount ?? '',
+      subject: 'Deleted support thread',
+      date: new Date().toUTCString(),
+      snippet: 'Help',
+      labels: ['INBOX'],
+      cc: undefined,
+      body: 'Help',
+      attachments: [],
+      automatic: false,
+    }
+    const delivery = await dispatch(connection, { id: payload.id, type: 'email', payload })
+    assert.ok(delivery.threadId, JSON.stringify(delivery))
+    // The first message succeeded; a later failure kept the reader's cursor behind it.
+    // A person deletes that delivered thread before the reader retries.
+    await db.session.delete({ where: { id: delivery.threadId } })
+    assert.equal(
+      await db.auditEntry.count({
+        where: { action: 'trigger.received', data: { path: ['eventId'], equals: payload.id } },
+      }),
+      1,
+    )
+    const sub = await db.subscription.findFirstOrThrow({ where: { connectionId: gmailShared } })
+    await db.subscription.updateMany({ where: { id: sub.id }, data: { cursor: '100' } })
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = new URL(
+        typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+      )
+      if (url.pathname.endsWith('/history'))
+        return json({
+          historyId: '200',
+          history: [
+            {
+              id: '200',
+              messagesAdded: [
+                { message: { id: payload.id, threadId: payload.threadId, labelIds: ['INBOX'] } },
+              ],
+            },
+          ],
+        })
+      if (url.pathname.endsWith(`/messages/${payload.id}`))
+        return json({
+          id: payload.id,
+          threadId: payload.threadId,
+          labelIds: ['INBOX'],
+          payload: {
+            mimeType: 'text/plain',
+            headers: [
+              { name: 'From', value: payload.from },
+              { name: 'To', value: payload.to },
+              { name: 'Subject', value: payload.subject },
+              { name: 'Date', value: payload.date },
+            ],
+            body: { data: Buffer.from(payload.body).toString('base64url') },
+          },
+        })
+      return json({ historyId: '100' })
+    }) as typeof fetch
+    const { readInbox } = await import('../src/subscriptions/gmail.js')
+    await assert.doesNotReject(
+      readInbox(sub.id),
+      'an audited id for a deleted thread must not poison the inbox cursor',
+    )
+    const after = await db.subscription.findFirstOrThrow({ where: { id: sub.id } })
+    assert.equal(after.cursor, '200')
+  })
+})

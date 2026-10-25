@@ -456,13 +456,16 @@ export async function handItem(
       subject: detail.subject,
     })
     if (watch) {
-      // Its replies wake this thread alone: the threads that had it before let go.
+      // Its replies wake this thread alone: the threads that had it before let go. Only watches
+      // older than this one, so that two hand-overs at once leave one, not none.
       await db.replyWatch.updateMany({
         where: {
           connectionId: m.connectionId,
           conversationKey: m.conversationId,
           sessionId: { not: thread.id },
-          until: { gt: new Date() },
+          until: { gt: new Date(), lte: watch.until },
+          // The same millisecond: the id decides, so exactly one of the two stays.
+          OR: [{ until: { lt: watch.until } }, { id: { lt: watch.id } }],
         },
         data: { until: new Date() },
       })
