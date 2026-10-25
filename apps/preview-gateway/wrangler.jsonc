@@ -1,7 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   // The previews' own site (src/index.ts): <id>.brigade.surf in front of each preview's
-  // address at the provider. Deploy with scripts/deploy/workers.sh deploy preview-gateway.
+  // address at the provider. A Workers Build deploys it on a push to main that changes it
+  // (scripts/deploy/workers.sh deploy preview-gateway, docs/deployment-plan.md).
   "name": "brigade-preview-gateway",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",

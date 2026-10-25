@@ -63,7 +63,7 @@ Cloudflare shipped first, more simply than the phases below:
   - Files go to the R2 bucket `brigade`.
 - **Deploy** happens on each push to `main`. Workers Builds, Cloudflare's GitHub
   integration, runs one build per Worker (`brigade-api`, `brigade-api-front`,
-  `brigade-web`, `brigade-collab`):
+  `brigade-web`, `brigade-collab`, `brigade-web-demo`, `brigade-preview-gateway`):
   - Each runs from the repository root, with Node from `.nvmrc` and `PNPM_VERSION`
     `10.34.6`. It installs, then runs `pnpm run cf:build:<worker>` and
     `pnpm run cf:deploy:<worker>`. Both call `scripts/deploy/workers.sh`.
@@ -71,6 +71,9 @@ Cloudflare shipped first, more simply than the phases below:
     in it the build's Worker name.
   - Watch paths limit each build to the files it is built from.
   - The API's deploy migrates the database first, with the `DATABASE_URL` build secret.
+  - The previews gateway's (`brigade-preview-gateway`, brigade.surf) applies its D1
+    migrations first. It builds only when `apps/preview-gateway` (its tests aside), the
+    root package files, `patches` or `scripts/deploy` change.
   - A deploy keeps the secrets a Worker has, and no file in the repository holds them:
     - `brigade-api` reads all its settings from secrets.
       `pnpm --filter @brigade/api exec wrangler secret list` names them. Billing's
