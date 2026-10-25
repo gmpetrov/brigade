@@ -2,7 +2,7 @@
 # Brigade's images for a server with Docker (deploy/vps): the API, the dashboard and
 # collab, built from the repository root:
 #   docker buildx bake -f deploy/vps/docker-bake.hcl
-ARG NODE=node:22.22.0-bookworm-slim
+ARG NODE=node:24.22.1-bookworm-slim
 
 FROM ${NODE} AS deps
 RUN npm install --global pnpm@10.34.6

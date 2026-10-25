@@ -111,3 +111,14 @@ export const HEARTBEAT_PROTOCOL = 19
 export const LIBRARY_VIEWS_PROTOCOL = 13
 /** The API rejects runners below this protocol version. */
 export const MIN_PROTOCOL_VERSION = 1
+/**
+ * The Node.js runners run on (the latest LTS, with its security fixes): the installer puts it in
+ * place wherever the computer's own Node.js is older, and an updating runner moves onto it.
+ */
+export const NODE_VERSION = 'v24.22.1'
+/** Whether Node.js `version` (as in process.version) is at least `min`. */
+export function nodeAtLeast(version: string, min = NODE_VERSION) {
+  const [a, b] = [version, min].map((v) => v.replace(/^v/, '').split('.').map(Number))
+  for (let i = 0; i < 3; i++) if (a![i] !== b![i]) return (a![i] ?? 0) > (b![i] ?? 0)
+  return true
+}

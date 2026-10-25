@@ -14,7 +14,7 @@ This block is written and re-added by `turbo` before repository-scoped commands 
 To run Brigade for someone to try (a Brigade preview), or locally without Docker:
 
 ```bash
-scripts/preview/setup.sh   # once, and again after pulling: Node 22, dependencies, builds, apps/api/.env, database, dev accounts
+scripts/preview/setup.sh   # once, and again after pulling: Node 24, dependencies, builds, apps/api/.env, database, dev accounts
 scripts/preview/start.sh   # PostgreSQL, the API and the dashboard at one address, port 3000
 ```
 

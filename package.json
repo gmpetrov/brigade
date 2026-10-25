@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.34.6",
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "scripts": {
     "build": "turbo run build",
@@ -27,7 +27,7 @@
     "demo:record": "scripts/demo/record.sh"
   },
   "devDependencies": {
-    "@types/node": "22.20.5",
+    "@types/node": "24.19.2",
     "prettier": "3.9.10",
     "turbo": "2.11.8",
     "typescript": "7.0.2"
