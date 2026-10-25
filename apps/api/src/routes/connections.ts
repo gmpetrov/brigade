@@ -725,9 +725,20 @@ export const connections = new Hono<AppEnv>()
     if (!connection) throw new HTTPException(404, { message: 'Connection not found' })
     requireAccountManager(scope, connection)
     const input = await parseBody(c.req.raw, UpdateConnection)
+    if (input.inbox !== undefined && connection.kind !== 'gmail')
+      throw new HTTPException(400, { message: 'Only a Gmail account goes in the Inbox' })
     await db.connection.updateMany({ where: { id: connection.id }, data: input })
     if (connection.kind === 'webhook' && input.label)
       await db.app.updateMany({ where: { id: connection.appId }, data: { name: input.label } })
+    // Gmail in the Inbox is read for it; out of it, or back to its owner's, it is not.
+    if (
+      connection.kind === 'gmail' &&
+      ((input.reach && input.reach !== connection.reach) ||
+        (input.inbox !== undefined && input.inbox !== connection.inbox))
+    )
+      await syncConnection(scope, connection.id).catch((error) =>
+        console.warn(`inbox: ${connection.id} not resynced`, error),
+      )
     if (input.reach && input.reach !== connection.reach)
       await audit({
         ...scope,

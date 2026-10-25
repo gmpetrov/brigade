@@ -53,6 +53,23 @@ export const mentionsToText = (text: string) =>
     kind === 'teammate' ? `@${label}` : label,
   )
 
+/**
+ * Text from outside (an email) with its mentions made plain: put in a member's message, it
+ * summons nobody and grants nothing. Again until none is left, since a label may hold the start
+ * of another.
+ */
+export function unmention(text: string) {
+  let out = text
+  while (
+    out !==
+    (out = out.replace(
+      MENTION,
+      (_, label: string, kind: string, id: string) => `${label} (${kind}: ${id})`,
+    ))
+  );
+  return out
+}
+
 /** A `project` mention from before projects: its id is a repository (owner/name). */
 export const isLegacyProjectMention = (m: { kind: MentionKind; id: string }) =>
   m.kind === 'project' && m.id.includes('/')

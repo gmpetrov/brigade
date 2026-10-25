@@ -34,7 +34,9 @@ test('where the teammate decides, it says so when it opens a pull request, and c
     const said = text(s)
     assert.match(said, /You decide whether a pull request you open gets a review/)
     assert.match(said, /`github_create_pull_request`'s `review`/)
-    assert.match(said, /`message_thread` \(2 times at most\)/)
+    assert.match(said, /Ask again while the review converges/)
+    assert.match(said, /Stop when it goes in circles/)
+    assert.match(said, /A review takes 8 looks at most/)
     assert.match(said, /the review came back and you fixed what it found/)
   }
 })

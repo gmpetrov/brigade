@@ -1133,6 +1133,10 @@ model Connection {
   /// An App keeps its removed accounts, for their call logs: it is never deleted on its own.
   app               App              @relation(fields: [appId], references: [id], onDelete: NoAction)
   reach             ConnectionReach  @default(workspace)
+  /// Gmail: its mail shows in the Inbox, for everyone in the workspace. Only while it is shared
+  /// (reach workspace), and only when its owner or an admin says so: a shared account may still
+  /// hold someone's personal mail.
+  inbox             Boolean          @default(false)
   kind              ConnectorKind
   label             String
   /// The external account, e.g. the mailbox address. Never a credential.
@@ -1155,6 +1159,8 @@ model Connection {
   attachments       Attachment[]
   /// The Email App: the address this account is (an agent's, or a project's inbox).
   mailAddress       MailAddress?
+  /// Gmail: its mail as the Inbox lists it, kept as the inbox reader reads it.
+  mailMessages      MailMessage[]
 
   @@index([workspaceId])
   @@index([appId])
@@ -2293,76 +2299,94 @@ enum MailSender {
   brigade
 }
 
-/// One email in a Brigade mailbox (an agent's address or a project inbox), received or sent.
-/// Received mail left in its box is kept 30 days; mail a thread took lives and goes with it.
+/// One email in a mailbox the workspace reads: one of Brigade's own addresses (an agent's, a
+/// project's inbox), received or sent, or a shared Gmail account's, received (the Inbox's mail,
+/// kept as Gmail's inbox reader reads it). Received mail left in its box is kept 30 days; mail
+/// a thread took lives and goes with it.
 model MailMessage {
-  id             String        @id @default(cuid())
-  organizationId String
-  workspaceId    String
-  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  addressId      String
-  address        MailAddress   @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  id                 String        @id @default(cuid())
+  organizationId     String
+  workspaceId        String
+  workspace          Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// Brigade's own address it came to or went from. Null for Gmail's mail.
+  addressId          String?
+  address            MailAddress?  @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  /// Gmail's mail: its account. It goes with the account.
+  connectionId       String?
+  connection         Connection?   @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  /// Gmail's mail: Gmail's message id, so a mail read again is kept once.
+  sourceId           String?
   /// The variant: the project of riley.<slug>@. Null: riley@ itself, or a project inbox.
-  projectId      String?
+  projectId          String?
   /// Address and variant ("<addressId>:<projectId or ->"): one copy per box of a mail sent to
-  /// several of Brigade's addresses.
-  box            String
+  /// several of Brigade's addresses. Gmail's: "gmail:<connectionId>".
+  box                String
   /// Received on a sign-up address.
-  aliasId        String?
-  alias          MailAlias?    @relation(fields: [aliasId], references: [id], onDelete: SetNull)
-  direction      MailDirection
-  status         MailStatus
+  aliasId            String?
+  alias              MailAlias?    @relation(fields: [aliasId], references: [id], onDelete: SetNull)
+  direction          MailDirection
+  status             MailStatus
   /// Resend's id for the email, received or sent.
-  resendId       String?
+  resendId           String?
   /// The RFC 5322 Message-ID, for threading. A sent email's comes once Resend reports it.
-  messageId      String?
-  inReplyTo      String?
-  references     String[]      @default([])
+  messageId          String?
+  inReplyTo          String?
+  references         String[]      @default([])
   /// Brigade's id for its conversation: an email answering one of the box's takes its id.
-  conversationId String
-  fromAddress    String
-  fromName       String        @default("")
-  to             String[]      @default([])
-  cc             String[]      @default([])
-  replyTo        String[]      @default([])
-  subject        String        @default("")
+  conversationId     String
+  fromAddress        String
+  fromName           String        @default("")
+  to                 String[]      @default([])
+  cc                 String[]      @default([])
+  replyTo            String[]      @default([])
+  subject            String        @default("")
   /// The plain text, up to 100 000 characters.
-  text           String        @default("")
+  text               String        @default("")
   /// The few headers Brigade reads (auto-submitted, precedence, list-id…), lower-cased.
-  headers        Json          @default("{}")
+  headers            Json          @default("{}")
   /// SPF, DKIM and DMARC as the receiving server computed them.
-  authentication Json?
+  authentication     Json?
   /// Sent by a machine (an out-of-office, a notification).
-  automatic      Boolean       @default(false)
-  sender         MailSender?
-  memberId       String?
-  contactId      String?
-  contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  automatic          Boolean       @default(false)
+  sender             MailSender?
+  memberId           String?
+  contactId          String?
+  contact            Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
   /// Resend's attachments: [{ id, filename, contentType, size, inline }].
-  attachments    Json          @default("[]")
+  attachments        Json          @default("[]")
   /// in: where it went. awaited (a thread waiting on it), conversation (its conversation's
   /// thread), member (a member's request), rule, box, duplicate, loop, cap, own_copy (a reply a
   /// person sent from Gmail), unknown_address. Null until delivered.
-  route          String?
-  routeNote      String?
+  route              String?
+  routeNote          String?
   /// The thread that took it (in) or sent it (out). Deleted with it.
-  sessionId      String?
-  session        Session?      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  triggerId      String?
+  sessionId          String?
+  session            Session?      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  triggerId          String?
   /// out: the teammate that wrote it, and the member who approved or changed it.
-  teammateId     String?
+  teammateId         String?
   approvedByMemberId String?
   /// out: when Resend sends it; it can be cancelled until then.
-  sendAt         DateTime?
-  error          String?
-  attempts       Int           @default(0)
-  receivedAt     DateTime      @default(now())
+  sendAt             DateTime?
+  /// The Inbox: a person marked it done (nothing more to do with it).
+  doneAt             DateTime?
+  doneByMemberId     String?
+  /// The Inbox: the person who handed it to a teammate (its thread is sessionId, route handed).
+  handedByMemberId   String?
+  /// When it was handed over: the newest hand-over holds its conversation.
+  handedAt           DateTime?
+  error              String?
+  attempts           Int           @default(0)
+  receivedAt         DateTime      @default(now())
   /// Left in its box: deleted then.
-  expiresAt      DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  expiresAt          DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   @@unique([resendId, box])
+  @@unique([box, sourceId])
+  /// The Inbox: a workspace's received mail, newest first.
+  @@index([workspaceId, direction, receivedAt])
   @@index([workspaceId, conversationId])
   @@index([workspaceId, messageId])
   @@index([box, receivedAt])

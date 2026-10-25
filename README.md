@@ -277,7 +277,9 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   own addresses on Brigade's mail domain, received and sent through Resend: `riley@`, `riley.<project>@` per project,
   sign-up addresses for one thread, and projects' inboxes that a company's own address is forwarded to. Names are
   unique across Brigade and never given again. Each mail goes to one place: a thread waiting on it, its conversation's
-  thread, a member's request, the address's first matching rule, or its box for 30 days.
+  thread, a member's request, the address's first matching rule, or its box for 30 days. The Inbox (`src/inbox.ts`, `/app/inbox`)
+  lists every mailbox's mail across agents, projects and sources (Brigade's addresses, Gmail), with where each went,
+  and lets a person mark one done or hand it to a teammate.
 - **Projects** (`apps/api/src/projects.ts`, `routes/projects.ts`, design in `docs/projects.md`). A project
   groups a workspace's work: threads, tasks, schedules and triggers carry a `projectId`; it owns a library folder
   and links repositories by `owner/name`. Everything else stays shared. A thread in a project gets its brief,
@@ -590,8 +592,11 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   them; without, it also runs the typecheck and the tests). The reviewer is another teammate that can post on the
   repository, preferably on another model than the author's; with nobody else, the author itself in a fresh
   context. Its verdict (`github_review_pull_request`) is posted on GitHub and kept as a `PullRequestReview`; its
-  report wakes the author, which fixes what it rightly found and may ask it to look again (`message_thread`, twice
-  at most). The pull request waits on a person (Needs you, with one push) once its review is done. A project's
+  report wakes the author, which fixes what it rightly found and asks it to look again (`message_thread`) while each
+  look finds fewer problems that block the merge, and stops to tell the person what is open once it goes in circles
+  (a fixed problem back, a disagreement that outlasts one exchange). A review takes 8 looks at most
+  (`REVIEW_LOOKS`): past them, the API refuses `message_thread` and the author's `request_review`, and only a person
+  has it read again (Review again). The pull request waits on a person (Needs you, with one push) once its review is done. A project's
   Code review setting (`Project.reviewPolicy`) says who decides there is one: the teammate that opens a pull
   request, in `github_create_pull_request`'s `review` (wanted, and a reason shown on it), or only someone who asks
   (`request_review` in the thread, or Ask for a review on the pull request's page). A child thread asks its parent

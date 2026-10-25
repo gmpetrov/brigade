@@ -438,8 +438,10 @@ export type MailProject = Prisma.MailProjectModel
 export type MailAlias = Prisma.MailAliasModel
 /**
  * Model MailMessage
- * One email in a Brigade mailbox (an agent's address or a project inbox), received or sent.
- * Received mail left in its box is kept 30 days; mail a thread took lives and goes with it.
+ * One email in a mailbox the workspace reads: one of Brigade's own addresses (an agent's, a
+ * project's inbox), received or sent, or a shared Gmail account's, received (the Inbox's mail,
+ * kept as Gmail's inbox reader reads it). Received mail left in its box is kept 30 days; mail
+ * a thread took lives and goes with it.
  */
 export type MailMessage = Prisma.MailMessageModel
 /**

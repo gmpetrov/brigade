@@ -134,7 +134,9 @@ export async function received(event: ReceivedEvent) {
   return kept
 }
 
-type Row = NonNullable<Awaited<ReturnType<typeof loadRow>>>
+type Loaded = NonNullable<Awaited<ReturnType<typeof loadRow>>>
+/** A mail of one of Brigade's own addresses (Gmail's mail in the table has none, and no route here). */
+type Row = Loaded & { address: NonNullable<Loaded['address']> }
 const loadRow = (id: string) =>
   prisma.mailMessage.findUnique({
     where: { id },
@@ -144,8 +146,9 @@ const loadRow = (id: string) =>
 /** Read a kept mail from Resend and deliver it. Never twice at once for the same mail. */
 export const processMail = (id: string) =>
   serially(`mail:${id}`, async () => {
-    const row = await loadRow(id)
-    if (!row || row.status !== 'pending' || row.direction !== 'in') return
+    const loaded = await loadRow(id)
+    if (!loaded?.address || loaded.status !== 'pending' || loaded.direction !== 'in') return
+    const row = loaded as Row
     const scope: Scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
     const db = scoped(scope)
     try {
@@ -255,8 +258,8 @@ async function readMail(db: ScopedDb, scope: Scope, row: Row): Promise<Row> {
       attachments,
     } as never,
   })
-  const read = await loadRow(row.id)
-  return Object.assign(read!, { senderLine: sender.line, senderInfo: sender })
+  const read = (await loadRow(row.id)) as Row
+  return Object.assign(read, { senderLine: sender.line, senderInfo: sender })
 }
 
 /**
@@ -403,10 +406,12 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
       conversationId: row.conversationId,
       box: row.box,
       sessionId: { not: null },
-      route: { in: ['member', 'conversation'] },
+      // handed: a person gave it to a teammate from the Inbox.
+      route: { in: ['member', 'conversation', 'handed'] },
       NOT: { id: row.id },
     },
-    orderBy: { receivedAt: 'desc' },
+    // A hand-over moves the conversation, even from an older mail of it: the newest one wins.
+    orderBy: [{ handedAt: { sort: 'desc', nulls: 'last' } }, { receivedAt: 'desc' }],
     select: { sessionId: true },
   })
   if (held?.sessionId) {

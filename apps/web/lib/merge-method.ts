@@ -45,7 +45,7 @@ export const changesAskedBy = (p: { tracking: PullRequestTracking | null }) =>
 
 /**
  * Who gave its review's latest verdict, when commits came after the one it read: those are
- * not reviewed (an approval, or fixes pushed once its rechecks ran out).
+ * not reviewed (an approval, or fixes pushed after its last look).
  */
 export const unreviewedBy = (p: { tracking: PullRequestTracking | null }) => {
   const review = p.tracking?.review

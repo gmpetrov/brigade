@@ -592,6 +592,8 @@ export type Connection = {
   appId: string
   /** mine: used only in threads the member who connected it started. workspace: in every thread. */
   reach: 'mine' | 'workspace'
+  /** Gmail shared with the workspace: its mail shows in the Inbox. */
+  inbox: boolean
   createdByMemberId: string
   /** webhook: a custom app that posts events to Brigade. Inbound only. */
   kind:

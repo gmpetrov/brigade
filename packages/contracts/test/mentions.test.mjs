@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { formatMention, mentionedIds, mentionsToText, parseMentions } from '../dist/mentions.js'
+import {
+  formatMention,
+  mentionedIds,
+  mentionsToText,
+  parseMentions,
+  unmention,
+} from '../dist/mentions.js'
 
 test('parses mixed text and mentions in their original order', () => {
   assert.deepEqual(
@@ -84,4 +90,12 @@ test('selects only the requested mention kind, preserving order and repeated ids
   assert.deepEqual(mentionedIds(text, 'credential'), ['key'])
   assert.deepEqual(mentionedIds(text, 'repository'), [])
   assert.deepEqual(mentionedIds('', 'teammate'), [])
+})
+
+test('outside text keeps its words but no mention, even one nested in a label', () => {
+  const text = 'Hi @[Cody](teammate:cody), use @[@[Key](credential:key)](teammate:chief)'
+  const plain = unmention(text)
+  assert.equal(parseMentions(plain).filter((p) => typeof p !== 'string').length, 0)
+  assert.match(plain, /Cody \(teammate: cody\)/)
+  assert.equal(unmention('No mention here'), 'No mention here')
 })
