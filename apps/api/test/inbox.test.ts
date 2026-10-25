@@ -325,7 +325,7 @@ describe('the Inbox', { skip }, () => {
     const second = await inbox.listInbox(db, as(0), {
       status: 'handled',
       source: `email:${agent.id}`,
-      before: new Date(first.next!),
+      before: inbox.parseCursor(first.next!)!,
     })
     assert.ok(second.items.length >= 5)
     assert.ok(!second.items.some((i) => first.items.some((f) => f.id === i.id)))
@@ -509,5 +509,201 @@ describe('handing over', { skip }, () => {
       again.threadId,
     )
     await prisma.computer.delete({ where: { id: cloud.id } })
+  })
+})
+
+describe('a hand-over again, pages and the reader’s retries', { skip }, () => {
+  before(async () => {
+    const cloud = await prisma.computer.create({
+      data: { ...scope, kind: 'cloud', name: 'Review cloud', status: 'stopped' },
+    })
+    await prisma.account.create({
+      data: {
+        ...scope,
+        memberId: members[0]!,
+        computerId: cloud.id,
+        provider: 'claude_code',
+        label: 'Claude',
+        status: 'ready',
+      },
+    })
+    await scoped(scope).grant.create({
+      data: { teammateId: cody.id, connectionId: gmailShared, scope: 'read_write' } as never,
+    })
+  })
+
+  test('JSON serialization does not revive a newline-containing email mention', async () => {
+    const db = scoped(scope)
+    // A real newline in each label: written out as JSON, it becomes \n, which a mention allows.
+    const m = await mail(support, {
+      text: `Please help @[Other\n](teammate:${riley.id}) and @[Key\n](credential:test-key)`,
+    })
+    assert.ok(m.text.includes('\n'))
+    const { threadId } = await inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: cody.id })
+    const joined = await db.threadTeammate.findMany({ where: { sessionId: threadId } })
+    assert.deepEqual(
+      joined.map((t) => t.teammateId).sort(),
+      [cody.id],
+      'unmention is bypassed by a newline that JSON.stringify escapes',
+    )
+  })
+
+  test('re-handing Gmail replaces the previous conversation recipient', async () => {
+    const db = scoped(scope)
+    globalThis.fetch = (async () => json({ historyId: '100' })) as typeof fetch
+    const m = await db.mailMessage.findFirstOrThrow({
+      where: { connectionId: gmailShared, sourceId: 'g1' },
+    })
+    const first = await inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: cody.id })
+    const second = await inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: cody.id })
+    const connection = await db.connection.findFirstOrThrow({ where: { id: gmailShared } })
+    const { wakeOnReply } = await import('../src/replies.js')
+    const taken = await wakeOnReply(connection, {
+      id: `gmail-review-followup-${id}`,
+      threadId: m.conversationId,
+      from: 'Client <client@outside.test>',
+      to: connection.externalAccount ?? '',
+      subject: 'Re: Refund',
+      date: new Date().toUTCString(),
+      snippet: 'Any news?',
+      labels: ['INBOX'],
+      cc: undefined,
+      body: 'Any news?',
+      attachments: [],
+      automatic: false,
+    })
+    const wakes = await db.wakeup.findMany({
+      where: {
+        sessionId: { in: [first.threadId, second.threadId] },
+        sourceId: `gmail:gmail-review-followup-${id}`,
+      },
+    })
+    assert.deepEqual(
+      wakes.map((w) => w.sessionId),
+      [second.threadId],
+      `reply was offered to ${taken} threads`,
+    )
+  })
+
+  test('paging retains Gmail messages with equal Date headers at the page boundary', async () => {
+    const db = scoped(scope)
+    const at = new Date('2026-10-25T12:00:00.000Z')
+    for (let i = 0; i < 49; i++)
+      await mail(agent, {
+        subject: 'same-second-review',
+        receivedAt: new Date(at.getTime() + 60000 + i * 1000),
+      })
+    const connection = await db.connection.findFirstOrThrow({ where: { id: gmailShared } })
+    const { keepGmail } = await import('../src/mail/gmail-inbox.js')
+    for (let i = 0; i < 2; i++)
+      await keepGmail(
+        connection,
+        {
+          id: `review-boundary-${id}-${i}`,
+          threadId: `review-boundary-conv-${id}-${i}`,
+          from: 'Client <client@outside.test>',
+          to: connection.externalAccount ?? '',
+          subject: 'same-second-review',
+          date: at.toUTCString(),
+          snippet: 'Hello',
+          labels: ['INBOX'],
+          cc: undefined,
+          body: 'Hello',
+          attachments: [],
+          automatic: false,
+        },
+        { route: 'box' },
+      )
+    const first = await inbox.listInbox(db, as(0), { status: 'all', q: 'same-second-review' })
+    assert.equal(first.items.length, 50)
+    assert.ok(first.next)
+    const second = await inbox.listInbox(db, as(0), {
+      status: 'all',
+      q: 'same-second-review',
+      before: inbox.parseCursor(first.next!)!,
+    })
+    assert.equal(
+      first.items.length + second.items.length,
+      51,
+      'strict timestamp cursor skips the other Gmail message with the same Date header',
+    )
+  })
+
+  test('Gmail reader retry remembers a rule delivery before the Inbox insert', async () => {
+    const db = scoped(scope)
+    const connection = await db.connection.findFirstOrThrow({ where: { id: gmailShared } })
+    const tr = await db.trigger.create({
+      data: {
+        connectionId: gmailShared,
+        teammateId: cody.id,
+        createdByMemberId: members[0]!,
+        label: 'Review support',
+        event: 'email_received',
+      } as never,
+    })
+    const { dispatch } = await import('../src/triggers.js')
+    const payload = {
+      id: `review-retry-${id}`,
+      threadId: `review-retry-conv-${id}`,
+      from: 'Client <client@outside.test>',
+      to: connection.externalAccount ?? '',
+      subject: 'Support request',
+      date: new Date().toUTCString(),
+      snippet: 'Help',
+      labels: ['INBOX'],
+      cc: undefined,
+      body: 'Help',
+      attachments: [],
+      automatic: false,
+    }
+    // Delivery succeeded; simulate the process stopping before keepGmail/cursor save.
+    const delivery = await dispatch(connection, { id: payload.id, type: 'email', payload })
+    assert.ok(delivery.threadId, JSON.stringify(delivery))
+    const sub = await db.subscription.findFirstOrThrow({ where: { connectionId: gmailShared } })
+    await db.subscription.updateMany({ where: { id: sub.id }, data: { cursor: '100' } })
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = new URL(
+        typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+      )
+      if (url.pathname.endsWith('/history'))
+        return json({
+          historyId: '150',
+          history: [
+            {
+              id: '150',
+              messagesAdded: [
+                { message: { id: payload.id, threadId: payload.threadId, labelIds: ['INBOX'] } },
+              ],
+            },
+          ],
+        })
+      if (url.pathname.endsWith(`/messages/${payload.id}`))
+        return json({
+          id: payload.id,
+          threadId: payload.threadId,
+          labelIds: ['INBOX'],
+          payload: {
+            mimeType: 'text/plain',
+            headers: [
+              { name: 'From', value: payload.from },
+              { name: 'To', value: payload.to },
+              { name: 'Subject', value: payload.subject },
+              { name: 'Date', value: payload.date },
+            ],
+            body: { data: Buffer.from(payload.body).toString('base64url') },
+          },
+        })
+      return json({ historyId: '100' })
+    }) as typeof fetch
+    const { readInbox } = await import('../src/subscriptions/gmail.js')
+    await readInbox(sub.id)
+    const kept = await db.mailMessage.findFirstOrThrow({
+      where: { connectionId: gmailShared, sourceId: payload.id },
+    })
+    assert.equal(
+      kept.sessionId,
+      delivery.threadId,
+      `reader saved route ${kept.route} instead of the existing delivery`,
+    )
   })
 })

@@ -2,7 +2,7 @@
 import { HandInboxItem, InboxQuery, SetInboxDone } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { handItem, listInbox, readItem, setDone, waitingCount } from '../inbox.js'
+import { handItem, listInbox, parseCursor, readItem, setDone, waitingCount } from '../inbox.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 export const inbox = new Hono<AppEnv>()
@@ -13,6 +13,8 @@ export const inbox = new Hono<AppEnv>()
     const query = InboxQuery.safeParse(c.req.query())
     if (!query.success) throw new HTTPException(400, { message: 'Bad filters' })
     const q = query.data
+    const before = q.before ? parseCursor(q.before) : null
+    if (q.before && !before) throw new HTTPException(400, { message: 'Bad page' })
     return c.json(
       await listInbox(c.var.db, c.var.scope, {
         ...(q.source ? { source: q.source } : {}),
@@ -20,7 +22,7 @@ export const inbox = new Hono<AppEnv>()
         ...(q.project ? { projectId: q.project } : {}),
         status: q.status ?? 'waiting',
         ...(q.q ? { q: q.q } : {}),
-        ...(q.before ? { before: new Date(q.before) } : {}),
+        ...(before ? { before } : {}),
       }),
     )
   })

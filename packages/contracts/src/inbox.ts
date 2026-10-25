@@ -58,7 +58,8 @@ export const InboxQuery = z.object({
   project: z.string().max(100).optional(),
   status: z.enum(['waiting', 'handled', 'done', 'all']).optional(),
   q: z.string().max(200).optional(),
-  before: z.string().datetime().optional(),
+  /** The previous page's next. */
+  before: z.string().max(200).optional(),
 })
 
 export const SetInboxDone = z.object({ done: z.boolean() })
