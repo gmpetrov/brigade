@@ -67,21 +67,9 @@ export const watchingNote = (until: Date) =>
   'do not set a wake-up to check the inbox for it, nor promise the person a check. Set one only as a deadline, ' +
   'if it matters that no reply came by then.'
 
-/** Whether an email was sent by a machine (an out-of-office, a ticket's acknowledgement): it wakes nobody. */
-export function automatic(headers: { name: string; value: string }[] | undefined) {
-  const value = (name: string) =>
-    headers
-      ?.find((h) => h.name.toLowerCase() === name)
-      ?.value.trim()
-      .toLowerCase()
-  const submitted = value('auto-submitted')
-  return (
-    (!!submitted && submitted !== 'no') ||
-    value('x-autoreply') !== undefined ||
-    value('x-autorespond') !== undefined ||
-    value('precedence') === 'auto_reply'
-  )
-}
+// A machine's email (an out-of-office, a ticket's acknowledgement) wakes nobody; Gmail's trigger
+// can leave it out too, so the test lives with Gmail's code.
+export { automatic } from './connectors/gmail.js'
 
 /**
  * A new email in a mailbox: wake each thread waiting on its conversation. Each email wakes a

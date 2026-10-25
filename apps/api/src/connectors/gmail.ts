@@ -116,11 +116,28 @@ const summary = (m: Message) => ({
   labels: m.labelIds,
 })
 
+/** Whether an email was sent by a machine (an out-of-office, a ticket's acknowledgement), by its headers. */
+export function automatic(headers: { name: string; value: string }[] | undefined) {
+  const value = (name: string) =>
+    headers
+      ?.find((h) => h.name.toLowerCase() === name)
+      ?.value.trim()
+      .toLowerCase()
+  const submitted = value('auto-submitted')
+  return (
+    (!!submitted && submitted !== 'no') ||
+    value('x-autoreply') !== undefined ||
+    value('x-autorespond') !== undefined ||
+    value('precedence') === 'auto_reply'
+  )
+}
+
 export const full = (m: Message) => ({
   ...summary(m),
   cc: header(m, 'Cc'),
   body: textOf(m.payload).slice(0, 50_000),
   attachments: attachmentsOf(m),
+  automatic: automatic(m.payload?.headers),
 })
 
 const Compose = z.object({
@@ -329,12 +346,20 @@ export const gmail: ConnectorDefinition = {
           placeholder: 'to:support@acme.com -category:promotions',
           help: "Gmail search, as in Gmail's search box. Empty: every new email in the inbox.",
         },
+        {
+          name: 'automated',
+          label: 'Automatic mail',
+          placeholder: 'skip',
+          help: 'skip: leave out mail a machine sent, such as out-of-office replies and acknowledgements (by its Auto-Submitted, X-Autoreply or Precedence headers). Empty: keep it.',
+        },
       ],
       events: ['email'],
       // Gmail decides what its search matches: ask it about this one message.
       matches: async ({ payload }, options, ctx) => {
-        if (!options.query) return true
         const email = payload as ReceivedEmail
+        // Headers say it, before any search: an out-of-office never reaches the teammate.
+        if (options.automated === 'skip' && email.automatic) return false
+        if (!options.query) return true
         const q = email.rfcMessageId
           ? `(${options.query}) rfc822msgid:${email.rfcMessageId}`
           : `(${options.query}) newer_than:2d`
@@ -363,6 +388,8 @@ export const gmail: ConnectorDefinition = {
             rfcMessageId: email.payload?.headers?.find((h) => h.name.toLowerCase() === 'message-id')
               ?.value,
           }
+          // As the trigger would have: a machine's mail is left out of the replay too.
+          if (options.automated === 'skip' && payload.automatic) continue
           const at = Number(email.internalDate)
           events.push({
             id: email.id,

@@ -182,3 +182,27 @@ test("a WebSocket from the preview's own page goes with the provider's origin; a
   await call(env, `${origin}/api`, { method: 'POST', headers: { origin }, body: '{}' })
   assert.equal(seen[1]!.headers.get('origin'), origin)
 })
+
+test('answers are asked for again before use, whatever the provider made of their cache time', async () => {
+  const { db } = fakeDb()
+  const env = envWith(db)
+  const { origin } = (await (await register(env, `${UPSTREAM}?_token=tok`)).json()) as {
+    origin: string
+  }
+  const answers = [
+    // A dev server's chunk: its no-cache, made four hours by the provider's Cloudflare.
+    'max-age=14400, must-revalidate',
+    null,
+    'no-store',
+  ]
+  globalThis.fetch = (async () => {
+    const cacheControl = answers.shift()
+    return new Response('x', { headers: cacheControl ? { 'cache-control': cacheControl } : {} })
+  }) as typeof fetch
+  const chunk = await call(env, `${origin}/_next/static/chunks/app.js`)
+  assert.equal(chunk.headers.get('cache-control'), 'private, no-cache')
+  const none = await call(env, `${origin}/favicon.ico`)
+  assert.equal(none.headers.get('cache-control'), 'private, no-cache')
+  const page = await call(env, `${origin}/`)
+  assert.equal(page.headers.get('cache-control'), 'no-store')
+})

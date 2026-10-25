@@ -21,7 +21,7 @@ pnpm workspaces + Turborepo.
 
 ## Develop
 
-Requires Node.js 22+, pnpm and Docker (for the local PostgreSQL).
+Requires Node.js 24 (`.nvmrc`), pnpm and Docker (for the local PostgreSQL).
 
 ```bash
 pnpm install

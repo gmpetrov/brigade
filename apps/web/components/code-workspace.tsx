@@ -262,28 +262,31 @@ export function CodeWorkspace({
             <Crosshair aria-hidden />
           </Button>
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-pressed={state.tree}
-          aria-label={state.tree ? 'Hide the files' : 'Show the files'}
-          title={
-            state.tree
-              ? 'Hide the files'
-              : changed
-                ? `Show the files: ${changed} changed${mixedBases(changes.data) ? '' : ` ${against.since}`}`
-                : 'Show the files'
-          }
-          className="relative"
-          onClick={() => setCodePanel(threadId, { tree: !state.tree })}
-        >
-          <PanelLeft aria-hidden />
-          {/* Files changed, while the list is hidden. */}
-          {!tree && changed > 0 && (
-            <span className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />
-          )}
-        </Button>
+        {/* With no file open the list always shows: nothing to hide it for. */}
+        {state.tabs.length > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-pressed={state.tree}
+            aria-label={state.tree ? 'Hide the files' : 'Show the files'}
+            title={
+              state.tree
+                ? 'Hide the files'
+                : changed
+                  ? `Show the files: ${changed} changed${mixedBases(changes.data) ? '' : ` ${against.since}`}`
+                  : 'Show the files'
+            }
+            className="relative"
+            onClick={() => setCodePanel(threadId, { tree: !state.tree })}
+          >
+            <PanelLeft aria-hidden />
+            {/* Files changed, while the list is hidden. */}
+            {!tree && changed > 0 && (
+              <span className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />
+            )}
+          </Button>
+        )}
         {actions}
         <Button
           type="button"

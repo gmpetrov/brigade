@@ -4,7 +4,7 @@ export const PLAYBOOK_TEMPLATES: Record<string, { manifest: unknown; files: Reco
     "manifest": {
       "id": "brigade/support-bugs",
       "name": "Support and bugs",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "description": "Sorts the support inbox, answers customers, fixes the bugs they report and tells them when it is fixed.",
       "teammate": "support",
       "apps": [
@@ -87,7 +87,8 @@ export const PLAYBOOK_TEMPLATES: Record<string, { manifest: unknown; files: Reco
           "trigger": "gmail.email_received",
           "account": "{{inbox}}",
           "options": {
-            "query": "to:{{address}}"
+            "query": "to:{{address}} -category:promotions -category:social -category:updates",
+            "automated": "skip"
           },
           "label": "Support mail"
         },

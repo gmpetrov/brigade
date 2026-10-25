@@ -295,6 +295,78 @@ test('Gmail replays the latest mails its search matches, as the inbox reader han
   )
 })
 
+test('Gmail leaves out a machine’s mail when its trigger says automated: skip', async () => {
+  const { full } = await import('../src/connectors/gmail.js')
+  const message = (id: string, extra: { name: string; value: string }[] = []) => ({
+    id,
+    threadId: `t${id}`,
+    internalDate: '1700000000000',
+    payload: {
+      mimeType: 'text/plain',
+      headers: [
+        { name: 'From', value: 'Jane <jane@customer.test>' },
+        { name: 'Subject', value: `Mail ${id}` },
+        { name: 'Message-ID', value: `<${id}@x>` },
+        ...extra,
+      ],
+      body: { data: Buffer.from(`Body ${id}`).toString('base64url') },
+    },
+  })
+  const outOfOffice = message('ooo', [{ name: 'Auto-Submitted', value: 'auto-replied' }])
+  const person = message('jane')
+  assert.equal(full(outOfOffice as never).automatic, true)
+  assert.equal(full(person as never).automatic, false)
+  // No search asked: the headers decide first.
+  const asked: string[] = []
+  const fetch = async (url: string) => {
+    asked.push(url)
+    const u = new URL(url)
+    if (u.pathname.endsWith('/messages'))
+      return Response.json({ messages: [{ id: 'ooo' }, { id: 'jane' }] })
+    return Response.json(u.pathname.endsWith('/ooo') ? outOfOffice : person)
+  }
+  const trigger = gmail.triggers!.email_received!
+  const event = (m: unknown) => ({ id: 'e', type: 'email', payload: full(m as never) })
+  assert.equal(
+    await trigger.matches!(
+      event(outOfOffice) as never,
+      { automated: 'skip' },
+      {
+        fetch: fetch as never,
+      },
+    ),
+    false,
+  )
+  assert.equal(asked.length, 0)
+  // Without the option, it is kept as before; a person's mail always is.
+  assert.equal(
+    await trigger.matches!(event(outOfOffice) as never, {}, { fetch: fetch as never }),
+    true,
+  )
+  assert.equal(
+    await trigger.matches!(
+      event(person) as never,
+      { automated: 'skip' },
+      { fetch: fetch as never },
+    ),
+    true,
+  )
+  // A dry run's replay leaves it out the same way.
+  const replayed = await trigger.replay!({ automated: 'skip' }, { fetch: fetch as never }, 5)
+  assert.deepEqual(
+    replayed.map((e) => e.id),
+    ['jane'],
+  )
+})
+
+test('Support and bugs leaves out Gmail tabs and out-of-office replies, never the forums tab', () => {
+  const support = templates().get('brigade/support-bugs')!.manifest
+  const entry = support.entries.find((e) => 'trigger' in e) as { options: Record<string, string> }
+  assert.equal(entry.options.automated, 'skip')
+  assert.match(entry.options.query!, /-category:promotions -category:social -category:updates/)
+  assert.doesNotMatch(entry.options.query!, /forums/)
+})
+
 test("the dry run's closing note shows as Brigade's, not as a person's message", () => {
   assert.equal(childNote(`${DRY_RUN_HEAD}Support and bugs is done: 3 events`), 'dry_run')
 })

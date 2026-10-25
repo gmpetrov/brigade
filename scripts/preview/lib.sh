@@ -6,7 +6,7 @@ HERE=$REPO/scripts/preview
 # Downloads shared by every checkout on this machine (Node, PostgreSQL); data stays in the checkout.
 CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/brigade-preview
 DATA=$REPO/.preview
-NODE_VERSION=22.14.0
+NODE_VERSION=24.22.1
 EMBEDDED_POSTGRES=17.10.0-beta.17
 DB_PORT=5433
 
@@ -20,9 +20,12 @@ fingerprint() {
 unchanged() { [ "$(cat "$DATA/stamps/$1" 2>/dev/null)" = "$2" ]; }
 stamp() { mkdir -p "$DATA/stamps" && echo "$2" >"$DATA/stamps/$1"; }
 
-# Node 22.13 or newer: the one on PATH, else one downloaded to the cache.
+# Node $NODE_VERSION or newer (older ones miss its security fixes): the one on PATH, else one
+# downloaded to the cache.
 use_node() {
-  if command -v node >/dev/null && node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 13) ? 0 : 1)'; then
+  if command -v node >/dev/null && node -e '
+    const [a, b] = [process.versions.node, process.argv[1]].map((v) => v.split(".").map(Number))
+    process.exit((a.map((n, i) => n - b[i]).find((n) => n !== 0) ?? 0) >= 0 ? 0 : 1)' "$NODE_VERSION"; then
     return
   fi
   local dir=$CACHE/node-v$NODE_VERSION
