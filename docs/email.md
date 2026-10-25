@@ -143,3 +143,7 @@ has to keep its messages there.
 - **Hand to**: a thread of the member with a teammate given the mailbox, in the item's project,
   with their note, the latest mail and the conversation's earlier ones. The mail then belongs to that thread (`route: handed`): Brigade's
   next mail in its conversation goes there; a Gmail conversation's reply wakes it (`ReplyWatch`).
+  The thread shows the note as the person's message and the mail as a card (`handedEmail`, trigger
+  `Inbox`), whose header, sender and subject open the conversation here (`inboxItem` in the event).
+  Like a mailbox rule's, the thread stays out of the sidebar and Home (`Session.quiet`) until a person
+  writes in it, pins it or a ticket opens; the Inbox links to it.
