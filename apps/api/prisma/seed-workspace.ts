@@ -19,6 +19,7 @@ import { prisma, scoped, type Prisma } from '../src/db.js'
 import { editMemory, saveLibraryFile, saveSummary, writeMemory } from '../src/library.js'
 import { sealSecret } from '../src/vault.js'
 import { seedPlaybooks } from './seed-playbooks.js'
+import { seedUsage } from './seed-usage.js'
 
 export const SAMPLE_ORGANIZATION = 'acme'
 
@@ -1567,6 +1568,9 @@ export async function seedWorkspace(users: Users) {
     projectId: support.id,
     repository: 'acme/web',
   })
+
+  // A month of tokens for Settings › Usage, once every thread is there.
+  await seedUsage(inWorkspace)
 
   console.log('created: sample organization Acme (ada owner, bob admin, carol member)')
 }

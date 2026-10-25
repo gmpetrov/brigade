@@ -90,6 +90,9 @@ export function UsageMenu({ accounts }: { accounts: Account[] | undefined }) {
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
+          <Link href="/app/usage">See what used it</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link href="/app/accounts">Manage accounts</Link>
         </DropdownMenuItem>
       </DropdownMenuSubContent>
