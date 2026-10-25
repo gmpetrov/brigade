@@ -30,7 +30,7 @@ import { audit } from './audit.js'
 import { triggersOf } from './connectors/index.js'
 import type { ConnectorKind } from './connectors/types.js'
 import type { Scope, ScopedDb } from './db.js'
-import { storedConditions } from './playbook-autonomy.js'
+import { lockActions, storedConditions } from './playbook-autonomy.js'
 import {
   answerSettings,
   checkSettings,
@@ -644,6 +644,8 @@ export async function upgradePlaybook(
   who: Who,
   id: string,
   input: UpgradePlaybook,
+  /** Tests only: runs once the update is planned, before it is written. */
+  hooks: { beforeApply?: () => Promise<void> } = {},
 ): Promise<PlaybookUpgradeResult> {
   const viewer = { memberId: who.memberId, role: who.role }
   const installer = {
@@ -727,8 +729,13 @@ export async function upgradePlaybook(
   const touched = new Set<string>()
   const timezoneFallback = found.schedules[0]?.timezone ?? 'UTC'
 
+  await hooks.beforeApply?.()
   await db.$transaction(async (raw) => {
     const tx = raw as unknown as ScopedDb
+    // Serialized with every other change to its actions (a person's level, a call marked as
+    // wrong, a proposal): their levels are read again under the lock, after any of those.
+    await lockActions(tx, who, id)
+    const rows = await tx.playbookAction.findMany({ where: { installationId: id } })
     // One update at a time: a second one finds the version moved and stops.
     const moved = await tx.playbookInstallation.updateMany({
       where: { id, version: fromVersion },
@@ -736,21 +743,30 @@ export async function upgradePlaybook(
     })
     if (!moved.count) throw new HTTPException(409, { message: 'It was just updated' })
 
-    // Autonomy never grows.
+    // Autonomy never grows: each level from the row as it is now, kept or lowered.
     for (const a of diff.actions) {
-      const row = found.actions.find((r) => r.key === a.key)
+      const row = rows.find((r) => r.key === a.key)
       if (!row) {
         await tx.playbookAction.create({
-          data: { installationId: id, key: a.key, level: a.to } as never,
+          data: {
+            installationId: id,
+            key: a.key,
+            level: lowest(a.spec.start, 'ask', a.spec.ceiling),
+          } as never,
         })
         continue
       }
       if (a.change === 'same') continue
-      const lowered = LEVELS.indexOf(a.to) < LEVELS.indexOf(row.level)
+      const level =
+        a.change === 'changed'
+          ? lowest(row.level, 'ask', a.spec.ceiling)
+          : lowest(row.level, a.spec.ceiling)
+      const lowered = LEVELS.indexOf(level) < LEVELS.indexOf(row.level)
+      if (a.change === 'ceiling' && !lowered) continue
       await tx.playbookAction.updateMany({
         where: { id: row.id },
         data: {
-          level: a.to,
+          level,
           ...(a.change === 'changed'
             ? { conditions: allowedConditions(a.spec, row.conditions) as never }
             : {}),
@@ -767,7 +783,9 @@ export async function upgradePlaybook(
     // A proposal to act on its own made for what it was has no more point.
     for (const key of [
       ...diff.actions
-        .filter((a) => a.change === 'changed' || (a.change === 'ceiling' && a.to !== 'auto'))
+        .filter(
+          (a) => a.change === 'changed' || (a.change === 'ceiling' && a.spec.ceiling !== 'auto'),
+        )
         .map((a) => a.key),
       ...diff.removedActions.map((a) => a.key),
     ])

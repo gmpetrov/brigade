@@ -37,6 +37,35 @@ const LEVEL_WORDS: Record<PlaybookLevel, string> = {
 /** "Reply to the customer" as it reads inside a sentence. */
 const inSentence = (label: string) => label.charAt(0).toLowerCase() + label.slice(1)
 
+/**
+ * Every change to an installation's actions (a person's level, a call marked as wrong, a
+ * proposal and its decision, an update to a newer version) takes this lock in its transaction
+ * and reads the rows after it: none writes a level from a stale read, so a restriction one makes
+ * is never undone by another.
+ */
+export async function lockActions(
+  tx: { $executeRaw: (query: TemplateStringsArray, ...values: unknown[]) => Promise<number> },
+  scope: Scope,
+  installationId: string,
+) {
+  const key = `playbook-actions:${scope.workspaceId}:${installationId}`
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))`
+}
+
+/** A scoped transaction holding the installation's action lock. */
+export function withActionsLock<T>(
+  db: ScopedDb,
+  scope: Scope,
+  installationId: string,
+  work: (tx: ScopedDb) => Promise<T>,
+): Promise<T> {
+  return db.$transaction(async (raw) => {
+    const tx = raw as unknown as ScopedDb
+    await lockActions(tx, scope, installationId)
+    return work(tx)
+  })
+}
+
 /** Stored conditions or caps as their schema reads them; null when they do not parse. */
 export const storedConditions = (raw: unknown) => {
   const parsed = PlaybookActionConditions.safeParse(raw ?? {})
@@ -679,23 +708,41 @@ export async function changeAction(
     const refusal = await mergeRefusal(repo ? await github(repo) : null, repo)
     if (refusal) throw new HTTPException(409, { message: refusal })
   }
-  const changed = row.level !== update.level
-  await db.playbookAction.updateMany({
-    where: { id: row.id },
-    data: {
-      level: update.level,
-      conditions: conditions as never,
-      ...(update.limits ? { limits: update.limits as never } : {}),
-      ...(changed
-        ? {
-            levelChangedAt: new Date(),
-            levelChangedByMemberId: scope.memberId,
-            demotedReason: null,
-          }
-        : {}),
-    },
+  // Written under the actions' lock, from the rows as they are then: an update to a newer
+  // version that landed since the checks above made them on another action than this one.
+  const from = await withActionsLock(db, scope, id, async (tx) => {
+    const fresh = await tx.playbookInstallation.findFirst({
+      where: { id },
+      include: { actions: { where: { key } } },
+    })
+    const now = fresh && (fresh.manifest as PlaybookManifest).actions.find((a) => a.key === key)
+    const current = fresh?.actions[0]
+    if (!now || !current || JSON.stringify(now) !== JSON.stringify(action))
+      throw new HTTPException(409, {
+        message: `${manifest.name} was just updated: look at ${action.label} again`,
+      })
+    conditions = update.conditions ?? storedConditions(current.conditions) ?? {}
+    if (needsChecks(action) && update.level === 'auto')
+      conditions = { ...conditions, checksPassed: true }
+    const changed = current.level !== update.level
+    await tx.playbookAction.updateMany({
+      where: { id: current.id },
+      data: {
+        level: update.level,
+        conditions: conditions as never,
+        ...(update.limits ? { limits: update.limits as never } : {}),
+        ...(changed
+          ? {
+              levelChangedAt: new Date(),
+              levelChangedByMemberId: scope.memberId,
+              demotedReason: null,
+            }
+          : {}),
+      },
+    })
+    if (update.level !== 'ask') await closePromotion(tx, scope.memberId, id, key)
+    return current.level
   })
-  if (update.level !== 'ask') await closePromotion(db, scope.memberId, id, key)
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
@@ -703,7 +750,7 @@ export async function changeAction(
     target: { type: 'playbook', id },
     data: {
       action: key,
-      from: row.level,
+      from,
       to: update.level,
       conditions: conditions as never,
       ...(update.limits ? { limits: update.limits as never } : {}),
@@ -748,15 +795,17 @@ export async function flagCall(db: ScopedDb, scope: WorkspaceScope, id: string, 
     throw new HTTPException(404, { message: 'This playbook made no call on its own with that id' })
   if ((await flaggedCalls(db, [call.id])).size) return
   const now = new Date()
-  const demoted = await db.playbookAction.updateMany({
-    where: { installationId: id, key: call.playbookActionKey!, level: 'auto' },
-    data: {
-      level: 'ask',
-      demotedReason: 'flagged',
-      levelChangedAt: now,
-      levelChangedByMemberId: scope.memberId,
-    },
-  })
+  const demoted = await withActionsLock(db, scope, id, (tx) =>
+    tx.playbookAction.updateMany({
+      where: { installationId: id, key: call.playbookActionKey!, level: 'auto' },
+      data: {
+        level: 'ask',
+        demotedReason: 'flagged',
+        levelChangedAt: now,
+        levelChangedByMemberId: scope.memberId,
+      },
+    }),
+  )
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
@@ -883,6 +932,30 @@ export async function proposePromotion(
   scope: Scope,
   input: { installationId: string; actionKey: string; sessionId: string | null },
 ) {
+  // Under the actions' lock: never a proposal for what an update just changed.
+  const made = await withActionsLock(db, scope, input.installationId, (tx) =>
+    promotionTicket(tx, input),
+  )
+  if (!made) return null
+  await audit({
+    ...scope,
+    actor: { type: 'system', id: 'brigade' },
+    action: 'playbook.promotion_proposed',
+    target: { type: 'playbook', id: input.installationId },
+    data: {
+      action: input.actionKey,
+      approved: made.approved,
+      decided: made.decided,
+      ticketId: made.ticketId,
+    },
+  })
+  return made.ticketId
+}
+
+async function promotionTicket(
+  db: ScopedDb,
+  input: { installationId: string; actionKey: string; sessionId: string | null },
+) {
   const installation = await db.playbookInstallation.findFirst({
     where: { id: input.installationId },
     include: {
@@ -935,14 +1008,7 @@ export async function proposePromotion(
       },
     } as never,
   })
-  await audit({
-    ...scope,
-    actor: { type: 'system', id: 'brigade' },
-    action: 'playbook.promotion_proposed',
-    target: { type: 'playbook', id: installation.id },
-    data: { action: action.key, approved: due.approved, decided: due.decided, ticketId: ticket.id },
-  })
-  return ticket.id
+  return { ticketId: ticket.id, approved: due.approved, decided: due.decided }
 }
 
 /**
@@ -984,8 +1050,8 @@ export async function decidePromotion(
   const { playbookPromotion: promotion } = ticket.payload as {
     playbookPromotion: PlaybookPromotionPayload
   }
-  const close = (status: 'approved' | 'denied' | 'resolved') =>
-    db.ticket.updateMany({
+  const close = (status: 'approved' | 'denied' | 'resolved', client: ScopedDb = db) =>
+    client.ticket.updateMany({
       where: { id: ticket.id, status: 'open' },
       data: { status, resolvedByMemberId: scope.memberId, resolvedAt: new Date() },
     })
@@ -1001,33 +1067,51 @@ export async function decidePromotion(
     throw new HTTPException(403, {
       message: "Only the playbook's owner, or an owner or admin, decides what it does on its own",
     })
-  const manifest = installation.manifest as PlaybookManifest
-  const action = manifest.actions.find((a) => a.key === promotion.actionKey)
-  const row = installation.actions[0]
-  if (approved) {
-    if (!action || !row || !withinCeiling('auto', action.ceiling) || needsChecks(action)) {
-      await close('resolved')
-      throw new HTTPException(409, {
-        message: `${promotion.label} can no longer act on its own in this playbook`,
-      })
-    }
-    await db.playbookAction.updateMany({
-      where: { id: row.id },
-      data: {
-        level: 'auto',
-        demotedReason: null,
-        levelChangedAt: new Date(),
-        levelChangedByMemberId: scope.memberId,
-      },
+  // Under the actions' lock, from the rows as they are then: an update that changed the action
+  // since closed this proposal, and a closed one decides nothing.
+  const outcome = await withActionsLock(db, scope, installation.id, async (tx) => {
+    const fresh = await tx.playbookInstallation.findFirst({
+      where: { id: installation.id },
+      include: { actions: { where: { key: promotion.actionKey } } },
     })
-  }
-  await close(approved ? 'approved' : 'denied')
+    const action = (fresh?.manifest as PlaybookManifest | undefined)?.actions.find(
+      (a) => a.key === promotion.actionKey,
+    )
+    const current = fresh?.actions[0]
+    if (
+      approved &&
+      (!action || !current || !withinCeiling('auto', action.ceiling) || needsChecks(action))
+    ) {
+      await close('resolved', tx)
+      return { stale: true as const, from: current?.level ?? null }
+    }
+    const claimed = await close(approved ? 'approved' : 'denied', tx)
+    if (!claimed.count) return { closed: true as const, from: current?.level ?? null }
+    if (approved)
+      await tx.playbookAction.updateMany({
+        where: { id: current!.id },
+        data: {
+          level: 'auto',
+          demotedReason: null,
+          levelChangedAt: new Date(),
+          levelChangedByMemberId: scope.memberId,
+        },
+      })
+    return { from: current?.level ?? null }
+  })
+  if ('stale' in outcome)
+    throw new HTTPException(409, {
+      message: `${promotion.label} can no longer act on its own in this playbook`,
+    })
+  if ('closed' in outcome)
+    throw new HTTPException(409, { message: 'This proposal was already closed' })
+  const row = { level: outcome.from }
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
     action: approved ? 'playbook.promotion_approved' : 'playbook.promotion_denied',
     target: { type: 'playbook', id: installation.id },
-    data: { action: promotion.actionKey, ticketId: ticket.id, from: row?.level ?? null },
+    data: { action: promotion.actionKey, ticketId: ticket.id, from: row.level },
   })
 }
 

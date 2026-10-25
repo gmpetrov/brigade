@@ -811,4 +811,40 @@ describe('updating an installed playbook', { skip: !database && 'no database ans
     assert.match(again.error, /already on its latest version/)
     await db.playbookInstallation.deleteMany({ where: { id: made.id } })
   })
+
+  test('a change landing between planning an update and writing it is never undone', async () => {
+    const { changeAction } = await import('../src/playbook-autonomy.js')
+    const made = await installed({
+      manifest: V1.manifest,
+      settings: { inbox: ids.gmail, address: 'help@acme.test' },
+      levels: { reply: 'auto', label: 'auto', draft: 'auto', old: 'auto' },
+      skills: [],
+    })
+    const owner = { ...as(ids.owner, 'owner'), userId: `owner-${suffix}` } as never
+    const done = await upgradePlaybook(
+      db,
+      as(ids.owner, 'owner'),
+      made.id,
+      { settings: { product: 'Acme' } },
+      {
+        // Planned with every action on its own; then a person restricts three of them.
+        beforeApply: async () => {
+          await changeAction(db, owner, made.id, 'reply', { level: 'deny' })
+          await changeAction(db, owner, made.id, 'draft', { level: 'deny' })
+          await changeAction(db, owner, made.id, 'label', { level: 'ask' })
+        },
+      },
+    )
+    assert.equal(done.updated, true)
+    const actions = await db.playbookAction.findMany({ where: { installationId: made.id } })
+    const level = (key: string) => actions.find((a) => a.key === key)?.level
+    // Its tools changed, but never back up from Never to Asks first.
+    assert.equal(level('reply'), 'deny')
+    // Its ceiling lowered to Asks first: Never stays Never.
+    assert.equal(level('draft'), 'deny')
+    // Unchanged: the person's lowering stays.
+    assert.equal(level('label'), 'ask')
+    assert.equal(level('archive'), 'ask')
+    await db.playbookInstallation.deleteMany({ where: { id: made.id } })
+  })
 })
