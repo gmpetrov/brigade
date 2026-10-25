@@ -252,6 +252,27 @@ export function InboxView() {
     }
   }
 
+  // Infinite scroll: the next page comes as the end of the list nears, in the list's own column
+  // on a wide screen (it scrolls on its own there), in the page on a phone. Watched again after
+  // each page, so a short page that leaves the end in sight asks for the next one too. Once a
+  // page failed, Load older asks again by hand.
+  const scroller = useRef<HTMLDivElement>(null)
+  const end = useRef<HTMLDivElement>(null)
+  const latestLoadOlder = useRef(loadOlder)
+  latestLoadOlder.current = loadOlder
+  const wide = useWide()
+  useEffect(() => {
+    if (!next || loadingOlder || olderError || !end.current) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void latestLoadOlder.current()
+      },
+      { root: wide ? scroller.current : null, rootMargin: '400px 0px' },
+    )
+    observer.observe(end.current)
+    return () => observer.disconnect()
+  }, [next, loadingOlder, olderError, wide])
+
   const refresh = useCallback(async () => {
     generation.current++
     setOlder(undefined)
@@ -454,7 +475,7 @@ export function InboxView() {
           </div>
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col lg:overflow-y-auto">
+        <div ref={scroller} className="flex min-h-0 flex-1 flex-col lg:overflow-y-auto">
           {list.error && (
             <p className="px-5 py-4 text-sm text-destructive-text">{list.error.message}</p>
           )}
@@ -476,17 +497,17 @@ export function InboxView() {
               ))}
             </ul>
           )}
-          {olderError && <p className="px-5 py-3 text-sm text-destructive-text">{olderError}</p>}
-          {next && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="my-4 self-center"
-              disabled={loadingOlder}
-              onClick={() => void loadOlder()}
-            >
-              {loadingOlder ? 'Loading…' : 'Load older'}
-            </Button>
+          {next && <div ref={end} aria-hidden className="h-px flex-none" />}
+          {loadingOlder && (
+            <p className="py-4 text-center text-xs text-muted-foreground">Loading…</p>
+          )}
+          {olderError && (
+            <div className="flex flex-col items-center gap-2 px-5 py-4">
+              <p className="text-sm text-destructive-text">{olderError}</p>
+              <Button variant="outline" size="sm" onClick={() => void loadOlder()}>
+                Load older
+              </Button>
+            </div>
           )}
         </div>
       </section>
@@ -523,6 +544,19 @@ function SourceItem({ source }: { source: InboxSourceView }) {
       <span className="truncate text-xs text-muted-foreground">{source.address}</span>
     </SelectItem>
   )
+}
+
+/** A screen wide enough for the Inbox's two columns (Tailwind's lg), following resizes. */
+function useWide() {
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 1024px)')
+    const update = () => setWide(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+  return wide
 }
 
 /** A sender's initial on a soft colour, the same for the same address. */
