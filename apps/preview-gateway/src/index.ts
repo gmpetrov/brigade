@@ -153,8 +153,7 @@ async function forward(request: Request, target: Route) {
   // address's. It is this address's here: the same check, then its own origin for the provider.
   // The runner's proxy gives the app this one back (preview-proxy.ts).
   const origin = request.headers.get('origin')
-  const websocket = request.headers.get('upgrade')?.toLowerCase() === 'websocket'
-  if (origin && websocket) {
+  if (origin && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
     if (origin !== url.origin) return new Response('cross-origin websocket denied', { status: 403 })
     headers.set('origin', target.origin)
   }
@@ -165,8 +164,6 @@ async function forward(request: Request, target: Route) {
       headers,
       body: request.body,
       redirect: 'manual',
-      // Never Cloudflare's copy: the app's files change with each edit, under the same names.
-      ...(websocket ? {} : { cache: 'no-store' as const }),
     })
   } catch (error) {
     console.error(`${request.method} ${url.pathname} at the provider: ${String(error)}`)

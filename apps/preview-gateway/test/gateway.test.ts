@@ -206,18 +206,3 @@ test('answers are asked for again before use, whatever the provider made of thei
   const page = await call(env, `${origin}/`)
   assert.equal(page.headers.get('cache-control'), 'no-store')
 })
-
-test("requests skip Cloudflare's cache on their way to the provider", async () => {
-  const { db } = fakeDb()
-  const env = envWith(db)
-  const { origin } = (await (await register(env, `${UPSTREAM}?_token=tok`)).json()) as {
-    origin: string
-  }
-  let cache: RequestCache | undefined
-  globalThis.fetch = (async (_input: URL, init: RequestInit) => {
-    cache = init.cache
-    return new Response('x')
-  }) as typeof fetch
-  await call(env, `${origin}/_next/static/chunks/app.js`)
-  assert.equal(cache, 'no-store')
-})

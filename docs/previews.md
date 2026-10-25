@@ -32,12 +32,16 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   Workers requests (a dev server's page can make hundreds) and a D1 read per
   preview per isolate.
 - **The gateway answers `Cache-Control: private, no-cache`** (the app's own when
-  it says `no-store`) and fetches past Cloudflare's cache. Cloudflare's Browser
-  Cache TTL made a dev server's `no-cache` scripts four hours, and Turbopack
-  keeps a chunk's name when an edit changes it: after Fast Refresh's full
-  reload, the dashboard's pane ran the old code. Chrome keeps a frame's cache
-  apart from a tab's, so a new tab showed the edit. Each file now costs a
-  revalidation (a 304) per load.
+  it says `no-store`). Cloudflare's Browser Cache TTL made a dev server's
+  `no-cache` scripts four hours, and Turbopack keeps a chunk's name when an
+  edit changes it: after Fast Refresh's full reload, the dashboard's pane ran
+  the old code. Chrome keeps a frame's cache apart from a tab's, so a new tab
+  showed the edit. Its requests to the provider go through Cloudflare's cache,
+  which revalidates them: fetched past it (`cache: 'no-store'`), the provider
+  answered every revalidation with the whole file. Measured on October 25, 2026
+  on `/app/connections` in a dev server: a second load revalidates its 48
+  chunks in 14 KB rather than 2.4 MB, and after an edit fetches the changed
+  chunk only.
 - **A proxy in front of every preview** (`apps/runner/src/preview-proxy.ts`). The
   provider hosts the proxy's port (`publicPort`), not the app's. It fixes what
   apps cannot be asked to change:
