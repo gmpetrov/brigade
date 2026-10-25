@@ -371,6 +371,38 @@ describe('the Inbox', { skip }, () => {
     )
   })
 
+  test('an unassigned mail says why, and an admin can add a rule on its mailbox from it', async () => {
+    const db = scoped(scope)
+    const stray = await mail(agent, { sender: 'unknown', subject: `Stray ${id}` })
+    const forAda = await inbox.readItem(db, as(0), `mail:${stray.id}`)
+    assert.equal(forAda.reason, 'From someone outside the workspace, and this mailbox has no rule.')
+    assert.deepEqual(forAda.addRule, {
+      connectionId: agent.connectionId,
+      projectId: null,
+      teammateId: riley.id,
+    })
+    // Rules are an owner's or admin's to add.
+    assert.equal((await inbox.readItem(db, as(1), `mail:${stray.id}`)).addRule, null)
+    const rule = await db.trigger.create({
+      data: {
+        connectionId: agent.connectionId,
+        teammateId: riley.id,
+        createdByMemberId: members[0]!,
+        label: 'Answer',
+        event: 'email_received',
+      } as never,
+    })
+    assert.equal(
+      (await inbox.readItem(db, as(0), `mail:${stray.id}`)).reason,
+      'From someone outside the workspace, and none of this mailbox’s rules matched it.',
+    )
+    await db.trigger.delete({ where: { id: rule.id } })
+    // A mail a thread took needs no reason.
+    const ruled = await thread(riley.id)
+    const taken = await mail(agent, { route: 'rule', sessionId: ruled.id })
+    assert.equal((await inbox.readItem(db, as(0), `mail:${taken.id}`)).reason, null)
+  })
+
   test('Gmail shows only when shared and put in the Inbox; a member’s own never does', async () => {
     const sources = await inbox.inboxSources(scoped(scope))
     assert.ok(sources.some((s) => s.id === `gmail:${gmailShared}`))

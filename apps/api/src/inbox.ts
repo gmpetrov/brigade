@@ -349,8 +349,30 @@ export async function readItem(
 ): Promise<InboxDetail> {
   const { head, mails } = await conversationOf(db, itemId)
   const [item] = await toItems(db, scope, [head])
+  const mailbox = head.address?.connectionId ?? head.connectionId
+  // Brigade's rules are per project variant of the address; Gmail's, the account's.
+  const projectId = head.address ? (head.projectId ?? head.address.projectId ?? null) : undefined
+  const rules =
+    mailbox && item!.status === 'waiting'
+      ? await db.trigger.count({
+          where: {
+            connectionId: mailbox,
+            event: 'email_received',
+            ...(projectId !== undefined ? { projectId } : {}),
+          },
+        })
+      : 0
   return {
     ...item!,
+    reason: item!.status === 'waiting' ? reasonOf(head, rules) : null,
+    addRule:
+      head.address && mailbox && admin(scope)
+        ? {
+            connectionId: mailbox,
+            projectId: projectId ?? null,
+            teammateId: head.address.kind === 'agent' ? head.address.teammateId : null,
+          }
+        : null,
     messages: mails.map((m) => {
       const masked = m.direction === 'in' && hidden(scope, m)
       const { text, quoted } = masked ? { text: '', quoted: '' } : splitQuoted(m.text)
@@ -378,6 +400,20 @@ export async function readItem(
     handTo: await handableTeammates(db, head.address?.connectionId ?? head.connectionId),
     doneAt: head.doneAt?.toISOString() ?? null,
   }
+}
+
+/** Why nobody took a mail, in plain words. */
+function reasonOf(m: Row, rules: number) {
+  if (m.status === 'pending') return 'Brigade has not delivered it yet.'
+  if (m.status === 'failed') return 'Brigade could not read or deliver it.'
+  if (m.route === 'cap') return 'Its rule already started its threads for the day.'
+  if (m.route === 'loop')
+    return 'Too many mails of this conversation went to threads within the hour.'
+  if (m.routeNote) return `${m.routeNote[0]!.toUpperCase()}${m.routeNote.slice(1)}.`
+  if (m.sender === 'member') return 'From a member of the workspace, but no thread could take it.'
+  return rules
+    ? 'From someone outside the workspace, and none of this mailbox’s rules matched it.'
+    : 'From someone outside the workspace, and this mailbox has no rule.'
 }
 
 /** The teammates an item can go to: those given its mailbox (an agent's address: that agent). */

@@ -123,6 +123,10 @@ has to keep its messages there.
   (Gmail's sent mail is not kept), oldest first, with its words (the quote apart), files,
   authentication; a sign-up's mail is shown only to its thread's starter and admins (others see that
   it came).
+- **Unassigned** (the page's word for `waiting`; `handled` shows as Assigned): the item says why
+  nobody took it (from outside the workspace with no rule matching, a rule over its cap, a loop,
+  not delivered yet) and, for Brigade's mail, lets an owner or admin add a rule on its mailbox
+  (its project's variant, its agent first picked) for the mail that comes next.
 - **Hand to**: a thread of the member with a teammate given the mailbox, in the item's project,
   with their note, the latest mail and the conversation's earlier ones. The mail then belongs to that thread (`route: handed`): Brigade's
   next mail in its conversation goes there; a Gmail conversation's reply wakes it (`ReplyWatch`).
