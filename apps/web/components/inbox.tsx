@@ -12,8 +12,8 @@ import type {
 import {
   ArrowLeft,
   Check,
+  FileText,
   Mail,
-  Paperclip,
   Search,
   ShieldAlert,
   ShieldCheck,
@@ -22,7 +22,7 @@ import {
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fileSize } from '@/components/attachments'
+import { fileSize, type Media, MediaPreview, mediaKind, Thumbnail } from '@/components/attachments'
 import { timeAgo, useDashboard } from '@/components/dashboard'
 import { AddRule } from '@/components/project-email'
 import { ProjectSelect } from '@/components/projects'
@@ -646,29 +646,69 @@ function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: 
             ··· Show quoted text
           </button>
         ))}
-      {m.attachments.length > 0 && (
-        <ul className="flex w-full flex-col gap-1 pt-1 text-sm">
-          {m.attachments.map((a, i) => (
-            <li key={`${a.id}-${i}`}>
-              <a
-                href={fileUrl(m, a.id)}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 rounded hover:underline focus-visible:underline"
-              >
-                <Paperclip aria-hidden className="size-3.5 flex-none text-muted-foreground" />
-                <span className="min-w-0 truncate">{a.name}</span>
-                {a.size > 0 && (
-                  <span className="flex-none text-xs text-muted-foreground">
-                    {fileSize(a.size)}
-                  </span>
-                )}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
+      {m.attachments.length > 0 && <MailFiles m={m} />}
     </div>
+  )
+}
+
+/**
+ * A mail's files, like a thread message's: an image or a video opens over the page, any other
+ * file (a PDF, a text) in a new tab, where the browser shows what it can and downloads the rest.
+ */
+function MailFiles({ m }: { m: InboxMessage }) {
+  const [viewing, setViewing] = useState<Media>()
+  const chip =
+    'flex max-w-64 items-center gap-2 rounded-lg border bg-card py-1.5 pr-3 pl-2 text-xs hover:border-ring'
+  return (
+    <>
+      <ul className="flex w-full flex-wrap gap-2 pt-1" aria-label="Attached files">
+        {m.attachments.map((a, i) => {
+          const src = fileUrl(m, a.id)
+          const kind = mediaKind(a.contentType)
+          const body = (
+            <>
+              {kind ? (
+                <span className="relative size-8 shrink-0 overflow-hidden rounded bg-secondary">
+                  <Thumbnail src={src} kind={kind} small />
+                </span>
+              ) : (
+                <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              )}
+              <span className="flex min-w-0 flex-col text-left">
+                <span className="truncate font-medium">{a.name}</span>
+                {a.size > 0 && (
+                  <span className="truncate text-muted-foreground">{fileSize(a.size)}</span>
+                )}
+              </span>
+            </>
+          )
+          return (
+            <li key={`${a.id}-${i}`}>
+              {kind ? (
+                <button
+                  type="button"
+                  className={cn(chip, 'cursor-zoom-in')}
+                  onClick={() => setViewing({ name: a.name, src, kind })}
+                  aria-label={`Preview ${a.name}`}
+                  title={a.name}
+                >
+                  {body}
+                </button>
+              ) : (
+                <a href={src} target="_blank" rel="noreferrer" className={chip} title={a.name}>
+                  {body}
+                </a>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <MediaPreview
+        media={viewing}
+        onClose={() => setViewing(undefined)}
+        unavailable="This image can’t be shown: its mailbox no longer has it, or Brigade did not keep it."
+      />
+    </>
   )
 }
 
