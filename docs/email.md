@@ -52,7 +52,8 @@ address's journal (`GET /api/email/addresses/:id/journal`):
 4. **The address's rules** (`rule`): triggers `email.email_received` in their order
    (`Trigger.position`, `PUT /api/email/rules/order`). The first that matches takes it; an agent's
    rule watches its project's variant only.
-5. **Its box** (`box`): read on demand with `email_list`; deleted after 30 days.
+5. **Its box** (`box`): read on demand with `email_list`; deleted after 30 days (`sweepMail`), but a
+   sign-up's mail whose conversation has mail that stays: it marks the conversation as its thread's.
 
 Before these: a copy of a reply a person sent from the mailbox itself (`own_copy`, its From is the
 inbox's public address), the same `Message-ID` already delivered from another address of the
@@ -100,9 +101,10 @@ minutes in one call), `email_send`, `email_cancel`. Everything read is untrusted
 ## The Inbox
 
 `/app/inbox`, under Home in the sidebar (`apps/api/src/inbox.ts`, `routes/inbox.ts`): every mail
-the workspace's mailboxes received, across agents, projects and sources, in one list. Every source
-keeps its mail in the same table, `MailMessage`, so one query lists, filters and pages them all; a
-new source (a chat) only has to keep its messages there.
+the workspace's mailboxes received, across agents, projects and sources, in one list, one row per
+conversation (a box's `conversationId`, a Gmail thread). Every source keeps its mail in the same
+table, `MailMessage`, so one query lists, filters and pages them all; a new source (a chat) only
+has to keep its messages there.
 
 - **Sources**: Brigade's addresses, as they receive mail; and Gmail accounts shared with the
   workspace that their owner or an admin put in the Inbox (`Connection.inbox`, "Show in the Inbox"
@@ -110,12 +112,23 @@ new source (a chat) only has to keep its messages there.
   `sourceId`, box `gmail:<connection id>`, without promotions and social). Such an account is read
   even without triggers. A member's own Gmail never shows, and a shared account stays out until
   someone puts it in: it may still hold personal mail.
-- **Status**, in the query (so paging is right whatever the view): `waiting` (nobody took it:
-  `box`, `cap`, `loop`, or not delivered yet, and not done), `handled` (a thread has it, or its
-  route needs nobody), `done` (`MailMessage.doneAt`). The sidebar counts what waits, last 30 days.
-- **Filters**: source, agent, project, words. Pages of 50, newest first.
-- **An item**: its words with the quote apart, files, authentication; a sign-up's mail is shown
-  only to its thread's starter and admins (others see that it came).
+- **A conversation** shows as its latest received mail (its head), with its number of mails. Its
+  status is the head's, in the query (SQL, `DISTINCT ON` box and conversation, so paging is right
+  whatever the view): `waiting` (nobody took it: `box`, `cap`, `loop`, or not delivered yet, and not
+  done), `handled` (a thread has it, or its route needs nobody), `done` (`MailMessage.doneAt`, set on
+  all its received mails; its next mail waits again). The sidebar counts conversations that wait,
+  last 30 days.
+- **Filters**: source, agent, project, words; a conversation shows when any of its mails matches
+  (words: its senders, or the words of its mails received or sent).
+  Pages of 50, newest first.
+- **Opened** (by any of its mails' ids): each mail, received and sent from Brigade's address
+  (Gmail's sent mail is not kept), oldest first, with its words (the quote apart), files,
+  authentication. A sign-up's conversation, with the replies sent in it (they can quote its code),
+  is shown and searched only for its thread's starter and admins; others see that it came.
+- **Unassigned** (the page's word for `waiting`; `handled` shows as Assigned): the item says why
+  nobody took it (from outside the workspace with no rule matching, a rule over its cap, a loop,
+  not delivered yet) and, for Brigade's mail, lets an owner or admin add a rule on its mailbox
+  (its project's variant, its agent first picked) for the mail that comes next.
 - **Hand to**: a thread of the member with a teammate given the mailbox, in the item's project,
-  with their note and the mail. The mail then belongs to that thread (`route: handed`): Brigade's
+  with their note, the latest mail and the conversation's earlier ones. The mail then belongs to that thread (`route: handed`): Brigade's
   next mail in its conversation goes there; a Gmail conversation's reply wakes it (`ReplyWatch`).

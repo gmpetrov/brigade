@@ -28,7 +28,7 @@ export const inbox = new Hono<AppEnv>()
   })
 
   /** What waits on a person, counted beside Inbox in the sidebar. */
-  .get('/count', async (c) => c.json({ waiting: await waitingCount(c.var.db) }))
+  .get('/count', async (c) => c.json({ waiting: await waitingCount(c.var.db, c.var.scope) }))
 
   .get('/items/:id', async (c) => c.json(await readItem(c.var.db, c.var.scope, c.req.param('id'))))
 

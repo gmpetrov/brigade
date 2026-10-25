@@ -40,12 +40,21 @@ async function tick() {
   }
 }
 
-/** Mail left in its box past its time: deleted. Mail a thread took goes with the thread. */
+/**
+ * Mail left in its box past its time: deleted. Mail a thread took goes with the thread. A
+ * sign-up's mail stays while its conversation has mail that stays (a reply its thread sent, the
+ * answer to it): it marks the conversation as that thread's (src/inbox.ts), whose replies can
+ * quote its code.
+ */
 export async function sweepMail(now = new Date()) {
-  const { count } = await prisma.mailMessage.deleteMany({
-    where: { expiresAt: { lt: now }, sessionId: null },
-  })
-  return count
+  return prisma.$executeRaw`
+    delete from "MailMessage" m
+    where m."expiresAt" < ${now} and m."sessionId" is null
+      and not (m."aliasId" is not null and exists (
+        select 1 from "MailMessage" o
+        where o."workspaceId" = m."workspaceId" and o.box = m.box
+          and o."conversationId" = m."conversationId" and o.id <> m.id
+          and (o."sessionId" is not null or o."expiresAt" is null or o."expiresAt" >= ${now})))`
 }
 
 export function watchMail() {

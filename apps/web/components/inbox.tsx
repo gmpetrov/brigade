@@ -1,8 +1,14 @@
 'use client'
 // The Inbox: every email the workspace's mailboxes received (Brigade's own addresses and
-// connected Gmail accounts), with where each went; read one, mark it done or hand it to a
-// teammate. Filters and the open email live in the address, so links and back work.
-import type { InboxDetail, InboxItem, InboxSourceView, InboxStatus } from '@brigade/contracts'
+// connected Gmail accounts), one row per conversation, with where it went; read one, mark it
+// done or hand it to a teammate. Filters and the open email live in the address, so links and back work.
+import type {
+  InboxDetail,
+  InboxItem,
+  InboxMessage,
+  InboxSourceView,
+  InboxStatus,
+} from '@brigade/contracts'
 import {
   ArrowLeft,
   Check,
@@ -18,6 +24,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fileSize } from '@/components/attachments'
 import { timeAgo, useDashboard } from '@/components/dashboard'
+import { AddRule } from '@/components/project-email'
 import { ProjectSelect } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
 import { Button } from '@/components/ui/button'
@@ -43,8 +50,8 @@ type StatusFilter = InboxStatus | 'all'
 type Param = 'status' | 'source' | 'teammate' | 'project' | 'q' | 'item'
 
 const STATUSES: { value: StatusFilter; label: string }[] = [
-  { value: 'waiting', label: 'Waiting' },
-  { value: 'handled', label: 'Handled' },
+  { value: 'waiting', label: 'Unassigned' },
+  { value: 'handled', label: 'Assigned' },
   { value: 'done', label: 'Done' },
   { value: 'all', label: 'All' },
 ]
@@ -70,7 +77,7 @@ export function destination(item: InboxItem): string {
     case 'handed':
       return 'Handed over'
     case 'box':
-      return 'Waiting'
+      return 'In the mailbox'
     case 'cap':
       return 'Rule over its daily limit'
     case 'loop':
@@ -84,7 +91,7 @@ export function destination(item: InboxItem): string {
     case 'test':
       return 'Test mail'
     default:
-      return item.thread ? 'Handled by a thread' : 'Waiting'
+      return item.thread ? 'Handled by a thread' : 'Unassigned'
   }
 }
 
@@ -309,7 +316,7 @@ export function InboxView() {
               </span>
               <p className="max-w-md text-sm text-muted-foreground">
                 {status === 'waiting'
-                  ? 'Nothing waiting. Every email went somewhere.'
+                  ? 'Nothing unassigned. Every email went somewhere.'
                   : 'No email here.'}
               </p>
             </section>
@@ -394,14 +401,22 @@ function Row({ item, href, selected }: { item: InboxItem; href: string; selected
       <ProviderLogo kind={item.source.kind} className="mt-0.5 size-4 flex-none" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-baseline gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm">{item.fromName || item.from}</span>
+          <span className="min-w-0 flex-1 truncate text-sm">
+            {item.fromName || item.from}
+            {item.count > 1 && (
+              <span className="ml-1.5 text-xs text-muted-foreground">
+                {item.count}
+                <span className="sr-only"> emails</span>
+              </span>
+            )}
+          </span>
           <time dateTime={item.at} className="flex-none text-xs text-muted-foreground">
             {timeAgo(item.at)}
           </time>
         </div>
         <span className={cn('truncate text-sm', waiting && 'font-semibold')}>
           {item.hidden ? SIGN_UP : item.subject || '(No subject)'}
-          {waiting && <span className="sr-only"> (waiting)</span>}
+          {waiting && <span className="sr-only"> (unassigned)</span>}
         </span>
         {!item.hidden && item.snippet && (
           <span className="truncate text-sm text-muted-foreground">{item.snippet}</span>
@@ -415,13 +430,14 @@ function Row({ item, href, selected }: { item: InboxItem; href: string; selected
   )
 }
 
-/** One email, whole, and what a person can do with it. */
+/** One conversation, whole, and what a person can do with it. */
 function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> }) {
   const detail = useApi<InboxDetail>(itemPath(id))
   const [handing, setHanding] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
-  const [quoteOpen, setQuoteOpen] = useState(false)
+  // Earlier mails folded, as in a mail app: the latest is open.
+  const [opened, setOpened] = useState<Set<string>>(() => new Set())
 
   if (detail.error) return <p className="text-sm text-destructive-text">{detail.error.message}</p>
   const d = detail.data
@@ -441,9 +457,7 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
     }
   }
 
-  const auth = d.authentication
-  const verified = auth && (auth.dkim === 'pass' || auth.dmarc === 'pass')
-  const date = new Date(d.at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  const last = d.messages.at(-1)?.id
 
   return (
     <Card className="gap-4 px-5 py-5">
@@ -454,94 +468,45 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
             {d.hidden ? SIGN_UP : d.subject || '(No subject)'}
           </h2>
         </div>
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-sm">
-          <dt className="text-muted-foreground">From</dt>
-          <dd className="wrap-anywhere">
-            {d.fromName && d.fromName !== d.from ? (
-              <>
-                <span className="font-semibold">{d.fromName}</span>{' '}
-                <span className="text-muted-foreground">&lt;{d.from}&gt;</span>
-              </>
-            ) : (
-              <span className="font-semibold">{d.from}</span>
-            )}
-          </dd>
-          <dt className="text-muted-foreground">To</dt>
-          <dd className="wrap-anywhere">{d.to}</dd>
-          {d.cc.length > 0 && (
-            <>
-              <dt className="text-muted-foreground">Cc</dt>
-              <dd className="wrap-anywhere">{d.cc.join(', ')}</dd>
-            </>
-          )}
-          <dt className="text-muted-foreground">Date</dt>
-          <dd>
-            <time dateTime={d.at}>{date}</time>
-          </dd>
-        </dl>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <DestinationChip item={d} />
           {d.teammate && <span className="text-xs text-muted-foreground">{d.teammate.name}</span>}
           {d.project && <span className="text-xs text-muted-foreground">{d.project.name}</span>}
+          <span className="text-xs text-muted-foreground">{d.to}</span>
         </div>
-        {d.routeNote && <p className="text-sm text-muted-foreground">{d.routeNote}</p>}
-        {auth && (
-          <p
-            className={cn(
-              'flex items-center gap-1.5 text-xs',
-              verified ? 'text-muted-foreground' : 'text-warning',
-            )}
-          >
-            {verified ? (
-              <ShieldCheck aria-hidden className="size-3.5" />
-            ) : (
-              <ShieldAlert aria-hidden className="size-3.5" />
-            )}
-            {verified ? 'Verified by the mail server' : 'Not verified'}
-          </p>
-        )}
-      </div>
-
-      <div className="flex flex-col items-start gap-2 border-t pt-4">
-        {d.hidden ? (
+        {d.reason ? (
           <p className="text-sm text-muted-foreground">
-            Mail to a sign-up address is for its thread: only its starter and admins can read it.
-          </p>
-        ) : d.text ? (
-          <p className="w-full text-[15px] leading-relaxed whitespace-pre-wrap wrap-anywhere">
-            {d.text}
+            {d.reason} No teammate is on it: hand it to one, or mark it done.
           </p>
         ) : (
-          <p className="text-sm text-muted-foreground">No text.</p>
+          d.routeNote && <p className="text-sm text-muted-foreground">{d.routeNote}</p>
         )}
-        {!d.hidden &&
-          d.quoted &&
-          (quoteOpen ? (
-            <p className="w-full border-l-2 pl-3 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground wrap-anywhere">
-              {d.quoted}
+        {d.reason && d.addRule && (
+          <div className="flex flex-col items-start gap-1.5">
+            <AddRule
+              connectionId={d.addRule.connectionId}
+              projectId={d.addRule.projectId}
+              teammateId={d.addRule.teammateId}
+              reload={detail.reload}
+            />
+            <p className="text-xs text-muted-foreground">
+              A rule starts a thread for the mail that comes next, not this one.
             </p>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setQuoteOpen(true)}
-              className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
-            >
-              ··· Show quoted text
-            </button>
-          ))}
+          </div>
+        )}
       </div>
 
-      {d.attachments.length > 0 && (
-        <ul className="flex flex-col gap-1 border-t pt-4 text-sm">
-          {d.attachments.map((a, i) => (
-            <li key={`${a.name}-${i}`} className="flex items-center gap-2">
-              <Paperclip aria-hidden className="size-3.5 flex-none text-muted-foreground" />
-              <span className="min-w-0 truncate">{a.name}</span>
-              <span className="flex-none text-xs text-muted-foreground">{fileSize(a.size)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ol className="flex flex-col">
+        {d.messages.map((m) => (
+          <li key={m.id} className="border-t">
+            <Message
+              m={m}
+              open={m.id === last || opened.has(m.id)}
+              onOpen={() => setOpened((o) => new Set(o).add(m.id))}
+            />
+          </li>
+        ))}
+      </ol>
 
       <div className="flex flex-wrap items-center gap-2 border-t pt-4">
         {d.thread && (
@@ -569,6 +534,124 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
         <HandForm detail={d} onCancel={() => setHanding(false)} onHanded={onChanged} />
       )}
     </Card>
+  )
+}
+
+const SENT_LABEL: Record<NonNullable<InboxMessage['sent']>, string> = {
+  scheduled: 'Sending',
+  sent: 'Sent',
+  delivered: 'Delivered',
+  bounced: 'Bounced',
+  failed: 'Not sent',
+}
+
+/** One mail of a conversation: folded to a line, or whole. */
+function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: () => void }) {
+  const [quoteOpen, setQuoteOpen] = useState(false)
+  const date = new Date(m.at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  const auth = m.authentication
+  const verified = auth && (auth.dkim === 'pass' || auth.dmarc === 'pass')
+  const sent = m.sent && m.sent !== 'sent' && m.sent !== 'delivered' ? SENT_LABEL[m.sent] : null
+  const header = (
+    <div className="flex w-full items-baseline gap-2 text-left">
+      <span className="min-w-0 flex-1 truncate text-sm">
+        <span className="font-semibold">{m.fromName || m.from}</span>
+        {m.fromName && m.fromName !== m.from && (
+          <span className="text-muted-foreground"> &lt;{m.from}&gt;</span>
+        )}
+      </span>
+      {sent && (
+        <span
+          className={cn(
+            'flex-none text-xs',
+            m.sent === 'bounced' || m.sent === 'failed'
+              ? 'text-destructive-text'
+              : 'text-muted-foreground',
+          )}
+        >
+          {sent}
+        </span>
+      )}
+      <time dateTime={m.at} className="flex-none text-xs text-muted-foreground">
+        {date}
+      </time>
+    </div>
+  )
+
+  if (!open)
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full flex-col gap-0.5 py-3 outline-none hover:bg-secondary/50 focus-visible:bg-secondary/50"
+      >
+        {header}
+        <span className="w-full truncate text-left text-sm text-muted-foreground">
+          {m.hidden ? SIGN_UP : m.text.replace(/\s+/g, ' ') || 'No text.'}
+        </span>
+      </button>
+    )
+
+  return (
+    <div className="flex flex-col items-start gap-2 py-4">
+      {header}
+      <p className="text-xs text-muted-foreground wrap-anywhere">
+        To {m.to.join(', ')}
+        {m.cc.length > 0 && ` · Cc ${m.cc.join(', ')}`}
+      </p>
+      {auth && (
+        <p
+          className={cn(
+            'flex items-center gap-1.5 text-xs',
+            verified ? 'text-muted-foreground' : 'text-warning',
+          )}
+        >
+          {verified ? (
+            <ShieldCheck aria-hidden className="size-3.5" />
+          ) : (
+            <ShieldAlert aria-hidden className="size-3.5" />
+          )}
+          {verified ? 'Verified by the mail server' : 'Not verified'}
+        </p>
+      )}
+      {m.hidden ? (
+        <p className="text-sm text-muted-foreground">
+          Mail to a sign-up address is for its thread: only its starter and admins can read it.
+        </p>
+      ) : m.text ? (
+        <p className="w-full text-[15px] leading-relaxed whitespace-pre-wrap wrap-anywhere">
+          {m.text}
+        </p>
+      ) : (
+        <p className="text-sm text-muted-foreground">No text.</p>
+      )}
+      {!m.hidden &&
+        m.quoted &&
+        (quoteOpen ? (
+          <p className="w-full border-l-2 pl-3 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground wrap-anywhere">
+            {m.quoted}
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setQuoteOpen(true)}
+            className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            ··· Show quoted text
+          </button>
+        ))}
+      {m.attachments.length > 0 && (
+        <ul className="flex w-full flex-col gap-1 pt-1 text-sm">
+          {m.attachments.map((a, i) => (
+            <li key={`${a.name}-${i}`} className="flex items-center gap-2">
+              <Paperclip aria-hidden className="size-3.5 flex-none text-muted-foreground" />
+              <span className="min-w-0 truncate">{a.name}</span>
+              <span className="flex-none text-xs text-muted-foreground">{fileSize(a.size)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 

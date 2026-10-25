@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import pg from 'pg'
 
+// Sent mail goes through a Resend played by a fake fetch; set before src/ is imported below.
+process.env.RESEND_API_KEY ??= 're_inbox_test'
+
 // The Inbox (src/inbox.ts) against a real database, with Gmail played by a fake fetch: the local
 // database of apps/api/.env, in an organization of its own that it removes at the end. Without a
 // database to reach, it is skipped.
@@ -263,7 +266,7 @@ describe('the Inbox', { skip }, () => {
     const shown = await inbox.listInbox(db, as(0), { status: 'waiting' })
     assert.ok(shown.items.some((i) => i.id === `mail:${waiting.id}`))
     assert.ok(!shown.items.some((i) => i.id === `mail:${taken.id}`))
-    assert.ok((await inbox.waitingCount(db)) >= 1)
+    assert.ok((await inbox.waitingCount(db, as(0))) >= 1)
   })
 
   test('filters: by source, agent, project and words', async () => {
@@ -286,6 +289,121 @@ describe('the Inbox', { skip }, () => {
       words.items.map((i) => i.id),
       [`mail:${lovarank.id}`],
     )
+  })
+
+  test('a conversation is one row: its latest mail in front, matched by any of its mails', async () => {
+    const db = scoped(scope)
+    const at = (minutes: number) => new Date(Date.now() - minutes * 60_000)
+    const first = await mail(support, {
+      subject: `Order 77 ${id}`,
+      text: 'Where is order 77?',
+      receivedAt: at(30),
+    })
+    const conversation = { box: first.box, conversationId: first.conversationId }
+    const answer = await prisma.mailMessage.create({
+      data: {
+        ...scope,
+        ...conversation,
+        addressId: support.id,
+        direction: 'out',
+        status: 'sent',
+        fromAddress: `support-inbox-${id}@mails.brigade.lol`,
+        fromName: 'Cody',
+        to: ['client@outside.test'],
+        subject: `Re: Order 77 ${id}`,
+        text: 'It ships tomorrow.',
+        receivedAt: at(20),
+      } as never,
+    })
+    // A mail cancelled before it left is not part of it.
+    await prisma.mailMessage.create({
+      data: {
+        ...scope,
+        ...conversation,
+        addressId: support.id,
+        direction: 'out',
+        status: 'cancelled',
+        fromAddress: `support-inbox-${id}@mails.brigade.lol`,
+        subject: 'Draft',
+        receivedAt: at(15),
+      } as never,
+    })
+    const reply = await mail(support, {
+      ...conversation,
+      subject: `Re: Order 77 ${id}`,
+      text: 'Thanks!',
+      receivedAt: at(10),
+    })
+    const list = (q?: string, status: 'all' | 'waiting' = 'all') =>
+      inbox
+        .listInbox(db, as(0), { status, source: `email:${support.id}`, ...(q ? { q } : {}) })
+        .then((r) => r.items.filter((i) => i.subject.includes(`Order 77 ${id}`)))
+    const rows = await list()
+    assert.deepEqual(
+      rows.map((i) => [i.id, i.count, i.snippet]),
+      [[`mail:${reply.id}`, 3, 'Thanks!']],
+    )
+    // Found by its first mail's words; shown by its latest.
+    assert.deepEqual(
+      (await list('Where is order 77')).map((i) => i.id),
+      [`mail:${reply.id}`],
+    )
+    // Any of its mails opens it whole, oldest first, received and sent.
+    const detail = await inbox.readItem(db, as(0), `mail:${first.id}`)
+    assert.equal(detail.id, `mail:${reply.id}`)
+    assert.deepEqual(
+      detail.messages.map((m) => [m.id, m.direction, m.sent]),
+      [
+        [`mail:${first.id}`, 'in', null],
+        [`mail:${answer.id}`, 'out', 'sent'],
+        [`mail:${reply.id}`, 'in', null],
+      ],
+    )
+    // Done is the conversation's; its next mail makes it wait again.
+    await inbox.setDone(db, as(0), `mail:${first.id}`, true)
+    assert.equal((await inbox.readItem(db, as(0), `mail:${reply.id}`)).status, 'done')
+    assert.deepEqual(await list(undefined, 'waiting'), [])
+    const next = await mail(support, {
+      ...conversation,
+      subject: `Re: Order 77 ${id}`,
+      receivedAt: at(1),
+    })
+    assert.deepEqual(
+      (await list(undefined, 'waiting')).map((i) => [i.id, i.count]),
+      [[`mail:${next.id}`, 4]],
+    )
+  })
+
+  test('an unassigned mail says why, and an admin can add a rule on its mailbox from it', async () => {
+    const db = scoped(scope)
+    const stray = await mail(agent, { sender: 'unknown', subject: `Stray ${id}` })
+    const forAda = await inbox.readItem(db, as(0), `mail:${stray.id}`)
+    assert.equal(forAda.reason, 'From someone outside the workspace, and this mailbox has no rule.')
+    assert.deepEqual(forAda.addRule, {
+      connectionId: agent.connectionId,
+      projectId: null,
+      teammateId: riley.id,
+    })
+    // Rules are an owner's or admin's to add.
+    assert.equal((await inbox.readItem(db, as(1), `mail:${stray.id}`)).addRule, null)
+    const rule = await db.trigger.create({
+      data: {
+        connectionId: agent.connectionId,
+        teammateId: riley.id,
+        createdByMemberId: members[0]!,
+        label: 'Answer',
+        event: 'email_received',
+      } as never,
+    })
+    assert.equal(
+      (await inbox.readItem(db, as(0), `mail:${stray.id}`)).reason,
+      'From someone outside the workspace, and none of this mailbox’s rules matched it.',
+    )
+    await db.trigger.delete({ where: { id: rule.id } })
+    // A mail a thread took needs no reason.
+    const ruled = await thread(riley.id)
+    const taken = await mail(agent, { route: 'rule', sessionId: ruled.id })
+    assert.equal((await inbox.readItem(db, as(0), `mail:${taken.id}`)).reason, null)
   })
 
   test('Gmail shows only when shared and put in the Inbox; a member’s own never does', async () => {
@@ -360,22 +478,25 @@ describe('the Inbox', { skip }, () => {
     assert.equal(await search(1, '4829'), undefined)
     assert.equal((await search(0, '4829'))?.hidden, false)
     const detail = await inbox.readItem(db, as(1), `mail:${code.id}`)
-    assert.equal(detail.text, '')
+    assert.equal(detail.messages.at(-1)!.text, '')
     await assert.rejects(
       inbox.handItem(db, as(1), `mail:${code.id}`, { teammateId: riley.id }),
       /sign-up/,
     )
     // Its thread's starter (and admins) read it.
-    assert.match((await inbox.readItem(db, as(0), `mail:${code.id}`)).text, /482913/)
+    assert.match(
+      (await inbox.readItem(db, as(0), `mail:${code.id}`)).messages.at(-1)!.text,
+      /482913/,
+    )
   })
 
   test('done, and not done again', async () => {
     const db = scoped(scope)
     const m = await mail(agent)
-    const count = await inbox.waitingCount(db)
+    const count = await inbox.waitingCount(db, as(0))
     await inbox.setDone(db, as(1), `mail:${m.id}`, true)
     assert.equal((await inbox.readItem(db, as(0), `mail:${m.id}`)).status, 'done')
-    assert.equal(await inbox.waitingCount(db), count - 1)
+    assert.equal(await inbox.waitingCount(db, as(0)), count - 1)
     await inbox.setDone(db, as(1), `mail:${m.id}`, false)
     assert.equal((await inbox.readItem(db, as(0), `mail:${m.id}`)).status, 'waiting')
   })
@@ -986,5 +1107,163 @@ describe('a hand-over takes the replies, on its project', { skip }, () => {
       }),
       /Project not found/,
     )
+  })
+})
+
+describe('sent mail in a conversation', { skip }, () => {
+  test('a sent reply must preserve sign-up mail privacy', async () => {
+    const db = scoped(scope)
+    const signup = await thread(riley.id)
+    const alias = await db.mailAlias.create({
+      data: {
+        local: `review377-${id}.0abc12`,
+        addressId: agent.id,
+        sessionId: signup.id,
+        teammateId: riley.id,
+        waitUntil: new Date(Date.now() + 60000),
+      } as never,
+    })
+    const code = await mail(agent, {
+      aliasId: alias.id,
+      subject: 'Your code is 482913',
+      text: 'Code 482913',
+      messageId: `<review377-signup-${id}@service.test>`,
+    })
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { id: agent.id },
+      include: { domain: true },
+    })
+    const { sendDraft } = await import('../src/mail/outbound.js')
+    const beforeFetch = globalThis.fetch
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      assert.equal(String(input), 'https://api.resend.com/emails')
+      return json({ id: `review377-out-${id}` })
+    }) as typeof fetch
+    let sent
+    try {
+      sent = await sendDraft(db, scope, {
+        address,
+        thread: signup,
+        teammateId: riley.id,
+        callId: randomUUID(),
+        draft: {
+          to: [code.fromAddress],
+          subject: '',
+          text: 'Please help me sign in.\n\nOn Sunday, Service wrote:\n> Code 482913',
+          replyTo: code.id,
+        },
+      })
+    } finally {
+      globalThis.fetch = beforeFetch
+    }
+    const detail = await inbox.readItem(db, as(1), `mail:${code.id}`)
+    const outgoing = detail.messages.find((m) => m.id === `mail:${sent.id}`)!
+    assert.doesNotMatch(
+      JSON.stringify(outgoing),
+      /482913/,
+      'another member can read the sign-up code via the newly included sent reply',
+    )
+    // Nor find it by the sent reply's words; its thread's starter does.
+    const found = (who: 0 | 1) =>
+      inbox
+        .listInbox(db, as(who), { status: 'all', q: 'Please help me sign in' })
+        .then((r) => r.items.some((i) => i.id === `mail:${code.id}`))
+    assert.equal(await found(1), false)
+    assert.equal(await found(0), true)
+  })
+  test('conversation search must find words in a sent reply', async () => {
+    const db = scoped(scope)
+    const first = await mail(support, { subject: `search-repro-${id}` })
+    await db.mailMessage.create({
+      data: {
+        ...scope,
+        addressId: support.id,
+        box: first.box,
+        conversationId: first.conversationId,
+        direction: 'out',
+        status: 'sent',
+        fromAddress: 'support@mails.brigade.test',
+        subject: 'Re: support',
+        text: `tracking-reference-${id}`,
+        receivedAt: new Date(),
+      } as never,
+    })
+    const results = await inbox.listInbox(db, as(0), {
+      status: 'all',
+      q: `tracking-reference-${id}`,
+    })
+    assert.ok(
+      results.items.some((m) => m.id === `mail:${first.id}`),
+      'sent mail text is never searched',
+    )
+  })
+})
+
+describe('a sign-up’s conversation after its box time', { skip }, () => {
+  test('its sign-up mail stays while the conversation does, so the replies stay its thread’s', async () => {
+    const db = scoped(scope)
+    const signup = await thread(riley.id)
+    const alias = await db.mailAlias.create({
+      data: {
+        local: `retention-${id}.0abc12`,
+        addressId: agent.id,
+        sessionId: signup.id,
+        teammateId: riley.id,
+        waitUntil: new Date(Date.now() - 1000),
+      } as never,
+    })
+    // A mail on an alias after its waiting window stays in the box, and its time is up.
+    const code = await mail(agent, {
+      aliasId: alias.id,
+      subject: 'Your private sign-up code is 482913',
+      text: 'Private sign-up code 482913',
+      expiresAt: new Date(Date.now() - 1000),
+      messageId: `<retention-${id}@service.test>`,
+    })
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { id: agent.id },
+      include: { domain: true },
+    })
+    const { sendDraft } = await import('../src/mail/outbound.js')
+    const beforeFetch = globalThis.fetch
+    globalThis.fetch = (async () => json({ id: `retention-out-${id}` })) as typeof fetch
+    try {
+      await sendDraft(db, scope, {
+        address,
+        thread: signup,
+        teammateId: riley.id,
+        callId: randomUUID(),
+        draft: {
+          to: [code.fromAddress],
+          subject: '',
+          text: 'Please help me sign in.\n\nOn Sunday, Service wrote:\n> Private sign-up code 482913',
+          replyTo: code.id,
+        },
+      })
+    } finally {
+      globalThis.fetch = beforeFetch
+    }
+    // The service answers the agent's own address: the sending thread keeps it, without alias.
+    const reply = await mail(agent, {
+      box: code.box,
+      conversationId: code.conversationId,
+      subject: 'Re: Sign-in help',
+      text: 'Try signing in again.',
+      sessionId: signup.id,
+      route: 'awaited',
+      receivedAt: new Date(),
+    })
+    const { sweepMail } = await import('../src/mail/jobs.js')
+    await sweepMail()
+    assert.ok(await db.mailMessage.findFirst({ where: { id: code.id } }))
+    const forBob = await inbox.readItem(db, as(1), `mail:${reply.id}`)
+    assert.equal(forBob.hidden, true)
+    assert.doesNotMatch(JSON.stringify(forBob.messages), /482913/)
+    const found = await inbox.listInbox(db, as(1), { status: 'all', q: 'Please help me sign in' })
+    assert.ok(!found.items.some((i) => i.id === `mail:${reply.id}`))
+    // Its thread gone (and the mail it held with it), the sign-up mail goes at the next sweep.
+    await prisma.session.delete({ where: { id: signup.id } })
+    await sweepMail()
+    assert.equal(await db.mailMessage.findFirst({ where: { id: code.id } }), null)
   })
 })
