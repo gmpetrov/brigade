@@ -1401,3 +1401,97 @@ describe('a received mail’s files', { skip }, () => {
     }
   })
 })
+
+describe('taking a file in while another copy of it is under way', { skip }, () => {
+  const file = (key: string, content: string, gate?: Promise<void>) => ({
+    key,
+    name: 'notes.txt',
+    contentType: 'text/plain',
+    size: content.length,
+    download: async () => new TextEncoder().encode(content),
+    open: async () => ({
+      size: content.length,
+      body: new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          await gate
+          controller.enqueue(new TextEncoder().encode(content))
+          controller.close()
+        },
+      }),
+    }),
+  })
+
+  test('a second taker waits for the first copy and gets it, ready', async () => {
+    const db = scoped(scope)
+    const { ingestExternal } = await import('../src/attachments.js')
+    const key = `test:concurrent-${id}`
+    let open!: () => void
+    const gate = new Promise<void>((resolve) => (open = resolve))
+    const first = ingestExternal(db, scope, gmailShared, [file(key, 'hello', gate)], {
+      fetch: globalThis.fetch,
+    })
+    // The first copy's row is there, pending, while its bytes wait.
+    while (!(await prisma.attachment.findFirst({ where: { externalRef: key } })))
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    const second = ingestExternal(db, scope, gmailShared, [file(key, 'hello')], {
+      fetch: globalThis.fetch,
+    })
+    setTimeout(open, 300)
+    const [[a], [b]] = await Promise.all([first, second])
+    assert.equal(a, b)
+    const row = await prisma.attachment.findUniqueOrThrow({ where: { id: a! } })
+    assert.equal(row.status, 'ready')
+  })
+
+  test('a copy that stopped halfway is made again; a row stays until its bytes are gone', async () => {
+    const db = scoped(scope)
+    const { ingestExternal, sweepUploads } = await import('../src/attachments.js')
+    const { attachmentKey } = await import('../src/bucket.js')
+    const { env } = await import('../src/config.js')
+    const { mkdir, rm } = await import('node:fs/promises')
+    const { join } = await import('node:path')
+    const key = `test:stale-${id}`
+    const stale = await db.attachment.create({
+      data: {
+        name: 'notes.txt',
+        contentType: 'text/plain',
+        size: 5,
+        status: 'pending',
+        source: 'connector',
+        connectionId: gmailShared,
+        externalRef: key,
+        createdAt: new Date(Date.now() - 2 * 3600_000),
+      } as never,
+    })
+    const [taken] = await ingestExternal(db, scope, gmailShared, [file(key, 'again')], {
+      fetch: globalThis.fetch,
+    })
+    assert.notEqual(taken, stale.id)
+    assert.equal(await prisma.attachment.findFirst({ where: { id: stale.id } }), null)
+    assert.equal(
+      (await prisma.attachment.findUniqueOrThrow({ where: { id: taken! } })).status,
+      'ready',
+    )
+    // A stopped copy whose bytes cannot be deleted (here a folder in their place) keeps its row
+    // for the next sweep, which removes it once they go.
+    const stuck = await db.attachment.create({
+      data: {
+        name: 'notes.txt',
+        contentType: 'text/plain',
+        size: 5,
+        status: 'pending',
+        source: 'connector',
+        connectionId: gmailShared,
+        externalRef: `test:stuck-${id}`,
+        createdAt: new Date(Date.now() - 2 * 3600_000),
+      } as never,
+    })
+    const where = join(env.BUCKET_DIR, attachmentKey(scope, stuck.id))
+    await mkdir(join(where, 'inside'), { recursive: true })
+    await sweepUploads()
+    assert.ok(await prisma.attachment.findFirst({ where: { id: stuck.id } }))
+    await rm(where, { recursive: true, force: true })
+    await sweepUploads()
+    assert.equal(await prisma.attachment.findFirst({ where: { id: stuck.id } }), null)
+  })
+})

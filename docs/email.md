@@ -133,7 +133,9 @@ has to keep its messages there.
 - **Taking a received file in** (a rule's thread, `email_read_attachment`, `gmail_read_attachment`,
   the Inbox): its bytes go from the source to the bucket as they arrive (`storeStream`, a signed PUT
   of its exact length), its hash read on the way; only a file of 1 MB or less is also kept whole a
-  moment, for its text. A copy no thread has goes after 30 days (`sweepUploads`).
+  moment, for its text. A taker of a file whose copy is under way waits for it (a retryable 409
+  after 20 seconds); a copy stopped halfway is made again. A copy no thread has goes after 30 days
+  (`sweepUploads`), its bytes before its row, so a failed delete is tried again.
 - **Unassigned** (the page's word for `waiting`; `handled` shows as Assigned): the item says why
   nobody took it (from outside the workspace with no rule matching, a rule over its cap, a loop,
   not delivered yet) and, for Brigade's mail, lets an owner or admin add a rule on its mailbox

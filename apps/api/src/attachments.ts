@@ -29,7 +29,7 @@ import {
   streamObject,
 } from './bucket.js'
 import type { ConnectorContext, ExternalFile, OpenedFile } from './connectors/types.js'
-import { prisma, Prisma, type Scope, type ScopedDb } from './db.js'
+import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { contentTypeFor, extractText } from './library.js'
 
 /** Programs and installers: never taken from outside (an email, a chat), where they are a common lure. */
@@ -199,10 +199,51 @@ export async function storeStream(
       data: { contentType, sha256: hash.digest('hex'), text, status: 'ready' },
     })
   } catch (error) {
-    await db.attachment.deleteMany({ where: { id: row.id } })
-    await deleteObject(key).catch(() => {})
+    // Its row stays (pending) until its bytes are gone: the sweep tries again otherwise.
+    await removeCopy(db, scope, row.id)
     throw error
   }
+}
+
+/** How long a taker waits for another's copy of the same file under way. */
+const COPY_WAIT_MS = 20_000
+/** A copy under way this long stopped halfway (its process went): made again. */
+const COPY_STALE_MS = 10 * 60_000
+
+/** A file's bytes, then its row: the row stays while its bytes could not go, for a later try. */
+async function removeCopy(db: ScopedDb, scope: Scope, id: string) {
+  try {
+    await deleteObject(attachmentKey(scope, id))
+  } catch (error) {
+    console.warn(`attachment ${id}: bytes not deleted: ${String(error)}`)
+    return false
+  }
+  await db.attachment.deleteMany({ where: { id } })
+  return true
+}
+
+/**
+ * A file already taken in under its key, once its copy is done: one under way elsewhere is waited
+ * for a while (then a retryable 409), one that stopped halfway removed (null: take it again).
+ */
+async function settledCopy<T extends { id: string; status: string; createdAt: Date }>(
+  db: ScopedDb,
+  scope: Scope,
+  row: T,
+): Promise<T | null> {
+  const until = Date.now() + COPY_WAIT_MS
+  let current: T | null = row
+  while (current?.status === 'pending') {
+    if (Date.now() - current.createdAt.getTime() > COPY_STALE_MS) {
+      if (await removeCopy(db, scope, current.id)) return null
+      throw new HTTPException(409, { message: 'it is being copied: try again shortly' })
+    }
+    if (Date.now() > until)
+      throw new HTTPException(409, { message: 'it is being copied: try again shortly' })
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    current = (await db.attachment.findFirst({ where: { id: current.id } })) as T | null
+  }
+  return current
 }
 
 const concat = (chunks: Uint8Array[], size: number) => {
@@ -352,10 +393,8 @@ export async function sweepUploads() {
   })
   for (const row of rows) {
     const scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
-    await prisma.attachment.delete({ where: { id: row.id } })
-    await deleteObject(attachmentKey(scope, row.id)).catch((error) =>
-      console.warn(`attachment ${row.id}: bytes not deleted: ${String(error)}`),
-    )
+    // Its bytes first: a row goes only once they are gone, so a failed delete is tried again.
+    await removeCopy(scoped(scope), scope, row.id)
   }
   if (rows.length > 0) console.log(`attachments: removed ${rows.length} unsent upload(s)`)
 }
@@ -511,9 +550,11 @@ export async function ingestExternal(
   )
   for (const [i, file] of wanted.entries()) {
     const origin = { source: 'connector' as const, connectionId, externalRef: file.key }
-    const existing = await db.attachment.findFirst({
+    const found = await db.attachment.findFirst({
       where: { connectionId, externalRef: file.key },
     })
+    // Taken in before, or being taken in now (another delivery, a teammate's call): that copy.
+    const existing = found && (await settledCopy(db, scope, found))
     if (existing) {
       ids.push(existing.id)
       continue
@@ -567,9 +608,10 @@ export async function ingestExternal(
       } catch (error) {
         // Fetched meanwhile by another delivery of the same event.
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-          const again = await db.attachment.findFirst({
+          const found = await db.attachment.findFirst({
             where: { connectionId, externalRef: file.key },
           })
+          const again = found && (await settledCopy(db, scope, found))
           if (again) {
             ids.push(again.id)
             continue
