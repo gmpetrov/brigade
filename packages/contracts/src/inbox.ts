@@ -62,6 +62,13 @@ export type InboxMessage = {
 export type InboxDetail = InboxItem & {
   messages: InboxMessage[]
   routeNote: string | null
+  /** Why nobody took it, in plain words, while it is unassigned. */
+  reason: string | null
+  /**
+   * What a rule on its mailbox needs, for an owner or admin to add one from it: Brigade's mail
+   * (its address, its project's variant; an agent's address: that agent). Null otherwise.
+   */
+  addRule: { connectionId: string; projectId: string | null; teammateId: string | null } | null
   /** The teammates it can be handed to: those given its mailbox. */
   handTo: { id: string; name: string }[]
   doneAt: string | null

@@ -794,19 +794,24 @@ function InboxBlock({
   )
 }
 
-function AddRule({
+/** A rule on a Brigade mailbox: here for a project's inbox, and from the Inbox for any address. */
+export function AddRule({
   connectionId,
   projectId,
+  teammateId: initialTeammate,
   reload,
 }: {
   connectionId: string
-  projectId: string
+  /** The project variant of the address it is for; null: the address without a project. */
+  projectId: string | null
+  /** The teammate it starts threads with, first picked (an agent's address: that agent). */
+  teammateId?: string | null
   reload: () => Promise<unknown>
 }) {
   const { teammates } = useDashboard()
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('Answer')
-  const [teammateId, setTeammateId] = useState<string>()
+  const [teammateId, setTeammateId] = useState<string | undefined>(initialTeammate ?? undefined)
   const [from, setFrom] = useState('')
   const [subject, setSubject] = useState('')
   const [skipAutomated, setSkipAutomated] = useState(true)

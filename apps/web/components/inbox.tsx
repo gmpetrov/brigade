@@ -24,6 +24,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fileSize } from '@/components/attachments'
 import { timeAgo, useDashboard } from '@/components/dashboard'
+import { AddRule } from '@/components/project-email'
 import { ProjectSelect } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
 import { Button } from '@/components/ui/button'
@@ -49,8 +50,8 @@ type StatusFilter = InboxStatus | 'all'
 type Param = 'status' | 'source' | 'teammate' | 'project' | 'q' | 'item'
 
 const STATUSES: { value: StatusFilter; label: string }[] = [
-  { value: 'waiting', label: 'Waiting' },
-  { value: 'handled', label: 'Handled' },
+  { value: 'waiting', label: 'Unassigned' },
+  { value: 'handled', label: 'Assigned' },
   { value: 'done', label: 'Done' },
   { value: 'all', label: 'All' },
 ]
@@ -76,7 +77,7 @@ export function destination(item: InboxItem): string {
     case 'handed':
       return 'Handed over'
     case 'box':
-      return 'Waiting'
+      return 'In the mailbox'
     case 'cap':
       return 'Rule over its daily limit'
     case 'loop':
@@ -90,7 +91,7 @@ export function destination(item: InboxItem): string {
     case 'test':
       return 'Test mail'
     default:
-      return item.thread ? 'Handled by a thread' : 'Waiting'
+      return item.thread ? 'Handled by a thread' : 'Unassigned'
   }
 }
 
@@ -315,7 +316,7 @@ export function InboxView() {
               </span>
               <p className="max-w-md text-sm text-muted-foreground">
                 {status === 'waiting'
-                  ? 'Nothing waiting. Every email went somewhere.'
+                  ? 'Nothing unassigned. Every email went somewhere.'
                   : 'No email here.'}
               </p>
             </section>
@@ -415,7 +416,7 @@ function Row({ item, href, selected }: { item: InboxItem; href: string; selected
         </div>
         <span className={cn('truncate text-sm', waiting && 'font-semibold')}>
           {item.hidden ? SIGN_UP : item.subject || '(No subject)'}
-          {waiting && <span className="sr-only"> (waiting)</span>}
+          {waiting && <span className="sr-only"> (unassigned)</span>}
         </span>
         {!item.hidden && item.snippet && (
           <span className="truncate text-sm text-muted-foreground">{item.snippet}</span>
@@ -473,7 +474,26 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
           {d.project && <span className="text-xs text-muted-foreground">{d.project.name}</span>}
           <span className="text-xs text-muted-foreground">{d.to}</span>
         </div>
-        {d.routeNote && <p className="text-sm text-muted-foreground">{d.routeNote}</p>}
+        {d.reason ? (
+          <p className="text-sm text-muted-foreground">
+            {d.reason} No teammate is on it: hand it to one, or mark it done.
+          </p>
+        ) : (
+          d.routeNote && <p className="text-sm text-muted-foreground">{d.routeNote}</p>
+        )}
+        {d.reason && d.addRule && (
+          <div className="flex flex-col items-start gap-1.5">
+            <AddRule
+              connectionId={d.addRule.connectionId}
+              projectId={d.addRule.projectId}
+              teammateId={d.addRule.teammateId}
+              reload={detail.reload}
+            />
+            <p className="text-xs text-muted-foreground">
+              A rule starts a thread for the mail that comes next, not this one.
+            </p>
+          </div>
+        )}
       </div>
 
       <ol className="flex flex-col">
