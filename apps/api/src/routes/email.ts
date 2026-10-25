@@ -265,7 +265,8 @@ export const email = new Hono<AppEnv>()
       status: row.status,
       from: row.fromName ? `${row.fromName} <${row.fromAddress}>` : row.fromAddress,
       to: row.to,
-      subject: row.subject,
+      // A sign-up's mail is its thread's: its subject often carries the code itself.
+      subject: row.aliasId ? 'Mail to a sign-up address' : row.subject,
       at: row.receivedAt.toISOString(),
       route: (row.route as MailJournalEntry['route']) ?? null,
       routeNote: row.routeNote,
@@ -370,16 +371,25 @@ export const email = new Hono<AppEnv>()
    * have taken. Nothing starts.
    */
   .post('/rules/preview', async (c) => {
-    const { db } = c.var
+    const { db, scope } = c.var
+    // Who makes rules (owners and admins), on an account they may read: a member's own Gmail
+    // (reach mine) shows its mail to no one else.
+    requireRole(scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, PreviewRule)
     const connection = await db.connection.findFirst({
       where: { id: input.connectionId, status: { not: 'removed' } },
     })
     if (!connection) throw new HTTPException(404, { message: 'No such account' })
+    if (connection.reach === 'mine' && connection.createdByMemberId !== scope.memberId)
+      throw new HTTPException(403, { message: 'This account is another member’s own' })
     const definition = triggersOf(connection.kind).email_received
     if (!definition?.replay)
       throw new HTTPException(400, { message: 'This account’s rules cannot be tried on past mail' })
-    const fetch = (url: string, init?: RequestInit) => globalThis.fetch(url, init)
+    // The account's own fetch, for its replay and for matching (a Gmail search asks Gmail).
+    const fetch =
+      connection.kind === 'email'
+        ? (url: string, init?: RequestInit) => globalThis.fetch(url, init)
+        : await (await import('../connector-calls.js')).authorisedFetch(db, scope, connection)
     let past: Awaited<ReturnType<NonNullable<typeof definition.replay>>>
     if (connection.kind === 'email') {
       // Its own box only: an agent's rule watches its project's variant.
@@ -392,12 +402,7 @@ export const email = new Hono<AppEnv>()
             (input.projectId ?? null),
         )
     } else {
-      const { authorisedFetch } = await import('../connector-calls.js')
-      past = await definition.replay(
-        {},
-        { fetch: await authorisedFetch(db, c.var.scope, connection) },
-        20,
-      )
+      past = await definition.replay({}, { fetch }, 20)
     }
     const results = []
     for (const e of past) {

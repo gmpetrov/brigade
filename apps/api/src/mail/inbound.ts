@@ -150,7 +150,20 @@ export const processMail = (id: string) =>
     const db = scoped(scope)
     try {
       const read = row.text || row.route ? row : await readMail(db, scope, row)
-      const outcome = await deliverMail(db, scope, read)
+      // Copies of one mail (the same Message-ID to two addresses) are delivered one after the
+      // other, so the second sees the first went somewhere and is a duplicate.
+      const outcome = await (read.messageId
+        ? serially(`mail-id:${row.workspaceId}:${read.messageId}`, () =>
+            deliverMail(db, scope, read).then(async (o) => {
+              // Written before the next copy looks.
+              await db.mailMessage.updateMany({
+                where: { id: row.id },
+                data: { route: o.route, sessionId: o.sessionId ?? null, status: 'done' },
+              })
+              return o
+            }),
+          )
+        : deliverMail(db, scope, read))
       await db.mailMessage.updateMany({
         where: { id: row.id },
         data: {
@@ -253,8 +266,10 @@ async function readMail(db: ScopedDb, scope: Scope, row: Row): Promise<Row> {
 async function conversationOf(db: ScopedDb, row: Row, ids: (string | null)[]) {
   const wanted = ids.filter((id): id is string => !!id)
   if (wanted.length) {
+    // Within its box only: a reply to riley.lovarank@'s mail sent to riley.other@ is not
+    // Lovarank's conversation, and must never reach a Lovarank thread.
     const earlier = await db.mailMessage.findMany({
-      where: { addressId: row.addressId, messageId: { in: wanted }, NOT: { id: row.id } },
+      where: { box: row.box, messageId: { in: wanted }, NOT: { id: row.id } },
       select: { messageId: true, conversationId: true },
     })
     for (const id of [wanted[0]!, ...wanted.slice(1).reverse()]) {
@@ -381,7 +396,7 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
   const held = await db.mailMessage.findFirst({
     where: {
       conversationId: row.conversationId,
-      addressId: row.addressId,
+      box: row.box,
       sessionId: { not: null },
       route: { in: ['member', 'conversation'] },
       NOT: { id: row.id },
@@ -392,10 +407,23 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
   if (held?.sessionId) {
     const session = await db.session.findFirst({
       where: { id: held.sessionId },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        startedByMemberId: true,
+        othersMayPrompt: true,
+        controlledByMemberId: true,
+      },
     })
     if (session && session.status !== 'failed') {
-      if (sender.kind === 'member' && sender.memberId) {
+      // A member's mail is their message only where they may prompt (their thread, or one
+      // opened to others) and nobody has taken it over; otherwise it is data, as anyone's.
+      const mayPrompt =
+        sender.kind === 'member' &&
+        !!sender.memberId &&
+        !session.controlledByMemberId &&
+        (session.startedByMemberId === sender.memberId || session.othersMayPrompt)
+      if (mayPrompt) {
         if (await memberRequest(db, scope, row, sender, session.id))
           return { route: 'conversation', sessionId: session.id }
       } else if (await handTo(db, scope, session.id, row, sender, 'conversation')) {

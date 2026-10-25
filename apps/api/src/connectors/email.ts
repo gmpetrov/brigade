@@ -469,8 +469,14 @@ export const email: ConnectorDefinition = {
           })
         let rows = await arrived()
         if (!rows.length) {
-          await awaitMail(thread.id, i.seconds * 1000)
-          rows = await arrived()
+          // Handed over as it is delivered, before its route is written: read by its id, from
+          // this thread's own sign-up addresses only.
+          const handed = await awaitMail(thread.id, i.seconds * 1000)
+          rows = handed
+            ? await db.mailMessage.findMany({
+                where: { id: handed, alias: { sessionId: thread.id } },
+              })
+            : await arrived()
         }
         if (!rows.length)
           return {

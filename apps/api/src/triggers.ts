@@ -318,6 +318,30 @@ export async function dispatch(
   // The event's files, taken once for every trigger it starts a thread for.
   let attachmentIds: string[] | undefined
 
+  // A mailbox's conversation stays with the rule whose thread already holds it, even when an
+  // earlier rule would match its next mail now (a reply whose subject says "urgent").
+  const exclusive = triggers.some((t) => catalog[t.event]?.exclusive)
+  if (exclusive && triggers.length > 1) {
+    const keys = new Set(
+      triggers.map((t) => catalog[t.event]?.conversation?.(event)).filter((k): k is string => !!k),
+    )
+    if (keys.size) {
+      const holder = await prisma.session.findFirst({
+        where: {
+          triggerId: { in: triggers.map((t) => t.id) },
+          conversationKey: { in: [...keys] },
+          status: { not: 'failed' },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { triggerId: true },
+      })
+      if (holder?.triggerId) {
+        const first = triggers.findIndex((t) => t.id === holder.triggerId)
+        if (first > 0) triggers.unshift(...triggers.splice(first, 1))
+      }
+    }
+  }
+
   let started = 0
   let failed = false
   for (const trigger of triggers) {

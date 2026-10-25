@@ -7,9 +7,13 @@ import { bareAddress, localOn } from './names.js'
 
 export type Authentication = { spf?: string; dkim?: string; dmarc?: string } | null | undefined
 
-/** The receiving server proved the From domain: an aligned DKIM signature, or DMARC. */
+/**
+ * The receiving server proved the From domain: DMARC passed, or DKIM passed (signed for the From
+ * domain, which is what Resend's pass means) and DMARC did not fail. A DMARC fail is never a
+ * member, whatever else passed: a signature for another domain proves nothing about From.
+ */
 export const authenticated = (auth: Authentication) =>
-  auth?.dkim === 'pass' || auth?.dmarc === 'pass'
+  auth?.dmarc === 'pass' || (auth?.dkim === 'pass' && auth?.dmarc !== 'fail')
 
 /**
  * Gmail's own Authentication-Results header ("dkim=pass header.i=@acme.com; … dmarc=pass"),

@@ -59,7 +59,9 @@ export async function memberRequestThread(
   ].join('\n')
   if (sessionId) {
     const thread = await loadThread(db, sessionId)
+    // Their message only where they may prompt, as in the chat (requireMayPrompt).
     if (thread.controlledByMemberId) return null
+    if (thread.startedByMemberId !== sender.memberId && !thread.othersMayPrompt) return null
     const outcome = await promptWithAttachments(
       db,
       scope,
@@ -67,7 +69,9 @@ export async function memberRequestThread(
       { text, memberId: sender.memberId, attachmentIds },
       null,
     )
-    return outcome === 'offline' ? null : sessionId
+    // Its computer asleep: the mail waits and is tried again, as a rule's would.
+    if (outcome === 'offline') throw new Error('The thread’s computer is offline')
+    return sessionId
   }
   const computer =
     (await db.computer.findFirst({ where: { kind: 'cloud', status: { not: 'destroyed' } } })) ??
@@ -75,7 +79,7 @@ export async function memberRequestThread(
       where: { kind: 'member_machine', memberId: sender.memberId },
       orderBy: { updatedAt: 'desc' },
     }))
-  if (!computer) return null
+  if (!computer) throw new Error('The workspace has no computer to run the request on')
   const { thread, outcome } = await startThread(db, scope, {
     teammate,
     computer,
@@ -86,5 +90,11 @@ export async function memberRequestThread(
     connectorFiles: true,
     projectId: row.projectId,
   })
-  return outcome === 'offline' ? null : thread.id
+  // Its computer asleep: the thread never ran, so it goes, and the mail is tried again later
+  // (src/mail/jobs.ts) rather than left in the box.
+  if (outcome === 'offline') {
+    await db.session.deleteMany({ where: { id: thread.id } })
+    throw new Error('The computer is offline')
+  }
+  return thread.id
 }

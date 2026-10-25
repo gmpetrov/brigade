@@ -509,11 +509,8 @@ describe('receiving', { skip }, () => {
       mail({ to: [to(base())], from: adaEmail, subject: 'Forged', dkim: 'fail' }),
     )
     assert.equal(forged!.sender, 'unknown')
-    assert.equal(
-      await prisma.session.count({ where: { ...a, startedByMemberId: members[0]! } }),
-      before,
-    )
-    await arrive(
+    assert.equal(forged!.route, 'box')
+    const [request] = await arrive(
       mail({
         to: [to(`${base()}.lovarank`)],
         from: adaEmail,
@@ -521,14 +518,15 @@ describe('receiving', { skip }, () => {
         dkim: 'pass',
       }),
     )
-    const started = await prisma.session.findFirst({
-      where: { ...a, title: 'Please look at the SEO report' },
-    })
-    // Its computer is offline here, so the thread could not run; it was started as Ada's, in Lovarank.
-    assert.ok(started)
-    assert.equal(started!.startedByMemberId, members[0])
-    assert.equal(started!.origin, 'member')
-    assert.equal(started!.projectId, projectId)
+    // Its computer is offline here: the thread it started never ran, so it went, and the mail
+    // waits to be tried again rather than lie in the box.
+    assert.equal(request!.sender, 'member')
+    assert.equal(request!.status, 'pending')
+    assert.match(request!.error ?? '', /offline/)
+    assert.equal(
+      await prisma.session.count({ where: { ...a, startedByMemberId: members[0]! } }),
+      before,
+    )
   })
 
   test('the first matching rule takes the mail, in their order; the others never see it', async () => {
@@ -916,5 +914,340 @@ describe('rules on any mailbox', { skip }, () => {
       1,
     )
     await prisma.trigger.delete({ where: { id: rule.id } })
+  })
+})
+
+describe('races and boundaries', { skip }, () => {
+  test('email_wait must return the email it consumes', async () => {
+    const db = scoped(a)
+    const session = await thread('member')
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const alias = await addresses.newAlias(db, {
+      address,
+      projectId: null,
+      sessionId: session.id,
+      teammateId: riley.id,
+      purpose: 'race',
+      waitMinutes: 10,
+    })
+    const { email } = await import('../src/connectors/email.js')
+    const ctx = {
+      scope: a,
+      connectionId: address.connectionId!,
+      teammateId: riley.id,
+      thread: session,
+      callId: randomUUID(),
+      fetch: globalThis.fetch,
+    }
+    const waiting = email.operations.email_wait!.run(ctx as never, { seconds: 5 } as never)
+    await new Promise((r) => setTimeout(r, 100))
+    const delivering = arrive(
+      mail({ to: [`${alias.local}@mails.brigade.test`], subject: 'wait-race' }),
+    )
+    const result = (await waiting) as { emails: unknown[] }
+    await delivering
+    assert.equal(result.emails.length, 1, 'consumed without wakeup but email_wait returned nothing')
+  })
+
+  test('reply to a different project variant must not deliver to the original project', async () => {
+    const db = scoped(a)
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const session = await thread('member', { projectId })
+    const p2 = await db.project.create({ data: { name: `Other ${id}` } as never })
+    const slug = await addresses.projectSlug(db, p2.id)
+    const original = await db.mailMessage.create({
+      data: {
+        addressId: address.id,
+        projectId,
+        box: `${address.id}:${projectId}`,
+        direction: 'out',
+        status: 'sent',
+        conversationId: `cross-${id}`,
+        messageId: `<cross-${id}@x.test>`,
+        fromAddress: `${base()}.lovarank@mails.brigade.test`,
+        text: 'original',
+        sessionId: session.id,
+      } as never,
+    })
+    await db.replyWatch.create({
+      data: {
+        sessionId: session.id,
+        teammateId: riley.id,
+        connectionId: address.connectionId!,
+        conversationKey: original.conversationId,
+        to: 'x',
+        subject: 'x',
+        until: new Date(Date.now() + 3600000),
+      } as never,
+    })
+    const [row] = await arrive(
+      mail({
+        to: [`${base()}.${slug}@mails.brigade.test`],
+        subject: 'Private other-project message',
+        headers: { 'in-reply-to': original.messageId! },
+      }),
+    )
+    assert.notEqual(
+      row!.sessionId,
+      session.id,
+      'other project body delivered to original project thread',
+    )
+  })
+
+  test('two concurrently delivered copies must only wake one thread', async () => {
+    const db = scoped(a)
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const sessions = await Promise.all([thread(), thread()])
+    const alias = await addresses.newAlias(db, {
+      address,
+      projectId: null,
+      sessionId: sessions[0]!.id,
+      teammateId: riley.id,
+      purpose: 'concurrent',
+      waitMinutes: 10,
+    })
+    const inbox = await addresses.createInbox(db, ws(a), { projectId, label: 'Race' })
+    await db.replyWatch.create({
+      data: {
+        sessionId: sessions[1]!.id,
+        teammateId: riley.id,
+        connectionId: inbox.connectionId!,
+        conversationKey: `race-${id}`,
+        to: 'x',
+        subject: 'x',
+        until: new Date(Date.now() + 3600000),
+      } as never,
+    })
+    const common = {
+      direction: 'in',
+      status: 'pending',
+      messageId: `<race-${id}@x.test>`,
+      fromAddress: 'stranger@outside.test',
+      text: 'pre-read race',
+      subject: 'race',
+      conversationId: `race-${id}`,
+      sender: 'unknown',
+    }
+    const rows = await Promise.all([
+      db.mailMessage.create({
+        data: {
+          ...common,
+          addressId: address.id,
+          box: `${address.id}:-`,
+          aliasId: alias.id,
+        } as never,
+      }),
+      db.mailMessage.create({
+        data: { ...common, addressId: inbox.id, box: `${inbox.id}:-` } as never,
+      }),
+    ])
+    await Promise.all(rows.map((row) => inbound.processMail(row.id)))
+    const delivered = await db.mailMessage.count({
+      where: { id: { in: rows.map((r) => r.id) }, sessionId: { not: null } },
+    })
+    assert.equal(delivered, 1, 'both copies of one Message-ID woke different threads')
+  })
+})
+
+describe('who may do what', { skip }, () => {
+  test('a valid DKIM signature with failed DMARC must not impersonate a member', async () => {
+    const { senderOf } = await import('../src/mail/identity.js')
+    const sender = await senderOf(scoped(a), a, adaEmail, 'Forged', { dkim: 'pass', dmarc: 'fail' })
+    assert.notEqual(
+      sender.kind,
+      'member',
+      'unrelated-domain DKIM can pass while the From address is forged',
+    )
+  })
+  test('a different member must not prompt an owners private thread by email', async () => {
+    const db = scoped(a)
+    const member = await prisma.member.upsert({
+      where: { id: `mem-review-${id}` },
+      create: {
+        id: `mem-review-${id}`,
+        organizationId: a.organizationId,
+        userId: users[1]!,
+        role: 'member',
+      },
+      update: {},
+    })
+    const session = await thread('member', { othersMayPrompt: false })
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { teammateId: riley.id },
+      include: { connection: true },
+    })
+    const { memberRequestThread } = await import('../src/mail/member-mail.js')
+    const old = await db.teammate.findFirstOrThrow({ where: { id: riley.id } })
+    // A cap makes prompting observable without needing a running computer.
+    await db.teammate.update({
+      where: { id: riley.id },
+      data: { caps: { computerHoursPerDay: 0 } },
+    })
+    try {
+      const result = await memberRequestThread(
+        db,
+        a,
+        {
+          id: 'review-auth',
+          resendId: null,
+          addressId: address.id,
+          projectId: null,
+          subject: 'private reply',
+          text: 'Do this with your private Apps',
+          inReplyTo: '<private@x.test>',
+          fromAddress: `bob-${id}@acme.test`,
+          attachments: [],
+          address,
+        },
+        { kind: 'member', memberId: member.id, line: 'Bob' },
+        session.id,
+      )
+      assert.equal(
+        result,
+        null,
+        'another member prompted the owners thread and created a cap ticket',
+      )
+    } finally {
+      await db.teammate.update({ where: { id: riley.id }, data: { caps: old.caps as never } })
+    }
+  })
+  test('existing conversation must beat a newly matching earlier rule', async () => {
+    const db = scoped(a)
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { teammateId: riley.id },
+      include: { connection: true },
+    })
+    const make = (label: string, position: number, options: object) =>
+      db.trigger.create({
+        data: {
+          connectionId: address.connectionId!,
+          teammateId: riley.id,
+          createdByMemberId: members[0]!,
+          event: 'email_received',
+          label,
+          position,
+          options,
+        } as never,
+      })
+    const first = await make('Urgent', 0, { subject: 'urgent' })
+    const rest = await make('Rest', 1, {})
+    const held = await thread('trigger', {
+      triggerId: rest.id,
+      conversationKey: 'rule-priority',
+      controlledByMemberId: members[0]!,
+    })
+    const { dispatch } = await import('../src/triggers.js')
+    try {
+      const result = await dispatch(address.connection!, {
+        id: randomUUID(),
+        type: 'email',
+        payload: {
+          id: randomUUID(),
+          threadId: 'rule-priority',
+          projectId: null,
+          subject: 'Now urgent',
+          from: 'client@outside.test',
+          to: 'x',
+          body: 'Please respond',
+          labels: [],
+        },
+      })
+      assert.equal(
+        result.threadId,
+        held.id,
+        'the first rule took a conversation already controlled in the second rules thread',
+      )
+    } finally {
+      await db.trigger.deleteMany({ where: { id: { in: [first.id, rest.id] } } })
+    }
+  })
+})
+
+describe('offline computers', { skip }, () => {
+  test('member mail to an offline laptop must remain pending for delivery', async () => {
+    const [row] = await arrive(
+      mail({
+        to: [`${base()}@mails.brigade.test`],
+        from: adaEmail,
+        subject: 'Offline request',
+        dkim: 'pass',
+      }),
+    )
+    assert.equal(
+      row!.status,
+      'pending',
+      'member mail was marked done/box although its created thread failed offline',
+    )
+  })
+})
+
+describe('rule preview privacy', { skip }, () => {
+  test('a regular member must not preview someone elses personal Gmail', async () => {
+    const db = scoped(a)
+    // A regular member of A (the test before may have made it already).
+    await prisma.member.upsert({
+      where: { id: `mem-review-${id}` },
+      create: {
+        id: `mem-review-${id}`,
+        organizationId: a.organizationId,
+        userId: users[1]!,
+        role: 'member',
+      },
+      update: {},
+    })
+    const { appFor } = await import('../src/apps.js')
+    const { sealSecret } = await import('../src/vault.js')
+    const { auth } = await import('../src/auth.js')
+    const { email } = await import('../src/routes/email.js')
+    const app = await appFor(db, ws(a), 'gmail')
+    const connection = await db.connection.create({
+      data: {
+        appId: app.id,
+        kind: 'gmail',
+        label: 'Private',
+        externalAccount: adaEmail,
+        reach: 'mine',
+        createdByMemberId: members[0]!,
+        vaultSecretId: await sealSecret(db, a, {
+          accessToken: 'test-only',
+          refreshToken: 'test-only',
+          expiresAt: Date.now() + 3600000,
+        }),
+      } as never,
+    })
+    const realSession = auth.api.getSession
+    const previousFetch = globalThis.fetch
+    ;(auth.api as any).getSession = async () => ({
+      user: { id: users[1]! },
+      session: {
+        id: 'test-session',
+        activeOrganizationId: a.organizationId,
+        activeWorkspaceId: a.workspaceId,
+      },
+    })
+    globalThis.fetch = (async () =>
+      json({
+        messages: [{ id: 'private-email' }],
+        id: 'private-email',
+        threadId: 'private-conversation',
+        payload: {
+          headers: [
+            { name: 'From', value: 'private@outside.test' },
+            { name: 'Subject', value: 'Confidential owner mail' },
+          ],
+        },
+      })) as typeof fetch
+    try {
+      const result = await email.request('/rules/preview', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ connectionId: connection.id, options: {} }),
+      })
+      const body = await result.text()
+      assert.equal(result.status, 403, body)
+    } finally {
+      ;(auth.api as any).getSession = realSession
+      globalThis.fetch = previousFetch
+    }
   })
 })

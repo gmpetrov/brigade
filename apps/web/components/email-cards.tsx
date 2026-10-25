@@ -331,7 +331,7 @@ export function EmailDraftView({
 }
 
 /** What a person changed in an email's draft before approving it (the Email App's email_send). */
-export type EditedEmail = { to: string[]; cc?: string[]; subject: string; text: string }
+export type EditedEmail = { to: string[]; cc: string[]; subject: string; text: string }
 
 const list = (value: string) =>
   value
@@ -371,12 +371,8 @@ export function EmailDraftEditor({
       onSubmit={(e) => {
         e.preventDefault()
         if (!recipients.length || !body.trim()) return
-        onSend({
-          to: recipients,
-          ...(list(cc).length ? { cc: list(cc) } : {}),
-          subject,
-          text: body,
-        })
+        // Cc always: emptied, it removes the draft's own (the edit replaces the draft's fields).
+        onSend({ to: recipients, cc: list(cc), subject, text: body })
       }}
     >
       {row('To', to, setTo)}
