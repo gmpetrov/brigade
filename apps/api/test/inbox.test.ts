@@ -1638,6 +1638,51 @@ describe('what comes next: a reply to approve, a reply set for later', { skip },
     assert.equal(detail.next, null)
   })
 
+  test('a reply to approve leaves a handed-over thread out of the sidebar; any other ask brings it in', async () => {
+    // Its hook surfaces a quiet thread when a ticket opens there.
+    await import('../src/thread-archive.js')
+    const db = scoped(scope)
+    const handed = await thread(riley.id, { quiet: true })
+    const received = await mail(agent, { route: 'handed', sessionId: handed.id })
+    const surfaced = async () =>
+      (await prisma.session.findUniqueOrThrow({ where: { id: handed.id } })).surfacedAt
+    /** The hook runs after the write: waits for it to set surfacedAt, or not. */
+    const settled = async (expected: boolean) => {
+      for (let i = 0; i < 20 && Boolean(await surfaced()) !== expected; i++)
+        await new Promise((r) => setTimeout(r, 50))
+      return surfaced()
+    }
+
+    // As connector-calls.ts opens it: through the scoped client.
+    await db.ticket.create({
+      data: {
+        sessionId: handed.id,
+        type: 'approval',
+        title: 'Riley: email send',
+        payload: {
+          connectionId: agent.connectionId,
+          operation: 'email_send',
+          input: { to: ['client@outside.test'], text: 'Got it.', replyTo: received.id },
+        },
+      } as never,
+    })
+    await new Promise((r) => setTimeout(r, 300))
+    assert.equal(await settled(false), null)
+    // The Inbox shows it as the conversation's reply to approve.
+    assert.equal((await inbox.readItem(db, as(0), `mail:${received.id}`)).drafts.length, 1)
+
+    // A reply to a mail of another conversation is not the Inbox's to show here.
+    await db.ticket.create({
+      data: {
+        sessionId: handed.id,
+        type: 'approval',
+        title: 'Riley: email send',
+        payload: { operation: 'email_send', input: { replyTo: (await mail(agent)).id } },
+      } as never,
+    })
+    assert.ok(await settled(true))
+  })
+
   test('a reply set for later shows when it leaves, under Scheduled, and its thread may cancel it', async () => {
     const db = scoped(scope)
     const asked = await thread(riley.id)
