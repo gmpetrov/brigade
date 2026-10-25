@@ -830,10 +830,11 @@ export class HarnessThread {
         }
         if (event.type === 'message.done') this.remember('assistant', event.text)
         this.replies.see(event)
-        // A turn's usage says whose account spent it: one thread may run on several.
+        // A turn's usage says whose account spent it: the stream's own, which after running out
+        // of usage (switchTo) is the next account's, not the one the turn started on.
         this.emitEvent(
           event.type === 'usage.updated' && !event.accountId
-            ? { ...event, accountId: this.spec.account.id }
+            ? { ...event, accountId: (attached ?? this.live)?.account.id ?? this.spec.account.id }
             : event,
         )
       },

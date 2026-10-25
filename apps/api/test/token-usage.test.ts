@@ -164,6 +164,60 @@ test(
   },
 )
 
+test(
+  'after an account runs out mid-turn, what follows is the next account’s',
+  { skip },
+  async () => {
+    const next = await prisma.account.create({
+      data: {
+        ...scope,
+        memberId: ids.members[0]!,
+        computerId,
+        provider: 'claude_code',
+        label: 'Second Claude',
+      },
+    })
+    const t = await thread()
+    await noteTokenUsage({ ...t, accountId: ada }, [
+      event({ type: 'turn.started', teammateId: riley, accountId: ada }),
+      event({ type: 'usage.updated', teammateId: riley, inputTokens: 10, outputTokens: 1 }),
+      event({
+        type: 'account.switched',
+        fromAccountId: ada,
+        toAccountId: next.id,
+        reason: 'usage_limit',
+        resetsAt: null,
+      }),
+      // An older runner stamps no account: the switch says whose it is.
+      event({ type: 'usage.updated', teammateId: riley, inputTokens: 20, outputTokens: 2 }),
+      // The runner's stamp is the stream's own account.
+      event({
+        type: 'usage.updated',
+        teammateId: riley,
+        accountId: next.id,
+        inputTokens: 30,
+        outputTokens: 3,
+      }),
+    ])
+    const rows = await prisma.tokenUsage.findMany({
+      where: { sessionId: t.id },
+      orderBy: { seq: 'asc' },
+    })
+    assert.deepEqual(
+      rows.map((r) => [r.inputTokens, r.accountId]),
+      [
+        [10, ada],
+        [20, next.id],
+        [30, next.id],
+      ],
+    )
+    // Not in the totals the next tests count.
+    await prisma.session.delete({ where: { id: t.id } })
+    await prisma.tokenUsage.deleteMany({ where: { accountId: next.id } })
+    await prisma.tokenUsage.deleteMany({ where: { sessionId: null, inputTokens: 10 } })
+  },
+)
+
 test("a routine's runs and Brigade's own runs are told apart", { skip }, async () => {
   const schedule = await prisma.schedule.create({
     data: {
