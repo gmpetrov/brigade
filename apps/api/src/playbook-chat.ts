@@ -15,6 +15,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import type { Scope, ScopedDb } from './db.js'
 import { latestDryRun, startDryRun } from './playbook-dry-runs.js'
+import { installationToUpdate, upgradePlaybook } from './playbook-updates.js'
 import {
   accountChoices,
   answerSettings,
@@ -392,6 +393,78 @@ export async function handlePlaybookCall(
             : 'Its report shows under your reply, one card per event. Say in a few lines what it found, ' +
               'what would have gone wrong, and the cost; propose recipe changes with propose_skill if any; ' +
               'then offer to activate it (activate_playbook).',
+      }
+    }
+
+    if (op.name === 'update_playbook') {
+      const starter = await db.member.findFirst({
+        where: { id: session.startedByMemberId },
+        select: { role: true },
+      })
+      const who = { memberId: session.startedByMemberId, role: starter?.role ?? 'member' }
+      const installation = await installationToUpdate(db, who, op)
+      const view = await getInstallation(db, installation.id, who)
+      if (!view.update)
+        return {
+          installationId: view.id,
+          playbook: view.name,
+          version: view.version,
+          error: `${view.name} is already on its latest version, ${view.version}.`,
+        }
+      if (!op.apply)
+        return {
+          installationId: view.id,
+          playbook: view.name,
+          status: view.status,
+          from: view.version,
+          to: view.update.version,
+          changes: view.update.changes,
+          autonomy: view.update.autonomy,
+          keptSkills: view.update.keptSkills,
+          newSettings: view.update.newSettings,
+          ...(view.update.blocked ? { blocked: view.update.blocked } : {}),
+          next:
+            `Tell the person in a few lines what moving from ${view.version} to ${view.update.version} changes ` +
+            '(the changes, and that autonomy never grows: the autonomy lines), and ' +
+            (view.update.keptSkills.length
+              ? `that their edited ${view.update.keptSkills.join(', ')} stay as they are unless they want the new ` +
+                'version (then pass replaceSkills). '
+              : '') +
+            (view.update.newSettings.some((s) => !s.optional)
+              ? 'ask the new required settings one at a time (newSettings), then call update_playbook with ' +
+                'installationId, apply: true and their answers by key. '
+              : 'ask whether to update; when they agree, call update_playbook with installationId and apply: true. ') +
+            'Its runs, numbers and history are kept, and it stays active or paused as it is.',
+        }
+      const result = await upgradePlaybook(db, { ...scope, ...who }, installation.id, {
+        settings: op.settings,
+        ...(op.replaceSkills ? { replaceSkills: op.replaceSkills } : {}),
+      })
+      if (!result.updated)
+        return {
+          installationId: installation.id,
+          updated: false,
+          missing: result.missing,
+          next:
+            `Not updated yet: ask the person "${result.missing[0]?.ask}" (${result.missing[0]?.type}), one ` +
+            'question at a time, then call update_playbook again with apply: true and every answer so far. ' +
+            'A teammate setting takes a teammate by name; an account setting the account as its row shows it.',
+        }
+      return {
+        installationId: installation.id,
+        updated: true,
+        from: result.from,
+        to: result.to,
+        keptSkills: result.keptSkills,
+        status: result.playbook.status,
+        apps: result.playbook.apps.filter((a) => a.status !== 'ready' && !a.optional),
+        next:
+          `Updated to ${result.to}. Say so in a line` +
+          (result.keptSkills.length
+            ? `, and that their edited ${result.keptSkills.join(', ')} were kept`
+            : '') +
+          '. If apps lists an App that is not ready, ask for it with an access ticket at the access the ' +
+          'playbook declares, for the teammate that holds it.',
       }
     }
 

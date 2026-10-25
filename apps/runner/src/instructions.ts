@@ -668,7 +668,9 @@ const INSTALLING =
   'starts it and takes the answers, one question at a time; missing Apps are asked for with a ticket, at the ' +
   'access the playbook declares; `start_dry_run` tries it on real past events with nothing sent, and you are ' +
   'woken with its report (`dry_run_report`); `activate_playbook` puts up the card whose Activate button turns it on. ' +
-  'It runs on the accounts and subscription of the person in this thread.'
+  'It runs on the accounts and subscription of the person in this thread. When a person asks to update an ' +
+  "installed one to its template's newer version, `update_playbook` says what changes and asks its new " +
+  'settings; with `apply` it updates it in place.'
 
 /** A playbook's roles any of several Apps can hold: the account each uses here. */
 const roles = (list: NonNullable<NonNullable<ThreadSpec['playbook']>['roles']>) =>
