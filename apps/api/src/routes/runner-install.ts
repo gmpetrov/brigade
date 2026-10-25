@@ -1,12 +1,12 @@
 // The one-command runner install: `curl -fsSL <api>/runner/install.sh | sh`.
 // Installs Node.js if needed (checksum-verified) and the runner into ~/.brigade. No root.
+// A Node.js older than NODE_VERSION is replaced: Node's security releases fix the runtime itself.
 // A runner updates itself by running this same script (see apps/runner/src/updater.ts).
+import { NODE_VERSION } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { env } from '../config.js'
 import { runnerBundleFile, runnerBundleSha256 } from '../platform/node.js'
-
-const NODE_VERSION = 'v24.18.1'
 
 /** Exit code of a runner that replaced itself: the wrapper starts the new one. */
 export const UPDATED_EXIT_CODE = 75
@@ -24,33 +24,51 @@ export const installScript = (apiUrl: string) => `#!/bin/sh
 set -eu
 API="${apiUrl}"
 NODE_VERSION="${NODE_VERSION}"
+NODE_DIST="\${BRIGADE_NODE_DIST:-https://nodejs.org/dist}"
 DIR="\${BRIGADE_INSTALL_DIR:-\${BRIGADE_HOME:-$HOME/.brigade}}"
 STEP="\${BRIGADE_INSTALL_STEP:-all}"
 mkdir -p "$DIR/bin"
 
-node_ok() { [ -x "$1" ] && [ "$("$1" -p 'process.versions.node.split(".")[0]')" -ge 22 ]; }
+# A Node.js at least as recent as NODE_VERSION.
+node_ok() {
+  [ -x "$1" ] && "$1" -e '
+    const [a, b] = [process.versions.node, process.argv[1]].map((v) => v.split(".").map(Number))
+    const d = a.map((n, i) => n - b[i]).find((n) => n !== 0) ?? 0
+    process.exit(d >= 0 ? 0 : 1)' "\${NODE_VERSION#v}" 2>/dev/null
+}
 if node_ok "$(command -v node || true)"; then
   NODE="$(command -v node)"
 elif node_ok "$DIR/node/bin/node"; then
   NODE="$DIR/node/bin/node"
 else
-  case "$(uname -s)-$(uname -m)" in
-    Linux-x86_64) P=linux-x64; EXT=tar.xz ;;
-    Linux-aarch64) P=linux-arm64; EXT=tar.xz ;;
-    Darwin-arm64) P=darwin-arm64; EXT=tar.gz ;;
-    Darwin-x86_64) P=darwin-x64; EXT=tar.gz ;;
-    *) echo "Unsupported platform: $(uname -s) $(uname -m)" >&2; exit 1 ;;
-  esac
-  F="node-$NODE_VERSION-$P.$EXT"
-  T=$(mktemp -d)
-  echo "Installing Node.js $NODE_VERSION"
-  curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/$F" -o "$T/$F"
-  EXPECTED=$(curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/SHASUMS256.txt" | grep " $F\\$" | cut -d' ' -f1)
-  ACTUAL=$( (sha256sum "$T/$F" 2>/dev/null || shasum -a 256 "$T/$F") | cut -d' ' -f1)
-  [ -n "$EXPECTED" ] && [ "$EXPECTED" = "$ACTUAL" ] || { echo "Node.js checksum mismatch" >&2; exit 1; }
-  rm -rf "$DIR/node" && mkdir -p "$DIR/node"
-  tar -xf "$T/$F" -C "$DIR/node" --strip-components=1
-  rm -rf "$T"
+  # Downloaded into node.new (the stage step of an update, while the runner works on its Node),
+  # then put in place by any other step.
+  if ! node_ok "$DIR/node.new/bin/node"; then
+    case "$(uname -s)-$(uname -m)" in
+      Linux-x86_64) P=linux-x64; EXT=tar.xz ;;
+      Linux-aarch64) P=linux-arm64; EXT=tar.xz ;;
+      Darwin-arm64) P=darwin-arm64; EXT=tar.gz ;;
+      Darwin-x86_64) P=darwin-x64; EXT=tar.gz ;;
+      *) echo "Unsupported platform: $(uname -s) $(uname -m)" >&2; exit 1 ;;
+    esac
+    F="node-$NODE_VERSION-$P.$EXT"
+    T=$(mktemp -d)
+    echo "Installing Node.js $NODE_VERSION"
+    curl -fsSL "$NODE_DIST/$NODE_VERSION/$F" -o "$T/$F"
+    EXPECTED=$(curl -fsSL "$NODE_DIST/$NODE_VERSION/SHASUMS256.txt" | grep " $F\\$" | cut -d' ' -f1)
+    ACTUAL=$( (sha256sum "$T/$F" 2>/dev/null || shasum -a 256 "$T/$F") | cut -d' ' -f1)
+    [ -n "$EXPECTED" ] && [ "$EXPECTED" = "$ACTUAL" ] || { echo "Node.js checksum mismatch" >&2; exit 1; }
+    rm -rf "$DIR/node.new" && mkdir -p "$DIR/node.new"
+    tar -xf "$T/$F" -C "$DIR/node.new" --strip-components=1
+    rm -rf "$T"
+  fi
+  if [ "$STEP" != stage ]; then
+    # Two renames: a running runner keeps its Node, whose files stay until it exits.
+    rm -rf "$DIR/node.old"
+    [ ! -d "$DIR/node" ] || mv "$DIR/node" "$DIR/node.old"
+    mv "$DIR/node.new" "$DIR/node"
+    rm -rf "$DIR/node.old"
+  fi
   NODE="$DIR/node/bin/node"
 fi
 

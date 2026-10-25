@@ -13,6 +13,8 @@ import { hostname } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import {
+  NODE_VERSION,
+  nodeAtLeast,
   RunnerLinkResult,
   type AgentEvent,
   type ApiToRunner,
@@ -136,6 +138,11 @@ async function start() {
     console.error(`A runner is already running from ${HOME} (pid ${other}). Stop it first.`)
     process.exit(ALREADY_RUNNING_EXIT_CODE)
   }
+  // The installer moves an installed runner onto it at its next update; one run from source does not.
+  if (!nodeAtLeast(process.version))
+    console.warn(
+      `running on Node.js ${process.version}, older than ${NODE_VERSION}: it misses security fixes`,
+    )
   // Before any preview starts again on a port one of them may still hold. The harnesses of
   // turns an update handed over stay, for their threads to take up.
   await processGroups.reap(takeHandOver()).then(
