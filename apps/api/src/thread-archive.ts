@@ -48,7 +48,13 @@ async function bringBack(scope: Scope, sessionId: string) {
 
 onScopedWrite((model, scope, operation, result) => {
   if (operation !== 'create') return
-  const row = result as { sessionId?: string | null; status?: string; state?: string }
+  const row = result as {
+    sessionId?: string | null
+    status?: string
+    state?: string
+    type?: string
+    payload?: unknown
+  }
   if (!row.sessionId) return
   if (
     (model === 'Ticket' && row.status === 'open') ||
@@ -57,14 +63,52 @@ onScopedWrite((model, scope, operation, result) => {
     void bringBack(scope, row.sessionId).catch((error) =>
       console.warn(`thread-archive: ${row.sessionId} not brought back: ${String(error)}`),
     )
-  // A quiet thread (a mailbox rule's) that needs a person: in the sidebar from now on.
-  if (model === 'Ticket' && row.status === 'open')
-    void scoped(scope)
-      .session.updateMany({
-        where: { id: row.sessionId, quiet: true, surfacedAt: null },
-        data: { surfacedAt: new Date() },
-      })
+  // A quiet thread (a mailbox rule's, an Inbox hand-over) that needs a person: in the sidebar
+  // from now on. Not for a reply to approve in its own conversation: the Inbox shows it.
+  if (model === 'Ticket' && row.status === 'open') {
+    const sessionId = row.sessionId
+    void draftInInbox(scope, sessionId, row)
+      .then((inInbox) =>
+        inInbox
+          ? undefined
+          : scoped(scope).session.updateMany({
+              where: { id: sessionId, quiet: true, surfacedAt: null },
+              data: { surfacedAt: new Date() },
+            }),
+      )
       .catch((error) =>
         console.warn(`thread-archive: ${row.sessionId} not surfaced: ${String(error)}`),
       )
+  }
 })
+
+/**
+ * An email_send waiting for approval that answers a mail of this thread's conversation: the
+ * Inbox shows it there as a reply to approve (inbox.ts, draftsOf), so the thread stays quiet.
+ */
+async function draftInInbox(
+  scope: Scope,
+  sessionId: string,
+  ticket: { type?: string; payload?: unknown },
+) {
+  const payload = (ticket.payload ?? {}) as { operation?: unknown; input?: { replyTo?: unknown } }
+  const replyTo = payload.input?.replyTo
+  if (
+    ticket.type !== 'approval' ||
+    typeof payload.operation !== 'string' ||
+    !/^email_send(_|$)/.test(payload.operation) ||
+    typeof replyTo !== 'string'
+  )
+    return false
+  const db = scoped(scope)
+  const answered = await db.mailMessage.findFirst({
+    where: { id: replyTo },
+    select: { box: true, conversationId: true },
+  })
+  if (!answered) return false
+  return (
+    (await db.mailMessage.count({
+      where: { box: answered.box, conversationId: answered.conversationId, sessionId },
+    })) > 0
+  )
+}
