@@ -15,7 +15,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   childPrompt,
-  REVIEW_RECHECKS,
+  REVIEW_LOOKS,
   REVIEW_WAIT_MINUTES,
   ReviewChoice,
   type ReviewPolicy,
@@ -84,7 +84,10 @@ export async function reviewPolicyOf(
 const startedNote = (reviewer: string) =>
   `${reviewer} reviews it in a child thread, from a brief of Brigade's. You are woken here with its ` +
   'report: fix what it rightly found and push, then ask it to look at what changed with ' +
-  `message_thread (${REVIEW_RECHECKS} times at most), and tell the person where it stands. Until ` +
+  'message_thread, and again while each look finds fewer problems that block the merge ' +
+  `(${REVIEW_LOOKS} looks at most). When it goes in circles (a fixed problem comes back, or a ` +
+  'disagreement outlasts telling it why once), stop and tell the person what is open and what you ' +
+  'recommend. Until ' +
   'then, do not offer to merge it. Tell the person in a line that it is in review, then end your ' +
   'turn: do not wait or poll.'
 
@@ -274,14 +277,16 @@ export function reviewBrief(input: {
       'request or its description does not say, data it could lose or corrupt, security and ' +
       'permission holes, races, and missing tests where a mistake is likely. Leave out style a ' +
       'formatter would fix, and taste. For each problem, say where (file and line) and a concrete ' +
-      'case where it goes wrong; leave out what you cannot make concrete.',
+      'case where it goes wrong; leave out what you cannot make concrete. Say which problems block ' +
+      'the merge; name the others as minor, and approve when only minor ones are left.',
     'Then call `github_review_pull_request` once, with verdict "approve" or "request_changes", a ' +
       'short summary and line comments for the problems. Do not push to its branch, do not merge it, ' +
       'and do not mention other teammates. ' +
       (input.child
         ? 'Then `report` the verdict and the problems in a few lines. The thread that waits for it ' +
-          'has them fixed and may ask you to look again: then review what changed since, and give a ' +
-          'new verdict the same way.'
+          'has them fixed and may ask you to look again: then review what changed since and whether ' +
+          'the problems you found are fixed, and give a new verdict the same way. On a new look, raise ' +
+          'a problem in code that did not change only when it blocks the merge.'
         : 'Then say the verdict and the problems in your reply, in a few lines.'),
   ]
     .filter(Boolean)
@@ -435,6 +440,18 @@ async function startClaimed(
   if (row.reviewSession && reviewUnderWay(row.reviewSession))
     throw new HTTPException(409, {
       message: `${row.reviewSession.teammate.name} is already reviewing it`,
+    })
+  // Its review took its last look: a fresh one is the person's call, not the author's way round it.
+  if (
+    input.by.kind === 'teammate' &&
+    row.reviewSession &&
+    (await db.pullRequestReview.count({ where: { sessionId: row.reviewSession.id } })) >=
+      REVIEW_LOOKS
+  )
+    throw new HTTPException(409, {
+      message:
+        `Its review took its ${REVIEW_LOOKS} looks. Tell the person where it stands: they can have ` +
+        'it read again with Review again on the pull request.',
     })
   const home = row.sessionId ? await loadThread(db, row.sessionId) : null
   const parent = await reviewParent(db, home)

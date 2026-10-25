@@ -21,6 +21,7 @@ import {
   REPORT_AFTER_PERSON_MINUTES,
   REPORT_MAX,
   REPORT_START,
+  REVIEW_LOOKS,
   type PlaybookManifest,
   type ScheduleOperation,
   singleNote,
@@ -741,15 +742,26 @@ export async function messageChild(
   // A review whose pull request is merged or closed: work it is asked for now is another pull
   // request's, which Brigade would show as unreviewed, with Merge. That one gets its own review.
   const reviewed = await db.pullRequest.findFirst({
-    where: { reviewSessionId: child.id, state: { not: 'open' } },
+    where: { reviewSessionId: child.id },
     select: { number: true, state: true },
   })
-  if (reviewed)
+  if (reviewed && reviewed.state !== 'open')
     return {
       error:
         `This thread reviewed #${reviewed.number}, which is ${reviewed.state}. To have its fixes in a new ` +
         'pull request reviewed, call request_review on that one, with this reviewer: Brigade then shows ' +
         'the person that it is in review.',
+    }
+  // A review that took its last look: past it, more looks rarely settle what is left.
+  if (
+    reviewed &&
+    (await db.pullRequestReview.count({ where: { sessionId: child.id } })) >= REVIEW_LOOKS
+  )
+    return {
+      error:
+        `This review of #${reviewed.number} took its ${REVIEW_LOOKS} looks, the most Brigade allows. ` +
+        'Tell the person where it stands: what is still open, and what you recommend. They can have ' +
+        'it read again with Review again on the pull request.',
     }
   const thread = await loadThread(db, child.id)
   if (thread.controlledByMemberId)
