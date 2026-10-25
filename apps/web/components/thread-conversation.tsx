@@ -646,10 +646,12 @@ export function ThreadConversation({
                 teammate: t.teammate,
               },
             }}
-            onResolve={async (ticketId, approved) => {
+            onResolve={async (ticketId, approved, _always, edited) => {
               setError(undefined)
               try {
-                await api(`/tickets/${ticketId}/resolve`, { body: { approved } })
+                await api(`/tickets/${ticketId}/resolve`, {
+                  body: { approved, ...(edited ? { edited } : {}) },
+                })
               } catch (e) {
                 setError((e as Error).message)
               }
@@ -1184,11 +1186,12 @@ export function ThreadConversation({
                       busy: previewStart.busy,
                       start: (words) => void previewStart.start(words),
                     }}
-                    onApproval={(approvalId, approved, always) =>
+                    onApproval={(approvalId, approved, always, edited) =>
                       void call('/approvals', {
                         approvalId,
                         approved,
                         ...(always ? { always: true } : {}),
+                        ...(edited ? { edited } : {}),
                       }).catch(() => undefined)
                     }
                     onAnswer={(questionId, answer) =>

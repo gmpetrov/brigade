@@ -73,6 +73,11 @@ export const CreateTeammate = z
 export const PermissionPolicy = z.object({
   /** Connector writes: allow (the default), ask (a ticket waits for a person) or deny. */
   connectorWrites: z.enum(['allow', 'ask', 'deny']).optional(),
+  /**
+   * Emails from Brigade's own addresses (the Email App) to anyone outside the workspace: ask
+   * (the default, whatever connectorWrites says) or allow. A deny of connectorWrites still stands.
+   */
+  emailSends: z.enum(['allow', 'ask']).optional(),
 })
 export type PermissionPolicy = z.infer<typeof PermissionPolicy>
 /** Daily caps per teammate. Unset means no cap. Reaching one pauses new work and opens a ticket. */
@@ -209,11 +214,21 @@ export const CreateTrigger = z.object({
   /** What the teammate does with each event, before the event in each thread. */
   instructions: TriggerInstructions.optional(),
 })
+/** An email's draft as a person approving it changed it (the Email App's email_send). */
+export const EditedEmail = z.object({
+  to: z.array(z.string().email()).min(1).max(50),
+  cc: z.array(z.string().email()).max(50).optional(),
+  subject: z.string().max(500),
+  text: z.string().max(100_000),
+})
+export type EditedEmail = z.infer<typeof EditedEmail>
 export const ResolveTicket = z.object({
   approved: z.boolean(),
   reason: z.string().max(2000).optional(),
   /** A credential's ticket: also let the teammate use it from now on, without asking. */
   always: z.boolean().optional(),
+  /** An email's approval: the draft as the person changed it before approving. */
+  edited: EditedEmail.optional(),
 })
 
 const hasContent = (m: { text: string; attachmentIds: string[] }) =>
@@ -315,6 +330,8 @@ export const ResolveApproval = z.object({
   approved: z.boolean(),
   reason: z.string().max(2000).optional(),
   always: z.boolean().optional(),
+  /** An email's approval: the draft as the person changed it before approving. */
+  edited: EditedEmail.optional(),
 })
 
 export const AnswerQuestion = z.object({ questionId: z.string(), answer: QuestionAnswer })

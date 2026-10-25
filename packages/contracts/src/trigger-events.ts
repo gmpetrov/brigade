@@ -6,6 +6,13 @@
 
 /** The trigger name of a reply to an email sent from the thread, rather than a trigger's event. */
 export const AWAITED_REPLY = 'Awaited reply'
+/**
+ * The same for Brigade's own addresses (the Email App): a reply to mail the thread sent, or mail
+ * on a sign-up address it made.
+ */
+export const AWAITED_EMAIL = 'Awaited email'
+/** The trigger name of a later email in a conversation a thread handles (the Email App). */
+export const EMAIL_IN_CONVERSATION = 'Email in this conversation'
 
 /** Raw payloads past this are cut: the summary carries what matters. */
 export const TRIGGER_PAYLOAD_MAX = 40_000

@@ -71,6 +71,10 @@ export const watchingNote = (until: Date) =>
 // can leave it out too, so the test lives with Gmail's code.
 export { automatic } from './connectors/gmail.js'
 
+/** A mail server saying an email could not be delivered (a delivery status notification). */
+export const bounced = (email: { from?: string | null }) =>
+  /\b(mailer-daemon|postmaster)@/i.test(email.from ?? '')
+
 /**
  * A new email in a mailbox: wake each thread waiting on its conversation. Each email wakes a
  * thread once, even when read again. A thread woken too often with no word from a person stops
@@ -88,6 +92,7 @@ export async function wakeOnReply(
   },
   email: ReceivedEmail,
   now = new Date(),
+  bounce = false,
 ) {
   if (!email.threadId) return 0
   // Ended ones too: an email read again after a failed read stays the thread's it woke, even
@@ -126,7 +131,7 @@ export async function wakeOnReply(
           sessionId: watch.sessionId,
           teammateId: watch.teammateId,
           kind: 'reply',
-          note: replyMessage(connection, watch, email, now),
+          note: replyMessage(connection, watch, email, now, bounce),
           wakeAt: now,
           sourceId,
         } as never,
@@ -151,14 +156,17 @@ export function replyMessage(
   watch: { to: string; subject: string },
   email: ReceivedEmail,
   now: Date,
+  bounce = false,
 ) {
   const account = connection.externalAccount ?? connection.label
   return triggerEventText({
-    summary:
-      `A reply came in the conversation of the email you sent from this thread to ${watch.to} ` +
-      `("${watch.subject}"), on ${account}. Read it, with gmail_read_thread for the whole conversation, ` +
-      'then tell the person what it says and what you do next. If you set a wake-up to check for this reply, ' +
-      'cancel it.',
+    summary: bounce
+      ? `The email you sent from this thread to ${watch.to} ("${watch.subject}"), on ${account}, could not be ` +
+        'delivered: here is the mail server’s answer. Tell the person, and check the address before sending again.'
+      : `A reply came in the conversation of the email you sent from this thread to ${watch.to} ` +
+        `("${watch.subject}"), on ${account}. Read it, with gmail_read_thread for the whole conversation, ` +
+        'then tell the person what it says and what you do next. If you set a wake-up to check for this reply, ' +
+        'cancel it.',
     trigger: AWAITED_REPLY,
     definition: 'Reply to an email sent from this thread',
     source: account,

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { levelOf, LEVEL_LABEL } from '@/components/credential-access'
 import { useDashboard } from '@/components/dashboard'
+import { AgentEmailRow } from '@/components/email-app'
 import { credentialHint } from '@/components/mention'
 import { ProviderTile } from '@/components/provider-logo'
 import {
@@ -105,8 +106,9 @@ export function TeammateAccess({
   }
 
   const all = connections.data?.connections ?? []
-  // A custom app only sends events: nothing to grant.
-  const list = all.filter((c) => c.kind !== 'webhook')
+  // A custom app only sends events: nothing to grant. An address of the Email App is its agent's
+  // or its project's, never granted to another: the Email address row shows this teammate's.
+  const list = all.filter((c) => c.kind !== 'webhook' && c.kind !== 'email')
   const triggers = (hooks.data ?? []).filter((w) => w.teammate.id === teammate.id)
   return (
     <Card className="gap-0 overflow-hidden pb-0">
@@ -149,6 +151,7 @@ export function TeammateAccess({
             folders={folders.data}
           />
         </div>
+        <AgentEmailRow teammate={teammate} editable={editable} />
         {list.length === 0 ? (
           <p className="border-t px-6 py-3 text-sm text-muted-foreground">
             No connections in this workspace yet.{' '}

@@ -13,6 +13,7 @@ import { sweepDoneTasks } from './tasks.js'
 import { sweepDeletedThreadFiles } from './thread-delete.js'
 import { watchSubscriptions } from './subscriptions/index.js'
 import { watchWakeups } from './wakeups.js'
+import { watchMail } from './mail/jobs.js'
 
 let started = false
 
@@ -28,6 +29,7 @@ export function startJobs() {
   offerRunnerUpdates()
   pingBrowsers()
   watchRunners()
+  watchMail()
 
   // Uploads abandoned mid-way or never sent with a message; files no document refers to;
   // library files in the trash long enough; tasks done long enough, off the board; images

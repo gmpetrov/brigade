@@ -26,6 +26,7 @@ type Kind = Connection['kind']
  */
 export const BUILT_IN: Kind[] = [
   'gmail',
+  'email',
   'google_calendar',
   'google_drive',
   'google_docs',
@@ -52,18 +53,27 @@ export const BUILT_IN: Kind[] = [
 
 export type AddedApp = { app: App; accounts: Connection[]; kind: Kind }
 
-/** The Apps added: those with an account. One whose accounts were all removed is offered again. */
+/**
+ * The Apps added: those with an account. One whose accounts were all removed is offered again.
+ * The Email App is added once the workspace turned it on, before any address exists.
+ */
 export function addedApps(data: ConnectionsResponse): AddedApp[] {
   return data.apps
     .map((app) => ({ app, accounts: data.connections.filter((c) => c.appId === app.id) }))
-    .filter((a) => a.accounts.length > 0)
-    .map((a) => ({ ...a, kind: a.accounts[0]!.kind }))
+    .filter((a) => a.accounts.length > 0 || a.app.key === 'email')
+    .map((a) => ({ ...a, kind: a.accounts[0]?.kind ?? 'email' }))
 }
 
 /** What an added App's row says under its name: the account it reaches, or what is wrong. */
 export function addedDetail({ app, accounts, kind }: AddedApp) {
   if (accounts.some((c) => c.status === 'needs_reauth')) return 'Reconnect needed'
   if (kind === 'webhook') return 'Custom app'
+  if (kind === 'email')
+    return accounts.length === 0
+      ? 'No addresses yet'
+      : accounts.length === 1
+        ? (accounts[0]!.externalAccount ?? accounts[0]!.label)
+        : `${accounts.length} addresses`
   if (app.mcp?.auth === 'none') return new URL(app.mcp.url).host
   if (accounts.length === 1) return accounts[0]!.externalAccount ?? accounts[0]!.label
   return `${accounts.length} accounts`

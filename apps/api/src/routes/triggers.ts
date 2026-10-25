@@ -38,6 +38,7 @@ const KINDS: ConnectorKind[] = [
   'posthog',
   'dataforseo',
   'ahrefs',
+  'email',
   'mcp',
   'webhook',
 ]
@@ -122,6 +123,36 @@ export async function createTrigger(
       throw new HTTPException(400, { message: `${option.label} is required` })
   }
 
+  // Brigade's own addresses: an agent's rules are its own, in the project of the variant they
+  // watch; an inbox's rules are its project's, and their teammate gets the inbox to answer from.
+  let projectId = (await usableProject(db, input.projectId)) ?? null
+  if (connection.kind === 'email') {
+    const address = await db.mailAddress.findFirst({ where: { connectionId: connection.id } })
+    if (!address || address.releasedAt)
+      throw new HTTPException(404, { message: 'This address is turned off' })
+    if (address.kind === 'agent' && address.teammateId !== teammate.id)
+      throw new HTTPException(400, { message: `Only ${connection.label} answers its own address` })
+    if (address.kind === 'inbox') {
+      projectId = address.projectId
+      if (
+        !(await db.grant.count({ where: { teammateId: teammate.id, connectionId: connection.id } }))
+      )
+        await db.grant.create({
+          data: {
+            teammateId: teammate.id,
+            connectionId: connection.id,
+            scope: 'read_write',
+          } as never,
+        })
+    }
+  }
+  // Last among the account's rules: the first that matches a mail takes it.
+  const last = await db.trigger.findFirst({
+    where: { connectionId: connection.id },
+    orderBy: { position: 'desc' },
+    select: { position: true },
+  })
+
   const custom = connection.kind === 'webhook'
   if (custom && !input.verification)
     throw new HTTPException(400, { message: 'Choose how the sender is verified' })
@@ -140,7 +171,8 @@ export async function createTrigger(
       verification: custom ? input.verification : null,
       verificationSecretId: secret ? await sealSecret(db, scope, { secret }) : null,
       createdByMemberId: by.createdByMemberId,
-      projectId: (await usableProject(db, input.projectId)) ?? null,
+      projectId,
+      position: (last?.position ?? -1) + 1,
     } as never,
   })
 

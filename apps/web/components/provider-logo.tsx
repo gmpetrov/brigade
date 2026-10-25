@@ -13,8 +13,8 @@ export type ProviderKind = Connection['kind']
  * black-on-white cube, Linear's violet mark, Mixpanel's violet x, Resend's R on black, Replicate's
  * bars on black, OpenRouter's arrows on white, PostHog's ramps and hog, DataForSEO's Q on blue
  * and yellow, Ahrefs' a on blue, GitHub's
- * Invertocat (in the text color, so it reads in both themes), and a
- * generic webhook mark for custom apps.
+ * Invertocat (in the text color, so it reads in both themes), Brigade's own Email App as an
+ * envelope on a violet tile, and a generic webhook mark for custom apps.
  */
 export function ProviderLogo({ kind, className }: { kind: ProviderKind; className?: string }) {
   const common = { 'aria-hidden': true, className: cn('size-6 shrink-0', className) } as const
@@ -112,6 +112,17 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
           d="M75 96v65c0 14.77 10.19 23 21 23 10 0 21-7 21-23V97c0-13.54-10-22-21-22s-21 9.33-21 21z"
         />
         <circle fill="#e37400" cx="41" cy="163" r="21" />
+      </svg>
+    )
+  if (kind === 'email')
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        {/* Brigade's own App: a white envelope on the brand violet. */}
+        <rect width="24" height="24" rx="5.5" className="fill-primary" />
+        <g fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="7" width="14" height="10" rx="1.75" />
+          <path d="m5.5 8 6.5 5 6.5-5" />
+        </g>
       </svg>
     )
   if (kind === 'webhook') return <Webhook {...common} />

@@ -9,7 +9,7 @@ import { authorisedFetch } from '../connector-calls.js'
 import { API, full, type Message, type ReceivedEmail } from '../connectors/gmail.js'
 import { json } from '../connectors/types.js'
 import { prisma, scoped, type Scope } from '../db.js'
-import { automatic, wakeOnReply } from '../replies.js'
+import { automatic, bounced, wakeOnReply } from '../replies.js'
 import { dispatch } from '../triggers.js'
 import { reachable, serially, type Target } from './common.js'
 
@@ -174,7 +174,12 @@ export const readInbox = (subscriptionId: string) =>
               )?.value,
             }
             // A reply a thread waits on is that thread's: no trigger starts or continues another.
-            if (!automatic(email.payload?.headers) && (await wakeOnReply(sub.connection, payload)))
+            // So is a mail server's word that the thread's email could not be delivered.
+            const bounce = bounced(payload)
+            if (
+              (!automatic(email.payload?.headers) || bounce) &&
+              (await wakeOnReply(sub.connection, payload, new Date(), bounce))
+            )
               continue
             const { failed } = await dispatch(sub.connection, {
               id: email.id,

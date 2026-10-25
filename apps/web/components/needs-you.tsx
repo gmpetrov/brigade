@@ -23,6 +23,7 @@ import { TicketRow } from '@/components/ticket-row'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { api, waitingItemKey, type PullWaiting, type Ticket } from '@/lib/api'
+import type { EditedEmail } from '@/components/email-cards'
 
 /** Others listed under the one shown; the rest are a link away. */
 const LISTED = 4
@@ -272,10 +273,12 @@ export function NeedsYou({
     await onChange()
   }
 
-  async function resolve(id: string, approved: boolean, always?: boolean) {
+  async function resolve(id: string, approved: boolean, always?: boolean, edited?: EditedEmail) {
     setError(undefined)
     try {
-      await api(`/tickets/${id}/resolve`, { body: { approved, ...(always ? { always } : {}) } })
+      await api(`/tickets/${id}/resolve`, {
+        body: { approved, ...(always ? { always } : {}), ...(edited ? { edited } : {}) },
+      })
     } catch (e) {
       setError((e as Error).message)
       await onChange()

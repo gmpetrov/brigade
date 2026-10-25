@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import { api, projectQuery, useApi, type Ticket } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
+import type { EditedEmail } from '@/components/email-cards'
 
 const TYPES: { value: Ticket['type'] | ''; label: string }[] = [
   { value: '', label: 'All kinds' },
@@ -40,10 +41,12 @@ export function TicketList({ projectId }: { projectId?: string }) {
   })
   const [error, setError] = useState<string>()
 
-  async function resolve(id: string, approved: boolean, always?: boolean) {
+  async function resolve(id: string, approved: boolean, always?: boolean, edited?: EditedEmail) {
     setError(undefined)
     try {
-      await api(`/tickets/${id}/resolve`, { body: { approved, ...(always ? { always } : {}) } })
+      await api(`/tickets/${id}/resolve`, {
+        body: { approved, ...(always ? { always } : {}), ...(edited ? { edited } : {}) },
+      })
     } catch (e) {
       setError((e as Error).message)
     }

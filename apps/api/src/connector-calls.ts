@@ -44,8 +44,17 @@ import { scoped, type Scope, type ScopedDb } from './db.js'
 import { actingTeammate } from './thread-spec.js'
 import { openSecret, replaceSecret } from './vault.js'
 
-/** always: a credential's ticket, also allowed for good (see credentials.ts). */
-export type Decision = { approved: boolean; memberId: string; reason?: string; always?: boolean }
+/**
+ * always: a credential's ticket, also allowed for good (see credentials.ts). input: what the
+ * person changed before approving (an email's draft), for an operation that lets them.
+ */
+export type Decision = {
+  approved: boolean
+  memberId: string
+  reason?: string
+  always?: boolean
+  input?: Record<string, unknown>
+}
 const waiting = new Map<string, (decision: Decision) => void>()
 
 type Call = Extract<RunnerToApi, { type: 'connector.call' }>
@@ -128,13 +137,37 @@ export async function handleConnectorCall(
       } as never,
     })
 
-  const input = operation.input.safeParse(call.input)
+  let input = operation.input.safeParse(call.input)
   if (!input.success)
     return result({
       ok: false,
       error: `Invalid input: ${input.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`,
     })
-  const target = operation.target(input.data)
+  let target = operation.target(input.data)
+  // Brigade's own connectors act on Brigade's data, for this thread.
+  const brigade = connectors[connection.kind]?.auth === 'brigade'
+  const own = brigade
+    ? {
+        scope,
+        connectionId: connection.id,
+        teammateId: teammate.id,
+        thread: {
+          id: session.id,
+          projectId: session.projectId,
+          teammateId: teammate.id,
+          startedByMemberId: session.startedByMemberId,
+          origin: session.origin,
+          status: session.status,
+        },
+      }
+    : {}
+  const callContext = (extra: Partial<ConnectorContext> = {}) =>
+    ({
+      fetch: (url: string, init?: RequestInit) => fetch(url, init),
+      callId: call.callId,
+      ...own,
+      ...extra,
+    }) as ConnectorContext
 
   // Grant and scope.
   const grant = await db.grant.findFirst({
@@ -193,6 +226,16 @@ export async function handleConnectorCall(
       error: `${teammate.name} has read-only access to ${connection.label}`,
     })
   }
+  // What stops the call before anyone is asked (an email's recipients, a secret in it).
+  if (operation.check) {
+    const problem = await operation
+      .check(callContext(), input.data)
+      .catch((error: unknown) => (error instanceof Error ? error.message : String(error)))
+    if (problem) {
+      await record({ result: 'denied', target, error: problem.slice(0, 1000) })
+      return result({ ok: false, error: problem })
+    }
+  }
 
   // A playbook's dry run: the write is recorded with what it would have sent, and answered
   // as if it went through. Nothing leaves, and nobody is asked. A deny still stands.
@@ -248,7 +291,16 @@ export async function handleConnectorCall(
       return result({ ok: false, error: verdict.reason })
     }
     const cap = await writeCapReached(db, teammate, connection.id)
-    let asks = verdict ? verdict.level === 'ask' : policy === 'ask'
+    let asks = verdict
+      ? verdict.level === 'ask'
+      : policy === 'ask' ||
+        (operation.asks
+          ? await operation.asks(
+              callContext(),
+              input.data,
+              teammate.permissionPolicy as PermissionPolicy,
+            )
+          : false)
     let overCap: string | undefined
     if (verdict?.level === 'auto' && !cap) {
       // On its own: it first takes its share of its action's caps, atomically; past one, it asks.
@@ -322,6 +374,32 @@ export async function handleConnectorCall(
       })
       const decided = await awaitDecision(ticket.id)
       decision = { ...decided, ticketId: ticket.id }
+      // The person changed the draft before approving: what goes is theirs, checked again.
+      if (decided.approved && decided.input && operation.editable) {
+        const edited = operation.input.safeParse({ ...(input.data as object), ...decided.input })
+        const problem = edited.success
+          ? operation.check
+            ? await operation
+                .check(callContext(), edited.data)
+                .catch((error: unknown) => (error instanceof Error ? error.message : String(error)))
+            : null
+          : edited.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')
+        if (!edited.success || problem) {
+          await record({
+            result: 'denied',
+            target,
+            ticketId: ticket.id,
+            error: `edited: ${problem}`,
+          })
+          return result({
+            ok: false,
+            error: `The approved changes cannot go: ${problem}`,
+            decision,
+          })
+        }
+        input = edited
+        target = operation.target(edited.data)
+      }
       if (!decided.approved) {
         await record({
           result: 'denied',
@@ -341,9 +419,13 @@ export async function handleConnectorCall(
   // Files the call brings into the thread, put in the teammate's folder before it sees the result.
   const kept: ThreadAttachmentRef[] = []
   try {
-    const fetch = await authorisedFetch(db, scope, connection)
+    const fetch = brigade
+      ? (url: string, init?: RequestInit) => globalThis.fetch(url, init)
+      : await authorisedFetch(db, scope, connection)
     const output = await operation.run(
       {
+        ...own,
+        ...(decision ? { approvedByMemberId: decision.memberId } : {}),
         fetch,
         callId: call.callId,
         keepFile: async (file) => {
@@ -611,7 +693,12 @@ export const awaitDecision = (ticketId: string) =>
 export async function decideTicket(
   scope: Scope & { memberId: string },
   ticketId: string,
-  decision: { approved: boolean; reason?: string; always?: boolean },
+  decision: {
+    approved: boolean
+    reason?: string
+    always?: boolean
+    input?: Record<string, unknown>
+  },
 ): Promise<boolean> {
   const db = scoped(scope)
   const ticket = await db.ticket.findFirst({
@@ -655,6 +742,7 @@ export async function decideTicket(
     memberId: scope.memberId,
     ...(decision.reason ? { reason: decision.reason } : {}),
     ...(decision.always && decision.approved ? { always: true } : {}),
+    ...(decision.input && decision.approved ? { input: decision.input } : {}),
   })
   // A person's decision on a playbook's approval measures its action's trust: enough approvals
   // propose it act on its own (one decided in bulk is marked first, and does not count).

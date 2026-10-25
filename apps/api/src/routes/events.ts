@@ -11,6 +11,9 @@ import { stripeAccountOf } from '../connectors/stripe.js'
 import { accountKey, readStripeEvent, verifyStripe } from '../subscriptions/stripe.js'
 import { dispatch, findTrigger } from '../triggers.js'
 import { openSecret } from '../vault.js'
+import { received as mailReceived } from '../mail/inbound.js'
+import { statusChanged as mailStatus } from '../mail/outbound.js'
+import { verifyWebhook } from '../mail/resend.js'
 
 const MAX_BODY = 1024 * 1024
 type SigningSecret = { secret: string }
@@ -104,6 +107,37 @@ export const events = new Hono()
     // Acknowledge at once; the inbox's history says what is new, and its reader retries.
     await inboxChanged(await c.req.json().catch(() => ({})))
     return c.body(null, 204)
+  })
+
+  /**
+   * Resend: Brigade's own addresses (the Email App). Mail is kept at once and delivered in the
+   * background; mail to other products' domains on the shared account is left alone, unread.
+   */
+  .post('/resend', async (c) => {
+    const body = await c.req.text()
+    if (body.length > MAX_BODY) return c.json({ error: 'Payload too large' }, 413)
+    const signed = verifyWebhook(body, {
+      id: c.req.header('svix-id'),
+      timestamp: c.req.header('svix-timestamp'),
+      signature: c.req.header('svix-signature'),
+    })
+    if (!signed) return c.json({ error: 'Bad signature' }, 401)
+    let event: { type?: string; data?: Record<string, unknown> }
+    try {
+      event = JSON.parse(body)
+    } catch {
+      return c.json({ error: 'Not JSON' }, 400)
+    }
+    if (!event.data || typeof event.data.email_id !== 'string') return c.json({ ok: true })
+    try {
+      if (event.type === 'email.received') await mailReceived(event.data as never)
+      else if (event.type?.startsWith('email.')) await mailStatus(event.type, event.data as never)
+    } catch (error) {
+      console.error('resend webhook failed:', error)
+      // Resend tries again.
+      return c.json({ error: 'Not kept yet' }, 503)
+    }
+    return c.json({ ok: true })
   })
 
   /** Google Calendar, on a channel Brigade opened. */

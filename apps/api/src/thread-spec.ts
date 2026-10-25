@@ -9,6 +9,7 @@ import { chiefRoster } from './chief.js'
 import type { ScopedDb } from './db.js'
 import type { WorkspaceScope } from './scope.js'
 import { connectors, operationSpecs } from './connectors/index.js'
+import { threadAddress } from './connectors/email.js'
 import { threadDesignSystems } from './designs.js'
 import { threadSkills } from './skills.js'
 import { playbookAccount, threadPlaybook } from './playbooks.js'
@@ -143,8 +144,36 @@ export async function specFor(
   // A member's own account (reach mine) only in the threads they started. In a playbook's
   // thread, only the Apps it declares, and no more than the access it declares for each: a
   // mail written to trap it cannot reach any other App its teammate has.
+  // Brigade's own addresses: a project's inbox only in its project's threads, an agent's address
+  // only for that agent, shown as the variant this thread writes from (riley.lovarank@).
+  const mailIds = granted.filter((g) => g.connection.kind === 'email').map((g) => g.connection.id)
+  const mail = mailIds.length
+    ? await db.mailAddress.findMany({ where: { connectionId: { in: mailIds }, releasedAt: null } })
+    : []
+  const mailAddress = new Map<string, string>()
+  for (const address of mail) {
+    if (!address.connectionId) continue
+    if (address.kind === 'inbox' && address.projectId !== thread.projectId) continue
+    if (address.kind === 'agent' && address.teammateId !== teammate.id) continue
+    mailAddress.set(
+      address.connectionId,
+      (await threadAddress(db, address.connectionId, thread.projectId)) ?? '',
+    )
+  }
   const grants = granted
     .filter((g) => usableIn(g.connection, thread))
+    .filter((g) => g.connection.kind !== 'email' || mailAddress.has(g.connection.id))
+    .map((g) =>
+      g.connection.kind === 'email'
+        ? {
+            ...g,
+            connection: {
+              ...g.connection,
+              externalAccount: mailAddress.get(g.connection.id) || g.connection.externalAccount,
+            },
+          }
+        : g,
+    )
     .flatMap((g) => {
       if (!playbook) return [g]
       // An App one of its roles accepts; where a setting picks the role's account (its inbox,

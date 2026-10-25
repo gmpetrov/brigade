@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { useDocumentPanel } from '@/components/document-panel'
+import { ProjectEmail } from '@/components/project-email'
 import { useProject } from '@/components/project-shell'
 import { ProjectLogoPreview, shrinkLogo } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
@@ -355,6 +356,8 @@ export default function ProjectSettings() {
           {error && <span className="text-sm text-destructive-text">{error}</span>}
         </div>
       </form>
+
+      <ProjectEmail projectId={project.id} projectName={project.name} />
 
       <Section
         title="Memory"

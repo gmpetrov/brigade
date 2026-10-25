@@ -1,3 +1,4 @@
+import { addressOf } from '../mail/names.js'
 import { randomUUID } from 'node:crypto'
 import {
   clipReport,
@@ -278,7 +279,7 @@ export const threads = new Hono<AppEnv>()
         // Child threads show in their parent, not in lists.
         parentId: null,
         // A playbook's runs, once a person took part in them (src/playbooks.ts).
-        OR: [{ playbookRunId: null }, { surfacedAt: { not: null } }],
+        OR: [{ playbookRunId: null, quiet: false }, { surfacedAt: { not: null } }],
       },
       ...(limit
         ? {
@@ -461,6 +462,28 @@ export const threads = new Hono<AppEnv>()
           },
           orderBy: { updatedAt: 'desc' },
         },
+        // Sign-up addresses it made whose mail still comes to it (the Email App).
+        mailAliases: {
+          where: { waitUntil: { gt: new Date() } },
+          select: { id: true, local: true, purpose: true, waitUntil: true, teammateId: true },
+          orderBy: { createdAt: 'desc' },
+        },
+        // Emails it sent from Brigade's addresses, the latest: one in its window can be cancelled.
+        mailMessages: {
+          where: { direction: 'out' },
+          select: {
+            id: true,
+            to: true,
+            subject: true,
+            status: true,
+            sendAt: true,
+            error: true,
+            fromAddress: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
       },
     })
     if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
@@ -498,6 +521,7 @@ export const threads = new Hono<AppEnv>()
       }),
       mayPrompt: thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt,
       eventsWaitingSince: eventsWaitingSince(thread.id),
+      mailAliases: thread.mailAliases.map((a) => ({ ...a, address: addressOf(a.local) })),
     })
   })
 
@@ -1160,6 +1184,7 @@ export const threads = new Hono<AppEnv>()
           approved: input.approved,
           ...(input.reason ? { reason: input.reason } : {}),
           ...(input.always ? { always: true } : {}),
+          ...(input.edited ? { edited: input.edited } : {}),
         }),
       )
     }

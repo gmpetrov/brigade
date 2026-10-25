@@ -176,7 +176,8 @@ export const ConnectorKind = {
   ahrefs: 'ahrefs',
   mcp: 'mcp',
   google_search_console: 'google_search_console',
-  google_analytics: 'google_analytics'
+  google_analytics: 'google_analytics',
+  email: 'email'
 } as const
 
 export type ConnectorKind = (typeof ConnectorKind)[keyof typeof ConnectorKind]
@@ -349,3 +350,43 @@ export const PlaybookRunStatus = {
 } as const
 
 export type PlaybookRunStatus = (typeof PlaybookRunStatus)[keyof typeof PlaybookRunStatus]
+
+
+export const MailAddressKind = {
+  agent: 'agent',
+  inbox: 'inbox'
+} as const
+
+export type MailAddressKind = (typeof MailAddressKind)[keyof typeof MailAddressKind]
+
+
+export const MailDirection = {
+  in: 'in',
+  out: 'out'
+} as const
+
+export type MailDirection = (typeof MailDirection)[keyof typeof MailDirection]
+
+
+export const MailStatus = {
+  pending: 'pending',
+  done: 'done',
+  failed: 'failed',
+  scheduled: 'scheduled',
+  sent: 'sent',
+  delivered: 'delivered',
+  bounced: 'bounced',
+  cancelled: 'cancelled'
+} as const
+
+export type MailStatus = (typeof MailStatus)[keyof typeof MailStatus]
+
+
+export const MailSender = {
+  member: 'member',
+  contact: 'contact',
+  unknown: 'unknown',
+  brigade: 'brigade'
+} as const
+
+export type MailSender = (typeof MailSender)[keyof typeof MailSender]

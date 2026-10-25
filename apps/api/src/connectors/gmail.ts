@@ -354,6 +354,8 @@ export const gmail: ConnectorDefinition = {
         },
       ],
       events: ['email'],
+      // A mailbox's rules: the first that matches takes the mail (Trigger.position).
+      exclusive: true,
       // Gmail decides what its search matches: ask it about this one message.
       matches: async ({ payload }, options, ctx) => {
         const email = payload as ReceivedEmail

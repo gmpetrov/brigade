@@ -6,6 +6,7 @@ import { AtlassianDomainHint } from '@/components/atlassian-domain-hint'
 import { MixpanelMcpHint } from '@/components/mixpanel-mcp-hint'
 import { RegionMenu } from '@/components/region-menu'
 import { CloseButton } from '@/components/close-button'
+import { EmailApp } from '@/components/email-app'
 import { ConnectionTriggers } from '@/components/connection-triggers'
 import { useDashboard, timeAgo } from '@/components/dashboard'
 import { McpServerCard } from '@/components/mcp-server-card'
@@ -84,6 +85,8 @@ export function AppSheet({
   const custom = kind === 'webhook'
   // An MCP server added by its URL: its App keeps the server, its tools and how it signs in.
   const server = kind === 'mcp'
+  // Brigade's own addresses: turned on for the workspace, with an address per agent or inbox.
+  const email = kind === 'email'
   const mcp = app?.mcp ?? null
   const accounts = app ? data.connections.filter((c) => c.appId === app.id) : []
   const added = accounts.length > 0
@@ -111,7 +114,7 @@ export function AppSheet({
    * the sheet stays open and shows the account once it has connected.
    */
   const route =
-    custom || server
+    custom || server || email
       ? null
       : kind === 'stripe' ||
           kind === 'cloudflare' ||
@@ -245,7 +248,7 @@ export function AppSheet({
               </span>
             )}
           </div>
-          {!added && !custom && !server && (
+          {!added && !custom && !server && !email && (
             <RegionMenu regions={regions} onPick={(region) => void connect(region)}>
               <Button
                 onClick={regions ? undefined : () => void connect()}
@@ -270,7 +273,8 @@ export function AppSheet({
         )}
         {waiting && kind === 'atlassian' && <AtlassianDomainHint />}
         {waiting && kind === 'mixpanel' && <MixpanelMcpHint />}
-        {!data.available[kind] && <Unavailable kind={kind} />}
+        {!email && !data.available[kind] && <Unavailable kind={kind} />}
+        {email && <EmailApp reload={reload} />}
         {kind === 'google_cloud' && data.available[kind] && (
           <p className="text-sm text-muted-foreground">
             Each command runs in a project of yours with the{' '}
@@ -301,7 +305,8 @@ export function AppSheet({
           </Section>
         )}
 
-        {(added || adding) && (
+        {/* The Email App lists its addresses above, in place of accounts. */}
+        {(added || adding) && !email && (
           <Section title={custom ? 'App' : 'Accounts'}>
             {accounts.map((c) => (
               <Account
@@ -461,7 +466,7 @@ export function AppSheet({
               <Info label="Category" value={entry.category} />
             </>
           )}
-          {!custom && (
+          {!custom && !email && (
             <Info
               label="Accounts"
               value={accounts.length === 0 ? 'None yet' : String(accounts.length)}
@@ -469,7 +474,8 @@ export function AppSheet({
           )}
         </Section>
 
-        {added && managesApp && (
+        {/* An address is turned off from its agent's page or its project's settings. */}
+        {added && managesApp && !email && (
           <div className="flex justify-end">
             <Button variant="outline" onClick={() => void removeApp()}>
               Remove {name}
