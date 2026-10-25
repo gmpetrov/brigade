@@ -25,14 +25,15 @@ import {
   objectSize,
   presignPut,
   putObject,
+  putObjectStream,
   streamObject,
 } from './bucket.js'
-import type { ConnectorContext, ExternalFile } from './connectors/types.js'
-import { prisma, Prisma, type Scope, type ScopedDb } from './db.js'
+import type { ConnectorContext, ExternalFile, OpenedFile } from './connectors/types.js'
+import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { contentTypeFor, extractText } from './library.js'
 
 /** Programs and installers: never taken from outside (an email, a chat), where they are a common lure. */
-const PROGRAM =
+export const PROGRAM =
   /\.(exe|scr|com|pif|bat|cmd|msi|msp|ps1|psm1|vbs|vbe|jse|wsf|wsh|hta|cpl|jar|app|dmg|pkg|deb|rpm|apk|lnk|reg|iso|img|vhd|vhdx)$/i
 
 /** Small inline images in an email are signatures and logos, not something it is about. */
@@ -142,6 +143,119 @@ export async function storeAttachment(
   return row
 }
 
+/** Leading bytes kept of a streamed file, for its type. */
+const HEAD_BYTES = 64
+/** A streamed file this small is also kept whole a moment, for its text (search). */
+const TEXT_MAX = 1024 * 1024
+
+/**
+ * Keep a file's bytes as they arrive, never held whole (but a small file's, for its text): to
+ * the bucket as they come, its hash and size read on the way. Not yet in any thread.
+ */
+export async function storeStream(
+  db: ScopedDb,
+  scope: Scope,
+  input: Origin & { name: string; contentType?: string | null; file: OpenedFile },
+) {
+  const { body, size } = input.file
+  if (size > ATTACHMENT_MAX) throw new HTTPException(413, { message: 'larger than 25 MB' })
+  const name = safeFileName(input.name)
+  const given = contentTypeFor(name, input.contentType)
+  // Pending until its bytes are in: no thread takes it before.
+  const row = await db.attachment.create({
+    data: {
+      name,
+      contentType: given,
+      size,
+      status: 'pending',
+      source: input.source,
+      uploadedByMemberId: input.uploadedByMemberId ?? null,
+      connectionId: input.connectionId ?? null,
+      externalRef: input.externalRef ?? null,
+      sessionId: input.sessionId ?? null,
+    } as never,
+  })
+  const key = attachmentKey(scope, row.id)
+  const hash = createHash('sha256')
+  let read = 0
+  const head = new Uint8Array(HEAD_BYTES)
+  const whole: Uint8Array[] | null = size <= TEXT_MAX ? [] : null
+  const tap = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, out) {
+      hash.update(chunk)
+      if (read < HEAD_BYTES) head.set(chunk.subarray(0, HEAD_BYTES - read), read)
+      read += chunk.byteLength
+      whole?.push(chunk)
+      out.enqueue(chunk)
+    },
+  })
+  try {
+    await putObjectStream(key, body.pipeThrough(tap), size, given)
+    if (read !== size) throw new Error(`${read} bytes came, not ${size}`)
+    const contentType = detectType(name, head.subarray(0, read), input.contentType)
+    const text = whole ? await extractText(concat(whole, size), contentType) : ''
+    return await db.attachment.update({
+      where: { id: row.id },
+      data: { contentType, sha256: hash.digest('hex'), text, status: 'ready' },
+    })
+  } catch (error) {
+    // Its row stays (pending) until its bytes are gone: the sweep tries again otherwise.
+    await removeCopy(db, scope, row.id)
+    throw error
+  }
+}
+
+/** How long a taker waits for another's copy of the same file under way. */
+const COPY_WAIT_MS = 20_000
+/** A copy under way this long stopped halfway (its process went): made again. */
+const COPY_STALE_MS = 10 * 60_000
+
+/** A file's bytes, then its row: the row stays while its bytes could not go, for a later try. */
+async function removeCopy(db: ScopedDb, scope: Scope, id: string) {
+  try {
+    await deleteObject(attachmentKey(scope, id))
+  } catch (error) {
+    console.warn(`attachment ${id}: bytes not deleted: ${String(error)}`)
+    return false
+  }
+  await db.attachment.deleteMany({ where: { id } })
+  return true
+}
+
+/**
+ * A file already taken in under its key, once its copy is done: one under way elsewhere is waited
+ * for a while (then a retryable 409), one that stopped halfway removed (null: take it again).
+ */
+async function settledCopy<T extends { id: string; status: string; createdAt: Date }>(
+  db: ScopedDb,
+  scope: Scope,
+  row: T,
+): Promise<T | null> {
+  const until = Date.now() + COPY_WAIT_MS
+  let current: T | null = row
+  while (current?.status === 'pending') {
+    if (Date.now() - current.createdAt.getTime() > COPY_STALE_MS) {
+      if (await removeCopy(db, scope, current.id)) return null
+      throw new HTTPException(409, { message: 'it is being copied: try again shortly' })
+    }
+    if (Date.now() > until)
+      throw new HTTPException(409, { message: 'it is being copied: try again shortly' })
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    current = (await db.attachment.findFirst({ where: { id: current.id } })) as T | null
+  }
+  return current
+}
+
+const concat = (chunks: Uint8Array[], size: number) => {
+  const all = new Uint8Array(size)
+  let at = 0
+  for (const chunk of chunks) {
+    all.set(chunk, at)
+    at += chunk.byteLength
+  }
+  return all
+}
+
 /** A file Brigade does not keep, so the teammate is told it exists and why it is missing. */
 function blockedAttachment(
   db: ScopedDb,
@@ -165,6 +279,8 @@ function blockedAttachment(
 const PENDING_MS = 60 * 60_000
 /** An upload never sent with a message is removed after this long. */
 const UNSENT_MS = 24 * 3600_000
+/** A file taken from a connection that no thread has: kept as long as its mail stays in its box. */
+const CONNECTOR_UNUSED_MS = 30 * 24 * 3600_000
 
 /**
  * A member starts an upload straight to the bucket: a pending file, and a URL
@@ -254,27 +370,31 @@ export const servedFromBucket = (row: { size: number }) => row.size > ATTACHMENT
 
 /**
  * Remove abandoned uploads, across workspaces: pending ones whose browser went
- * away, and uploads never sent with a message.
+ * away, and uploads never sent with a message. And files taken from a connection
+ * that no thread has: one whose copy stopped halfway, and after their mail's time
+ * in its box, one copied for a person to open (the Inbox).
  */
 export async function sweepUploads() {
   const now = Date.now()
   const rows = await prisma.attachment.findMany({
     where: {
-      source: 'upload',
       threads: { none: {} },
       OR: [
-        { status: 'pending', createdAt: { lt: new Date(now - PENDING_MS) } },
-        { createdAt: { lt: new Date(now - UNSENT_MS) } },
+        {
+          source: { in: ['upload', 'connector'] },
+          status: 'pending',
+          createdAt: { lt: new Date(now - PENDING_MS) },
+        },
+        { source: 'upload', createdAt: { lt: new Date(now - UNSENT_MS) } },
+        { source: 'connector', createdAt: { lt: new Date(now - CONNECTOR_UNUSED_MS) } },
       ],
     },
     take: 500,
   })
   for (const row of rows) {
     const scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
-    await prisma.attachment.delete({ where: { id: row.id } })
-    await deleteObject(attachmentKey(scope, row.id)).catch((error) =>
-      console.warn(`attachment ${row.id}: bytes not deleted: ${String(error)}`),
-    )
+    // Its bytes first: a row goes only once they are gone, so a failed delete is tried again.
+    await removeCopy(scoped(scope), scope, row.id)
   }
   if (rows.length > 0) console.log(`attachments: removed ${rows.length} unsent upload(s)`)
 }
@@ -430,9 +550,11 @@ export async function ingestExternal(
   )
   for (const [i, file] of wanted.entries()) {
     const origin = { source: 'connector' as const, connectionId, externalRef: file.key }
-    const existing = await db.attachment.findFirst({
+    const found = await db.attachment.findFirst({
       where: { connectionId, externalRef: file.key },
     })
+    // Taken in before, or being taken in now (another delivery, a teammate's call): that copy.
+    const existing = found && (await settledCopy(db, scope, found))
     if (existing) {
       ids.push(existing.id)
       continue
@@ -457,21 +579,39 @@ export async function ingestExternal(
     else {
       let fetched = false
       try {
-        const bytes = await file.download(ctx)
-        fetched = true
-        row = await storeAttachment(db, scope, {
-          ...origin,
-          name: file.name,
-          bytes,
-          contentType: file.contentType,
-        })
+        if (file.open) {
+          // Its bytes go on to the bucket as they arrive.
+          const opened = await file.open(ctx)
+          fetched = true
+          if (total + opened.size > ATTACHMENTS_TOTAL_MAX) {
+            await opened.body.cancel()
+            throw new HTTPException(413, { message: 'more than 50 MB of files at once' })
+          }
+          if (opened.size > ATTACHMENT_MAX) await opened.body.cancel()
+          row = await storeStream(db, scope, {
+            ...origin,
+            name: file.name,
+            contentType: file.contentType,
+            file: opened,
+          })
+        } else {
+          const bytes = await file.download(ctx)
+          fetched = true
+          row = await storeAttachment(db, scope, {
+            ...origin,
+            name: file.name,
+            bytes,
+            contentType: file.contentType,
+          })
+        }
         total += row.size
       } catch (error) {
         // Fetched meanwhile by another delivery of the same event.
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-          const again = await db.attachment.findFirst({
+          const found = await db.attachment.findFirst({
             where: { connectionId, externalRef: file.key },
           })
+          const again = found && (await settledCopy(db, scope, found))
           if (again) {
             ids.push(again.id)
             continue

@@ -1,14 +1,16 @@
 // The one bucket (Cloudflare R2, through its S3 API). Every key starts with
 // the organization and workspace (spec hard constraint 5); callers pass a
 // scope and a document id, never a path from request input.
-import { createReadStream } from 'node:fs'
+import { createReadStream, createWriteStream } from 'node:fs'
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import { STORED_FILE_NAME } from '@brigade/contracts'
 import { AwsClient } from 'aws4fetch'
 import { env } from './config.js'
 import type { Scope } from './db.js'
+import { fixedLength } from './platform/node.js'
 
 const r2 =
   env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_BUCKET
@@ -200,6 +202,32 @@ export async function putObject(key: string, body: Uint8Array, contentType: stri
     body: exactBytes(body),
     headers: { 'content-type': contentType },
   })
+  if (!response.ok) throw new Error(`bucket put failed: ${response.status}`)
+}
+
+/**
+ * Put an object from a stream of exactly `size` bytes, never held whole: the bytes go on to the
+ * bucket as they arrive (a signed PUT, whose length R2 checks).
+ */
+export async function putObjectStream(
+  key: string,
+  body: ReadableStream<Uint8Array>,
+  size: number,
+  contentType: string,
+) {
+  if (!r2) {
+    const file = join(env.BUCKET_DIR, key)
+    await mkdir(dirname(file), { recursive: true })
+    return pipeline(Readable.fromWeb(body as never), createWriteStream(file))
+  }
+  const signed = await presignPut(key, size, contentType)
+  const sized = fixedLength(body, size)
+  const response = await fetch(signed.url, {
+    method: 'PUT',
+    headers: { ...signed.headers, ...sized.headers },
+    body: sized.body,
+    duplex: 'half',
+  } as RequestInit)
   if (!response.ok) throw new Error(`bucket put failed: ${response.status}`)
 }
 

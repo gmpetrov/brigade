@@ -57,6 +57,8 @@ export type ConnectorContext = {
     name: string
     contentType: string
     bytes: () => Promise<Uint8Array>
+    /** Its bytes as they arrive: taken in by the stream, preferred to `bytes`. */
+    open?: () => Promise<OpenedFile>
   }) => Promise<ThreadAttachmentRef>
   /** A file the teammate sends with this call, by the id the runner gave its upload. */
   readFile: (id: string) => Promise<{ name: string; contentType: string; bytes: Uint8Array }>
@@ -124,7 +126,15 @@ export type ExternalFile = {
   /** Shown inside the message (an email's inline image) rather than attached to it. */
   inline?: boolean
   download: (ctx: Pick<ConnectorContext, 'fetch'>) => Promise<Uint8Array>
+  /**
+   * Its bytes as they arrive, and how many: taken in by the stream, never held whole (an
+   * email's attachment). Preferred to `download` when given.
+   */
+  open?: (ctx: Pick<ConnectorContext, 'fetch'>) => Promise<OpenedFile>
 }
+
+/** A file's bytes as they arrive, and their number. */
+export type OpenedFile = { body: ReadableStream<Uint8Array>; size: number }
 
 /** A vendor event, as the ingress or the change reader hands it to the triggers. */
 export type VendorEvent = {

@@ -9,6 +9,12 @@ import type { RunnerBundleFile, Upstream, UpstreamEvents } from './types.js'
 
 export { upgradeWebSocket } from '@hono/node-server'
 
+/** A request body of exactly `size` bytes, sent with that length (undici sends the header given). */
+export const fixedLength = (body: ReadableStream<Uint8Array>, size: number) => ({
+  body,
+  headers: { 'content-length': String(size) },
+})
+
 export function connectSocket(
   url: string,
   init: { protocol: string; headers: Record<string, string> },

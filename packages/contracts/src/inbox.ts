@@ -51,7 +51,8 @@ export type InboxMessage = {
   /** Its own words; the earlier messages it quotes apart. */
   text: string
   quoted: string
-  attachments: { name: string; contentType: string; size: number }[]
+  /** Its files: a received one opens at the API's /inbox/items/<its id>/files/<file id>. */
+  attachments: { id: string; name: string; contentType: string; size: number }[]
   authentication: { spf?: string; dkim?: string; dmarc?: string } | null
   /** Sent mail: where it is. */
   sent: 'scheduled' | 'sent' | 'delivered' | 'bounced' | 'failed' | null

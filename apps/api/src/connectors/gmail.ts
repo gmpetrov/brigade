@@ -9,7 +9,9 @@ import {
   type ConnectorContext,
   type ConnectorDefinition,
   type ExternalFile,
+  type OpenedFile,
 } from './types.js'
+import { jsonBase64Field } from '../json-base64.js'
 
 export const API = 'https://gmail.googleapis.com/gmail/v1/users/me'
 /** Messages with attachments go through the upload endpoint, which takes up to 35 MB. */
@@ -104,6 +106,45 @@ async function partData(ctx: Pick<ConnectorContext, 'fetch'>, messageId: string,
   )
   return new Uint8Array(bytesOf(data))
 }
+
+/**
+ * An attachment part as it arrives, never held whole: Gmail sends it base64url inside JSON,
+ * decoded on the way. Its size is the part's (Gmail gives it decoded).
+ */
+async function openPart(
+  ctx: Pick<ConnectorContext, 'fetch'>,
+  messageId: string,
+  part: Part,
+): Promise<OpenedFile> {
+  if (part.body?.data) {
+    const bytes = new Uint8Array(bytesOf(part.body.data))
+    return { body: new Blob([bytes]).stream(), size: bytes.byteLength }
+  }
+  const size = part.body?.size ?? 0
+  if (size > ATTACHMENT_MAX) throw new ConnectorError('The attachment is larger than 25 MB')
+  const response = await ctx.fetch(
+    `${API}/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(part.body!.attachmentId!)}`,
+  )
+  if (!response.ok || !response.body) {
+    await response.body?.cancel()
+    throw new ConnectorError(`The attachment could not be read (${response.status})`)
+  }
+  return { body: response.body.pipeThrough(jsonBase64Field('data')), size }
+}
+
+/** A received email's attachment, as the Inbox and triggers take it in (by the stream). */
+export const gmailFile = (
+  messageId: string,
+  a: { partId: string; filename: string; mimeType: string; size: number; inline?: boolean },
+): ExternalFile => ({
+  key: `gmail:${messageId}:${a.partId}`,
+  name: a.filename,
+  contentType: a.mimeType,
+  size: a.size,
+  ...(a.inline ? { inline: true } : {}),
+  download: async (ctx) => partData(ctx, messageId, await findPart(ctx, messageId, a.partId)),
+  open: async (ctx) => openPart(ctx, messageId, await findPart(ctx, messageId, a.partId)),
+})
 
 const summary = (m: Message) => ({
   id: m.id,
@@ -404,14 +445,7 @@ export const gmail: ConnectorDefinition = {
       },
       attachments: ({ payload }): ExternalFile[] => {
         const email = payload as ReceivedEmail
-        return (email.attachments ?? []).map((a) => ({
-          key: `gmail:${email.id}:${a.partId}`,
-          name: a.filename,
-          contentType: a.mimeType,
-          size: a.size,
-          ...(a.inline ? { inline: true } : {}),
-          download: async (ctx) => partData(ctx, email.id, await findPart(ctx, email.id, a.partId)),
-        }))
+        return (email.attachments ?? []).map((a) => gmailFile(email.id, a))
       },
       describe: ({ payload }) => {
         const email = payload as ReceivedEmail
@@ -487,6 +521,7 @@ export const gmail: ConnectorDefinition = {
           name: part.filename!,
           contentType: part.mimeType ?? 'application/octet-stream',
           bytes: () => partData(ctx, i.messageId, part),
+          open: () => openPart(ctx, i.messageId, part),
         })
         if (ref.status !== 'ready')
           throw new ConnectorError(`Brigade did not keep ${ref.name}: ${ref.note ?? 'blocked'}`)
