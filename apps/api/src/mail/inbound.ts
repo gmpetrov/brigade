@@ -365,6 +365,8 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
     const sessionId = row.alias.sessionId
     if (await handTo(db, scope, sessionId, row, sender, 'awaited'))
       return { route: 'awaited', sessionId }
+    // Its thread's alone, even when it cannot be woken now: no rule ever sees a sign-up's mail.
+    return { route: 'box', note: 'the thread waiting on it could not take it now' }
   }
   // 1. A reply to mail a thread sent from this address.
   if (connection) {
@@ -390,6 +392,9 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
       )
         return { route: bounce ? 'bounce' : 'awaited', sessionId: watch.sessionId }
     }
+    // A reply the waiting threads could not take now: theirs still, never a rule's.
+    if (watches.length && !(row.automatic && !bounce))
+      return { route: 'box', note: 'the threads waiting on it could not take it now' }
   }
 
   // 2. The thread of its conversation, when a member's mail or a rule started one.
@@ -429,6 +434,9 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
       } else if (await handTo(db, scope, session.id, row, sender, 'conversation')) {
         return { route: 'conversation', sessionId: session.id }
       }
+      // The conversation is that thread's, even when it cannot take this mail now (woken too
+      // often in a row): never a new thread or a rule for it. It waits in the box.
+      return { route: 'box', note: 'its conversation’s thread could not take it now' }
     }
   }
 

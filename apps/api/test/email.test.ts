@@ -1251,3 +1251,61 @@ describe('rule preview privacy', { skip }, () => {
     }
   })
 })
+
+describe('a conversation’s thread that cannot take more now', { skip }, () => {
+  test('a sixth follow-up waits in the box: no new thread, no rule', async () => {
+    const db = scoped(a)
+    const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+    const controlled = await thread('member', { controlledByMemberId: members[0]! })
+    const original = await db.mailMessage.create({
+      data: {
+        addressId: address.id,
+        box: `${address.id}:-`,
+        direction: 'in',
+        status: 'done',
+        fromAddress: adaEmail,
+        text: 'original member request',
+        messageId: `<controlled-${id}@x.test>`,
+        conversationId: `controlled-${id}`,
+        route: 'member',
+        sessionId: controlled.id,
+      } as never,
+    })
+    await db.wakeup.createMany({
+      data: Array.from({ length: 5 }, (_, i) => ({
+        organizationId: a.organizationId,
+        workspaceId: a.workspaceId,
+        sessionId: controlled.id,
+        teammateId: riley.id,
+        kind: 'reply',
+        status: 'pending',
+        note: `previous follow-up ${i}`,
+        wakeAt: new Date(),
+        sourceId: `prior-controlled-${id}-${i}`,
+      })) as never,
+    })
+    const old = await db.teammate.findFirstOrThrow({ where: { id: riley.id } })
+    // Make a new thread observable without connecting a runner: its initial prompt hits a cap.
+    await db.teammate.update({
+      where: { id: riley.id },
+      data: { caps: { computerHoursPerDay: 0 } },
+    })
+    const before = await prisma.session.count({ where: { ...a } })
+    try {
+      const [row] = await arrive(
+        mail({
+          to: [`${base()}@mails.brigade.test`],
+          from: adaEmail,
+          dkim: 'pass',
+          subject: 'Sixth follow-up while a person controls the conversation',
+          headers: { 'in-reply-to': original.messageId! },
+        }),
+      )
+      assert.equal(row!.route, 'box')
+      assert.equal(row!.sessionId, null)
+      assert.equal(await prisma.session.count({ where: { ...a } }), before)
+    } finally {
+      await db.teammate.update({ where: { id: riley.id }, data: { caps: old.caps as never } })
+    }
+  })
+})
