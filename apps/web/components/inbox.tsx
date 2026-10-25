@@ -568,6 +568,9 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
     .filter(Boolean)
     .join(' · ')
 
+  // Once a thread has it, handing it over starts a new thread: worth offering only when the
+  // mailbox has another teammate than the one on it.
+  const handOver = d.handTo.some((t) => t.id !== d.teammate?.id)
   const handButton = (primary: boolean) =>
     oneClick && unowned ? (
       <Button size="sm" disabled={busy} onClick={() => void handToOnly()}>
@@ -651,7 +654,7 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
               <span className={cn(trouble ? 'text-warning' : 'text-foreground')}>{state}</span>
             )}
             {about && <span>· {about}</span>}
-            {!d.hidden && <span className="ml-auto">{handButton(false)}</span>}
+            {!d.hidden && handOver && <span className="ml-auto">{handButton(false)}</span>}
           </div>
         )}
         {!d.reason && d.routeNote && <p className="text-xs text-muted-foreground">{d.routeNote}</p>}
