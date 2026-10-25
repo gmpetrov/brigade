@@ -132,9 +132,29 @@ const statusSql = (status: InboxFilters['status']) =>
         ? sql`(h."doneAt" is null and not ${WAITING})`
         : sql`true`
 
-/** One of its mails matches (x: a mail of the conversation). */
+/**
+ * A conversation this member may read (h: its head): no sign-up mail of another's thread in it.
+ * A sign-up's conversation is its thread's starter's and admins', with the replies sent in it,
+ * which can quote its code.
+ */
+const readableSql = (scope: WorkspaceScope) =>
+  admin(scope)
+    ? sql`true`
+    : sql`not exists (select 1 from "MailMessage" y
+        where y."workspaceId" = ${scope.workspaceId}
+          and y.box = h.box and y."conversationId" = h."conversationId"
+          and y."aliasId" is not null
+          and y."aliasId" not in (select a.id from "MailAlias" a
+            join "Session" s on s.id = a."sessionId" where s."startedByMemberId" = ${scope.memberId}))`
+
+/** One of its mails matches each filter (x: a mail of the conversation). */
 function matchSql(scope: WorkspaceScope, filters: InboxFilters) {
   const conditions: Prisma.Sql[] = []
+  const some = (condition: Prisma.Sql, received = true) =>
+    sql`exists (select 1 from "MailMessage" x
+      where x."workspaceId" = ${scope.workspaceId} and x.status <> 'cancelled'
+        ${received ? sql`and x.direction = 'in'` : sql``}
+        and x.box = h.box and x."conversationId" = h."conversationId" and ${condition})`
   if (filters.teammateId)
     conditions.push(sql`(x."addressId" in (select id from "MailAddress" where "teammateId" = ${filters.teammateId})
       or x."sessionId" in (select id from "Session" where "teammateId" = ${filters.teammateId}))`)
@@ -143,21 +163,14 @@ function matchSql(scope: WorkspaceScope, filters: InboxFilters) {
       or x."addressId" in (select id from "MailAddress" where "projectId" = ${filters.projectId})
       or x."sessionId" in (select id from "Session" where "projectId" = ${filters.projectId}))`)
   const words = filters.q?.trim()
-  if (words) {
-    const like = `%${words.replace(/[\\%_]/g, '\\$&')}%`
-    // A sign-up's words only for those who may read them: a match would give its code away.
-    const visible = admin(scope)
-      ? sql`true`
-      : sql`(x."aliasId" is null or x."aliasId" in (select a.id from "MailAlias" a
-          join "Session" s on s.id = a."sessionId" where s."startedByMemberId" = ${scope.memberId}))`
-    conditions.push(sql`(x."fromAddress" ilike ${like} or x."fromName" ilike ${like}
-      or (${visible} and (x.subject ilike ${like} or x.text ilike ${like})))`)
-  }
-  if (!conditions.length) return sql`true`
-  return sql`exists (select 1 from "MailMessage" x
-    where x."workspaceId" = ${scope.workspaceId} and x.direction = 'in'
-      and x.box = h.box and x."conversationId" = h."conversationId"
-      and ${Prisma.join(conditions, ' and ')})`
+  const like = words ? `%${words.replace(/[\\%_]/g, '\\$&')}%` : ''
+  const all = conditions.map((c) => some(c))
+  // Its senders, or the words of any of its mails, received or sent; a sign-up's words only for
+  // those who may read them: a match would give its code away.
+  if (words)
+    all.push(sql`(${some(sql`(x."fromAddress" ilike ${like} or x."fromName" ilike ${like})`)}
+      or (${readableSql(scope)} and ${some(sql`(x.subject ilike ${like} or x.text ilike ${like})`, false)}))`)
+  return all.length ? Prisma.join(all, ' and ') : sql`true`
 }
 
 /** The list, newest conversation first, whatever the sources, filtered and paged in one query. */
@@ -239,7 +252,8 @@ const waiting = (m: Row) =>
 const SHOWN: Prisma.MailMessageWhereInput = { status: { not: 'cancelled' } }
 
 async function toItems(db: ScopedDb, scope: WorkspaceScope, rows: Row[]): Promise<InboxItem[]> {
-  const [rules, teammates, projects, slugs, counts] = await Promise.all([
+  const keys = rows.map((r) => ({ box: r.box, conversationId: r.conversationId }))
+  const [rules, teammates, projects, slugs, counts, signUps] = await Promise.all([
     db.trigger.findMany({
       where: { id: { in: rows.map((r) => r.triggerId).filter((x): x is string => !!x) } },
       select: { id: true, label: true },
@@ -250,16 +264,21 @@ async function toItems(db: ScopedDb, scope: WorkspaceScope, rows: Row[]): Promis
     rows.length
       ? db.mailMessage.groupBy({
           by: ['box', 'conversationId'],
-          where: {
-            ...SHOWN,
-            OR: rows.map((r) => ({ box: r.box, conversationId: r.conversationId })),
-          },
+          where: { ...SHOWN, OR: keys },
           _count: { _all: true },
         })
       : [],
+    // Their sign-up mails: such a conversation is its thread's, whatever its latest mail.
+    rows.length && !admin(scope)
+      ? db.mailMessage.findMany({ where: { aliasId: { not: null }, OR: keys }, include })
+      : [],
   ])
   return rows.map((m) => {
-    const masked = hidden(scope, m)
+    const masked =
+      hidden(scope, m) ||
+      signUps.some(
+        (x) => x.box === m.box && x.conversationId === m.conversationId && hidden(scope, x),
+      )
     const projectId = m.projectId ?? m.address?.projectId ?? m.session?.projectId ?? null
     const teammateId = m.session?.teammateId ?? m.address?.teammateId ?? null
     const to = m.address
@@ -373,8 +392,9 @@ export async function readItem(
             teammateId: head.address.kind === 'agent' ? head.address.teammateId : null,
           }
         : null,
+    // A sign-up's conversation is its thread's, with the replies sent in it (they can quote its code).
     messages: mails.map((m) => {
-      const masked = m.direction === 'in' && hidden(scope, m)
+      const masked = item!.hidden || mails.some((x) => hidden(scope, x))
       const { text, quoted } = masked ? { text: '', quoted: '' } : splitQuoted(m.text)
       return {
         id: `mail:${m.id}`,

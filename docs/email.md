@@ -117,12 +117,13 @@ has to keep its messages there.
   done), `handled` (a thread has it, or its route needs nobody), `done` (`MailMessage.doneAt`, set on
   all its received mails; its next mail waits again). The sidebar counts conversations that wait,
   last 30 days.
-- **Filters**: source, agent, project, words; a conversation shows when any of its mails matches.
+- **Filters**: source, agent, project, words; a conversation shows when any of its mails matches
+  (words: its senders, or the words of its mails received or sent).
   Pages of 50, newest first.
 - **Opened** (by any of its mails' ids): each mail, received and sent from Brigade's address
   (Gmail's sent mail is not kept), oldest first, with its words (the quote apart), files,
-  authentication; a sign-up's mail is shown only to its thread's starter and admins (others see that
-  it came).
+  authentication. A sign-up's conversation, with the replies sent in it (they can quote its code),
+  is shown and searched only for its thread's starter and admins; others see that it came.
 - **Unassigned** (the page's word for `waiting`; `handled` shows as Assigned): the item says why
   nobody took it (from outside the workspace with no rule matching, a rule over its cap, a loop,
   not delivered yet) and, for Brigade's mail, lets an owner or admin add a rule on its mailbox

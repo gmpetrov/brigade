@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import pg from 'pg'
 
+// Sent mail goes through a Resend played by a fake fetch; set before src/ is imported below.
+process.env.RESEND_API_KEY ??= 're_inbox_test'
+
 // The Inbox (src/inbox.ts) against a real database, with Gmail played by a fake fetch: the local
 // database of apps/api/.env, in an organization of its own that it removes at the end. Without a
 // database to reach, it is skipped.
@@ -1103,6 +1106,95 @@ describe('a hand-over takes the replies, on its project', { skip }, () => {
         projectId: foreignProject.id,
       }),
       /Project not found/,
+    )
+  })
+})
+
+describe('sent mail in a conversation', { skip }, () => {
+  test('a sent reply must preserve sign-up mail privacy', async () => {
+    const db = scoped(scope)
+    const signup = await thread(riley.id)
+    const alias = await db.mailAlias.create({
+      data: {
+        local: `review377-${id}.0abc12`,
+        addressId: agent.id,
+        sessionId: signup.id,
+        teammateId: riley.id,
+        waitUntil: new Date(Date.now() + 60000),
+      } as never,
+    })
+    const code = await mail(agent, {
+      aliasId: alias.id,
+      subject: 'Your code is 482913',
+      text: 'Code 482913',
+      messageId: `<review377-signup-${id}@service.test>`,
+    })
+    const address = await db.mailAddress.findFirstOrThrow({
+      where: { id: agent.id },
+      include: { domain: true },
+    })
+    const { sendDraft } = await import('../src/mail/outbound.js')
+    const beforeFetch = globalThis.fetch
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      assert.equal(String(input), 'https://api.resend.com/emails')
+      return json({ id: `review377-out-${id}` })
+    }) as typeof fetch
+    let sent
+    try {
+      sent = await sendDraft(db, scope, {
+        address,
+        thread: signup,
+        teammateId: riley.id,
+        callId: randomUUID(),
+        draft: {
+          to: [code.fromAddress],
+          subject: '',
+          text: 'Please help me sign in.\n\nOn Sunday, Service wrote:\n> Code 482913',
+          replyTo: code.id,
+        },
+      })
+    } finally {
+      globalThis.fetch = beforeFetch
+    }
+    const detail = await inbox.readItem(db, as(1), `mail:${code.id}`)
+    const outgoing = detail.messages.find((m) => m.id === `mail:${sent.id}`)!
+    assert.doesNotMatch(
+      JSON.stringify(outgoing),
+      /482913/,
+      'another member can read the sign-up code via the newly included sent reply',
+    )
+    // Nor find it by the sent reply's words; its thread's starter does.
+    const found = (who: 0 | 1) =>
+      inbox
+        .listInbox(db, as(who), { status: 'all', q: 'Please help me sign in' })
+        .then((r) => r.items.some((i) => i.id === `mail:${code.id}`))
+    assert.equal(await found(1), false)
+    assert.equal(await found(0), true)
+  })
+  test('conversation search must find words in a sent reply', async () => {
+    const db = scoped(scope)
+    const first = await mail(support, { subject: `search-repro-${id}` })
+    await db.mailMessage.create({
+      data: {
+        ...scope,
+        addressId: support.id,
+        box: first.box,
+        conversationId: first.conversationId,
+        direction: 'out',
+        status: 'sent',
+        fromAddress: 'support@mails.brigade.test',
+        subject: 'Re: support',
+        text: `tracking-reference-${id}`,
+        receivedAt: new Date(),
+      } as never,
+    })
+    const results = await inbox.listInbox(db, as(0), {
+      status: 'all',
+      q: `tracking-reference-${id}`,
+    })
+    assert.ok(
+      results.items.some((m) => m.id === `mail:${first.id}`),
+      'sent mail text is never searched',
     )
   })
 })
