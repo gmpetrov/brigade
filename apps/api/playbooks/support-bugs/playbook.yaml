@@ -1,6 +1,6 @@
 id: brigade/support-bugs
 name: Support and bugs
-version: 1.2.0
+version: 1.3.0
 description: Sorts the support inbox, answers customers, fixes the bugs they report and tells them when it is fixed.
 
 # Two teammates: support reads the customers' mail and answers them; developer fixes the bugs
@@ -34,7 +34,14 @@ entries:
   - {
       trigger: gmail.email_received,
       account: '{{inbox}}',
-      options: { query: 'to:{{address}}' },
+      # Gmail's promotions, social and updates tabs (newsletters, notifications, receipts) and
+      # out-of-office replies never start a run. Not forums: a support@ that is a Google Group
+      # files every mail there.
+      options:
+        {
+          query: 'to:{{address}} -category:promotions -category:social -category:updates',
+          automated: skip,
+        },
       label: 'Support mail',
     }
   - {

@@ -278,7 +278,10 @@ await check('installed through the API: its triggers, schedule, skills and actio
   const [trigger] = await q(`select options from "Trigger" where "playbookInstallationId" = $1`, [
     playbook.id,
   ])
-  assert.deepEqual(trigger.options, { query: 'to:support@acme.test' })
+  assert.deepEqual(trigger.options, {
+    query: 'to:support@acme.test -category:promotions -category:social -category:updates',
+    automated: 'skip',
+  })
   const skills = await q(
     `select s.name from "Skill" s join "SkillPack" p on p.id = s."packId" where p."playbookInstallationId" = $1 order by s.name`,
     [playbook.id],
