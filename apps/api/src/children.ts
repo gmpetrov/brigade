@@ -33,6 +33,7 @@ import { attachToThread } from './attachments.js'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
+import { looksTaken } from './review-state.js'
 import { loadThread } from './thread-spec.js'
 import { fireNow, firedInARow } from './wakeups.js'
 import { promptThread, startThread } from './work.js'
@@ -741,9 +742,10 @@ export async function messageChild(
     }
   // A review whose pull request is merged or closed: work it is asked for now is another pull
   // request's, which Brigade would show as unreviewed, with Merge. That one gets its own review.
+  // Its pull request, also once a newer review replaced this one on it.
   const reviewed = await db.pullRequest.findFirst({
-    where: { reviewSessionId: child.id },
-    select: { number: true, state: true },
+    where: { OR: [{ reviewSessionId: child.id }, { reviews: { some: { sessionId: child.id } } }] },
+    select: { id: true, number: true, state: true },
   })
   if (reviewed && reviewed.state !== 'open')
     return {
@@ -752,14 +754,11 @@ export async function messageChild(
         'pull request reviewed, call request_review on that one, with this reviewer: Brigade then shows ' +
         'the person that it is in review.',
     }
-  // A review that took its last look: past it, more looks rarely settle what is left.
-  if (
-    reviewed &&
-    (await db.pullRequestReview.count({ where: { sessionId: child.id } })) >= REVIEW_LOOKS
-  )
+  // Its pull request's reviews took their last look: past it, more rarely settle what is left.
+  if (reviewed && (await looksTaken(db, reviewed.id)) >= REVIEW_LOOKS)
     return {
       error:
-        `This review of #${reviewed.number} took its ${REVIEW_LOOKS} looks, the most Brigade allows. ` +
+        `The reviews of #${reviewed.number} took their ${REVIEW_LOOKS} looks, the most Brigade allows. ` +
         'Tell the person where it stands: what is still open, and what you recommend. They can have ' +
         'it read again with Review again on the pull request.',
     }

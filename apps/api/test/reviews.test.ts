@@ -552,7 +552,7 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     await look()
     const past = await ask()
     assert.ok('error' in past)
-    assert.match(past.error, new RegExp(`took its ${REVIEW_LOOKS} looks.*Review again`))
+    assert.match(past.error, new RegExp(`took their ${REVIEW_LOOKS} looks.*Review again`))
     // Nor does the author start a fresh one on its own once that one is done.
     await db.session.updateMany({
       where: { id: child },
@@ -566,7 +566,7 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
       { id: ids.riley, name: 'Riley' },
       { name: 'request_review', repository: repo, number: 24 },
     )) as { error?: string }
-    assert.match(again.error ?? '', /took its \d+ looks/)
+    assert.match(again.error ?? '', /took their \d+ looks/)
     // The person does, with Review again.
     const { threadId } = await requestReview(
       { ...scope, userId: `owner-${suffix}`, memberId: ids.owner, role: 'owner' },
@@ -575,6 +575,58 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
       { reviewerId: ids.kai },
     )
     assert.notEqual(threadId, child)
+  })
+
+  test('a fresh review the author starts goes on counting where its last one stopped', async () => {
+    const { messageChild } = await import('../src/children.js')
+    const { handleReviewCall } = await import('../src/reviews.js')
+    const { REVIEW_LOOKS } = await import('@brigade/contracts')
+    await open(ids.thread, 25, { wanted: true, reason: 'New permissions' })
+    const pr = await row(25)
+    const first = pr.reviewSessionId!
+    const look = (sessionId: string) =>
+      db.pullRequestReview.create({
+        data: {
+          pullRequestId: pr.id,
+          teammateId: ids.kai,
+          sessionId,
+          verdict: 'request_changes',
+          body: 'Still a race',
+          sha: 'abc',
+          round: 1,
+        } as never,
+      })
+    const ask = (child: string) =>
+      messageChild(
+        db,
+        scope,
+        { id: ids.thread, title: 'Thread' },
+        { id: ids.riley, name: 'Riley' },
+        child,
+        'Fixed, can you look again?',
+      )
+    for (let i = 1; i < REVIEW_LOOKS; i++) await look(first)
+    // One look left, the author starts a fresh review rather than asking this one again.
+    await db.session.updateMany({
+      where: { id: first },
+      data: { reportDeliveredAt: new Date(), awaited: false, status: 'idle' },
+    })
+    const own = await db.session.findFirstOrThrow({ where: { id: ids.thread } })
+    const fresh = (await handleReviewCall(
+      db,
+      scope,
+      own,
+      { id: ids.riley, name: 'Riley' },
+      { name: 'request_review', repository: repo, number: 25 },
+    )) as { threadId?: string; error?: string }
+    assert.ok(fresh.threadId, fresh.error)
+    await look(fresh.threadId)
+    // The fresh one took the last look: neither it nor the old one is asked again.
+    for (const child of [fresh.threadId, first]) {
+      const past = await ask(child)
+      assert.ok('error' in past)
+      assert.match(past.error, new RegExp(`took their ${REVIEW_LOOKS} looks`))
+    }
   })
 
   test('the brief says whether the repository runs checks, and how the thread started', async () => {

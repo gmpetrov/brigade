@@ -40,7 +40,7 @@ import {
   type GhPull,
   type GitHub,
 } from './pull-requests.js'
-import { reviewUnderWay } from './review-state.js'
+import { looksTaken, reviewUnderWay } from './review-state.js'
 import { usableAccounts } from './routes/accounts.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread, type LoadedThread } from './thread-spec.js'
@@ -441,16 +441,11 @@ async function startClaimed(
     throw new HTTPException(409, {
       message: `${row.reviewSession.teammate.name} is already reviewing it`,
     })
-  // Its review took its last look: a fresh one is the person's call, not the author's way round it.
-  if (
-    input.by.kind === 'teammate' &&
-    row.reviewSession &&
-    (await db.pullRequestReview.count({ where: { sessionId: row.reviewSession.id } })) >=
-      REVIEW_LOOKS
-  )
+  // Its reviews took their last look: a fresh one is the person's call, not the author's way round it.
+  if (input.by.kind === 'teammate' && (await looksTaken(db, row.id)) >= REVIEW_LOOKS)
     throw new HTTPException(409, {
       message:
-        `Its review took its ${REVIEW_LOOKS} looks. Tell the person where it stands: they can have ` +
+        `Its reviews took their ${REVIEW_LOOKS} looks. Tell the person where it stands: they can have ` +
         'it read again with Review again on the pull request.',
     })
   const home = row.sessionId ? await loadThread(db, row.sessionId) : null

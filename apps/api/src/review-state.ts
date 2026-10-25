@@ -1,7 +1,7 @@
 // Where a pull request's review stands, read from its thread (src/reviews.ts): shared by the
 // pull requests' lists (src/pull-requests.ts) and the Tasks board (src/tasks.ts), so Needs you
 // says the same everywhere.
-import type { Prisma } from './db.js'
+import type { Prisma, ScopedDb } from './db.js'
 
 /** A thread's statuses while at work, or asking a person something. */
 const AT_WORK_OR_ASKING = ['starting', 'running', 'waiting'] as const
@@ -57,4 +57,25 @@ export function pullWaitsOnPerson(p: {
     (p.mergeStatus === 'stuck' ||
       (p.mergeStatus === 'none' && !(p.reviewSession && reviewUnderWay(p.reviewSession))))
   )
+}
+
+/**
+ * Looks a pull request's reviews took since a person last asked for one: whichever review
+ * thread took them, so a fresh review the author starts goes on counting where its last one
+ * stopped, and only a person's request starts the count again (REVIEW_LOOKS).
+ */
+export async function looksTaken(db: ScopedDb, pullRequestId: string) {
+  const asked = await db.auditEntry.findFirst({
+    where: {
+      action: 'pull_request.review_requested',
+      targetType: 'pull_request',
+      targetId: pullRequestId,
+      actorType: 'member',
+    },
+    orderBy: { at: 'desc' },
+    select: { at: true },
+  })
+  return db.pullRequestReview.count({
+    where: { pullRequestId, ...(asked ? { createdAt: { gt: asked.at } } : {}) },
+  })
 }
