@@ -590,7 +590,7 @@ export const threads = new Hono<AppEnv>()
         isText(row.contentType) &&
         // Its first part only, read as such: the rest never leaves the bucket.
         new TextDecoder('utf-8', { fatal: false }).decode(
-          await headOf(attachmentKey(c.var.scope, row.id), row.size, FILE_VIEW_MAX),
+          await headOf(attachmentKey(c.var.scope, row.id), FILE_VIEW_MAX),
         )
       return c.json({
         source: 'attachment',

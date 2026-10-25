@@ -72,12 +72,12 @@ const INLINE =
 function fileResponse(
   c: Context,
   key: string,
-  file: { path: string; contentType: string; size: number },
+  file: { path: string; contentType: string },
   download: boolean,
 ) {
   const inline = !download && INLINE.test(file.contentType)
   const name = file.path.split('/').pop()!
-  return serveObject(c, key, file.size, {
+  return serveObject(c, key, {
     'content-type': file.contentType.startsWith('text/')
       ? `${file.contentType}; charset=utf-8`
       : file.contentType,

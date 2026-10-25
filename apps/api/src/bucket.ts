@@ -9,6 +9,7 @@ import { pipeline } from 'node:stream/promises'
 import { STORED_FILE_NAME } from '@brigade/contracts'
 import { AwsClient } from 'aws4fetch'
 import { env } from './config.js'
+import { byteRange } from './byte-range.js'
 import type { Scope } from './db.js'
 import { fixedLength } from './platform/node.js'
 
@@ -254,23 +255,44 @@ export async function streamObject(key: string): Promise<ReadableStream<Uint8Arr
 }
 
 /**
- * Bytes `start` to `end` (inclusive) of the object as they arrive, or null when it is gone: a
- * file served through the API is never held whole.
+ * Part of the object (`bytes=…`, one range) as it arrives, as the bucket answers it: from what it
+ * holds now, not from a size recorded elsewhere (a file may have been replaced since). Null when
+ * it is gone; 416 when the range is past its end.
  */
 export async function streamRange(
   key: string,
-  start: number,
-  end: number,
-): Promise<ReadableStream<Uint8Array> | null> {
+  range: string,
+): Promise<
+  | { status: 206; body: ReadableStream<Uint8Array>; contentRange: string }
+  | { status: 416; size: number | null }
+  | null
+> {
   if (!r2) {
     const file = join(env.BUCKET_DIR, key)
-    if (!(await stat(file).catch(() => null))) return null
-    return Readable.toWeb(createReadStream(file, { start, end })) as ReadableStream<Uint8Array>
+    const found = await stat(file).catch(() => null)
+    if (!found) return null
+    const part = byteRange(range, found.size)
+    if (!part) return { status: 416, size: found.size }
+    const [start, end] = part
+    return {
+      status: 206,
+      body: Readable.toWeb(createReadStream(file, { start, end })) as ReadableStream<Uint8Array>,
+      contentRange: `bytes ${start}-${end}/${found.size}`,
+    }
   }
-  const response = await r2.client.fetch(url(key), { headers: { range: `bytes=${start}-${end}` } })
+  const response = await r2.client.fetch(url(key), { headers: { range } })
   if (response.status === 404) return null
-  if (!response.ok || !response.body) throw new Error(`bucket get failed: ${response.status}`)
-  return response.body
+  if (response.status === 416) {
+    await response.body?.cancel()
+    const size = Number(response.headers.get('content-range')?.match(/\/(\d+)$/)?.[1])
+    return { status: 416, size: Number.isFinite(size) ? size : null }
+  }
+  const contentRange = response.headers.get('content-range')
+  if (response.status !== 206 || !response.body || !contentRange) {
+    await response.body?.cancel()
+    throw new Error(`bucket get failed: ${response.status}`)
+  }
+  return { status: 206, body: response.body, contentRange }
 }
 
 /** The keys of every object in a folder, such as `threadFilesPrefix`: it ends with a slash. */

@@ -16,9 +16,7 @@ const { headOf, serveObject } = await import('../src/serve-object.js')
 const bytes = new Uint8Array(Array.from({ length: 1000 }, (_, i) => i % 251))
 await putObject('org/ws/file', bytes, 'application/octet-stream')
 const app = new Hono().get('/:key', (c) =>
-  serveObject(c, c.req.param('key') === 'file' ? 'org/ws/file' : 'org/ws/none', 1000, {
-    'content-type': 'application/octet-stream',
-  }),
+  serveObject(c, `org/ws/${c.req.param('key')}`, { 'content-type': 'application/octet-stream' }),
 )
 const get = (key: string, range?: string) =>
   app.request(`/${key}`, range ? { headers: { range } } : {})
@@ -46,8 +44,23 @@ test('a file missing from storage is a 404', async () => {
   assert.equal((await get('none')).status, 404)
 })
 
+test('ranges are those of the file as it is now, not as it was recorded', async () => {
+  // A library file replaced by a shorter one, while its row still says 1000 bytes.
+  await putObject('org/ws/replaced', bytes, 'application/octet-stream')
+  await putObject('org/ws/replaced', bytes.subarray(0, 500), 'application/octet-stream')
+  const part = await get('replaced', 'bytes=400-999')
+  assert.equal(part.status, 206)
+  assert.equal(part.headers.get('content-range'), 'bytes 400-499/500')
+  assert.deepEqual(new Uint8Array(await part.arrayBuffer()), bytes.subarray(400, 500))
+  const past = await get('replaced', 'bytes=600-')
+  assert.equal(past.status, 416)
+  assert.equal(past.headers.get('content-range'), 'bytes */500')
+  assert.equal((await get('replaced', 'bytes=0-1,5-6')).status, 416)
+})
+
 test('a look at a file reads its beginning only', async () => {
-  assert.deepEqual(await headOf('org/ws/file', 1000, 100), bytes.subarray(0, 100))
-  assert.deepEqual(await headOf('org/ws/file', 1000, 5000), bytes)
-  assert.equal((await headOf('org/ws/file', 0, 100)).byteLength, 0)
+  assert.deepEqual(await headOf('org/ws/file', 100), bytes.subarray(0, 100))
+  assert.deepEqual(await headOf('org/ws/file', 5000), bytes)
+  await putObject('org/ws/empty', new Uint8Array(), 'text/plain')
+  assert.equal((await headOf('org/ws/empty', 100)).byteLength, 0)
 })

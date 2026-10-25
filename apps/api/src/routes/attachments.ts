@@ -113,7 +113,7 @@ export const attachments = new Hono<AppEnv>()
       return c.redirect(signed.url, 302)
     }
     // Through the API (the dashboard reads it with its session), as it streams.
-    return serveObject(c, attachmentKey(scope, row.id), row.size, {
+    return serveObject(c, attachmentKey(scope, row.id), {
       'content-type': row.contentType.startsWith('text/')
         ? `${row.contentType}; charset=utf-8`
         : row.contentType,
