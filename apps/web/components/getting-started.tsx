@@ -19,7 +19,7 @@ const dismissedKey = (workspaceId: string) => `brigade.checklist.dismissed.${wor
 export function GettingStarted({ threads }: { threads: ThreadSummary[] | undefined }) {
   const { me, teammates } = useDashboard()
   const workspaceId = me.activeWorkspaceId!
-  const connections = useApi<ConnectionsResponse>('/connections')
+  const connections = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
   const tasks = useApi<Task[]>('/tasks')
   const [dismissed, setDismissed] = useState(true)
 

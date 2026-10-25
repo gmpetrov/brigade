@@ -5,7 +5,10 @@ import { useApi, type ThreadSummary } from '@/lib/api'
 
 export default function ProjectThreads() {
   const { project } = useProject()
-  const threads = useApi<ThreadSummary[]>(`/threads?project=${project.id}`)
+  const threads = useApi<ThreadSummary[]>(`/threads?project=${project.id}`, [
+    'thread.updated',
+    'pulls.updated',
+  ])
   return threads.data ? (
     <ThreadList
       threads={threads.data}

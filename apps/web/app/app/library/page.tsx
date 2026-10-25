@@ -47,9 +47,9 @@ type Tab = 'files' | 'designs' | 'memory' | 'design-systems' | 'trash'
 function LibraryView() {
   const params = useSearchParams()
   const router = useRouter()
-  const tree = useApi<LibraryTree>('/library/tree')
-  const memory = useApi<MemoryOverview>('/library/memory')
-  const teammates = useApi<Teammate[]>('/teammates')
+  const tree = useApi<LibraryTree>('/library/tree', ['library.updated'])
+  const memory = useApi<MemoryOverview>('/library/memory', ['library.updated'])
+  const teammates = useApi<Teammate[]>('/teammates', ['teammates.updated'])
   const me = useApi<Me>('/me')
   const [tab, setTab] = useState<Tab>('files')
   const [query, setQuery] = useState('')

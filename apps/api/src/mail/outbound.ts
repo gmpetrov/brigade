@@ -387,7 +387,8 @@ export async function fillMessageIds() {
   for (const row of rows) {
     try {
       const got = await sentEmail(row.resendId!)
-      await prisma.mailMessage.updateMany({
+      // Scoped, so dashboards showing it hear of it (src/hub.ts).
+      await scoped(row).mailMessage.updateMany({
         where: { id: row.id },
         data: {
           ...(got.message_id ? { messageId: got.message_id } : {}),

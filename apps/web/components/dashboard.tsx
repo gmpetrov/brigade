@@ -109,7 +109,6 @@ import { authClient } from '@/lib/auth-client'
 import { DEMO, signUp } from '@/lib/demo/flag'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 import { isMac, useIsMac } from '@/lib/platform'
-import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
 export { StatusBadge } from '@/components/status-badge'
@@ -238,34 +237,36 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // thread panel's (sent ahead). Without a workspace they fail, unseen: onboarding comes next.
   const me = useApi<Me>('/me')
   useEffect(() => preloadThreadPanel(pathname), []) // eslint-disable-line react-hooks/exhaustive-deps
-  const teammates = useApi<Teammate[]>('/teammates')
-  const projects = useApi<ProjectSummary[]>('/projects')
+  const teammates = useApi<Teammate[]>('/teammates', ['teammates.updated'])
+  const projects = useApi<ProjectSummary[]>('/projects', ['projects.updated'])
   const reloadProjects = projects.reload
   const [creatingProject, setCreatingProject] = useState(false)
   const mac = useIsMac()
   const { theme = 'dark', setTheme } = useTheme()
   const ThemeIcon = THEMES.find((t) => t.value === theme)?.icon ?? Monitor
   const [sidebarWidth, setSidebarWidth] = useSidebarWidth()
-  // Tickets waiting on this member, refreshed as the member moves around.
-  const tickets = useApi<Ticket[]>('/tickets')
+  // Tickets waiting on this member, live and refreshed as the member moves around.
+  const tickets = useApi<Ticket[]>('/tickets', ['tickets.updated'])
   const reloadTickets = tickets.reload
-  // Tasks that need a person, the same way.
-  const tasks = useApi<Task[]>('/tasks')
+  // Tasks that need a person, the same way: a task's column follows its thread's status and
+  // open tickets.
+  const tasks = useApi<Task[]>('/tasks', ['task.updated', 'thread.updated', 'tickets.updated'])
   const reloadTasks = tasks.reload
   // Pull requests waiting on a person: with the tickets, what Home's Waiting on you counts.
-  const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention')
+  const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention', ['pulls.updated'])
   const reloadPulls = pulls.reload
-  // Mail nobody took, beside Inbox: every minute and when the window comes back, too.
-  const inboxCount = useApi<{ waiting: number }>('/inbox/count')
+  // Mail nobody took, beside Inbox: live, and again when the window comes back (a phone that
+  // slept missed what its socket would have said).
+  const inboxCount = useApi<{ waiting: number }>('/inbox/count', [
+    'mail.updated',
+    // A Gmail account put in the Inbox or taken out of it, an address released.
+    'connections.updated',
+  ])
   const reloadInboxCount = inboxCount.reload
   useEffect(() => {
-    const timer = window.setInterval(() => void reloadInboxCount(), 60_000)
     const onFocus = () => void reloadInboxCount()
     window.addEventListener('focus', onFocus)
-    return () => {
-      window.clearInterval(timer)
-      window.removeEventListener('focus', onFocus)
-    }
+    return () => window.removeEventListener('focus', onFocus)
   }, [reloadInboxCount])
   // The member's AI accounts, for the avatar menu's usage: fresh each time it opens.
   const accounts = useApi<Account[]>('/accounts')
@@ -286,18 +287,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     void reloadPulls()
     void reloadInboxCount()
   }, [pathname, reloadTickets, reloadTasks, reloadPulls, reloadInboxCount])
-  // And live: a task's column follows its thread's status and open tickets.
-  useLive((message) => {
-    if (message.type === 'projects.updated') void reloadProjects()
-    if (message.type === 'tickets.updated') void reloadTickets()
-    if (message.type === 'pulls.updated') void reloadPulls()
-    if (
-      message.type === 'task.updated' ||
-      message.type === 'thread.updated' ||
-      message.type === 'tickets.updated'
-    )
-      void reloadTasks()
-  })
 
   useEffect(() => {
     if (me.error?.status === 401) {

@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils'
 export function EmailApp({ reload }: { reload: () => Promise<unknown> }) {
   const { me } = useDashboard()
   const admin = isAdmin(me)
-  const state = useApi<EmailState>('/email')
+  const state = useApi<EmailState>('/email', ['mail.updated', 'connections.updated'])
   const [error, setError] = useState<string>()
   const [turning, setTurning] = useState(false)
 
@@ -292,7 +292,9 @@ function destination(e: MailJournalEntry) {
 
 /** An address's latest mail and where each went; never its text. */
 function Journal({ address, fresh }: { address: MailAddress; fresh: number }) {
-  const entries = useApi<MailJournalEntry[]>(`/email/addresses/${address.id}/journal?limit=50`)
+  const entries = useApi<MailJournalEntry[]>(`/email/addresses/${address.id}/journal?limit=50`, [
+    'mail.updated',
+  ])
   const { reload } = entries
   useEffect(() => {
     if (fresh) void reload()
@@ -375,7 +377,7 @@ export function AgentEmailRow({
   /** An owner or admin: turns it on or off. */
   editable: boolean
 }) {
-  const state = useApi<EmailState>('/email')
+  const state = useApi<EmailState>('/email', ['mail.updated', 'connections.updated'])
   const [form, setForm] = useState(false)
   const suggestion = useApi<{ name: string; address: string; kept: boolean }>(
     form ? `/email/agents/${teammate.id}/suggestion` : null,

@@ -49,7 +49,7 @@ export function TeammateAccess({
   editable: boolean
   onPolicyChange: () => void
 }) {
-  const connections = useApi<ConnectionsResponse>('/connections')
+  const connections = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
   const grants = useApi<{ connectionId: string; scope: Exclude<Scope, 'none'> }[]>(
     `/teammates/${teammate.id}/grants`,
   )

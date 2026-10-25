@@ -14,7 +14,7 @@ import { pullHref, useApi, type ProjectSummary, type PullRequestList } from '@/l
 export default function Repository() {
   const params = useParams<{ owner: string; name: string }>()
   const repository = `${params.owner}/${params.name}`.toLowerCase()
-  const pulls = useApi<PullRequestList>('/pulls?state=open')
+  const pulls = useApi<PullRequestList>('/pulls?state=open', ['pulls.updated'])
   const projects = useApi<ProjectSummary[]>(
     `/projects?repository=${encodeURIComponent(repository)}`,
   )

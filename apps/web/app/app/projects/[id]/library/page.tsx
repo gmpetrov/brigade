@@ -13,7 +13,7 @@ import { API_URL } from '@/lib/config'
 export default function ProjectLibrary() {
   const { project, reload } = useProject()
   const { me, teammates } = useDashboard()
-  const tree = useApi<LibraryTree>('/library/tree')
+  const tree = useApi<LibraryTree>('/library/tree', ['library.updated'])
   const [folder, setFolder] = useState(project.folder ?? '')
   const [creating, setCreating] = useState<'file' | 'folder' | null>(null)
   const [uploading, setUploading] = useState<string>()

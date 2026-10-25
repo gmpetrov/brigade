@@ -61,7 +61,7 @@ export default function ProjectSettings() {
   const { reloadProjects } = useDashboard()
   const documents = useDocumentPanel()
   const router = useRouter()
-  const connections = useApi<ConnectionsResponse>('/connections')
+  const connections = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
   const [name, setName] = useState(project.name)
   const [icon, setIcon] = useState(project.icon ?? '')
   const [brief, setBrief] = useState(project.brief)

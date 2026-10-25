@@ -58,7 +58,7 @@ export function TeamProposalCard({
   onSend?: (text: string) => Promise<void>
 }) {
   const { me, teammates, reloadTeammates } = useDashboard()
-  const connections = useApi<ConnectionsResponse>('/connections')
+  const connections = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
   const [draft, setDraft] = useState(() =>
     proposal.teammates.map((t) => ({ ...t, included: true })),
   )

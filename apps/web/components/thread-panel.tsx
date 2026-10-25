@@ -338,11 +338,8 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
 
   // Every thread, for what each teammate is doing and what waits; live. A pull request's
   // change moves its thread in the sidebar (waiting on a person to merge, or not).
-  const threads = useApi<ThreadSummary[]>('/threads')
+  const threads = useApi<ThreadSummary[]>('/threads', ['thread.updated', 'pulls.updated'])
   const reloadThreads = threads.reload
-  useLive((message) => {
-    if (message.type === 'thread.updated' || message.type === 'pulls.updated') void reloadThreads()
-  })
   const { activity, waiting } = useMemo(() => {
     const activity: Record<string, TeammateActivity> = {}
     let waiting = 0
