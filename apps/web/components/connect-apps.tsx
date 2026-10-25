@@ -2,7 +2,6 @@
 // Connect apps: the popup the sidebar's button opens (openConnectApps). The catalog to
 // search and add from, and the Apps already connected one click away; each App opens its
 // sheet on top. Settings → Apps shows the same, as a page (ConnectApps).
-import Link from 'next/link'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Check, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { AppSheet } from '@/components/app-sheet'
@@ -391,15 +390,6 @@ function Connected({
               )
             })}
           </div>
-        )}
-        {dialog && (
-          <Link
-            href="/app/connections"
-            onClick={onClose}
-            className="mt-6 inline-block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
-            Open Apps in Settings
-          </Link>
         )}
       </div>
     </>
