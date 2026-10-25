@@ -8,6 +8,7 @@ CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/brigade-preview
 DATA=$REPO/.preview
 NODE_VERSION=24.22.1
 EMBEDDED_POSTGRES=17.10.0-beta.17
+PG_CACHE=$CACHE/postgres-$EMBEDDED_POSTGRES
 DB_PORT=5433
 
 say() { printf '\033[1m==> %s\033[0m\n' "$*"; }
@@ -81,6 +82,30 @@ docker_holds_db() {
       --filter label=com.docker.compose.volume=postgres 2>/dev/null)" ]
 }
 
+# The embedded-postgres package, once per version, in the cache. With pnpm rather than npm: a
+# cloud computer's own npm can be broken (one updated over another's files fails on every
+# install). Installed beside the cache and moved in only once complete, so an install that
+# failed or two previews installing at once never leave a half-installed package behind.
+# Its platform package's install script links the libraries PostgreSQL loads: allowed here.
+download_postgres() {
+  [ -f "$PG_CACHE/node_modules/embedded-postgres/dist/index.js" ] && return
+  say "Downloading PostgreSQL"
+  local temp=$PG_CACHE.$$
+  rm -rf "$temp" && mkdir -p "$temp" && echo '{"private":true}' >"$temp/package.json"
+  if ! (cd "$temp" && "${PNPM[@]}" add --config.node-linker=hoisted \
+    --config.dangerously-allow-all-builds=true "embedded-postgres@$EMBEDDED_POSTGRES"); then
+    rm -rf "$temp"
+    echo "Could not download PostgreSQL (embedded-postgres@$EMBEDDED_POSTGRES)" >&2
+    return 1
+  fi
+  # Another preview may have put its own in place meanwhile.
+  if [ -f "$PG_CACHE/node_modules/embedded-postgres/dist/index.js" ]; then
+    rm -rf "$temp"
+  else
+    rm -rf "$PG_CACHE" && mv "$temp" "$PG_CACHE"
+  fi
+}
+
 # Starts PostgreSQL unless something already answers on its port. Embedded, it runs in the
 # background until this script exits. Docker's when Docker works here, except:
 # - once the embedded one holds this checkout's data. Its data stays the same whether Docker
@@ -105,11 +130,8 @@ start_db() {
     :
   else
     [ -z "$docker" ] || say "Docker could not start PostgreSQL: using the embedded one"
-    if [ ! -f "$CACHE/postgres/node_modules/embedded-postgres/package.json" ]; then
-      say "Downloading PostgreSQL"
-      npm install --silent --prefix "$CACHE/postgres" "embedded-postgres@$EMBEDDED_POSTGRES"
-    fi
-    PG_PACKAGE=$CACHE/postgres/node_modules/embedded-postgres PG_DATA=$DATA/postgres PG_PORT=$DB_PORT \
+    download_postgres || return 1
+    PG_PACKAGE=$PG_CACHE/node_modules/embedded-postgres PG_DATA=$DATA/postgres PG_PORT=$DB_PORT \
       node "$HERE/postgres.mjs" &
   fi
   wait_for_db
