@@ -52,6 +52,7 @@ import { processGroups } from './process-groups.js'
 import { Threads, threadFolder } from './threads.js'
 import { prefetch, sweep, type BackupName, type BundleStore } from './repos.js'
 import { Updater } from './updater.js'
+import { sendUsageRunsTo } from './usage.js'
 import { noteHandOver, takeHandOver } from './hand-over.js'
 
 /** While an update hands its turns over, how long the calls under way get to finish on the connection. */
@@ -372,6 +373,7 @@ async function start() {
     memoryTidy: (tidy) => connection.send(tidy),
     title: (update) => connection.send(update),
   })
+  sendUsageRunsTo((run) => connection.send(run))
   // On a cloud computer, the computer running out of memory as a whole: a preview or a turn is
   // stopped, with the reason, before it stops answering at all.
   if (CLOUD && process.env.BRIGADE_MEMORY_GUARD !== '0') {

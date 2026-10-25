@@ -421,6 +421,7 @@ export const ModelName = {
   ReplyWatch: 'ReplyWatch',
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
+  TokenUsage: 'TokenUsage',
   Account: 'Account',
   PullRequest: 'PullRequest',
   PullRequestReview: 'PullRequestReview',
@@ -482,7 +483,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle"
+    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2259,6 +2260,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.SessionEventCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.SessionEventCountAggregateOutputType> | number
+        }
+      }
+    }
+    TokenUsage: {
+      payload: Prisma.$TokenUsagePayload<ExtArgs>
+      fields: Prisma.TokenUsageFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TokenUsageFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TokenUsageFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload>
+        }
+        findFirst: {
+          args: Prisma.TokenUsageFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TokenUsageFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload>
+        }
+        findMany: {
+          args: Prisma.TokenUsageFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload>[]
+        }
+        create: {
+          args: Prisma.TokenUsageCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload>
+        }
+        createMany: {
+          args: Prisma.TokenUsageCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TokenUsageCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload>[]
+        }
+        delete: {
+          args: Prisma.TokenUsageDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload>
+        }
+        update: {
+          args: Prisma.TokenUsageUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload>
+        }
+        deleteMany: {
+          args: Prisma.TokenUsageDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TokenUsageUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TokenUsageUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload>[]
+        }
+        upsert: {
+          args: Prisma.TokenUsageUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TokenUsagePayload>
+        }
+        aggregate: {
+          args: Prisma.TokenUsageAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTokenUsage>
+        }
+        groupBy: {
+          args: Prisma.TokenUsageGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TokenUsageGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TokenUsageCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TokenUsageCountAggregateOutputType> | number
         }
       }
     }
@@ -6100,6 +6175,32 @@ export const SessionEventScalarFieldEnum = {
 export type SessionEventScalarFieldEnum = (typeof SessionEventScalarFieldEnum)[keyof typeof SessionEventScalarFieldEnum]
 
 
+export const TokenUsageScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  seq: 'seq',
+  teammateId: 'teammateId',
+  accountId: 'accountId',
+  memberId: 'memberId',
+  projectId: 'projectId',
+  scheduleId: 'scheduleId',
+  provider: 'provider',
+  model: 'model',
+  source: 'source',
+  inputTokens: 'inputTokens',
+  cacheReadTokens: 'cacheReadTokens',
+  cacheWriteTokens: 'cacheWriteTokens',
+  outputTokens: 'outputTokens',
+  reasoningTokens: 'reasoningTokens',
+  at: 'at',
+  createdAt: 'createdAt'
+} as const
+
+export type TokenUsageScalarFieldEnum = (typeof TokenUsageScalarFieldEnum)[keyof typeof TokenUsageScalarFieldEnum]
+
+
 export const AccountScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -7822,6 +7923,7 @@ export type GlobalOmitConfig = {
   replyWatch?: Prisma.ReplyWatchOmit
   threadTeammate?: Prisma.ThreadTeammateOmit
   sessionEvent?: Prisma.SessionEventOmit
+  tokenUsage?: Prisma.TokenUsageOmit
   account?: Prisma.AccountOmit
   pullRequest?: Prisma.PullRequestOmit
   pullRequestReview?: Prisma.PullRequestReviewOmit

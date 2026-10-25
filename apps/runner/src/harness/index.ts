@@ -20,6 +20,7 @@ import {
   SHOW_WIDGET_TOOL,
   type ThreadSpec,
   type TicketAnswer,
+  type UsageRunKind,
   runModel,
   WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
@@ -65,6 +66,7 @@ import {
   type WaitingCall,
 } from './closed-turn.js'
 import { harnessEnv } from './env.js'
+import { reportRunUsage } from '../usage.js'
 import {
   answered,
   askUserQuestions,
@@ -828,7 +830,13 @@ export class HarnessThread {
         }
         if (event.type === 'message.done') this.remember('assistant', event.text)
         this.replies.see(event)
-        this.emitEvent(event)
+        // A turn's usage says whose account spent it: the stream's own, which after running out
+        // of usage (switchTo) is the next account's, not the one the turn started on.
+        this.emitEvent(
+          event.type === 'usage.updated' && !event.accountId
+            ? { ...event, accountId: (attached ?? this.live)?.account.id ?? this.spec.account.id }
+            : event,
+        )
       },
       this.toolCalls,
       this.texts,
@@ -1132,6 +1140,7 @@ export class HarnessThread {
     const image = await generateImage({
       account,
       sessionId: this.spec.sessionId,
+      teammateId: this.spec.teammate.id,
       workDir: this.workDir,
       ...(this.runAs ? { runAs: this.runAs } : {}),
       prompt: input.prompt,
@@ -1650,6 +1659,8 @@ export async function runOnce(input: {
   model?: string
   /** Names the run's session and sandbox, after the thread's id. */
   purpose?: string
+  /** What the run is for, and the thread, when it is one's: its usage is reported (usage.ts). */
+  usage: { kind: UsageRunKind; sessionId?: string; teammateId?: string }
 }): Promise<string> {
   const { spec, workDir, runAs, purpose = 'memory' } = input
   const env = {
@@ -1683,6 +1694,7 @@ export async function runOnce(input: {
     let text = ''
     const mapper = new EventMapper((event) => {
       if (event.type === 'message.done') text = event.text
+      reportRunUsage(event, { ...input.usage, accountId: spec.account.id })
     })
     const result = await agent.stream({ session, prompt: input.prompt, abortSignal: input.signal })
     for await (const part of result.fullStream) mapper.map(part)
@@ -1712,6 +1724,8 @@ export async function generateImage(input: {
   /** Absolute paths of images to start from or match. */
   references: string[]
   signal?: AbortSignal
+  /** The teammate whose generate_image call it is: its usage is reported (usage.ts). */
+  teammateId?: string
 }): Promise<{ savedPath: string; prompt?: string }> {
   const { account, runAs } = input
   // Its own empty folder: Codex runs without asking, and has nothing of the thread's to change.
@@ -1751,6 +1765,12 @@ export async function generateImage(input: {
     let text = ''
     const mapper = new EventMapper((event) => {
       if (event.type === 'message.done') text = event.text
+      reportRunUsage(event, {
+        kind: 'image',
+        accountId: account.id,
+        sessionId: input.sessionId,
+        ...(input.teammateId ? { teammateId: input.teammateId } : {}),
+      })
     })
     const result = await agent.stream({ session, prompt, abortSignal: signal })
     for await (const part of result.fullStream) {

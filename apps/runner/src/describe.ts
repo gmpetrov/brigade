@@ -104,6 +104,7 @@ export async function describeProject(request: Request): Promise<Result> {
       prompt: describePrompt(request.url, request.text, request.logos),
       model: TITLE_MODEL[request.account.provider],
       purpose: 'brief',
+      usage: { kind: 'brief' },
       signal: AbortSignal.timeout(DESCRIBE_RUN_MS),
     })
     const { brief, name, logo } = parseAnswer(answer, request.logos.length)

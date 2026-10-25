@@ -4,6 +4,7 @@
 // send a message) and the others accepted without effect. A reload starts over.
 import type { ApiToBrowser, SequencedEvent } from '@brigade/contracts'
 import fixtures from './fixtures.json'
+import { demoUsage } from './usage'
 import { DEMO_API, DEMO_THREAD } from './flag'
 import { demoPulls, mergedPull, newPull, type DemoPull, type NewPull } from './pulls'
 import { afterDecision, replyTo, type Run } from './scripts'
@@ -756,6 +757,7 @@ const routes: [string, RegExp, Handler][] = [
     /^\/pulls\/acme\/web\/(\d+)\/merge$/,
     ([number]) => (merge(Number(number)) ? ok : { status: 409, body: { error: 'Already merged' } }),
   ],
+  ['GET', /^\/usage$/, (_, __, url) => demoUsageFor(url)],
   ['GET', /^\/pulls\/acme\/web\/(\d+)$/, ([number]) => pullResponse(Number(number), 'detail')],
   [
     'GET',
@@ -784,6 +786,19 @@ const routes: [string, RegExp, Handler][] = [
     () => ({ session: { id: 'demo' }, user: body<Json>('GET /me')?.user }),
   ],
 ]
+
+/** Settings › Usage, made up from the sample's threads, teammates and routines. */
+function demoUsageFor(url: URL) {
+  const asked = Number(url.searchParams.get('days'))
+  return demoUsage(asked === 1 || asked === 30 ? asked : 7, {
+    threads:
+      body<{ id: string; title: string; teammateId: string; origin: string }[]>('GET /threads') ??
+      [],
+    teammates,
+    schedules: body<{ id: string; title: string }[]>('GET /schedules') ?? [],
+    member: { id: me.memberId, name: me.user.name },
+  })
+}
 
 function respond({ status, body }: Stored) {
   if (status === 204) return new Response(null, { status })

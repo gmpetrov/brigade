@@ -10,6 +10,7 @@ import {
   type AgentEvent,
   type QuestionAnswer,
   type TicketAnswer,
+  type TokenCounts,
 } from '@brigade/contracts'
 import { ASK_USER_TOOL, OPEN_TICKET_TOOL } from './tools.js'
 
@@ -293,8 +294,32 @@ export const answered = (event: AgentEvent) =>
 
 type Part = { type: string; [key: string]: any }
 
+const count = (n: unknown) =>
+  typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : undefined
+
+/**
+ * A stream's usage as the AI SDK totals it (LanguageModelUsage), as Brigade counts it. Both
+ * harnesses put the cache's reads and writes in inputTokens. Nothing when it counted no token.
+ */
+export function tokenCounts(usage: any, model?: string): TokenCounts | undefined {
+  const counts = {
+    inputTokens: count(usage?.inputTokens),
+    outputTokens: count(usage?.outputTokens),
+    cacheReadTokens: count(usage?.inputTokenDetails?.cacheReadTokens),
+    cacheWriteTokens: count(usage?.inputTokenDetails?.cacheWriteTokens),
+    reasoningTokens: count(usage?.outputTokenDetails?.reasoningTokens),
+  }
+  if (counts.inputTokens === undefined && counts.outputTokens === undefined) return
+  return {
+    ...Object.fromEntries(Object.entries(counts).filter(([, n]) => n !== undefined)),
+    ...(model ? { model: model.slice(0, 200) } : {}),
+  }
+}
+
 export class EventMapper {
   finishReason = 'unknown'
+  /** The model the harness says it ran, once a step finished. */
+  model: string | undefined
   /** The first error the harness reported during this turn. */
   error: string | undefined
   /** Set when the account ran out of usage during this turn. */
@@ -494,15 +519,14 @@ export class EventMapper {
         })
       case 'finish': {
         this.finishReason = part.finishReason
-        const usage = part.totalUsage ?? {}
-        if (usage.inputTokens !== undefined || usage.outputTokens !== undefined) {
-          this.emit({
-            at,
-            type: 'usage.updated',
-            inputTokens: usage.inputTokens,
-            outputTokens: usage.outputTokens,
-          })
-        }
+        const usage = tokenCounts(part.totalUsage, this.model)
+        if (usage) this.emit({ at, type: 'usage.updated', ...usage })
+        return
+      }
+      case 'finish-step': {
+        // The model the harness ran, as it named it: the account's own when Brigade set none.
+        const model = part.response?.modelId
+        if (typeof model === 'string' && model) this.model = model
         return
       }
       case 'error': {
@@ -542,7 +566,6 @@ export class EventMapper {
       // Stream lifecycle parts carry nothing a person needs to see.
       case 'start':
       case 'start-step':
-      case 'finish-step':
       case 'text-start':
       case 'reasoning-start':
       case 'tool-input-start':

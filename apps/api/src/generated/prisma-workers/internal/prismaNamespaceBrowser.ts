@@ -75,6 +75,7 @@ export const ModelName = {
   ReplyWatch: 'ReplyWatch',
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
+  TokenUsage: 'TokenUsage',
   Account: 'Account',
   PullRequest: 'PullRequest',
   PullRequestReview: 'PullRequestReview',
@@ -532,6 +533,32 @@ export const SessionEventScalarFieldEnum = {
 } as const
 
 export type SessionEventScalarFieldEnum = (typeof SessionEventScalarFieldEnum)[keyof typeof SessionEventScalarFieldEnum]
+
+
+export const TokenUsageScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  seq: 'seq',
+  teammateId: 'teammateId',
+  accountId: 'accountId',
+  memberId: 'memberId',
+  projectId: 'projectId',
+  scheduleId: 'scheduleId',
+  provider: 'provider',
+  model: 'model',
+  source: 'source',
+  inputTokens: 'inputTokens',
+  cacheReadTokens: 'cacheReadTokens',
+  cacheWriteTokens: 'cacheWriteTokens',
+  outputTokens: 'outputTokens',
+  reasoningTokens: 'reasoningTokens',
+  at: 'at',
+  createdAt: 'createdAt'
+} as const
+
+export type TokenUsageScalarFieldEnum = (typeof TokenUsageScalarFieldEnum)[keyof typeof TokenUsageScalarFieldEnum]
 
 
 export const AccountScalarFieldEnum = {

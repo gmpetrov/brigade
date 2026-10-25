@@ -3,6 +3,7 @@ import { workspaceLogoPath } from '@brigade/contracts'
 import {
   Building2,
   CalendarClock,
+  ChartColumn,
   ChevronDown,
   CreditCard,
   GitPullRequest,
@@ -155,6 +156,7 @@ export const SETTINGS_NAV = [
   { href: '/app/vault', label: 'Secrets', icon: KeyRound },
   { href: '/app/security', label: 'Security', icon: ShieldCheck },
   { href: '/app/accounts', label: 'AI Accounts', icon: UserRound },
+  { href: '/app/usage', label: 'Usage', icon: ChartColumn },
   { href: '/app/computers', label: 'Computers', icon: Monitor },
   { href: '/app/billing', label: 'Billing', icon: CreditCard },
 ]

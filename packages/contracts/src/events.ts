@@ -15,6 +15,21 @@ const base = {
 }
 
 /**
+ * Tokens one harness run spent: input in all (cacheRead and cacheWrite are part of it), output in
+ * all (reasoning is part of it), and the model that spent them as the harness named it. Counts
+ * only, never what was said.
+ */
+export const TokenCounts = z.object({
+  inputTokens: z.number().optional(),
+  outputTokens: z.number().optional(),
+  cacheReadTokens: z.number().optional(),
+  cacheWriteTokens: z.number().optional(),
+  reasoningTokens: z.number().optional(),
+  model: z.string().max(200).optional(),
+})
+export type TokenCounts = z.infer<typeof TokenCounts>
+
+/**
  * The earlier message a member's message answers: where it is in the thread
  * (its event's seq), who wrote it (a teammate, else a person) and its text, clipped.
  */
@@ -545,8 +560,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
   z.object({
     ...base,
     type: z.literal('usage.updated'),
-    inputTokens: z.number().optional(),
-    outputTokens: z.number().optional(),
+    /** What one stream of a turn spent (TokenCounts): input counts the cache's reads and writes too. */
+    ...TokenCounts.shape,
     /** allowed, warning (close to a limit) or rejected (out of usage). */
     status: z.enum(['allowed', 'warning', 'rejected']).optional(),
     /** The account the limits are for, when read after its turn (Codex) rather than during it. */

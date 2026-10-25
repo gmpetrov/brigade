@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { ThreadAttachmentRef } from './attachments.js'
 import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
-import { QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
+import { QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer, TokenCounts } from './events.js'
 import {
   FILE_VIEW_MAX,
   LibraryAccess,
@@ -37,6 +37,7 @@ import { ScheduleOperation } from './schedules.js'
 import { SkillProposal, ThreadSkill } from './skills.js'
 import { TaskOperation } from './tasks.js'
 import { TeammateKind } from './chief.js'
+import { UsageRunKind } from './usage.js'
 
 /** Longest clipboard text carried between a person's browser and a desktop. */
 export const CLIPBOARD_MAX = 1_000_000
@@ -535,6 +536,19 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     sessionId: z.string(),
     from: z.string(),
     title: z.string().trim().min(1).max(120),
+  }),
+  /**
+   * What a harness run outside a teammate's turn spent (UsageRunKind): a thread's memory, its
+   * title, a project's brief, an image. On the account it ran on; the thread it was for, if any.
+   */
+  z.object({
+    type: z.literal('usage.run'),
+    kind: UsageRunKind,
+    accountId: z.string(),
+    sessionId: z.string().optional(),
+    teammateId: z.string().optional(),
+    at: z.iso.datetime(),
+    ...TokenCounts.shape,
   }),
 ])
 export type RunnerToApi = z.infer<typeof RunnerToApi>

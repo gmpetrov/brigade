@@ -41,6 +41,7 @@ import { bringBackFromLater } from './later.js'
 import { noteDryRunEvents } from './playbook-dry-runs.js'
 import { movesOn, onReleased } from './move.js'
 import { noteDisk } from './disk-tickets.js'
+import { noteTokenUsage, noteUsageRun } from './usage.js'
 import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery.js'
 import type { Session } from './generated/prisma/client.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
@@ -832,6 +833,15 @@ export function runnerSocket(runner: {
       return
     }
 
+    if (message.type === 'usage.run') {
+      void noteUsageRun(runner, message).catch((error) =>
+        console.warn(
+          `runner ${runner.id}: usage of a ${message.kind} run not kept: ${String(error)}`,
+        ),
+      )
+      return
+    }
+
     if (message.type === 'thread.handoff') {
       // Sent when the teammate's turn ends; caps and the chain limit are checked there.
       void handoffThread(runner, message).catch((error) =>
@@ -1031,6 +1041,10 @@ export function runnerSocket(runner: {
         void movesOn(runner.computerId, session.id).catch(console.error)
       // Not awaited: a merge under way may call GitHub and prompt the author.
       void noteTurnsEnded(session, fresh).catch(console.error)
+      // Not awaited, nor tried again: the tokens a turn spent never hold its thread back.
+      void noteTokenUsage(session, fresh).catch((error) =>
+        console.warn(`thread ${session.id}: token usage not kept: ${String(error)}`),
+      )
       // A message in a thread put away for later brings it back (src/later.ts): a member's,
       // a wake-up's or a child's report, each a new turn. Not the end of a turn already under
       // way when it was put away. A child's do not, a schedule's quiet runs among them.
