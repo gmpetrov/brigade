@@ -7,7 +7,14 @@ import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { RepositoryName } from '@brigade/contracts'
 import { audit } from '../audit.js'
-import { getObject, putObject, repoBackupKey } from '../bucket.js'
+import {
+  directUploads,
+  objectSize,
+  presignGet,
+  putObject,
+  repoBackupKey,
+  streamObject,
+} from '../bucket.js'
 import { scoped } from '../db.js'
 import { authenticateRunner } from '../hub.js'
 
@@ -74,9 +81,16 @@ export const runnerBackups = new Hono<{ Variables: { runner: Runner } }>()
 
   .get(PATH, async (c) => {
     const { key } = await backupOf(c)
-    const bytes = await getObject(key)
-    if (!bytes) throw new HTTPException(404, { message: 'No backup' })
-    return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
-      'content-type': 'application/x-git-bundle',
-    })
+    // From the bucket's short-lived URL, never through the API (fetch drops the token on the way).
+    if (directUploads) {
+      if ((await objectSize(key)) === null) throw new HTTPException(404, { message: 'No backup' })
+      const signed = await presignGet(key, {
+        contentType: 'application/x-git-bundle',
+        disposition: 'attachment',
+      })
+      return c.redirect(signed.url, 302)
+    }
+    const body = await streamObject(key)
+    if (!body) throw new HTTPException(404, { message: 'No backup' })
+    return c.body(body, 200, { 'content-type': 'application/x-git-bundle' })
   })

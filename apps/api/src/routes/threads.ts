@@ -52,9 +52,9 @@ import {
 import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
-import { readAttachment, toInfo } from '../attachments.js'
+import { toInfo } from '../attachments.js'
 import { audit } from '../audit.js'
-import { presignGet, streamObject, threadFileKey } from '../bucket.js'
+import { attachmentKey, presignGet, streamObject, threadFileKey } from '../bucket.js'
 import {
   latestPreview,
   livePreview,
@@ -123,6 +123,7 @@ import {
   type AppEnv,
   type WorkspaceScope,
 } from '../scope.js'
+import { headOf } from '../serve-object.js'
 
 /** The ids of a thread's teammates, the one asked for first (whose folder is tried first). */
 function teammatesFirst(
@@ -587,8 +588,9 @@ export const threads = new Hono<AppEnv>()
       const row = given.attachment
       const text =
         isText(row.contentType) &&
+        // Its first part only, read as such: the rest never leaves the bucket.
         new TextDecoder('utf-8', { fatal: false }).decode(
-          (await readAttachment(c.var.scope, row.id)).subarray(0, FILE_VIEW_MAX),
+          await headOf(attachmentKey(c.var.scope, row.id), FILE_VIEW_MAX),
         )
       return c.json({
         source: 'attachment',

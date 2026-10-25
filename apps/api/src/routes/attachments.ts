@@ -10,15 +10,14 @@ import { audit } from '../audit.js'
 import {
   deleteAttachment,
   finishUpload,
-  readAttachment,
   servedFromBucket,
   startUpload,
   storeAttachment,
   toInfo,
 } from '../attachments.js'
 import { attachmentKey, directUploads, presignGet } from '../bucket.js'
-import { byteRange } from '../byte-range.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
+import { serveObject } from '../serve-object.js'
 
 /** Types the browser may show inline from the API's origin; anything else downloads. */
 export const INLINE =
@@ -113,8 +112,8 @@ export const attachments = new Hono<AppEnv>()
       c.header('cache-control', `private, max-age=${signed.seconds - 60}`)
       return c.redirect(signed.url, 302)
     }
-    const bytes = await readAttachment(scope, row.id)
-    const headers = {
+    // Through the API (the dashboard reads it with its session), as it streams.
+    return serveObject(c, attachmentKey(scope, row.id), {
       'content-type': row.contentType.startsWith('text/')
         ? `${row.contentType}; charset=utf-8`
         : row.contentType,
@@ -122,21 +121,7 @@ export const attachments = new Hono<AppEnv>()
       'x-content-type-options': 'nosniff',
       'content-security-policy': 'sandbox',
       'cache-control': 'private, max-age=3600',
-      'accept-ranges': 'bytes',
-    }
-    // A video plays by ranges, and Safari plays none without them.
-    const asked = c.req.header('range')
-    if (asked) {
-      const range = byteRange(asked, bytes.length)
-      if (!range)
-        return c.body(null, 416, { ...headers, 'content-range': `bytes */${bytes.length}` })
-      const [start, end] = range
-      return c.body(bytes.subarray(start, end + 1) as Uint8Array<ArrayBuffer>, 206, {
-        ...headers,
-        'content-range': `bytes ${start}-${end}/${bytes.length}`,
-      })
-    }
-    return c.body(bytes as Uint8Array<ArrayBuffer>, 200, headers)
+    })
   })
 
   /** Remove an upload that was not sent: the chip's ✕ in the composer. */
