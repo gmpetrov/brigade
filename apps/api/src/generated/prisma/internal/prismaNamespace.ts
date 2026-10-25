@@ -466,7 +466,8 @@ export const ModelName = {
   MailMessage: 'MailMessage',
   MailDomain: 'MailDomain',
   Contact: 'Contact',
-  ContactHandle: 'ContactHandle'
+  ContactHandle: 'ContactHandle',
+  InboxState: 'InboxState'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -482,7 +483,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle"
+    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "inboxState"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -5666,6 +5667,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    InboxState: {
+      payload: Prisma.$InboxStatePayload<ExtArgs>
+      fields: Prisma.InboxStateFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.InboxStateFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.InboxStateFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload>
+        }
+        findFirst: {
+          args: Prisma.InboxStateFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.InboxStateFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload>
+        }
+        findMany: {
+          args: Prisma.InboxStateFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload>[]
+        }
+        create: {
+          args: Prisma.InboxStateCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload>
+        }
+        createMany: {
+          args: Prisma.InboxStateCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.InboxStateCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload>[]
+        }
+        delete: {
+          args: Prisma.InboxStateDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload>
+        }
+        update: {
+          args: Prisma.InboxStateUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload>
+        }
+        deleteMany: {
+          args: Prisma.InboxStateDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.InboxStateUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.InboxStateUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload>[]
+        }
+        upsert: {
+          args: Prisma.InboxStateUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InboxStatePayload>
+        }
+        aggregate: {
+          args: Prisma.InboxStateAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateInboxState>
+        }
+        groupBy: {
+          args: Prisma.InboxStateGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.InboxStateGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.InboxStateCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.InboxStateCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -6950,6 +7025,24 @@ export const ContactHandleScalarFieldEnum = {
 export type ContactHandleScalarFieldEnum = (typeof ContactHandleScalarFieldEnum)[keyof typeof ContactHandleScalarFieldEnum]
 
 
+export const InboxStateScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  source: 'source',
+  itemId: 'itemId',
+  doneAt: 'doneAt',
+  doneByMemberId: 'doneByMemberId',
+  sessionId: 'sessionId',
+  handedByMemberId: 'handedByMemberId',
+  handedAt: 'handedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type InboxStateScalarFieldEnum = (typeof InboxStateScalarFieldEnum)[keyof typeof InboxStateScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -7861,6 +7954,7 @@ export type GlobalOmitConfig = {
   mailDomain?: Prisma.MailDomainOmit
   contact?: Prisma.ContactOmit
   contactHandle?: Prisma.ContactHandleOmit
+  inboxState?: Prisma.InboxStateOmit
 }
 
 /* Types for Logging */

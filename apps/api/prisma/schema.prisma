@@ -255,6 +255,7 @@ model Workspace {
   mailDomains           MailDomain[]
   contacts              Contact[]
   contactHandles        ContactHandle[]
+  inboxStates           InboxState[]
 
   @@index([organizationId])
 }
@@ -579,6 +580,8 @@ model Session {
   mailMessages         MailMessage[]
   /// Sign-up addresses it asked for (email_new_address).
   mailAliases          MailAlias[]
+  /// Inbox items a person handed to it.
+  inboxStates          InboxState[]
   /// The dry runs of a playbook started from this thread (its installation's chat).
   playbookDryRuns      PlaybookDryRun[]
   /// Threads it follows (follow_thread): their report wakes it, like a parent's child's.
@@ -2377,4 +2380,29 @@ model ContactHandle {
   lastSeenAt     DateTime  @default(now())
 
   @@unique([workspaceId, kind, value])
+}
+
+/// What people did with an item of the Inbox, whatever its source: marked done, or handed to a
+/// teammate (the thread it went to). One row per item; an item with none is as its source says.
+model InboxState {
+  id               String    @id @default(cuid())
+  organizationId   String
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// email (Brigade's own addresses) or gmail.
+  source           String
+  /// email:<MailMessage id>, gmail:<connection id>:<message id>.
+  itemId           String
+  doneAt           DateTime?
+  doneByMemberId   String?
+  /// The thread a person handed it to.
+  sessionId        String?
+  session          Session?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  handedByMemberId String?
+  handedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([workspaceId, itemId])
+  @@index([workspaceId, source, doneAt])
 }

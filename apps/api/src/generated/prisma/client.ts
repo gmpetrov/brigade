@@ -452,3 +452,9 @@ export type Contact = Prisma.ContactModel
  * One way to reach a contact: an email address today, a chat account later.
  */
 export type ContactHandle = Prisma.ContactHandleModel
+/**
+ * Model InboxState
+ * What people did with an item of the Inbox, whatever its source: marked done, or handed to a
+ * teammate (the thread it went to). One row per item; an item with none is as its source says.
+ */
+export type InboxState = Prisma.InboxStateModel

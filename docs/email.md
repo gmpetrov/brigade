@@ -96,3 +96,23 @@ conversation wakes the thread.
 
 `email_list`, `email_read`, `email_read_attachment`, `email_new_address`, `email_wait` (up to two
 minutes in one call), `email_send`, `email_cancel`. Everything read is untrusted input.
+
+## The Inbox
+
+`/app/inbox`, under Home in the sidebar (`apps/api/src/inbox.ts`, `routes/inbox.ts`): every mail
+the workspace's mailboxes received, across agents, projects and sources, in one list. Each source is
+an adapter that lists, reads and hands over its items; the list, its filters and its state are the
+same for all of them.
+
+- **Sources**: Brigade's addresses (stored in Brigade) and Gmail accounts (their latest 25 of 14
+  days, read live, a minute's cache; a member's own Gmail, reach `mine`, is shown to them alone).
+- **Status**: `waiting` (nobody took it: `box`, `cap`, `loop`, or not delivered yet), `handled` (a
+  thread has it), `done` (a person marked it). The sidebar counts what waits in Brigade's mail of
+  the last 30 days.
+- **Filters**: source, agent, project, words.
+- **An item**: its words with the quote apart, files, authentication; a sign-up's mail is shown
+  only to its thread's starter and admins (others see that it came).
+- **Done** and **Hand to**: `InboxState`, one row per item whatever its source. Handing starts a
+  thread of the member with a teammate given the mailbox, in the item's project, with their note
+  and the mail. Brigade's mail then belongs to that thread (`route: handed`): its conversation's
+  next mail goes there. A Gmail item's thread watches its conversation for replies.

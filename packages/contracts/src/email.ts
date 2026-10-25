@@ -50,6 +50,7 @@ export const MAIL_ROUTES = [
   'own_copy',
   'bounce',
   'test',
+  'handed',
 ] as const
 export type MailRoute = (typeof MAIL_ROUTES)[number]
 

@@ -403,7 +403,8 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
       conversationId: row.conversationId,
       box: row.box,
       sessionId: { not: null },
-      route: { in: ['member', 'conversation'] },
+      // handed: a person gave it to a teammate from the Inbox.
+      route: { in: ['member', 'conversation', 'handed'] },
       NOT: { id: row.id },
     },
     orderBy: { receivedAt: 'desc' },
