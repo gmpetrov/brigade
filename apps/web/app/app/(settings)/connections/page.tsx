@@ -4,12 +4,12 @@ import { Suspense, useEffect, useState } from 'react'
 import { CircleCheck, ShieldCheck } from 'lucide-react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { AppSheet } from '@/components/app-sheet'
+import { addedApps, addedDetail, BUILT_IN } from '@/components/connect-apps'
 import { ProviderTile } from '@/components/provider-logo'
 import { Skills } from '@/components/skills'
 import { Card } from '@/components/ui/card'
 import {
   useApi,
-  type App,
   type Connection,
   type ConnectionsResponse,
   type Trigger,
@@ -33,36 +33,6 @@ const CONNECT_ERRORS: Record<string, string> = {
   github_not_yours:
     'Your GitHub account cannot reach that installation. Sign in to GitHub as someone who can, and try again.',
 }
-
-/**
- * The built-in Apps, in the order the page offers them. An MCP server and a custom app
- * can be added many times.
- */
-const BUILT_IN: Kind[] = [
-  'gmail',
-  'google_calendar',
-  'google_drive',
-  'google_docs',
-  'google_sheets',
-  'google_search_console',
-  'google_analytics',
-  'github',
-  'cloudflare',
-  'google_cloud',
-  'neon',
-  'supabase',
-  'atlassian',
-  'notion',
-  'linear',
-  'mixpanel',
-  'resend',
-  'replicate',
-  'openrouter',
-  'posthog',
-  'dataforseo',
-  'ahrefs',
-  'stripe',
-]
 
 /** The App sheet that is open: an added App, or one from the catalog not added yet. */
 type Open = { kind: Kind; appId?: string }
@@ -109,13 +79,8 @@ function AppsList() {
   const [open, setOpen] = useState<Open>()
 
   const connections = data.data?.connections ?? []
-  const accountsOf = (app: App) => connections.filter((c) => c.appId === app.id)
-  // An App is added while it has an account; one whose accounts were all removed is offered again.
-  const added = (data.data?.apps ?? [])
-    .map((app) => ({ app, accounts: accountsOf(app) }))
-    .filter((a) => a.accounts.length > 0)
-  const kindOf = (a: (typeof added)[number]) => a.accounts[0]!.kind
-  const offered = BUILT_IN.filter((kind) => !added.some((a) => kindOf(a) === kind))
+  const added = data.data ? addedApps(data.data) : []
+  const offered = BUILT_IN.filter((kind) => !added.some((a) => a.kind === kind))
 
   // Back from a provider's sign-in: open the App the new account belongs to.
   const connected = params.get('connected')
@@ -180,31 +145,17 @@ function AppsList() {
               <p className="text-sm text-muted-foreground">No Apps yet. Add one below.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {added.map(({ app, accounts }) => {
-                  const kind = kindOf({ app, accounts })
-                  const reconnect = accounts.some((c) => c.status === 'needs_reauth')
-                  return (
-                    <AppTile
-                      key={app.id}
-                      kind={kind}
-                      icons={app.mcp?.icons}
-                      name={app.name ?? data.data!.catalog[kind].name}
-                      detail={
-                        reconnect
-                          ? 'Reconnect needed'
-                          : kind === 'webhook'
-                            ? 'Custom app'
-                            : app.mcp?.auth === 'none'
-                              ? new URL(app.mcp.url).host
-                              : accounts.length === 1
-                                ? (accounts[0]!.externalAccount ?? accounts[0]!.label)
-                                : `${accounts.length} accounts`
-                      }
-                      warn={reconnect}
-                      onClick={() => setOpen({ kind, appId: app.id })}
-                    />
-                  )
-                })}
+                {added.map((a) => (
+                  <AppTile
+                    key={a.app.id}
+                    kind={a.kind}
+                    icons={a.app.mcp?.icons}
+                    name={a.app.name ?? data.data!.catalog[a.kind].name}
+                    detail={addedDetail(a)}
+                    warn={a.accounts.some((c) => c.status === 'needs_reauth')}
+                    onClick={() => setOpen({ kind: a.kind, appId: a.app.id })}
+                  />
+                ))}
               </div>
             )}
           </section>
