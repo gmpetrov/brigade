@@ -297,6 +297,12 @@ export function InboxView() {
   const latestLoadOlder = useRef(loadOlder)
   latestLoadOlder.current = loadOlder
   const wide = useWide()
+  // On a wide screen the first conversation opens by itself, so the reading column is never
+  // empty; on a phone the list stays, since opening one hides it.
+  const first = items[0]?.id
+  useEffect(() => {
+    if (wide && !item && first) router.replace(href({ item: first }), { scroll: false })
+  }, [wide, item, first, href, router])
   useEffect(() => {
     if (!next || loadingOlder || olderError || !end.current) return
     const observer = new IntersectionObserver(
