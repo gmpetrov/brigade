@@ -8,7 +8,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
 import { env } from '../config.js'
-import { prisma } from '../db.js'
+import { prisma, scoped } from '../db.js'
 import { forgetInstallation, gitUrl, prefetchToken } from '../git.js'
 import { runnerProtocol, sendToRunner } from '../hub.js'
 import { pullRequestEvent, type GhPull } from '../pull-requests.js'
@@ -81,8 +81,12 @@ async function installationChanged(installationId: number, action: string) {
         ? 'active'
         : null
   if (!status) return
+  // Scoped, so dashboards hear of it (src/hub.ts).
   for (const connection of await connectionsOf(installationId))
-    await prisma.connection.updateMany({ where: { id: connection.id }, data: { status } })
+    await scoped(connection).connection.updateMany({
+      where: { id: connection.id },
+      data: { status },
+    })
 }
 
 async function pullRequestChanged(installationId: number, repository: string, pull: GhPull) {

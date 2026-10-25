@@ -13,7 +13,7 @@ import { api, useApi, type ConnectionsResponse } from '@/lib/api'
 export type GitHubState = 'loading' | 'connected' | 'needs_reauth' | 'none' | 'unavailable'
 
 export function useGitHub(): GitHubState {
-  const { data } = useApi<ConnectionsResponse>('/connections')
+  const { data } = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
   if (!data) return 'loading'
   const github = data.connections.filter((c) => c.kind === 'github')
   if (github.some((c) => c.status === 'active')) return 'connected'

@@ -465,10 +465,18 @@ export function broadcastTask(workspaceId: string, taskId: string) {
 const listTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 /**
- * Tell dashboards tickets or pull requests changed, so lists and sidebar badges
- * refetch. Coalesced: a burst of writes is one message, sent once they settle.
+ * Tell dashboards a list changed (tickets, pull requests, mail, teammates, Apps), so lists and
+ * sidebar badges refetch. Coalesced: a burst of writes is one message, sent once they settle.
  */
-export function notifyList(workspaceId: string, type: 'tickets.updated' | 'pulls.updated') {
+export function notifyList(
+  workspaceId: string,
+  type:
+    | 'tickets.updated'
+    | 'pulls.updated'
+    | 'mail.updated'
+    | 'teammates.updated'
+    | 'connections.updated',
+) {
   const key = `${workspaceId}:${type}`
   if (listTimers.has(key)) return
   listTimers.set(
@@ -484,6 +492,11 @@ onScopedWrite((model, scope) => {
   if (model === 'Ticket') notifyList(scope.workspaceId, 'tickets.updated')
   else if (model === 'PullRequest' || model === 'PullRequestReview')
     notifyList(scope.workspaceId, 'pulls.updated')
+  else if (model === 'MailMessage' || model === 'MailAddress')
+    notifyList(scope.workspaceId, 'mail.updated')
+  else if (model === 'Teammate') notifyList(scope.workspaceId, 'teammates.updated')
+  else if (model === 'Connection' || model === 'Grant')
+    notifyList(scope.workspaceId, 'connections.updated')
 })
 
 /** A project was created, changed or removed: the sidebar and project pages refetch. */

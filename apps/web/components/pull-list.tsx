@@ -35,6 +35,7 @@ export function PullList({ projectId }: { projectId?: string }) {
     github === 'connected'
       ? `/pulls?state=${state}${projectQuery(projectId ?? filter, '&')}`
       : null,
+    ['pulls.updated'],
   )
   const shown = (list.data?.pulls ?? []).filter(
     (p) => repository === ALL || p.repository === repository,

@@ -166,7 +166,7 @@ export function InboxView() {
   if (project) search.set('project', project)
   if (q) search.set('q', q)
   const path = `/inbox?${search}`
-  const list = useApi<InboxList>(path)
+  const list = useApi<InboxList>(path, ['mail.updated'])
   const reloadList = list.reload
 
   // Older pages, appended below the first: kept for the filters they were asked with.
@@ -438,7 +438,7 @@ function Row({ item, href, selected }: { item: InboxItem; href: string; selected
 
 /** One conversation, whole, and what a person can do with it. */
 function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> }) {
-  const detail = useApi<InboxDetail>(itemPath(id))
+  const detail = useApi<InboxDetail>(itemPath(id), ['mail.updated'])
   const [handing, setHanding] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()

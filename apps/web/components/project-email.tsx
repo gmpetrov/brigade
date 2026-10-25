@@ -180,7 +180,7 @@ export function ProjectEmail({
 }) {
   const { me } = useDashboard()
   const admin = isAdmin(me)
-  const email = useApi<EmailState>('/email')
+  const email = useApi<EmailState>('/email', ['mail.updated'])
   const triggers = useApi<Rule[]>(`/triggers?project=${encodeURIComponent(projectId)}`)
   const state = email.data
   if (!state?.available) return null
@@ -341,7 +341,9 @@ function InboxBlock({
   setRules: (rules: Rule[]) => void
   reload: () => Promise<unknown>
 }) {
-  const journal = useApi<MailJournalEntry[]>(`/email/addresses/${inbox.id}/journal?limit=20`)
+  const journal = useApi<MailJournalEntry[]>(`/email/addresses/${inbox.id}/journal?limit=20`, [
+    'mail.updated',
+  ])
   const forwarding = useApi<Forwarding>(
     admin && inbox.publicAddress ? `/email/addresses/${inbox.id}/forwarding` : null,
   )

@@ -238,7 +238,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // thread panel's (sent ahead). Without a workspace they fail, unseen: onboarding comes next.
   const me = useApi<Me>('/me')
   useEffect(() => preloadThreadPanel(pathname), []) // eslint-disable-line react-hooks/exhaustive-deps
-  const teammates = useApi<Teammate[]>('/teammates')
+  const teammates = useApi<Teammate[]>('/teammates', ['teammates.updated'])
   const projects = useApi<ProjectSummary[]>('/projects')
   const reloadProjects = projects.reload
   const [creatingProject, setCreatingProject] = useState(false)
@@ -255,17 +255,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Pull requests waiting on a person: with the tickets, what Home's Waiting on you counts.
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention')
   const reloadPulls = pulls.reload
-  // Mail nobody took, beside Inbox: every minute and when the window comes back, too.
-  const inboxCount = useApi<{ waiting: number }>('/inbox/count')
+  // Mail nobody took, beside Inbox: live, and again when the window comes back (a phone that
+  // slept missed what its socket would have said).
+  const inboxCount = useApi<{ waiting: number }>('/inbox/count', ['mail.updated'])
   const reloadInboxCount = inboxCount.reload
   useEffect(() => {
-    const timer = window.setInterval(() => void reloadInboxCount(), 60_000)
     const onFocus = () => void reloadInboxCount()
     window.addEventListener('focus', onFocus)
-    return () => {
-      window.clearInterval(timer)
-      window.removeEventListener('focus', onFocus)
-    }
+    return () => window.removeEventListener('focus', onFocus)
   }, [reloadInboxCount])
   // The member's AI accounts, for the avatar menu's usage: fresh each time it opens.
   const accounts = useApi<Account[]>('/accounts')

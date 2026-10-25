@@ -7,6 +7,7 @@ import {
   type FolderRule,
 } from '@brigade/contracts'
 import type {
+  ApiToBrowser,
   ChildReport,
   ProjectSummary,
   AssetTicket,
@@ -28,6 +29,7 @@ import type {
 } from '@brigade/contracts'
 import { useCallback, useEffect, useState } from 'react'
 import { API_URL } from './config'
+import { listen } from './use-live'
 
 export type { AttachmentInfo } from '@brigade/contracts'
 
@@ -200,8 +202,11 @@ export function preloaded<T>(path: string) {
   return request as Promise<T> | undefined
 }
 
-/** Fetch on mount (taking the request sent ahead, if any); `reload` refetches. */
-export function useApi<T>(path: string | null) {
+/**
+ * Fetch on mount (taking the request sent ahead, if any); `reload` refetches, and so does each
+ * dashboard socket message of a type in `live`.
+ */
+export function useApi<T>(path: string | null, live?: readonly ApiToBrowser['type'][]) {
   const [data, setData] = useState<T | undefined>()
   const [error, setError] = useState<ApiError | undefined>()
   const load = useCallback(
@@ -220,6 +225,14 @@ export function useApi<T>(path: string | null) {
   useEffect(() => {
     void load(true)
   }, [load])
+  const types = live?.join(' ') ?? ''
+  useEffect(() => {
+    if (!path || !types) return
+    const heard = types.split(' ')
+    return listen((message) => {
+      if (heard.includes(message.type)) void load(false)
+    })
+  }, [path, types, load])
   return { data, error, reload, setData }
 }
 

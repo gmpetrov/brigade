@@ -207,7 +207,7 @@ export function TeammateCaps({
   editable: boolean
   onSaved: () => void
 }) {
-  const connections = useApi<ConnectionsResponse>('/connections')
+  const connections = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
   const caps = teammate.caps ?? {}
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState<string>()

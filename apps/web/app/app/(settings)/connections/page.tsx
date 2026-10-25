@@ -60,7 +60,7 @@ function AppsList() {
   const { me } = useDashboard()
   const params = useSearchParams()
   const router = useRouter()
-  const data = useApi<ConnectionsResponse>('/connections')
+  const data = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
   const triggers = useApi<Trigger[]>('/triggers')
   const catalog = useApi<TriggerCatalog>('/triggers/catalog')
   const [open, setOpen] = useState<Open>()

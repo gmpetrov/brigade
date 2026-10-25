@@ -74,7 +74,7 @@ export const MENTION_GROUPS: { kind: MentionKind; title: string; max: number }[]
 /** Everything in the workspace a message can mention. */
 export function useMentionOptions(threadId?: string): Option[] {
   const { teammates, projects } = useDashboard()
-  const connections = useApi<ConnectionsResponse>('/connections')
+  const connections = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
   const threads = useApi<ThreadSummary[]>('/threads')
   const computers = useApi<ComputersResponse>('/computers')
   const credentials = useApi<Credential[]>('/credentials')

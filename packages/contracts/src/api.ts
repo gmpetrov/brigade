@@ -441,6 +441,12 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
   z.object({ type: z.literal('projects.updated') }),
   /** The library or memory changed: open documents check whether theirs did. */
   z.object({ type: z.literal('library.updated') }),
+  /** A mail came, left, was handed or done, or an address changed: the Inbox and its badge refetch. */
+  z.object({ type: z.literal('mail.updated') }),
+  /** A teammate was created, changed or removed: the sidebar and pickers refetch. */
+  z.object({ type: z.literal('teammates.updated') }),
+  /** An App account or a teammate's access to one changed: lists of Apps refetch. */
+  z.object({ type: z.literal('connections.updated') }),
   z.object({ type: z.literal('terminal.output'), terminalId: z.string(), data: z.string() }),
   z.object({
     type: z.literal('terminal.exit'),

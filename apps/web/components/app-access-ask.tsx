@@ -133,7 +133,7 @@ export function AppAccessAsk({
   const askerName = ask.app.teammate
     ? (teammates.find((t) => t.id === ask.app.teammate)?.name ?? ask.app.teammate)
     : asker
-  const data = useApi<ConnectionsResponse>('/connections')
+  const data = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
   const kind = ask.app.kind as Connection['kind']
   // A GitHub repository: only the accounts whose installation reaches it, listed afresh.
   const repository = kind === 'github' ? ask.app.repository : undefined
