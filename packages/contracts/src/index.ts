@@ -33,6 +33,7 @@ export * from './tasks.js'
 export * from './thread-history.js'
 export * from './trigger-events.js'
 export * from './triggers.js'
+export * from './usage.js'
 
 /**
  * Bump when the runner protocol changes. 2: threads with several teammates.

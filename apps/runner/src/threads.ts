@@ -1243,6 +1243,7 @@ export class Threads {
             spec,
             ...this.memoryWorkDir(spec),
             prompt: run.prompt,
+            usage: { kind: 'memory', sessionId, teammateId: spec.teammate.id },
             signal: AbortSignal.any([AbortSignal.timeout(MEMORY_RUN_MS), this.stopped.signal]),
           })
           const update = run.parse(text)
@@ -1292,6 +1293,7 @@ export class Threads {
           spec,
           ...this.memoryWorkDir(spec, 'tidy-runs'),
           prompt: run.prompt,
+          usage: { kind: 'tidy', sessionId: spec.sessionId, teammateId: spec.teammate.id },
           signal: AbortSignal.any([AbortSignal.timeout(TIDY_RUN_MS), this.stopped.signal]),
         })
         const layout = run.parse(text)
@@ -1329,6 +1331,7 @@ export class Threads {
         prompt: titlePrompt(text),
         model: TITLE_MODEL[spec.teammate.harness],
         purpose: 'title',
+        usage: { kind: 'title', sessionId: spec.sessionId, teammateId: spec.teammate.id },
         signal: AbortSignal.timeout(TITLE_RUN_MS),
       })
       const title = parseTitle(answer)
