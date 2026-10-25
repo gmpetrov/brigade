@@ -1,7 +1,6 @@
 'use client'
 import { workspaceLogoPath } from '@brigade/contracts'
 import {
-  Bell,
   Building2,
   CalendarClock,
   ChevronDown,
@@ -13,21 +12,18 @@ import {
   KeyRound,
   Library,
   LogOut,
-  MessageSquareText,
   Monitor,
-  Moon,
   Plug,
   Plus,
   Search,
   Settings,
   ShieldCheck,
-  Sun,
+  SlidersHorizontal,
   UserRound,
   UsersRound,
   FolderKanban,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useTheme } from 'next-themes'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   createContext,
@@ -43,11 +39,7 @@ import { DocumentPanel, DocumentPanelProvider } from '@/components/document-pane
 import { openShortcuts, ShortcutsDialog } from '@/components/help-menu'
 import { PebbleAvatar } from '@/components/pebble-avatar'
 import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
-import {
-  NotificationsDialog,
-  openNotifications,
-  useAppNotifications,
-} from '@/components/notifications'
+import { useAppNotifications } from '@/components/notifications'
 import { NewProjectDialog, ProjectIcon } from '@/components/projects'
 import { SearchDialog } from '@/components/search'
 import { SidebarResizer, useSidebarWidth } from '@/components/sidebar-resizer'
@@ -91,7 +83,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { Switch } from '@/components/ui/switch'
 import {
   api,
   isAdmin,
@@ -148,8 +139,9 @@ const WORK_NAV = [
   { href: '/app/routines', label: 'Routines', icon: CalendarClock },
 ]
 
-/** The setup every project shares: the Settings page's sections, its first one first. */
+/** The Settings page's sections, its first one first: the member's own, then what every project shares. */
 export const SETTINGS_NAV = [
+  { href: '/app/preferences', label: 'Preferences', icon: SlidersHorizontal },
   { href: '/app/workspace', label: 'Workspace', icon: Building2 },
   { href: '/app/connections', label: 'Apps', icon: Plug },
   { href: '/app/vault', label: 'Secrets', icon: KeyRound },
@@ -160,12 +152,6 @@ export const SETTINGS_NAV = [
 ]
 
 export const NAV = [...WORK_NAV, ...SETTINGS_NAV]
-
-const THEMES = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
-] as const
 
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
 
@@ -241,8 +227,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const reloadProjects = projects.reload
   const [creatingProject, setCreatingProject] = useState(false)
   const mac = useIsMac()
-  const { theme = 'system', setTheme } = useTheme()
-  const ThemeIcon = THEMES.find((t) => t.value === theme)?.icon ?? Monitor
   const [sidebarWidth, setSidebarWidth] = useSidebarWidth()
   // Tickets waiting on this member, refreshed as the member moves around.
   const tickets = useApi<Ticket[]>('/tickets')
@@ -349,12 +333,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   async function switchWorkspace(workspaceId: string) {
     await api('/workspaces/switch', { body: { workspaceId } })
     window.location.href = '/app'
-  }
-
-  /** Their message box suggests what they may write next, or stops: shown at once, then saved. */
-  function setSuggestions(on: boolean) {
-    me.setData((current) => current && { ...current, suggestions: on })
-    api('/me/suggestions', { method: 'PUT', body: { suggestions: on } }).catch(() => me.reload())
   }
 
   async function signOut() {
@@ -508,7 +486,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        aria-label={`${data.user.name}: settings, appearance, notifications, help and sign out`}
+                        aria-label={`${data.user.name}: settings, usage, help and sign out`}
                         className="focus-visible:ring-sidebar-ring shrink-0 rounded-full outline-none focus-visible:ring-2"
                       >
                         <Avatar className="size-9 group-data-[collapsible=icon]:size-8">
@@ -542,64 +520,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      {/* Theme on one row: three icon segments, kept open on pick so the change shows. */}
-                      <div
-                        role="group"
-                        aria-label="Theme"
-                        className="flex items-center gap-2 px-2 py-1 text-sm"
-                      >
-                        <ThemeIcon className="text-muted-foreground size-4" />
-                        Theme
-                        <div className="bg-muted ml-auto flex gap-0.5 rounded-md p-0.5">
-                          {THEMES.map(({ value, label, icon: Icon }) => (
-                            <DropdownMenuItem
-                              key={value}
-                              role="menuitemradio"
-                              aria-checked={theme === value}
-                              aria-label={label}
-                              title={label}
-                              onSelect={(e) => {
-                                e.preventDefault()
-                                setTheme(value)
-                              }}
-                              className={cn(
-                                'rounded-sm px-1.5 py-1',
-                                theme === value && 'bg-card shadow-xs',
-                              )}
-                            >
-                              <Icon
-                                className={cn(
-                                  'size-3.5',
-                                  theme === value ? 'text-foreground' : 'text-muted-foreground',
-                                )}
-                              />
-                            </DropdownMenuItem>
-                          ))}
-                        </div>
-                      </div>
-                      {/* Suggestions in their message box, on or off: kept open so the switch shows. */}
-                      <DropdownMenuItem
-                        role="menuitemcheckbox"
-                        aria-checked={data.suggestions}
-                        onSelect={(e) => {
-                          e.preventDefault()
-                          setSuggestions(!data.suggestions)
-                        }}
-                      >
-                        <MessageSquareText /> Suggest my next message
-                        <Switch
-                          size="sm"
-                          checked={data.suggestions}
-                          tabIndex={-1}
-                          aria-hidden
-                          className="pointer-events-none ml-auto"
-                        />
-                      </DropdownMenuItem>
                       <UsageMenu accounts={accounts.data} />
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={openNotifications}>
-                        <Bell /> Notifications
-                      </DropdownMenuItem>
                       <DropdownMenuItem onSelect={openShortcuts}>
                         <Keyboard /> Keyboard shortcuts
                         <span className="text-muted-foreground ml-auto text-xs">
@@ -646,7 +568,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </SidebarProvider>
           <SearchDialog open={searching} onOpenChange={setSearching} />
           <ShortcutsDialog />
-          <NotificationsDialog />
           <AppNotifications needsYou={badge.size} />
           <NewProjectDialog open={creatingProject} onOpenChange={setCreatingProject} />
         </ThreadPanelProvider>
