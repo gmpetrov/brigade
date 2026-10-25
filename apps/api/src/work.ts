@@ -358,7 +358,10 @@ export async function startThread(
     effort?: Effort | null
     /** The playbook run it is the root thread of: out of the sidebar until a person takes part. */
     playbookRunId?: string
-    /** Started by a mailbox's rule: out of the sidebar until it needs a person (Session.quiet). */
+    /**
+     * Started by a mailbox's rule or handed over from the Inbox: out of the sidebar until a
+     * person takes part or it needs one (Session.quiet).
+     */
     quiet?: boolean
   },
 ) {

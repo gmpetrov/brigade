@@ -14,6 +14,11 @@ export const AWAITED_EMAIL = 'Awaited email'
 /** The trigger name of a later email in a conversation a thread handles (the Email App). */
 export const EMAIL_IN_CONVERSATION = 'Email in this conversation'
 
+/** The trigger name of an email a person handed over from the Inbox (with their note above it). */
+export const INBOX_HANDOFF = 'Inbox'
+/** A hand-over's note when the person wrote none. */
+export const HANDOFF_DEFAULT_NOTE = 'Please take care of this email.'
+
 /** Raw payloads past this are cut: the summary carries what matters. */
 export const TRIGGER_PAYLOAD_MAX = 40_000
 
@@ -121,6 +126,30 @@ export function triggerEmail(event: TriggerEventMessage): TriggerEmail | null {
     labels: Array.isArray(r.labels) ? r.labels.filter((l) => typeof l === 'string') : [],
     rfcMessageId: str(r.rfcMessageId),
   }
+}
+
+/**
+ * An email a person handed over from the Inbox, read back: their note (empty when they wrote
+ * none), the mail, and the Inbox conversation it came from. Its summary is their note, then one
+ * line for the teammate (how to read and answer it), which people never need to see.
+ */
+export function handedEmail(text: string): {
+  note: string
+  event: TriggerEventMessage
+  email: TriggerEmail
+  /** The Inbox item to open (any mail of the conversation), when known. */
+  item: string | null
+} | null {
+  const event = triggerEvent(text)
+  if (!event || event.trigger !== INBOX_HANDOFF) return null
+  const email = triggerEmail(event)
+  if (!email) return null
+  const cut = event.summary.lastIndexOf('\n\n')
+  const note = cut < 0 ? '' : event.summary.slice(0, cut).trim()
+  const p = event.payload as Record<string, unknown>
+  // Older hand-overs name no item: Brigade's own mail is its own item, Gmail's is not.
+  const item = str(p.inboxItem) ?? (p.provider === 'email' && email.id ? `mail:${email.id}` : null)
+  return { note: note === HANDOFF_DEFAULT_NOTE ? '' : note, event, email, item }
 }
 
 /** "Ada Lovelace <ada@example.com>": the name and the address; a bare address has no name. */

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { createHash, randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
+import { handedEmail, INBOX_HANDOFF, triggerEventText } from '@brigade/contracts'
 import pg from 'pg'
 
 // Sent mail goes through a Resend played by a fake fetch; set before src/ is imported below.
@@ -235,6 +236,54 @@ const thread = (teammateId: string, extra: Record<string, unknown> = {}) =>
     } as never,
   })
 let computerFor: string
+
+// No database needed: what the thread's first message holds.
+test('a long conversation handed over stays a card: oldest mails go, then the end of the words', () => {
+  const event = (payload: unknown) =>
+    triggerEventText({
+      trigger: INBOX_HANDOFF,
+      definition: 'An email a person handed over from the Inbox',
+      source: 'riley@x.test',
+      type: 'email',
+      id: 'm1',
+      received: '2026-10-25T15:43:19.606Z',
+      payload,
+    })
+  const mail = {
+    provider: 'email',
+    id: 'm1',
+    from: 'Client <client@x.test>',
+    to: 'riley@x.test',
+    subject: 'Re: Order',
+    date: '2026-10-25T15:43:19.606Z',
+    labels: [],
+    inboxItem: 'mail:m1',
+  }
+  const earlier = (n: number, size: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      from: 'client@x.test',
+      date: `d${i}`,
+      body: 'x'.repeat(size),
+    }))
+  // An earlier mail of 40,000 characters: it goes, the latest stays.
+  const one = inbox.withinCap({ ...mail, body: 'Hello', earlier: earlier(2, 40_000) })
+  const read = handedEmail(`Note\n\nHow\n\n${event(one)}`)
+  assert.equal(read?.email.body, 'Hello')
+  assert.equal(read?.item, 'mail:m1')
+  assert.equal((one as { earlierLeftOut?: number }).earlierLeftOut, 2)
+  // Those that fit stay, the newest.
+  const some = inbox.withinCap({ ...mail, body: 'Hi', earlier: earlier(10, 8_000) }) as {
+    earlier: { date: string }[]
+  }
+  assert.ok(some.earlier.length > 0 && some.earlier.length < 10)
+  assert.equal(some.earlier.at(-1)?.date, 'd9')
+  // A latest mail past the cap: cut, still a card.
+  const long = inbox.withinCap({ ...mail, body: '"quoted"\n'.repeat(10_000), earlier: [] })
+  const cut = handedEmail(`Note\n\nHow\n\n${event(long)}`)
+  assert.ok(cut?.email.body.endsWith('[cut]'))
+  // A short one is left as it was.
+  assert.deepEqual(inbox.withinCap({ ...mail, body: 'Hi', earlier: [] }), { ...mail, body: 'Hi' })
+})
 
 describe('the Inbox', { skip }, () => {
   before(async () => {
@@ -579,6 +628,9 @@ describe('handing over', { skip }, () => {
     assert.equal(session.teammateId, cody.id)
     assert.equal(session.startedByMemberId, members[0])
     assert.equal(session.projectId, projectId)
+    // Out of the sidebar until someone takes part or it needs a person: the Inbox follows it.
+    assert.equal(session.quiet, true)
+    assert.equal(session.surfacedAt, null)
     const row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: m.id } })
     assert.equal(row.sessionId, threadId)
     assert.equal(row.route, 'handed')

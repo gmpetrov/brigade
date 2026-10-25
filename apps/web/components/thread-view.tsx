@@ -45,6 +45,7 @@ import {
   type ReplyTo,
   type SequencedEvent,
   type TicketAnswer,
+  handedEmail,
   triggerEmail,
   triggerEvent,
   type TriggerEmail,
@@ -157,6 +158,13 @@ export type Item =
       brigade?: NonNullable<ReturnType<typeof childNote>>
       /** An email a trigger received, shown as a mail rather than as the teammate's prompt. */
       email?: { event: TriggerEventMessage; email: TriggerEmail }
+      /** An email the person handed over from the Inbox: their note as their message, the mail as a card below it. */
+      handed?: {
+        note: string
+        event: TriggerEventMessage
+        email: TriggerEmail
+        item: string | null
+      }
       /** Anything else Brigade wrote (a wake-up, a schedule's run…): a line rather than a person's bubble. */
       note?: BrigadeNote
       /** A person handed the thread back: their note and what they did, as a card rather than the teammate's prompt. */
@@ -317,6 +325,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           if (!e.steered) turnStartedAt = undefined
           else if (idle) idle = 'steered'
           const handback = e.memberId !== null ? handbackNote(e.text) : null
+          const handedOver = e.memberId !== null ? handedEmail(e.text) : null
           // Its card takes the place of the hand back's line, and of what that line held.
           if (handback && handed && items.includes(handed)) items.splice(items.indexOf(handed), 1)
           add({
@@ -332,6 +341,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             ...(e.memberId === null ? receivedEmail(e.text) : {}),
             ...userNote(e.text, e.memberId === null),
             ...(handback ? { handback: { ...handback, commands: handed?.commands ?? [] } } : {}),
+            ...(handedOver ? { handed: handedOver } : {}),
           })
           handed = undefined
           break
@@ -1898,14 +1908,16 @@ export function ThreadItems({
         // A command it starts with (/design, a skill) is a label above it: what was asked for.
         // Elements picked in the preview are chips above it, out of its text; their
         // pictures show in them, not with its other files.
-        const { text: written, elements } = splitPreviewElements(forPeople(item.text))
+        const { text: written, elements } = splitPreviewElements(
+          forPeople(item.handed ? item.handed.note : item.text),
+        )
         const pictureOf = (name?: string) =>
           name ? item.attachments.find((a) => a.name === name && a.status === 'ready') : undefined
         const pictures = new Set(elements.flatMap((e) => pictureOf(e.image)?.id ?? []))
         const files = item.attachments.filter((a) => !pictures.has(a.id))
         const asked = startingCommand(written, skillNames)
         const text = asked ? asked.rest : written
-        return (
+        const bubble = (
           <div
             key={item.key}
             data-seq={item.seq}
@@ -1954,6 +1966,23 @@ export function ThreadItems({
             ) : null}
           </div>
         )
+        // Handed over from the Inbox: their note, then the mail, which opens its conversation there.
+        if (item.handed)
+          return (
+            <div key={item.key} className="flex min-w-0 flex-col gap-3">
+              {(text || files.length > 0 || item.replyTo) && bubble}
+              <div data-seq={item.seq} className="min-w-0">
+                <ReceivedEmailCard
+                  event={item.handed.event}
+                  email={item.handed.email}
+                  attachments={[]}
+                  reply={false}
+                  handed={{ item: item.handed.item }}
+                />
+              </div>
+            </div>
+          )
+        return bubble
       }
       case 'assistant': {
         const author = (item.teammateId && byId.get(item.teammateId)) || teammate
