@@ -207,6 +207,7 @@ export type MemberWhereInput = {
   schedules?: Prisma.ScheduleListRelationFilter
   threadReads?: Prisma.ThreadReadListRelationFilter
   threadPins?: Prisma.ThreadPinListRelationFilter
+  documentPins?: Prisma.DocumentPinListRelationFilter
   threadLaters?: Prisma.ThreadLaterListRelationFilter
   homeDismissals?: Prisma.HomeDismissalListRelationFilter
   pushNotices?: Prisma.PushNoticeListRelationFilter
@@ -230,6 +231,7 @@ export type MemberOrderByWithRelationInput = {
   schedules?: Prisma.ScheduleOrderByRelationAggregateInput
   threadReads?: Prisma.ThreadReadOrderByRelationAggregateInput
   threadPins?: Prisma.ThreadPinOrderByRelationAggregateInput
+  documentPins?: Prisma.DocumentPinOrderByRelationAggregateInput
   threadLaters?: Prisma.ThreadLaterOrderByRelationAggregateInput
   homeDismissals?: Prisma.HomeDismissalOrderByRelationAggregateInput
   pushNotices?: Prisma.PushNoticeOrderByRelationAggregateInput
@@ -257,6 +259,7 @@ export type MemberWhereUniqueInput = Prisma.AtLeast<{
   schedules?: Prisma.ScheduleListRelationFilter
   threadReads?: Prisma.ThreadReadListRelationFilter
   threadPins?: Prisma.ThreadPinListRelationFilter
+  documentPins?: Prisma.DocumentPinListRelationFilter
   threadLaters?: Prisma.ThreadLaterListRelationFilter
   homeDismissals?: Prisma.HomeDismissalListRelationFilter
   pushNotices?: Prisma.PushNoticeListRelationFilter
@@ -304,6 +307,7 @@ export type MemberCreateInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -325,6 +329,7 @@ export type MemberUncheckedCreateInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -346,6 +351,7 @@ export type MemberUpdateInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -367,6 +373,7 @@ export type MemberUncheckedUpdateInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
@@ -672,6 +679,20 @@ export type MemberUpdateOneRequiredWithoutAccountsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutAccountsInput, Prisma.MemberUpdateWithoutAccountsInput>, Prisma.MemberUncheckedUpdateWithoutAccountsInput>
 }
 
+export type MemberCreateNestedOneWithoutDocumentPinsInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutDocumentPinsInput, Prisma.MemberUncheckedCreateWithoutDocumentPinsInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutDocumentPinsInput
+  connect?: Prisma.MemberWhereUniqueInput
+}
+
+export type MemberUpdateOneRequiredWithoutDocumentPinsNestedInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutDocumentPinsInput, Prisma.MemberUncheckedCreateWithoutDocumentPinsInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutDocumentPinsInput
+  upsert?: Prisma.MemberUpsertWithoutDocumentPinsInput
+  connect?: Prisma.MemberWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutDocumentPinsInput, Prisma.MemberUpdateWithoutDocumentPinsInput>, Prisma.MemberUncheckedUpdateWithoutDocumentPinsInput>
+}
+
 export type MemberCreateNestedOneWithoutPushNoticesInput = {
   create?: Prisma.XOR<Prisma.MemberCreateWithoutPushNoticesInput, Prisma.MemberUncheckedCreateWithoutPushNoticesInput>
   connectOrCreate?: Prisma.MemberCreateOrConnectWithoutPushNoticesInput
@@ -714,6 +735,7 @@ export type MemberCreateWithoutUserInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -734,6 +756,7 @@ export type MemberUncheckedCreateWithoutUserInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -793,6 +816,7 @@ export type MemberCreateWithoutOrganizationInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -813,6 +837,7 @@ export type MemberUncheckedCreateWithoutOrganizationInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -859,6 +884,7 @@ export type MemberCreateWithoutComputersInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -879,6 +905,7 @@ export type MemberUncheckedCreateWithoutComputersInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -915,6 +942,7 @@ export type MemberUpdateWithoutComputersInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -935,6 +963,7 @@ export type MemberUncheckedUpdateWithoutComputersInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
@@ -955,6 +984,7 @@ export type MemberCreateWithoutThreadReadsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -975,6 +1005,7 @@ export type MemberUncheckedCreateWithoutThreadReadsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -1011,6 +1042,7 @@ export type MemberUpdateWithoutThreadReadsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -1031,6 +1063,7 @@ export type MemberUncheckedUpdateWithoutThreadReadsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
@@ -1051,6 +1084,7 @@ export type MemberCreateWithoutThreadPinsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -1071,6 +1105,7 @@ export type MemberUncheckedCreateWithoutThreadPinsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -1107,6 +1142,7 @@ export type MemberUpdateWithoutThreadPinsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -1127,6 +1163,7 @@ export type MemberUncheckedUpdateWithoutThreadPinsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
@@ -1148,6 +1185,7 @@ export type MemberCreateWithoutThreadLatersInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
@@ -1168,6 +1206,7 @@ export type MemberUncheckedCreateWithoutThreadLatersInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
@@ -1204,6 +1243,7 @@ export type MemberUpdateWithoutThreadLatersInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
@@ -1224,6 +1264,7 @@ export type MemberUncheckedUpdateWithoutThreadLatersInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
@@ -1244,6 +1285,7 @@ export type MemberCreateWithoutHomeDismissalsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
@@ -1264,6 +1306,7 @@ export type MemberUncheckedCreateWithoutHomeDismissalsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
@@ -1300,6 +1343,7 @@ export type MemberUpdateWithoutHomeDismissalsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
@@ -1320,6 +1364,7 @@ export type MemberUncheckedUpdateWithoutHomeDismissalsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
@@ -1339,6 +1384,7 @@ export type MemberCreateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -1359,6 +1405,7 @@ export type MemberUncheckedCreateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -1395,6 +1442,7 @@ export type MemberUpdateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -1415,6 +1463,7 @@ export type MemberUncheckedUpdateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
@@ -1435,6 +1484,7 @@ export type MemberCreateWithoutTasksInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -1455,6 +1505,7 @@ export type MemberUncheckedCreateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -1491,6 +1542,7 @@ export type MemberUpdateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -1511,6 +1563,7 @@ export type MemberUncheckedUpdateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
@@ -1531,6 +1584,7 @@ export type MemberCreateWithoutSchedulesInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -1551,6 +1605,7 @@ export type MemberUncheckedCreateWithoutSchedulesInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -1587,6 +1642,7 @@ export type MemberUpdateWithoutSchedulesInput = {
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -1607,6 +1663,7 @@ export type MemberUncheckedUpdateWithoutSchedulesInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
@@ -1627,6 +1684,7 @@ export type MemberCreateWithoutAccountsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -1647,6 +1705,7 @@ export type MemberUncheckedCreateWithoutAccountsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -1683,6 +1742,7 @@ export type MemberUpdateWithoutAccountsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -1698,6 +1758,107 @@ export type MemberUncheckedUpdateWithoutAccountsInput = {
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
+  threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
+}
+
+export type MemberCreateWithoutDocumentPinsInput = {
+  id: string
+  role?: string
+  createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
+  suggestions?: boolean
+  organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
+  user: Prisma.UserCreateNestedOneWithoutMembersInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
+  homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
+}
+
+export type MemberUncheckedCreateWithoutDocumentPinsInput = {
+  id: string
+  organizationId: string
+  userId: string
+  role?: string
+  createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
+  suggestions?: boolean
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
+}
+
+export type MemberCreateOrConnectWithoutDocumentPinsInput = {
+  where: Prisma.MemberWhereUniqueInput
+  create: Prisma.XOR<Prisma.MemberCreateWithoutDocumentPinsInput, Prisma.MemberUncheckedCreateWithoutDocumentPinsInput>
+}
+
+export type MemberUpsertWithoutDocumentPinsInput = {
+  update: Prisma.XOR<Prisma.MemberUpdateWithoutDocumentPinsInput, Prisma.MemberUncheckedUpdateWithoutDocumentPinsInput>
+  create: Prisma.XOR<Prisma.MemberCreateWithoutDocumentPinsInput, Prisma.MemberUncheckedCreateWithoutDocumentPinsInput>
+  where?: Prisma.MemberWhereInput
+}
+
+export type MemberUpdateToOneWithWhereWithoutDocumentPinsInput = {
+  where?: Prisma.MemberWhereInput
+  data: Prisma.XOR<Prisma.MemberUpdateWithoutDocumentPinsInput, Prisma.MemberUncheckedUpdateWithoutDocumentPinsInput>
+}
+
+export type MemberUpdateWithoutDocumentPinsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
+  suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
+  homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
+}
+
+export type MemberUncheckedUpdateWithoutDocumentPinsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
+  suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
@@ -1724,6 +1885,7 @@ export type MemberCreateWithoutPushNoticesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutOwnerInput
@@ -1744,6 +1906,7 @@ export type MemberUncheckedCreateWithoutPushNoticesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutOwnerInput
@@ -1780,6 +1943,7 @@ export type MemberUpdateWithoutPushNoticesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutOwnerNestedInput
@@ -1800,6 +1964,7 @@ export type MemberUncheckedUpdateWithoutPushNoticesInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutOwnerNestedInput
@@ -1820,6 +1985,7 @@ export type MemberCreateWithoutPlaybookInstallationsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
@@ -1840,6 +2006,7 @@ export type MemberUncheckedCreateWithoutPlaybookInstallationsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
   threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutMemberInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutMemberInput
   threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutMemberInput
   homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutMemberInput
   pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
@@ -1876,6 +2043,7 @@ export type MemberUpdateWithoutPlaybookInstallationsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -1896,6 +2064,7 @@ export type MemberUncheckedUpdateWithoutPlaybookInstallationsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
@@ -1924,6 +2093,7 @@ export type MemberUpdateWithoutUserInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -1944,6 +2114,7 @@ export type MemberUncheckedUpdateWithoutUserInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
@@ -1982,6 +2153,7 @@ export type MemberUpdateWithoutOrganizationInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
@@ -2002,6 +2174,7 @@ export type MemberUncheckedUpdateWithoutOrganizationInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
   threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutMemberNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutMemberNestedInput
   threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutMemberNestedInput
   homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutMemberNestedInput
   pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
@@ -2030,6 +2203,7 @@ export type MemberCountOutputType = {
   schedules: number
   threadReads: number
   threadPins: number
+  documentPins: number
   threadLaters: number
   homeDismissals: number
   pushNotices: number
@@ -2044,6 +2218,7 @@ export type MemberCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   schedules?: boolean | MemberCountOutputTypeCountSchedulesArgs
   threadReads?: boolean | MemberCountOutputTypeCountThreadReadsArgs
   threadPins?: boolean | MemberCountOutputTypeCountThreadPinsArgs
+  documentPins?: boolean | MemberCountOutputTypeCountDocumentPinsArgs
   threadLaters?: boolean | MemberCountOutputTypeCountThreadLatersArgs
   homeDismissals?: boolean | MemberCountOutputTypeCountHomeDismissalsArgs
   pushNotices?: boolean | MemberCountOutputTypeCountPushNoticesArgs
@@ -2112,6 +2287,13 @@ export type MemberCountOutputTypeCountThreadPinsArgs<ExtArgs extends runtime.Typ
 /**
  * MemberCountOutputType without action
  */
+export type MemberCountOutputTypeCountDocumentPinsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DocumentPinWhereInput
+}
+
+/**
+ * MemberCountOutputType without action
+ */
 export type MemberCountOutputTypeCountThreadLatersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ThreadLaterWhereInput
 }
@@ -2155,6 +2337,7 @@ export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   schedules?: boolean | Prisma.Member$schedulesArgs<ExtArgs>
   threadReads?: boolean | Prisma.Member$threadReadsArgs<ExtArgs>
   threadPins?: boolean | Prisma.Member$threadPinsArgs<ExtArgs>
+  documentPins?: boolean | Prisma.Member$documentPinsArgs<ExtArgs>
   threadLaters?: boolean | Prisma.Member$threadLatersArgs<ExtArgs>
   homeDismissals?: boolean | Prisma.Member$homeDismissalsArgs<ExtArgs>
   pushNotices?: boolean | Prisma.Member$pushNoticesArgs<ExtArgs>
@@ -2207,6 +2390,7 @@ export type MemberInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   schedules?: boolean | Prisma.Member$schedulesArgs<ExtArgs>
   threadReads?: boolean | Prisma.Member$threadReadsArgs<ExtArgs>
   threadPins?: boolean | Prisma.Member$threadPinsArgs<ExtArgs>
+  documentPins?: boolean | Prisma.Member$documentPinsArgs<ExtArgs>
   threadLaters?: boolean | Prisma.Member$threadLatersArgs<ExtArgs>
   homeDismissals?: boolean | Prisma.Member$homeDismissalsArgs<ExtArgs>
   pushNotices?: boolean | Prisma.Member$pushNoticesArgs<ExtArgs>
@@ -2234,6 +2418,7 @@ export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     schedules: Prisma.$SchedulePayload<ExtArgs>[]
     threadReads: Prisma.$ThreadReadPayload<ExtArgs>[]
     threadPins: Prisma.$ThreadPinPayload<ExtArgs>[]
+    documentPins: Prisma.$DocumentPinPayload<ExtArgs>[]
     threadLaters: Prisma.$ThreadLaterPayload<ExtArgs>[]
     homeDismissals: Prisma.$HomeDismissalPayload<ExtArgs>[]
     pushNotices: Prisma.$PushNoticePayload<ExtArgs>[]
@@ -2659,6 +2844,7 @@ export interface Prisma__MemberClient<T, Null = never, ExtArgs extends runtime.T
   schedules<T extends Prisma.Member$schedulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$schedulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SchedulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   threadReads<T extends Prisma.Member$threadReadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$threadReadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadReadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   threadPins<T extends Prisma.Member$threadPinsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$threadPinsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadPinPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  documentPins<T extends Prisma.Member$documentPinsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$documentPinsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPinPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   threadLaters<T extends Prisma.Member$threadLatersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$threadLatersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadLaterPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   homeDismissals<T extends Prisma.Member$homeDismissalsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$homeDismissalsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HomeDismissalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pushNotices<T extends Prisma.Member$pushNoticesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$pushNoticesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PushNoticePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3265,6 +3451,30 @@ export type Member$threadPinsArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.ThreadPinScalarFieldEnum | Prisma.ThreadPinScalarFieldEnum[]
+}
+
+/**
+ * Member.documentPins
+ */
+export type Member$documentPinsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DocumentPin
+   */
+  select?: Prisma.DocumentPinSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DocumentPin
+   */
+  omit?: Prisma.DocumentPinOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DocumentPinInclude<ExtArgs> | null
+  where?: Prisma.DocumentPinWhereInput
+  orderBy?: Prisma.DocumentPinOrderByWithRelationInput | Prisma.DocumentPinOrderByWithRelationInput[]
+  cursor?: Prisma.DocumentPinWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DocumentPinScalarFieldEnum | Prisma.DocumentPinScalarFieldEnum[]
 }
 
 /**

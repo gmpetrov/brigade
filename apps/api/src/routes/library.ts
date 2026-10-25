@@ -129,17 +129,26 @@ export const library = new Hono<AppEnv>()
     return c.json(await libraryFiles(db, rows))
   })
 
-  /** The files and the folders people made or set access on, at once. */
+  /** The files, the folders people made or set access on, and this member's pins, at once. */
   .get('/tree', async (c) => {
-    const { db } = c.var
-    const [rows, folders] = await Promise.all([
+    const { db, scope } = c.var
+    const [rows, folders, pins] = await Promise.all([
       db.document.findMany({
         where: { kind: 'library', deletedAt: null },
         orderBy: { path: 'asc' },
       }),
       explicitFolders(db),
+      db.documentPin.findMany({
+        where: { memberId: scope.memberId, document: { deletedAt: null } },
+        orderBy: { pinnedAt: 'asc' },
+        select: { documentId: true },
+      }),
     ])
-    return c.json({ files: await libraryFiles(db, rows), folders } satisfies LibraryTree)
+    return c.json({
+      files: await libraryFiles(db, rows),
+      folders,
+      pinned: pins.map((p) => p.documentId),
+    } satisfies LibraryTree)
   })
 
   /** The folders people made or set access on. */
@@ -552,6 +561,30 @@ export const library = new Hono<AppEnv>()
       { path: row.path, bytes: new TextEncoder().encode(text), contentType: row.contentType },
     )
     return c.json(await libraryFileOf(db, saved))
+  })
+
+  /** Pin it to the top of this member's Library; DELETE unpins it. Each member's own. */
+  .post('/:id/pin', async (c) => {
+    const { scope, db } = c.var
+    const row = await libraryFile(db, c.req.param('id'))
+    await db.documentPin.upsert({
+      where: { memberId_documentId: { memberId: scope.memberId, documentId: row.id } },
+      create: {
+        organizationId: scope.organizationId,
+        workspaceId: scope.workspaceId,
+        memberId: scope.memberId,
+        documentId: row.id,
+      },
+      update: {},
+    })
+    return c.json({ ok: true })
+  })
+  .delete('/:id/pin', async (c) => {
+    const { scope, db } = c.var
+    await db.documentPin.deleteMany({
+      where: { memberId: scope.memberId, documentId: c.req.param('id') },
+    })
+    return c.json({ ok: true })
   })
 
   /** Rename or move. */

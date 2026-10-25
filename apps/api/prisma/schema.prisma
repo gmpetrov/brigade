@@ -154,6 +154,7 @@ model Member {
   schedules             Schedule[]
   threadReads           ThreadRead[]
   threadPins            ThreadPin[]
+  documentPins          DocumentPin[]
   threadLaters          ThreadLater[]
   homeDismissals        HomeDismissal[]
   /// Which notifications reach their devices (src/notifications.ts).
@@ -241,6 +242,7 @@ model Workspace {
   previewVariables      PreviewVariable[]
   threadReads           ThreadRead[]
   threadPins            ThreadPin[]
+  documentPins          DocumentPin[]
   threadLaters          ThreadLater[]
   homeDismissals        HomeDismissal[]
   pushNotices           PushNotice[]
@@ -1490,10 +1492,28 @@ model Document {
   assets             DocumentAsset[]
   versions           DocumentVersion[]
   memoryLines        MemoryLine[]
+  /// The members who pinned it.
+  pins               DocumentPin[]
 
   @@unique([workspaceId, kind, path])
   @@index([search], type: Gin)
   @@index([workspaceId, deletedAt])
+}
+
+/// A library file a member pinned: it stays at the top of their Library. Each member's own,
+/// like a thread's pin. A file in the trash keeps its pin, which shows again once restored.
+model DocumentPin {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  documentId     String
+  document       Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  pinnedAt       DateTime  @default(now())
+
+  @@id([memberId, documentId])
+  @@index([documentId])
 }
 
 /// A saved state of a library file. Its bytes are in the bucket under
