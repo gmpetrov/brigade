@@ -1,27 +1,14 @@
 'use client'
-// Notifications: the panel from the member's menu (openNotifications), where they
+// Notifications: the panel in Settings > Preferences (NotificationsPanel), where they
 // turn them on for this device and pick a preset, and what the dashboard does for
 // them while open (useAppNotifications). The API decides what to send and when
 // (apps/api/src/notifications.ts); public/sw.js shows it.
 import type { NotificationSettings, NotifyPreset } from '@brigade/contracts'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { api, useApi } from '@/lib/api'
-
-const OPEN_EVENT = 'brigade:notifications'
-
-export function openNotifications() {
-  window.dispatchEvent(new Event(OPEN_EVENT))
-}
 
 const PRESETS: { value: NotifyPreset; label: string; detail: string }[] = [
   {
@@ -112,26 +99,15 @@ async function deviceState(): Promise<DeviceState> {
   return subscription && Notification.permission === 'granted' ? 'on' : 'off'
 }
 
-export function NotificationsDialog() {
-  const [open, setOpen] = useState(false)
-  const settings = useApi<NotificationSettings>(open ? '/notifications' : null)
+export function NotificationsPanel() {
+  const settings = useApi<NotificationSettings>('/notifications')
   const [preset, setPreset] = useState<NotifyPreset>()
   const [device, setDevice] = useState<DeviceState>()
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string>()
 
-  useEffect(() => {
-    const onOpen = () => setOpen(true)
-    window.addEventListener(OPEN_EVENT, onOpen)
-    return () => window.removeEventListener(OPEN_EVENT, onOpen)
-  }, [])
-
   const refresh = useCallback(() => void deviceState().then(setDevice), [])
-  useEffect(() => {
-    if (!open) return
-    setNote(undefined)
-    refresh()
-  }, [open, refresh])
+  useEffect(refresh, [refresh])
   useEffect(() => setPreset(settings.data?.preset), [settings.data?.preset])
 
   const publicKey = settings.data?.publicKey
@@ -203,97 +179,83 @@ export function NotificationsDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md" data-id="notifications-settings">
-        <DialogHeader>
-          <DialogTitle>Notifications</DialogTitle>
-          <DialogDescription>
-            Brigade tells you when something needs you, and otherwise stays quiet.
-          </DialogDescription>
-        </DialogHeader>
-
-        {settings.data && !publicKey ? (
-          <p className="text-muted-foreground text-sm">
-            Notifications are not set up on this Brigade yet.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-5">
-            <section className="flex flex-col gap-2" data-id="notifications-device">
-              <h3 className="text-sm font-medium">This device</h3>
-              {device === 'install' && (
-                <p className="text-muted-foreground text-sm">
-                  On iPhone, add Brigade to your Home Screen first: tap Share, then Add to Home
-                  Screen. Open it from there and turn notifications on here.
-                </p>
-              )}
-              {device === 'unsupported' && (
-                <p className="text-muted-foreground text-sm">
-                  This browser can’t show notifications.
-                </p>
-              )}
-              {device === 'blocked' && (
-                <p className="text-muted-foreground text-sm">
-                  Notifications are blocked for Brigade. Allow them in this browser’s settings, then
-                  come back here.
-                </p>
-              )}
-              {device === 'off' && (
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-muted-foreground text-sm">Off on this device.</p>
-                  <Button size="sm" disabled={busy || !publicKey} onClick={() => void turnOn()}>
-                    Turn on
+    <div data-id="notifications-settings">
+      {settings.data && !publicKey ? (
+        <p className="text-muted-foreground text-sm">
+          Notifications are not set up on this Brigade yet.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-5">
+          <section className="flex flex-col gap-2" data-id="notifications-device">
+            <h3 className="text-sm font-medium">This device</h3>
+            {device === 'install' && (
+              <p className="text-muted-foreground text-sm">
+                On iPhone, add Brigade to your Home Screen first: tap Share, then Add to Home
+                Screen. Open it from there and turn notifications on here.
+              </p>
+            )}
+            {device === 'unsupported' && (
+              <p className="text-muted-foreground text-sm">
+                This browser can’t show notifications.
+              </p>
+            )}
+            {device === 'blocked' && (
+              <p className="text-muted-foreground text-sm">
+                Notifications are blocked for Brigade. Allow them in this browser’s settings, then
+                come back here.
+              </p>
+            )}
+            {device === 'off' && (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-muted-foreground text-sm">Off on this device.</p>
+                <Button size="sm" disabled={busy || !publicKey} onClick={() => void turnOn()}>
+                  Turn on
+                </Button>
+              </div>
+            )}
+            {device === 'on' && (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-muted-foreground text-sm">On for this device.</p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => void test()}>
+                    Send a test
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => void turnOff()}>
+                    Turn off
                   </Button>
                 </div>
-              )}
-              {device === 'on' && (
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-muted-foreground text-sm">On for this device.</p>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => void test()}>
-                      Send a test
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => void turnOff()}
-                    >
-                      Turn off
-                    </Button>
-                  </div>
+              </div>
+            )}
+            {note && <p className="text-muted-foreground text-xs">{note}</p>}
+          </section>
+
+          <fieldset className="flex flex-col gap-2" data-id="notifications-preset">
+            <legend className="mb-2 text-sm font-medium">Notify me about</legend>
+            <RadioGroup
+              value={preset ?? ''}
+              onValueChange={(value) => void choose(value)}
+              disabled={!preset}
+              className="gap-3"
+            >
+              {PRESETS.map((p) => (
+                <div key={p.value} className="flex items-start gap-2.5">
+                  <RadioGroupItem value={p.value} id={`notify-${p.value}`} className="mt-0.5" />
+                  <Label htmlFor={`notify-${p.value}`} className="grid gap-0.5 font-normal">
+                    <span className="font-medium">{p.label}</span>
+                    <span className="text-muted-foreground text-xs">{p.detail}</span>
+                  </Label>
                 </div>
-              )}
-              {note && <p className="text-muted-foreground text-xs">{note}</p>}
-            </section>
+              ))}
+            </RadioGroup>
+          </fieldset>
 
-            <fieldset className="flex flex-col gap-2" data-id="notifications-preset">
-              <legend className="mb-2 text-sm font-medium">Notify me about</legend>
-              <RadioGroup
-                value={preset ?? ''}
-                onValueChange={(value) => void choose(value)}
-                disabled={!preset}
-                className="gap-3"
-              >
-                {PRESETS.map((p) => (
-                  <div key={p.value} className="flex items-start gap-2.5">
-                    <RadioGroupItem value={p.value} id={`notify-${p.value}`} className="mt-0.5" />
-                    <Label htmlFor={`notify-${p.value}`} className="grid gap-0.5 font-normal">
-                      <span className="font-medium">{p.label}</span>
-                      <span className="text-muted-foreground text-xs">{p.detail}</span>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </fieldset>
-
-            <p className="text-muted-foreground text-xs">
-              Brigade waits a minute before telling you, so a burst arrives as one notification. It
-              stays quiet while you’re looking at Brigade, reminds you once at most, and sends no
-              more than 4 an hour.
-            </p>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          <p className="text-muted-foreground text-xs">
+            Brigade waits a minute before telling you, so a burst arrives as one notification. It
+            stays quiet while you’re looking at Brigade, reminds you once at most, and sends no more
+            than 4 an hour.
+          </p>
+        </div>
+      )}
+    </div>
   )
 }

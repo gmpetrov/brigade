@@ -1,5 +1,5 @@
 'use client'
-// Settings: the workspace's setup, one page per section with a nav beside them (above
+// Settings: the member's preferences, then the workspace's setup, one page per section with a nav beside them (above
 // them on a phone). Opened from the member's menu or ⌘,; each section keeps its address.
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
