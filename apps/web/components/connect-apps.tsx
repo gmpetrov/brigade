@@ -1,9 +1,9 @@
 'use client'
 // Connect apps: the popup the sidebar's button opens (openConnectApps). The catalog to
 // search and add from, and the Apps already connected one click away; each App opens its
-// sheet on top. Settings → Apps keeps the full page.
+// sheet on top. Settings → Apps shows the same, as a page (ConnectApps).
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Check, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { AppSheet } from '@/components/app-sheet'
 import { CloseButton } from '@/components/close-button'
@@ -77,13 +77,12 @@ export function openConnectApps() {
 }
 
 /** The App sheet that is open: an added App, or one from the catalog not added yet. */
-type Open = { kind: Kind; appId?: string }
+export type Open = { kind: Kind; appId?: string }
 
 export function ConnectAppsDialog() {
   const [open, setOpen] = useState(false)
-  const [view, setView] = useState<'catalog' | 'connected'>('catalog')
-  const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<string>()
+  // Each opening starts again on the catalog, with no search or category.
+  const [opening, setOpening] = useState(0)
   const [sheet, setSheet] = useState<Open>()
   const data = useApi<ConnectionsResponse>(open ? '/connections' : null)
   const triggers = useApi<Trigger[]>(open ? '/triggers' : null)
@@ -91,9 +90,7 @@ export function ConnectAppsDialog() {
 
   useEffect(() => {
     const onOpen = () => {
-      setView('catalog')
-      setQuery('')
-      setCategory(undefined)
+      setOpening((n) => n + 1)
       setSheet(undefined)
       setOpen(true)
     }
@@ -102,7 +99,6 @@ export function ConnectAppsDialog() {
   }, [])
 
   const reload = () => Promise.all([data.reload(), triggers.reload()])
-  const added = data.data ? addedApps(data.data) : []
   // A built-in App opened from the catalog becomes the added one once its first account connects.
   const sheetApp = data.data?.apps.find((a) =>
     sheet?.appId ? a.id === sheet.appId : a.key === sheet?.kind,
@@ -115,27 +111,12 @@ export function ConnectAppsDialog() {
         aria-describedby={undefined}
         className="flex h-[min(90dvh,48rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl"
       >
-        {view === 'catalog' ? (
-          <Catalog
-            data={data.data}
-            added={added}
-            query={query}
-            setQuery={setQuery}
-            category={category}
-            setCategory={setCategory}
-            onOpen={setSheet}
-            onConnected={() => setView('connected')}
-            onClose={() => setOpen(false)}
-          />
-        ) : (
-          <Connected
-            data={data.data}
-            added={added}
-            onOpen={setSheet}
-            onBack={() => setView('catalog')}
-            onClose={() => setOpen(false)}
-          />
-        )}
+        <ConnectApps
+          key={opening}
+          data={data.data}
+          onOpen={setSheet}
+          onClose={() => setOpen(false)}
+        />
 
         {sheet && data.data && (
           <AppSheet
@@ -155,6 +136,61 @@ export function ConnectAppsDialog() {
   )
 }
 
+/**
+ * The catalog to search and add from, and the Apps connected one click away: the popup's
+ * content (with onClose), and Settings → Apps' (without, its intro under the title).
+ */
+export function ConnectApps({
+  data,
+  onOpen,
+  onClose,
+  intro,
+}: {
+  data?: ConnectionsResponse
+  onOpen: (open: Open) => void
+  /** In the popup: its close button. Unset on the page, which scrolls as a whole. */
+  onClose?: () => void
+  intro?: ReactNode
+}) {
+  const [view, setView] = useState<'catalog' | 'connected'>('catalog')
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<string>()
+  const added = data ? addedApps(data) : []
+  const dialog = !!onClose
+  const props = { data, added, onOpen, onClose, intro }
+  return view === 'catalog' ? (
+    <Catalog
+      {...props}
+      query={query}
+      setQuery={setQuery}
+      category={category}
+      setCategory={setCategory}
+      onConnected={() => setView('connected')}
+      dialog={dialog}
+    />
+  ) : (
+    <Connected {...props} onBack={() => setView('catalog')} dialog={dialog} />
+  )
+}
+
+type ViewProps = {
+  data?: ConnectionsResponse
+  added: AddedApp[]
+  onOpen: (open: Open) => void
+  onClose?: () => void
+  intro?: ReactNode
+  dialog: boolean
+}
+
+/** The view's title: the dialog's in the popup, the page's heading in Settings. */
+function Title({ dialog, children }: { dialog: boolean; children: ReactNode }) {
+  return dialog ? (
+    <DialogTitle className="flex-1 text-xl font-bold tracking-tight">{children}</DialogTitle>
+  ) : (
+    <h1 className="flex-1 text-3xl font-extrabold tracking-tight">{children}</h1>
+  )
+}
+
 function Catalog({
   data,
   added,
@@ -165,16 +201,14 @@ function Catalog({
   onOpen,
   onConnected,
   onClose,
-}: {
-  data?: ConnectionsResponse
-  added: AddedApp[]
+  intro,
+  dialog,
+}: ViewProps & {
   query: string
   setQuery: (query: string) => void
   category?: string
   setCategory: (category?: string) => void
-  onOpen: (open: Open) => void
   onConnected: () => void
-  onClose: () => void
 }) {
   const kinds: Kind[] = [...BUILT_IN, 'mcp', 'webhook']
   const categories = data ? [...new Set(kinds.map((k) => data.catalog[k].category))] : []
@@ -197,11 +231,9 @@ function Catalog({
 
   return (
     <>
-      <div className="flex flex-col gap-4 px-6 pt-6 pb-4">
+      <div className={cn('flex flex-col gap-4 pb-4', dialog && 'px-6 pt-6')}>
         <div className="flex items-center gap-3">
-          <DialogTitle className="flex-1 text-xl font-bold tracking-tight">
-            Connect apps
-          </DialogTitle>
+          <Title dialog={dialog}>{dialog ? 'Connect apps' : 'Apps'}</Title>
           {added.length > 0 && (
             <button
               type="button"
@@ -225,8 +257,9 @@ function Catalog({
               <ChevronRight className="size-4" aria-hidden />
             </button>
           )}
-          <CloseButton label="Close Connect apps" title="Close" onClick={onClose} />
+          {onClose && <CloseButton label="Close Connect apps" title="Close" onClick={onClose} />}
         </div>
+        {intro}
         <label className="flex h-10 items-center gap-2.5 rounded-full border bg-card px-4 focus-within:ring-2 focus-within:ring-ring">
           <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           <input
@@ -237,7 +270,12 @@ function Catalog({
             className="h-full flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </label>
-        <div className="-mx-6 flex gap-2 overflow-x-auto px-6 [scrollbar-width:none]">
+        <div
+          className={cn(
+            'flex gap-2 overflow-x-auto [scrollbar-width:none]',
+            dialog ? '-mx-6 px-6' : 'flex-wrap',
+          )}
+        >
           {[undefined, ...categories].map((c) => (
             <button
               key={c ?? 'all'}
@@ -257,7 +295,7 @@ function Catalog({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
+      <div className={cn(dialog && 'flex-1 overflow-y-auto px-6 pb-6')}>
         {data && shown.length === 0 && (
           <p className="py-10 text-center text-sm text-muted-foreground">No App matches.</p>
         )}
@@ -304,34 +342,34 @@ function Connected({
   onOpen,
   onBack,
   onClose,
-}: {
-  data?: ConnectionsResponse
-  added: AddedApp[]
-  onOpen: (open: Open) => void
-  onBack: () => void
-  onClose: () => void
-}) {
+  dialog,
+}: ViewProps & { onBack: () => void }) {
+  const description = 'Open one to see its accounts and choose which teammates get each.'
   return (
     <>
-      <div className="flex items-center gap-3 px-6 pt-6 pb-2">
+      <div className={cn('flex items-center gap-3 pb-2', dialog && 'px-6 pt-6')}>
         <button
           type="button"
           onClick={onBack}
           className="-ml-2 flex flex-1 items-center gap-1 self-center rounded-md px-1 py-1 text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
         >
           <ChevronLeft className="size-4" aria-hidden />
-          Connect apps
+          {dialog ? 'Connect apps' : 'Apps'}
         </button>
         <span className="hidden flex-1 sm:block" />
-        <CloseButton label="Close Connect apps" title="Close" onClick={onClose} />
+        {onClose && <CloseButton label="Close Connect apps" title="Close" onClick={onClose} />}
       </div>
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
-        <DialogTitle className="pt-2 pb-1 text-xl font-bold tracking-tight">
-          Connected apps
-        </DialogTitle>
-        <DialogDescription className="pb-3 text-sm text-muted-foreground">
-          Open one to see its accounts and choose which teammates get each.
-        </DialogDescription>
+      <div className={cn(dialog && 'flex-1 overflow-y-auto px-6 pb-6')}>
+        <div className="flex flex-col gap-1 pt-2 pb-3">
+          <Title dialog={dialog}>Connected apps</Title>
+          {dialog ? (
+            <DialogDescription className="text-sm text-muted-foreground">
+              {description}
+            </DialogDescription>
+          ) : (
+            <p className="text-sm text-muted-foreground">{description}</p>
+          )}
+        </div>
         {data && added.length === 0 && (
           <p className="py-6 text-sm text-muted-foreground">No Apps yet.</p>
         )}
@@ -354,13 +392,15 @@ function Connected({
             })}
           </div>
         )}
-        <Link
-          href="/app/connections"
-          onClick={onClose}
-          className="mt-6 inline-block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Open Apps in Settings
-        </Link>
+        {dialog && (
+          <Link
+            href="/app/connections"
+            onClick={onClose}
+            className="mt-6 inline-block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Open Apps in Settings
+          </Link>
+        )}
       </div>
     </>
   )
