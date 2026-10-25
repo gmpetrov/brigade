@@ -1,9 +1,12 @@
 'use client'
 // The Inbox: every email the workspace's mailboxes received (Brigade's own addresses and
-// connected Gmail accounts), one row per conversation, with where it went; read one, mark it
-// done or hand it to a teammate. Filters and the open email live in the address, so links and back work.
+// connected Gmail accounts), one row per conversation with its next step; read one, approve a
+// teammate's reply (now or for later), mark it done or hand it to a teammate. The list and the
+// open conversation are two columns, each the window's height. Filters and the open email live
+// in the address, so links and back work.
 import type {
   InboxDetail,
+  InboxDraft,
   InboxItem,
   InboxMessage,
   InboxSourceView,
@@ -11,24 +14,27 @@ import type {
 } from '@brigade/contracts'
 import {
   ArrowLeft,
+  ArrowUpRight,
   Check,
+  Clock,
   FileText,
   Mail,
   Search,
   ShieldAlert,
-  ShieldCheck,
   Undo2,
+  X,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { fileSize, type Media, MediaPreview, mediaKind, Thumbnail } from '@/components/attachments'
-import { timeAgo, useDashboard } from '@/components/dashboard'
+import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
+import { type EditedEmail, EmailDraftEditor, emailDraft } from '@/components/email-cards'
 import { AddRule } from '@/components/project-email'
-import { ProjectSelect } from '@/components/projects'
+import { ProjectIcon, ProjectSelect } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
+import { leavingLabel, SendLaterMenu } from '@/components/send-later'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -44,21 +50,74 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { api, ApiError, attachmentUrl, useApi } from '@/lib/api'
 import { API_URL } from '@/lib/config'
+import {
+  draftFacts,
+  filtersKey,
+  filtersToRestore,
+  type KeptFilters,
+  keptFilters,
+  reloadsInboxList,
+} from '@/lib/inbox'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
 type InboxList = { items: InboxItem[]; sources: InboxSourceView[]; next: string | null }
-type StatusFilter = InboxStatus | 'all'
 type Param = 'status' | 'source' | 'teammate' | 'project' | 'q' | 'item'
 
+type StatusFilter = InboxStatus | 'scheduled' | 'all'
+
+/** Its tabs, by what comes next: to do (nobody on it, or a reply to approve), and the rest. */
 const STATUSES: { value: StatusFilter; label: string }[] = [
-  { value: 'waiting', label: 'Unassigned' },
-  { value: 'handled', label: 'Assigned' },
+  { value: 'waiting', label: 'To do' },
+  { value: 'handled', label: 'With teammates' },
+  { value: 'scheduled', label: 'Scheduled' },
   { value: 'done', label: 'Done' },
   { value: 'all', label: 'All' },
 ]
 
+const EMPTY: Record<StatusFilter, string> = {
+  waiting: 'Nothing to do. Every email has a teammate, and no reply waits for you.',
+  handled: 'No conversation with a teammate right now.',
+  scheduled: 'No reply set to leave later.',
+  done: 'Nothing marked done yet.',
+  all: 'No email here.',
+}
+
 const ALL = '*'
+/** A filter picker under the tabs: plain text until it is set. */
+const FILTER =
+  'h-8 w-auto max-w-56 sm:w-auto border-transparent bg-transparent px-2.5 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground dark:bg-transparent dark:hover:bg-secondary'
+/** A filter that is set: its icon and short name in a chip, a × beside it to clear it. */
+const CHIP =
+  'h-7 w-auto max-w-44 border-0 bg-transparent py-0 pr-1 pl-2 text-foreground shadow-none sm:w-auto dark:bg-transparent dark:hover:bg-transparent [&>svg]:hidden'
+
+function FilterChip({
+  active,
+  what,
+  onClear,
+  children,
+}: {
+  active: boolean
+  what: string
+  onClear: () => void
+  children: ReactNode
+}) {
+  if (!active) return children
+  return (
+    <span className="inline-flex max-w-full items-center rounded-full border bg-card pr-1 hover:border-ring">
+      {children}
+      <button
+        type="button"
+        aria-label={`Clear the ${what} filter`}
+        title="Clear"
+        onClick={onClear}
+        className="flex size-5 flex-none items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-secondary hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
+        <X className="size-3.5" aria-hidden />
+      </button>
+    </span>
+  )
+}
 const SIGN_UP = 'Mail to a sign-up address'
 
 const message = (e: unknown) =>
@@ -102,26 +161,11 @@ export function destination(item: InboxItem): string {
   }
 }
 
-function DestinationChip({ item, className }: { item: InboxItem; className?: string }) {
-  const trouble = item.route === 'cap' || item.route === 'loop' || item.route === 'bounce'
-  return (
-    <span
-      className={cn(
-        'inline-flex max-w-full min-w-0 items-center rounded-full px-2 py-0.5 text-xs font-medium',
-        trouble ? 'bg-warning/15 text-warning' : 'bg-secondary text-muted-foreground',
-        className,
-      )}
-    >
-      <span className="truncate">{destination(item)}</span>
-    </span>
-  )
-}
-
-/** The page: filters, the list and the open email beside it (in its place on a phone). */
+/** The page: the list with its filters, and the open email beside it (in its place on a phone). */
 export function InboxView() {
   const params = useSearchParams()
   const router = useRouter()
-  const { teammates, reloadInboxCount } = useDashboard()
+  const { me, teammates, projects, reloadInboxCount, inboxWaiting } = useDashboard()
   const status = (STATUSES.find((s) => s.value === params.get('status'))?.value ??
     'waiting') as StatusFilter
   const source = params.get('source') ?? ''
@@ -144,6 +188,35 @@ export function InboxView() {
   const go = (patch: Partial<Record<Param, string | null>>) =>
     router.push(href(patch), { scroll: false })
 
+  // The tab and pickers are remembered in this browser, per workspace: arriving on the bare
+  // address puts them back (a link to a view, a search or an email wins). Until they are back,
+  // nothing is asked, so the default view does not flash first.
+  const workspaceId = me?.activeWorkspaceId ?? null
+  const [restore, setRestore] = useState<'checking' | 'done' | KeptFilters>('checking')
+  useEffect(() => {
+    if (restore !== 'checking' || !workspaceId) return
+    let saved: string | null = null
+    try {
+      saved = localStorage.getItem(filtersKey(workspaceId))
+    } catch {}
+    const back = filtersToRestore(new URLSearchParams(params.toString()), saved)
+    setRestore(back ?? 'done')
+    if (back) router.replace(href(back), { scroll: false })
+  }, [restore, workspaceId, params, href, router])
+  useEffect(() => {
+    if (!workspaceId || restore === 'checking') return
+    const kept = keptFilters(new URLSearchParams(params.toString()))
+    if (restore !== 'done') {
+      // Waiting for the address to take the filters put back (it was bare): once it says
+      // anything, they are back, or the member already went elsewhere.
+      if (!Object.keys(kept).length && !params.has('q') && !params.has('item')) return
+      setRestore('done')
+    }
+    try {
+      localStorage.setItem(filtersKey(workspaceId), JSON.stringify(kept))
+    } catch {}
+  }, [params, restore, workspaceId])
+
   // The search box: sent ~300 ms after the last key, and following back and forward.
   const [query, setQuery] = useState(q)
   const written = useRef(q)
@@ -161,13 +234,29 @@ export function InboxView() {
     return () => window.clearTimeout(timer)
   }, [query, q, href, router])
 
+  // "/" goes to the search box, from anywhere on the page but a field.
+  const searchBox = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+      e.preventDefault()
+      searchBox.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  // The To do count is the workspace's, so it shows only while nothing narrows the list.
+  const filtered = !!(source || teammate || project || q)
+
   const search = new URLSearchParams({ status })
   if (source) search.set('source', source)
   if (teammate) search.set('teammate', teammate)
   if (project) search.set('project', project)
   if (q) search.set('q', q)
   const path = `/inbox?${search}`
-  const list = useApi<InboxList>(path)
+  const list = useApi<InboxList>(restore === 'done' ? path : null)
   const reloadList = list.reload
 
   // Older pages, appended below the first: kept for the filters they were asked with.
@@ -199,17 +288,45 @@ export function InboxView() {
     }
   }
 
+  // Infinite scroll: the next page comes as the end of the list nears, in the list's own column
+  // on a wide screen (it scrolls on its own there), in the page on a phone. Watched again after
+  // each page, so a short page that leaves the end in sight asks for the next one too. Once a
+  // page failed, Load older asks again by hand.
+  const scroller = useRef<HTMLDivElement>(null)
+  const end = useRef<HTMLDivElement>(null)
+  const latestLoadOlder = useRef(loadOlder)
+  latestLoadOlder.current = loadOlder
+  const wide = useWide()
+  // On a wide screen the first conversation opens by itself, so the reading column is never
+  // empty; on a phone the list stays, since opening one hides it.
+  const first = items[0]?.id
+  useEffect(() => {
+    if (wide && !item && first) router.replace(href({ item: first }), { scroll: false })
+  }, [wide, item, first, href, router])
+  useEffect(() => {
+    if (!next || loadingOlder || olderError || !end.current) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void latestLoadOlder.current()
+      },
+      { root: wide ? scroller.current : null, rootMargin: '400px 0px' },
+    )
+    observer.observe(end.current)
+    return () => observer.disconnect()
+  }, [next, loadingOlder, olderError, wide])
+
   const refresh = useCallback(async () => {
     generation.current++
     setOlder(undefined)
     await Promise.all([reloadList(), reloadInboxCount()])
   }, [reloadList, reloadInboxCount])
   // Live: a mail came or changed anywhere in the list (older pages too, so they go and come
-  // back on asking), or a mailbox came in or out of the Inbox. The sidebar's count follows
+  // back on asking), a mailbox came in or out of the Inbox, or a reply to approve opened or was
+  // decided (it moves its conversation in or out of To do). The sidebar's count follows
   // the same messages by itself.
   useLive(
     (message) => {
-      if (message.type !== 'mail.updated' && message.type !== 'connections.updated') return
+      if (!reloadsInboxList(message.type)) return
       generation.current++
       setOlder(undefined)
       void reloadList()
@@ -218,165 +335,241 @@ export function InboxView() {
   )
 
   const sources = list.data?.sources ?? []
+  // The filters set, by their short name and icon (an address's own shows in its menu).
+  const chosenSource = sources.find((s) => s.id === source)
+  const chosenTeammate = teammates.find((t) => t.id === teammate)
+  const chosenProject = projects.find((p) => p.id === project)
+  // A filter kept or linked to that is no more (a mailbox taken out, a teammate or project
+  // deleted) would show an empty list: it goes.
+  const stale = {
+    ...(source && list.data && !chosenSource ? { source: null } : {}),
+    ...(teammate && teammates.length && !chosenTeammate ? { teammate: null } : {}),
+    ...(project && projects.length && !chosenProject ? { project: null } : {}),
+  }
+  const staleKey = Object.keys(stale).join()
+  useEffect(() => {
+    if (staleKey) router.replace(href(stale), { scroll: false })
+  }, [staleKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const brigade = sources.filter((s) => s.kind === 'email')
   const gmail = sources.filter((s) => s.kind === 'gmail')
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className={cn('flex flex-col gap-1', item && 'hidden lg:flex')}>
-        <h1 className="text-3xl font-extrabold tracking-tight">Inbox</h1>
-        <p className="max-w-prose text-muted-foreground">
-          Every email your mailboxes received, and where it went.
-        </p>
-      </header>
-
-      <div className={cn('flex flex-col gap-3', item && 'hidden lg:flex')}>
-        <div className="flex flex-wrap items-center gap-3">
-          <div role="group" aria-label="Status" className="flex flex-wrap gap-2">
-            {STATUSES.map((s) => (
-              <button
-                key={s.value}
-                type="button"
-                aria-pressed={status === s.value}
-                onClick={() => go({ status: s.value === 'waiting' ? null : s.value })}
-                className={cn(
-                  'inline-flex h-8 items-center rounded-full border px-3.5 text-sm font-semibold transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                  status === s.value
-                    ? 'border-transparent bg-foreground text-background'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                )}
-              >
-                {s.label}
-              </button>
-            ))}
+    <div className="flex min-w-0 lg:h-dvh">
+      <section
+        aria-label="Emails"
+        className={cn(
+          'flex w-full min-w-0 flex-col lg:w-[26rem] lg:flex-none lg:border-r xl:w-[28rem]',
+          item && 'hidden lg:flex',
+        )}
+      >
+        <header className="flex flex-col gap-3 border-b px-4 pt-6 pb-3 md:px-5">
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-2xl font-extrabold tracking-tight">Inbox</h1>
+            <span className="truncate text-sm text-muted-foreground">
+              Every email your mailboxes received
+            </span>
           </div>
-          <div className="relative min-w-48 flex-1">
+          <div className="relative">
             <Search
               aria-hidden
               className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
             />
             <Input
+              ref={searchBox}
               type="search"
               aria-label="Search"
-              placeholder="Search"
+              placeholder="Search email"
+              title="Search (/)"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-9"
+              onKeyDown={(e) => e.key === 'Escape' && setQuery('')}
+              className="h-9 pl-9"
             />
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={source || ALL} onValueChange={(v) => go({ source: v === ALL ? null : v })}>
-            <SelectTrigger aria-label="Source" className="w-full sm:w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All sources</SelectItem>
-              {brigade.length > 0 && (
-                <>
-                  <SelectSeparator />
-                  <SelectGroup>
-                    <SelectLabel>Brigade addresses</SelectLabel>
-                    {brigade.map((s) => (
-                      <SourceItem key={s.id} source={s} />
-                    ))}
-                  </SelectGroup>
-                </>
-              )}
-              {gmail.length > 0 && (
-                <>
-                  <SelectSeparator />
-                  <SelectGroup>
-                    <SelectLabel>Gmail</SelectLabel>
-                    {gmail.map((s) => (
-                      <SourceItem key={s.id} source={s} />
-                    ))}
-                  </SelectGroup>
-                </>
-              )}
-            </SelectContent>
-          </Select>
-          {teammates.length > 0 && (
+          <div
+            role="group"
+            aria-label="Status"
+            className="-mx-1 flex gap-1 overflow-x-auto px-1 [scrollbar-width:none]"
+          >
+            {STATUSES.map((s) => {
+              const count = s.value === 'waiting' && !filtered ? inboxWaiting : 0
+              return (
+                <button
+                  key={s.value}
+                  type="button"
+                  aria-pressed={status === s.value}
+                  onClick={() => go({ status: s.value === 'waiting' ? null : s.value, item: null })}
+                  className={cn(
+                    'inline-flex h-7 flex-none items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                    status === s.value
+                      ? 'bg-foreground text-background'
+                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                  )}
+                >
+                  {s.label}
+                  {count > 0 && <span className="text-xs font-normal tabular-nums">{count}</span>}
+                </button>
+              )
+            })}
+          </div>
+          <div className="-mx-1 flex flex-wrap items-center gap-1">
             <Select
-              value={teammate || ALL}
-              onValueChange={(v) => go({ teammate: v === ALL ? null : v })}
+              value={source || ALL}
+              onValueChange={(v) => go({ source: v === ALL ? null : v })}
             >
-              <SelectTrigger aria-label="Agent" className="w-full sm:w-48">
-                <SelectValue />
-              </SelectTrigger>
+              <FilterChip active={!!source} what="source" onClear={() => go({ source: null })}>
+                <SelectTrigger aria-label="Source" className={source ? CHIP : FILTER}>
+                  <SelectValue>
+                    {chosenSource ? (
+                      <>
+                        {chosenSource.teammate ? (
+                          <TeammateAvatar teammate={chosenSource.teammate} className="size-4" />
+                        ) : (
+                          <ProviderLogo kind={chosenSource.kind} className="size-4" />
+                        )}
+                        <span className="truncate">{chosenSource.label}</span>
+                      </>
+                    ) : source ? undefined : (
+                      'Sources'
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+              </FilterChip>
               <SelectContent>
-                <SelectItem value={ALL}>All agents</SelectItem>
-                <SelectSeparator />
-                {teammates.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value={ALL}>All sources</SelectItem>
+                {brigade.length > 0 && (
+                  <>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>Brigade addresses</SelectLabel>
+                      {brigade.map((s) => (
+                        <SourceItem key={s.id} source={s} />
+                      ))}
+                    </SelectGroup>
+                  </>
+                )}
+                {gmail.length > 0 && (
+                  <>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>Gmail</SelectLabel>
+                      {gmail.map((s) => (
+                        <SourceItem key={s.id} source={s} />
+                      ))}
+                    </SelectGroup>
+                  </>
+                )}
               </SelectContent>
             </Select>
-          )}
-          <ProjectSelect
-            value={project}
-            onChange={(v) => go({ project: v || null })}
-            all
-            none={false}
-            className="sm:w-48"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
-        <section
-          aria-label="Emails"
-          className={cn('flex min-w-0 flex-col gap-3', item && 'hidden lg:flex')}
-        >
-          {list.error && <p className="text-sm text-destructive-text">{list.error.message}</p>}
-          {!list.data && !list.error ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : list.data && items.length === 0 ? (
-            <section className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card px-6 py-16 text-center">
-              <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                <Mail className="size-6" aria-hidden />
-              </span>
-              <p className="max-w-md text-sm text-muted-foreground">
-                {status === 'waiting'
-                  ? 'Nothing unassigned. Every email went somewhere.'
-                  : 'No email here.'}
-              </p>
-            </section>
-          ) : (
-            items.length > 0 && (
-              <Card className="gap-0 overflow-hidden py-0">
-                <ul className="divide-y">
-                  {items.map((i) => (
-                    <li key={i.id}>
-                      <Row item={i} href={href({ item: i.id })} selected={i.id === item} />
-                    </li>
+            {teammates.length > 0 && (
+              <Select
+                value={teammate || ALL}
+                onValueChange={(v) => go({ teammate: v === ALL ? null : v })}
+              >
+                <FilterChip active={!!teammate} what="agent" onClear={() => go({ teammate: null })}>
+                  <SelectTrigger aria-label="Agent" className={teammate ? CHIP : FILTER}>
+                    <SelectValue>
+                      {chosenTeammate ? (
+                        <>
+                          <TeammateAvatar teammate={chosenTeammate} className="size-4" />
+                          <span className="truncate">{chosenTeammate.name}</span>
+                        </>
+                      ) : teammate ? undefined : (
+                        'Agents'
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                </FilterChip>
+                <SelectContent>
+                  <SelectItem value={ALL}>All agents</SelectItem>
+                  <SelectSeparator />
+                  {teammates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      <TeammateAvatar teammate={t} className="size-4" />
+                      {t.name}
+                    </SelectItem>
                   ))}
-                </ul>
-              </Card>
-            )
-          )}
-          {olderError && <p className="text-sm text-destructive-text">{olderError}</p>}
-          {next && (
-            <Button
-              variant="outline"
-              className="self-center"
-              disabled={loadingOlder}
-              onClick={() => void loadOlder()}
-            >
-              {loadingOlder ? 'Loading…' : 'Load older'}
-            </Button>
-          )}
-        </section>
+                </SelectContent>
+              </Select>
+            )}
+            {projects.length > 0 && (
+              <Select
+                value={project || ALL}
+                onValueChange={(v) => go({ project: v === ALL ? null : v })}
+              >
+                <FilterChip active={!!project} what="project" onClear={() => go({ project: null })}>
+                  <SelectTrigger aria-label="Project" className={project ? CHIP : FILTER}>
+                    <SelectValue>
+                      {chosenProject ? (
+                        <>
+                          <ProjectIcon project={chosenProject} className="size-4 text-[0.625rem]" />
+                          <span className="truncate">{chosenProject.name}</span>
+                        </>
+                      ) : project ? undefined : (
+                        'Projects'
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                </FilterChip>
+                <SelectContent>
+                  <SelectItem value={ALL}>All projects</SelectItem>
+                  <SelectSeparator />
+                  {projects
+                    .filter((p) => !p.archivedAt || p.id === project)
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <ProjectIcon project={p} className="size-4 text-[0.625rem]" />
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </header>
 
-        <section
-          aria-label="Email"
-          className={cn(
-            'min-w-0 flex-col gap-3 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto',
-            item ? 'flex' : 'hidden lg:flex',
+        <div ref={scroller} className="flex min-h-0 flex-1 flex-col lg:overflow-y-auto">
+          {list.error && (
+            <p className="px-5 py-4 text-sm text-destructive-text">{list.error.message}</p>
           )}
-        >
+          {!list.data && !list.error ? (
+            <p className="px-5 py-4 text-sm text-muted-foreground">Loading…</p>
+          ) : list.data && items.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+              <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                <Mail className="size-5" aria-hidden />
+              </span>
+              <p className="max-w-xs text-sm text-muted-foreground">{EMPTY[status]}</p>
+            </div>
+          ) : (
+            <ul className="divide-y border-b">
+              {items.map((i) => (
+                <li key={i.id}>
+                  <Row item={i} href={href({ item: i.id })} selected={i.id === item} />
+                </li>
+              ))}
+            </ul>
+          )}
+          {next && <div ref={end} aria-hidden className="h-px flex-none" />}
+          {loadingOlder && (
+            <p className="py-4 text-center text-xs text-muted-foreground">Loading…</p>
+          )}
+          {olderError && (
+            <div className="flex flex-col items-center gap-2 px-5 py-4">
+              <p className="text-sm text-destructive-text">{olderError}</p>
+              <Button variant="outline" size="sm" onClick={() => void loadOlder()}>
+                Load older
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section
+        aria-label="Email"
+        className={cn('min-w-0 flex-1 lg:overflow-y-auto', item ? 'block' : 'hidden lg:block')}
+      >
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 pt-6 pb-16 md:px-10 md:pt-8">
           {item ? (
             <>
               <Button asChild variant="ghost" size="sm" className="self-start lg:hidden">
@@ -387,12 +580,12 @@ export function InboxView() {
               <Reader key={item} id={item} onChanged={refresh} />
             </>
           ) : (
-            <p className="rounded-xl border border-dashed px-6 py-16 text-center text-sm text-muted-foreground">
+            <p className="py-24 text-center text-sm text-muted-foreground">
               Pick an email to read it.
             </p>
           )}
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
   )
 }
@@ -406,29 +599,107 @@ function SourceItem({ source }: { source: InboxSourceView }) {
   )
 }
 
+/** A screen wide enough for the Inbox's two columns (Tailwind's lg), following resizes. */
+function useWide() {
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 1024px)')
+    const update = () => setWide(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+  return wide
+}
+
+/** A sender's initial on a soft colour, the same for the same address. */
+function SenderAvatar({
+  name,
+  address,
+  className,
+}: {
+  name: string
+  address: string
+  className?: string
+}) {
+  const tones = [
+    'bg-chart-1/20',
+    'bg-chart-2/20',
+    'bg-chart-3/20',
+    'bg-chart-4/20',
+    'bg-chart-5/20',
+  ]
+  const tone = tones[[...address].reduce((sum, c) => sum + c.charCodeAt(0), 0) % tones.length]
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'flex size-9 flex-none items-center justify-center rounded-lg text-sm font-semibold text-foreground',
+        tone,
+        className,
+      )}
+    >
+      {(name || address).trim().charAt(0).toUpperCase() || '?'}
+    </span>
+  )
+}
+
+/** A conversation's next step, in a few words: what the row says under its words. */
+function NextStep({ item }: { item: InboxItem }) {
+  const trouble = item.route === 'cap' || item.route === 'loop' || item.route === 'bounce'
+  const who = item.next?.kind === 'draft' ? (item.next.teammate ?? item.teammate) : item.teammate
+  const step =
+    item.next?.kind === 'draft' ? (
+      <span className="font-semibold text-primary">Draft to approve</span>
+    ) : item.status === 'done' ? (
+      <span>Done</span>
+    ) : item.next?.kind === 'scheduled' ? (
+      <span className="inline-flex items-center gap-1">
+        <Clock aria-hidden className="size-3" />
+        Leaves {leavingLabel(item.next.at)}
+      </span>
+    ) : item.status === 'waiting' ? (
+      <span className="font-semibold text-warning">
+        {trouble ? destination(item) : 'No teammate on it'}
+      </span>
+    ) : null
+  return (
+    <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+      {item.status === 'waiting' && !item.next ? (
+        <span aria-hidden className="size-1.5 flex-none rounded-full bg-warning" />
+      ) : (
+        who && (
+          <>
+            <TeammateAvatar teammate={who} className="size-4" />
+            <span className="truncate">{who.name}</span>
+          </>
+        )
+      )}
+      {step}
+      {item.project && <span className="truncate">· {item.project.name}</span>}
+    </span>
+  )
+}
+
 function Row({ item, href, selected }: { item: InboxItem; href: string; selected: boolean }) {
-  const waiting = item.status === 'waiting'
-  const who = [item.teammate?.name, item.project?.name].filter(Boolean).join(' · ')
+  const todo = item.status === 'waiting' || item.next?.kind === 'draft'
   return (
     <Link
       href={href}
       scroll={false}
       aria-current={selected ? 'true' : undefined}
       className={cn(
-        'flex gap-3 px-4 py-3 outline-none hover:bg-secondary/50 focus-visible:bg-secondary/50',
+        'flex gap-3 px-4 py-3.5 outline-none hover:bg-secondary/50 focus-visible:bg-secondary/50 md:px-5',
         selected && 'bg-secondary hover:bg-secondary',
       )}
     >
-      <span className="flex w-2 flex-none justify-center pt-1.5" aria-hidden>
-        {waiting && <span className="size-2 rounded-full bg-primary" />}
-      </span>
-      <ProviderLogo kind={item.source.kind} className="mt-0.5 size-4 flex-none" />
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <SenderAvatar name={item.fromName} address={item.from} />
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-baseline gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm">
+          <span className={cn('min-w-0 flex-1 truncate text-sm', todo && 'font-semibold')}>
             {item.fromName || item.from}
             {item.count > 1 && (
-              <span className="ml-1.5 text-xs text-muted-foreground">
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                 {item.count}
                 <span className="sr-only"> emails</span>
               </span>
@@ -438,17 +709,13 @@ function Row({ item, href, selected }: { item: InboxItem; href: string; selected
             {timeAgo(item.at)}
           </time>
         </div>
-        <span className={cn('truncate text-sm', waiting && 'font-semibold')}>
+        <span className={cn('truncate text-sm', todo ? 'font-semibold' : 'text-foreground/90')}>
           {item.hidden ? SIGN_UP : item.subject || '(No subject)'}
-          {waiting && <span className="sr-only"> (unassigned)</span>}
         </span>
         {!item.hidden && item.snippet && (
           <span className="truncate text-sm text-muted-foreground">{item.snippet}</span>
         )}
-        <div className="mt-1 flex min-w-0 items-center gap-2">
-          <DestinationChip item={item} className="flex-none" />
-          {who && <span className="truncate text-xs text-muted-foreground">{who}</span>}
-        </div>
+        <NextStep item={item} />
       </div>
     </Link>
   )
@@ -456,8 +723,10 @@ function Row({ item, href, selected }: { item: InboxItem; href: string; selected
 
 /** One conversation, whole, and what a person can do with it. */
 function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> }) {
-  const detail = useApi<InboxDetail>(itemPath(id), ['mail.updated'])
+  const router = useRouter()
+  const detail = useApi<InboxDetail>(itemPath(id), ['mail.updated', 'tickets.updated'])
   const [handing, setHanding] = useState(false)
+  const [ruling, setRuling] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   // Earlier mails folded, as in a mail app: the latest is open.
@@ -481,83 +750,295 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
     }
   }
 
+  // Handed in one click when it can only go to one teammate and needs nothing more (Gmail's
+  // mail asks for its project first); otherwise the form opens.
+  const only = d.handTo.length === 1 ? d.handTo[0]! : null
+  const oneClick = only && d.source.kind !== 'gmail'
+  async function handToOnly() {
+    if (!only) return
+    setBusy(true)
+    setError(undefined)
+    try {
+      const { threadId } = await api<{ threadId: string }>(`${itemPath(id)}/hand`, {
+        body: { teammateId: only.id },
+      })
+      void onChanged()
+      router.push(`/app/threads/${threadId}`)
+    } catch (e) {
+      setError(message(e))
+      setBusy(false)
+    }
+  }
+
   const last = d.messages.at(-1)?.id
+  const unowned = d.status === 'waiting' && !d.thread
+  const trouble = d.route === 'cap' || d.route === 'loop' || d.route === 'bounce'
+  const state = d.reason ? 'No teammate is on it' : destination(d)
+  const about = [d.teammate && `${d.teammate.name}’s mailbox`, d.project?.name]
+    .filter(Boolean)
+    .join(' · ')
+  // Once a thread has it, handing it over starts a new thread: worth offering only when the
+  // mailbox has another teammate than the one on it.
+  const handOver = d.handTo.some((t) => t.id !== d.teammate?.id)
+  const handButton = (primary: boolean) =>
+    oneClick && unowned ? (
+      <Button size="sm" disabled={busy} onClick={() => void handToOnly()}>
+        Hand to {only.name}
+      </Button>
+    ) : (
+      <Button
+        size="sm"
+        variant={primary ? 'default' : 'ghost'}
+        className={cn(!primary && 'h-7 px-2 text-muted-foreground')}
+        aria-expanded={handing}
+        onClick={() => setHanding((h) => !h)}
+      >
+        {primary && only ? `Hand to ${only.name}` : 'Hand to…'}
+      </Button>
+    )
+  const sender = d.fromName || d.from
+  const reload = async () => {
+    await Promise.all([detail.reload(), onChanged()])
+  }
 
   return (
-    <Card className="gap-4 px-5 py-5">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-start gap-2">
-          <ProviderLogo kind={d.source.kind} className="mt-1.5 size-4 flex-none" />
-          <h2 className="min-w-0 flex-1 text-xl font-bold wrap-anywhere">
-            {d.hidden ? SIGN_UP : d.subject || '(No subject)'}
-          </h2>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          <DestinationChip item={d} />
-          {d.teammate && <span className="text-xs text-muted-foreground">{d.teammate.name}</span>}
-          {d.project && <span className="text-xs text-muted-foreground">{d.project.name}</span>}
-          <span className="text-xs text-muted-foreground">{d.to}</span>
-        </div>
-        {d.reason ? (
-          <p className="text-sm text-muted-foreground">
-            {d.reason} No teammate is on it: hand it to one, or mark it done.
-          </p>
-        ) : (
-          d.routeNote && <p className="text-sm text-muted-foreground">{d.routeNote}</p>
-        )}
-        {d.reason && d.addRule && (
-          <div className="flex flex-col items-start gap-1.5">
-            <AddRule
-              connectionId={d.addRule.connectionId}
-              projectId={d.addRule.projectId}
-              teammateId={d.addRule.teammateId}
-              reload={detail.reload}
-            />
-            <p className="text-xs text-muted-foreground">
-              A rule starts a thread for the mail that comes next, not this one.
+    <article className="flex flex-col gap-4">
+      <header className="flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <h2 className="text-2xl font-bold tracking-tight wrap-anywhere">
+              {d.hidden ? SIGN_UP : d.subject || '(No subject)'}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              with {sender} · {d.messages.length} {d.messages.length === 1 ? 'message' : 'messages'}
             </p>
           </div>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-8 flex-none"
+            disabled={busy}
+            aria-label={done ? 'Not done' : 'Done'}
+            title={done ? 'Not done' : 'Done'}
+            onClick={() => void toggleDone()}
+          >
+            {done ? <Undo2 /> : <Check />}
+          </Button>
+        </div>
+        {unowned ? (
+          // Nobody is on it: what to do with it, and with the mail that comes next, together.
+          <div
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-2.5"
+            title={d.reason ?? undefined}
+          >
+            <span aria-hidden className="size-1.5 flex-none rounded-full bg-warning" />
+            <span className={cn('min-w-0 flex-1 text-sm', trouble && 'text-warning')}>
+              {state}
+              {about && <span className="text-muted-foreground"> · {about}</span>}
+            </span>
+            <div className="flex flex-none items-center gap-1">
+              {!d.hidden && handButton(true)}
+              {d.reason && d.addRule && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-expanded={ruling}
+                  className="text-primary hover:text-primary"
+                  onClick={() => setRuling((r) => !r)}
+                >
+                  Add a rule
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+            <span
+              aria-hidden
+              className={cn(
+                'size-1.5 flex-none rounded-full',
+                trouble ? 'bg-warning' : done ? 'bg-muted-foreground/50' : 'bg-primary',
+              )}
+            />
+            {d.thread ? (
+              <Link
+                href={`/app/threads/${d.thread.id}`}
+                className="inline-flex items-center gap-0.5 font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                {state}
+                <ArrowUpRight aria-hidden className="size-3.5" />
+              </Link>
+            ) : (
+              <span className={cn(trouble ? 'text-warning' : 'text-foreground')}>{state}</span>
+            )}
+            {about && <span>· {about}</span>}
+            {!d.hidden && handOver && <span className="ml-auto">{handButton(false)}</span>}
+          </div>
         )}
-      </div>
+        {!d.reason && d.routeNote && <p className="text-xs text-muted-foreground">{d.routeNote}</p>}
+        {error && <p className="text-sm text-destructive-text">{error}</p>}
+        {handing && !d.hidden && (
+          <HandForm detail={d} onCancel={() => setHanding(false)} onHanded={onChanged} />
+        )}
+        {ruling && d.addRule && (
+          <AddRule
+            connectionId={d.addRule.connectionId}
+            projectId={d.addRule.projectId}
+            teammateId={d.addRule.teammateId}
+            reload={detail.reload}
+            onClose={() => setRuling(false)}
+          />
+        )}
+      </header>
 
-      <ol className="flex flex-col">
+      <ol className="flex flex-col gap-3">
         {d.messages.map((m) => (
-          <li key={m.id} className="border-t">
+          <li key={m.id}>
             <Message
               m={m}
-              open={m.id === last || opened.has(m.id)}
+              open={m.id === last || opened.has(m.id) || !!m.sendAt}
               onOpen={() => setOpened((o) => new Set(o).add(m.id))}
+              onChanged={reload}
             />
           </li>
         ))}
+        {d.drafts.map((draft) => (
+          <li key={draft.ticketId}>
+            <DraftCard draft={draft} thread={d.thread} onChanged={reload} />
+          </li>
+        ))}
       </ol>
+    </article>
+  )
+}
 
-      <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-        {d.thread && (
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/app/threads/${d.thread.id}`}>Open thread</Link>
-          </Button>
+/**
+ * A teammate's reply waiting for approval, in its place in the conversation: approve it now or
+ * for later, change it, or turn it down (the thread's ticket, decided as in the thread).
+ */
+function DraftCard({
+  draft,
+  thread,
+  onChanged,
+}: {
+  draft: InboxDraft
+  thread: InboxDetail['thread']
+  onChanged: () => Promise<void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+  const email = emailDraft(draft.input)
+  const teammate = draft.teammate
+  async function decide(approved: boolean, edited?: EditedEmail) {
+    setBusy(true)
+    setError(undefined)
+    try {
+      await api(`/tickets/${draft.ticketId}/resolve`, {
+        body: { approved, ...(edited ? { edited } : {}) },
+      })
+      await onChanged()
+    } catch (e) {
+      setError(message(e))
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-primary/50 bg-card px-5 py-4">
+      <div className="flex items-start gap-3">
+        {teammate ? (
+          <TeammateAvatar teammate={teammate} className="size-9" />
+        ) : (
+          <SenderAvatar name="?" address="?" />
         )}
-        {!d.hidden && (
-          <Button
-            variant="outline"
-            size="sm"
-            aria-expanded={handing}
-            onClick={() => setHanding((h) => !h)}
-          >
-            Hand to…
-          </Button>
-        )}
-        <Button variant="outline" size="sm" disabled={busy} onClick={() => void toggleDone()}>
-          {done ? <Undo2 /> : <Check />}
-          {done ? 'Not done' : 'Done'}
-        </Button>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            {teammate?.name ?? 'A teammate'}
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
+              Draft
+            </span>
+          </span>
+        </div>
+        <span className="flex-none text-xs text-muted-foreground">
+          {email?.sendAt ? `Leaves ${leavingLabel(email.sendAt)}` : 'Waiting for you'}
+        </span>
       </div>
-      {error && <p className="text-sm text-destructive-text">{error}</p>}
-      {handing && !d.hidden && (
-        <HandForm detail={d} onCancel={() => setHanding(false)} onHanded={onChanged} />
+      {/* Whom it goes to, its subject and files: all of what is approved, not only the words. */}
+      {email && (
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-sm">
+          {draftFacts(email).map(([label, value]) => (
+            <Fragment key={label}>
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className={cn('wrap-anywhere', label === 'Cc' && 'font-semibold')}>{value}</dd>
+            </Fragment>
+          ))}
+        </dl>
       )}
-    </Card>
+      {editing && email ? (
+        <EmailDraftEditor
+          draft={email}
+          onCancel={() => setEditing(false)}
+          onSend={(edited) => {
+            setEditing(false)
+            void decide(true, edited)
+          }}
+        />
+      ) : (
+        <p className="text-[15px] leading-relaxed whitespace-pre-wrap wrap-anywhere">
+          {email?.body ?? JSON.stringify(draft.input)}
+        </p>
+      )}
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+      {draft.canDecide ? (
+        !editing && (
+          <div className="flex flex-col gap-2 border-t pt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" disabled={busy} onClick={() => void decide(true)}>
+                <Check />
+                {email?.sendAt ? 'Approve' : 'Approve & send'}
+              </Button>
+              <SendLaterMenu disabled={busy} onPick={(sendAt) => void decide(true, { sendAt })} />
+              {email && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setEditing(true)}
+                >
+                  Edit
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="ml-auto text-muted-foreground"
+                disabled={busy}
+                onClick={() => void decide(false)}
+              >
+                Discard
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {email?.sendAt
+                ? 'It leaves at that time once approved, and can be cancelled until then.'
+                : 'It leaves 30 seconds after you approve it, and can be cancelled until then.'}
+            </p>
+          </div>
+        )
+      ) : (
+        <p className="border-t pt-3 text-xs text-muted-foreground">
+          Only the member who started{' '}
+          {thread ? (
+            <Link href={`/app/threads/${thread.id}`} className="underline underline-offset-4">
+              its thread
+            </Link>
+          ) : (
+            'its thread'
+          )}
+          , or an admin, can approve it.
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -569,22 +1050,74 @@ const SENT_LABEL: Record<NonNullable<InboxMessage['sent']>, string> = {
   failed: 'Not sent',
 }
 
-/** One mail of a conversation: folded to a line, or whole. */
-function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: () => void }) {
+/** A mail's time: the hour today, the day this year, else the date. The whole date shows on hover. */
+function shortDate(at: string) {
+  const date = new Date(at)
+  const now = new Date()
+  if (date.toDateString() === now.toDateString())
+    return date.toLocaleTimeString(undefined, { timeStyle: 'short' })
+  if (date.getFullYear() === now.getFullYear())
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return date.toLocaleDateString(undefined, { dateStyle: 'medium' })
+}
+
+/** One mail of a conversation, as a card: folded to a line, or whole. */
+function Message({
+  m,
+  open,
+  onOpen,
+  onChanged,
+}: {
+  m: InboxMessage
+  open: boolean
+  onOpen: () => void
+  onChanged: () => Promise<void>
+}) {
+  const { teammates } = useDashboard()
   const [quoteOpen, setQuoteOpen] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [error, setError] = useState<string>()
   const date = new Date(m.at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  const when = shortDate(m.at)
   const auth = m.authentication
   const verified = auth && (auth.dkim === 'pass' || auth.dmarc === 'pass')
   const sent = m.sent && m.sent !== 'sent' && m.sent !== 'delivered' ? SENT_LABEL[m.sent] : null
+  // Sent by a teammate: its pebble, as everywhere else.
+  const teammate =
+    m.direction === 'out' ? (teammates.find((t) => t.name === m.fromName) ?? null) : null
+  const name = m.fromName || m.from
+  const avatar = teammate ? (
+    <TeammateAvatar teammate={teammate} className="size-9" />
+  ) : (
+    <SenderAvatar name={name} address={m.from} />
+  )
+  async function cancel() {
+    setCancelling(true)
+    setError(undefined)
+    try {
+      await api(`/email/messages/${encodeURIComponent(m.id.replace(/^mail:/, ''))}/cancel`, {
+        method: 'POST',
+      })
+      await onChanged()
+    } catch (e) {
+      setError(message(e))
+    } finally {
+      setCancelling(false)
+    }
+  }
   const header = (
-    <div className="flex w-full items-baseline gap-2 text-left">
-      <span className="min-w-0 flex-1 truncate text-sm">
-        <span className="font-semibold">{m.fromName || m.from}</span>
-        {m.fromName && m.fromName !== m.from && (
-          <span className="text-muted-foreground"> &lt;{m.from}&gt;</span>
-        )}
+    <div className="flex w-full items-start gap-3 text-left">
+      {avatar}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm font-semibold" title={m.from}>
+          {name}
+        </span>
+        <span className="truncate text-xs text-muted-foreground">
+          to {m.to.join(', ')}
+          {m.cc.length > 0 && ` · Cc ${m.cc.join(', ')}`}
+        </span>
       </span>
-      {sent && (
+      {sent && !m.sendAt && (
         <span
           className={cn(
             'flex-none text-xs',
@@ -596,8 +1129,8 @@ function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: 
           {sent}
         </span>
       )}
-      <time dateTime={m.at} className="flex-none text-xs text-muted-foreground">
-        {date}
+      <time dateTime={m.at} title={date} className="flex-none text-xs text-muted-foreground">
+        {when}
       </time>
     </div>
   )
@@ -607,35 +1140,45 @@ function Message({ m, open, onOpen }: { m: InboxMessage; open: boolean; onOpen: 
       <button
         type="button"
         onClick={onOpen}
-        className="flex w-full flex-col gap-0.5 py-3 outline-none hover:bg-secondary/50 focus-visible:bg-secondary/50"
+        className="flex w-full flex-col gap-2 rounded-xl border bg-card px-5 py-3.5 outline-none hover:bg-secondary/40 focus-visible:bg-secondary/40"
       >
         {header}
-        <span className="w-full truncate text-left text-sm text-muted-foreground">
+        <span className="w-full truncate pl-12 text-left text-sm text-muted-foreground">
           {m.hidden ? SIGN_UP : m.text.replace(/\s+/g, ' ') || 'No text.'}
         </span>
       </button>
     )
 
   return (
-    <div className="flex flex-col items-start gap-2 py-4">
+    <div
+      className={cn(
+        'flex flex-col items-start gap-3 rounded-xl border bg-card px-5 py-4',
+        m.sendAt && 'border-dashed',
+      )}
+    >
       {header}
-      <p className="text-xs text-muted-foreground wrap-anywhere">
-        To {m.to.join(', ')}
-        {m.cc.length > 0 && ` · Cc ${m.cc.join(', ')}`}
-      </p>
-      {auth && (
-        <p
-          className={cn(
-            'flex items-center gap-1.5 text-xs',
-            verified ? 'text-muted-foreground' : 'text-warning',
+      {m.sendAt && (
+        <div className="flex w-full flex-wrap items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm">
+          <Clock aria-hidden className="size-4 text-muted-foreground" />
+          <span className="flex-1">Leaves {leavingLabel(m.sendAt)}</span>
+          {m.canCancel && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7"
+              disabled={cancelling}
+              onClick={() => void cancel()}
+            >
+              Cancel sending
+            </Button>
           )}
-        >
-          {verified ? (
-            <ShieldCheck aria-hidden className="size-3.5" />
-          ) : (
-            <ShieldAlert aria-hidden className="size-3.5" />
-          )}
-          {verified ? 'Verified by the mail server' : 'Not verified'}
+        </div>
+      )}
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+      {auth && !verified && (
+        <p className="flex items-center gap-1.5 text-xs text-warning">
+          <ShieldAlert aria-hidden className="size-3.5" />
+          Not verified by the mail server
         </p>
       )}
       {m.hidden ? (

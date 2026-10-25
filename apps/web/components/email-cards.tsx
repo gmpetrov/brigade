@@ -18,6 +18,7 @@ import Link from 'next/link'
 import { Fragment, useState, type ReactNode } from 'react'
 import { MessageAttachments } from '@/components/attachments'
 import { ProviderLogo } from '@/components/provider-logo'
+import { leavingLabel, SendLaterMenu } from '@/components/send-later'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
@@ -359,6 +360,8 @@ export type EmailDraft = {
   body: string
   replying: boolean
   files: string[]
+  /** Set to leave later (the Email App's sendAt). */
+  sendAt?: string
 }
 
 /** The email a tool would send (gmail_send, gmail_create_draft, Resend's send-email), if it is one. */
@@ -378,6 +381,7 @@ export function emailDraft(input: unknown): EmailDraft | null {
       typeof i.inReplyTo === 'string' ||
       typeof i.replyTo === 'string',
     files: strings(i.attachments).map((path) => path.split('/').pop() ?? path),
+    ...(typeof i.sendAt === 'string' ? { sendAt: i.sendAt } : {}),
   }
 }
 
@@ -425,12 +429,17 @@ export function EmailDraftView({
         {draft.body}
       </p>
       {draft.files.length > 0 && <Line label="Files">{draft.files.join(', ')}</Line>}
+      {draft.sendAt && <Line label="Leaves">{leavingLabel(draft.sendAt)}</Line>}
     </div>
   )
 }
 
-/** What a person changed in an email's draft before approving it (the Email App's email_send). */
-export type EditedEmail = { to: string[]; cc: string[]; subject: string; text: string }
+/**
+ * What a person changed in an email's draft before approving it (the Email App's email_send):
+ * its recipients and words, or only when it leaves (sendAt, ISO 8601).
+ */
+export type EditedEmail =
+  { to: string[]; cc: string[]; subject: string; text: string } | { sendAt: string }
 
 const list = (value: string) =>
   value
@@ -523,10 +532,12 @@ export function EditableEmailPreview({
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <EmailDraftView draft={draft} />
-      <div>
+      <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
           Edit before allowing
         </Button>
+        {/* Allowed now, it leaves then. */}
+        <SendLaterMenu onPick={(sendAt) => onAllow({ sendAt })} />
       </div>
     </div>
   )

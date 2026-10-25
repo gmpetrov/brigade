@@ -1,6 +1,8 @@
 // Mail a thread sends from Brigade's own addresses: checked before anyone is asked, sent through
-// Resend 30 seconds later (the window to cancel it), followed through Resend's events (sent,
-// delivered, bounced), and its conversation watched so a reply wakes the thread.
+// Resend 30 seconds later (the window to cancel it) or at the time it was set to leave, followed
+// through Resend's events (sent, delivered, bounced), and its conversation watched so a reply
+// wakes the thread.
+import { SEND_LATER_MAX_DAYS } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { attachmentKey, presignGet } from '../bucket.js'
@@ -33,7 +35,13 @@ export type Draft = {
   newRecipients?: boolean
   /** Ids of the files the teammate uploaded with the call. */
   attachments?: string[]
+  /** When it leaves, if later than its window to cancel: Resend holds it until then. */
+  sendAt?: Date
 }
+
+/** When a mail leaves: in its window to cancel it, or later when it was set to. */
+export const leavingAt = (draft: Pick<Draft, 'sendAt'>, now = Date.now()) =>
+  new Date(Math.max(now + UNDO_SECONDS * 1000, draft.sendAt?.getTime() ?? 0))
 
 export type SendingThread = {
   id: string
@@ -71,6 +79,8 @@ export async function checkDraft(
     return `An email goes to ${RECIPIENTS_MAX} recipients at most`
   if ((draft.attachments?.length ?? 0) > FILES_MAX)
     return `An email carries ${FILES_MAX} files at most`
+  if (draft.sendAt && draft.sendAt.getTime() > Date.now() + SEND_LATER_MAX_DAYS * 86_400_000)
+    return `An email can be set to leave up to ${SEND_LATER_MAX_DAYS} days ahead`
   const secret = secretIn(`${draft.subject}\n${draft.text}`)
   if (secret)
     return `The email holds what looks like ${secret}. Never mail a secret: remove it, or ask the person to send it themselves.`
@@ -180,7 +190,7 @@ export async function sendDraft(
       ).url,
     })),
   )
-  const sendAt = new Date(Date.now() + UNDO_SECONDS * 1000)
+  const sendAt = leavingAt(draft)
   const row = await db.mailMessage.create({
     data: {
       addressId: address.id,
@@ -246,14 +256,20 @@ export async function sendDraft(
   // A reply in its conversation wakes this thread (a person's thread or a child); a rule's
   // thread follows its conversation already.
   const watch = address.connectionId
-    ? await watchReplies(db, scope, {
-        session: thread,
-        teammateId: input.teammateId,
-        connectionId: address.connectionId,
-        conversationKey: conversationId,
-        to: draft.to,
-        subject,
-      })
+    ? await watchReplies(
+        db,
+        scope,
+        {
+          session: thread,
+          teammateId: input.teammateId,
+          connectionId: address.connectionId,
+          conversationKey: conversationId,
+          to: draft.to,
+          subject,
+        },
+        // From when it leaves: one set for next week is followed the days after it.
+        sendAt,
+      )
     : null
   return { id: row.id, sendAt, conversationId, watch, from }
 }

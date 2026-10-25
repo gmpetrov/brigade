@@ -2,6 +2,7 @@
 // address: an agent's (riley@, used by each thread from its project's variant, riley.<project>@)
 // or a project's inbox. Its mail is in Brigade's database, so its tools read it there; sending
 // goes through Resend with Brigade's key. A thread only ever touches its own variant's box.
+import { SEND_LATER_MAX_DAYS } from '@brigade/contracts'
 import { z } from 'zod'
 import { prisma, scoped, type ScopedDb } from '../db.js'
 import { boxKey, newAlias, senderOfBox, variantLocal } from '../mail/addresses.js'
@@ -159,6 +160,13 @@ const Send = z.object({
     .describe(
       'Files on your computer to attach: paths, absolute or relative to your working folder',
     ),
+  sendAt: z
+    .string()
+    .datetime({ offset: true })
+    .optional()
+    .describe(
+      `When it leaves, ISO 8601 with its offset (2026-11-02T09:00:00+01:00), up to ${SEND_LATER_MAX_DAYS} days ahead, for "send it Monday at 9". Omit to send now. It can be cancelled until then.`,
+    ),
 })
 
 async function draftOf(db: ScopedDb, input: z.infer<typeof Send>): Promise<Draft> {
@@ -170,6 +178,7 @@ async function draftOf(db: ScopedDb, input: z.infer<typeof Send>): Promise<Draft
     ...(input.replyTo ? { replyTo: input.replyTo } : {}),
     ...(input.newRecipients ? { newRecipients: true } : {}),
     ...(input.attachments?.length ? { attachments: input.attachments } : {}),
+    ...(input.sendAt ? { sendAt: new Date(input.sendAt) } : {}),
   }
 }
 
@@ -522,8 +531,8 @@ export const email: ConnectorDefinition = {
     }),
     email_send: op({
       description:
-        `Send an email from this thread's address, or a reply with replyTo. It leaves ${UNDO_SECONDS} seconds later: ` +
-        'until then a person can cancel it in the thread, or you with email_cancel. An email to anyone outside the ' +
+        `Send an email from this thread's address, or a reply with replyTo. It leaves ${UNDO_SECONDS} seconds later, or at sendAt: ` +
+        'until then a person can cancel it in the thread or the Inbox, or you with email_cancel. An email to anyone outside the ' +
         'workspace waits for a person to approve it, unless your settings let it go. Never put a secret in an email.',
       write: true,
       input: Send,
@@ -567,7 +576,7 @@ export const email: ConnectorDefinition = {
       },
     }),
     email_cancel: op({
-      description: `Cancel an email sent from this thread in the last ${UNDO_SECONDS} seconds, before it leaves.`,
+      description: `Cancel an email sent from this thread before it leaves: in its first ${UNDO_SECONDS} seconds, or until the time it was set to leave (sendAt).`,
       write: false,
       input: z.object({ id: z.string() }),
       target: (i) => `email ${i.id}`,

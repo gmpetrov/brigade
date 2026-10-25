@@ -1547,3 +1547,156 @@ describe('taking a file in while another copy of it is under way', { skip }, () 
     assert.equal(await prisma.attachment.findFirst({ where: { id: stuck.id } }), null)
   })
 })
+
+describe('what comes next: a reply to approve, a reply set for later', { skip }, () => {
+  before(async () => {
+    computerFor ??= (
+      await prisma.computer.create({
+        data: { ...scope, kind: 'member_machine', memberId: members[0]!, name: 'Laptop' },
+      })
+    ).id
+  })
+
+  /** Riley's email_send waiting for approval in its thread, answering `replyTo`. */
+  const draft = (sessionId: string, replyTo: string, extra: Record<string, unknown> = {}) =>
+    prisma.ticket.create({
+      data: {
+        ...scope,
+        sessionId,
+        type: 'approval',
+        title: 'Riley: email send',
+        payload: {
+          connectionId: agent.connectionId,
+          operation: 'email_send',
+          target: 'email to client@outside.test',
+          input: {
+            to: ['client@outside.test'],
+            subject: '',
+            text: 'Here you go.',
+            replyTo,
+            ...extra,
+          },
+        },
+      },
+    })
+
+  test('a reply to approve is To do for whoever may decide it, and with the teammate for others', async () => {
+    const db = scoped(scope)
+    // Ada started the thread; Bob is a member who did not.
+    const asked = await thread(riley.id)
+    // The newest, so on the first page whatever the earlier tests left.
+    const received = await mail(agent, {
+      route: 'conversation',
+      sessionId: asked.id,
+      receivedAt: new Date(),
+    })
+    const ticket = await draft(asked.id, received.id, { sendAt: '2026-11-02T09:00:00+01:00' })
+    const item = `mail:${received.id}`
+    const list = (who: 0 | 1, status: 'waiting' | 'handled') =>
+      inbox.listInbox(db, as(who), { status }).then((r) => r.items.find((i) => i.id === item))
+
+    const ada = await list(0, 'waiting')
+    assert.deepEqual(ada?.next, {
+      kind: 'draft',
+      ticketId: ticket.id,
+      teammate: { id: riley.id, name: 'Riley' },
+    })
+    assert.equal(await list(0, 'handled'), undefined)
+    assert.equal(await list(1, 'waiting'), undefined)
+    assert.equal((await list(1, 'handled'))?.next?.kind, 'draft')
+
+    const forAda = await inbox.readItem(db, as(0), item)
+    assert.equal(forAda.drafts.length, 1)
+    assert.equal(forAda.drafts[0]!.canDecide, true)
+    assert.equal(forAda.drafts[0]!.input.sendAt, '2026-11-02T09:00:00+01:00')
+    assert.equal((await inbox.readItem(db, as(1), item)).drafts[0]!.canDecide, false)
+
+    // Counted beside Inbox for Ada, until it is decided.
+    const before = await inbox.waitingCount(db, as(0))
+    await prisma.ticket.update({ where: { id: ticket.id }, data: { status: 'approved' } })
+    assert.equal(await inbox.waitingCount(db, as(0)), before - 1)
+    assert.equal((await list(0, 'handled'))?.next, null)
+  })
+
+  test('a draft answering another conversation, or another call, is not this one’s', async () => {
+    const db = scoped(scope)
+    const asked = await thread(riley.id)
+    const here = await mail(agent, { route: 'conversation', sessionId: asked.id })
+    const elsewhere = await mail(agent)
+    await draft(asked.id, elsewhere.id)
+    await prisma.ticket.create({
+      data: {
+        ...scope,
+        sessionId: asked.id,
+        type: 'approval',
+        title: 'Riley: a payment',
+        payload: { operation: 'stripe_refund', input: { replyTo: here.id } },
+      },
+    })
+    const detail = await inbox.readItem(db, as(0), `mail:${here.id}`)
+    assert.deepEqual(detail.drafts, [])
+    assert.equal(detail.next, null)
+  })
+
+  test('a reply set for later shows when it leaves, under Scheduled, and its thread may cancel it', async () => {
+    const db = scoped(scope)
+    const asked = await thread(riley.id)
+    const received = await mail(agent, {
+      route: 'conversation',
+      sessionId: asked.id,
+      receivedAt: new Date(),
+    })
+    const at = new Date(Date.now() + 3 * 86_400_000)
+    const leaving = await prisma.mailMessage.create({
+      data: {
+        ...scope,
+        addressId: agent.id,
+        box: received.box,
+        direction: 'out',
+        status: 'scheduled',
+        conversationId: received.conversationId,
+        fromAddress: `riley-inbox-${id}@mails.brigade.test`,
+        fromName: 'Riley',
+        to: ['client@outside.test'],
+        subject: 'Re: later',
+        text: 'On Monday.',
+        sessionId: asked.id,
+        teammateId: riley.id,
+        sendAt: at,
+      } as never,
+    })
+    // One in its 30 seconds to cancel is not one set for later.
+    const now = await mail(agent, { route: 'conversation', sessionId: asked.id })
+    await prisma.mailMessage.create({
+      data: {
+        ...scope,
+        addressId: agent.id,
+        box: now.box,
+        direction: 'out',
+        status: 'scheduled',
+        conversationId: now.conversationId,
+        fromAddress: 'riley@x.test',
+        to: ['client@outside.test'],
+        sessionId: asked.id,
+        sendAt: new Date(Date.now() + 20_000),
+      } as never,
+    })
+    const scheduled = await inbox.listInbox(db, as(0), { status: 'scheduled' })
+    const row = scheduled.items.find((i) => i.id === `mail:${received.id}`)
+    assert.deepEqual(row?.next, {
+      kind: 'scheduled',
+      id: `mail:${leaving.id}`,
+      at: at.toISOString(),
+    })
+    assert.ok(!scheduled.items.some((i) => i.id === `mail:${now.id}`))
+
+    const message = (who: 0 | 1) =>
+      inbox
+        .readItem(db, as(who), `mail:${received.id}`)
+        .then((d) => d.messages.find((m) => m.id === `mail:${leaving.id}`)!)
+    assert.equal((await message(0)).sendAt, at.toISOString())
+    assert.equal((await message(0)).canCancel, true)
+    // Bob may not prompt Ada's thread, so may not cancel what it sends.
+    assert.equal((await message(1)).canCancel, false)
+  })
+})

@@ -7,6 +7,28 @@ import type { MailRoute } from './email.js'
 /** waiting: nobody took it and no person marked it done. handled: a thread has it. */
 export type InboxStatus = 'waiting' | 'handled' | 'done'
 
+/**
+ * What comes next in a conversation, shown on its row: a teammate's reply waiting for this
+ * member's approval (an email_send ticket they may decide), or a reply set to leave later.
+ */
+export type InboxNext =
+  | { kind: 'draft'; ticketId: string; teammate: { id: string; name: string } | null }
+  | { kind: 'scheduled'; id: string; at: string }
+
+/** A teammate's reply in the conversation, waiting for a person to approve it. */
+export type InboxDraft = {
+  ticketId: string
+  teammate: { id: string; name: string } | null
+  /** email_send's arguments: to, cc, subject, text, replyTo, sendAt… */
+  input: Record<string, unknown>
+  /** The thread's starter or an admin: the others see it, but cannot decide. */
+  canDecide: boolean
+  at: string
+}
+
+/** How far ahead an email can be set to leave (Resend schedules up to 30 days). */
+export const SEND_LATER_MAX_DAYS = 30
+
 /** A conversation, as its latest received mail shows it. */
 export type InboxItem = {
   /**
@@ -35,6 +57,7 @@ export type InboxItem = {
   hidden: boolean
   /** Its mails, received and sent. */
   count: number
+  next: InboxNext | null
 }
 
 /** One mail of a conversation. */
@@ -56,6 +79,9 @@ export type InboxMessage = {
   authentication: { spf?: string; dkim?: string; dmarc?: string } | null
   /** Sent mail: where it is. */
   sent: 'scheduled' | 'sent' | 'delivered' | 'bounced' | 'failed' | null
+  /** Sent mail still to leave: when it does, and whether this member may cancel it. */
+  sendAt: string | null
+  canCancel: boolean
   hidden: boolean
 }
 
@@ -73,6 +99,8 @@ export type InboxDetail = InboxItem & {
   /** The teammates it can be handed to: those given its mailbox. */
   handTo: { id: string; name: string }[]
   doneAt: string | null
+  /** Its teammates' replies waiting for approval, oldest first. */
+  drafts: InboxDraft[]
 }
 
 export type InboxSourceView = {
@@ -88,7 +116,11 @@ export const InboxQuery = z.object({
   source: z.string().max(200).optional(),
   teammate: z.string().max(100).optional(),
   project: z.string().max(100).optional(),
-  status: z.enum(['waiting', 'handled', 'done', 'all']).optional(),
+  /**
+   * waiting: to do (nobody took it, or a reply waits for this member's approval); handled: with
+   * a teammate; scheduled: a reply set to leave later; done; all.
+   */
+  status: z.enum(['waiting', 'handled', 'scheduled', 'done', 'all']).optional(),
   q: z.string().max(200).optional(),
   /** The previous page's next. */
   before: z.string().max(200).optional(),

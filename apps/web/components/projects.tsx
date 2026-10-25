@@ -120,7 +120,11 @@ export function ProjectSelect({
   const shown = projects.filter((p) => !p.archivedAt || p.id === value)
   return (
     <Select value={value || 'all'} onValueChange={(v) => onChange(v === 'all' ? '' : v)}>
-      <SelectTrigger id={id} className={cn('w-full sm:w-56', className)}>
+      <SelectTrigger
+        id={id}
+        aria-label={id ? undefined : 'Project'}
+        className={cn('w-full sm:w-56', className)}
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
