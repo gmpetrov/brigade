@@ -206,6 +206,7 @@ model Workspace {
   teammates             Teammate[]
   sessions              Session[]
   sessionEvents         SessionEvent[]
+  tokenUsage            TokenUsage[]
   threadSeats           ThreadTeammate[]
   accounts              Account[]
   comments              Comment[]
@@ -531,6 +532,7 @@ model Session {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   events               SessionEvent[]
+  tokenUsage           TokenUsage[]
   /// Every teammate in the thread, the starting one (teammateId) included.
   teammates            ThreadTeammate[]
   comments             Comment[]
@@ -801,6 +803,46 @@ model SessionEvent {
   @@index([workspaceId, at])
   /// Thread lists count each thread's messages and answers by type.
   @@index([sessionId, type])
+}
+
+/// What a harness spent for the workspace, in tokens: one row per stream of a teammate's turn
+/// (its usage.updated event, by seq) and per run outside a turn (memory, title, a project's
+/// brief, an image). Counts only, never what was said (src/usage.ts, Settings › Usage).
+/// Who and what it was for are copied in when it is stored: a thread deleted later keeps
+/// its tokens in the totals.
+model TokenUsage {
+  id               String    @id @default(cuid())
+  organizationId   String
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId        String?
+  session          Session?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  /// The thread's usage.updated event it was stored from; null for a run outside a turn.
+  seq              Int?
+  teammateId       String?
+  /// The account that spent it, and the member it belongs to.
+  accountId        String?
+  memberId         String?
+  projectId        String?
+  /// The routine whose run it was.
+  scheduleId       String?
+  provider         Harness
+  /// As the harness named it; null when it did not say.
+  model            String?
+  /// What asked for it (UsageSource): member, trigger, schedule, child, review, playbook,
+  /// or a run outside a turn: memory, tidy, title, brief, image.
+  source           String
+  /// All input, the cache's reads and writes included.
+  inputTokens      Int       @default(0)
+  cacheReadTokens  Int       @default(0)
+  cacheWriteTokens Int       @default(0)
+  outputTokens     Int       @default(0)
+  reasoningTokens  Int       @default(0)
+  at               DateTime
+  createdAt        DateTime  @default(now())
+
+  @@unique([sessionId, seq])
+  @@index([workspaceId, at])
 }
 
 // ---------------------------------------------------------------------------

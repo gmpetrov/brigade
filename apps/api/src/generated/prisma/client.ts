@@ -175,6 +175,15 @@ export type ThreadTeammate = Prisma.ThreadTeammateModel
  */
 export type SessionEvent = Prisma.SessionEventModel
 /**
+ * Model TokenUsage
+ * What a harness spent for the workspace, in tokens: one row per stream of a teammate's turn
+ * (its usage.updated event, by seq) and per run outside a turn (memory, title, a project's
+ * brief, an image). Counts only, never what was said (src/usage.ts, Settings › Usage).
+ * Who and what it was for are copied in when it is stored: a thread deleted later keeps
+ * its tokens in the totals.
+ */
+export type TokenUsage = Prisma.TokenUsageModel
+/**
  * Model Account
  * One harness login of one member on one computer. Never the credential.
  */
