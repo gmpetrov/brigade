@@ -622,10 +622,12 @@ export type MailAddressCreateNestedOneWithoutMessagesInput = {
   connect?: Prisma.MailAddressWhereUniqueInput
 }
 
-export type MailAddressUpdateOneRequiredWithoutMessagesNestedInput = {
+export type MailAddressUpdateOneWithoutMessagesNestedInput = {
   create?: Prisma.XOR<Prisma.MailAddressCreateWithoutMessagesInput, Prisma.MailAddressUncheckedCreateWithoutMessagesInput>
   connectOrCreate?: Prisma.MailAddressCreateOrConnectWithoutMessagesInput
   upsert?: Prisma.MailAddressUpsertWithoutMessagesInput
+  disconnect?: Prisma.MailAddressWhereInput | boolean
+  delete?: Prisma.MailAddressWhereInput | boolean
   connect?: Prisma.MailAddressWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.MailAddressUpdateToOneWithWhereWithoutMessagesInput, Prisma.MailAddressUpdateWithoutMessagesInput>, Prisma.MailAddressUncheckedUpdateWithoutMessagesInput>
 }

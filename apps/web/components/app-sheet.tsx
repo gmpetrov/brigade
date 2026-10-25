@@ -18,6 +18,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -537,7 +538,7 @@ function Account({
   const owner = mine ? 'you' : (data.members[c.createdByMemberId] ?? 'a former member')
   const [open, setOpen] = useState<'teammates' | 'log' | 'triggers'>()
 
-  async function update(body: { reach: Connection['reach'] }) {
+  async function update(body: { reach?: Connection['reach']; inbox?: boolean }) {
     try {
       await api(`/connections/${c.id}`, { method: 'PATCH', body })
       await reload()
@@ -666,6 +667,24 @@ function Account({
                     In every thread
                   </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
+              </>
+            )}
+            {/* A shared mailbox's mail in the Inbox, for everyone: its owner's or an admin's choice. */}
+            {c.kind === 'gmail' && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={c.inbox && c.reach === 'workspace'}
+                  disabled={!manages || c.reach !== 'workspace'}
+                  onCheckedChange={(inbox) => void update({ inbox: inbox === true })}
+                  title={
+                    c.reach === 'workspace'
+                      ? 'Everyone in the workspace sees its mail in the Inbox'
+                      : 'Share it with every thread first'
+                  }
+                >
+                  Show in the Inbox
+                </DropdownMenuCheckboxItem>
               </>
             )}
             {manages && !custom && (

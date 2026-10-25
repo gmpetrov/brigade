@@ -277,7 +277,9 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   own addresses on Brigade's mail domain, received and sent through Resend: `riley@`, `riley.<project>@` per project,
   sign-up addresses for one thread, and projects' inboxes that a company's own address is forwarded to. Names are
   unique across Brigade and never given again. Each mail goes to one place: a thread waiting on it, its conversation's
-  thread, a member's request, the address's first matching rule, or its box for 30 days.
+  thread, a member's request, the address's first matching rule, or its box for 30 days. The Inbox (`src/inbox.ts`, `/app/inbox`)
+  lists every mailbox's mail across agents, projects and sources (Brigade's addresses, Gmail), with where each went,
+  and lets a person mark one done or hand it to a teammate.
 - **Projects** (`apps/api/src/projects.ts`, `routes/projects.ts`, design in `docs/projects.md`). A project
   groups a workspace's work: threads, tasks, schedules and triggers carry a `projectId`; it owns a library folder
   and links repositories by `owner/name`. Everything else stays shared. A thread in a project gets its brief,

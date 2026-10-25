@@ -12,7 +12,7 @@ import type { Sender } from './identity.js'
 type Row = {
   id: string
   resendId: string | null
-  addressId: string
+  addressId: string | null
   projectId: string | null
   subject: string
   text: string

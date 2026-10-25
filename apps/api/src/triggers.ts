@@ -30,7 +30,8 @@ export const findTrigger = (pathToken: string) =>
 
 export type Delivery =
   | { ok: true; threadId: string; paused: boolean }
-  | { duplicate: true }
+  /** Seen before: the thread it went to then, if it went to one. */
+  | { duplicate: true; threadId?: string }
   /** A playbook's trigger while the playbook is not active: the event starts nothing. */
   | { skipped: string }
   /** A mailbox's rule past its threads for the day: the mail stays in its box, a person is told. */
@@ -75,7 +76,13 @@ export async function deliver(
         data: { path: ['eventId'], equals: event.eventId },
       },
     })
-    if (seen) return { duplicate: true }
+    if (seen) {
+      const { threadId, outcome } = (seen.data ?? {}) as { threadId?: string; outcome?: string }
+      // Unless that thread is gone since (deleted): then it went nowhere that still is.
+      const went =
+        threadId && outcome !== 'loop' && (await db.session.count({ where: { id: threadId } }))
+      return { duplicate: true, ...(went ? { threadId } : {}) }
+    }
   }
 
   const failed = async (message: string): Promise<Delivery> => {
@@ -405,8 +412,15 @@ export async function dispatch(
         return { started, failed, threadId: delivery.threadId, triggerId: trigger.id }
       if ('capped' in delivery)
         return { started, failed, capped: delivery.capped, triggerId: trigger.id }
-      if ('duplicate' in delivery || 'error' in delivery)
-        return { started, failed, triggerId: trigger.id }
+      // Seen before (the reader read it again): where it went then.
+      if ('duplicate' in delivery)
+        return {
+          started,
+          failed,
+          triggerId: trigger.id,
+          ...(delivery.threadId ? { threadId: delivery.threadId } : {}),
+        }
+      if ('error' in delivery) return { started, failed, triggerId: trigger.id }
     }
   }
   return { started, failed }

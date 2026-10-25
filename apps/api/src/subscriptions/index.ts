@@ -10,6 +10,7 @@ import { SubscribeError, type Target } from './common.js'
 import { gmailPush, readInbox, retryAt as gmailRetries, syncGmail } from './gmail.js'
 import { readCalendar, retryAt as calendarRetries, syncCalendar } from './google-calendar.js'
 import { syncStripe } from './stripe.js'
+import { inInbox } from '../mail/gmail-inbox.js'
 
 export { SubscribeError }
 
@@ -57,7 +58,10 @@ export async function syncConnection(
     connection: connection as Target['connection'],
     triggers,
     awaitingReplies:
-      !options.removing && connection.kind === 'gmail' && (await awaitingReplies(db, connectionId)),
+      !options.removing &&
+      connection.kind === 'gmail' &&
+      // A shared account is read for the Inbox too (src/mail/gmail-inbox.ts).
+      (inInbox(connection) || (await awaitingReplies(db, connectionId))),
   }
   if (connection.kind === 'stripe') await syncStripe(target)
   else if (connection.kind === 'gmail') await syncGmail(target)
@@ -68,13 +72,36 @@ export async function syncConnection(
 /** Whether a Gmail connection's inbox still has a trigger or an awaited reply to read for. */
 async function listened(scope: Scope, connectionId: string) {
   const db = scoped(scope)
+  const connection = await db.connection.findFirst({
+    where: { id: connectionId },
+    select: { kind: true, reach: true, inbox: true },
+  })
   return (
+    (connection ? inInbox(connection) : false) ||
     (await db.trigger.count({ where: { connectionId, teammate: { archivedAt: null } } })) > 0 ||
     (await awaitingReplies(db, connectionId))
   )
 }
 
 async function tick() {
+  // A Gmail account put in the Inbox with nothing reading it yet: subscribed, so its mail
+  // reaches the Inbox.
+  const unread = await prisma.connection.findMany({
+    where: {
+      kind: 'gmail',
+      status: 'active',
+      reach: 'workspace',
+      inbox: true,
+      subscriptions: { none: {} },
+    },
+    select: { id: true, organizationId: true, workspaceId: true },
+    take: 20,
+  })
+  for (const c of unread)
+    await syncConnection(
+      { organizationId: c.organizationId, workspaceId: c.workspaceId },
+      c.id,
+    ).catch((error) => console.warn(`inbox: ${c.id} not subscribed`, error))
   const subs = await prisma.subscription.findMany({
     where: { connection: { status: 'active' } },
     include: { connection: { select: { kind: true } } },

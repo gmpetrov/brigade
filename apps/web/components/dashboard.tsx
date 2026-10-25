@@ -12,6 +12,7 @@ import {
   KeyRound,
   Library,
   LogOut,
+  Mail,
   Moon,
   Monitor,
   Plug,
@@ -120,6 +121,8 @@ type Dashboard = {
   /** Archived ones included; the sidebar and pickers leave them out. */
   projects: ProjectSummary[]
   reloadProjects: () => Promise<void>
+  /** Count again the Inbox's mail waiting, beside Inbox in the sidebar. */
+  reloadInboxCount: () => Promise<void>
 }
 const DashboardContext = createContext<Dashboard | null>(null)
 
@@ -137,6 +140,7 @@ export { isAdmin }
 /** The work: what projects group. */
 const WORK_NAV = [
   { href: '/app', label: 'Home', icon: House },
+  { href: '/app/inbox', label: 'Inbox', icon: Mail },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },
@@ -249,6 +253,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Pull requests waiting on a person: with the tickets, what Home's Waiting on you counts.
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention')
   const reloadPulls = pulls.reload
+  // Mail nobody took, beside Inbox: every minute and when the window comes back, too.
+  const inboxCount = useApi<{ waiting: number }>('/inbox/count')
+  const reloadInboxCount = inboxCount.reload
+  useEffect(() => {
+    const timer = window.setInterval(() => void reloadInboxCount(), 60_000)
+    const onFocus = () => void reloadInboxCount()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [reloadInboxCount])
   // The member's AI accounts, for the avatar menu's usage: fresh each time it opens.
   const accounts = useApi<Account[]>('/accounts')
   const reloadAccounts = accounts.reload
@@ -266,7 +282,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     void reloadTickets()
     void reloadTasks()
     void reloadPulls()
-  }, [pathname, reloadTickets, reloadTasks, reloadPulls])
+    void reloadInboxCount()
+  }, [pathname, reloadTickets, reloadTasks, reloadPulls, reloadInboxCount])
   // And live: a task's column follows its thread's status and open tickets.
   useLive((message) => {
     if (message.type === 'projects.updated') void reloadProjects()
@@ -362,7 +379,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     reloadTeammates: teammates.reload,
     projects: projects.data ?? [],
     reloadProjects,
+    reloadInboxCount,
   }
+  const inboxWaiting = inboxCount.data?.waiting ?? 0
   if (alone)
     return <DashboardContext.Provider value={dashboard}>{children}</DashboardContext.Provider>
 
@@ -454,6 +473,26 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                               className="bg-warning/15 text-warning ml-auto shrink-0 rounded-full px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums"
                             >
                               {waitingOnYou}
+                            </span>
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip="Inbox"
+                        isActive={pathname.startsWith('/app/inbox')}
+                      >
+                        <Link href="/app/inbox">
+                          <Mail />
+                          <span>Inbox</span>
+                          {inboxWaiting > 0 && (
+                            <span
+                              title={`${inboxWaiting} ${inboxWaiting === 1 ? 'email' : 'emails'} waiting`}
+                              className="bg-primary/15 text-primary ml-auto shrink-0 rounded-full px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums"
+                            >
+                              {inboxWaiting}
                             </span>
                           )}
                         </Link>

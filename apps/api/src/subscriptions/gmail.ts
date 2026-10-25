@@ -11,6 +11,7 @@ import { json } from '../connectors/types.js'
 import { prisma, scoped, type Scope } from '../db.js'
 import { automatic, bounced, wakeOnReply } from '../replies.js'
 import { dispatch } from '../triggers.js'
+import { inInbox, keepGmail } from '../mail/gmail-inbox.js'
 import { reachable, serially, type Target } from './common.js'
 
 const RESOURCE = 'inbox'
@@ -120,6 +121,8 @@ export const readInbox = (subscriptionId: string) =>
 
     // Without triggers, only the conversations threads wait on a reply in are read. Looked up
     // after each page of history, so that a watch started while it was asked for is in it.
+    // A shared account's mail is all read: the Inbox keeps it (src/mail/gmail-inbox.ts).
+    const listed = inInbox(sub.connection)
     const listeners = async () => ({
       triggered: await db.trigger.count({
         where: { connectionId: sub.connectionId, teammate: { archivedAt: null } },
@@ -156,7 +159,8 @@ export const readInbox = (subscriptionId: string) =>
           for (const { message } of record.messagesAdded ?? []) {
             // The mailbox's own mail, e.g. a teammate's reply to itself, starts nothing.
             if (message.labelIds?.some((l) => l === 'SENT' || l === 'DRAFT')) continue
-            if (!triggered && !(message.threadId && awaited.has(message.threadId))) continue
+            if (!triggered && !listed && !(message.threadId && awaited.has(message.threadId)))
+              continue
             if (read >= PER_READ) {
               await save({ cursor })
               // Pushes come only for new changes: read the rest now.
@@ -179,17 +183,40 @@ export const readInbox = (subscriptionId: string) =>
             if (
               (!automatic(email.payload?.headers) || bounce) &&
               (await wakeOnReply(sub.connection, payload, new Date(), bounce))
-            )
+            ) {
+              // The thread it woke (on a read again too): its wake-up says, not the watches.
+              const woken = await db.wakeup.findFirst({
+                where: { sourceId: `gmail:${payload.id}`, kind: 'reply' },
+                orderBy: { createdAt: 'desc' },
+                select: { sessionId: true },
+              })
+              await keepGmail(sub.connection, payload, {
+                route: 'awaited',
+                ...(woken ? { sessionId: woken.sessionId } : {}),
+              })
               continue
-            const { failed } = await dispatch(sub.connection, {
+            }
+            const delivered = await dispatch(sub.connection, {
               id: email.id,
               type: 'email',
               payload,
             })
-            if (failed) {
+            if (delivered.failed) {
               retryAt.set(sub.id, Date.now() + RETRY_MS)
               return save({ cursor })
             }
+            await keepGmail(
+              sub.connection,
+              payload,
+              delivered.threadId
+                ? { route: 'rule', sessionId: delivered.threadId, triggerId: delivered.triggerId! }
+                : delivered.capped
+                  ? {
+                      route: 'cap',
+                      ...(delivered.triggerId ? { triggerId: delivered.triggerId } : {}),
+                    }
+                  : { route: 'box' },
+            )
           }
           cursor = record.id
         }

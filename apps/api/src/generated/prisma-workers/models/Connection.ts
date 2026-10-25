@@ -30,6 +30,7 @@ export type ConnectionMinAggregateOutputType = {
   workspaceId: string | null
   appId: string | null
   reach: $Enums.ConnectionReach | null
+  inbox: boolean | null
   kind: $Enums.ConnectorKind | null
   label: string | null
   externalAccount: string | null
@@ -48,6 +49,7 @@ export type ConnectionMaxAggregateOutputType = {
   workspaceId: string | null
   appId: string | null
   reach: $Enums.ConnectionReach | null
+  inbox: boolean | null
   kind: $Enums.ConnectorKind | null
   label: string | null
   externalAccount: string | null
@@ -66,6 +68,7 @@ export type ConnectionCountAggregateOutputType = {
   workspaceId: number
   appId: number
   reach: number
+  inbox: number
   kind: number
   label: number
   externalAccount: number
@@ -86,6 +89,7 @@ export type ConnectionMinAggregateInputType = {
   workspaceId?: true
   appId?: true
   reach?: true
+  inbox?: true
   kind?: true
   label?: true
   externalAccount?: true
@@ -104,6 +108,7 @@ export type ConnectionMaxAggregateInputType = {
   workspaceId?: true
   appId?: true
   reach?: true
+  inbox?: true
   kind?: true
   label?: true
   externalAccount?: true
@@ -122,6 +127,7 @@ export type ConnectionCountAggregateInputType = {
   workspaceId?: true
   appId?: true
   reach?: true
+  inbox?: true
   kind?: true
   label?: true
   externalAccount?: true
@@ -213,6 +219,7 @@ export type ConnectionGroupByOutputType = {
   workspaceId: string
   appId: string
   reach: $Enums.ConnectionReach
+  inbox: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount: string | null
@@ -252,6 +259,7 @@ export type ConnectionWhereInput = {
   workspaceId?: Prisma.StringFilter<"Connection"> | string
   appId?: Prisma.StringFilter<"Connection"> | string
   reach?: Prisma.EnumConnectionReachFilter<"Connection"> | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFilter<"Connection"> | boolean
   kind?: Prisma.EnumConnectorKindFilter<"Connection"> | $Enums.ConnectorKind
   label?: Prisma.StringFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableFilter<"Connection"> | string | null
@@ -272,6 +280,7 @@ export type ConnectionWhereInput = {
   subscriptions?: Prisma.SubscriptionListRelationFilter
   attachments?: Prisma.AttachmentListRelationFilter
   mailAddress?: Prisma.XOR<Prisma.MailAddressNullableScalarRelationFilter, Prisma.MailAddressWhereInput> | null
+  mailMessages?: Prisma.MailMessageListRelationFilter
 }
 
 export type ConnectionOrderByWithRelationInput = {
@@ -280,6 +289,7 @@ export type ConnectionOrderByWithRelationInput = {
   workspaceId?: Prisma.SortOrder
   appId?: Prisma.SortOrder
   reach?: Prisma.SortOrder
+  inbox?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -300,6 +310,7 @@ export type ConnectionOrderByWithRelationInput = {
   subscriptions?: Prisma.SubscriptionOrderByRelationAggregateInput
   attachments?: Prisma.AttachmentOrderByRelationAggregateInput
   mailAddress?: Prisma.MailAddressOrderByWithRelationInput
+  mailMessages?: Prisma.MailMessageOrderByRelationAggregateInput
 }
 
 export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
@@ -312,6 +323,7 @@ export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
   workspaceId?: Prisma.StringFilter<"Connection"> | string
   appId?: Prisma.StringFilter<"Connection"> | string
   reach?: Prisma.EnumConnectionReachFilter<"Connection"> | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFilter<"Connection"> | boolean
   kind?: Prisma.EnumConnectorKindFilter<"Connection"> | $Enums.ConnectorKind
   label?: Prisma.StringFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableFilter<"Connection"> | string | null
@@ -331,6 +343,7 @@ export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
   subscriptions?: Prisma.SubscriptionListRelationFilter
   attachments?: Prisma.AttachmentListRelationFilter
   mailAddress?: Prisma.XOR<Prisma.MailAddressNullableScalarRelationFilter, Prisma.MailAddressWhereInput> | null
+  mailMessages?: Prisma.MailMessageListRelationFilter
 }, "id" | "vaultSecretId">
 
 export type ConnectionOrderByWithAggregationInput = {
@@ -339,6 +352,7 @@ export type ConnectionOrderByWithAggregationInput = {
   workspaceId?: Prisma.SortOrder
   appId?: Prisma.SortOrder
   reach?: Prisma.SortOrder
+  inbox?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -363,6 +377,7 @@ export type ConnectionScalarWhereWithAggregatesInput = {
   workspaceId?: Prisma.StringWithAggregatesFilter<"Connection"> | string
   appId?: Prisma.StringWithAggregatesFilter<"Connection"> | string
   reach?: Prisma.EnumConnectionReachWithAggregatesFilter<"Connection"> | $Enums.ConnectionReach
+  inbox?: Prisma.BoolWithAggregatesFilter<"Connection"> | boolean
   kind?: Prisma.EnumConnectorKindWithAggregatesFilter<"Connection"> | $Enums.ConnectorKind
   label?: Prisma.StringWithAggregatesFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableWithAggregatesFilter<"Connection"> | string | null
@@ -379,6 +394,7 @@ export type ConnectionCreateInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -398,6 +414,7 @@ export type ConnectionCreateInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateInput = {
@@ -406,6 +423,7 @@ export type ConnectionUncheckedCreateInput = {
   workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -423,12 +441,14 @@ export type ConnectionUncheckedCreateInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -448,6 +468,7 @@ export type ConnectionUpdateInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateInput = {
@@ -456,6 +477,7 @@ export type ConnectionUncheckedUpdateInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -473,6 +495,7 @@ export type ConnectionUncheckedUpdateInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateManyInput = {
@@ -481,6 +504,7 @@ export type ConnectionCreateManyInput = {
   workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -497,6 +521,7 @@ export type ConnectionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -514,6 +539,7 @@ export type ConnectionUncheckedUpdateManyInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -547,6 +573,7 @@ export type ConnectionCountOrderByAggregateInput = {
   workspaceId?: Prisma.SortOrder
   appId?: Prisma.SortOrder
   reach?: Prisma.SortOrder
+  inbox?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrder
@@ -565,6 +592,7 @@ export type ConnectionMaxOrderByAggregateInput = {
   workspaceId?: Prisma.SortOrder
   appId?: Prisma.SortOrder
   reach?: Prisma.SortOrder
+  inbox?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrder
@@ -583,6 +611,7 @@ export type ConnectionMinOrderByAggregateInput = {
   workspaceId?: Prisma.SortOrder
   appId?: Prisma.SortOrder
   reach?: Prisma.SortOrder
+  inbox?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrder
@@ -830,10 +859,27 @@ export type ConnectionUpdateOneWithoutMailAddressNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ConnectionUpdateToOneWithWhereWithoutMailAddressInput, Prisma.ConnectionUpdateWithoutMailAddressInput>, Prisma.ConnectionUncheckedUpdateWithoutMailAddressInput>
 }
 
+export type ConnectionCreateNestedOneWithoutMailMessagesInput = {
+  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutMailMessagesInput, Prisma.ConnectionUncheckedCreateWithoutMailMessagesInput>
+  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutMailMessagesInput
+  connect?: Prisma.ConnectionWhereUniqueInput
+}
+
+export type ConnectionUpdateOneWithoutMailMessagesNestedInput = {
+  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutMailMessagesInput, Prisma.ConnectionUncheckedCreateWithoutMailMessagesInput>
+  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutMailMessagesInput
+  upsert?: Prisma.ConnectionUpsertWithoutMailMessagesInput
+  disconnect?: Prisma.ConnectionWhereInput | boolean
+  delete?: Prisma.ConnectionWhereInput | boolean
+  connect?: Prisma.ConnectionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ConnectionUpdateToOneWithWhereWithoutMailMessagesInput, Prisma.ConnectionUpdateWithoutMailMessagesInput>, Prisma.ConnectionUncheckedUpdateWithoutMailMessagesInput>
+}
+
 export type ConnectionCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -852,6 +898,7 @@ export type ConnectionCreateWithoutWorkspaceInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutWorkspaceInput = {
@@ -859,6 +906,7 @@ export type ConnectionUncheckedCreateWithoutWorkspaceInput = {
   organizationId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -876,6 +924,7 @@ export type ConnectionUncheckedCreateWithoutWorkspaceInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutWorkspaceInput = {
@@ -913,6 +962,7 @@ export type ConnectionScalarWhereInput = {
   workspaceId?: Prisma.StringFilter<"Connection"> | string
   appId?: Prisma.StringFilter<"Connection"> | string
   reach?: Prisma.EnumConnectionReachFilter<"Connection"> | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFilter<"Connection"> | boolean
   kind?: Prisma.EnumConnectorKindFilter<"Connection"> | $Enums.ConnectorKind
   label?: Prisma.StringFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableFilter<"Connection"> | string | null
@@ -929,6 +979,7 @@ export type ConnectionCreateWithoutReplyWatchesInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -947,6 +998,7 @@ export type ConnectionCreateWithoutReplyWatchesInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutReplyWatchesInput = {
@@ -955,6 +1007,7 @@ export type ConnectionUncheckedCreateWithoutReplyWatchesInput = {
   workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -971,6 +1024,7 @@ export type ConnectionUncheckedCreateWithoutReplyWatchesInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutReplyWatchesInput = {
@@ -993,6 +1047,7 @@ export type ConnectionUpdateWithoutReplyWatchesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1011,6 +1066,7 @@ export type ConnectionUpdateWithoutReplyWatchesInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutReplyWatchesInput = {
@@ -1019,6 +1075,7 @@ export type ConnectionUncheckedUpdateWithoutReplyWatchesInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1035,12 +1092,14 @@ export type ConnectionUncheckedUpdateWithoutReplyWatchesInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateWithoutAppInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1059,6 +1118,7 @@ export type ConnectionCreateWithoutAppInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutAppInput = {
@@ -1066,6 +1126,7 @@ export type ConnectionUncheckedCreateWithoutAppInput = {
   organizationId: string
   workspaceId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1083,6 +1144,7 @@ export type ConnectionUncheckedCreateWithoutAppInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutAppInput = {
@@ -1115,6 +1177,7 @@ export type ConnectionCreateWithoutVaultSecretInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1133,6 +1196,7 @@ export type ConnectionCreateWithoutVaultSecretInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutVaultSecretInput = {
@@ -1141,6 +1205,7 @@ export type ConnectionUncheckedCreateWithoutVaultSecretInput = {
   workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1157,6 +1222,7 @@ export type ConnectionUncheckedCreateWithoutVaultSecretInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutVaultSecretInput = {
@@ -1179,6 +1245,7 @@ export type ConnectionUpdateWithoutVaultSecretInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1197,6 +1264,7 @@ export type ConnectionUpdateWithoutVaultSecretInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutVaultSecretInput = {
@@ -1205,6 +1273,7 @@ export type ConnectionUncheckedUpdateWithoutVaultSecretInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1221,12 +1290,14 @@ export type ConnectionUncheckedUpdateWithoutVaultSecretInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateWithoutGrantsInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1245,6 +1316,7 @@ export type ConnectionCreateWithoutGrantsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutGrantsInput = {
@@ -1253,6 +1325,7 @@ export type ConnectionUncheckedCreateWithoutGrantsInput = {
   workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1269,6 +1342,7 @@ export type ConnectionUncheckedCreateWithoutGrantsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutGrantsInput = {
@@ -1291,6 +1365,7 @@ export type ConnectionUpdateWithoutGrantsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1309,6 +1384,7 @@ export type ConnectionUpdateWithoutGrantsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutGrantsInput = {
@@ -1317,6 +1393,7 @@ export type ConnectionUncheckedUpdateWithoutGrantsInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1333,12 +1410,14 @@ export type ConnectionUncheckedUpdateWithoutGrantsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateWithoutCallsInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1357,6 +1436,7 @@ export type ConnectionCreateWithoutCallsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutCallsInput = {
@@ -1365,6 +1445,7 @@ export type ConnectionUncheckedCreateWithoutCallsInput = {
   workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1381,6 +1462,7 @@ export type ConnectionUncheckedCreateWithoutCallsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutCallsInput = {
@@ -1403,6 +1485,7 @@ export type ConnectionUpdateWithoutCallsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1421,6 +1504,7 @@ export type ConnectionUpdateWithoutCallsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutCallsInput = {
@@ -1429,6 +1513,7 @@ export type ConnectionUncheckedUpdateWithoutCallsInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1445,12 +1530,14 @@ export type ConnectionUncheckedUpdateWithoutCallsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateWithoutTriggersInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1469,6 +1556,7 @@ export type ConnectionCreateWithoutTriggersInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutTriggersInput = {
@@ -1477,6 +1565,7 @@ export type ConnectionUncheckedCreateWithoutTriggersInput = {
   workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1493,6 +1582,7 @@ export type ConnectionUncheckedCreateWithoutTriggersInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutTriggersInput = {
@@ -1515,6 +1605,7 @@ export type ConnectionUpdateWithoutTriggersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1533,6 +1624,7 @@ export type ConnectionUpdateWithoutTriggersInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutTriggersInput = {
@@ -1541,6 +1633,7 @@ export type ConnectionUncheckedUpdateWithoutTriggersInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1557,12 +1650,14 @@ export type ConnectionUncheckedUpdateWithoutTriggersInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateWithoutSubscriptionsInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1581,6 +1676,7 @@ export type ConnectionCreateWithoutSubscriptionsInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutSubscriptionsInput = {
@@ -1589,6 +1685,7 @@ export type ConnectionUncheckedCreateWithoutSubscriptionsInput = {
   workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1605,6 +1702,7 @@ export type ConnectionUncheckedCreateWithoutSubscriptionsInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutSubscriptionsInput = {
@@ -1627,6 +1725,7 @@ export type ConnectionUpdateWithoutSubscriptionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1645,6 +1744,7 @@ export type ConnectionUpdateWithoutSubscriptionsInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutSubscriptionsInput = {
@@ -1653,6 +1753,7 @@ export type ConnectionUncheckedUpdateWithoutSubscriptionsInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1669,12 +1770,14 @@ export type ConnectionUncheckedUpdateWithoutSubscriptionsInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateWithoutAttachmentsInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1693,6 +1796,7 @@ export type ConnectionCreateWithoutAttachmentsInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutAttachmentsInput = {
@@ -1701,6 +1805,7 @@ export type ConnectionUncheckedCreateWithoutAttachmentsInput = {
   workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1717,6 +1822,7 @@ export type ConnectionUncheckedCreateWithoutAttachmentsInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutAttachmentsInput = {
@@ -1739,6 +1845,7 @@ export type ConnectionUpdateWithoutAttachmentsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1757,6 +1864,7 @@ export type ConnectionUpdateWithoutAttachmentsInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutAttachmentsInput = {
@@ -1765,6 +1873,7 @@ export type ConnectionUncheckedUpdateWithoutAttachmentsInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1781,12 +1890,14 @@ export type ConnectionUncheckedUpdateWithoutAttachmentsInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateWithoutMailAddressInput = {
   id?: string
   organizationId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1805,6 +1916,7 @@ export type ConnectionCreateWithoutMailAddressInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutMailAddressInput = {
@@ -1813,6 +1925,7 @@ export type ConnectionUncheckedCreateWithoutMailAddressInput = {
   workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1829,6 +1942,7 @@ export type ConnectionUncheckedCreateWithoutMailAddressInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutMailAddressInput = {
@@ -1851,6 +1965,7 @@ export type ConnectionUpdateWithoutMailAddressInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1869,6 +1984,7 @@ export type ConnectionUpdateWithoutMailAddressInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutMailAddressInput = {
@@ -1877,6 +1993,7 @@ export type ConnectionUncheckedUpdateWithoutMailAddressInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1893,13 +2010,42 @@ export type ConnectionUncheckedUpdateWithoutMailAddressInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
-export type ConnectionCreateManyWorkspaceInput = {
+export type ConnectionCreateWithoutMailMessagesInput = {
   id?: string
   organizationId: string
+  reach?: $Enums.ConnectionReach
+  inbox?: boolean
+  kind: $Enums.ConnectorKind
+  label: string
+  externalAccount?: string | null
+  externalUrl?: string | null
+  mcpUrl?: string | null
+  status?: $Enums.ConnectionStatus
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionsInput
+  app: Prisma.AppCreateNestedOneWithoutConnectionsInput
+  vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
+  grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
+  calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
+  mailAddress?: Prisma.MailAddressCreateNestedOneWithoutConnectionInput
+}
+
+export type ConnectionUncheckedCreateWithoutMailMessagesInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
   appId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1910,12 +2056,36 @@ export type ConnectionCreateManyWorkspaceInput = {
   createdByMemberId: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
+  calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
+  mailAddress?: Prisma.MailAddressUncheckedCreateNestedOneWithoutConnectionInput
 }
 
-export type ConnectionUpdateWithoutWorkspaceInput = {
+export type ConnectionCreateOrConnectWithoutMailMessagesInput = {
+  where: Prisma.ConnectionWhereUniqueInput
+  create: Prisma.XOR<Prisma.ConnectionCreateWithoutMailMessagesInput, Prisma.ConnectionUncheckedCreateWithoutMailMessagesInput>
+}
+
+export type ConnectionUpsertWithoutMailMessagesInput = {
+  update: Prisma.XOR<Prisma.ConnectionUpdateWithoutMailMessagesInput, Prisma.ConnectionUncheckedUpdateWithoutMailMessagesInput>
+  create: Prisma.XOR<Prisma.ConnectionCreateWithoutMailMessagesInput, Prisma.ConnectionUncheckedCreateWithoutMailMessagesInput>
+  where?: Prisma.ConnectionWhereInput
+}
+
+export type ConnectionUpdateToOneWithWhereWithoutMailMessagesInput = {
+  where?: Prisma.ConnectionWhereInput
+  data: Prisma.XOR<Prisma.ConnectionUpdateWithoutMailMessagesInput, Prisma.ConnectionUncheckedUpdateWithoutMailMessagesInput>
+}
+
+export type ConnectionUpdateWithoutMailMessagesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1925,6 +2095,7 @@ export type ConnectionUpdateWithoutWorkspaceInput = {
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionsNestedInput
   app?: Prisma.AppUpdateOneRequiredWithoutConnectionsNestedInput
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
@@ -1936,11 +2107,13 @@ export type ConnectionUpdateWithoutWorkspaceInput = {
   mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
 }
 
-export type ConnectionUncheckedUpdateWithoutWorkspaceInput = {
+export type ConnectionUncheckedUpdateWithoutMailMessagesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1960,11 +2133,82 @@ export type ConnectionUncheckedUpdateWithoutWorkspaceInput = {
   mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
 }
 
+export type ConnectionCreateManyWorkspaceInput = {
+  id?: string
+  organizationId: string
+  appId: string
+  reach?: $Enums.ConnectionReach
+  inbox?: boolean
+  kind: $Enums.ConnectorKind
+  label: string
+  externalAccount?: string | null
+  externalUrl?: string | null
+  mcpUrl?: string | null
+  status?: $Enums.ConnectionStatus
+  vaultSecretId?: string | null
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type ConnectionUpdateWithoutWorkspaceInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  app?: Prisma.AppUpdateOneRequiredWithoutConnectionsNestedInput
+  vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
+  calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
+  mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
+}
+
+export type ConnectionUncheckedUpdateWithoutWorkspaceInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  appId?: Prisma.StringFieldUpdateOperationsInput | string
+  reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
+  vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
+  calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
+  mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
+}
+
 export type ConnectionUncheckedUpdateManyWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1982,6 +2226,7 @@ export type ConnectionCreateManyAppInput = {
   organizationId: string
   workspaceId: string
   reach?: $Enums.ConnectionReach
+  inbox?: boolean
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1998,6 +2243,7 @@ export type ConnectionUpdateWithoutAppInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2016,6 +2262,7 @@ export type ConnectionUpdateWithoutAppInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutAppInput = {
@@ -2023,6 +2270,7 @@ export type ConnectionUncheckedUpdateWithoutAppInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2040,6 +2288,7 @@ export type ConnectionUncheckedUpdateWithoutAppInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
   mailAddress?: Prisma.MailAddressUncheckedUpdateOneWithoutConnectionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateManyWithoutAppInput = {
@@ -2047,6 +2296,7 @@ export type ConnectionUncheckedUpdateManyWithoutAppInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2071,6 +2321,7 @@ export type ConnectionCountOutputType = {
   triggers: number
   subscriptions: number
   attachments: number
+  mailMessages: number
 }
 
 export type ConnectionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2080,6 +2331,7 @@ export type ConnectionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extens
   triggers?: boolean | ConnectionCountOutputTypeCountTriggersArgs
   subscriptions?: boolean | ConnectionCountOutputTypeCountSubscriptionsArgs
   attachments?: boolean | ConnectionCountOutputTypeCountAttachmentsArgs
+  mailMessages?: boolean | ConnectionCountOutputTypeCountMailMessagesArgs
 }
 
 /**
@@ -2134,6 +2386,13 @@ export type ConnectionCountOutputTypeCountAttachmentsArgs<ExtArgs extends runtim
   where?: Prisma.AttachmentWhereInput
 }
 
+/**
+ * ConnectionCountOutputType without action
+ */
+export type ConnectionCountOutputTypeCountMailMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MailMessageWhereInput
+}
+
 
 export type ConnectionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2141,6 +2400,7 @@ export type ConnectionSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   workspaceId?: boolean
   appId?: boolean
   reach?: boolean
+  inbox?: boolean
   kind?: boolean
   label?: boolean
   externalAccount?: boolean
@@ -2161,6 +2421,7 @@ export type ConnectionSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   subscriptions?: boolean | Prisma.Connection$subscriptionsArgs<ExtArgs>
   attachments?: boolean | Prisma.Connection$attachmentsArgs<ExtArgs>
   mailAddress?: boolean | Prisma.Connection$mailAddressArgs<ExtArgs>
+  mailMessages?: boolean | Prisma.Connection$mailMessagesArgs<ExtArgs>
   _count?: boolean | Prisma.ConnectionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["connection"]>
 
@@ -2170,6 +2431,7 @@ export type ConnectionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   workspaceId?: boolean
   appId?: boolean
   reach?: boolean
+  inbox?: boolean
   kind?: boolean
   label?: boolean
   externalAccount?: boolean
@@ -2191,6 +2453,7 @@ export type ConnectionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   workspaceId?: boolean
   appId?: boolean
   reach?: boolean
+  inbox?: boolean
   kind?: boolean
   label?: boolean
   externalAccount?: boolean
@@ -2212,6 +2475,7 @@ export type ConnectionSelectScalar = {
   workspaceId?: boolean
   appId?: boolean
   reach?: boolean
+  inbox?: boolean
   kind?: boolean
   label?: boolean
   externalAccount?: boolean
@@ -2224,7 +2488,7 @@ export type ConnectionSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "appId" | "reach" | "kind" | "label" | "externalAccount" | "externalUrl" | "mcpUrl" | "status" | "vaultSecretId" | "createdByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["connection"]>
+export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "appId" | "reach" | "inbox" | "kind" | "label" | "externalAccount" | "externalUrl" | "mcpUrl" | "status" | "vaultSecretId" | "createdByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["connection"]>
 export type ConnectionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   app?: boolean | Prisma.AppDefaultArgs<ExtArgs>
@@ -2236,6 +2500,7 @@ export type ConnectionInclude<ExtArgs extends runtime.Types.Extensions.InternalA
   subscriptions?: boolean | Prisma.Connection$subscriptionsArgs<ExtArgs>
   attachments?: boolean | Prisma.Connection$attachmentsArgs<ExtArgs>
   mailAddress?: boolean | Prisma.Connection$mailAddressArgs<ExtArgs>
+  mailMessages?: boolean | Prisma.Connection$mailMessagesArgs<ExtArgs>
   _count?: boolean | Prisma.ConnectionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ConnectionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2268,6 +2533,10 @@ export type $ConnectionPayload<ExtArgs extends runtime.Types.Extensions.Internal
      * The Email App: the address this account is (an agent's, or a project's inbox).
      */
     mailAddress: Prisma.$MailAddressPayload<ExtArgs> | null
+    /**
+     * Gmail: its mail as the Inbox lists it, kept as the inbox reader reads it.
+     */
+    mailMessages: Prisma.$MailMessagePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2275,6 +2544,12 @@ export type $ConnectionPayload<ExtArgs extends runtime.Types.Extensions.Internal
     workspaceId: string
     appId: string
     reach: $Enums.ConnectionReach
+    /**
+     * Gmail: its mail shows in the Inbox, for everyone in the workspace. Only while it is shared
+     * (reach workspace), and only when its owner or an admin says so: a shared account may still
+     * hold someone's personal mail.
+     */
+    inbox: boolean
     kind: $Enums.ConnectorKind
     label: string
     /**
@@ -2698,6 +2973,7 @@ export interface Prisma__ConnectionClient<T, Null = never, ExtArgs extends runti
   subscriptions<T extends Prisma.Connection$subscriptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$subscriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   attachments<T extends Prisma.Connection$attachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$attachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   mailAddress<T extends Prisma.Connection$mailAddressArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$mailAddressArgs<ExtArgs>>): Prisma.Prisma__MailAddressClient<runtime.Types.Result.GetResult<Prisma.$MailAddressPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  mailMessages<T extends Prisma.Connection$mailMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$mailMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MailMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2732,6 +3008,7 @@ export interface ConnectionFieldRefs {
   readonly workspaceId: Prisma.FieldRef<"Connection", 'String'>
   readonly appId: Prisma.FieldRef<"Connection", 'String'>
   readonly reach: Prisma.FieldRef<"Connection", 'ConnectionReach'>
+  readonly inbox: Prisma.FieldRef<"Connection", 'Boolean'>
   readonly kind: Prisma.FieldRef<"Connection", 'ConnectorKind'>
   readonly label: Prisma.FieldRef<"Connection", 'String'>
   readonly externalAccount: Prisma.FieldRef<"Connection", 'String'>
@@ -3322,6 +3599,30 @@ export type Connection$mailAddressArgs<ExtArgs extends runtime.Types.Extensions.
    */
   include?: Prisma.MailAddressInclude<ExtArgs> | null
   where?: Prisma.MailAddressWhereInput
+}
+
+/**
+ * Connection.mailMessages
+ */
+export type Connection$mailMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MailMessage
+   */
+  select?: Prisma.MailMessageSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the MailMessage
+   */
+  omit?: Prisma.MailMessageOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MailMessageInclude<ExtArgs> | null
+  where?: Prisma.MailMessageWhereInput
+  orderBy?: Prisma.MailMessageOrderByWithRelationInput | Prisma.MailMessageOrderByWithRelationInput[]
+  cursor?: Prisma.MailMessageWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MailMessageScalarFieldEnum | Prisma.MailMessageScalarFieldEnum[]
 }
 
 /**
