@@ -259,6 +259,7 @@ type Outcome = {
     | 'cap'
     | 'own_copy'
     | 'bounce'
+    | 'test'
   sessionId?: string
   triggerId?: string
   note?: string
@@ -276,6 +277,9 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
     ...(row.contactId ? { contactId: row.contactId } : {}),
     line: `<${row.fromAddress}>`,
   }
+
+  // Brigade's test mail (Settings › Apps › Email): it arrived, which is all it is for.
+  if ((row.headers as Record<string, string>)['x-brigade-test']) return { route: 'test' }
 
   // A reply a person sent from Gmail, copied here by their own rule: theirs, not a new mail.
   if (address.publicAddress && row.fromAddress === address.publicAddress.toLowerCase())

@@ -32,7 +32,7 @@ export function decodeEntities(text: string) {
   })
 }
 
-/** HTML as plain text: blocks on their own lines, each link as "text <url>", no styles or scripts. */
+/** HTML as plain text: blocks on their own lines, each link as "text (url)", no styles or scripts. */
 export function htmlToText(html: string | null | undefined) {
   if (!html) return ''
   const text = html
@@ -45,7 +45,8 @@ export function htmlToText(html: string | null | undefined) {
         .replace(/\s+/g, ' ')
         .trim()
       if (!href || /^(mailto:|#)/i.test(href)) return label
-      return label && decodeEntities(label) !== href ? `${label} <${href}>` : `<${href}>`
+      // In parentheses: angle brackets would read as a tag below.
+      return label && decodeEntities(label) !== href ? `${label} (${href})` : href
     })
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li|tr|h[1-6]|blockquote|section|table)>/gi, '\n')
@@ -86,6 +87,7 @@ export const KEPT_HEADERS = [
   'reply-to',
   'date',
   'return-path',
+  'x-brigade-test',
 ]
 
 /** Sent by a machine (an out-of-office, a notification), by its headers, as Gmail's trigger tells. */
