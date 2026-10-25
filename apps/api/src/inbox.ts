@@ -16,6 +16,7 @@ import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import type { Prisma, ScopedDb } from './db.js'
 import { addressOf } from './mail/names.js'
+import { usableProject } from './projects.js'
 import { watchReplies } from './replies.js'
 import type { WorkspaceScope } from './scope.js'
 import { syncConnection } from './subscriptions/index.js'
@@ -375,11 +376,15 @@ export async function handItem(
   if (!detail.handTo.some((t) => t.id === input.teammateId))
     throw new HTTPException(400, { message: 'That teammate has no access to this mailbox' })
   // Brigade's mail is read and answered from its mailbox, which only its project's threads reach.
-  const projectId = m.address
-    ? (detail.project?.id ?? null)
-    : input.projectId !== undefined
-      ? input.projectId
-      : (detail.project?.id ?? null)
+  // One of this workspace's projects, not archived.
+  const projectId = await usableProject(
+    db,
+    m.address
+      ? (detail.project?.id ?? null)
+      : input.projectId !== undefined
+        ? input.projectId
+        : (detail.project?.id ?? null),
+  )
   if (m.address && input.projectId !== undefined && input.projectId !== projectId)
     throw new HTTPException(400, {
       message: 'This mailbox is its project’s: its thread stays in that project',
@@ -446,34 +451,39 @@ export async function handItem(
       expiresAt: null,
     },
   })
-  if (gmail && m.connectionId) {
-    const watch = await watchReplies(db, scope, {
-      session: { id: thread.id, origin: 'member', status: thread.status },
-      teammateId: teammate.id,
-      connectionId: m.connectionId,
-      conversationKey: m.conversationId,
-      to: [detail.from],
-      subject: detail.subject,
-    })
-    if (watch) {
-      // Its replies wake this thread alone: the threads that had it before let go. Only watches
-      // older than this one, so that two hand-overs at once leave one, not none.
-      await db.replyWatch.updateMany({
-        where: {
+  // Gmail: a reply in its conversation wakes this thread (Brigade's mail goes to it by handedAt).
+  const watch =
+    gmail && m.connectionId
+      ? await watchReplies(db, scope, {
+          session: { id: thread.id, origin: 'member', status: thread.status },
+          teammateId: teammate.id,
           connectionId: m.connectionId,
           conversationKey: m.conversationId,
-          sessionId: { not: thread.id },
-          until: { gt: new Date(), lte: watch.until },
-          // The same millisecond: the id decides, so exactly one of the two stays.
-          OR: [{ until: { lt: watch.until } }, { id: { lt: watch.id } }],
-        },
-        data: { until: new Date() },
-      })
-      await syncConnection(scope, m.connectionId).catch((error) =>
-        console.warn(`inbox: ${m.connectionId} not watched`, error),
-      )
-    }
+          to: [detail.from],
+          subject: detail.subject,
+        })
+      : null
+  // Its replies are this thread's alone: the threads waiting on them before (they had written in
+  // it) let go, on either source. With a watch of its own, only those older than it, so that two
+  // hand-overs at once leave one, not none; within a millisecond the id decides.
+  const mailbox = m.address?.connectionId ?? m.connectionId
+  if (mailbox) {
+    const now = new Date()
+    await db.replyWatch.updateMany({
+      where: {
+        connectionId: mailbox,
+        conversationKey: m.conversationId,
+        sessionId: { not: thread.id },
+        until: watch ? { gt: now, lte: watch.until } : { gt: now },
+        ...(watch ? { OR: [{ until: { lt: watch.until } }, { id: { lt: watch.id } }] } : {}),
+      },
+      data: { until: now },
+    })
   }
+  if (watch && m.connectionId)
+    await syncConnection(scope, m.connectionId).catch((error) =>
+      console.warn(`inbox: ${m.connectionId} not watched`, error),
+    )
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },

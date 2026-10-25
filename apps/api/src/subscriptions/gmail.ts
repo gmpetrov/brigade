@@ -184,14 +184,15 @@ export const readInbox = (subscriptionId: string) =>
               (!automatic(email.payload?.headers) || bounce) &&
               (await wakeOnReply(sub.connection, payload, new Date(), bounce))
             ) {
-              const watch = await db.replyWatch.findFirst({
-                where: { connectionId: sub.connectionId, conversationKey: payload.threadId },
-                orderBy: { updatedAt: 'desc' },
+              // The thread it woke (on a read again too): its wake-up says, not the watches.
+              const woken = await db.wakeup.findFirst({
+                where: { sourceId: `gmail:${payload.id}`, kind: 'reply' },
+                orderBy: { createdAt: 'desc' },
                 select: { sessionId: true },
               })
               await keepGmail(sub.connection, payload, {
                 route: 'awaited',
-                ...(watch ? { sessionId: watch.sessionId } : {}),
+                ...(woken ? { sessionId: woken.sessionId } : {}),
               })
               continue
             }

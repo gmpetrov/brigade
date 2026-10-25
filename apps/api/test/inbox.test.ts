@@ -852,3 +852,139 @@ describe('hand-overs at once, and a thread deleted since', { skip }, () => {
     assert.equal(after.cursor, '200')
   })
 })
+
+describe('a hand-over takes the replies, on its project', { skip }, () => {
+  test('Brigade handover retires a previous sender watch', async () => {
+    const db = scoped(scope)
+    const m = await mail(support, { messageId: `<review-brigade-watch-${id}@x.test>` })
+    const first = await inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: cody.id })
+    const { watchReplies } = await import('../src/replies.js')
+    await watchReplies(db, scope, {
+      session: { id: first.threadId, origin: 'member', status: 'idle' },
+      teammateId: cody.id,
+      connectionId: support.connectionId,
+      conversationKey: m.conversationId,
+      to: ['client@outside.test'],
+      subject: m.subject,
+    })
+    const second = await inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: cody.id })
+    const next = await mail(support, {
+      direction: 'in',
+      status: 'pending',
+      conversationId: m.conversationId,
+      fromAddress: 'client@outside.test',
+      sender: 'contact',
+      text: 'Next reply',
+    })
+    const { processMail } = await import('../src/mail/inbound.js')
+    await processMail(next.id)
+    const delivered = await db.mailMessage.findFirstOrThrow({ where: { id: next.id } })
+    assert.equal(
+      delivered.sessionId,
+      second.threadId,
+      `reply went to first=${delivered.sessionId === first.threadId}, route=${delivered.route}`,
+    )
+  })
+
+  test('Gmail reader records the thread actually woken after handover', async () => {
+    const db = scoped(scope)
+    const connection = await db.connection.findFirstOrThrow({ where: { id: gmailShared } })
+    const { keepGmail } = await import('../src/mail/gmail-inbox.js')
+    const payload = {
+      id: `review-wrong-owner-${id}`,
+      threadId: `review-wrong-owner-conv-${id}`,
+      from: 'client@outside.test',
+      to: connection.externalAccount ?? '',
+      subject: 'Owner regression',
+      date: new Date().toUTCString(),
+      snippet: 'Help',
+      labels: ['INBOX'],
+      cc: undefined,
+      body: 'Help',
+      attachments: [],
+      automatic: false,
+    }
+    await keepGmail(connection, payload, { route: 'box' })
+    const m = await db.mailMessage.findFirstOrThrow({ where: { sourceId: payload.id } })
+    globalThis.fetch = (async () => json({ historyId: '100' })) as typeof fetch
+    const first = await inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: cody.id })
+    const second = await inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: cody.id })
+    const sub = await db.subscription.findFirstOrThrow({ where: { connectionId: gmailShared } })
+    await db.subscription.updateMany({ where: { id: sub.id }, data: { cursor: '100' } })
+    const incomingId = `review-wrong-owner-reply-${id}`
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = new URL(
+        typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+      )
+      if (url.pathname.endsWith('/history'))
+        return json({
+          historyId: '250',
+          history: [
+            {
+              id: '250',
+              messagesAdded: [
+                {
+                  message: { id: incomingId, threadId: payload.threadId, labelIds: ['INBOX'] },
+                },
+              ],
+            },
+          ],
+        })
+      if (url.pathname.endsWith(`/messages/${incomingId}`))
+        return json({
+          id: incomingId,
+          threadId: payload.threadId,
+          labelIds: ['INBOX'],
+          payload: {
+            mimeType: 'text/plain',
+            headers: [
+              { name: 'From', value: payload.from },
+              { name: 'To', value: payload.to },
+              { name: 'Subject', value: payload.subject },
+              { name: 'Date', value: payload.date },
+            ],
+            body: { data: Buffer.from(payload.body).toString('base64url') },
+          },
+        })
+      return json({ historyId: '100' })
+    }) as typeof fetch
+    const { readInbox } = await import('../src/subscriptions/gmail.js')
+    await readInbox(sub.id)
+    const wakes = await db.wakeup.findMany({ where: { sourceId: `gmail:${incomingId}` } })
+    assert.deepEqual(
+      wakes.map((w) => w.sessionId),
+      [second.threadId],
+    )
+    const saved = await db.mailMessage.findFirstOrThrow({ where: { sourceId: incomingId } })
+    assert.equal(
+      saved.sessionId,
+      second.threadId,
+      `recorded first=${saved.sessionId === first.threadId} although only second was woken`,
+    )
+  })
+
+  test('Gmail handover rejects a project from another workspace', async () => {
+    const db = scoped(scope)
+    const foreignWorkspace = await prisma.workspace.create({
+      data: { organizationId: org, name: 'Foreign' },
+    })
+    const foreignProject = await prisma.project.create({
+      data: {
+        organizationId: org,
+        workspaceId: foreignWorkspace.id,
+        name: 'Foreign project',
+      },
+    })
+    const m = await db.mailMessage.findFirstOrThrow({
+      where: { connectionId: gmailShared, sourceId: 'g1' },
+    })
+    globalThis.fetch = (async () => json({ historyId: '100' })) as typeof fetch
+    await assert.rejects(
+      inbox.handItem(db, as(0), `mail:${m.id}`, {
+        teammateId: cody.id,
+        projectId: foreignProject.id,
+      }),
+      /Project not found/,
+    )
+  })
+})
