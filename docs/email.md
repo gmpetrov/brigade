@@ -125,8 +125,8 @@ has to keep its messages there.
   (Gmail's sent mail is not kept), oldest first, with its words (the quote apart), files,
   authentication. A sign-up's conversation, with the replies sent in it (they can quote its code),
   is shown and searched only for its thread's starter and admins; others see that it came.
-- **Files** open from the page, never through the API's memory (`GET /api/inbox/items/:id/files/
-:fileId`): Brigade's address's redirect to Resend's short-lived link; Gmail's, which has none, are
+- **Files** open from the page (`/api/inbox/items/:id/files/:fileId`), never through the API's
+  memory: Brigade's address's redirect to Resend's short-lived link; Gmail's, which has none, are
   copied once to the bucket as they stream (Gmail's base64 decoded on the way, `src/json-base64.ts`)
   and redirect to the bucket's link. Programs and installers do not open. Sent files open as Brigade
   keeps them.
