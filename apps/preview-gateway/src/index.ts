@@ -14,6 +14,7 @@
 // - Any request to <id>.brigade.surf goes to that address with the token, redirects
 //   to it come back here, and WebSockets (hot reload) pass through.
 // - The runner's proxy gives the app this host as the Host it was asked for (preview-proxy.ts).
+// - Browsers ask again for each file before using what they kept (cacheControl).
 
 export type Env = {
   DB: D1Database
@@ -131,6 +132,17 @@ export function upstreamUrl(request: URL, origin: string) {
   return url
 }
 
+/**
+ * How long a browser may keep an answer: ask each time. Cloudflare's Browser Cache TTL turns
+ * an app's no-cache into four hours (max-age=14400) on scripts and styles, and a dev server
+ * (Next's Turbopack) keeps a chunk's name when an edit changes it: after a reload the page
+ * ran the old code. Chrome keeps a frame's cache apart from a tab's, so the dashboard's
+ * pane stayed on it while a new tab showed the edit. Asking again costs a 304 each.
+ */
+export function cacheControl(upstream: string | null) {
+  return upstream && /\bno-store\b/i.test(upstream) ? upstream : 'private, no-cache'
+}
+
 async function forward(request: Request, target: Route) {
   const url = new URL(request.url)
   const headers = new Headers(request.headers)
@@ -141,7 +153,8 @@ async function forward(request: Request, target: Route) {
   // address's. It is this address's here: the same check, then its own origin for the provider.
   // The runner's proxy gives the app this one back (preview-proxy.ts).
   const origin = request.headers.get('origin')
-  if (origin && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+  const websocket = request.headers.get('upgrade')?.toLowerCase() === 'websocket'
+  if (origin && websocket) {
     if (origin !== url.origin) return new Response('cross-origin websocket denied', { status: 403 })
     headers.set('origin', target.origin)
   }
@@ -152,6 +165,8 @@ async function forward(request: Request, target: Route) {
       headers,
       body: request.body,
       redirect: 'manual',
+      // Never Cloudflare's copy: the app's files change with each edit, under the same names.
+      ...(websocket ? {} : { cache: 'no-store' as const }),
     })
   } catch (error) {
     console.error(`${request.method} ${url.pathname} at the provider: ${String(error)}`)
@@ -163,6 +178,7 @@ async function forward(request: Request, target: Route) {
   // The host is what lets people in: no other site gets it as the Referer of a link, an
   // image or a font. (A cross-origin fetch with CORS still sends it as its Origin.)
   answer.headers.set('referrer-policy', 'same-origin')
+  answer.headers.set('cache-control', cacheControl(response.headers.get('cache-control')))
   // A redirect to the provider's address stays here, where the browser needs no cookie.
   const location = response.headers.get('location')
   if (location) {

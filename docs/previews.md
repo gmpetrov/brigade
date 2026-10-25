@@ -31,6 +31,13 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   `<id>.preview.brigade.surf` would need Advanced Certificate Manager. Costs:
   Workers requests (a dev server's page can make hundreds) and a D1 read per
   preview per isolate.
+- **The gateway answers `Cache-Control: private, no-cache`** (the app's own when
+  it says `no-store`) and fetches past Cloudflare's cache. Cloudflare's Browser
+  Cache TTL made a dev server's `no-cache` scripts four hours, and Turbopack
+  keeps a chunk's name when an edit changes it: after Fast Refresh's full
+  reload, the dashboard's pane ran the old code. Chrome keeps a frame's cache
+  apart from a tab's, so a new tab showed the edit. Each file now costs a
+  revalidation (a 304) per load.
 - **A proxy in front of every preview** (`apps/runner/src/preview-proxy.ts`). The
   provider hosts the proxy's port (`publicPort`), not the app's. It fixes what
   apps cannot be asked to change:
