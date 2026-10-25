@@ -802,6 +802,7 @@ export function AddRule({
   projectId,
   teammateId: initialTeammate,
   reload,
+  onClose,
 }: {
   connectionId: string
   /** The project variant of the address it is for; null: the address without a project. */
@@ -809,9 +810,15 @@ export function AddRule({
   /** The teammate it starts threads with, first picked (an agent's address: that agent). */
   teammateId?: string | null
   reload: () => Promise<unknown>
+  /** Opened by its caller's own button: the form shows at once, and closing it calls this. */
+  onClose?: () => void
 }) {
   const { teammates } = useDashboard()
-  const [open, setOpen] = useState(false)
+  const [open, setOpenState] = useState(!!onClose)
+  const setOpen = (value: boolean) => {
+    setOpenState(value)
+    if (!value) onClose?.()
+  }
   const [label, setLabel] = useState('Answer')
   const [teammateId, setTeammateId] = useState<string | undefined>(initialTeammate ?? undefined)
   const [from, setFrom] = useState('')

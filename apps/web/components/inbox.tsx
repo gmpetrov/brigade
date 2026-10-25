@@ -9,7 +9,16 @@ import type {
   InboxSourceView,
   InboxStatus,
 } from '@brigade/contracts'
-import { ArrowLeft, Check, FileText, Mail, Search, ShieldAlert, Undo2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Check,
+  FileText,
+  Mail,
+  Search,
+  ShieldAlert,
+  Undo2,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -507,6 +516,7 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
   const router = useRouter()
   const detail = useApi<InboxDetail>(itemPath(id), ['mail.updated'])
   const [handing, setHanding] = useState(false)
+  const [ruling, setRuling] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   // Earlier mails folded, as in a mail app: the latest is open.
@@ -558,65 +568,105 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
     .filter(Boolean)
     .join(' · ')
 
+  const handButton = (primary: boolean) =>
+    oneClick && unowned ? (
+      <Button size="sm" disabled={busy} onClick={() => void handToOnly()}>
+        Hand to {only.name}
+      </Button>
+    ) : (
+      <Button
+        size="sm"
+        variant={primary ? 'default' : 'ghost'}
+        className={cn(!primary && 'h-7 px-2 text-muted-foreground')}
+        aria-expanded={handing}
+        onClick={() => setHanding((h) => !h)}
+      >
+        {primary && only ? `Hand to ${only.name}` : 'Hand to…'}
+      </Button>
+    )
+
   return (
     <Card className="gap-4 px-5 py-5">
-      <div className="flex flex-col gap-1.5">
-        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-          <h2 className="min-w-0 flex-1 basis-48 text-xl font-bold wrap-anywhere">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-start gap-3">
+          <h2 className="min-w-0 flex-1 text-xl font-bold wrap-anywhere">
             {d.hidden ? SIGN_UP : d.subject || '(No subject)'}
           </h2>
-          <div className="flex flex-none items-center gap-1.5">
-            {d.thread && (
-              <Button asChild size="sm" variant={unowned ? 'outline' : 'default'}>
-                <Link href={`/app/threads/${d.thread.id}`}>Open thread</Link>
-              </Button>
-            )}
-            {!d.hidden &&
-              (oneClick && unowned ? (
-                <Button size="sm" disabled={busy} onClick={() => void handToOnly()}>
-                  Hand to {only.name}
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant={unowned ? 'default' : 'outline'}
-                  aria-expanded={handing}
-                  onClick={() => setHanding((h) => !h)}
-                >
-                  {unowned && only ? `Hand to ${only.name}` : 'Hand to…'}
-                </Button>
-              ))}
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-8"
-              disabled={busy}
-              aria-label={done ? 'Not done' : 'Done'}
-              title={done ? 'Not done' : 'Done'}
-              onClick={() => void toggleDone()}
-            >
-              {done ? <Undo2 /> : <Check />}
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-8 flex-none"
+            disabled={busy}
+            aria-label={done ? 'Not done' : 'Done'}
+            title={done ? 'Not done' : 'Done'}
+            onClick={() => void toggleDone()}
+          >
+            {done ? <Undo2 /> : <Check />}
+          </Button>
         </div>
-        <p
-          className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground"
-          title={d.reason ?? undefined}
-        >
-          <span
-            aria-hidden
-            className={cn(
-              'size-1.5 flex-none rounded-full',
-              trouble || unowned ? 'bg-warning' : done ? 'bg-muted-foreground/50' : 'bg-primary',
+        {unowned ? (
+          // Nobody is on it: what to do with it, and with the mail that comes next, together.
+          <div
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2"
+            title={d.reason ?? undefined}
+          >
+            <span aria-hidden className="size-1.5 flex-none rounded-full bg-warning" />
+            <span className={cn('min-w-0 flex-1 text-sm', trouble && 'text-warning')}>
+              {state}
+              {about && <span className="text-muted-foreground"> · {about}</span>}
+            </span>
+            <div className="flex flex-none items-center gap-1">
+              {!d.hidden && handButton(true)}
+              {d.reason && d.addRule && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-expanded={ruling}
+                  className="text-primary hover:text-primary"
+                  onClick={() => setRuling((r) => !r)}
+                >
+                  Add a rule
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+            <span
+              aria-hidden
+              className={cn(
+                'size-1.5 flex-none rounded-full',
+                trouble ? 'bg-warning' : done ? 'bg-muted-foreground/50' : 'bg-primary',
+              )}
+            />
+            {d.thread ? (
+              <Link
+                href={`/app/threads/${d.thread.id}`}
+                className="inline-flex items-center gap-0.5 font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                {state}
+                <ArrowUpRight aria-hidden className="size-3.5" />
+              </Link>
+            ) : (
+              <span className={cn(trouble ? 'text-warning' : 'text-foreground')}>{state}</span>
             )}
-          />
-          <span className={cn(trouble ? 'text-warning' : 'text-foreground')}>{state}</span>
-          {about && <span>· {about}</span>}
-        </p>
+            {about && <span>· {about}</span>}
+            {!d.hidden && <span className="ml-auto">{handButton(false)}</span>}
+          </div>
+        )}
         {!d.reason && d.routeNote && <p className="text-xs text-muted-foreground">{d.routeNote}</p>}
         {error && <p className="text-sm text-destructive-text">{error}</p>}
         {handing && !d.hidden && (
           <HandForm detail={d} onCancel={() => setHanding(false)} onHanded={onChanged} />
+        )}
+        {ruling && d.addRule && (
+          <AddRule
+            connectionId={d.addRule.connectionId}
+            projectId={d.addRule.projectId}
+            teammateId={d.addRule.teammateId}
+            reload={detail.reload}
+            onClose={() => setRuling(false)}
+          />
         )}
       </div>
 
@@ -631,20 +681,6 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
           </li>
         ))}
       </ol>
-
-      {d.reason && d.addRule && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t pt-4">
-          <AddRule
-            connectionId={d.addRule.connectionId}
-            projectId={d.addRule.projectId}
-            teammateId={d.addRule.teammateId}
-            reload={detail.reload}
-          />
-          <p className="text-xs text-muted-foreground">
-            For the mail that comes next: a rule starts a thread for it.
-          </p>
-        </div>
-      )}
     </Card>
   )
 }
