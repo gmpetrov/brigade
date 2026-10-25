@@ -18,7 +18,7 @@ import {
   PROPOSE_TEAM_TOOL,
   BUILTIN_SKILL_PREFIX,
   PROPOSE_SKILL_TOOL,
-  REVIEW_RECHECKS,
+  REVIEW_LOOKS,
   SHOW_WIDGET_TOOL,
   type ThreadSkill,
   type ThreadSpec,
@@ -809,8 +809,12 @@ const reviewPolicy = (spec: ThreadSpec) =>
 /** After a review: what the author does with its report. */
 const AFTER_REVIEW =
   'With a review, Brigade starts it in a child thread, with a brief of its own, and wakes you with its report: ' +
-  `fix what it rightly found and push, then ask the reviewer to look at what changed with \`message_thread\` ` +
-  `(${REVIEW_RECHECKS} times at most), or tell it why you disagree; then tell the person where it stands. ` +
+  `fix what it rightly found and push, then ask the reviewer to look at what changed with \`message_thread\`, ` +
+  'or tell it why you disagree. Ask again while the review converges: each look finds fewer problems that block ' +
+  'the merge, and new ones. Stop when it goes in circles (a problem you fixed comes back, or you still disagree ' +
+  'on one after telling it why once) and tell the person where it stands: what is still open, both sides of a ' +
+  'disagreement in a line each, and what you recommend. ' +
+  `A review takes ${REVIEW_LOOKS} looks at most, its first included: Brigade refuses more. ` +
   'When you pushed after its last look and may not ask it again, say so: the pull request shows those commits ' +
   'as not reviewed, and the person can have them read with Review again on it. ' +
   "When its fixes go in a new pull request, leave that one's `review` out and call `request_review` on it, " +

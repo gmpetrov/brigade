@@ -14,8 +14,12 @@ export type ReviewPolicy = z.infer<typeof ReviewPolicy>
 /** How long the thread that opened a pull request waits for its review, then hears what is done. */
 export const REVIEW_WAIT_MINUTES = 3 * 60
 
-/** Times the author asks the reviewer to look again, at most, before it tells the person what remains. */
-export const REVIEW_RECHECKS = 2
+/**
+ * Looks a review takes at most, its first included. The author asks for another while the
+ * review converges and stops on its own when it goes in circles (its instructions); this
+ * ceiling, which the API keeps (messageChild), is for when that judgment fails.
+ */
+export const REVIEW_LOOKS = 8
 
 /** A teammate asks for a review of a pull request of its thread (request_review), as a schedule.call operation. */
 export const ReviewOperations = [
