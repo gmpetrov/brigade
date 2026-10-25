@@ -263,7 +263,7 @@ describe('the Inbox', { skip }, () => {
     const shown = await inbox.listInbox(db, as(0), { status: 'waiting' })
     assert.ok(shown.items.some((i) => i.id === `mail:${waiting.id}`))
     assert.ok(!shown.items.some((i) => i.id === `mail:${taken.id}`))
-    assert.ok((await inbox.waitingCount(db)) >= 1)
+    assert.ok((await inbox.waitingCount(db, as(0))) >= 1)
   })
 
   test('filters: by source, agent, project and words', async () => {
@@ -285,6 +285,89 @@ describe('the Inbox', { skip }, () => {
     assert.deepEqual(
       words.items.map((i) => i.id),
       [`mail:${lovarank.id}`],
+    )
+  })
+
+  test('a conversation is one row: its latest mail in front, matched by any of its mails', async () => {
+    const db = scoped(scope)
+    const at = (minutes: number) => new Date(Date.now() - minutes * 60_000)
+    const first = await mail(support, {
+      subject: `Order 77 ${id}`,
+      text: 'Where is order 77?',
+      receivedAt: at(30),
+    })
+    const conversation = { box: first.box, conversationId: first.conversationId }
+    const answer = await prisma.mailMessage.create({
+      data: {
+        ...scope,
+        ...conversation,
+        addressId: support.id,
+        direction: 'out',
+        status: 'sent',
+        fromAddress: `support-inbox-${id}@mails.brigade.lol`,
+        fromName: 'Cody',
+        to: ['client@outside.test'],
+        subject: `Re: Order 77 ${id}`,
+        text: 'It ships tomorrow.',
+        receivedAt: at(20),
+      } as never,
+    })
+    // A mail cancelled before it left is not part of it.
+    await prisma.mailMessage.create({
+      data: {
+        ...scope,
+        ...conversation,
+        addressId: support.id,
+        direction: 'out',
+        status: 'cancelled',
+        fromAddress: `support-inbox-${id}@mails.brigade.lol`,
+        subject: 'Draft',
+        receivedAt: at(15),
+      } as never,
+    })
+    const reply = await mail(support, {
+      ...conversation,
+      subject: `Re: Order 77 ${id}`,
+      text: 'Thanks!',
+      receivedAt: at(10),
+    })
+    const list = (q?: string, status: 'all' | 'waiting' = 'all') =>
+      inbox
+        .listInbox(db, as(0), { status, source: `email:${support.id}`, ...(q ? { q } : {}) })
+        .then((r) => r.items.filter((i) => i.subject.includes(`Order 77 ${id}`)))
+    const rows = await list()
+    assert.deepEqual(
+      rows.map((i) => [i.id, i.count, i.snippet]),
+      [[`mail:${reply.id}`, 3, 'Thanks!']],
+    )
+    // Found by its first mail's words; shown by its latest.
+    assert.deepEqual(
+      (await list('Where is order 77')).map((i) => i.id),
+      [`mail:${reply.id}`],
+    )
+    // Any of its mails opens it whole, oldest first, received and sent.
+    const detail = await inbox.readItem(db, as(0), `mail:${first.id}`)
+    assert.equal(detail.id, `mail:${reply.id}`)
+    assert.deepEqual(
+      detail.messages.map((m) => [m.id, m.direction, m.sent]),
+      [
+        [`mail:${first.id}`, 'in', null],
+        [`mail:${answer.id}`, 'out', 'sent'],
+        [`mail:${reply.id}`, 'in', null],
+      ],
+    )
+    // Done is the conversation's; its next mail makes it wait again.
+    await inbox.setDone(db, as(0), `mail:${first.id}`, true)
+    assert.equal((await inbox.readItem(db, as(0), `mail:${reply.id}`)).status, 'done')
+    assert.deepEqual(await list(undefined, 'waiting'), [])
+    const next = await mail(support, {
+      ...conversation,
+      subject: `Re: Order 77 ${id}`,
+      receivedAt: at(1),
+    })
+    assert.deepEqual(
+      (await list(undefined, 'waiting')).map((i) => [i.id, i.count]),
+      [[`mail:${next.id}`, 4]],
     )
   })
 
@@ -360,22 +443,25 @@ describe('the Inbox', { skip }, () => {
     assert.equal(await search(1, '4829'), undefined)
     assert.equal((await search(0, '4829'))?.hidden, false)
     const detail = await inbox.readItem(db, as(1), `mail:${code.id}`)
-    assert.equal(detail.text, '')
+    assert.equal(detail.messages.at(-1)!.text, '')
     await assert.rejects(
       inbox.handItem(db, as(1), `mail:${code.id}`, { teammateId: riley.id }),
       /sign-up/,
     )
     // Its thread's starter (and admins) read it.
-    assert.match((await inbox.readItem(db, as(0), `mail:${code.id}`)).text, /482913/)
+    assert.match(
+      (await inbox.readItem(db, as(0), `mail:${code.id}`)).messages.at(-1)!.text,
+      /482913/,
+    )
   })
 
   test('done, and not done again', async () => {
     const db = scoped(scope)
     const m = await mail(agent)
-    const count = await inbox.waitingCount(db)
+    const count = await inbox.waitingCount(db, as(0))
     await inbox.setDone(db, as(1), `mail:${m.id}`, true)
     assert.equal((await inbox.readItem(db, as(0), `mail:${m.id}`)).status, 'done')
-    assert.equal(await inbox.waitingCount(db), count - 1)
+    assert.equal(await inbox.waitingCount(db, as(0)), count - 1)
     await inbox.setDone(db, as(1), `mail:${m.id}`, false)
     assert.equal((await inbox.readItem(db, as(0), `mail:${m.id}`)).status, 'waiting')
   })

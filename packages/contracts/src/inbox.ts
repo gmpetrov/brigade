@@ -1,13 +1,18 @@
 // The Inbox: every mail the workspace's mailboxes received, across agents, projects and sources
-// (Brigade's own addresses, Gmail accounts), with where each went. See the API's src/inbox.ts.
+// (Brigade's own addresses, Gmail accounts), one row per conversation, with where it went. See
+// the API's src/inbox.ts.
 import { z } from 'zod'
 import type { MailRoute } from './email.js'
 
 /** waiting: nobody took it and no person marked it done. handled: a thread has it. */
 export type InboxStatus = 'waiting' | 'handled' | 'done'
 
+/** A conversation, as its latest received mail shows it. */
 export type InboxItem = {
-  /** mail:<MailMessage id>, whatever its source: every source keeps its mail there. */
+  /**
+   * mail:<MailMessage id> of its latest received mail, whatever its source: every source keeps
+   * its mail there. Any of its mails' ids opens the conversation.
+   */
   id: string
   source: { id: string; kind: 'email' | 'gmail' }
   /** The address it came to. */
@@ -28,15 +33,34 @@ export type InboxItem = {
   sender: 'member' | 'contact' | 'unknown' | 'brigade' | null
   /** A sign-up's mail, which is its thread's: its subject and words are not shown. */
   hidden: boolean
+  /** Its mails, received and sent. */
+  count: number
 }
 
-export type InboxDetail = InboxItem & {
+/** One mail of a conversation. */
+export type InboxMessage = {
+  id: string
+  /** in: received; out: sent from Brigade's address (Gmail's sent mail is not kept). */
+  direction: 'in' | 'out'
+  from: string
+  fromName: string
+  to: string[]
   cc: string[]
+  subject: string
+  at: string
   /** Its own words; the earlier messages it quotes apart. */
   text: string
   quoted: string
-  authentication: { spf?: string; dkim?: string; dmarc?: string } | null
   attachments: { name: string; contentType: string; size: number }[]
+  authentication: { spf?: string; dkim?: string; dmarc?: string } | null
+  /** Sent mail: where it is. */
+  sent: 'scheduled' | 'sent' | 'delivered' | 'bounced' | 'failed' | null
+  hidden: boolean
+}
+
+/** A conversation, whole: its latest received mail in front, then each of its mails, oldest first. */
+export type InboxDetail = InboxItem & {
+  messages: InboxMessage[]
   routeNote: string | null
   /** The teammates it can be handed to: those given its mailbox. */
   handTo: { id: string; name: string }[]

@@ -100,9 +100,10 @@ minutes in one call), `email_send`, `email_cancel`. Everything read is untrusted
 ## The Inbox
 
 `/app/inbox`, under Home in the sidebar (`apps/api/src/inbox.ts`, `routes/inbox.ts`): every mail
-the workspace's mailboxes received, across agents, projects and sources, in one list. Every source
-keeps its mail in the same table, `MailMessage`, so one query lists, filters and pages them all; a
-new source (a chat) only has to keep its messages there.
+the workspace's mailboxes received, across agents, projects and sources, in one list, one row per
+conversation (a box's `conversationId`, a Gmail thread). Every source keeps its mail in the same
+table, `MailMessage`, so one query lists, filters and pages them all; a new source (a chat) only
+has to keep its messages there.
 
 - **Sources**: Brigade's addresses, as they receive mail; and Gmail accounts shared with the
   workspace that their owner or an admin put in the Inbox (`Connection.inbox`, "Show in the Inbox"
@@ -110,12 +111,18 @@ new source (a chat) only has to keep its messages there.
   `sourceId`, box `gmail:<connection id>`, without promotions and social). Such an account is read
   even without triggers. A member's own Gmail never shows, and a shared account stays out until
   someone puts it in: it may still hold personal mail.
-- **Status**, in the query (so paging is right whatever the view): `waiting` (nobody took it:
-  `box`, `cap`, `loop`, or not delivered yet, and not done), `handled` (a thread has it, or its
-  route needs nobody), `done` (`MailMessage.doneAt`). The sidebar counts what waits, last 30 days.
-- **Filters**: source, agent, project, words. Pages of 50, newest first.
-- **An item**: its words with the quote apart, files, authentication; a sign-up's mail is shown
-  only to its thread's starter and admins (others see that it came).
+- **A conversation** shows as its latest received mail (its head), with its number of mails. Its
+  status is the head's, in the query (SQL, `DISTINCT ON` box and conversation, so paging is right
+  whatever the view): `waiting` (nobody took it: `box`, `cap`, `loop`, or not delivered yet, and not
+  done), `handled` (a thread has it, or its route needs nobody), `done` (`MailMessage.doneAt`, set on
+  all its received mails; its next mail waits again). The sidebar counts conversations that wait,
+  last 30 days.
+- **Filters**: source, agent, project, words; a conversation shows when any of its mails matches.
+  Pages of 50, newest first.
+- **Opened** (by any of its mails' ids): each mail, received and sent from Brigade's address
+  (Gmail's sent mail is not kept), oldest first, with its words (the quote apart), files,
+  authentication; a sign-up's mail is shown only to its thread's starter and admins (others see that
+  it came).
 - **Hand to**: a thread of the member with a teammate given the mailbox, in the item's project,
-  with their note and the mail. The mail then belongs to that thread (`route: handed`): Brigade's
+  with their note, the latest mail and the conversation's earlier ones. The mail then belongs to that thread (`route: handed`): Brigade's
   next mail in its conversation goes there; a Gmail conversation's reply wakes it (`ReplyWatch`).
