@@ -1,5 +1,6 @@
-import type { ThreadAttachmentRef } from '@brigade/contracts'
+import type { PermissionPolicy, ThreadAttachmentRef } from '@brigade/contracts'
 import type { z } from 'zod'
+import type { Scope } from '../db.js'
 
 /** One thing a connector can do. Each declares whether it reads or writes and what it touches. */
 export type Operation<I extends z.ZodType = z.ZodType> = {
@@ -15,6 +16,32 @@ export type Operation<I extends z.ZodType = z.ZodType> = {
    * operation reads them with ctx.readFile by the ids it gets instead.
    */
   files?: string
+  /**
+   * Why the call cannot go, checked before anyone is asked to approve it (and again with what a
+   * person changed): null when it can.
+   */
+  check?: (ctx: ConnectorContext, input: z.infer<I>) => Promise<string | null>
+  /**
+   * A write that asks a person even when the teammate's connector writes go without asking (an
+   * email to someone outside the workspace), unless its own policy says otherwise.
+   */
+  asks?: (
+    ctx: ConnectorContext,
+    input: z.infer<I>,
+    policy: PermissionPolicy,
+  ) => Promise<boolean>
+  /** A person approving the call may change its input (an email's draft) first. */
+  editable?: boolean
+}
+
+/** The thread a call comes from, for connectors that act on Brigade's own data (the Email App). */
+export type CallThread = {
+  id: string
+  projectId: string | null
+  teammateId: string
+  startedByMemberId: string
+  origin: string
+  status: string
 }
 
 /**
@@ -42,6 +69,13 @@ export type ConnectorContext = {
    * passed on. The merge goes through only on that commit, never on one pushed since.
    */
   checkedSha?: string
+  /** Brigade's own connectors (auth brigade): the call's workspace, account, thread and teammate. */
+  scope?: Scope
+  connectionId?: string
+  thread?: CallThread
+  teammateId?: string
+  /** The member who approved the call, when one did. */
+  approvedByMemberId?: string
 }
 
 export type ConnectorKind =
@@ -69,6 +103,7 @@ export type ConnectorKind =
   | 'posthog'
   | 'dataforseo'
   | 'ahrefs'
+  | 'email'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
@@ -116,7 +151,7 @@ export type TriggerDefinition = {
   matches?: (
     event: VendorEvent,
     options: Record<string, string>,
-    ctx: Pick<ConnectorContext, 'fetch'>,
+    ctx: TriggerContext,
   ) => boolean | Promise<boolean>
   /** What the teammate reads first: a title and a few lines, before the raw payload. */
   describe: (event: VendorEvent) => { title: string; summary: string }
@@ -130,10 +165,18 @@ export type TriggerDefinition = {
    */
   replay?: (
     options: Record<string, string>,
-    ctx: Pick<ConnectorContext, 'fetch'>,
+    ctx: TriggerContext,
     last: number,
   ) => Promise<(VendorEvent & { at: string | null })[]>
+  /**
+   * A mailbox's rules: an event goes to the first trigger that matches it, in their order
+   * (Trigger.position), never to several. Otherwise each matching trigger starts its thread.
+   */
+  exclusive?: boolean
 }
+
+/** What a trigger's checks get: the account's fetch, and which account it is. */
+export type TriggerContext = Pick<ConnectorContext, 'fetch'> & { connectionId?: string }
 
 export type ConnectorDefinition = {
   kind: ConnectorKind
@@ -144,8 +187,9 @@ export type ConnectorDefinition = {
    * google: OAuth tokens refreshed by the API. api_key: a key entered in the dashboard.
    * github_app: an installation of Brigade's GitHub App; tokens are minted per call.
    * mcp: an MCP server's own OAuth (discovery, client registration, PKCE), refreshed by the API.
+   * brigade: Brigade's own service (the Email App): no credential, the API's own keys.
    */
-  auth: 'google' | 'api_key' | 'github_app' | 'mcp'
+  auth: 'google' | 'api_key' | 'github_app' | 'mcp' | 'brigade'
   /** Written in Brigade. An MCP connector has none: its tools come from the server. */
   operations: Record<string, Operation>
   /** A remote MCP server (Streamable HTTP) the API calls with the account's token. */

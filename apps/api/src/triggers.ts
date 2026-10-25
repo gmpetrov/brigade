@@ -3,6 +3,7 @@
 // against the connection's triggers from the catalog, and each match starts one
 // thread. The event is untrusted: it summons nobody, and its thread's changes
 // are bounded by the teammate's grants, policy and caps like any other thread.
+import { randomUUID } from 'node:crypto'
 import { triggerEventText } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { ingestExternal } from './attachments.js'
@@ -32,7 +33,15 @@ export type Delivery =
   | { duplicate: true }
   /** A playbook's trigger while the playbook is not active: the event starts nothing. */
   | { skipped: string }
+  /** A mailbox's rule past its threads for the day: the mail stays in its box, a person is told. */
+  | { capped: string }
   | { error: string }
+
+/** A mailbox rule's threads in a day, unless its perDay option says otherwise. */
+export const RULE_THREADS_PER_DAY = 50
+/** Events of one conversation a trigger's thread takes within the hour before it is a loop. */
+const CONVERSATION_LOOP_LIMIT = 8
+const CONVERSATION_LOOP_MS = 60 * 60_000
 
 /**
  * Start a thread for one event, once per event id, or continue the thread of
@@ -49,6 +58,11 @@ export async function deliver(
     conversationKey?: string
     /** The event's files, already taken from the connection. */
     attachmentIds?: string[]
+    /**
+     * A mailbox's rule (an exclusive trigger): its threads stay out of the sidebar until they
+     * need a person, and it starts at most its perDay threads a day.
+     */
+    mailbox?: boolean
   },
 ): Promise<Delivery> {
   const scope: Scope = { organizationId: trigger.organizationId, workspaceId: trigger.workspaceId }
@@ -93,14 +107,49 @@ export async function deliver(
       data: { eventId: event.eventId, eventType: event.eventType, threadId, outcome },
     })
 
-  // The conversation's latest thread, unless it failed or a member has taken it over.
+  // The conversation's latest thread, unless it failed.
   const ongoing =
     event.conversationKey &&
     (await db.session.findFirst({
       where: { triggerId: trigger.id, conversationKey: event.conversationKey },
       orderBy: { createdAt: 'desc' },
     }))
-  if (ongoing && ongoing.status !== 'failed' && !ongoing.controlledByMemberId) {
+  // A person took it over: the conversation stays theirs. The event waits in the thread, as a
+  // wake-up does, until they hand it back; no other thread starts for it.
+  if (ongoing && ongoing.status !== 'failed' && ongoing.controlledByMemberId) {
+    try {
+      await db.wakeup.create({
+        data: {
+          sessionId: ongoing.id,
+          teammateId: ongoing.teammateId,
+          kind: 'reply',
+          note: event.text,
+          wakeAt: new Date(),
+          sourceId: `trigger:${trigger.id}:${event.eventId ?? randomUUID()}`,
+        } as never,
+      })
+    } catch (error) {
+      // Offered twice: the first one waits already.
+      if ((error as { code?: string }).code !== 'P2002') throw error
+    }
+    await received(ongoing.id, 'held')
+    return { ok: true, threadId: ongoing.id, paused: true }
+  }
+  if (ongoing && ongoing.status !== 'failed') {
+    // Two agents, or an agent and an autoresponder, answering each other: past so many events of
+    // one conversation in an hour, the next starts nothing.
+    const lately = await db.auditEntry.count({
+      where: {
+        action: 'trigger.received',
+        targetId: trigger.id,
+        at: { gt: new Date(Date.now() - CONVERSATION_LOOP_MS) },
+        data: { path: ['threadId'], equals: ongoing.id },
+      },
+    })
+    if (lately >= CONVERSATION_LOOP_LIMIT) {
+      await received(ongoing.id, 'loop')
+      return { skipped: 'its conversation looks like a loop: too many events within the hour' }
+    }
     try {
       const outcome = await promptWithAttachments(
         db,
@@ -116,6 +165,30 @@ export async function deliver(
     } catch (error) {
       if (error instanceof HTTPException) return failed(error.message)
       throw error
+    }
+  }
+
+  // A mailbox's rule: so many threads a day at most; past it the mail stays in its box.
+  if (event.mailbox) {
+    const perDay = Number((trigger.options as Record<string, string>)?.perDay) || RULE_THREADS_PER_DAY
+    const started = await db.session.count({
+      where: { triggerId: trigger.id, createdAt: { gt: new Date(Date.now() - 86_400_000) } },
+    })
+    if (started >= perDay) {
+      const message = `the rule "${trigger.label}" started its ${perDay} threads of the last 24 hours`
+      const open = await db.ticket.count({
+        where: { type: 'question', status: 'open', payload: { path: ['capOfTriggerId'], equals: trigger.id } },
+      })
+      if (!open)
+        await db.ticket.create({
+          data: {
+            type: 'question',
+            title: `Rule "${trigger.label}" reached ${perDay} threads in a day: new mail stays in the box`,
+            payload: { capOfTriggerId: trigger.id, triggerId: trigger.id, memberId: trigger.createdByMemberId },
+          } as never,
+        })
+      await received('', 'capped')
+      return { capped: message }
     }
   }
 
@@ -149,6 +222,7 @@ export async function deliver(
       attachmentIds: event.attachmentIds ?? [],
       projectId: trigger.projectId,
       ...(runId ? { playbookRunId: runId } : {}),
+      ...(event.mailbox ? { quiet: true } : {}),
     })
     if (runId) await settleRun(db, runId, outcome === 'offline' ? null : thread.id)
     if (outcome === 'offline') return failed('the computer is offline')
@@ -200,13 +274,23 @@ export async function dispatch(
   connection: Connection,
   event: VendorEvent,
   only?: Trigger,
-): Promise<{ started: number; failed: boolean }> {
+): Promise<{
+  started: number
+  failed: boolean
+  /** The thread that took the event, for a mailbox's rules (one at most). */
+  threadId?: string
+  triggerId?: string
+  /** Why a mailbox's rule left it in the box: its cap for the day. */
+  capped?: string
+}> {
   if (connection.status === 'removed') return { started: 0, failed: false }
   const triggers = only
     ? [only]
     : await prisma.trigger.findMany({
-        where: { connectionId: connection.id, teammate: { archivedAt: null } },
+        where: { connectionId: connection.id },
         include,
+        // A mailbox's rules in their order: the first that matches takes the mail.
+        orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
       })
   const catalog = triggersOf(connection.kind as ConnectorKind)
   const scope: Scope = {
@@ -231,13 +315,33 @@ export async function dispatch(
     const definition = catalog[trigger.event]
     if (!definition?.events.includes(event.type)) continue
     const options = (trigger.options ?? {}) as Record<string, string>
+    // Brigade's addresses: an agent's rule is for its project's variant only.
+    if (
+      connection.kind === 'email' &&
+      'projectId' in (event.payload ?? {}) &&
+      (trigger.projectId ?? null) !== ((event.payload as { projectId?: string | null }).projectId ?? null)
+    )
+      continue
     const conversationKey = definition.conversation?.(event)
     // A reply in a conversation this trigger already took up continues it even if its
     // filter would not match (a reply to support@ comes back to the inbox's own address).
     const ongoing =
       conversationKey &&
       (await prisma.session.count({ where: { triggerId: trigger.id, conversationKey } })) > 0
-    if (!ongoing && definition.matches && !(await definition.matches(event, options, ctx))) continue
+    if (
+      !ongoing &&
+      definition.matches &&
+      !(await definition.matches(event, options, { ...ctx, connectionId: connection.id }))
+    )
+      continue
+    // A rule whose teammate was archived: the mail is not lost, a person is told.
+    if (trigger.teammate.archivedAt) {
+      if (definition.exclusive) {
+        await deliverToNobody(trigger, `${trigger.teammate.name} is archived`)
+        continue
+      }
+      continue
+    }
     const files = definition.attachments?.(event) ?? []
     if (files.length > 0 && !attachmentIds) {
       try {
@@ -257,9 +361,32 @@ export async function dispatch(
       text,
       conversationKey,
       ...(files.length > 0 ? { attachmentIds } : {}),
+      ...(definition.exclusive ? { mailbox: true } : {}),
     })
     if ('error' in delivery) failed = true
     if ('ok' in delivery) started++
+    // A mailbox's rules: the first that matched takes the mail, the others never see it.
+    if (definition.exclusive) {
+      if ('ok' in delivery) return { started, failed, threadId: delivery.threadId, triggerId: trigger.id }
+      if ('capped' in delivery) return { started, failed, capped: delivery.capped, triggerId: trigger.id }
+      if ('duplicate' in delivery || 'error' in delivery) return { started, failed, triggerId: trigger.id }
+    }
   }
   return { started, failed }
+}
+
+/** A mailbox's rule that cannot take a mail (its teammate archived): a ticket, once, for its owner. */
+async function deliverToNobody(trigger: Trigger, reason: string) {
+  const db = scoped({ organizationId: trigger.organizationId, workspaceId: trigger.workspaceId })
+  const open = await db.ticket.count({
+    where: { type: 'question', status: 'open', payload: { path: ['triggerId'], equals: trigger.id } },
+  })
+  if (!open)
+    await db.ticket.create({
+      data: {
+        type: 'question',
+        title: `Rule "${trigger.label}" could not take a mail: ${reason}. Give the rule to another teammate.`,
+        payload: { triggerId: trigger.id, memberId: trigger.createdByMemberId },
+      } as never,
+    })
 }

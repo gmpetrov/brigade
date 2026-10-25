@@ -978,10 +978,18 @@ export async function continueRun(db: ScopedDb, runId: string | null) {
  */
 export async function surface(
   db: ScopedDb,
-  thread: { id: string; playbookRunId: string | null; surfacedAt: Date | null },
+  thread: { id: string; playbookRunId: string | null; surfacedAt: Date | null; quiet?: boolean },
   intervention = false,
 ) {
-  if (!thread.playbookRunId) return
+  // A mailbox rule's quiet thread surfaces the same way, without a run to count it in.
+  if (!thread.playbookRunId) {
+    if (thread.quiet && !thread.surfacedAt)
+      await db.session.updateMany({
+        where: { id: thread.id, surfacedAt: null },
+        data: { surfacedAt: new Date() },
+      })
+    return
+  }
   if (!thread.surfacedAt)
     await db.session.updateMany({
       where: { id: thread.id, surfacedAt: null },

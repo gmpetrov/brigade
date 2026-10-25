@@ -249,6 +249,12 @@ model Workspace {
   playbookDryRuns       PlaybookDryRun[]
   threadFollows         ThreadFollow[]
   billingSubscriptions  BillingSubscription[]
+  mailProjects          MailProject[]
+  mailAliases           MailAlias[]
+  mailMessages          MailMessage[]
+  mailDomains           MailDomain[]
+  contacts              Contact[]
+  contactHandles        ContactHandle[]
 
   @@index([organizationId])
 }
@@ -566,6 +572,13 @@ model Session {
   /// A run's thread stays out of the sidebar's Threads until a person first takes part in it
   /// (a message, a takeover, a pin): then this is set, and it stays there.
   surfacedAt           DateTime?
+  /// Started by a rule on a mailbox (an email trigger): out of the sidebar's Threads, like a
+  /// playbook's run, until a person takes part in it or it needs one (surfacedAt).
+  quiet                Boolean            @default(false)
+  /// Emails it received or sent through Brigade's own addresses (the Email App).
+  mailMessages         MailMessage[]
+  /// Sign-up addresses it asked for (email_new_address).
+  mailAliases          MailAlias[]
   /// The dry runs of a playbook started from this thread (its installation's chat).
   playbookDryRuns      PlaybookDryRun[]
   /// Threads it follows (follow_thread): their report wakes it, like a parent's child's.
@@ -1009,6 +1022,9 @@ enum ConnectorKind {
   /// Search Console and Analytics (GA4), on Brigade's Google client like Gmail.
   google_search_console
   google_analytics
+  /// Brigade's own addresses on its mail domain (mails.brigade.lol), received and sent through
+  /// Resend with Brigade's key: an agent's address, or a project's inbox. No credential.
+  email
 }
 
 /// Brigade registered as an OAuth client of an MCP server's authorization server
@@ -1095,6 +1111,8 @@ model Connection {
   triggers          Trigger[]
   subscriptions     Subscription[]
   attachments       Attachment[]
+  /// The Email App: the address this account is (an agent's, or a project's inbox).
+  mailAddress       MailAddress?
 
   @@index([workspaceId])
   @@index([appId])
@@ -1268,6 +1286,8 @@ model Trigger {
   /// Set when a playbook made it: changed only through the playbook, deleted with it.
   playbookInstallationId String?
   playbookInstallation   PlaybookInstallation? @relation(fields: [playbookInstallationId], references: [id], onDelete: Cascade)
+  /// Its place among its mailbox's rules: an email goes to the first rule that matches it.
+  position               Int                   @default(0)
   createdAt              DateTime              @default(now())
   sessions               Session[]
 
@@ -1855,6 +1875,8 @@ model Project {
   triggers               Trigger[]
   documents              Document[]
   playbookInstallations  PlaybookInstallation[]
+  /// Its name in its agents' addresses (riley.<slug>@), once one was used.
+  mailProject            MailProject?
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
@@ -2108,4 +2130,251 @@ model ThreadFollow {
 
   @@unique([sessionId, followerId])
   @@index([followerId])
+}
+
+// ---------------------------------------------------------------------------
+// Email: Brigade's own addresses on its mail domain (the Email App)
+// ---------------------------------------------------------------------------
+
+enum MailAddressKind {
+  /// An agent's: riley@, with a variant per project (riley.lovarank@) and per sign-up.
+  agent
+  /// A project's shared mailbox, such as the one support@ is forwarded to.
+  inbox
+}
+
+/// An address on Brigade's mail domain: its name is the part before the first dot, in one
+/// registry for all of Brigade. A name belongs to one agent or one project inbox, in one
+/// workspace, and is never given to anyone else, even once its owner is gone: no link to the
+/// workspace that could delete it, and none to the teammate or project either.
+model MailAddress {
+  id                String          @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  /// Lowercase letters, digits and hyphens. Unique across Brigade, for good.
+  name              String          @unique
+  kind              MailAddressKind
+  /// agent: whose address it is. One address per teammate, kept if it is turned off and on again.
+  teammateId        String?         @unique
+  /// inbox: the project it belongs to, whose threads alone use it.
+  projectId         String?
+  /// Its account in the Email App, which tools, grants, rules and the journal hang on. Null once
+  /// the App or the account was removed: the address then receives nothing.
+  connectionId      String?         @unique
+  connection        Connection?     @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  /// inbox: the address customers write to, forwarded here (support@lovarank.com). Replies go out
+  /// from it once its domain is verified.
+  publicAddress     String?         @unique
+  domainId          String?
+  domain            MailDomain?     @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  /// inbox: the name on what it sends, e.g. "Lovarank support".
+  displayName       String?
+  /// When it stopped receiving (turned off, its agent or project gone). Its name stays reserved.
+  releasedAt        DateTime?
+  createdByMemberId String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  aliases           MailAlias[]
+  messages          MailMessage[]
+
+  @@index([workspaceId])
+}
+
+/// A project's name in its agents' addresses (riley.<slug>@): set the first time one is used,
+/// then kept when the project is renamed or deleted, and never given to another project.
+model MailProject {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  slug           String
+  /// Null once the project is deleted: mail to its variants goes nowhere.
+  projectId      String?   @unique
+  project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+
+  @@unique([workspaceId, slug])
+}
+
+/// An address made for one sign-up (riley.lovarank.k3f9@): until waitUntil its mail goes to the
+/// thread that asked for it, then to its box. Never deleted, so it never points elsewhere.
+model MailAlias {
+  id             String        @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// The whole part before the @, e.g. riley.lovarank.k3f9.
+  local          String        @unique
+  addressId      String
+  address        MailAddress   @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  /// The variant it belongs to (the thread's project). Null: the address without a project.
+  projectId      String?
+  sessionId      String?
+  session        Session?      @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  teammateId     String?
+  /// What it is for, in the teammate's words ("Notion sign-up").
+  purpose        String        @default("")
+  waitUntil      DateTime
+  createdAt      DateTime      @default(now())
+  messages       MailMessage[]
+
+  @@index([sessionId])
+}
+
+enum MailDirection {
+  in
+  out
+}
+
+enum MailStatus {
+  /// in: kept from the webhook, not read and delivered yet.
+  pending
+  /// in: delivered where it goes (see route).
+  done
+  /// in: could not be read or delivered after several tries.
+  failed
+  /// out: handed to Resend, which sends it at sendAt (the window to cancel it).
+  scheduled
+  sent
+  delivered
+  bounced
+  cancelled
+}
+
+enum MailSender {
+  /// A member of the workspace whose address passed DKIM or DMARC.
+  member
+  /// Someone this workspace's mailboxes exchanged mail with before.
+  contact
+  unknown
+  /// One of Brigade's own addresses, e.g. an agent writing to a project inbox.
+  brigade
+}
+
+/// One email in a Brigade mailbox (an agent's address or a project inbox), received or sent.
+/// Received mail left in its box is kept 30 days; mail a thread took lives and goes with it.
+model MailMessage {
+  id             String        @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  addressId      String
+  address        MailAddress   @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  /// The variant: the project of riley.<slug>@. Null: riley@ itself, or a project inbox.
+  projectId      String?
+  /// Address and variant ("<addressId>:<projectId or ->"): one copy per box of a mail sent to
+  /// several of Brigade's addresses.
+  box            String
+  /// Received on a sign-up address.
+  aliasId        String?
+  alias          MailAlias?    @relation(fields: [aliasId], references: [id], onDelete: SetNull)
+  direction      MailDirection
+  status         MailStatus
+  /// Resend's id for the email, received or sent.
+  resendId       String?
+  /// The RFC 5322 Message-ID, for threading. A sent email's comes once Resend reports it.
+  messageId      String?
+  inReplyTo      String?
+  references     String[]      @default([])
+  /// Brigade's id for its conversation: an email answering one of the box's takes its id.
+  conversationId String
+  fromAddress    String
+  fromName       String        @default("")
+  to             String[]      @default([])
+  cc             String[]      @default([])
+  replyTo        String[]      @default([])
+  subject        String        @default("")
+  /// The plain text, up to 100 000 characters.
+  text           String        @default("")
+  /// The few headers Brigade reads (auto-submitted, precedence, list-id…), lower-cased.
+  headers        Json          @default("{}")
+  /// SPF, DKIM and DMARC as the receiving server computed them.
+  authentication Json?
+  /// Sent by a machine (an out-of-office, a notification).
+  automatic      Boolean       @default(false)
+  sender         MailSender?
+  memberId       String?
+  contactId      String?
+  contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  /// Resend's attachments: [{ id, filename, contentType, size, inline }].
+  attachments    Json          @default("[]")
+  /// in: where it went. awaited (a thread waiting on it), conversation (its conversation's
+  /// thread), member (a member's request), rule, box, duplicate, loop, cap, own_copy (a reply a
+  /// person sent from Gmail), unknown_address. Null until delivered.
+  route          String?
+  routeNote      String?
+  /// The thread that took it (in) or sent it (out). Deleted with it.
+  sessionId      String?
+  session        Session?      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  triggerId      String?
+  /// out: the teammate that wrote it, and the member who approved or changed it.
+  teammateId     String?
+  approvedByMemberId String?
+  /// out: when Resend sends it; it can be cancelled until then.
+  sendAt         DateTime?
+  error          String?
+  attempts       Int           @default(0)
+  receivedAt     DateTime      @default(now())
+  /// Left in its box: deleted then.
+  expiresAt      DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([resendId, box])
+  @@index([workspaceId, conversationId])
+  @@index([workspaceId, messageId])
+  @@index([box, receivedAt])
+  @@index([status, updatedAt])
+  @@index([sessionId])
+  @@index([expiresAt])
+}
+
+/// A domain of the workspace's own (lovarank.com) that its project inboxes send as, once its DNS
+/// records are in place. One workspace per domain across Brigade.
+model MailDomain {
+  id                String        @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name              String        @unique
+  resendDomainId    String?
+  /// pending, verified or failed, as Resend last said.
+  status            String        @default("pending")
+  /// The DNS records to add: [{ record, type, name, value, priority?, status }].
+  records           Json          @default("[]")
+  createdByMemberId String
+  checkedAt         DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  addresses         MailAddress[]
+}
+
+/// Someone a workspace's mailboxes exchanged mail with, with each way to reach them.
+model Contact {
+  id             String          @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String          @default("")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  handles        ContactHandle[]
+  messages       MailMessage[]
+}
+
+/// One way to reach a contact: an email address today, a chat account later.
+model ContactHandle {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contactId      String
+  contact        Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  /// email.
+  kind           String
+  /// Lower-cased.
+  value          String
+  lastSeenAt     DateTime  @default(now())
+
+  @@unique([workspaceId, kind, value])
 }

@@ -304,6 +304,14 @@ export const teammates = new Hono<AppEnv>()
       throw new HTTPException(400, {
         message: 'A custom app only sends events; there is nothing to grant',
       })
+    // An agent's email address is that agent's alone; a project's inbox may be given to any.
+    if (connection.kind === 'email') {
+      const address = await db.mailAddress.findFirst({ where: { connectionId: connection.id } })
+      if (address?.kind === 'agent')
+        throw new HTTPException(400, {
+          message: 'An agent’s address is its own: turn it on or off from that agent’s page',
+        })
+    }
     await db.grant.deleteMany({ where: { teammateId: teammate.id, connectionId: connection.id } })
     if (input.scope !== 'none') {
       await db.grant.create({

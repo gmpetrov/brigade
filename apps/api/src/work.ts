@@ -348,6 +348,8 @@ export async function startThread(
         }
     /** Uploaded by the member (or, for a trigger, taken from the event), given with the first message. */
     attachmentIds?: string[]
+    /** The files came from a connection (a member's email to an agent), not the member's uploads. */
+    connectorFiles?: boolean
     /** The task this thread works on, linked before its first turn so the teammate knows. */
     taskId?: string
     /** The project it works in; its context comes with the first turn. */
@@ -356,6 +358,8 @@ export async function startThread(
     effort?: Effort | null
     /** The playbook run it is the root thread of: out of the sidebar until a person takes part. */
     playbookRunId?: string
+    /** Started by a mailbox's rule: out of the sidebar until it needs a person (Session.quiet). */
+    quiet?: boolean
   },
 ) {
   // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
@@ -383,6 +387,7 @@ export async function startThread(
       ...(input.projectId ? { projectId: input.projectId } : {}),
       ...(input.effort ? { effort: input.effort } : {}),
       ...(input.playbookRunId ? { playbookRunId: input.playbookRunId } : {}),
+      ...(input.quiet ? { quiet: true } : {}),
       ...(input.origin?.kind === 'trigger'
         ? {
             origin: 'trigger',
@@ -423,7 +428,7 @@ export async function startThread(
       scope,
       created.id,
       input.attachmentIds ?? [],
-      input.origin ? null : { memberId: input.memberId },
+      input.origin || input.connectorFiles ? null : { memberId: input.memberId },
     ).catch(async (error: unknown) => {
       await db.session.updateMany({ where: { id: created.id }, data: { status: 'failed' } })
       throw error

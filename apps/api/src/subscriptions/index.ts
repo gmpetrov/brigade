@@ -17,6 +17,8 @@ const TICK_MS = 60_000
 
 /** Why a kind of trigger cannot be set up on this server, if it cannot. */
 export function unavailable(kind: ConnectorKind): string | null {
+  if (kind === 'email' && (!env.RESEND_API_KEY || !env.RESEND_WEBHOOK_SECRET))
+    return 'The Email App needs Resend configured on this Brigade server (RESEND_API_KEY and RESEND_WEBHOOK_SECRET)'
   if (kind === 'github' && !env.GITHUB_APP_WEBHOOK_SECRET)
     return "GitHub triggers need the GitHub App's webhook (GITHUB_APP_WEBHOOK_SECRET) configured on this Brigade server"
   return null

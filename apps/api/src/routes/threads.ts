@@ -278,7 +278,7 @@ export const threads = new Hono<AppEnv>()
         // Child threads show in their parent, not in lists.
         parentId: null,
         // A playbook's runs, once a person took part in them (src/playbooks.ts).
-        OR: [{ playbookRunId: null }, { surfacedAt: { not: null } }],
+        OR: [{ playbookRunId: null, quiet: false }, { surfacedAt: { not: null } }],
       },
       ...(limit
         ? {
@@ -1160,6 +1160,7 @@ export const threads = new Hono<AppEnv>()
           approved: input.approved,
           ...(input.reason ? { reason: input.reason } : {}),
           ...(input.always ? { always: true } : {}),
+          ...(input.edited ? { edited: input.edited } : {}),
         }),
       )
     }

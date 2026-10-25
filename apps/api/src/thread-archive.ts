@@ -57,4 +57,12 @@ onScopedWrite((model, scope, operation, result) => {
     void bringBack(scope, row.sessionId).catch((error) =>
       console.warn(`thread-archive: ${row.sessionId} not brought back: ${String(error)}`),
     )
+  // A quiet thread (a mailbox rule's) that needs a person: in the sidebar from now on.
+  if (model === 'Ticket' && row.status === 'open')
+    void scoped(scope)
+      .session.updateMany({
+        where: { id: row.sessionId, quiet: true, surfacedAt: null },
+        data: { surfacedAt: new Date() },
+      })
+      .catch((error) => console.warn(`thread-archive: ${row.sessionId} not surfaced: ${String(error)}`))
 })

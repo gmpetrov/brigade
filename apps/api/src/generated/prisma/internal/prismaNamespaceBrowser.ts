@@ -113,7 +113,14 @@ export const ModelName = {
   PlaybookAction: 'PlaybookAction',
   PlaybookRun: 'PlaybookRun',
   PlaybookDryRun: 'PlaybookDryRun',
-  ThreadFollow: 'ThreadFollow'
+  ThreadFollow: 'ThreadFollow',
+  MailAddress: 'MailAddress',
+  MailProject: 'MailProject',
+  MailAlias: 'MailAlias',
+  MailMessage: 'MailMessage',
+  MailDomain: 'MailDomain',
+  Contact: 'Contact',
+  ContactHandle: 'ContactHandle'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -411,7 +418,8 @@ export const SessionScalarFieldEnum = {
   projectId: 'projectId',
   playbookRunId: 'playbookRunId',
   playbookTeammate: 'playbookTeammate',
-  surfacedAt: 'surfacedAt'
+  surfacedAt: 'surfacedAt',
+  quiet: 'quiet'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -759,6 +767,7 @@ export const TriggerScalarFieldEnum = {
   createdByMemberId: 'createdByMemberId',
   projectId: 'projectId',
   playbookInstallationId: 'playbookInstallationId',
+  position: 'position',
   createdAt: 'createdAt'
 } as const
 
@@ -1234,6 +1243,145 @@ export const ThreadFollowScalarFieldEnum = {
 } as const
 
 export type ThreadFollowScalarFieldEnum = (typeof ThreadFollowScalarFieldEnum)[keyof typeof ThreadFollowScalarFieldEnum]
+
+
+export const MailAddressScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  kind: 'kind',
+  teammateId: 'teammateId',
+  projectId: 'projectId',
+  connectionId: 'connectionId',
+  publicAddress: 'publicAddress',
+  domainId: 'domainId',
+  displayName: 'displayName',
+  releasedAt: 'releasedAt',
+  createdByMemberId: 'createdByMemberId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MailAddressScalarFieldEnum = (typeof MailAddressScalarFieldEnum)[keyof typeof MailAddressScalarFieldEnum]
+
+
+export const MailProjectScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  slug: 'slug',
+  projectId: 'projectId',
+  createdAt: 'createdAt'
+} as const
+
+export type MailProjectScalarFieldEnum = (typeof MailProjectScalarFieldEnum)[keyof typeof MailProjectScalarFieldEnum]
+
+
+export const MailAliasScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  local: 'local',
+  addressId: 'addressId',
+  projectId: 'projectId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  purpose: 'purpose',
+  waitUntil: 'waitUntil',
+  createdAt: 'createdAt'
+} as const
+
+export type MailAliasScalarFieldEnum = (typeof MailAliasScalarFieldEnum)[keyof typeof MailAliasScalarFieldEnum]
+
+
+export const MailMessageScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  addressId: 'addressId',
+  projectId: 'projectId',
+  box: 'box',
+  aliasId: 'aliasId',
+  direction: 'direction',
+  status: 'status',
+  resendId: 'resendId',
+  messageId: 'messageId',
+  inReplyTo: 'inReplyTo',
+  references: 'references',
+  conversationId: 'conversationId',
+  fromAddress: 'fromAddress',
+  fromName: 'fromName',
+  to: 'to',
+  cc: 'cc',
+  replyTo: 'replyTo',
+  subject: 'subject',
+  text: 'text',
+  headers: 'headers',
+  authentication: 'authentication',
+  automatic: 'automatic',
+  sender: 'sender',
+  memberId: 'memberId',
+  contactId: 'contactId',
+  attachments: 'attachments',
+  route: 'route',
+  routeNote: 'routeNote',
+  sessionId: 'sessionId',
+  triggerId: 'triggerId',
+  teammateId: 'teammateId',
+  approvedByMemberId: 'approvedByMemberId',
+  sendAt: 'sendAt',
+  error: 'error',
+  attempts: 'attempts',
+  receivedAt: 'receivedAt',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MailMessageScalarFieldEnum = (typeof MailMessageScalarFieldEnum)[keyof typeof MailMessageScalarFieldEnum]
+
+
+export const MailDomainScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  resendDomainId: 'resendDomainId',
+  status: 'status',
+  records: 'records',
+  createdByMemberId: 'createdByMemberId',
+  checkedAt: 'checkedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MailDomainScalarFieldEnum = (typeof MailDomainScalarFieldEnum)[keyof typeof MailDomainScalarFieldEnum]
+
+
+export const ContactScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ContactScalarFieldEnum = (typeof ContactScalarFieldEnum)[keyof typeof ContactScalarFieldEnum]
+
+
+export const ContactHandleScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  contactId: 'contactId',
+  kind: 'kind',
+  value: 'value',
+  lastSeenAt: 'lastSeenAt'
+} as const
+
+export type ContactHandleScalarFieldEnum = (typeof ContactHandleScalarFieldEnum)[keyof typeof ContactHandleScalarFieldEnum]
 
 
 export const SortOrder = {

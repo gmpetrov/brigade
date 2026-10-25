@@ -386,3 +386,45 @@ export type PlaybookDryRun = Prisma.PlaybookDryRunModel
  * wakes each follower once, like a parent (src/children.ts).
  */
 export type ThreadFollow = Prisma.ThreadFollowModel
+/**
+ * Model MailAddress
+ * An address on Brigade's mail domain: its name is the part before the first dot, in one
+ * registry for all of Brigade. A name belongs to one agent or one project inbox, in one
+ * workspace, and is never given to anyone else, even once its owner is gone: no link to the
+ * workspace that could delete it, and none to the teammate or project either.
+ */
+export type MailAddress = Prisma.MailAddressModel
+/**
+ * Model MailProject
+ * A project's name in its agents' addresses (riley.<slug>@): set the first time one is used,
+ * then kept when the project is renamed or deleted, and never given to another project.
+ */
+export type MailProject = Prisma.MailProjectModel
+/**
+ * Model MailAlias
+ * An address made for one sign-up (riley.lovarank.k3f9@): until waitUntil its mail goes to the
+ * thread that asked for it, then to its box. Never deleted, so it never points elsewhere.
+ */
+export type MailAlias = Prisma.MailAliasModel
+/**
+ * Model MailMessage
+ * One email in a Brigade mailbox (an agent's address or a project inbox), received or sent.
+ * Received mail left in its box is kept 30 days; mail a thread took lives and goes with it.
+ */
+export type MailMessage = Prisma.MailMessageModel
+/**
+ * Model MailDomain
+ * A domain of the workspace's own (lovarank.com) that its project inboxes send as, once its DNS
+ * records are in place. One workspace per domain across Brigade.
+ */
+export type MailDomain = Prisma.MailDomainModel
+/**
+ * Model Contact
+ * Someone a workspace's mailboxes exchanged mail with, with each way to reach them.
+ */
+export type Contact = Prisma.ContactModel
+/**
+ * Model ContactHandle
+ * One way to reach a contact: an email address today, a chat account later.
+ */
+export type ContactHandle = Prisma.ContactHandleModel

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { ConnectorDefinition, ConnectorKind, TriggerDefinition } from './types.js'
 import { cloudflare } from './cloudflare.js'
+import { email } from './email.js'
 import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
@@ -46,6 +47,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   posthog,
   dataforseo,
   ahrefs,
+  email,
 }
 
 /**
@@ -97,6 +99,7 @@ export const triggerCatalog = () =>
         'posthog',
         'dataforseo',
         'ahrefs',
+        'email',
         'mcp',
         'webhook',
       ] as const
@@ -327,6 +330,15 @@ export const appCatalog: Record<
     category: 'Custom',
     // A sign-in is someone's own account: kept to their threads until they open it to every thread.
     personal: true,
+  },
+  email: {
+    name: 'Email',
+    description:
+      'Addresses of your own for your agents, on Brigade’s mail domain: to sign up to services, receive codes, ' +
+      'and answer customers from a project’s inbox.',
+    developer: 'Brigade',
+    category: 'Productivity',
+    personal: false,
   },
   webhook: {
     name: 'Custom app',

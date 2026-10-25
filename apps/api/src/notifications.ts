@@ -233,7 +233,7 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
             at: { gt: fresh },
             session: {
               parentId: null,
-              OR: [{ playbookRunId: null }, { surfacedAt: { not: null } }],
+              OR: [{ playbookRunId: null, quiet: false }, { surfacedAt: { not: null } }],
             },
           },
           select: {

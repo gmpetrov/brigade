@@ -123,6 +123,19 @@ const Env = z.object({
    * reads it from Stripe each time it opens (a preview).
    */
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  /**
+   * The Email App (src/mail/): agents' addresses on MAIL_DOMAIN, received and sent through
+   * Resend. A Resend API key with full access, of the account where MAIL_DOMAIN is verified
+   * for sending and receiving. Without it, the Email App is unavailable.
+   */
+  RESEND_API_KEY: z.string().optional(),
+  /**
+   * The signing secret (whsec_…) of the Resend webhook to {API_URL}/events/resend, with the
+   * events email.received, email.sent, email.delivered, email.bounced and email.failed.
+   */
+  RESEND_WEBHOOK_SECRET: z.string().optional(),
+  /** The domain agents' addresses are on. */
+  MAIL_DOMAIN: z.string().default('mails.brigade.lol'),
 })
 
 // An empty value (KEY= in .env, as .env.example has them) means unset.

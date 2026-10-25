@@ -477,8 +477,16 @@ async function mayDecideCredential(
 export async function resolveTicket(
   scope: WorkspaceScope,
   ticketId: string,
-  input: { approved: boolean; reason?: string; always?: boolean },
+  given: {
+    approved: boolean
+    reason?: string
+    always?: boolean
+    /** An email's draft as the person changed it (EditedEmail). */
+    edited?: Record<string, unknown>
+  },
 ): Promise<{ ok: true; live: boolean }> {
+  const { edited, ...rest } = given
+  const input = { ...rest, ...(edited ? { input: edited } : {}) }
   const db = scoped(scope)
   const ticket = await db.ticket.findFirst({
     where: { id: ticketId, status: 'open' },
