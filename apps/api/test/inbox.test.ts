@@ -579,6 +579,9 @@ describe('handing over', { skip }, () => {
     assert.equal(session.teammateId, cody.id)
     assert.equal(session.startedByMemberId, members[0])
     assert.equal(session.projectId, projectId)
+    // Out of the sidebar until someone takes part or it needs a person: the Inbox follows it.
+    assert.equal(session.quiet, true)
+    assert.equal(session.surfacedAt, null)
     const row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: m.id } })
     assert.equal(row.sessionId, threadId)
     assert.equal(row.route, 'handed')

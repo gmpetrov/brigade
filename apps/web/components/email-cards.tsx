@@ -1,7 +1,7 @@
 'use client'
 // Emails as people read them rather than as the teammate gets them: one a trigger received
-// (the first message of its thread, or a reply in its conversation) or a reply to an email
-// sent from the thread, and one a teammate asks to send (an approval's arguments). The raw
+// (the first message of its thread, or a reply in its conversation), a reply to an email
+// sent from the thread or one a person handed over from the Inbox, and one a teammate asks to send (an approval's arguments). The raw
 // event or arguments fold under Details.
 import {
   AWAITED_EMAIL,
@@ -13,7 +13,8 @@ import {
   type TriggerEmail,
   type TriggerEventMessage,
 } from '@brigade/contracts'
-import { ChevronRight, Reply, Zap } from 'lucide-react'
+import { ChevronRight, Mail, Reply, Zap } from 'lucide-react'
+import Link from 'next/link'
 import { Fragment, useState, type ReactNode } from 'react'
 import { MessageAttachments } from '@/components/attachments'
 import { ProviderLogo } from '@/components/provider-logo'
@@ -49,6 +50,8 @@ export function Details({
     </Collapsible>
   )
 }
+
+const str = (value: unknown) => (typeof value === 'string' ? value : undefined)
 
 /** Raw JSON or text, as under a tool call. */
 export function Raw({ value }: { value: unknown }) {
@@ -137,14 +140,16 @@ export function ReceivedEmailCard({
   email,
   attachments,
   reply,
+  handed,
 }: {
   event: TriggerEventMessage
   email: TriggerEmail
   attachments: MessageAttachment[]
   /** A later email in the thread's conversation, not the one that started it. */
   reply: boolean
+  /** Handed over from the Inbox: the card opens its conversation there (its item, when known). */
+  handed?: { item: string | null }
 }) {
-  const from = mailbox(email.from)
   const at = when(email.date, event.received)
   // Mail the thread waited on (a reply to its email, a sign-up's code) or in a conversation it
   // handles, rather than a trigger's event.
@@ -152,6 +157,78 @@ export function ReceivedEmailCard({
   const labels = email.labels.map((l) => LABELS[l]).filter(Boolean)
   const payload = (event.payload ?? {}) as { provider?: string; sender?: { kind?: string } }
   const sender = SENDERS[payload.sender?.kind ?? '']
+  // A handed-over email's conversation before it, oldest first.
+  const earlier = (
+    Array.isArray((payload as { earlier?: unknown }).earlier)
+      ? (payload as { earlier: unknown[] }).earlier
+      : []
+  ).flatMap((m) => {
+    const r = (m ?? {}) as Record<string, unknown>
+    return typeof r.from === 'string' && typeof r.body === 'string'
+      ? [
+          {
+            from: r.from,
+            body: r.body,
+            at: when(str(r.date), event.received),
+            sent: r.sent === true,
+          },
+        ]
+      : []
+  })
+  const inbox = handed?.item ? `/app/inbox?item=${encodeURIComponent(handed.item)}` : '/app/inbox'
+  // Handed over: who wrote it and its subject open its conversation in the Inbox.
+  const opens = (children: ReactNode) =>
+    handed ? (
+      <Link href={inbox} className="rounded-md hover:opacity-80">
+        {children}
+      </Link>
+    ) : (
+      children
+    )
+  if (handed)
+    return (
+      <article className="min-w-0 overflow-hidden rounded-xl border bg-card text-sm shadow-xs">
+        <Link
+          href={inbox}
+          className="flex items-center gap-2 border-b px-4 py-2 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <Mail aria-hidden className="size-3.5 flex-none" />
+          <span className="min-w-0 flex-1 truncate">Handed over from the Inbox</span>
+          Open conversation
+          <ChevronRight aria-hidden className="size-3.5 flex-none" />
+        </Link>
+        <EmailBody email={email} at={at} attachments={attachments} opens={opens} />
+        {earlier.length > 0 && (
+          <Details
+            label={`${earlier.length} earlier ${earlier.length === 1 ? 'message' : 'messages'}`}
+            className="border-t px-4 py-2.5"
+          >
+            {earlier.map((m, i) => (
+              <div key={i} className="flex flex-col gap-1 border-l-2 pl-3">
+                <p className="text-xs text-muted-foreground wrap-anywhere">
+                  <span className="font-semibold text-foreground">
+                    {mailbox(m.from).name ?? mailbox(m.from).address}
+                  </span>
+                  {m.sent && ' · sent'}
+                  {m.at && ` · ${m.at.label}`}
+                </p>
+                <Body body={m.body} className="[&>p]:text-sm" />
+              </div>
+            ))}
+          </Details>
+        )}
+        <Details className="border-t px-4 py-2.5">
+          <Facts
+            rows={[
+              ['Mailbox', event.source],
+              ['Received', event.received, true],
+              ...(email.id ? [['Message id', email.id, true] as [string, string, boolean]] : []),
+            ]}
+          />
+          <Raw value={event.payload} />
+        </Details>
+      </article>
+    )
   return (
     <article className="min-w-0 overflow-hidden rounded-xl border bg-card text-sm shadow-xs">
       <div className="flex items-center gap-2 border-b px-4 py-2 text-xs text-muted-foreground">
@@ -176,7 +253,45 @@ export function ReceivedEmailCard({
           </>
         )}
       </div>
-      <div className="flex flex-col gap-2 px-4 pt-3.5 pb-3">
+      <EmailBody email={email} at={at} attachments={attachments} />
+      <Details className="border-t px-4 py-2.5">
+        <Facts
+          rows={[
+            awaited
+              ? ['Mailbox', event.source]
+              : ['Trigger', `${event.trigger} · ${event.definition} on ${event.source}`],
+            ['Received', event.received, true],
+            ...(sender ? [['Sender', sender] as [string, string]] : []),
+            ...(labels.length ? [['Labels', labels.join(' · ')] as [string, string]] : []),
+            ...(email.id ? [['Message id', email.id, true] as [string, string, boolean]] : []),
+            ...(email.threadId
+              ? [['Thread id', email.threadId, true] as [string, string, boolean]]
+              : []),
+          ]}
+        />
+        <Raw value={event.payload} />
+      </Details>
+    </article>
+  )
+}
+
+/** Who wrote an email, to whom and when, then its subject, words and files. */
+function EmailBody({
+  email,
+  at,
+  attachments,
+  opens = (children) => children,
+}: {
+  email: TriggerEmail
+  at: ReturnType<typeof when>
+  attachments: MessageAttachment[]
+  /** Wraps who wrote it and its subject: a link, on a handed-over email's card. */
+  opens?: (children: ReactNode) => ReactNode
+}) {
+  const from = mailbox(email.from)
+  return (
+    <div className="flex flex-col gap-2 px-4 pt-3.5 pb-3">
+      {opens(
         <div className="flex items-start gap-3">
           <span
             aria-hidden
@@ -207,33 +322,17 @@ export function ReceivedEmailCard({
               {at.label}
             </time>
           )}
-        </div>
-        <div className="flex flex-col gap-1 sm:pl-11">
-          {email.subject && <h3 className="text-base font-bold wrap-anywhere">{email.subject}</h3>}
-          <Body body={email.body} />
-          {attachments.length > 0 && (
-            <MessageAttachments attachments={attachments} className="mt-1" />
-          )}
-        </div>
+        </div>,
+      )}
+      <div className="flex flex-col gap-1 sm:pl-11">
+        {email.subject &&
+          opens(<h3 className="text-base font-bold wrap-anywhere">{email.subject}</h3>)}
+        <Body body={email.body} />
+        {attachments.length > 0 && (
+          <MessageAttachments attachments={attachments} className="mt-1" />
+        )}
       </div>
-      <Details className="border-t px-4 py-2.5">
-        <Facts
-          rows={[
-            awaited
-              ? ['Mailbox', event.source]
-              : ['Trigger', `${event.trigger} · ${event.definition} on ${event.source}`],
-            ['Received', event.received, true],
-            ...(sender ? [['Sender', sender] as [string, string]] : []),
-            ...(labels.length ? [['Labels', labels.join(' · ')] as [string, string]] : []),
-            ...(email.id ? [['Message id', email.id, true] as [string, string, boolean]] : []),
-            ...(email.threadId
-              ? [['Thread id', email.threadId, true] as [string, string, boolean]]
-              : []),
-          ]}
-        />
-        <Raw value={event.payload} />
-      </Details>
-    </article>
+    </div>
   )
 }
 
