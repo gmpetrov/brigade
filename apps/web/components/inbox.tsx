@@ -590,6 +590,8 @@ function HandForm({
   const [projectId, setProjectId] = useState(detail.project?.id ?? 'none')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string>()
+  // Brigade's mail is answered from its mailbox, which only its project's threads reach.
+  const gmail = detail.source.kind === 'gmail'
 
   if (detail.handTo.length === 0)
     return (
@@ -607,7 +609,7 @@ function HandForm({
         body: {
           teammateId,
           note: note.trim() || undefined,
-          projectId: projectId === 'none' ? null : projectId,
+          ...(gmail ? { projectId: projectId === 'none' ? null : projectId } : {}),
         },
       })
       void onHanded()
@@ -652,10 +654,12 @@ function HandForm({
           rows={3}
         />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="hand-project">Project</Label>
-        <ProjectSelect id="hand-project" value={projectId} onChange={setProjectId} />
-      </div>
+      {gmail && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="hand-project">Project</Label>
+          <ProjectSelect id="hand-project" value={projectId} onChange={setProjectId} />
+        </div>
+      )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={!teammateId || sending}>

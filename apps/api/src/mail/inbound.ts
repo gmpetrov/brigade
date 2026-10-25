@@ -410,7 +410,8 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
       route: { in: ['member', 'conversation', 'handed'] },
       NOT: { id: row.id },
     },
-    orderBy: { receivedAt: 'desc' },
+    // A hand-over moves the conversation, even from an older mail of it: the newest one wins.
+    orderBy: [{ handedAt: { sort: 'desc', nulls: 'last' } }, { receivedAt: 'desc' }],
     select: { sessionId: true },
   })
   if (held?.sessionId) {

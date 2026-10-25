@@ -6903,6 +6903,7 @@ export const MailMessageScalarFieldEnum = {
   doneAt: 'doneAt',
   doneByMemberId: 'doneByMemberId',
   handedByMemberId: 'handedByMemberId',
+  handedAt: 'handedAt',
   error: 'error',
   attempts: 'attempts',
   receivedAt: 'receivedAt',

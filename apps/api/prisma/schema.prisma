@@ -2331,6 +2331,8 @@ model MailMessage {
   doneByMemberId     String?
   /// The Inbox: the person who handed it to a teammate (its thread is sessionId, route handed).
   handedByMemberId   String?
+  /// When it was handed over: the newest hand-over holds its conversation.
+  handedAt           DateTime?
   error              String?
   attempts           Int           @default(0)
   receivedAt         DateTime      @default(now())

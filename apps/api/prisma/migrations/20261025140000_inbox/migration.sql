@@ -2,6 +2,7 @@
 ALTER TABLE "MailMessage" ADD COLUMN     "connectionId" TEXT,
 ADD COLUMN     "doneAt" TIMESTAMP(3),
 ADD COLUMN     "doneByMemberId" TEXT,
+ADD COLUMN     "handedAt" TIMESTAMP(3),
 ADD COLUMN     "handedByMemberId" TEXT,
 ADD COLUMN     "sourceId" TEXT,
 ALTER COLUMN "addressId" DROP NOT NULL;

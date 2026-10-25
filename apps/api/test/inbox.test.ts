@@ -345,18 +345,20 @@ describe('the Inbox', { skip }, () => {
     })
     const code = await mail(agent, {
       aliasId: alias.id,
+      fromAddress: `codes-${id}@service.test`,
       subject: 'Your code is 482913',
       text: 'Code 482913',
     })
-    const forBob = (
-      await inbox.listInbox(db, as(1), {
-        status: 'all',
-        source: `email:${agent.id}`,
-        q: '482913',
-      })
-    ).items.find((i) => i.id === `mail:${code.id}`)
+    const search = (who: 0 | 1, q: string) =>
+      inbox
+        .listInbox(db, as(who), { status: 'all', source: `email:${agent.id}`, q })
+        .then((r) => r.items.find((i) => i.id === `mail:${code.id}`))
+    const forBob = await search(1, `codes-${id}`)
     assert.equal(forBob?.hidden, true)
     assert.doesNotMatch(forBob!.subject + forBob!.snippet, /482913/)
+    // Its words are not searched for him either: a match would give the code away digit by digit.
+    assert.equal(await search(1, '4829'), undefined)
+    assert.equal((await search(0, '4829'))?.hidden, false)
     const detail = await inbox.readItem(db, as(1), `mail:${code.id}`)
     assert.equal(detail.text, '')
     await assert.rejects(
@@ -434,11 +436,24 @@ describe('handing over', { skip }, () => {
     const m = await mail(support, {
       subject: 'Please refund me',
       messageId: `<handed-${id}@x.test>`,
+      text: `Ask @[Riley](teammate:${riley.id}) and use @[Key](credential:key-${id})`,
     })
+    // Its mailbox is the project's: a thread elsewhere could not read or answer it.
+    await assert.rejects(
+      inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: cody.id, projectId: null }),
+      /project/,
+    )
     const { threadId } = await inbox.handItem(db, as(0), `mail:${m.id}`, {
       teammateId: cody.id,
       note: 'Check the order first',
     })
+    // The mail's mentions are words: they summon nobody and grant nothing.
+    assert.deepEqual(
+      (await prisma.threadTeammate.findMany({ where: { sessionId: threadId } })).map(
+        (t) => t.teammateId,
+      ),
+      [cody.id],
+    )
     const session = await prisma.session.findUniqueOrThrow({ where: { id: threadId } })
     assert.equal(session.teammateId, cody.id)
     assert.equal(session.startedByMemberId, members[0])
@@ -470,6 +485,29 @@ describe('handing over', { skip }, () => {
     const delivered = await prisma.mailMessage.findUniqueOrThrow({ where: { id: answer.id } })
     assert.equal(delivered.route, 'conversation')
     assert.equal(delivered.sessionId, threadId)
+
+    // Handed again, from its first mail: the conversation moves to the new thread.
+    const again = await inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: cody.id })
+    assert.notEqual(again.threadId, threadId)
+    const next = await prisma.mailMessage.create({
+      data: {
+        ...scope,
+        addressId: support.id,
+        box: `${support.id}:-`,
+        direction: 'in',
+        status: 'pending',
+        conversationId: row.conversationId,
+        fromAddress: 'client@outside.test',
+        subject: 'Re: Please refund me',
+        text: 'Any news?',
+        sender: 'contact',
+      } as never,
+    })
+    await processMail(next.id)
+    assert.equal(
+      (await prisma.mailMessage.findUniqueOrThrow({ where: { id: next.id } })).sessionId,
+      again.threadId,
+    )
     await prisma.computer.delete({ where: { id: cloud.id } })
   })
 })

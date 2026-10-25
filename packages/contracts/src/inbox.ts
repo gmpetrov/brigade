@@ -67,6 +67,6 @@ export const HandInboxItem = z.object({
   teammateId: z.string(),
   /** What the person asks, before the mail. */
   note: z.string().max(5000).optional(),
-  /** Its thread's project. Default: the item's. */
+  /** Its thread's project, for Gmail. Default: the item's; Brigade's mail stays in its mailbox's. */
   projectId: z.string().nullish(),
 })
