@@ -5,8 +5,8 @@
 import { ATTACHMENT_MAX } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { readAttachment, servedFromBucket, storeAttachment } from '../attachments.js'
-import { attachmentKey, presignGet } from '../bucket.js'
+import { storeAttachment } from '../attachments.js'
+import { attachmentKey, directUploads, presignGet, streamObject } from '../bucket.js'
 import { scoped } from '../db.js'
 import { authenticateRunner } from '../hub.js'
 import { actingTeammate } from '../thread-spec.js'
@@ -33,16 +33,19 @@ export const runnerAttachments = new Hono<{
       },
     })
     if (!row) throw new HTTPException(404, { message: 'File not found' })
-    // A large video: from the bucket's short-lived URL (fetch drops the token on the way there).
-    if (servedFromBucket(row)) {
+    // From the bucket's short-lived URL, never through the API (fetch drops the token on the
+    // way there); the runner checks the bytes against the SHA-256 it was given.
+    if (directUploads) {
       const signed = await presignGet(attachmentKey(runner, row.id), {
         contentType: 'application/octet-stream',
         disposition: 'attachment',
       })
       return c.redirect(signed.url, 302)
     }
-    const bytes = await readAttachment(runner, row.id)
-    return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
+    // Without R2 (on a laptop): from its folder, as it streams.
+    const body = await streamObject(attachmentKey(runner, row.id))
+    if (!body) throw new HTTPException(404, { message: 'The file is missing from storage' })
+    return c.body(body, 200, {
       'content-type': 'application/octet-stream',
       'x-sha256': row.sha256,
     })

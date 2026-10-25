@@ -20,6 +20,7 @@ import {
 } from '@brigade/contracts'
 import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
+import { documentKey, versionKey } from '../bucket.js'
 import { collabEnabled, COLLAB_PARTY, cursorColor, editToken } from '../collab.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
@@ -61,21 +62,22 @@ import {
 } from '../library.js'
 import { libraryPreview } from '../previews.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
+import { serveObject } from '../serve-object.js'
 
 /** Types the browser may show inline from the API's origin; anything else downloads. */
 const INLINE =
   /^(text\/plain|text\/markdown|text\/csv|text\/tab-separated-values|application\/json|application\/pdf|image\/(png|jpeg|gif|webp|avif)|video\/(mp4|webm|quicktime)|audio\/(mpeg|mp4|wav|ogg))$/
 
-/** A file's bytes, to show or download. Never run as a page on this origin. */
+/** A file's bytes, to show or download, as they stream. Never run as a page on this origin. */
 function fileResponse(
   c: Context,
-  bytes: Uint8Array,
-  file: { path: string; contentType: string },
+  key: string,
+  file: { path: string; contentType: string; size: number },
   download: boolean,
 ) {
   const inline = !download && INLINE.test(file.contentType)
   const name = file.path.split('/').pop()!
-  return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
+  return serveObject(c, key, file.size, {
     'content-type': file.contentType.startsWith('text/')
       ? `${file.contentType}; charset=utf-8`
       : file.contentType,
@@ -446,8 +448,12 @@ export const library = new Hono<AppEnv>()
   /** The file's bytes. Shown inline only for types that cannot run script on this origin. */
   .get('/:id/content', async (c) => {
     const row = await libraryFile(c.var.db, c.req.param('id'))
-    const bytes = await readLibraryFile(c.var.scope, row.id)
-    return fileResponse(c, bytes, row, c.req.query('download') !== undefined)
+    return fileResponse(
+      c,
+      documentKey(c.var.scope, row.id),
+      row,
+      c.req.query('download') !== undefined,
+    )
   })
 
   /** A Word document, spreadsheet or deck, readable in the dashboard. `?version=` for an older one. */
@@ -501,8 +507,12 @@ export const library = new Hono<AppEnv>()
       where: { id: c.req.param('versionId'), documentId: row.id },
     })
     if (!version) throw new HTTPException(404, { message: 'Version not found' })
-    const bytes = await readVersion(scope, version.id)
-    return fileResponse(c, bytes, version, c.req.query('download') !== undefined)
+    return fileResponse(
+      c,
+      versionKey(scope, version.id),
+      version,
+      c.req.query('download') !== undefined,
+    )
   })
 
   /** Make an older version the current one. The newer ones stay in the history. */

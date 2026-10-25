@@ -253,6 +253,26 @@ export async function streamObject(key: string): Promise<ReadableStream<Uint8Arr
   return response.body
 }
 
+/**
+ * Bytes `start` to `end` (inclusive) of the object as they arrive, or null when it is gone: a
+ * file served through the API is never held whole.
+ */
+export async function streamRange(
+  key: string,
+  start: number,
+  end: number,
+): Promise<ReadableStream<Uint8Array> | null> {
+  if (!r2) {
+    const file = join(env.BUCKET_DIR, key)
+    if (!(await stat(file).catch(() => null))) return null
+    return Readable.toWeb(createReadStream(file, { start, end })) as ReadableStream<Uint8Array>
+  }
+  const response = await r2.client.fetch(url(key), { headers: { range: `bytes=${start}-${end}` } })
+  if (response.status === 404) return null
+  if (!response.ok || !response.body) throw new Error(`bucket get failed: ${response.status}`)
+  return response.body
+}
+
 /** The keys of every object in a folder, such as `threadFilesPrefix`: it ends with a slash. */
 export async function listObjects(prefix: string): Promise<string[]> {
   if (!prefix.endsWith('/')) throw new Error('List a folder')
