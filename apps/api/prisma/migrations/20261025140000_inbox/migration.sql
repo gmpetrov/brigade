@@ -1,29 +1,20 @@
--- CreateTable
-CREATE TABLE "InboxState" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
-    "source" TEXT NOT NULL,
-    "itemId" TEXT NOT NULL,
-    "doneAt" TIMESTAMP(3),
-    "doneByMemberId" TEXT,
-    "sessionId" TEXT,
-    "handedByMemberId" TEXT,
-    "handedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "InboxState_pkey" PRIMARY KEY ("id")
-);
+-- AlterTable
+ALTER TABLE "MailMessage" ADD COLUMN     "connectionId" TEXT,
+ADD COLUMN     "doneAt" TIMESTAMP(3),
+ADD COLUMN     "doneByMemberId" TEXT,
+ADD COLUMN     "handedByMemberId" TEXT,
+ADD COLUMN     "sourceId" TEXT,
+ALTER COLUMN "addressId" DROP NOT NULL;
 
 -- CreateIndex
-CREATE INDEX "InboxState_workspaceId_source_doneAt_idx" ON "InboxState"("workspaceId", "source", "doneAt");
+CREATE INDEX "MailMessage_workspaceId_direction_receivedAt_idx" ON "MailMessage"("workspaceId", "direction", "receivedAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "InboxState_workspaceId_itemId_key" ON "InboxState"("workspaceId", "itemId");
+CREATE UNIQUE INDEX "MailMessage_box_sourceId_key" ON "MailMessage"("box", "sourceId");
 
 -- AddForeignKey
-ALTER TABLE "InboxState" ADD CONSTRAINT "InboxState_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "MailMessage" ADD CONSTRAINT "MailMessage_connectionId_fkey" FOREIGN KEY ("connectionId") REFERENCES "Connection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "InboxState" ADD CONSTRAINT "InboxState_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- AlterTable
+ALTER TABLE "Connection" ADD COLUMN     "inbox" BOOLEAN NOT NULL DEFAULT false;
+

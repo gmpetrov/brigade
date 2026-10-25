@@ -29,7 +29,7 @@ async function reachable() {
   })
   try {
     await client.connect()
-    await client.query('select 1 from "InboxState" limit 1')
+    await client.query('select "inbox" from "Connection" limit 1')
     return true
   } catch {
     return false
@@ -56,6 +56,7 @@ let agent: { id: string; connectionId: string }
 let support: { id: string; connectionId: string }
 let gmailShared: string
 let gmailBobs: string
+let gmailNotListed: string
 const realFetch = globalThis.fetch
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
@@ -70,30 +71,9 @@ const as = (who: 0 | 1) => ({
 
 before(async () => {
   if (skip) return
-  // Gmail, as the Inbox reads an account: its latest messages, then each one's metadata.
+  // Gmail is not called: its mail is in Brigade, kept as its inbox reader reads it.
   globalThis.fetch = (async (input: string | URL | Request) => {
-    const url = new URL(
-      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
-    )
-    if (url.host !== 'gmail.googleapis.com') throw new Error(`unexpected request ${url}`)
-    const path = url.pathname.replace('/gmail/v1/users/me', '')
-    if (path === '/messages') return json({ messages: [{ id: 'g1' }] })
-    if (path === '/messages/g1')
-      return json({
-        id: 'g1',
-        threadId: 'gt1',
-        internalDate: String(Date.now() - 60_000),
-        snippet: 'Can I get a refund?',
-        payload: {
-          headers: [
-            { name: 'From', value: 'Client <client@outside.test>' },
-            { name: 'Subject', value: 'Refund' },
-          ],
-          mimeType: 'text/plain',
-          body: { data: Buffer.from('Can I get a refund?').toString('base64url') },
-        },
-      })
-    throw new Error(`unexpected request ${url}`)
+    throw new Error(`unexpected request ${String(input)}`)
   }) as typeof fetch
 
   await prisma.organization.create({ data: { id: org, name: 'Inbox test', slug: org } })
@@ -157,7 +137,12 @@ before(async () => {
   const gmailApp = await db.app.create({
     data: { key: 'gmail', createdByMemberId: members[0] } as never,
   })
-  const gmail = async (reach: 'mine' | 'workspace', owner: string, address: string) =>
+  const gmail = async (
+    reach: 'mine' | 'workspace',
+    owner: string,
+    address: string,
+    inInbox = true,
+  ) =>
     (
       await db.connection.create({
         data: {
@@ -166,6 +151,7 @@ before(async () => {
           label: address,
           externalAccount: address,
           reach,
+          inbox: inInbox,
           createdByMemberId: owner,
           vaultSecretId: await sealSecret(db, scope, {
             accessToken: 'token',
@@ -177,6 +163,30 @@ before(async () => {
     ).id
   gmailShared = await gmail('workspace', members[0]!, `support-${id}@acme.test`)
   gmailBobs = await gmail('mine', members[1]!, `bob-${id}@acme.test`)
+  gmailNotListed = await gmail('workspace', members[0]!, `ada-${id}@acme.test`, false)
+  // Its latest mail, as the reader keeps it (src/mail/gmail-inbox.ts); the others' never is.
+  const { keepGmail } = await import('../src/mail/gmail-inbox.js')
+  for (const connectionId of [gmailShared, gmailBobs, gmailNotListed]) {
+    const connection = await prisma.connection.findUniqueOrThrow({ where: { id: connectionId } })
+    await keepGmail(
+      connection,
+      {
+        id: 'g1',
+        threadId: 'gt1',
+        from: 'Client <client@outside.test>',
+        to: connection.externalAccount ?? '',
+        subject: 'Refund',
+        date: new Date(Date.now() - 60_000).toUTCString(),
+        snippet: 'Can I get a refund?',
+        labels: ['INBOX'],
+        cc: undefined,
+        body: 'Can I get a refund?',
+        attachments: [],
+        automatic: false,
+      },
+      { route: 'box' },
+    )
+  }
 })
 
 after(async () => {
@@ -239,19 +249,20 @@ describe('the Inbox', { skip }, () => {
     const taken = await mail(support, { route: 'rule', sessionId: ruled.id })
     const all = await inbox.listInbox(db, as(0), { status: 'all' })
     const byId = new Map(all.items.map((i) => [i.id, i]))
-    assert.equal(byId.get(`email:${waiting.id}`)?.status, 'waiting')
-    assert.equal(byId.get(`email:${taken.id}`)?.status, 'handled')
-    assert.equal(byId.get(`email:${taken.id}`)?.thread?.id, ruled.id)
-    assert.equal(byId.get(`email:${taken.id}`)?.project?.id, projectId)
+    assert.equal(byId.get(`mail:${waiting.id}`)?.status, 'waiting')
+    assert.equal(byId.get(`mail:${taken.id}`)?.status, 'handled')
+    assert.equal(byId.get(`mail:${taken.id}`)?.thread?.id, ruled.id)
+    assert.equal(byId.get(`mail:${taken.id}`)?.project?.id, projectId)
     // Gmail's latest, read live, beside Brigade's own.
-    const g = byId.get(`gmail:${gmailShared}:g1`)
+    const kept = await prisma.mailMessage.findFirstOrThrow({ where: { connectionId: gmailShared } })
+    const g = byId.get(`mail:${kept.id}`)
     assert.equal(g?.subject, 'Refund')
     assert.equal(g?.from, 'client@outside.test')
     assert.equal(g?.status, 'waiting')
     // Waiting is the default view; the sidebar counts what waits in Brigade's mail.
     const shown = await inbox.listInbox(db, as(0), { status: 'waiting' })
-    assert.ok(shown.items.some((i) => i.id === `email:${waiting.id}`))
-    assert.ok(!shown.items.some((i) => i.id === `email:${taken.id}`))
+    assert.ok(shown.items.some((i) => i.id === `mail:${waiting.id}`))
+    assert.ok(!shown.items.some((i) => i.id === `mail:${taken.id}`))
     assert.ok((await inbox.waitingCount(db)) >= 1)
   })
 
@@ -265,31 +276,59 @@ describe('the Inbox', { skip }, () => {
     })
     assert.ok(onlySupport.items.every((i) => i.source.id === `email:${support.id}`))
     const rileys = await inbox.listInbox(db, as(0), { status: 'all', teammateId: riley.id })
-    assert.ok(rileys.items.some((i) => i.id === `email:${mine.id}`))
-    assert.ok(!rileys.items.some((i) => i.id === `email:${lovarank.id}`))
+    assert.ok(rileys.items.some((i) => i.id === `mail:${mine.id}`))
+    assert.ok(!rileys.items.some((i) => i.id === `mail:${lovarank.id}`))
     const project = await inbox.listInbox(db, as(0), { status: 'all', projectId })
-    assert.ok(project.items.some((i) => i.id === `email:${lovarank.id}`))
-    assert.ok(!project.items.some((i) => i.id === `email:${mine.id}`))
+    assert.ok(project.items.some((i) => i.id === `mail:${lovarank.id}`))
+    assert.ok(!project.items.some((i) => i.id === `mail:${mine.id}`))
     const words = await inbox.listInbox(db, as(0), { status: 'all', q: 'invoice', source: 'email' })
     assert.deepEqual(
       words.items.map((i) => i.id),
-      [`email:${lovarank.id}`],
+      [`mail:${lovarank.id}`],
     )
   })
 
-  test('a member’s own Gmail is theirs alone', async () => {
-    const ada = await inbox.inboxSources(scoped(scope), as(0))
-    const bob = await inbox.inboxSources(scoped(scope), as(1))
-    assert.ok(!ada.some((s) => s.id === `gmail:${gmailBobs}`))
-    assert.ok(bob.some((s) => s.id === `gmail:${gmailBobs}`))
-    assert.ok(
-      ada.some((s) => s.id === `gmail:${gmailShared}`) &&
-        bob.some((s) => s.id === `gmail:${gmailShared}`),
-    )
-    await assert.rejects(
-      inbox.readItem(scoped(scope), as(0), `gmail:${gmailBobs}:g1`),
-      /No such item/,
-    )
+  test('Gmail shows only when shared and put in the Inbox; a member’s own never does', async () => {
+    const sources = await inbox.inboxSources(scoped(scope))
+    assert.ok(sources.some((s) => s.id === `gmail:${gmailShared}`))
+    assert.ok(!sources.some((s) => s.id === `gmail:${gmailBobs}`))
+    assert.ok(!sources.some((s) => s.id === `gmail:${gmailNotListed}`))
+    // The reader keeps only an account in the Inbox: the others' mail is not in Brigade at all.
+    assert.equal(await prisma.mailMessage.count({ where: { connectionId: gmailBobs } }), 0)
+    assert.equal(await prisma.mailMessage.count({ where: { connectionId: gmailNotListed } }), 0)
+    const all = await inbox.listInbox(scoped(scope), as(1), { status: 'all', source: 'gmail' })
+    assert.deepEqual([...new Set(all.items.map((i) => i.source.id))], [`gmail:${gmailShared}`])
+  })
+
+  test('paging: the waiting view finds what waits under newer handled mail', async () => {
+    const db = scoped(scope)
+    const old = await mail(agent, {
+      subject: 'Old and waiting',
+      receivedAt: new Date(Date.now() - 86_400_000),
+    })
+    const ruled = await thread(riley.id)
+    for (let i = 0; i < 55; i++)
+      await mail(agent, { route: 'rule', sessionId: ruled.id, subject: `Handled ${i}` })
+    const waiting = await inbox.listInbox(db, as(0), {
+      status: 'waiting',
+      source: `email:${agent.id}`,
+    })
+    assert.ok(waiting.items.some((i) => i.id === `mail:${old.id}`))
+    assert.ok(waiting.items.every((i) => i.status === 'waiting'))
+    // Pages of handled mail: 50, then the rest.
+    const first = await inbox.listInbox(db, as(0), {
+      status: 'handled',
+      source: `email:${agent.id}`,
+    })
+    assert.equal(first.items.length, 50)
+    assert.ok(first.next)
+    const second = await inbox.listInbox(db, as(0), {
+      status: 'handled',
+      source: `email:${agent.id}`,
+      before: new Date(first.next!),
+    })
+    assert.ok(second.items.length >= 5)
+    assert.ok(!second.items.some((i) => first.items.some((f) => f.id === i.id)))
   })
 
   test('a sign-up’s mail is its thread’s: others see that it came, not what it says', async () => {
@@ -310,41 +349,45 @@ describe('the Inbox', { skip }, () => {
       text: 'Code 482913',
     })
     const forBob = (
-      await inbox.listInbox(db, as(1), { status: 'all', source: `email:${agent.id}` })
-    ).items.find((i) => i.id === `email:${code.id}`)
+      await inbox.listInbox(db, as(1), {
+        status: 'all',
+        source: `email:${agent.id}`,
+        q: '482913',
+      })
+    ).items.find((i) => i.id === `mail:${code.id}`)
     assert.equal(forBob?.hidden, true)
     assert.doesNotMatch(forBob!.subject + forBob!.snippet, /482913/)
-    const detail = await inbox.readItem(db, as(1), `email:${code.id}`)
+    const detail = await inbox.readItem(db, as(1), `mail:${code.id}`)
     assert.equal(detail.text, '')
     await assert.rejects(
-      inbox.handItem(db, as(1), `email:${code.id}`, { teammateId: riley.id }),
+      inbox.handItem(db, as(1), `mail:${code.id}`, { teammateId: riley.id }),
       /sign-up/,
     )
     // Its thread's starter (and admins) read it.
-    assert.match((await inbox.readItem(db, as(0), `email:${code.id}`)).text, /482913/)
+    assert.match((await inbox.readItem(db, as(0), `mail:${code.id}`)).text, /482913/)
   })
 
   test('done, and not done again', async () => {
     const db = scoped(scope)
     const m = await mail(agent)
     const count = await inbox.waitingCount(db)
-    await inbox.setDone(db, as(1), `email:${m.id}`, true)
-    assert.equal((await inbox.readItem(db, as(0), `email:${m.id}`)).status, 'done')
+    await inbox.setDone(db, as(1), `mail:${m.id}`, true)
+    assert.equal((await inbox.readItem(db, as(0), `mail:${m.id}`)).status, 'done')
     assert.equal(await inbox.waitingCount(db), count - 1)
-    await inbox.setDone(db, as(1), `email:${m.id}`, false)
-    assert.equal((await inbox.readItem(db, as(0), `email:${m.id}`)).status, 'waiting')
+    await inbox.setDone(db, as(1), `mail:${m.id}`, false)
+    assert.equal((await inbox.readItem(db, as(0), `mail:${m.id}`)).status, 'waiting')
   })
 
   test('hand to a teammate: only one given the mailbox; the conversation stays with its thread', async () => {
     const db = scoped(scope)
     const m = await mail(support, { messageId: `<hand-${id}@x.test>` })
-    const detail = await inbox.readItem(db, as(0), `email:${m.id}`)
+    const detail = await inbox.readItem(db, as(0), `mail:${m.id}`)
     assert.deepEqual(
       detail.handTo.map((t) => t.name),
       ['Cody'],
     )
     await assert.rejects(
-      inbox.handItem(db, as(0), `email:${m.id}`, { teammateId: riley.id }),
+      inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: riley.id }),
       /no access/,
     )
     // Ada's computer is a laptop, offline here: nothing is left behind.
@@ -360,7 +403,7 @@ describe('the Inbox', { skip }, () => {
     })
     const sessions = await prisma.session.count({ where: { ...scope } })
     await assert.rejects(
-      inbox.handItem(db, as(0), `email:${m.id}`, { teammateId: cody.id }),
+      inbox.handItem(db, as(0), `mail:${m.id}`, { teammateId: cody.id }),
       /offline/,
     )
     assert.equal(await prisma.session.count({ where: { ...scope } }), sessions)
@@ -392,7 +435,7 @@ describe('handing over', { skip }, () => {
       subject: 'Please refund me',
       messageId: `<handed-${id}@x.test>`,
     })
-    const { threadId } = await inbox.handItem(db, as(0), `email:${m.id}`, {
+    const { threadId } = await inbox.handItem(db, as(0), `mail:${m.id}`, {
       teammateId: cody.id,
       note: 'Check the order first',
     })
@@ -403,7 +446,7 @@ describe('handing over', { skip }, () => {
     const row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: m.id } })
     assert.equal(row.sessionId, threadId)
     assert.equal(row.route, 'handed')
-    const item = await inbox.readItem(db, as(1), `email:${m.id}`)
+    const item = await inbox.readItem(db, as(1), `mail:${m.id}`)
     assert.equal(item.status, 'handled')
     assert.equal(item.thread?.id, threadId)
     // The customer's answer in that conversation goes to the thread it was handed to.

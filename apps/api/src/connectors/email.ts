@@ -232,9 +232,10 @@ export const email: ConnectorDefinition = {
         const { mailPayload } = await import('../mail/inbound.js')
         const events = []
         for (const row of rows) {
+          if (!row.address) continue
           const payload = await mailPayload(
             scoped({ organizationId: row.organizationId, workspaceId: row.workspaceId }),
-            row,
+            { ...row, address: row.address },
           )
           const event: VendorEvent = { id: row.id, type: 'email', payload }
           if (options.automated === 'skip' && row.automatic) continue

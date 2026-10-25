@@ -14,8 +14,10 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model MailMessage
- * One email in a Brigade mailbox (an agent's address or a project inbox), received or sent.
- * Received mail left in its box is kept 30 days; mail a thread took lives and goes with it.
+ * One email in a mailbox the workspace reads: one of Brigade's own addresses (an agent's, a
+ * project's inbox), received or sent, or a shared Gmail account's, received (the Inbox's mail,
+ * kept as Gmail's inbox reader reads it). Received mail left in its box is kept 30 days; mail
+ * a thread took lives and goes with it.
  */
 export type MailMessageModel = runtime.Types.Result.DefaultSelection<Prisma.$MailMessagePayload>
 
@@ -40,6 +42,8 @@ export type MailMessageMinAggregateOutputType = {
   organizationId: string | null
   workspaceId: string | null
   addressId: string | null
+  connectionId: string | null
+  sourceId: string | null
   projectId: string | null
   box: string | null
   aliasId: string | null
@@ -64,6 +68,9 @@ export type MailMessageMinAggregateOutputType = {
   teammateId: string | null
   approvedByMemberId: string | null
   sendAt: Date | null
+  doneAt: Date | null
+  doneByMemberId: string | null
+  handedByMemberId: string | null
   error: string | null
   attempts: number | null
   receivedAt: Date | null
@@ -77,6 +84,8 @@ export type MailMessageMaxAggregateOutputType = {
   organizationId: string | null
   workspaceId: string | null
   addressId: string | null
+  connectionId: string | null
+  sourceId: string | null
   projectId: string | null
   box: string | null
   aliasId: string | null
@@ -101,6 +110,9 @@ export type MailMessageMaxAggregateOutputType = {
   teammateId: string | null
   approvedByMemberId: string | null
   sendAt: Date | null
+  doneAt: Date | null
+  doneByMemberId: string | null
+  handedByMemberId: string | null
   error: string | null
   attempts: number | null
   receivedAt: Date | null
@@ -114,6 +126,8 @@ export type MailMessageCountAggregateOutputType = {
   organizationId: number
   workspaceId: number
   addressId: number
+  connectionId: number
+  sourceId: number
   projectId: number
   box: number
   aliasId: number
@@ -145,6 +159,9 @@ export type MailMessageCountAggregateOutputType = {
   teammateId: number
   approvedByMemberId: number
   sendAt: number
+  doneAt: number
+  doneByMemberId: number
+  handedByMemberId: number
   error: number
   attempts: number
   receivedAt: number
@@ -168,6 +185,8 @@ export type MailMessageMinAggregateInputType = {
   organizationId?: true
   workspaceId?: true
   addressId?: true
+  connectionId?: true
+  sourceId?: true
   projectId?: true
   box?: true
   aliasId?: true
@@ -192,6 +211,9 @@ export type MailMessageMinAggregateInputType = {
   teammateId?: true
   approvedByMemberId?: true
   sendAt?: true
+  doneAt?: true
+  doneByMemberId?: true
+  handedByMemberId?: true
   error?: true
   attempts?: true
   receivedAt?: true
@@ -205,6 +227,8 @@ export type MailMessageMaxAggregateInputType = {
   organizationId?: true
   workspaceId?: true
   addressId?: true
+  connectionId?: true
+  sourceId?: true
   projectId?: true
   box?: true
   aliasId?: true
@@ -229,6 +253,9 @@ export type MailMessageMaxAggregateInputType = {
   teammateId?: true
   approvedByMemberId?: true
   sendAt?: true
+  doneAt?: true
+  doneByMemberId?: true
+  handedByMemberId?: true
   error?: true
   attempts?: true
   receivedAt?: true
@@ -242,6 +269,8 @@ export type MailMessageCountAggregateInputType = {
   organizationId?: true
   workspaceId?: true
   addressId?: true
+  connectionId?: true
+  sourceId?: true
   projectId?: true
   box?: true
   aliasId?: true
@@ -273,6 +302,9 @@ export type MailMessageCountAggregateInputType = {
   teammateId?: true
   approvedByMemberId?: true
   sendAt?: true
+  doneAt?: true
+  doneByMemberId?: true
+  handedByMemberId?: true
   error?: true
   attempts?: true
   receivedAt?: true
@@ -372,7 +404,9 @@ export type MailMessageGroupByOutputType = {
   id: string
   organizationId: string
   workspaceId: string
-  addressId: string
+  addressId: string | null
+  connectionId: string | null
+  sourceId: string | null
   projectId: string | null
   box: string
   aliasId: string | null
@@ -404,6 +438,9 @@ export type MailMessageGroupByOutputType = {
   teammateId: string | null
   approvedByMemberId: string | null
   sendAt: Date | null
+  doneAt: Date | null
+  doneByMemberId: string | null
+  handedByMemberId: string | null
   error: string | null
   attempts: number
   receivedAt: Date
@@ -439,7 +476,9 @@ export type MailMessageWhereInput = {
   id?: Prisma.StringFilter<"MailMessage"> | string
   organizationId?: Prisma.StringFilter<"MailMessage"> | string
   workspaceId?: Prisma.StringFilter<"MailMessage"> | string
-  addressId?: Prisma.StringFilter<"MailMessage"> | string
+  addressId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  connectionId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  sourceId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   projectId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   box?: Prisma.StringFilter<"MailMessage"> | string
   aliasId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
@@ -471,6 +510,9 @@ export type MailMessageWhereInput = {
   teammateId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   approvedByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   sendAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  doneAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  doneByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  handedByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   error?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   attempts?: Prisma.IntFilter<"MailMessage"> | number
   receivedAt?: Prisma.DateTimeFilter<"MailMessage"> | Date | string
@@ -478,7 +520,8 @@ export type MailMessageWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"MailMessage"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"MailMessage"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
-  address?: Prisma.XOR<Prisma.MailAddressScalarRelationFilter, Prisma.MailAddressWhereInput>
+  address?: Prisma.XOR<Prisma.MailAddressNullableScalarRelationFilter, Prisma.MailAddressWhereInput> | null
+  connection?: Prisma.XOR<Prisma.ConnectionNullableScalarRelationFilter, Prisma.ConnectionWhereInput> | null
   alias?: Prisma.XOR<Prisma.MailAliasNullableScalarRelationFilter, Prisma.MailAliasWhereInput> | null
   contact?: Prisma.XOR<Prisma.ContactNullableScalarRelationFilter, Prisma.ContactWhereInput> | null
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
@@ -488,7 +531,9 @@ export type MailMessageOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
-  addressId?: Prisma.SortOrder
+  addressId?: Prisma.SortOrderInput | Prisma.SortOrder
+  connectionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  sourceId?: Prisma.SortOrderInput | Prisma.SortOrder
   projectId?: Prisma.SortOrderInput | Prisma.SortOrder
   box?: Prisma.SortOrder
   aliasId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -520,6 +565,9 @@ export type MailMessageOrderByWithRelationInput = {
   teammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   approvedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   sendAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  doneAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  doneByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
+  handedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   error?: Prisma.SortOrderInput | Prisma.SortOrder
   attempts?: Prisma.SortOrder
   receivedAt?: Prisma.SortOrder
@@ -528,6 +576,7 @@ export type MailMessageOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   address?: Prisma.MailAddressOrderByWithRelationInput
+  connection?: Prisma.ConnectionOrderByWithRelationInput
   alias?: Prisma.MailAliasOrderByWithRelationInput
   contact?: Prisma.ContactOrderByWithRelationInput
   session?: Prisma.SessionOrderByWithRelationInput
@@ -536,12 +585,15 @@ export type MailMessageOrderByWithRelationInput = {
 export type MailMessageWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   resendId_box?: Prisma.MailMessageResendIdBoxCompoundUniqueInput
+  box_sourceId?: Prisma.MailMessageBoxSourceIdCompoundUniqueInput
   AND?: Prisma.MailMessageWhereInput | Prisma.MailMessageWhereInput[]
   OR?: Prisma.MailMessageWhereInput[]
   NOT?: Prisma.MailMessageWhereInput | Prisma.MailMessageWhereInput[]
   organizationId?: Prisma.StringFilter<"MailMessage"> | string
   workspaceId?: Prisma.StringFilter<"MailMessage"> | string
-  addressId?: Prisma.StringFilter<"MailMessage"> | string
+  addressId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  connectionId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  sourceId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   projectId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   box?: Prisma.StringFilter<"MailMessage"> | string
   aliasId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
@@ -573,6 +625,9 @@ export type MailMessageWhereUniqueInput = Prisma.AtLeast<{
   teammateId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   approvedByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   sendAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  doneAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  doneByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  handedByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   error?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   attempts?: Prisma.IntFilter<"MailMessage"> | number
   receivedAt?: Prisma.DateTimeFilter<"MailMessage"> | Date | string
@@ -580,17 +635,20 @@ export type MailMessageWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"MailMessage"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"MailMessage"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
-  address?: Prisma.XOR<Prisma.MailAddressScalarRelationFilter, Prisma.MailAddressWhereInput>
+  address?: Prisma.XOR<Prisma.MailAddressNullableScalarRelationFilter, Prisma.MailAddressWhereInput> | null
+  connection?: Prisma.XOR<Prisma.ConnectionNullableScalarRelationFilter, Prisma.ConnectionWhereInput> | null
   alias?: Prisma.XOR<Prisma.MailAliasNullableScalarRelationFilter, Prisma.MailAliasWhereInput> | null
   contact?: Prisma.XOR<Prisma.ContactNullableScalarRelationFilter, Prisma.ContactWhereInput> | null
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
-}, "id" | "resendId_box">
+}, "id" | "resendId_box" | "box_sourceId">
 
 export type MailMessageOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
-  addressId?: Prisma.SortOrder
+  addressId?: Prisma.SortOrderInput | Prisma.SortOrder
+  connectionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  sourceId?: Prisma.SortOrderInput | Prisma.SortOrder
   projectId?: Prisma.SortOrderInput | Prisma.SortOrder
   box?: Prisma.SortOrder
   aliasId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -622,6 +680,9 @@ export type MailMessageOrderByWithAggregationInput = {
   teammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   approvedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   sendAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  doneAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  doneByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
+  handedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   error?: Prisma.SortOrderInput | Prisma.SortOrder
   attempts?: Prisma.SortOrder
   receivedAt?: Prisma.SortOrder
@@ -642,7 +703,9 @@ export type MailMessageScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"MailMessage"> | string
   organizationId?: Prisma.StringWithAggregatesFilter<"MailMessage"> | string
   workspaceId?: Prisma.StringWithAggregatesFilter<"MailMessage"> | string
-  addressId?: Prisma.StringWithAggregatesFilter<"MailMessage"> | string
+  addressId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
+  connectionId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
+  sourceId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
   projectId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
   box?: Prisma.StringWithAggregatesFilter<"MailMessage"> | string
   aliasId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
@@ -674,6 +737,9 @@ export type MailMessageScalarWhereWithAggregatesInput = {
   teammateId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
   approvedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
   sendAt?: Prisma.DateTimeNullableWithAggregatesFilter<"MailMessage"> | Date | string | null
+  doneAt?: Prisma.DateTimeNullableWithAggregatesFilter<"MailMessage"> | Date | string | null
+  doneByMemberId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
+  handedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
   error?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
   attempts?: Prisma.IntWithAggregatesFilter<"MailMessage"> | number
   receivedAt?: Prisma.DateTimeWithAggregatesFilter<"MailMessage"> | Date | string
@@ -685,6 +751,7 @@ export type MailMessageScalarWhereWithAggregatesInput = {
 export type MailMessageCreateInput = {
   id?: string
   organizationId: string
+  sourceId?: string | null
   projectId?: string | null
   box: string
   direction: $Enums.MailDirection
@@ -713,6 +780,9 @@ export type MailMessageCreateInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -720,7 +790,8 @@ export type MailMessageCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutMailMessagesInput
-  address: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  address?: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutMailMessagesInput
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
@@ -730,7 +801,9 @@ export type MailMessageUncheckedCreateInput = {
   id?: string
   organizationId: string
   workspaceId: string
-  addressId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   aliasId?: string | null
@@ -762,6 +835,9 @@ export type MailMessageUncheckedCreateInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -773,6 +849,7 @@ export type MailMessageUncheckedCreateInput = {
 export type MailMessageUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
@@ -801,6 +878,9 @@ export type MailMessageUpdateInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -808,7 +888,8 @@ export type MailMessageUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutMailMessagesNestedInput
-  address?: Prisma.MailAddressUpdateOneRequiredWithoutMessagesNestedInput
+  address?: Prisma.MailAddressUpdateOneWithoutMessagesNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutMailMessagesNestedInput
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
@@ -818,7 +899,9 @@ export type MailMessageUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  addressId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -850,6 +933,9 @@ export type MailMessageUncheckedUpdateInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -862,7 +948,9 @@ export type MailMessageCreateManyInput = {
   id?: string
   organizationId: string
   workspaceId: string
-  addressId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   aliasId?: string | null
@@ -894,6 +982,9 @@ export type MailMessageCreateManyInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -905,6 +996,7 @@ export type MailMessageCreateManyInput = {
 export type MailMessageUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
@@ -933,6 +1025,9 @@ export type MailMessageUpdateManyMutationInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -945,7 +1040,9 @@ export type MailMessageUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  addressId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -977,6 +1074,9 @@ export type MailMessageUncheckedUpdateManyInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1000,11 +1100,18 @@ export type MailMessageResendIdBoxCompoundUniqueInput = {
   box: string
 }
 
+export type MailMessageBoxSourceIdCompoundUniqueInput = {
+  box: string
+  sourceId: string
+}
+
 export type MailMessageCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   addressId?: Prisma.SortOrder
+  connectionId?: Prisma.SortOrder
+  sourceId?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   box?: Prisma.SortOrder
   aliasId?: Prisma.SortOrder
@@ -1036,6 +1143,9 @@ export type MailMessageCountOrderByAggregateInput = {
   teammateId?: Prisma.SortOrder
   approvedByMemberId?: Prisma.SortOrder
   sendAt?: Prisma.SortOrder
+  doneAt?: Prisma.SortOrder
+  doneByMemberId?: Prisma.SortOrder
+  handedByMemberId?: Prisma.SortOrder
   error?: Prisma.SortOrder
   attempts?: Prisma.SortOrder
   receivedAt?: Prisma.SortOrder
@@ -1053,6 +1163,8 @@ export type MailMessageMaxOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   addressId?: Prisma.SortOrder
+  connectionId?: Prisma.SortOrder
+  sourceId?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   box?: Prisma.SortOrder
   aliasId?: Prisma.SortOrder
@@ -1077,6 +1189,9 @@ export type MailMessageMaxOrderByAggregateInput = {
   teammateId?: Prisma.SortOrder
   approvedByMemberId?: Prisma.SortOrder
   sendAt?: Prisma.SortOrder
+  doneAt?: Prisma.SortOrder
+  doneByMemberId?: Prisma.SortOrder
+  handedByMemberId?: Prisma.SortOrder
   error?: Prisma.SortOrder
   attempts?: Prisma.SortOrder
   receivedAt?: Prisma.SortOrder
@@ -1090,6 +1205,8 @@ export type MailMessageMinOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   addressId?: Prisma.SortOrder
+  connectionId?: Prisma.SortOrder
+  sourceId?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   box?: Prisma.SortOrder
   aliasId?: Prisma.SortOrder
@@ -1114,6 +1231,9 @@ export type MailMessageMinOrderByAggregateInput = {
   teammateId?: Prisma.SortOrder
   approvedByMemberId?: Prisma.SortOrder
   sendAt?: Prisma.SortOrder
+  doneAt?: Prisma.SortOrder
+  doneByMemberId?: Prisma.SortOrder
+  handedByMemberId?: Prisma.SortOrder
   error?: Prisma.SortOrder
   attempts?: Prisma.SortOrder
   receivedAt?: Prisma.SortOrder
@@ -1207,6 +1327,48 @@ export type MailMessageUncheckedUpdateManyWithoutSessionNestedInput = {
   connect?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
   update?: Prisma.MailMessageUpdateWithWhereUniqueWithoutSessionInput | Prisma.MailMessageUpdateWithWhereUniqueWithoutSessionInput[]
   updateMany?: Prisma.MailMessageUpdateManyWithWhereWithoutSessionInput | Prisma.MailMessageUpdateManyWithWhereWithoutSessionInput[]
+  deleteMany?: Prisma.MailMessageScalarWhereInput | Prisma.MailMessageScalarWhereInput[]
+}
+
+export type MailMessageCreateNestedManyWithoutConnectionInput = {
+  create?: Prisma.XOR<Prisma.MailMessageCreateWithoutConnectionInput, Prisma.MailMessageUncheckedCreateWithoutConnectionInput> | Prisma.MailMessageCreateWithoutConnectionInput[] | Prisma.MailMessageUncheckedCreateWithoutConnectionInput[]
+  connectOrCreate?: Prisma.MailMessageCreateOrConnectWithoutConnectionInput | Prisma.MailMessageCreateOrConnectWithoutConnectionInput[]
+  createMany?: Prisma.MailMessageCreateManyConnectionInputEnvelope
+  connect?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
+}
+
+export type MailMessageUncheckedCreateNestedManyWithoutConnectionInput = {
+  create?: Prisma.XOR<Prisma.MailMessageCreateWithoutConnectionInput, Prisma.MailMessageUncheckedCreateWithoutConnectionInput> | Prisma.MailMessageCreateWithoutConnectionInput[] | Prisma.MailMessageUncheckedCreateWithoutConnectionInput[]
+  connectOrCreate?: Prisma.MailMessageCreateOrConnectWithoutConnectionInput | Prisma.MailMessageCreateOrConnectWithoutConnectionInput[]
+  createMany?: Prisma.MailMessageCreateManyConnectionInputEnvelope
+  connect?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
+}
+
+export type MailMessageUpdateManyWithoutConnectionNestedInput = {
+  create?: Prisma.XOR<Prisma.MailMessageCreateWithoutConnectionInput, Prisma.MailMessageUncheckedCreateWithoutConnectionInput> | Prisma.MailMessageCreateWithoutConnectionInput[] | Prisma.MailMessageUncheckedCreateWithoutConnectionInput[]
+  connectOrCreate?: Prisma.MailMessageCreateOrConnectWithoutConnectionInput | Prisma.MailMessageCreateOrConnectWithoutConnectionInput[]
+  upsert?: Prisma.MailMessageUpsertWithWhereUniqueWithoutConnectionInput | Prisma.MailMessageUpsertWithWhereUniqueWithoutConnectionInput[]
+  createMany?: Prisma.MailMessageCreateManyConnectionInputEnvelope
+  set?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
+  disconnect?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
+  delete?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
+  connect?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
+  update?: Prisma.MailMessageUpdateWithWhereUniqueWithoutConnectionInput | Prisma.MailMessageUpdateWithWhereUniqueWithoutConnectionInput[]
+  updateMany?: Prisma.MailMessageUpdateManyWithWhereWithoutConnectionInput | Prisma.MailMessageUpdateManyWithWhereWithoutConnectionInput[]
+  deleteMany?: Prisma.MailMessageScalarWhereInput | Prisma.MailMessageScalarWhereInput[]
+}
+
+export type MailMessageUncheckedUpdateManyWithoutConnectionNestedInput = {
+  create?: Prisma.XOR<Prisma.MailMessageCreateWithoutConnectionInput, Prisma.MailMessageUncheckedCreateWithoutConnectionInput> | Prisma.MailMessageCreateWithoutConnectionInput[] | Prisma.MailMessageUncheckedCreateWithoutConnectionInput[]
+  connectOrCreate?: Prisma.MailMessageCreateOrConnectWithoutConnectionInput | Prisma.MailMessageCreateOrConnectWithoutConnectionInput[]
+  upsert?: Prisma.MailMessageUpsertWithWhereUniqueWithoutConnectionInput | Prisma.MailMessageUpsertWithWhereUniqueWithoutConnectionInput[]
+  createMany?: Prisma.MailMessageCreateManyConnectionInputEnvelope
+  set?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
+  disconnect?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
+  delete?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
+  connect?: Prisma.MailMessageWhereUniqueInput | Prisma.MailMessageWhereUniqueInput[]
+  update?: Prisma.MailMessageUpdateWithWhereUniqueWithoutConnectionInput | Prisma.MailMessageUpdateWithWhereUniqueWithoutConnectionInput[]
+  updateMany?: Prisma.MailMessageUpdateManyWithWhereWithoutConnectionInput | Prisma.MailMessageUpdateManyWithWhereWithoutConnectionInput[]
   deleteMany?: Prisma.MailMessageScalarWhereInput | Prisma.MailMessageScalarWhereInput[]
 }
 
@@ -1387,6 +1549,7 @@ export type MailMessageUncheckedUpdateManyWithoutContactNestedInput = {
 export type MailMessageCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
+  sourceId?: string | null
   projectId?: string | null
   box: string
   direction: $Enums.MailDirection
@@ -1415,13 +1578,17 @@ export type MailMessageCreateWithoutWorkspaceInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
   expiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  address: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  address?: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutMailMessagesInput
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
@@ -1430,7 +1597,9 @@ export type MailMessageCreateWithoutWorkspaceInput = {
 export type MailMessageUncheckedCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
-  addressId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   aliasId?: string | null
@@ -1462,6 +1631,9 @@ export type MailMessageUncheckedCreateWithoutWorkspaceInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1503,7 +1675,9 @@ export type MailMessageScalarWhereInput = {
   id?: Prisma.StringFilter<"MailMessage"> | string
   organizationId?: Prisma.StringFilter<"MailMessage"> | string
   workspaceId?: Prisma.StringFilter<"MailMessage"> | string
-  addressId?: Prisma.StringFilter<"MailMessage"> | string
+  addressId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  connectionId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  sourceId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   projectId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   box?: Prisma.StringFilter<"MailMessage"> | string
   aliasId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
@@ -1535,6 +1709,9 @@ export type MailMessageScalarWhereInput = {
   teammateId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   approvedByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   sendAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  doneAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  doneByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  handedByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   error?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   attempts?: Prisma.IntFilter<"MailMessage"> | number
   receivedAt?: Prisma.DateTimeFilter<"MailMessage"> | Date | string
@@ -1546,6 +1723,7 @@ export type MailMessageScalarWhereInput = {
 export type MailMessageCreateWithoutSessionInput = {
   id?: string
   organizationId: string
+  sourceId?: string | null
   projectId?: string | null
   box: string
   direction: $Enums.MailDirection
@@ -1574,6 +1752,9 @@ export type MailMessageCreateWithoutSessionInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1581,7 +1762,8 @@ export type MailMessageCreateWithoutSessionInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutMailMessagesInput
-  address: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  address?: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutMailMessagesInput
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
 }
@@ -1590,7 +1772,9 @@ export type MailMessageUncheckedCreateWithoutSessionInput = {
   id?: string
   organizationId: string
   workspaceId: string
-  addressId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   aliasId?: string | null
@@ -1621,6 +1805,9 @@ export type MailMessageUncheckedCreateWithoutSessionInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1655,9 +1842,10 @@ export type MailMessageUpdateManyWithWhereWithoutSessionInput = {
   data: Prisma.XOR<Prisma.MailMessageUpdateManyMutationInput, Prisma.MailMessageUncheckedUpdateManyWithoutSessionInput>
 }
 
-export type MailMessageCreateWithoutAddressInput = {
+export type MailMessageCreateWithoutConnectionInput = {
   id?: string
   organizationId: string
+  sourceId?: string | null
   projectId?: string | null
   box: string
   direction: $Enums.MailDirection
@@ -1686,6 +1874,9 @@ export type MailMessageCreateWithoutAddressInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1693,15 +1884,18 @@ export type MailMessageCreateWithoutAddressInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutMailMessagesInput
+  address?: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
 }
 
-export type MailMessageUncheckedCreateWithoutAddressInput = {
+export type MailMessageUncheckedCreateWithoutConnectionInput = {
   id?: string
   organizationId: string
   workspaceId: string
+  addressId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   aliasId?: string | null
@@ -1733,6 +1927,131 @@ export type MailMessageUncheckedCreateWithoutAddressInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
+  error?: string | null
+  attempts?: number
+  receivedAt?: Date | string
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type MailMessageCreateOrConnectWithoutConnectionInput = {
+  where: Prisma.MailMessageWhereUniqueInput
+  create: Prisma.XOR<Prisma.MailMessageCreateWithoutConnectionInput, Prisma.MailMessageUncheckedCreateWithoutConnectionInput>
+}
+
+export type MailMessageCreateManyConnectionInputEnvelope = {
+  data: Prisma.MailMessageCreateManyConnectionInput | Prisma.MailMessageCreateManyConnectionInput[]
+  skipDuplicates?: boolean
+}
+
+export type MailMessageUpsertWithWhereUniqueWithoutConnectionInput = {
+  where: Prisma.MailMessageWhereUniqueInput
+  update: Prisma.XOR<Prisma.MailMessageUpdateWithoutConnectionInput, Prisma.MailMessageUncheckedUpdateWithoutConnectionInput>
+  create: Prisma.XOR<Prisma.MailMessageCreateWithoutConnectionInput, Prisma.MailMessageUncheckedCreateWithoutConnectionInput>
+}
+
+export type MailMessageUpdateWithWhereUniqueWithoutConnectionInput = {
+  where: Prisma.MailMessageWhereUniqueInput
+  data: Prisma.XOR<Prisma.MailMessageUpdateWithoutConnectionInput, Prisma.MailMessageUncheckedUpdateWithoutConnectionInput>
+}
+
+export type MailMessageUpdateManyWithWhereWithoutConnectionInput = {
+  where: Prisma.MailMessageScalarWhereInput
+  data: Prisma.XOR<Prisma.MailMessageUpdateManyMutationInput, Prisma.MailMessageUncheckedUpdateManyWithoutConnectionInput>
+}
+
+export type MailMessageCreateWithoutAddressInput = {
+  id?: string
+  organizationId: string
+  sourceId?: string | null
+  projectId?: string | null
+  box: string
+  direction: $Enums.MailDirection
+  status: $Enums.MailStatus
+  resendId?: string | null
+  messageId?: string | null
+  inReplyTo?: string | null
+  references?: Prisma.MailMessageCreatereferencesInput | string[]
+  conversationId: string
+  fromAddress: string
+  fromName?: string
+  to?: Prisma.MailMessageCreatetoInput | string[]
+  cc?: Prisma.MailMessageCreateccInput | string[]
+  replyTo?: Prisma.MailMessageCreatereplyToInput | string[]
+  subject?: string
+  text?: string
+  headers?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  authentication?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  automatic?: boolean
+  sender?: $Enums.MailSender | null
+  memberId?: string | null
+  attachments?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  route?: string | null
+  routeNote?: string | null
+  triggerId?: string | null
+  teammateId?: string | null
+  approvedByMemberId?: string | null
+  sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
+  error?: string | null
+  attempts?: number
+  receivedAt?: Date | string
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutMailMessagesInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutMailMessagesInput
+  alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
+  contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
+  session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
+}
+
+export type MailMessageUncheckedCreateWithoutAddressInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  connectionId?: string | null
+  sourceId?: string | null
+  projectId?: string | null
+  box: string
+  aliasId?: string | null
+  direction: $Enums.MailDirection
+  status: $Enums.MailStatus
+  resendId?: string | null
+  messageId?: string | null
+  inReplyTo?: string | null
+  references?: Prisma.MailMessageCreatereferencesInput | string[]
+  conversationId: string
+  fromAddress: string
+  fromName?: string
+  to?: Prisma.MailMessageCreatetoInput | string[]
+  cc?: Prisma.MailMessageCreateccInput | string[]
+  replyTo?: Prisma.MailMessageCreatereplyToInput | string[]
+  subject?: string
+  text?: string
+  headers?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  authentication?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  automatic?: boolean
+  sender?: $Enums.MailSender | null
+  memberId?: string | null
+  contactId?: string | null
+  attachments?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  route?: string | null
+  routeNote?: string | null
+  sessionId?: string | null
+  triggerId?: string | null
+  teammateId?: string | null
+  approvedByMemberId?: string | null
+  sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1770,6 +2089,7 @@ export type MailMessageUpdateManyWithWhereWithoutAddressInput = {
 export type MailMessageCreateWithoutAliasInput = {
   id?: string
   organizationId: string
+  sourceId?: string | null
   projectId?: string | null
   box: string
   direction: $Enums.MailDirection
@@ -1798,6 +2118,9 @@ export type MailMessageCreateWithoutAliasInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1805,7 +2128,8 @@ export type MailMessageCreateWithoutAliasInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutMailMessagesInput
-  address: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  address?: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutMailMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
 }
@@ -1814,7 +2138,9 @@ export type MailMessageUncheckedCreateWithoutAliasInput = {
   id?: string
   organizationId: string
   workspaceId: string
-  addressId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   direction: $Enums.MailDirection
@@ -1845,6 +2171,9 @@ export type MailMessageUncheckedCreateWithoutAliasInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1882,6 +2211,7 @@ export type MailMessageUpdateManyWithWhereWithoutAliasInput = {
 export type MailMessageCreateWithoutContactInput = {
   id?: string
   organizationId: string
+  sourceId?: string | null
   projectId?: string | null
   box: string
   direction: $Enums.MailDirection
@@ -1910,6 +2240,9 @@ export type MailMessageCreateWithoutContactInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1917,7 +2250,8 @@ export type MailMessageCreateWithoutContactInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutMailMessagesInput
-  address: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  address?: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutMailMessagesInput
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
 }
@@ -1926,7 +2260,9 @@ export type MailMessageUncheckedCreateWithoutContactInput = {
   id?: string
   organizationId: string
   workspaceId: string
-  addressId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   aliasId?: string | null
@@ -1957,6 +2293,9 @@ export type MailMessageUncheckedCreateWithoutContactInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1994,7 +2333,9 @@ export type MailMessageUpdateManyWithWhereWithoutContactInput = {
 export type MailMessageCreateManyWorkspaceInput = {
   id?: string
   organizationId: string
-  addressId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   aliasId?: string | null
@@ -2026,6 +2367,9 @@ export type MailMessageCreateManyWorkspaceInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2037,6 +2381,7 @@ export type MailMessageCreateManyWorkspaceInput = {
 export type MailMessageUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
@@ -2065,13 +2410,17 @@ export type MailMessageUpdateWithoutWorkspaceInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  address?: Prisma.MailAddressUpdateOneRequiredWithoutMessagesNestedInput
+  address?: Prisma.MailAddressUpdateOneWithoutMessagesNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutMailMessagesNestedInput
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
@@ -2080,7 +2429,9 @@ export type MailMessageUpdateWithoutWorkspaceInput = {
 export type MailMessageUncheckedUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  addressId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2112,6 +2463,9 @@ export type MailMessageUncheckedUpdateWithoutWorkspaceInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2123,7 +2477,9 @@ export type MailMessageUncheckedUpdateWithoutWorkspaceInput = {
 export type MailMessageUncheckedUpdateManyWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  addressId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2155,6 +2511,9 @@ export type MailMessageUncheckedUpdateManyWithoutWorkspaceInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2167,7 +2526,9 @@ export type MailMessageCreateManySessionInput = {
   id?: string
   organizationId: string
   workspaceId: string
-  addressId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   aliasId?: string | null
@@ -2198,6 +2559,9 @@ export type MailMessageCreateManySessionInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2209,6 +2573,7 @@ export type MailMessageCreateManySessionInput = {
 export type MailMessageUpdateWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
@@ -2237,6 +2602,9 @@ export type MailMessageUpdateWithoutSessionInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2244,7 +2612,8 @@ export type MailMessageUpdateWithoutSessionInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutMailMessagesNestedInput
-  address?: Prisma.MailAddressUpdateOneRequiredWithoutMessagesNestedInput
+  address?: Prisma.MailAddressUpdateOneWithoutMessagesNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutMailMessagesNestedInput
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
 }
@@ -2253,7 +2622,9 @@ export type MailMessageUncheckedUpdateWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  addressId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2284,6 +2655,9 @@ export type MailMessageUncheckedUpdateWithoutSessionInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2296,7 +2670,9 @@ export type MailMessageUncheckedUpdateManyWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  addressId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2327,6 +2703,201 @@ export type MailMessageUncheckedUpdateManyWithoutSessionInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attempts?: Prisma.IntFieldUpdateOperationsInput | number
+  receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type MailMessageCreateManyConnectionInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  addressId?: string | null
+  sourceId?: string | null
+  projectId?: string | null
+  box: string
+  aliasId?: string | null
+  direction: $Enums.MailDirection
+  status: $Enums.MailStatus
+  resendId?: string | null
+  messageId?: string | null
+  inReplyTo?: string | null
+  references?: Prisma.MailMessageCreatereferencesInput | string[]
+  conversationId: string
+  fromAddress: string
+  fromName?: string
+  to?: Prisma.MailMessageCreatetoInput | string[]
+  cc?: Prisma.MailMessageCreateccInput | string[]
+  replyTo?: Prisma.MailMessageCreatereplyToInput | string[]
+  subject?: string
+  text?: string
+  headers?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  authentication?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  automatic?: boolean
+  sender?: $Enums.MailSender | null
+  memberId?: string | null
+  contactId?: string | null
+  attachments?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  route?: string | null
+  routeNote?: string | null
+  sessionId?: string | null
+  triggerId?: string | null
+  teammateId?: string | null
+  approvedByMemberId?: string | null
+  sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
+  error?: string | null
+  attempts?: number
+  receivedAt?: Date | string
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type MailMessageUpdateWithoutConnectionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  box?: Prisma.StringFieldUpdateOperationsInput | string
+  direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
+  status?: Prisma.EnumMailStatusFieldUpdateOperationsInput | $Enums.MailStatus
+  resendId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inReplyTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  references?: Prisma.MailMessageUpdatereferencesInput | string[]
+  conversationId?: Prisma.StringFieldUpdateOperationsInput | string
+  fromAddress?: Prisma.StringFieldUpdateOperationsInput | string
+  fromName?: Prisma.StringFieldUpdateOperationsInput | string
+  to?: Prisma.MailMessageUpdatetoInput | string[]
+  cc?: Prisma.MailMessageUpdateccInput | string[]
+  replyTo?: Prisma.MailMessageUpdatereplyToInput | string[]
+  subject?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  headers?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  authentication?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  automatic?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sender?: Prisma.NullableEnumMailSenderFieldUpdateOperationsInput | $Enums.MailSender | null
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachments?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  route?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  routeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attempts?: Prisma.IntFieldUpdateOperationsInput | number
+  receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutMailMessagesNestedInput
+  address?: Prisma.MailAddressUpdateOneWithoutMessagesNestedInput
+  alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
+  contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
+  session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
+}
+
+export type MailMessageUncheckedUpdateWithoutConnectionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  box?: Prisma.StringFieldUpdateOperationsInput | string
+  aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
+  status?: Prisma.EnumMailStatusFieldUpdateOperationsInput | $Enums.MailStatus
+  resendId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inReplyTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  references?: Prisma.MailMessageUpdatereferencesInput | string[]
+  conversationId?: Prisma.StringFieldUpdateOperationsInput | string
+  fromAddress?: Prisma.StringFieldUpdateOperationsInput | string
+  fromName?: Prisma.StringFieldUpdateOperationsInput | string
+  to?: Prisma.MailMessageUpdatetoInput | string[]
+  cc?: Prisma.MailMessageUpdateccInput | string[]
+  replyTo?: Prisma.MailMessageUpdatereplyToInput | string[]
+  subject?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  headers?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  authentication?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  automatic?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sender?: Prisma.NullableEnumMailSenderFieldUpdateOperationsInput | $Enums.MailSender | null
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contactId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachments?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  route?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  routeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attempts?: Prisma.IntFieldUpdateOperationsInput | number
+  receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type MailMessageUncheckedUpdateManyWithoutConnectionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  box?: Prisma.StringFieldUpdateOperationsInput | string
+  aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
+  status?: Prisma.EnumMailStatusFieldUpdateOperationsInput | $Enums.MailStatus
+  resendId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inReplyTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  references?: Prisma.MailMessageUpdatereferencesInput | string[]
+  conversationId?: Prisma.StringFieldUpdateOperationsInput | string
+  fromAddress?: Prisma.StringFieldUpdateOperationsInput | string
+  fromName?: Prisma.StringFieldUpdateOperationsInput | string
+  to?: Prisma.MailMessageUpdatetoInput | string[]
+  cc?: Prisma.MailMessageUpdateccInput | string[]
+  replyTo?: Prisma.MailMessageUpdatereplyToInput | string[]
+  subject?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  headers?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  authentication?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  automatic?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sender?: Prisma.NullableEnumMailSenderFieldUpdateOperationsInput | $Enums.MailSender | null
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contactId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachments?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  route?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  routeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2339,6 +2910,8 @@ export type MailMessageCreateManyAddressInput = {
   id?: string
   organizationId: string
   workspaceId: string
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   aliasId?: string | null
@@ -2370,6 +2943,9 @@ export type MailMessageCreateManyAddressInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2381,6 +2957,7 @@ export type MailMessageCreateManyAddressInput = {
 export type MailMessageUpdateWithoutAddressInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
@@ -2409,6 +2986,9 @@ export type MailMessageUpdateWithoutAddressInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2416,6 +2996,7 @@ export type MailMessageUpdateWithoutAddressInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutMailMessagesNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutMailMessagesNestedInput
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
@@ -2425,6 +3006,8 @@ export type MailMessageUncheckedUpdateWithoutAddressInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2456,6 +3039,9 @@ export type MailMessageUncheckedUpdateWithoutAddressInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2468,6 +3054,8 @@ export type MailMessageUncheckedUpdateManyWithoutAddressInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2499,6 +3087,9 @@ export type MailMessageUncheckedUpdateManyWithoutAddressInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2511,7 +3102,9 @@ export type MailMessageCreateManyAliasInput = {
   id?: string
   organizationId: string
   workspaceId: string
-  addressId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   direction: $Enums.MailDirection
@@ -2542,6 +3135,9 @@ export type MailMessageCreateManyAliasInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2553,6 +3149,7 @@ export type MailMessageCreateManyAliasInput = {
 export type MailMessageUpdateWithoutAliasInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
@@ -2581,6 +3178,9 @@ export type MailMessageUpdateWithoutAliasInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2588,7 +3188,8 @@ export type MailMessageUpdateWithoutAliasInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutMailMessagesNestedInput
-  address?: Prisma.MailAddressUpdateOneRequiredWithoutMessagesNestedInput
+  address?: Prisma.MailAddressUpdateOneWithoutMessagesNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutMailMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
 }
@@ -2597,7 +3198,9 @@ export type MailMessageUncheckedUpdateWithoutAliasInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  addressId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
@@ -2628,6 +3231,9 @@ export type MailMessageUncheckedUpdateWithoutAliasInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2640,7 +3246,9 @@ export type MailMessageUncheckedUpdateManyWithoutAliasInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  addressId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
@@ -2671,6 +3279,9 @@ export type MailMessageUncheckedUpdateManyWithoutAliasInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2683,7 +3294,9 @@ export type MailMessageCreateManyContactInput = {
   id?: string
   organizationId: string
   workspaceId: string
-  addressId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
   projectId?: string | null
   box: string
   aliasId?: string | null
@@ -2714,6 +3327,9 @@ export type MailMessageCreateManyContactInput = {
   teammateId?: string | null
   approvedByMemberId?: string | null
   sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2725,6 +3341,7 @@ export type MailMessageCreateManyContactInput = {
 export type MailMessageUpdateWithoutContactInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
@@ -2753,6 +3370,9 @@ export type MailMessageUpdateWithoutContactInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2760,7 +3380,8 @@ export type MailMessageUpdateWithoutContactInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutMailMessagesNestedInput
-  address?: Prisma.MailAddressUpdateOneRequiredWithoutMessagesNestedInput
+  address?: Prisma.MailAddressUpdateOneWithoutMessagesNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutMailMessagesNestedInput
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
 }
@@ -2769,7 +3390,9 @@ export type MailMessageUncheckedUpdateWithoutContactInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  addressId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2800,6 +3423,9 @@ export type MailMessageUncheckedUpdateWithoutContactInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2812,7 +3438,9 @@ export type MailMessageUncheckedUpdateManyWithoutContactInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  addressId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   box?: Prisma.StringFieldUpdateOperationsInput | string
   aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2843,6 +3471,9 @@ export type MailMessageUncheckedUpdateManyWithoutContactInput = {
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2858,6 +3489,8 @@ export type MailMessageSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   organizationId?: boolean
   workspaceId?: boolean
   addressId?: boolean
+  connectionId?: boolean
+  sourceId?: boolean
   projectId?: boolean
   box?: boolean
   aliasId?: boolean
@@ -2889,6 +3522,9 @@ export type MailMessageSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   teammateId?: boolean
   approvedByMemberId?: boolean
   sendAt?: boolean
+  doneAt?: boolean
+  doneByMemberId?: boolean
+  handedByMemberId?: boolean
   error?: boolean
   attempts?: boolean
   receivedAt?: boolean
@@ -2896,7 +3532,8 @@ export type MailMessageSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
-  address?: boolean | Prisma.MailAddressDefaultArgs<ExtArgs>
+  address?: boolean | Prisma.MailMessage$addressArgs<ExtArgs>
+  connection?: boolean | Prisma.MailMessage$connectionArgs<ExtArgs>
   alias?: boolean | Prisma.MailMessage$aliasArgs<ExtArgs>
   contact?: boolean | Prisma.MailMessage$contactArgs<ExtArgs>
   session?: boolean | Prisma.MailMessage$sessionArgs<ExtArgs>
@@ -2907,6 +3544,8 @@ export type MailMessageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   organizationId?: boolean
   workspaceId?: boolean
   addressId?: boolean
+  connectionId?: boolean
+  sourceId?: boolean
   projectId?: boolean
   box?: boolean
   aliasId?: boolean
@@ -2938,6 +3577,9 @@ export type MailMessageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   teammateId?: boolean
   approvedByMemberId?: boolean
   sendAt?: boolean
+  doneAt?: boolean
+  doneByMemberId?: boolean
+  handedByMemberId?: boolean
   error?: boolean
   attempts?: boolean
   receivedAt?: boolean
@@ -2945,7 +3587,8 @@ export type MailMessageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
-  address?: boolean | Prisma.MailAddressDefaultArgs<ExtArgs>
+  address?: boolean | Prisma.MailMessage$addressArgs<ExtArgs>
+  connection?: boolean | Prisma.MailMessage$connectionArgs<ExtArgs>
   alias?: boolean | Prisma.MailMessage$aliasArgs<ExtArgs>
   contact?: boolean | Prisma.MailMessage$contactArgs<ExtArgs>
   session?: boolean | Prisma.MailMessage$sessionArgs<ExtArgs>
@@ -2956,6 +3599,8 @@ export type MailMessageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   organizationId?: boolean
   workspaceId?: boolean
   addressId?: boolean
+  connectionId?: boolean
+  sourceId?: boolean
   projectId?: boolean
   box?: boolean
   aliasId?: boolean
@@ -2987,6 +3632,9 @@ export type MailMessageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   teammateId?: boolean
   approvedByMemberId?: boolean
   sendAt?: boolean
+  doneAt?: boolean
+  doneByMemberId?: boolean
+  handedByMemberId?: boolean
   error?: boolean
   attempts?: boolean
   receivedAt?: boolean
@@ -2994,7 +3642,8 @@ export type MailMessageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
-  address?: boolean | Prisma.MailAddressDefaultArgs<ExtArgs>
+  address?: boolean | Prisma.MailMessage$addressArgs<ExtArgs>
+  connection?: boolean | Prisma.MailMessage$connectionArgs<ExtArgs>
   alias?: boolean | Prisma.MailMessage$aliasArgs<ExtArgs>
   contact?: boolean | Prisma.MailMessage$contactArgs<ExtArgs>
   session?: boolean | Prisma.MailMessage$sessionArgs<ExtArgs>
@@ -3005,6 +3654,8 @@ export type MailMessageSelectScalar = {
   organizationId?: boolean
   workspaceId?: boolean
   addressId?: boolean
+  connectionId?: boolean
+  sourceId?: boolean
   projectId?: boolean
   box?: boolean
   aliasId?: boolean
@@ -3036,6 +3687,9 @@ export type MailMessageSelectScalar = {
   teammateId?: boolean
   approvedByMemberId?: boolean
   sendAt?: boolean
+  doneAt?: boolean
+  doneByMemberId?: boolean
+  handedByMemberId?: boolean
   error?: boolean
   attempts?: boolean
   receivedAt?: boolean
@@ -3044,24 +3698,27 @@ export type MailMessageSelectScalar = {
   updatedAt?: boolean
 }
 
-export type MailMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "addressId" | "projectId" | "box" | "aliasId" | "direction" | "status" | "resendId" | "messageId" | "inReplyTo" | "references" | "conversationId" | "fromAddress" | "fromName" | "to" | "cc" | "replyTo" | "subject" | "text" | "headers" | "authentication" | "automatic" | "sender" | "memberId" | "contactId" | "attachments" | "route" | "routeNote" | "sessionId" | "triggerId" | "teammateId" | "approvedByMemberId" | "sendAt" | "error" | "attempts" | "receivedAt" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["mailMessage"]>
+export type MailMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "addressId" | "connectionId" | "sourceId" | "projectId" | "box" | "aliasId" | "direction" | "status" | "resendId" | "messageId" | "inReplyTo" | "references" | "conversationId" | "fromAddress" | "fromName" | "to" | "cc" | "replyTo" | "subject" | "text" | "headers" | "authentication" | "automatic" | "sender" | "memberId" | "contactId" | "attachments" | "route" | "routeNote" | "sessionId" | "triggerId" | "teammateId" | "approvedByMemberId" | "sendAt" | "doneAt" | "doneByMemberId" | "handedByMemberId" | "error" | "attempts" | "receivedAt" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["mailMessage"]>
 export type MailMessageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
-  address?: boolean | Prisma.MailAddressDefaultArgs<ExtArgs>
+  address?: boolean | Prisma.MailMessage$addressArgs<ExtArgs>
+  connection?: boolean | Prisma.MailMessage$connectionArgs<ExtArgs>
   alias?: boolean | Prisma.MailMessage$aliasArgs<ExtArgs>
   contact?: boolean | Prisma.MailMessage$contactArgs<ExtArgs>
   session?: boolean | Prisma.MailMessage$sessionArgs<ExtArgs>
 }
 export type MailMessageIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
-  address?: boolean | Prisma.MailAddressDefaultArgs<ExtArgs>
+  address?: boolean | Prisma.MailMessage$addressArgs<ExtArgs>
+  connection?: boolean | Prisma.MailMessage$connectionArgs<ExtArgs>
   alias?: boolean | Prisma.MailMessage$aliasArgs<ExtArgs>
   contact?: boolean | Prisma.MailMessage$contactArgs<ExtArgs>
   session?: boolean | Prisma.MailMessage$sessionArgs<ExtArgs>
 }
 export type MailMessageIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
-  address?: boolean | Prisma.MailAddressDefaultArgs<ExtArgs>
+  address?: boolean | Prisma.MailMessage$addressArgs<ExtArgs>
+  connection?: boolean | Prisma.MailMessage$connectionArgs<ExtArgs>
   alias?: boolean | Prisma.MailMessage$aliasArgs<ExtArgs>
   contact?: boolean | Prisma.MailMessage$contactArgs<ExtArgs>
   session?: boolean | Prisma.MailMessage$sessionArgs<ExtArgs>
@@ -3071,7 +3728,8 @@ export type $MailMessagePayload<ExtArgs extends runtime.Types.Extensions.Interna
   name: "MailMessage"
   objects: {
     workspace: Prisma.$WorkspacePayload<ExtArgs>
-    address: Prisma.$MailAddressPayload<ExtArgs>
+    address: Prisma.$MailAddressPayload<ExtArgs> | null
+    connection: Prisma.$ConnectionPayload<ExtArgs> | null
     alias: Prisma.$MailAliasPayload<ExtArgs> | null
     contact: Prisma.$ContactPayload<ExtArgs> | null
     session: Prisma.$SessionPayload<ExtArgs> | null
@@ -3080,14 +3738,25 @@ export type $MailMessagePayload<ExtArgs extends runtime.Types.Extensions.Interna
     id: string
     organizationId: string
     workspaceId: string
-    addressId: string
+    /**
+     * Brigade's own address it came to or went from. Null for Gmail's mail.
+     */
+    addressId: string | null
+    /**
+     * Gmail's mail: its account. It goes with the account.
+     */
+    connectionId: string | null
+    /**
+     * Gmail's mail: Gmail's message id, so a mail read again is kept once.
+     */
+    sourceId: string | null
     /**
      * The variant: the project of riley.<slug>@. Null: riley@ itself, or a project inbox.
      */
     projectId: string | null
     /**
      * Address and variant ("<addressId>:<projectId or ->"): one copy per box of a mail sent to
-     * several of Brigade's addresses.
+     * several of Brigade's addresses. Gmail's: "gmail:<connectionId>".
      */
     box: string
     /**
@@ -3160,6 +3829,15 @@ export type $MailMessagePayload<ExtArgs extends runtime.Types.Extensions.Interna
      * out: when Resend sends it; it can be cancelled until then.
      */
     sendAt: Date | null
+    /**
+     * The Inbox: a person marked it done (nothing more to do with it).
+     */
+    doneAt: Date | null
+    doneByMemberId: string | null
+    /**
+     * The Inbox: the person who handed it to a teammate (its thread is sessionId, route handed).
+     */
+    handedByMemberId: string | null
     error: string | null
     attempts: number
     receivedAt: Date
@@ -3564,7 +4242,8 @@ readonly fields: MailMessageFieldRefs;
 export interface Prisma__MailMessageClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  address<T extends Prisma.MailAddressDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MailAddressDefaultArgs<ExtArgs>>): Prisma.Prisma__MailAddressClient<runtime.Types.Result.GetResult<Prisma.$MailAddressPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  address<T extends Prisma.MailMessage$addressArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MailMessage$addressArgs<ExtArgs>>): Prisma.Prisma__MailAddressClient<runtime.Types.Result.GetResult<Prisma.$MailAddressPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  connection<T extends Prisma.MailMessage$connectionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MailMessage$connectionArgs<ExtArgs>>): Prisma.Prisma__ConnectionClient<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   alias<T extends Prisma.MailMessage$aliasArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MailMessage$aliasArgs<ExtArgs>>): Prisma.Prisma__MailAliasClient<runtime.Types.Result.GetResult<Prisma.$MailAliasPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   contact<T extends Prisma.MailMessage$contactArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MailMessage$contactArgs<ExtArgs>>): Prisma.Prisma__ContactClient<runtime.Types.Result.GetResult<Prisma.$ContactPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   session<T extends Prisma.MailMessage$sessionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MailMessage$sessionArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
@@ -3601,6 +4280,8 @@ export interface MailMessageFieldRefs {
   readonly organizationId: Prisma.FieldRef<"MailMessage", 'String'>
   readonly workspaceId: Prisma.FieldRef<"MailMessage", 'String'>
   readonly addressId: Prisma.FieldRef<"MailMessage", 'String'>
+  readonly connectionId: Prisma.FieldRef<"MailMessage", 'String'>
+  readonly sourceId: Prisma.FieldRef<"MailMessage", 'String'>
   readonly projectId: Prisma.FieldRef<"MailMessage", 'String'>
   readonly box: Prisma.FieldRef<"MailMessage", 'String'>
   readonly aliasId: Prisma.FieldRef<"MailMessage", 'String'>
@@ -3632,6 +4313,9 @@ export interface MailMessageFieldRefs {
   readonly teammateId: Prisma.FieldRef<"MailMessage", 'String'>
   readonly approvedByMemberId: Prisma.FieldRef<"MailMessage", 'String'>
   readonly sendAt: Prisma.FieldRef<"MailMessage", 'DateTime'>
+  readonly doneAt: Prisma.FieldRef<"MailMessage", 'DateTime'>
+  readonly doneByMemberId: Prisma.FieldRef<"MailMessage", 'String'>
+  readonly handedByMemberId: Prisma.FieldRef<"MailMessage", 'String'>
   readonly error: Prisma.FieldRef<"MailMessage", 'String'>
   readonly attempts: Prisma.FieldRef<"MailMessage", 'Int'>
   readonly receivedAt: Prisma.FieldRef<"MailMessage", 'DateTime'>
@@ -4036,6 +4720,44 @@ export type MailMessageDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * Limit how many MailMessages to delete.
    */
   limit?: number
+}
+
+/**
+ * MailMessage.address
+ */
+export type MailMessage$addressArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MailAddress
+   */
+  select?: Prisma.MailAddressSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the MailAddress
+   */
+  omit?: Prisma.MailAddressOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MailAddressInclude<ExtArgs> | null
+  where?: Prisma.MailAddressWhereInput
+}
+
+/**
+ * MailMessage.connection
+ */
+export type MailMessage$connectionArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Connection
+   */
+  select?: Prisma.ConnectionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Connection
+   */
+  omit?: Prisma.ConnectionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ConnectionInclude<ExtArgs> | null
+  where?: Prisma.ConnectionWhereInput
 }
 
 /**

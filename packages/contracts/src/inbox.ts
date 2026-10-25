@@ -7,7 +7,7 @@ import type { MailRoute } from './email.js'
 export type InboxStatus = 'waiting' | 'handled' | 'done'
 
 export type InboxItem = {
-  /** email:<id> or gmail:<connection id>:<message id>. */
+  /** mail:<MailMessage id>, whatever its source: every source keeps its mail there. */
   id: string
   source: { id: string; kind: 'email' | 'gmail' }
   /** The address it came to. */

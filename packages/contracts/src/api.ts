@@ -195,6 +195,8 @@ export const ConnectWebhookApp = z.object({ label: z.string().trim().min(1).max(
 export const UpdateConnection = z.object({
   label: z.string().trim().min(1).max(80).optional(),
   reach: z.enum(['mine', 'workspace']).optional(),
+  /** Gmail shared with the workspace: its mail shows in the Inbox (src/inbox.ts). */
+  inbox: z.boolean().optional(),
 })
 /** An App's tools that no teammate gets, on any of its accounts. */
 export const UpdateApp = z.object({ disabledTools: z.array(z.string().max(100)).max(200) })

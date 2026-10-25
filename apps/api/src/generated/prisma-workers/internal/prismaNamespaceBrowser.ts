@@ -120,8 +120,7 @@ export const ModelName = {
   MailMessage: 'MailMessage',
   MailDomain: 'MailDomain',
   Contact: 'Contact',
-  ContactHandle: 'ContactHandle',
-  InboxState: 'InboxState'
+  ContactHandle: 'ContactHandle'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -655,6 +654,7 @@ export const ConnectionScalarFieldEnum = {
   workspaceId: 'workspaceId',
   appId: 'appId',
   reach: 'reach',
+  inbox: 'inbox',
   kind: 'kind',
   label: 'label',
   externalAccount: 'externalAccount',
@@ -1301,6 +1301,8 @@ export const MailMessageScalarFieldEnum = {
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
   addressId: 'addressId',
+  connectionId: 'connectionId',
+  sourceId: 'sourceId',
   projectId: 'projectId',
   box: 'box',
   aliasId: 'aliasId',
@@ -1332,6 +1334,9 @@ export const MailMessageScalarFieldEnum = {
   teammateId: 'teammateId',
   approvedByMemberId: 'approvedByMemberId',
   sendAt: 'sendAt',
+  doneAt: 'doneAt',
+  doneByMemberId: 'doneByMemberId',
+  handedByMemberId: 'handedByMemberId',
   error: 'error',
   attempts: 'attempts',
   receivedAt: 'receivedAt',
@@ -1383,24 +1388,6 @@ export const ContactHandleScalarFieldEnum = {
 } as const
 
 export type ContactHandleScalarFieldEnum = (typeof ContactHandleScalarFieldEnum)[keyof typeof ContactHandleScalarFieldEnum]
-
-
-export const InboxStateScalarFieldEnum = {
-  id: 'id',
-  organizationId: 'organizationId',
-  workspaceId: 'workspaceId',
-  source: 'source',
-  itemId: 'itemId',
-  doneAt: 'doneAt',
-  doneByMemberId: 'doneByMemberId',
-  sessionId: 'sessionId',
-  handedByMemberId: 'handedByMemberId',
-  handedAt: 'handedAt',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type InboxStateScalarFieldEnum = (typeof InboxStateScalarFieldEnum)[keyof typeof InboxStateScalarFieldEnum]
 
 
 export const SortOrder = {

@@ -507,7 +507,6 @@ export type SessionWhereInput = {
   rootOfPlaybookRun?: Prisma.XOR<Prisma.PlaybookRunNullableScalarRelationFilter, Prisma.PlaybookRunWhereInput> | null
   mailMessages?: Prisma.MailMessageListRelationFilter
   mailAliases?: Prisma.MailAliasListRelationFilter
-  inboxStates?: Prisma.InboxStateListRelationFilter
   playbookDryRuns?: Prisma.PlaybookDryRunListRelationFilter
   following?: Prisma.ThreadFollowListRelationFilter
   followers?: Prisma.ThreadFollowListRelationFilter
@@ -583,7 +582,6 @@ export type SessionOrderByWithRelationInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunOrderByWithRelationInput
   mailMessages?: Prisma.MailMessageOrderByRelationAggregateInput
   mailAliases?: Prisma.MailAliasOrderByRelationAggregateInput
-  inboxStates?: Prisma.InboxStateOrderByRelationAggregateInput
   playbookDryRuns?: Prisma.PlaybookDryRunOrderByRelationAggregateInput
   following?: Prisma.ThreadFollowOrderByRelationAggregateInput
   followers?: Prisma.ThreadFollowOrderByRelationAggregateInput
@@ -662,7 +660,6 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   rootOfPlaybookRun?: Prisma.XOR<Prisma.PlaybookRunNullableScalarRelationFilter, Prisma.PlaybookRunWhereInput> | null
   mailMessages?: Prisma.MailMessageListRelationFilter
   mailAliases?: Prisma.MailAliasListRelationFilter
-  inboxStates?: Prisma.InboxStateListRelationFilter
   playbookDryRuns?: Prisma.PlaybookDryRunListRelationFilter
   following?: Prisma.ThreadFollowListRelationFilter
   followers?: Prisma.ThreadFollowListRelationFilter
@@ -817,7 +814,6 @@ export type SessionCreateInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -882,7 +878,6 @@ export type SessionUncheckedCreateInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -947,7 +942,6 @@ export type SessionUpdateInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -1012,7 +1006,6 @@ export type SessionUncheckedUpdateInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -2083,22 +2076,6 @@ export type SessionUpdateOneWithoutMailMessagesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutMailMessagesInput, Prisma.SessionUpdateWithoutMailMessagesInput>, Prisma.SessionUncheckedUpdateWithoutMailMessagesInput>
 }
 
-export type SessionCreateNestedOneWithoutInboxStatesInput = {
-  create?: Prisma.XOR<Prisma.SessionCreateWithoutInboxStatesInput, Prisma.SessionUncheckedCreateWithoutInboxStatesInput>
-  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutInboxStatesInput
-  connect?: Prisma.SessionWhereUniqueInput
-}
-
-export type SessionUpdateOneWithoutInboxStatesNestedInput = {
-  create?: Prisma.XOR<Prisma.SessionCreateWithoutInboxStatesInput, Prisma.SessionUncheckedCreateWithoutInboxStatesInput>
-  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutInboxStatesInput
-  upsert?: Prisma.SessionUpsertWithoutInboxStatesInput
-  disconnect?: Prisma.SessionWhereInput | boolean
-  delete?: Prisma.SessionWhereInput | boolean
-  connect?: Prisma.SessionWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutInboxStatesInput, Prisma.SessionUpdateWithoutInboxStatesInput>, Prisma.SessionUncheckedUpdateWithoutInboxStatesInput>
-}
-
 export type SessionCreateWithoutStartedByInput = {
   id?: string
   organizationId: string
@@ -2157,7 +2134,6 @@ export type SessionCreateWithoutStartedByInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -2221,7 +2197,6 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -2355,7 +2330,6 @@ export type SessionCreateWithoutWorkspaceInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -2419,7 +2393,6 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -2509,7 +2482,6 @@ export type SessionCreateWithoutComputerInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -2573,7 +2545,6 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -2663,7 +2634,6 @@ export type SessionCreateWithoutTeammateInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -2727,7 +2697,6 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -2817,7 +2786,6 @@ export type SessionCreateWithoutReadsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -2881,7 +2849,6 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -2961,7 +2928,6 @@ export type SessionUpdateWithoutReadsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -3025,7 +2991,6 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -3089,7 +3054,6 @@ export type SessionCreateWithoutPinsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -3153,7 +3117,6 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -3233,7 +3196,6 @@ export type SessionUpdateWithoutPinsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -3297,7 +3259,6 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -3361,7 +3322,6 @@ export type SessionCreateWithoutLatersInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -3425,7 +3385,6 @@ export type SessionUncheckedCreateWithoutLatersInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -3505,7 +3464,6 @@ export type SessionUpdateWithoutLatersInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -3569,7 +3527,6 @@ export type SessionUncheckedUpdateWithoutLatersInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -3633,7 +3590,6 @@ export type SessionCreateWithoutChildrenInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -3697,7 +3653,6 @@ export type SessionUncheckedCreateWithoutChildrenInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -3766,7 +3721,6 @@ export type SessionCreateWithoutParentInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -3830,7 +3784,6 @@ export type SessionUncheckedCreateWithoutParentInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -3915,7 +3868,6 @@ export type SessionUpdateWithoutChildrenInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -3979,7 +3931,6 @@ export type SessionUncheckedUpdateWithoutChildrenInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -4059,7 +4010,6 @@ export type SessionCreateWithoutTaskInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -4123,7 +4073,6 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -4203,7 +4152,6 @@ export type SessionUpdateWithoutTaskInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -4267,7 +4215,6 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -4331,7 +4278,6 @@ export type SessionCreateWithoutReportingSchedulesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -4395,7 +4341,6 @@ export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -4464,7 +4409,6 @@ export type SessionCreateWithoutScheduleInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -4528,7 +4472,6 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -4613,7 +4556,6 @@ export type SessionUpdateWithoutReportingSchedulesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -4677,7 +4619,6 @@ export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -4757,7 +4698,6 @@ export type SessionCreateWithoutWakeupsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -4821,7 +4761,6 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -4901,7 +4840,6 @@ export type SessionUpdateWithoutWakeupsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -4965,7 +4903,6 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -5029,7 +4966,6 @@ export type SessionCreateWithoutReplyWatchesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -5093,7 +5029,6 @@ export type SessionUncheckedCreateWithoutReplyWatchesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -5173,7 +5108,6 @@ export type SessionUpdateWithoutReplyWatchesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -5237,7 +5171,6 @@ export type SessionUncheckedUpdateWithoutReplyWatchesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -5301,7 +5234,6 @@ export type SessionCreateWithoutTeammatesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -5365,7 +5297,6 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -5445,7 +5376,6 @@ export type SessionUpdateWithoutTeammatesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -5509,7 +5439,6 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -5573,7 +5502,6 @@ export type SessionCreateWithoutEventsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -5637,7 +5565,6 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -5717,7 +5644,6 @@ export type SessionUpdateWithoutEventsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -5781,7 +5707,6 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -5845,7 +5770,6 @@ export type SessionCreateWithoutAccountInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -5909,7 +5833,6 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -5999,7 +5922,6 @@ export type SessionCreateWithoutPullRequestsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -6063,7 +5985,6 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -6132,7 +6053,6 @@ export type SessionCreateWithoutReviewsOfInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -6196,7 +6116,6 @@ export type SessionUncheckedCreateWithoutReviewsOfInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -6276,7 +6195,6 @@ export type SessionUpdateWithoutPullRequestsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -6340,7 +6258,6 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -6415,7 +6332,6 @@ export type SessionUpdateWithoutReviewsOfInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -6479,7 +6395,6 @@ export type SessionUncheckedUpdateWithoutReviewsOfInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -6543,7 +6458,6 @@ export type SessionCreateWithoutCommentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -6607,7 +6521,6 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -6687,7 +6600,6 @@ export type SessionUpdateWithoutCommentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -6751,7 +6663,6 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -6815,7 +6726,6 @@ export type SessionCreateWithoutConnectionCallsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -6879,7 +6789,6 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -6959,7 +6868,6 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -7023,7 +6931,6 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -7087,7 +6994,6 @@ export type SessionCreateWithoutTriggerInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -7151,7 +7057,6 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -7241,7 +7146,6 @@ export type SessionCreateWithoutTicketsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -7305,7 +7209,6 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -7385,7 +7288,6 @@ export type SessionUpdateWithoutTicketsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -7449,7 +7351,6 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -7513,7 +7414,6 @@ export type SessionCreateWithoutDocumentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -7577,7 +7477,6 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -7657,7 +7556,6 @@ export type SessionUpdateWithoutDocumentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -7721,7 +7619,6 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -7785,7 +7682,6 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -7849,7 +7745,6 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -7929,7 +7824,6 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -7993,7 +7887,6 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -8057,7 +7950,6 @@ export type SessionCreateWithoutAttachmentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -8121,7 +8013,6 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -8201,7 +8092,6 @@ export type SessionUpdateWithoutAttachmentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -8265,7 +8155,6 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -8329,7 +8218,6 @@ export type SessionCreateWithoutProjectInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -8393,7 +8281,6 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -8483,7 +8370,6 @@ export type SessionCreateWithoutRootOfPlaybookRunInput = {
   playbookRun?: Prisma.PlaybookRunCreateNestedOneWithoutThreadsInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -8547,7 +8433,6 @@ export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
   reportingSchedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutParentSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -8616,7 +8501,6 @@ export type SessionCreateWithoutPlaybookRunInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -8680,7 +8564,6 @@ export type SessionUncheckedCreateWithoutPlaybookRunInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -8765,7 +8648,6 @@ export type SessionUpdateWithoutRootOfPlaybookRunInput = {
   playbookRun?: Prisma.PlaybookRunUpdateOneWithoutThreadsNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -8829,7 +8711,6 @@ export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
   reportingSchedules?: Prisma.ScheduleUncheckedUpdateManyWithoutParentSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -8910,7 +8791,6 @@ export type SessionCreateWithoutPlaybookDryRunsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
 }
@@ -8974,7 +8854,6 @@ export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
 }
@@ -9054,7 +8933,6 @@ export type SessionUpdateWithoutPlaybookDryRunsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
 }
@@ -9118,7 +8996,6 @@ export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
 }
@@ -9182,7 +9059,6 @@ export type SessionCreateWithoutFollowersInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
 }
@@ -9246,7 +9122,6 @@ export type SessionUncheckedCreateWithoutFollowersInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
 }
@@ -9315,7 +9190,6 @@ export type SessionCreateWithoutFollowingInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
 }
@@ -9379,7 +9253,6 @@ export type SessionUncheckedCreateWithoutFollowingInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
 }
@@ -9459,7 +9332,6 @@ export type SessionUpdateWithoutFollowersInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
 }
@@ -9523,7 +9395,6 @@ export type SessionUncheckedUpdateWithoutFollowersInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
 }
@@ -9598,7 +9469,6 @@ export type SessionUpdateWithoutFollowingInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
 }
@@ -9662,7 +9532,6 @@ export type SessionUncheckedUpdateWithoutFollowingInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
 }
@@ -9725,7 +9594,6 @@ export type SessionCreateWithoutMailAliasesInput = {
   playbookRun?: Prisma.PlaybookRunCreateNestedOneWithoutThreadsInput
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -9789,7 +9657,6 @@ export type SessionUncheckedCreateWithoutMailAliasesInput = {
   reportingSchedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutParentSessionInput
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -9869,7 +9736,6 @@ export type SessionUpdateWithoutMailAliasesInput = {
   playbookRun?: Prisma.PlaybookRunUpdateOneWithoutThreadsNestedInput
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -9933,7 +9799,6 @@ export type SessionUncheckedUpdateWithoutMailAliasesInput = {
   reportingSchedules?: Prisma.ScheduleUncheckedUpdateManyWithoutParentSessionNestedInput
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -9997,7 +9862,6 @@ export type SessionCreateWithoutMailMessagesInput = {
   playbookRun?: Prisma.PlaybookRunCreateNestedOneWithoutThreadsInput
   rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
@@ -10061,7 +9925,6 @@ export type SessionUncheckedCreateWithoutMailMessagesInput = {
   reportingSchedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutParentSessionInput
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  inboxStates?: Prisma.InboxStateUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
@@ -10141,7 +10004,6 @@ export type SessionUpdateWithoutMailMessagesInput = {
   playbookRun?: Prisma.PlaybookRunUpdateOneWithoutThreadsNestedInput
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -10204,279 +10066,6 @@ export type SessionUncheckedUpdateWithoutMailMessagesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutSessionNestedInput
   reportingSchedules?: Prisma.ScheduleUncheckedUpdateManyWithoutParentSessionNestedInput
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
-  mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
-  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
-  following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
-  followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
-}
-
-export type SessionCreateWithoutInboxStatesInput = {
-  id?: string
-  organizationId: string
-  title: string
-  status?: $Enums.SessionStatus
-  private?: boolean
-  othersMayPrompt?: boolean
-  controlledByMemberId?: string | null
-  origin?: $Enums.SessionOrigin
-  parentTeammateId?: string | null
-  awaited?: boolean
-  awaitUntil?: Date | string | null
-  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  reportDeliveredAt?: Date | string | null
-  reportDueAt?: Date | string | null
-  conversationKey?: string | null
-  archivedAt?: Date | string | null
-  lastSeq?: number
-  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  movedAt?: Date | string | null
-  movedFrom?: string | null
-  movedSeq?: number | null
-  effort?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  playbookTeammate?: string | null
-  surfacedAt?: Date | string | null
-  quiet?: boolean
-  workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
-  teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
-  startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
-  computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
-  account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  parent?: Prisma.SessionCreateNestedOneWithoutChildrenInput
-  children?: Prisma.SessionCreateNestedManyWithoutParentInput
-  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
-  schedule?: Prisma.ScheduleCreateNestedOneWithoutSessionsInput
-  events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
-  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
-  comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
-  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
-  tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
-  documents?: Prisma.DocumentCreateNestedManyWithoutSessionInput
-  attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
-  sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
-  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
-  reviewsOf?: Prisma.PullRequestCreateNestedManyWithoutReviewSessionInput
-  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
-  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
-  laters?: Prisma.ThreadLaterCreateNestedManyWithoutSessionInput
-  task?: Prisma.TaskCreateNestedOneWithoutSessionInput
-  project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
-  wakeups?: Prisma.WakeupCreateNestedManyWithoutSessionInput
-  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutSessionInput
-  reportingSchedules?: Prisma.ScheduleCreateNestedManyWithoutParentSessionInput
-  playbookRun?: Prisma.PlaybookRunCreateNestedOneWithoutThreadsInput
-  rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
-  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
-  mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
-  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
-  following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
-  followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
-}
-
-export type SessionUncheckedCreateWithoutInboxStatesInput = {
-  id?: string
-  organizationId: string
-  workspaceId: string
-  teammateId: string
-  startedByMemberId: string
-  computerId: string
-  accountId?: string | null
-  title: string
-  status?: $Enums.SessionStatus
-  private?: boolean
-  othersMayPrompt?: boolean
-  controlledByMemberId?: string | null
-  origin?: $Enums.SessionOrigin
-  parentId?: string | null
-  parentTeammateId?: string | null
-  awaited?: boolean
-  awaitUntil?: Date | string | null
-  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  reportDeliveredAt?: Date | string | null
-  reportDueAt?: Date | string | null
-  triggerId?: string | null
-  conversationKey?: string | null
-  scheduleId?: string | null
-  archivedAt?: Date | string | null
-  lastSeq?: number
-  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  movedAt?: Date | string | null
-  movedFrom?: string | null
-  movedSeq?: number | null
-  effort?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  taskId?: string | null
-  projectId?: string | null
-  playbookRunId?: string | null
-  playbookTeammate?: string | null
-  surfacedAt?: Date | string | null
-  quiet?: boolean
-  children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
-  events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
-  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
-  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
-  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
-  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
-  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutSessionInput
-  attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
-  sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
-  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
-  reviewsOf?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewSessionInput
-  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
-  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
-  laters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutSessionInput
-  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutSessionInput
-  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutSessionInput
-  reportingSchedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutParentSessionInput
-  rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
-  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
-  mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
-  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
-  following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
-  followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
-}
-
-export type SessionCreateOrConnectWithoutInboxStatesInput = {
-  where: Prisma.SessionWhereUniqueInput
-  create: Prisma.XOR<Prisma.SessionCreateWithoutInboxStatesInput, Prisma.SessionUncheckedCreateWithoutInboxStatesInput>
-}
-
-export type SessionUpsertWithoutInboxStatesInput = {
-  update: Prisma.XOR<Prisma.SessionUpdateWithoutInboxStatesInput, Prisma.SessionUncheckedUpdateWithoutInboxStatesInput>
-  create: Prisma.XOR<Prisma.SessionCreateWithoutInboxStatesInput, Prisma.SessionUncheckedCreateWithoutInboxStatesInput>
-  where?: Prisma.SessionWhereInput
-}
-
-export type SessionUpdateToOneWithWhereWithoutInboxStatesInput = {
-  where?: Prisma.SessionWhereInput
-  data: Prisma.XOR<Prisma.SessionUpdateWithoutInboxStatesInput, Prisma.SessionUncheckedUpdateWithoutInboxStatesInput>
-}
-
-export type SessionUpdateWithoutInboxStatesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
-  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
-  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
-  teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
-  startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
-  computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
-  account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  parent?: Prisma.SessionUpdateOneWithoutChildrenNestedInput
-  children?: Prisma.SessionUpdateManyWithoutParentNestedInput
-  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
-  schedule?: Prisma.ScheduleUpdateOneWithoutSessionsNestedInput
-  events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
-  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
-  comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
-  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
-  tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
-  documents?: Prisma.DocumentUpdateManyWithoutSessionNestedInput
-  attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
-  sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
-  pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
-  reviewsOf?: Prisma.PullRequestUpdateManyWithoutReviewSessionNestedInput
-  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
-  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
-  laters?: Prisma.ThreadLaterUpdateManyWithoutSessionNestedInput
-  task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
-  project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
-  wakeups?: Prisma.WakeupUpdateManyWithoutSessionNestedInput
-  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutSessionNestedInput
-  reportingSchedules?: Prisma.ScheduleUpdateManyWithoutParentSessionNestedInput
-  playbookRun?: Prisma.PlaybookRunUpdateOneWithoutThreadsNestedInput
-  rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
-  mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
-  mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
-  following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
-  followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
-}
-
-export type SessionUncheckedUpdateWithoutInboxStatesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
-  startedByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
-  computerId?: Prisma.StringFieldUpdateOperationsInput | string
-  accountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
-  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
-  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
-  events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
-  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
-  comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
-  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
-  tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
-  documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
-  attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
-  sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
-  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
-  reviewsOf?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewSessionNestedInput
-  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
-  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
-  laters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutSessionNestedInput
-  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutSessionNestedInput
-  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutSessionNestedInput
-  reportingSchedules?: Prisma.ScheduleUncheckedUpdateManyWithoutParentSessionNestedInput
-  rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
-  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -10581,7 +10170,6 @@ export type SessionUpdateWithoutStartedByInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -10645,7 +10233,6 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -10789,7 +10376,6 @@ export type SessionUpdateWithoutWorkspaceInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -10853,7 +10439,6 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -10997,7 +10582,6 @@ export type SessionUpdateWithoutComputerInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -11061,7 +10645,6 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -11205,7 +10788,6 @@ export type SessionUpdateWithoutTeammateInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -11269,7 +10851,6 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -11413,7 +10994,6 @@ export type SessionUpdateWithoutParentInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -11477,7 +11057,6 @@ export type SessionUncheckedUpdateWithoutParentInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -11621,7 +11200,6 @@ export type SessionUpdateWithoutScheduleInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -11685,7 +11263,6 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -11829,7 +11406,6 @@ export type SessionUpdateWithoutAccountInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -11893,7 +11469,6 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -12037,7 +11612,6 @@ export type SessionUpdateWithoutTriggerInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -12101,7 +11675,6 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -12245,7 +11818,6 @@ export type SessionUpdateWithoutProjectInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -12309,7 +11881,6 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -12453,7 +12024,6 @@ export type SessionUpdateWithoutPlaybookRunInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
@@ -12517,7 +12087,6 @@ export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
-  inboxStates?: Prisma.InboxStateUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
@@ -12588,7 +12157,6 @@ export type SessionCountOutputType = {
   reportingSchedules: number
   mailMessages: number
   mailAliases: number
-  inboxStates: number
   playbookDryRuns: number
   following: number
   followers: number
@@ -12614,7 +12182,6 @@ export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   reportingSchedules?: boolean | SessionCountOutputTypeCountReportingSchedulesArgs
   mailMessages?: boolean | SessionCountOutputTypeCountMailMessagesArgs
   mailAliases?: boolean | SessionCountOutputTypeCountMailAliasesArgs
-  inboxStates?: boolean | SessionCountOutputTypeCountInboxStatesArgs
   playbookDryRuns?: boolean | SessionCountOutputTypeCountPlaybookDryRunsArgs
   following?: boolean | SessionCountOutputTypeCountFollowingArgs
   followers?: boolean | SessionCountOutputTypeCountFollowersArgs
@@ -12766,13 +12333,6 @@ export type SessionCountOutputTypeCountMailAliasesArgs<ExtArgs extends runtime.T
 /**
  * SessionCountOutputType without action
  */
-export type SessionCountOutputTypeCountInboxStatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.InboxStateWhereInput
-}
-
-/**
- * SessionCountOutputType without action
- */
 export type SessionCountOutputTypeCountPlaybookDryRunsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PlaybookDryRunWhereInput
 }
@@ -12862,7 +12422,6 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   rootOfPlaybookRun?: boolean | Prisma.Session$rootOfPlaybookRunArgs<ExtArgs>
   mailMessages?: boolean | Prisma.Session$mailMessagesArgs<ExtArgs>
   mailAliases?: boolean | Prisma.Session$mailAliasesArgs<ExtArgs>
-  inboxStates?: boolean | Prisma.Session$inboxStatesArgs<ExtArgs>
   playbookDryRuns?: boolean | Prisma.Session$playbookDryRunsArgs<ExtArgs>
   following?: boolean | Prisma.Session$followingArgs<ExtArgs>
   followers?: boolean | Prisma.Session$followersArgs<ExtArgs>
@@ -13047,7 +12606,6 @@ export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   rootOfPlaybookRun?: boolean | Prisma.Session$rootOfPlaybookRunArgs<ExtArgs>
   mailMessages?: boolean | Prisma.Session$mailMessagesArgs<ExtArgs>
   mailAliases?: boolean | Prisma.Session$mailAliasesArgs<ExtArgs>
-  inboxStates?: boolean | Prisma.Session$inboxStatesArgs<ExtArgs>
   playbookDryRuns?: boolean | Prisma.Session$playbookDryRunsArgs<ExtArgs>
   following?: boolean | Prisma.Session$followingArgs<ExtArgs>
   followers?: boolean | Prisma.Session$followersArgs<ExtArgs>
@@ -13150,10 +12708,6 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * Sign-up addresses it asked for (email_new_address).
      */
     mailAliases: Prisma.$MailAliasPayload<ExtArgs>[]
-    /**
-     * Inbox items a person handed to it.
-     */
-    inboxStates: Prisma.$InboxStatePayload<ExtArgs>[]
     /**
      * The dry runs of a playbook started from this thread (its installation's chat).
      */
@@ -13706,7 +13260,6 @@ export interface Prisma__SessionClient<T, Null = never, ExtArgs extends runtime.
   rootOfPlaybookRun<T extends Prisma.Session$rootOfPlaybookRunArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$rootOfPlaybookRunArgs<ExtArgs>>): Prisma.Prisma__PlaybookRunClient<runtime.Types.Result.GetResult<Prisma.$PlaybookRunPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   mailMessages<T extends Prisma.Session$mailMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$mailMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MailMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   mailAliases<T extends Prisma.Session$mailAliasesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$mailAliasesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MailAliasPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  inboxStates<T extends Prisma.Session$inboxStatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$inboxStatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InboxStatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   playbookDryRuns<T extends Prisma.Session$playbookDryRunsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$playbookDryRunsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaybookDryRunPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   following<T extends Prisma.Session$followingArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$followingArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadFollowPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   followers<T extends Prisma.Session$followersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$followersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadFollowPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -14783,30 +14336,6 @@ export type Session$mailAliasesArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.MailAliasScalarFieldEnum | Prisma.MailAliasScalarFieldEnum[]
-}
-
-/**
- * Session.inboxStates
- */
-export type Session$inboxStatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the InboxState
-   */
-  select?: Prisma.InboxStateSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the InboxState
-   */
-  omit?: Prisma.InboxStateOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.InboxStateInclude<ExtArgs> | null
-  where?: Prisma.InboxStateWhereInput
-  orderBy?: Prisma.InboxStateOrderByWithRelationInput | Prisma.InboxStateOrderByWithRelationInput[]
-  cursor?: Prisma.InboxStateWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.InboxStateScalarFieldEnum | Prisma.InboxStateScalarFieldEnum[]
 }
 
 /**
