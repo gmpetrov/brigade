@@ -14,6 +14,7 @@ import {
 } from '@brigade/contracts'
 import type { ScopedDb } from './db.js'
 import { eventsWaitingSince } from './hub.js'
+import { latestEvents } from './latest-events.js'
 import { playbookLines } from './playbook-metrics.js'
 import { waitingOnPerson } from './pull-requests.js'
 
@@ -264,12 +265,11 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
   // run is its routine's loose end, below.
   const failed = threads.filter((t) => t.status === 'failed' && !t.scheduleId && !held.has(t.id))
   const errors = failed.length
-    ? await db.sessionEvent.findMany({
-        where: { sessionId: { in: failed.map((t) => t.id) }, type: 'error' },
-        orderBy: { seq: 'desc' },
-        distinct: ['sessionId'],
-        select: { sessionId: true, at: true, data: true },
-      })
+    ? await latestEvents(
+        db,
+        failed.map((t) => t.id),
+        'error',
+      )
     : []
   loose.push(...failedLooseEnds(failed, errors, gone))
 

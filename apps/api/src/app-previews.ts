@@ -19,6 +19,7 @@ import { cloudAvailable, ensureRunning, hostedPort } from './cloud.js'
 import { prisma, scoped, type Prisma } from './db.js'
 import type { ScopedDb } from './db.js'
 import { runnerProtocol, runnerStartedAt, sendToRunner } from './hub.js'
+import { latestEvents } from './latest-events.js'
 import { variableNames, variableValues } from './preview-variables.js'
 import { actingTeammate, currentTeammate, type LoadedThread } from './thread-spec.js'
 
@@ -70,12 +71,7 @@ export async function previewStates(db: ScopedDb, sessionIds: string[]) {
   const states = new Map<string, 'starting' | 'running' | 'ready' | null>()
   if (!sessionIds.length) return states
   const [rows, sessions] = await Promise.all([
-    db.sessionEvent.findMany({
-      where: { sessionId: { in: sessionIds }, type: 'preview.changed' },
-      orderBy: { seq: 'desc' },
-      distinct: ['sessionId'],
-      select: { sessionId: true, data: true, at: true },
-    }),
+    latestEvents(db, sessionIds, 'preview.changed'),
     db.session.findMany({
       where: { id: { in: sessionIds } },
       select: { id: true, computerId: true },
