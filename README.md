@@ -273,6 +273,11 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   replies (`Auto-Submitted` and the like) wake nobody, and a thread woken `WAKEUPS_IN_A_ROW` times with no word
   from a person stops waiting. The mailbox is read while a watch runs even without triggers, and then only the
   awaited conversations' emails. The thread's panel lists them under Waiting for replies, where a member stops one.
+- **Email** (`apps/api/src/mail/`, `connectors/email.ts`, `routes/email.ts`, design in `docs/email.md`). Agents'
+  own addresses on Brigade's mail domain, received and sent through Resend: `riley@`, `riley.<project>@` per project,
+  sign-up addresses for one thread, and projects' inboxes that a company's own address is forwarded to. Names are
+  unique across Brigade and never given again. Each mail goes to one place: a thread waiting on it, its conversation's
+  thread, a member's request, the address's first matching rule, or its box for 30 days.
 - **Projects** (`apps/api/src/projects.ts`, `routes/projects.ts`, design in `docs/projects.md`). A project
   groups a workspace's work: threads, tasks, schedules and triggers carry a `projectId`; it owns a library folder
   and links repositories by `owner/name`. Everything else stays shared. A thread in a project gets its brief,
