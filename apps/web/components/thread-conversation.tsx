@@ -9,6 +9,7 @@ import {
   ArrowDown,
   ArrowUp,
   CalendarClock,
+  ChevronDown,
   CircleStop,
   CloudUpload,
   FolderKanban,
@@ -870,13 +871,14 @@ export function ThreadConversation({
 
   // Expanded, what is not the conversation sits in the panel beside it: the thread's
   // computer (with Preview), its details, then what it made.
-  // One row per fact, an icon for its kind: who is in it, where it runs, its project, its task,
-  // who started it. Not what the page already says: its title is in the pill, its teammate and
-  // the cloud computer in the panel's header.
+  // Its name first, on one line that opens when it is cut, as the pill is out of sight on a
+  // phone. Then one row per fact, an icon for its kind: who is in it, where it runs, its project,
+  // its task, who started it. Not its teammate and the cloud computer: the panel's header says them.
   const fact = 'flex min-w-0 items-center gap-2.5'
   const factIcon = 'size-4 shrink-0 text-muted-foreground'
   const details = (
     <div className="flex flex-col gap-2 text-sm">
+      {t.title && <ThreadName title={t.title} />}
       {people.length > 1 && (
         <div className={fact}>
           <UsersRound aria-label="Teammates" className={factIcon} />
@@ -1517,6 +1519,45 @@ const END_SLACK = 48
 
 /** Back down to the latest, while reading higher up. */
 /** Over the whole conversation while files are dragged on it: dropping attaches them. */
+// The thread's name in its details: one line, cut with an ellipsis; when cut, a tap anywhere on
+// it shows it whole, and the chevron after it says so.
+function ThreadName({ title }: { title: string }) {
+  const [open, setOpen] = useState(false)
+  const [cut, setCut] = useState(false)
+  const ref = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || open) return
+    const measure = () => setCut(el.scrollWidth > el.clientWidth)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [open, title])
+  return (
+    <button
+      type="button"
+      disabled={!cut && !open}
+      aria-expanded={cut || open ? open : undefined}
+      onClick={() => setOpen((o) => !o)}
+      className="flex min-w-0 items-start gap-1.5 text-left text-base font-semibold text-foreground disabled:cursor-default"
+    >
+      <span ref={ref} className={cn('min-w-0 flex-1', open ? 'break-words' : 'truncate')}>
+        {title}
+      </span>
+      {(cut || open) && (
+        <ChevronDown
+          aria-hidden
+          className={cn(
+            'mt-1 size-4 shrink-0 text-muted-foreground transition-transform',
+            open && 'rotate-180',
+          )}
+        />
+      )}
+    </button>
+  )
+}
+
 function DropOverlay() {
   return (
     <div className="pointer-events-none absolute inset-0 z-30 grid place-items-center bg-background/80 backdrop-blur-[2px]">
