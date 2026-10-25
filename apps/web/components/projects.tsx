@@ -107,6 +107,7 @@ export function ProjectSelect({
   none = true,
   id,
   className,
+  allLabel,
 }: {
   value: string
   onChange: (value: string) => void
@@ -115,13 +116,19 @@ export function ProjectSelect({
   none?: boolean
   id?: string
   className?: string
+  /** Shown in the closed picker in place of "All projects", when nothing is picked. */
+  allLabel?: string
 }) {
   const { projects } = useDashboard()
   const shown = projects.filter((p) => !p.archivedAt || p.id === value)
   return (
     <Select value={value || 'all'} onValueChange={(v) => onChange(v === 'all' ? '' : v)}>
-      <SelectTrigger id={id} className={cn('w-full sm:w-56', className)}>
-        <SelectValue />
+      <SelectTrigger
+        id={id}
+        aria-label={id ? undefined : 'Project'}
+        className={cn('w-full sm:w-56', className)}
+      >
+        <SelectValue>{!value && allLabel ? allLabel : undefined}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {all && <SelectItem value="all">All projects</SelectItem>}

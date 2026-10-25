@@ -59,6 +59,10 @@ const STATUSES: { value: StatusFilter; label: string }[] = [
 ]
 
 const ALL = '*'
+/** A filter picker in the status row: plain text until it is set. */
+const FILTER =
+  'h-8 w-auto max-w-56 sm:w-auto border-transparent bg-transparent px-2.5 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground dark:bg-transparent dark:hover:bg-secondary'
+const FILTER_ON = 'bg-secondary text-foreground dark:bg-secondary'
 const SIGN_UP = 'Mail to a sign-up address'
 
 const message = (e: unknown) =>
@@ -121,7 +125,7 @@ function DestinationChip({ item, className }: { item: InboxItem; className?: str
 export function InboxView() {
   const params = useSearchParams()
   const router = useRouter()
-  const { teammates, reloadInboxCount } = useDashboard()
+  const { teammates, projects, reloadInboxCount, inboxWaiting } = useDashboard()
   const status = (STATUSES.find((s) => s.value === params.get('status'))?.value ??
     'waiting') as StatusFilter
   const source = params.get('source') ?? ''
@@ -160,6 +164,25 @@ export function InboxView() {
     }, 300)
     return () => window.clearTimeout(timer)
   }, [query, q, href, router])
+
+  // Search: an icon until it is opened (or "/" is pressed), and open while it holds text.
+  const [searchOpen, setSearchOpen] = useState(!!q)
+  const searching = searchOpen || !!query
+  const searchBox = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+      e.preventDefault()
+      setSearchOpen(true)
+      searchBox.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  // The Unassigned count is the workspace's, so it shows only while nothing narrows the list.
+  const filtered = !!(source || teammate || project || q)
 
   const search = new URLSearchParams({ status })
   if (source) search.set('source', source)
@@ -230,98 +253,132 @@ export function InboxView() {
         </p>
       </header>
 
-      <div className={cn('flex flex-col gap-3', item && 'hidden lg:flex')}>
-        <div className="flex flex-wrap items-center gap-3">
-          <div role="group" aria-label="Status" className="flex flex-wrap gap-2">
-            {STATUSES.map((s) => (
+      <div className={cn('flex flex-wrap items-center gap-x-2 gap-y-3', item && 'hidden lg:flex')}>
+        <div
+          role="group"
+          aria-label="Status"
+          className="mr-2 inline-flex rounded-lg border bg-card p-0.5"
+        >
+          {STATUSES.map((s) => {
+            const count = s.value === 'waiting' && !filtered ? inboxWaiting : 0
+            return (
               <button
                 key={s.value}
                 type="button"
                 aria-pressed={status === s.value}
                 onClick={() => go({ status: s.value === 'waiting' ? null : s.value })}
                 className={cn(
-                  'inline-flex h-8 items-center rounded-full border px-3.5 text-sm font-semibold transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                  'inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-sm transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
                   status === s.value
-                    ? 'border-transparent bg-foreground text-background'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                    ? 'bg-secondary font-semibold text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {s.label}
+                {count > 0 && (
+                  <span className="text-xs font-normal text-muted-foreground tabular-nums">
+                    {count}
+                  </span>
+                )}
               </button>
-            ))}
-          </div>
-          <div className="relative min-w-48 flex-1">
-            <Search
-              aria-hidden
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              type="search"
-              aria-label="Search"
-              placeholder="Search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+            )
+          })}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={source || ALL} onValueChange={(v) => go({ source: v === ALL ? null : v })}>
-            <SelectTrigger aria-label="Source" className="w-full sm:w-56">
-              <SelectValue />
+        <Select value={source || ALL} onValueChange={(v) => go({ source: v === ALL ? null : v })}>
+          <SelectTrigger aria-label="Source" className={cn(FILTER, source && FILTER_ON)}>
+            <SelectValue>{source ? undefined : 'Sources'}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All sources</SelectItem>
+            {brigade.length > 0 && (
+              <>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectLabel>Brigade addresses</SelectLabel>
+                  {brigade.map((s) => (
+                    <SourceItem key={s.id} source={s} />
+                  ))}
+                </SelectGroup>
+              </>
+            )}
+            {gmail.length > 0 && (
+              <>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectLabel>Gmail</SelectLabel>
+                  {gmail.map((s) => (
+                    <SourceItem key={s.id} source={s} />
+                  ))}
+                </SelectGroup>
+              </>
+            )}
+          </SelectContent>
+        </Select>
+        {teammates.length > 0 && (
+          <Select
+            value={teammate || ALL}
+            onValueChange={(v) => go({ teammate: v === ALL ? null : v })}
+          >
+            <SelectTrigger aria-label="Agent" className={cn(FILTER, teammate && FILTER_ON)}>
+              <SelectValue>{teammate ? undefined : 'Agents'}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All sources</SelectItem>
-              {brigade.length > 0 && (
-                <>
-                  <SelectSeparator />
-                  <SelectGroup>
-                    <SelectLabel>Brigade addresses</SelectLabel>
-                    {brigade.map((s) => (
-                      <SourceItem key={s.id} source={s} />
-                    ))}
-                  </SelectGroup>
-                </>
-              )}
-              {gmail.length > 0 && (
-                <>
-                  <SelectSeparator />
-                  <SelectGroup>
-                    <SelectLabel>Gmail</SelectLabel>
-                    {gmail.map((s) => (
-                      <SourceItem key={s.id} source={s} />
-                    ))}
-                  </SelectGroup>
-                </>
-              )}
+              <SelectItem value={ALL}>All agents</SelectItem>
+              <SelectSeparator />
+              {teammates.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          {teammates.length > 0 && (
-            <Select
-              value={teammate || ALL}
-              onValueChange={(v) => go({ teammate: v === ALL ? null : v })}
-            >
-              <SelectTrigger aria-label="Agent" className="w-full sm:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All agents</SelectItem>
-                <SelectSeparator />
-                {teammates.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+        )}
+        {projects.length > 0 && (
           <ProjectSelect
             value={project}
             onChange={(v) => go({ project: v || null })}
             all
             none={false}
-            className="sm:w-48"
+            allLabel="Projects"
+            className={cn(FILTER, project && FILTER_ON)}
           />
+        )}
+        <div className="ml-auto flex items-center">
+          {searching ? (
+            <div className="relative w-56 max-sm:w-[calc(100vw-3rem)]">
+              <Search
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                ref={searchBox}
+                type="search"
+                aria-label="Search"
+                placeholder="Search"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onBlur={() => !query.trim() && setSearchOpen(false)}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Escape') return
+                  setQuery('')
+                  setSearchOpen(false)
+                }}
+                className="h-8 pl-9"
+              />
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Search"
+              title="Search (/)"
+              className="size-8 text-muted-foreground"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search />
+            </Button>
+          )}
         </div>
       </div>
 

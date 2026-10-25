@@ -123,6 +123,8 @@ type Dashboard = {
   reloadProjects: () => Promise<void>
   /** Count again the Inbox's mail waiting, beside Inbox in the sidebar. */
   reloadInboxCount: () => Promise<void>
+  /** The Inbox's mail waiting, workspace-wide: the sidebar's count. */
+  inboxWaiting: number
 }
 const DashboardContext = createContext<Dashboard | null>(null)
 
@@ -263,6 +265,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     'connections.updated',
   ])
   const reloadInboxCount = inboxCount.reload
+  const inboxWaiting = inboxCount.data?.waiting ?? 0
   useEffect(() => {
     const onFocus = () => void reloadInboxCount()
     window.addEventListener('focus', onFocus)
@@ -371,8 +374,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     projects: projects.data ?? [],
     reloadProjects,
     reloadInboxCount,
+    inboxWaiting,
   }
-  const inboxWaiting = inboxCount.data?.waiting ?? 0
   if (alone)
     return <DashboardContext.Provider value={dashboard}>{children}</DashboardContext.Provider>
 
