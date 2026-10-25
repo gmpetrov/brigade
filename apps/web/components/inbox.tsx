@@ -22,15 +22,17 @@ import {
   Search,
   ShieldAlert,
   Undo2,
+  X,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { fileSize, type Media, MediaPreview, mediaKind, Thumbnail } from '@/components/attachments'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { type EditedEmail, EmailDraftEditor, emailDraft } from '@/components/email-cards'
 import { AddRule } from '@/components/project-email'
-import { ProjectSelect } from '@/components/projects'
+import { ProjectIcon, ProjectSelect } from '@/components/projects'
+import { ProviderLogo } from '@/components/provider-logo'
 import { leavingLabel, SendLaterMenu } from '@/components/send-later'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -78,7 +80,37 @@ const ALL = '*'
 /** A filter picker under the tabs: plain text until it is set. */
 const FILTER =
   'h-8 w-auto max-w-56 sm:w-auto border-transparent bg-transparent px-2.5 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground dark:bg-transparent dark:hover:bg-secondary'
-const FILTER_ON = 'bg-secondary text-foreground dark:bg-secondary'
+/** A filter that is set: its icon and short name in a chip, a × beside it to clear it. */
+const CHIP =
+  'h-7 w-auto max-w-44 border-0 bg-transparent py-0 pr-1 pl-2 text-foreground shadow-none sm:w-auto dark:bg-transparent dark:hover:bg-transparent [&>svg]:hidden'
+
+function FilterChip({
+  active,
+  what,
+  onClear,
+  children,
+}: {
+  active: boolean
+  what: string
+  onClear: () => void
+  children: ReactNode
+}) {
+  if (!active) return children
+  return (
+    <span className="inline-flex max-w-full items-center rounded-full border bg-card pr-1 hover:border-ring">
+      {children}
+      <button
+        type="button"
+        aria-label={`Clear the ${what} filter`}
+        title="Clear"
+        onClick={onClear}
+        className="flex size-5 flex-none items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-secondary hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
+        <X className="size-3.5" aria-hidden />
+      </button>
+    </span>
+  )
+}
 const SIGN_UP = 'Mail to a sign-up address'
 
 const message = (e: unknown) =>
@@ -240,6 +272,10 @@ export function InboxView() {
   )
 
   const sources = list.data?.sources ?? []
+  // The filters set, by their short name and icon (an address's own shows in its menu).
+  const chosenSource = sources.find((s) => s.id === source)
+  const chosenTeammate = teammates.find((t) => t.id === teammate)
+  const chosenProject = projects.find((p) => p.id === project)
   const brigade = sources.filter((s) => s.kind === 'email')
   const gmail = sources.filter((s) => s.kind === 'gmail')
 
@@ -302,14 +338,29 @@ export function InboxView() {
               )
             })}
           </div>
-          <div className="-mx-2.5 flex flex-wrap items-center">
+          <div className="-mx-1 flex flex-wrap items-center gap-1">
             <Select
               value={source || ALL}
               onValueChange={(v) => go({ source: v === ALL ? null : v })}
             >
-              <SelectTrigger aria-label="Source" className={cn(FILTER, source && FILTER_ON)}>
-                <SelectValue>{source ? undefined : 'Sources'}</SelectValue>
-              </SelectTrigger>
+              <FilterChip active={!!source} what="source" onClear={() => go({ source: null })}>
+                <SelectTrigger aria-label="Source" className={source ? CHIP : FILTER}>
+                  <SelectValue>
+                    {chosenSource ? (
+                      <>
+                        {chosenSource.teammate ? (
+                          <TeammateAvatar teammate={chosenSource.teammate} className="size-4" />
+                        ) : (
+                          <ProviderLogo kind={chosenSource.kind} className="size-4" />
+                        )}
+                        <span className="truncate">{chosenSource.label}</span>
+                      </>
+                    ) : source ? undefined : (
+                      'Sources'
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+              </FilterChip>
               <SelectContent>
                 <SelectItem value={ALL}>All sources</SelectItem>
                 {brigade.length > 0 && (
@@ -341,14 +392,26 @@ export function InboxView() {
                 value={teammate || ALL}
                 onValueChange={(v) => go({ teammate: v === ALL ? null : v })}
               >
-                <SelectTrigger aria-label="Agent" className={cn(FILTER, teammate && FILTER_ON)}>
-                  <SelectValue>{teammate ? undefined : 'Agents'}</SelectValue>
-                </SelectTrigger>
+                <FilterChip active={!!teammate} what="agent" onClear={() => go({ teammate: null })}>
+                  <SelectTrigger aria-label="Agent" className={teammate ? CHIP : FILTER}>
+                    <SelectValue>
+                      {chosenTeammate ? (
+                        <>
+                          <TeammateAvatar teammate={chosenTeammate} className="size-4" />
+                          <span className="truncate">{chosenTeammate.name}</span>
+                        </>
+                      ) : teammate ? undefined : (
+                        'Agents'
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                </FilterChip>
                 <SelectContent>
                   <SelectItem value={ALL}>All agents</SelectItem>
                   <SelectSeparator />
                   {teammates.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
+                      <TeammateAvatar teammate={t} className="size-4" />
                       {t.name}
                     </SelectItem>
                   ))}
@@ -356,14 +419,37 @@ export function InboxView() {
               </Select>
             )}
             {projects.length > 0 && (
-              <ProjectSelect
-                value={project}
-                onChange={(v) => go({ project: v || null })}
-                all
-                none={false}
-                allLabel="Projects"
-                className={cn(FILTER, project && FILTER_ON)}
-              />
+              <Select
+                value={project || ALL}
+                onValueChange={(v) => go({ project: v === ALL ? null : v })}
+              >
+                <FilterChip active={!!project} what="project" onClear={() => go({ project: null })}>
+                  <SelectTrigger aria-label="Project" className={project ? CHIP : FILTER}>
+                    <SelectValue>
+                      {chosenProject ? (
+                        <>
+                          <ProjectIcon project={chosenProject} className="size-4 text-[0.625rem]" />
+                          <span className="truncate">{chosenProject.name}</span>
+                        </>
+                      ) : project ? undefined : (
+                        'Projects'
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                </FilterChip>
+                <SelectContent>
+                  <SelectItem value={ALL}>All projects</SelectItem>
+                  <SelectSeparator />
+                  {projects
+                    .filter((p) => !p.archivedAt || p.id === project)
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <ProjectIcon project={p} className="size-4 text-[0.625rem]" />
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
         </header>
