@@ -6,9 +6,11 @@
 // on memory too long (PSI "full", all of it), or memory and swap are nearly
 // gone, the runner gives memory back itself, what costs least first:
 //   1. the frozen preview unused longest, when swap is what runs out;
-//   2. the running preview or turn holding the most memory, a preview counting
-//      double (it starts again at the next visit; a turn loses its work in
-//      progress), said in its thread.
+//   2. a teammate's browser no turn used for a while, the biggest: it starts
+//      again at the next browser tool call, its sign-ins kept in its profile;
+//   3. the running preview, browser or turn holding the most memory, a preview
+//      or browser counting double (it starts again at the next visit or call;
+//      a turn loses its work in progress), said in its thread.
 // One at a time, then a pause to see what it changed. Where the runner has no
 // cgroups of its own (preview-cgroup.ts), there is nothing it could stop.
 import { readFile } from 'node:fs/promises'
@@ -28,10 +30,10 @@ export type Reading = {
 
 /** What the guard may stop to give memory back. */
 export type Candidate = {
-  kind: 'frozen' | 'preview' | 'turn'
+  kind: 'frozen' | 'preview' | 'turn' | 'browser'
   /** Its own memory in RAM. */
   memory: number
-  /** When it was last used, for frozen previews. */
+  /** When it was last used, for frozen previews and browsers. */
   lastUsed?: number
   stop: (why: string) => Promise<unknown>
 }
@@ -39,6 +41,8 @@ export type Candidate = {
 const GB = 1024 ** 3
 /** Less than this is not worth stopping: it would not change much. */
 const SMALL = 64 * 1024 ** 2
+/** A browser no turn used for this long is stopped before anything that runs. */
+const BROWSER_IDLE = 2 * 60_000
 
 export class MemoryGuard {
   private since: number | undefined
@@ -102,13 +106,18 @@ export class MemoryGuard {
   }
 
   /** What to stop for it, the least costly that helps. */
-  pick(candidates: Candidate[], reading: Reading): Candidate | undefined {
+  pick(candidates: Candidate[], reading: Reading, now = Date.now()): Candidate | undefined {
     const frozen = candidates
       .filter((c) => c.kind === 'frozen')
       .sort((a, b) => (a.lastUsed ?? 0) - (b.lastUsed ?? 0))
     // Frozen previews hold swap, hardly any memory: they help when swap is what runs out.
     if (frozen[0] && reading.swapTotal > 0 && reading.swapUsed > 0.8) return frozen[0]
-    const weight = (c: Candidate) => c.memory * (c.kind === 'preview' ? 2 : 1)
+    const idle = candidates
+      .filter((c) => c.kind === 'browser' && c.memory >= SMALL)
+      .filter((c) => now - (c.lastUsed ?? 0) >= BROWSER_IDLE)
+      .sort((a, b) => b.memory - a.memory)
+    if (idle[0]) return idle[0]
+    const weight = (c: Candidate) => c.memory * (c.kind === 'turn' ? 1 : 2)
     const running = candidates
       .filter((c) => c.kind !== 'frozen' && c.memory >= SMALL)
       .sort((a, b) => weight(b) - weight(a))
@@ -126,9 +135,9 @@ export class MemoryGuard {
       const why = this.check(reading, now)
       if (!why) return
       this.pause(now)
-      const victim = this.pick(await this.options.candidates(), reading)
+      const victim = this.pick(await this.options.candidates(), reading, now)
       if (!victim) {
-        console.warn(`${why}, and no preview or turn of the runner's holds much of it`)
+        console.warn(`${why}, and no preview, browser or turn of the runner's holds much of it`)
         return
       }
       // Stuck, the kernel may have killed something meanwhile: then that was enough for now.

@@ -29,7 +29,14 @@ import { promisify } from 'node:util'
 import type { ShotResult } from '../design-shot.js'
 import { accountEnv, accountToken } from '../accounts.js'
 import { readCodexLimits } from '../codex-usage.js'
-import { browserMcpServer, ensureBrowser, threadTabsFile } from '../browsers.js'
+import {
+  browserMcpServer,
+  browserPort,
+  ensureBrowser,
+  isBrowserTool,
+  threadTabsFile,
+  touchBrowser,
+} from '../browsers.js'
 import { ComputerUseError, computerUseClient } from '../computer-use.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import {
@@ -387,6 +394,8 @@ export class HarnessThread {
   private readonly reasoning = new Map<string, string>()
   /** Built-in tool calls waiting for a person's approval, by approval id. */
   private readonly approvals = new Map<string, { toolName: string; input: unknown }>()
+  /** The teammate's browser is being started for this thread (browserUsed). */
+  private browserStarting = false
   private saved: SavedState | undefined
   /** The live session resumed a turn frozen mid-run (see frozenMidRun). */
   private frozen = false
@@ -828,6 +837,8 @@ export class HarnessThread {
           }
           this.approvals.set(event.approvalId, { toolName: event.toolName, input: event.input })
         }
+        if (event.type === 'tool.started' || event.type === 'tool.finished')
+          this.browserUsed(event.toolName)
         if (event.type === 'message.done') this.remember('assistant', event.text)
         this.replies.see(event)
         // A turn's usage says whose account spent it: the stream's own, which after running out
@@ -1271,6 +1282,19 @@ export class HarnessThread {
       .join('\n\n')
   }
 
+  /**
+   * A browser tool call starts the teammate's browser when it is not running: the browser relay
+   * waits for it. Each call keeps it from being stopped as unused.
+   */
+  private browserUsed(toolName: string) {
+    if (!this.runAs || !isBrowserTool(toolName)) return
+    if (this.browserStarting) return touchBrowser(this.spec.teammate.id)
+    this.browserStarting = true
+    void ensureBrowser(this.spec.teammate)
+      .catch((error) => console.warn(`no browser for ${this.runAs}: ${errorMessage(error)}`))
+      .finally(() => (this.browserStarting = false))
+  }
+
   private async attach(): Promise<Live> {
     if (this.live) return this.live
     const account = this.spec.account
@@ -1279,10 +1303,10 @@ export class HarnessThread {
       ...gitEnv(this.spec.git),
     }
     // On a cloud computer the teammate has its own browser, signed in where a person signed it in.
-    // Why it did not start goes to the teammate too, which tells the person.
+    // It starts at the first browser tool call (browserUsed), not with every turn.
     let browserError: string | undefined
     const browser = this.runAs
-      ? await ensureBrowser(this.spec.teammate)
+      ? await browserPort(this.spec.teammate.id)
           .then(async (port) => {
             // In the thread's own network, its loopback is its own: the browser's port is bridged in.
             const net = await threadNet(this.spec.sessionId)

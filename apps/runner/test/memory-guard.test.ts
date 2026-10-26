@@ -105,6 +105,24 @@ test('frozen previews go first when swap is what runs out, the one unused longes
   assert.equal(g.pick([newer, older], calm), older)
 })
 
+test('a browser no turn used for a while goes before anything that runs', () => {
+  const g = guard()
+  const now = 10 * 60_000
+  const idle = candidate('browser', 500, now - 5 * 60_000)
+  const busy = candidate('browser', 800, now - 10_000)
+  const turn = candidate('turn', 3000)
+  const preview = candidate('preview', 1000)
+  assert.equal(g.pick([turn, preview, busy, idle], calm, now), idle)
+  // In use: weighed as a preview is, since it starts again at the next call.
+  assert.equal(g.pick([turn, busy], calm, now), turn)
+  assert.equal(g.pick([candidate('turn', 1200), busy], calm, now), busy)
+  // Frozen previews still go first when swap is what runs out.
+  const frozen = candidate('frozen', 10, 1_000)
+  assert.equal(g.pick([idle, frozen], { ...calm, swapUsed: 0.85 }, now), frozen)
+  // Too small to matter: not stopped for nothing.
+  assert.equal(g.pick([candidate('browser', 20, 0), turn], calm, now), turn)
+})
+
 test('checks that pile up on a stuck computer stop one thing, not one each', async () => {
   let stopped = 0
   let release!: () => void
