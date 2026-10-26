@@ -189,7 +189,6 @@ async function fire(wakeup: {
   const now = new Date()
   const thread = await loadThread(db, wakeup.sessionId)
   const settle = async (status: 'fired' | 'missed') => {
-    // Moving it off pending is the claim: another tick that read it too does nothing.
     const { count } = await db.wakeup.updateMany({
       where: { id: wakeup.id, status: 'pending' },
       data: { status, firedAt: now },
@@ -205,30 +204,33 @@ async function fire(wakeup: {
     await settle('missed')
     return changed(scope, thread)
   }
-  if (!(await settle('fired'))) return
+  // Settled only once its prompt is kept (src/runner-commands.ts): a restart in between fires it
+  // again, and the prompt's id, the wake-up's own, keeps it from reaching the thread twice.
   // Archived meanwhile, the thread comes back with the reports and replies, as with a new message.
   if (wakeup.kind !== 'wakeup' && thread.archivedAt)
     await db.session.updateMany({ where: { id: thread.id }, data: { archivedAt: null } })
-  const outcome = await promptThread(db, scope, thread, {
-    // A report's and a reply's note is the message itself.
-    text:
-      wakeup.kind === 'wakeup'
-        ? prompt(wakeup, now, await memberTimezone(db, thread.startedByMemberId))
-        : wakeup.note,
-    memberId: null,
-    ...(seat && !seat.teammate.archivedAt ? { teammateIds: [wakeup.teammateId] } : {}),
-  }).catch((error: unknown) => {
+  const outcome = await promptThread(
+    db,
+    scope,
+    thread,
+    {
+      // A report's and a reply's note is the message itself.
+      text:
+        wakeup.kind === 'wakeup'
+          ? prompt(wakeup, now, await memberTimezone(db, thread.startedByMemberId))
+          : wakeup.note,
+      memberId: null,
+      ...(seat && !seat.teammate.archivedAt ? { teammateIds: [wakeup.teammateId] } : {}),
+    },
+    { commandId: `wakeup:${wakeup.id}` },
+  ).catch((error: unknown) => {
     console.error(`wake-up ${wakeup.id}: could not prompt`, error)
     return 'offline' as const
   })
   // A member's machine asleep: pending again, tried each minute, until it is too late.
   if (outcome === 'offline') {
-    const missed = now.getTime() - wakeup.wakeAt.getTime() > MISSED_AFTER_MS
-    await db.wakeup.updateMany({
-      where: { id: wakeup.id },
-      data: missed ? { status: 'missed' } : { status: 'pending', firedAt: null },
-    })
-  }
+    if (now.getTime() - wakeup.wakeAt.getTime() > MISSED_AFTER_MS) await settle('missed')
+  } else if (!(await settle('fired'))) return
   // paused: a cap ticket holds the prompt and sends it when allowed.
   changed(scope, thread)
 }

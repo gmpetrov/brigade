@@ -360,20 +360,31 @@ export async function settleHeldCalls(now = Date.now()) {
       take: 50,
     })
     for (const held of cut) {
+      // Claimed by touching it, still running: a restart before the thread is told leaves it to
+      // the next tick. The thread hears once (its wake-up's source is the ticket), then it is done.
       const { count } = await prisma.heldCall.updateMany({
         where: { id: held.id, status: 'running', updatedAt: held.updatedAt },
-        data: { status: 'done', result: { ok: false, error: 'cut off by a restart' } },
+        data: { updatedAt: new Date() },
       })
       if (!count) continue
       const db = scoped({ organizationId: held.organizationId, workspaceId: held.workspaceId })
-      await tellThread(
-        db,
-        held,
-        { ...(held.decision as Decision) },
-        failed(
-          'Brigade restarted while making it, so it may or may not have gone through. Check before you make it again.',
-        ),
-      ).catch((error) => console.error(`held call ${held.id}: thread not told`, error))
+      try {
+        await tellThread(
+          db,
+          held,
+          { ...(held.decision as Decision) },
+          failed(
+            'Brigade restarted while making it, so it may or may not have gone through. Check before you make it again.',
+          ),
+        )
+      } catch (error) {
+        console.error(`held call ${held.id}: thread not told`, error)
+        continue
+      }
+      await prisma.heldCall.updateMany({
+        where: { id: held.id, status: 'running' },
+        data: { status: 'done', result: { ok: false, error: 'cut off by a restart' } },
+      })
     }
     await prisma.heldCall.deleteMany({
       where: { status: { in: ['done', 'expired'] }, updatedAt: { lt: new Date(now - KEEP_MS) } },

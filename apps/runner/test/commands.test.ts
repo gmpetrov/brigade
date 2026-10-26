@@ -41,11 +41,20 @@ const until = async (check: () => boolean, what: string) => {
   assert.ok(check(), `timed out waiting for ${what}`)
 }
 
-function runner(url: string, seenFile: string, taken: ApiToRunner[]) {
+function runner(
+  url: string,
+  seenFile: string,
+  taken: ApiToRunner[],
+  /** How long taking a command lasts (a takeover waits for its folder): never, by default. */
+  take: () => unknown = () => undefined,
+) {
   const connection = new Connection(
     { apiUrl: url, token: 'test', workspaceName: 'Test' } as never,
     new Outbox(join(home, `outbox-${Math.random()}`)),
-    (message) => taken.push(message),
+    (message) => {
+      taken.push(message)
+      return message.type === 'welcome' ? undefined : take()
+    },
     async () => ({}),
     () => false,
     new SeenCommands(seenFile),
@@ -70,9 +79,10 @@ test('a command sent again is acknowledged and ignored, even after the runner re
   assert.equal(hello.protocolVersion >= OUTBOX_PROTOCOL, true)
   await until(() => taken.some((m) => m.type === 'welcome'), 'welcome')
   sockets[0]!.send(JSON.stringify(command))
-  sockets[0]!.send(JSON.stringify(command))
   const acks = () => heard.filter((m) => m.type === 'command.ack')
-  await until(() => acks().length === 2, 'two acks')
+  await until(() => acks().length === 1, 'the ack')
+  sockets[0]!.send(JSON.stringify(command))
+  await until(() => acks().length === 2, 'the second ack')
   assert.deepEqual(acks()[0], { type: 'command.ack', commandIds: ['cmd-1'] })
   assert.equal(taken.filter((m) => m.type === 'thread.interrupt').length, 1, 'taken once')
   first.close()
@@ -121,5 +131,38 @@ test('a call that waits on a person when the connection drops says it still wait
     message: /Lost the connection to Brigade during this call; try again/,
   })
   connection.close()
+  server.close()
+})
+
+test('a command is acknowledged once taken: a restart while it is taken leaves it to be sent again', async () => {
+  const { server, heard, sockets, url } = await api()
+  const seen = join(home, 'seen-3.json')
+  const taken: ApiToRunner[] = []
+  // Taking it never ends here (the runner stops while a takeover waits for its folder).
+  const first = runner(url, seen, taken, () => new Promise(() => {}))
+  await until(() => taken.some((m) => m.type === 'welcome'), 'welcome')
+  const takeover = { ...command, commandId: 'cmd-3' }
+  sockets[0]!.send(JSON.stringify(takeover))
+  // Sent again meanwhile: not taken twice, and not acknowledged before the first is taken.
+  sockets[0]!.send(JSON.stringify(takeover))
+  await until(() => taken.filter((m) => m.type === 'thread.interrupt').length === 1, 'taken')
+  await new Promise((r) => setTimeout(r, 100))
+  assert.equal(taken.filter((m) => m.type === 'thread.interrupt').length, 1)
+  assert.equal(heard.filter((m) => m.type === 'command.ack').length, 0, 'not acknowledged')
+  first.close()
+
+  // The runner restarts: sent again, it is taken this time.
+  const after: ApiToRunner[] = []
+  const second = runner(url, seen, after)
+  await until(() => sockets.length === 2, 'the second connection')
+  await until(() => after.some((m) => m.type === 'welcome'), 'welcome')
+  sockets[1]!.send(JSON.stringify(takeover))
+  await until(() => heard.some((m) => m.type === 'command.ack'), 'the ack')
+  assert.equal(
+    after.filter((m) => m.type === 'thread.interrupt').length,
+    1,
+    'taken after the restart',
+  )
+  second.close()
   server.close()
 })

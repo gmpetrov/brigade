@@ -740,7 +740,7 @@ async function start() {
   connection = new Connection(
     config,
     outbox,
-    (message) => void onCommand(message),
+    (message) => onCommand(message),
     hello,
     (bundle, required) => updater.offer(bundle, required),
     new SeenCommands(join(paths.state, 'commands-seen.json')),

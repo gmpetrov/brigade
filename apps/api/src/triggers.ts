@@ -19,7 +19,7 @@ import type {
 } from './connectors/types.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { loadThread } from './thread-spec.js'
-import { promptWithAttachments, startThread } from './work.js'
+import { promptThread, promptWithAttachments, startThread } from './work.js'
 
 const include = { teammate: true, connection: true } as const
 type Trigger = NonNullable<Awaited<ReturnType<typeof findTrigger>>>
@@ -49,7 +49,12 @@ const CLAIM_STALE_MS = 10 * 60_000
 /** Deliveries are remembered this long: a vendor's retry or a mailbox read again comes within it. */
 const DELIVERIES_KEPT_MS = 30 * 24 * 60 * 60_000
 
-type Claim = { id: string } | { duplicate: true; threadId?: string }
+type Claim =
+  /** Ours to deliver; a try before ours may have started its thread already. */
+  | { id: string; threadId?: string }
+  | { duplicate: true; threadId?: string }
+  /** Another try is on it right now: this one is tried again later, in case that one dies. */
+  | { busy: true }
 
 /**
  * Claim one event for a trigger before its thread starts: one row per trigger and event id
@@ -92,9 +97,11 @@ async function claimDelivery(db: ScopedDb, triggerId: string, eventId: string): 
       where: { id: row.id, status: row.status, updatedAt: row.updatedAt },
       data: { status: 'starting' },
     })
-    if (count === 1) return { id: row.id }
+    if (count === 1) return { id: row.id, ...(row.threadId ? { threadId: row.threadId } : {}) }
   }
-  // Being started by another try, or delivered: never a second thread.
+  // Being started by another try: not done yet, so tried again later rather than taken as done.
+  if (row.status === 'starting' || row.status === 'failed') return { busy: true }
+  // Delivered: never a second thread.
   return went(db, row.status === 'loop' ? undefined : (row.threadId ?? undefined))
 }
 
@@ -123,11 +130,39 @@ export async function deliver(
   if (!event.eventId) return deliverOnce(trigger, event)
   const db = scoped({ organizationId: trigger.organizationId, workspaceId: trigger.workspaceId })
   const claim = await claimDelivery(db, trigger.id, event.eventId)
+  if ('busy' in claim) return { error: 'another try is starting its thread' }
   if (!('id' in claim)) return claim
   const settle = (data: { status: string; threadId?: string }) =>
     db.triggerDelivery.updateMany({ where: { id: claim.id }, data })
+  // Its prompt's id is the delivery's: a try after a crash sends it once (src/runner-commands.ts).
+  const commandId = `delivery:${claim.id}`
   try {
-    const delivery = await deliverOnce(trigger, event)
+    // A try before this one started the thread and was cut off: its first message goes, once.
+    const begun =
+      claim.threadId &&
+      (await db.session.findFirst({
+        where: { id: claim.threadId, status: { not: 'failed' } },
+        select: { id: true },
+      }))
+    if (begun) {
+      const outcome = await promptThread(
+        db,
+        { organizationId: trigger.organizationId, workspaceId: trigger.workspaceId },
+        await loadThread(db, begun.id),
+        { text: event.text, memberId: null },
+        { commandId },
+      )
+      if (outcome === 'offline') {
+        await settle({ status: 'failed' })
+        return { error: 'the computer is offline' }
+      }
+      await settle({ status: 'done', threadId: begun.id })
+      return { ok: true, threadId: begun.id, paused: outcome === 'paused' }
+    }
+    const delivery = await deliverOnce(trigger, event, {
+      commandId,
+      created: (threadId) => settle({ status: 'starting', threadId }),
+    })
     await settle(
       'error' in delivery
         ? { status: 'failed' }
@@ -162,6 +197,8 @@ async function deliverOnce(
      */
     mailbox?: boolean
   },
+  /** A delivery's stable prompt id, and where its new thread's id is kept as soon as it exists. */
+  once: { commandId?: string; created?: (threadId: string) => Promise<unknown> } = {},
 ): Promise<Delivery> {
   const scope: Scope = { organizationId: trigger.organizationId, workspaceId: trigger.workspaceId }
   const db = scoped(scope)
@@ -245,6 +282,7 @@ async function deliverOnce(
         await loadThread(db, ongoing.id),
         { text: event.text, memberId: null, attachmentIds: event.attachmentIds ?? [] },
         null,
+        once.commandId ? { commandId: once.commandId } : {},
       )
       if (outcome === 'offline') return failed('the computer is offline')
       await continueRun(db, ongoing.playbookRunId)
@@ -320,6 +358,7 @@ async function deliverOnce(
       projectId: trigger.projectId,
       ...(runId ? { playbookRunId: runId } : {}),
       ...(event.mailbox ? { quiet: true } : {}),
+      ...once,
     })
     if (runId) await settleRun(db, runId, outcome === 'offline' ? null : thread.id)
     if (outcome === 'offline') return failed('the computer is offline')

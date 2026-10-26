@@ -574,17 +574,26 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     })
     const results = await Promise.all([1, 2, 3].map(() => deliver(trigger, event('evt-1'))))
     assert.equal(results.filter((r) => 'ok' in r).length, 1, JSON.stringify(results))
-    assert.equal(results.filter((r) => 'duplicate' in r).length, 2)
+    // The others found it being started: not done, so their senders try again.
+    assert.equal(results.filter((r) => 'error' in r || 'duplicate' in r).length, 2)
     assert.equal(await db.session.count({ where: { triggerId: trigger.id } }), 1)
     // Again later (the sender's retry): where it went.
     const again = await deliver(trigger, event('evt-1'))
     assert.ok('duplicate' in again && again.threadId)
 
-    // A try that crashed between its claim and its thread: taken over once stale.
+    // A try that crashed between its claim and its thread: while its claim is fresh, a retry is
+    // not taken as done (the inbox tries again); once stale, it is taken over.
+    const { dispatch } = await import('../src/triggers.js')
     await db.triggerDelivery.create({
       data: { triggerId: trigger.id, eventId: 'evt-2', status: 'starting' } as never,
     })
-    assert.ok('duplicate' in (await deliver(trigger, event('evt-2'))), 'still being started')
+    const busy = await dispatch(
+      trigger.connection,
+      { id: 'evt-2', type: 'received', payload: {} },
+      trigger,
+    )
+    assert.equal(busy.failed, true, 'tried again later, not taken as delivered')
+    assert.equal(busy.started, 0)
     await db.triggerDelivery.updateMany({
       where: { triggerId: trigger.id, eventId: 'evt-2' },
       data: { updatedAt: new Date(Date.now() - 30 * 60_000) },
@@ -592,5 +601,105 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     const taken = await deliver(trigger, event('evt-2'))
     assert.ok('ok' in taken, JSON.stringify(taken))
     assert.equal(await db.session.count({ where: { triggerId: trigger.id } }), 2)
+
+    // A try that crashed after its thread started, before it settled: taken over, it goes on in
+    // that thread, and its first message reaches the computer once.
+    const first = await deliver(trigger, event('evt-3'))
+    assert.ok('ok' in first)
+    const claim = await db.triggerDelivery.findFirstOrThrow({
+      where: { triggerId: trigger.id, eventId: 'evt-3' },
+    })
+    assert.equal(claim.threadId, first.threadId)
+    await db.triggerDelivery.updateMany({
+      where: { id: claim.id },
+      data: { status: 'starting', updatedAt: new Date(Date.now() - 30 * 60_000) },
+    })
+    const retaken = await deliver(trigger, event('evt-3'))
+    assert.deepEqual(retaken, { ok: true, threadId: first.threadId, paused: false })
+    assert.equal(await db.session.count({ where: { triggerId: trigger.id } }), 3)
+    assert.equal(await prisma.runnerCommand.count({ where: { id: `delivery:${claim.id}` } }), 1)
+    assert.equal(
+      await prisma.runnerCommand.count({
+        where: { sessionId: first.threadId, type: 'thread.prompt' },
+      }),
+      1,
+      'one first message',
+    )
+  })
+
+  test('a wake-up fired again after a restart cut it off reaches its thread once', async () => {
+    const { fireDueWakeups } = await import('../src/wakeups.js')
+    const runner = await connect()
+    const wakeup = await db.wakeup.create({
+      data: {
+        sessionId: ids.session,
+        teammateId: ids.sam,
+        kind: 'reply',
+        note: 'A reply came',
+        wakeAt: new Date(Date.now() - 1000),
+      } as never,
+    })
+    await fireDueWakeups()
+    const fired = await db.wakeup.findFirstOrThrow({ where: { id: wakeup.id } })
+    assert.equal(fired.status, 'fired')
+    assert.equal(await prisma.runnerCommand.count({ where: { id: `wakeup:${wakeup.id}` } }), 1)
+    // As if the API stopped after keeping its prompt, before settling it: fired again.
+    await db.wakeup.updateMany({
+      where: { id: wakeup.id },
+      data: { status: 'pending', firedAt: null },
+    })
+    await fireDueWakeups()
+    assert.equal((await db.wakeup.findFirstOrThrow({ where: { id: wakeup.id } })).status, 'fired')
+    assert.equal(
+      await prisma.runnerCommand.count({
+        where: {
+          sessionId: ids.session,
+          type: 'thread.prompt',
+          message: { path: ['text'], equals: 'A reply came' },
+        },
+      }),
+      1,
+      'one prompt',
+    )
+    assert.equal(runner.sent.filter((m) => m.commandId === `wakeup:${wakeup.id}`).length, 1)
+    runner.handle.onClose()
+  })
+
+  test('a call cut off whose thread could not be told is told on a later tick', async () => {
+    const { settleHeldCalls } = await import('../src/held-calls.js')
+    const ticket = await db.ticket.create({
+      data: {
+        sessionId: ids.session,
+        type: 'approval',
+        title: 'Sam: gmail send (cut)',
+        status: 'approved',
+      },
+    } as never)
+    const held = await db.heldCall.create({
+      data: {
+        sessionId: ids.session,
+        // Nobody to tell yet: telling the thread fails.
+        teammateId: 'no-such-teammate',
+        ticketId: ticket.id,
+        kind: 'connector',
+        fingerprint: ticket.id,
+        request: {},
+        status: 'running',
+        decision: { approved: true, memberId: ids.owner },
+      } as never,
+    })
+    const stale = () =>
+      db.heldCall.updateMany({
+        where: { id: held.id },
+        data: { updatedAt: new Date(Date.now() - 20 * 60_000) },
+      })
+    await stale()
+    await settleHeldCalls()
+    assert.equal((await db.heldCall.findFirstOrThrow({ where: { id: held.id } })).status, 'running')
+    await db.heldCall.updateMany({ where: { id: held.id }, data: { teammateId: ids.sam } })
+    await stale()
+    await settleHeldCalls()
+    assert.equal((await db.heldCall.findFirstOrThrow({ where: { id: held.id } })).status, 'done')
+    assert.equal(await db.wakeup.count({ where: { sourceId: `held:${ticket.id}` } }), 1)
   })
 })

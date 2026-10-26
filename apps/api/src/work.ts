@@ -85,6 +85,11 @@ export async function promptThread(
     nameThread?: string
     /** The message a move takes along (src/move.ts), sent once the thread is on its new computer. */
     moving?: boolean
+    /**
+     * A stable id for the prompt (a wake-up's, a trigger delivery's): tried again after a restart,
+     * it is kept once and reaches the runner once (src/runner-commands.ts).
+     */
+    commandId?: string
   } = {},
 ): Promise<'sent' | 'queued' | 'offline' | 'paused'> {
   // Moving, the thread is on neither computer for good: what is sent now could be lost on
@@ -153,7 +158,7 @@ export async function promptThread(
   const [first, ...then] = specs
   return dispatch(thread.computer, {
     type: 'thread.prompt',
-    commandId: randomUUID(),
+    commandId: options.commandId ?? randomUUID(),
     thread: first!,
     text: prompt.text,
     memberId: prompt.memberId,
@@ -363,6 +368,10 @@ export async function startThread(
      * person takes part or it needs one (Session.quiet).
      */
     quiet?: boolean
+    /** Its first prompt's stable id (promptThread's commandId). */
+    commandId?: string
+    /** Told the thread's id as soon as it exists, before its first prompt goes. */
+    created?: (threadId: string) => Promise<unknown>
   },
 ) {
   // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
@@ -459,7 +468,11 @@ export async function startThread(
         : {}),
     },
   })
-  const [, thread] = await Promise.all([started, loadThread(db, created.id)])
+  const [, thread] = await Promise.all([
+    started,
+    loadThread(db, created.id),
+    input.created?.(created.id),
+  ])
   const outcome = await promptThread(
     db,
     scope,
@@ -471,7 +484,11 @@ export async function startThread(
       attachments,
     },
     // A member's thread gets a better title than its first line; an event's or a schedule's keeps its own.
-    { isNew: true, ...(input.origin ? {} : { nameThread: created.title }) },
+    {
+      isNew: true,
+      ...(input.origin ? {} : { nameThread: created.title }),
+      ...(input.commandId ? { commandId: input.commandId } : {}),
+    },
   ).catch(async (error: unknown) => {
     // E.g. a mentioned teammate's harness has no account: the thread never ran.
     await db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } })
@@ -492,12 +509,13 @@ export async function promptWithAttachments(
   thread: Thread,
   prompt: Omit<Prompt, 'attachments'> & { attachmentIds: string[] },
   check: { memberId: string } | null,
+  options: { commandId?: string } = {},
 ) {
   const { attachmentIds, ...rest } = prompt
   const { refs, created } = await attachToThread(db, scope, thread.id, attachmentIds, check)
   // The thread's spec lists every file in it, these included.
   try {
-    const outcome = await promptThread(db, scope, thread, { ...rest, attachments: refs })
+    const outcome = await promptThread(db, scope, thread, { ...rest, attachments: refs }, options)
     if (outcome === 'offline') await detach(db, created)
     return outcome
   } catch (error) {

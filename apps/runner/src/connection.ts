@@ -86,6 +86,8 @@ export const STILL_WAITING =
 export class Connection {
   private ws: WebSocket | undefined
   private calls = new Map<string, PendingCall>()
+  /** Commands being taken now, by commandId: one sent again meanwhile waits for their ack. */
+  private taking = new Set<string>()
   private ready = false
   private backoff = 1000
   private closed = false
@@ -97,7 +99,8 @@ export class Connection {
   constructor(
     private readonly config: RunnerConfig,
     private readonly outbox: Outbox,
-    private readonly onCommand: (message: ApiToRunner) => void,
+    /** Settles once the command is taken (a takeover, once the folder is back): then it is acknowledged. */
+    private readonly onCommand: (message: ApiToRunner) => unknown,
     private readonly hello: () => Promise<Partial<Extract<RunnerToApi, { type: 'hello' }>>>,
     /**
      * The bundle the API serves, on every connect. `required`: the API refuses
@@ -174,13 +177,27 @@ export class Connection {
         )
         process.exit(1)
       } else if ('commandId' in message && this.seen) {
-        // Sent again by the API until acknowledged: one taken already is not taken twice.
+        // Sent again by the API until acknowledged: one taken already is not taken twice. It is
+        // acknowledged once taken, so a restart while it is being taken leaves it to be sent again.
         const { commandId } = message
-        if (!this.seen.has(commandId)) {
-          this.onCommand(message)
-          this.seen.add(commandId)
+        const seen = this.seen
+        if (seen.has(commandId)) return this.send({ type: 'command.ack', commandIds: [commandId] })
+        if (this.taking.has(commandId)) return
+        this.taking.add(commandId)
+        let taken: unknown
+        try {
+          // Now, in the order commands came; acknowledged once it settles.
+          taken = this.onCommand(message)
+        } catch (error) {
+          taken = Promise.reject(error)
         }
-        this.send({ type: 'command.ack', commandIds: [commandId] })
+        void Promise.resolve(taken)
+          .catch((error: unknown) => console.warn(`command ${commandId} failed: ${String(error)}`))
+          .finally(() => {
+            this.taking.delete(commandId)
+            seen.add(commandId)
+            this.send({ type: 'command.ack', commandIds: [commandId] })
+          })
       } else {
         this.onCommand(message)
       }

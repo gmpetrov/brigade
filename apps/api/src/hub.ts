@@ -350,7 +350,8 @@ export async function dispatch(
   const conn = runners.get(computer.id)
   if (!conn && computer.kind !== 'cloud' && !updating) return 'offline'
   if (isDurable(message)) {
-    await keepCommand(computer, message)
+    // Kept already (a stable id tried again after a restart): it goes, or went, from its row.
+    if (!(await keepCommand(computer, message))) return 'queued'
     if (conn && !updating) {
       await sendKept(computer.id, conn, message)
       return 'sent'

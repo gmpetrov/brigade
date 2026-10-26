@@ -34,7 +34,7 @@ const KEEP_MS = 3 * 24 * 60 * 60_000
 const sessionOf = (message: DurableCommand) =>
   'thread' in message ? message.thread.sessionId : 'sessionId' in message ? message.sessionId : null
 
-/** Keep a command before it is sent. */
+/** Keep a command before it is sent. False when one with its id is kept already. */
 export async function keepCommand(
   computer: { id: string; organizationId?: string; workspaceId?: string },
   message: DurableCommand,
@@ -46,16 +46,22 @@ export async function keepCommand(
           where: { id: computer.id },
           select: { organizationId: true, workspaceId: true },
         })
-  await prisma.runnerCommand.create({
-    data: {
-      id: message.commandId,
-      ...owner,
-      computerId: computer.id,
-      sessionId: sessionOf(message),
-      type: message.type,
-      message: message as never,
-    },
-  })
+  try {
+    await prisma.runnerCommand.create({
+      data: {
+        id: message.commandId,
+        ...owner,
+        computerId: computer.id,
+        sessionId: sessionOf(message),
+        type: message.type,
+        message: message as never,
+      },
+    })
+    return true
+  } catch (error) {
+    if ((error as { code?: string }).code === 'P2002') return false
+    throw error
+  }
 }
 
 /**
