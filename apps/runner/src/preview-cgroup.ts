@@ -10,6 +10,8 @@
 //     previews/      every preview together: a ceiling below what the computer has,
 //       <thread>/    and a lower CPU weight; one preview: its own ceiling, killed as
 //                    one when it reaches it, frozen while nobody uses it
+//     browsers/      one cgroup per teammate's Chrome (browsers.ts): measured, and
+//       <user>/      stopped as one when idle or when the computer runs out of memory
 //
 // So a preview that grows too big is what gets killed, not the runner or a turn,
 // and a preview nobody uses stops taking CPU and gives its memory back (to swap)
@@ -268,6 +270,7 @@ export class PreviewCgroups {
   private constructor(
     private readonly root: string,
     private readonly turnsRoot: string,
+    private readonly browsersRoot: string,
     readonly budget: ReturnType<typeof previewBudget>,
   ) {}
 
@@ -285,20 +288,25 @@ export class PreviewCgroups {
       await access(join(service, 'cgroup.procs'), constants.W_OK)
       const root = join(service, 'previews')
       const turns = join(service, 'turns')
+      const browsers = join(service, 'browsers')
       await mkdir(root, { recursive: true })
       await mkdir(turns, { recursive: true })
+      await mkdir(browsers, { recursive: true })
       // Its children get memory and CPU control only once the service's own cgroup hands them down.
       if (!(await enable(service)).includes('memory')) return null
       await enable(root)
       await enable(turns)
+      await enable(browsers)
       const budget = previewBudget()
       await write(root, 'memory.high', round(budget.high))
       await write(root, 'memory.max', round(budget.max))
       // Under contention, turns and the runner get about three quarters of the CPU.
       await write(root, 'cpu.weight', '30')
-      const cgroups = new PreviewCgroups(root, turns, budget)
+      const cgroups = new PreviewCgroups(root, turns, browsers, budget)
       await cgroups.sweep(root)
       await cgroups.sweep(turns)
+      // A browser outlives the runner that started it: only the empty ones go.
+      await cgroups.sweep(browsers)
       return cgroups
     } catch (error) {
       console.warn(`previews run without cgroups: ${String(error)}`)
@@ -336,6 +344,13 @@ export class PreviewCgroups {
   async removeTurn(turn: TurnCgroup) {
     this.turnCgroups.delete(turn)
     await turn.cgroup.remove()
+  }
+
+  /** The cgroup of a teammate's browser, made the first time. */
+  async browser(user: string) {
+    const cgroup = new PreviewCgroup(join(this.browsersRoot, user.replace(/[^A-Za-z0-9_-]/g, '_')))
+    await mkdir(cgroup.path, { recursive: true })
+    return cgroup
   }
 
   /** The harnesses' cgroups now. */

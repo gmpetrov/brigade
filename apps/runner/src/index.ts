@@ -39,7 +39,13 @@ import { codeFiles } from './code-files.js'
 import { findSource, readThreadFile, writeThreadFile } from './files.js'
 import { Folders, ThreadGone, type FolderName } from './folders.js'
 import { Library } from './library.js'
-import { BROWSER_START_PAGE, ensureBrowser, focusThreadTab } from './browsers.js'
+import {
+  BROWSER_START_PAGE,
+  browserCandidates,
+  ensureBrowser,
+  focusThreadTab,
+  stopIdleBrowsers,
+} from './browsers.js'
 import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys, usePersonPath, type Transcript } from './harness/index.js'
@@ -49,6 +55,7 @@ import { MemoryGuard } from './memory-guard.js'
 import { runnerCgroups } from './preview-cgroup.js'
 import { Previews } from './previews.js'
 import { processGroups } from './process-groups.js'
+import { teammateUser } from './teammates.js'
 import { Threads, threadFolder } from './threads.js'
 import { prefetch, sweep, type BackupName, type BundleStore } from './repos.js'
 import { Updater } from './updater.js'
@@ -374,12 +381,17 @@ async function start() {
     title: (update) => connection.send(update),
   })
   sendUsageRunsTo((run) => connection.send(run))
-  // On a cloud computer, the computer running out of memory as a whole: a preview or a turn is
-  // stopped, with the reason, before it stops answering at all.
+  // A teammate's browser that nobody uses stops, unless a person has control of one of its threads.
+  const controlled = (user: string) =>
+    [...threads.controlledTeammates()].some((id) => teammateUser(id) === user)
+  if (CLOUD) stopIdleBrowsers(controlled)
+  // On a cloud computer, the computer running out of memory as a whole: an idle browser, a preview
+  // or a turn is stopped, with the reason, before it stops answering at all.
   if (CLOUD && process.env.BRIGADE_MEMORY_GUARD !== '0') {
     new MemoryGuard({
       candidates: async () => [
         ...(await previews.memoryCandidates()),
+        ...(await browserCandidates(controlled)),
         ...(await Promise.all(
           ((await runnerCgroups())?.turns ?? []).map(async (turn) => {
             const memory = await turn.cgroup.resident()

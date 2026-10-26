@@ -4,6 +4,8 @@
 // their popups), so threads sharing the teammate's browser each have their own
 // tabs. The harness restarts its MCP servers between turns, so a thread's tabs
 // are remembered in a file and kept; tabs of threads idle for a day are closed.
+// The browser starts at the thread's first browser tool call (browsers.ts): the
+// relay waits for it, and says why when it does not come up.
 //
 // Usage (as the MCP server command): browser-relay <chrome-port> <tabs-file> <mcp-cli> [args...]
 // Runs as the teammate's Linux user, the only user that can reach its browser.
@@ -12,6 +14,7 @@ import { randomBytes } from 'node:crypto'
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { WebSocket, WebSocketServer } from 'ws'
+import { chromeLog, chromeLogErrors } from './chrome-log.js'
 
 type Message = {
   id?: number
@@ -29,6 +32,8 @@ if (!chromePort || !tabsFile || !cli) {
 }
 /** Tabs of threads idle this long are closed. */
 const STALE_MS = 24 * 3600_000
+/** How long a connection waits for the browser to start. */
+const START_MS = 45_000
 
 const readTabs = (file: string): string[] => {
   try {
@@ -48,6 +53,29 @@ let ownId = 1_000_000_000
 async function browserEndpoint() {
   const response = await fetch(`http://127.0.0.1:${chromePort}/json/version`)
   return ((await response.json()) as { webSocketDebuggerUrl: string }).webSocketDebuggerUrl
+}
+
+/** The browser's endpoint once it runs: the runner starts it when the thread calls a browser tool. */
+async function startedEndpoint() {
+  const deadline = Date.now() + START_MS
+  for (;;) {
+    try {
+      return await browserEndpoint()
+    } catch (error) {
+      if (Date.now() > deadline) throw error
+      await new Promise((resolve) => setTimeout(resolve, 250))
+    }
+  }
+}
+
+/** Why the browser is not there, for the teammate: Chrome's last errors, when it logged any. */
+function notStarted() {
+  let log = ''
+  try {
+    log = readFileSync(chromeLog(process.env.HOME ?? ''), 'utf8').slice(-4000)
+  } catch {}
+  const why = chromeLogErrors(log)
+  return `Your browser did not start on this computer${why ? `: ${why}` : ''}. Try again in a moment.`
 }
 
 function relay(client: WebSocket, upstream: WebSocket) {
@@ -203,7 +231,7 @@ async function main() {
     const early: Buffer[] = []
     const keep = (raw: Buffer) => early.push(raw)
     client.on('message', keep)
-    void browserEndpoint().then(
+    void startedEndpoint().then(
       (endpoint) => {
         const upstream = new WebSocket(endpoint)
         upstream.once('open', () => {
@@ -213,7 +241,16 @@ async function main() {
         })
         upstream.once('error', () => client.close())
       },
-      () => client.close(),
+      () => {
+        // The tool call fails with the reason, rather than a connection closed without one.
+        const message = notStarted()
+        for (const raw of early) {
+          const m = JSON.parse(String(raw)) as Message
+          if (m.id !== undefined)
+            client.send(JSON.stringify({ id: m.id, error: { code: -32000, message } }))
+        }
+        client.close()
+      },
     )
   })
   const { port } = server.address() as { port: number }

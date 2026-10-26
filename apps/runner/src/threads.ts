@@ -223,7 +223,7 @@ type Thread = {
   /** A memory run is queued or running: a new message waits for it. */
   memorizing: boolean
   /** Set while a person holds control: no teammate acts in the thread. */
-  takeover?: { memberId: string; since: number }
+  takeover?: { memberId: string; since: number; teammateId: string }
   log: Promise<Log>
   /** Turns queued and not yet started, by teammate id. */
   waiting: Map<string, number>
@@ -517,11 +517,16 @@ export class Threads {
     this.options.emit(sessionId, { at, type: 'turn.completed', finishReason: 'interrupted' })
   }
 
+  /** The teammates of the threads a person has control of now, by id. */
+  controlledTeammates() {
+    return new Set([...this.threads.values()].flatMap((t) => t.takeover?.teammateId ?? []))
+  }
+
   /** A person takes control: the teammate stops now, or after its current turn. */
   takeover(spec: ThreadSpec, memberId: string, interrupt: boolean) {
     const thread = this.thread(spec.sessionId)
     if (thread.takeover) return
-    thread.takeover = { memberId, since: Date.now() }
+    thread.takeover = { memberId, since: Date.now(), teammateId: spec.teammate.id }
     this.settleFailure(thread)
     void this.options.previews.threadBusy(spec.sessionId)
     if (interrupt) thread.controller?.abort()
