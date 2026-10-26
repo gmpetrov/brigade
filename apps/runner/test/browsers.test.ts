@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { idleBrowsers, isBrowserTool } from '../src/browsers.js'
+import { idleBrowsers, isBrowserTool, stopIdle } from '../src/browsers.js'
 import { chromeLogErrors } from '../src/chrome-log.js'
 
 const MIN = 60_000
@@ -83,4 +83,30 @@ test("Chrome's last errors, without the ones repeated inside later ones", () => 
     'Missing X server or $DISPLAY / The platform failed to initialize.  Exiting.',
   )
   assert.equal(chromeLogErrors(''), '')
+})
+
+test('a browser used or taken control of while another one stops is not stopped', async () => {
+  let clock = 20 * MIN
+  const used = new Map([
+    ['bt-a', 0],
+    ['bt-b', 0],
+    ['bt-c', 0],
+  ])
+  const controlled = new Set<string>()
+  const stopped: string[] = []
+  await stopIdle(
+    ['bt-a', 'bt-b', 'bt-c'],
+    used,
+    (user) => controlled.has(user),
+    async (user) => {
+      stopped.push(user)
+      // The stop takes a while: meanwhile b is used, and a person takes control of c.
+      clock += 10_000
+      used.set('bt-b', clock)
+      controlled.add('bt-c')
+    },
+    () => clock,
+    15 * MIN,
+  )
+  assert.deepEqual(stopped, ['bt-a'])
 })

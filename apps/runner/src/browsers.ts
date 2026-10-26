@@ -83,20 +83,28 @@ export async function ensureBrowser(teammate: { id: string; name: string }, url?
   if (url) await helperBrowser(user, [user, String(port), title, url])
   else if (!(await listening(port))) {
     // Several threads may ask at once: one start, or the others would each open a window.
+    // The helper returns before Chrome listens: the start lasts until it does.
     let start = starting.get(user)
     if (!start) {
-      start = helperBrowser(user, [user, String(port), title]).finally(() => starting.delete(user))
+      start = helperBrowser(user, [user, String(port), title])
+        .then(() => untilListening(user, port))
+        .finally(() => starting.delete(user))
       starting.set(user, start)
     }
     await start
   }
+  await untilListening(user, port)
+  return port
+}
+
+/** Once the browser listens on its port; an error with Chrome's reason when it does not. */
+async function untilListening(user: string, port: number) {
   for (let i = 0; i < 100 && !(await listening(port)); i++)
     await new Promise((r) => setTimeout(r, 200))
   if (!(await listening(port))) {
     const why = await chromeErrors(user)
     throw new Error(`The browser of ${user} did not start${why ? `: ${why}` : ''}`)
   }
-  return port
 }
 
 const starting = new Map<string, Promise<void>>()
@@ -211,10 +219,38 @@ export function idleBrowsers(
   idleMs = IDLE_MS,
 ) {
   for (const user of [...used.keys()]) if (!running.includes(user)) used.delete(user)
-  return running.filter((user) => {
-    if (inUse(user) || !used.has(user)) used.set(user, now)
-    return now - used.get(user)! >= idleMs
-  })
+  return running.filter((user) => idle(user, used, now, inUse, idleMs))
+}
+
+function idle(
+  user: string,
+  used: Map<string, number>,
+  now: number,
+  inUse: (user: string) => boolean,
+  idleMs: number,
+) {
+  if (inUse(user) || !used.has(user)) used.set(user, now)
+  return now - used.get(user)! >= idleMs
+}
+
+/**
+ * Stop the idle ones among the running browsers, one at a time. A stop takes up
+ * to 10 s, during which another browser may be used or taken control of: each
+ * is checked again right before it is stopped.
+ */
+export async function stopIdle(
+  running: string[],
+  used: Map<string, number>,
+  inUse: (user: string) => boolean,
+  stop: (user: string) => Promise<unknown>,
+  now: () => number = Date.now,
+  idleMs = IDLE_MS,
+) {
+  for (const user of idleBrowsers(running, used, now(), inUse, idleMs)) {
+    if (!idle(user, used, now(), inUse, idleMs)) continue
+    console.log(`stopping the browser of ${user}: unused for ${Math.round(idleMs / 60_000)} min`)
+    await stop(user)
+  }
 }
 
 /**
@@ -228,15 +264,7 @@ export function stopIdleBrowsers(inUse: (user: string) => boolean, every = 60_00
     if (checking) return
     checking = true
     void runningBrowsers()
-      .then((running) => idleBrowsers(running, lastUsed, Date.now(), inUse))
-      .then(async (idle) => {
-        for (const user of idle) {
-          console.log(
-            `stopping the browser of ${user}: unused for ${Math.round(IDLE_MS / 60_000)} min`,
-          )
-          await stopBrowser(user)
-        }
-      })
+      .then((running) => stopIdle(running, lastUsed, inUse, stopBrowser))
       .catch((error: unknown) => console.warn(`could not stop idle browsers: ${String(error)}`))
       .finally(() => (checking = false))
   }, every)
