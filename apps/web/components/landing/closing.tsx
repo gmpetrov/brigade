@@ -111,7 +111,7 @@ export function Pricing() {
             <ul className={c('feat')}>
               <li>
                 <Icon name="check" />
-                Teammates run on your Mac while it&apos;s awake
+                Teammates run on your own computer while it&apos;s on
               </li>
               <li>
                 <Icon name="check" />
@@ -138,7 +138,7 @@ export function Pricing() {
             <ul className={c('feat')}>
               <li>
                 <Icon name="check" />
-                Teammates keep working when your Mac is asleep, closed or you don&apos;t have one
+                Teammates get a computer of their own, which keeps working when yours is off
               </li>
               <li>
                 <Icon name="check" />
@@ -166,7 +166,7 @@ export function Faq() {
       <div className={c('wrap')}>
         <div className={c('side')}>
           <h2 className={c('h2')} id="faq-title">
-            Questions
+            Questions, answered
           </h2>
           <p>
             More on how it runs:{' '}
@@ -184,46 +184,22 @@ export function Faq() {
               </span>
             </summary>
             <p>
-              No. You describe a job in a message, the way you would to a new hire. For a task in an
-              app, show it once with Teach a task.
+              No. You describe a job in a message, the way you would to a new hire. For a task in a
+              website or an app, take over a teammate&apos;s cloud computer and show it once.
             </p>
           </details>
           <details>
             <summary>
-              Can a teammate send an email or pay without me?
+              What does Brigade cost?
               <span className={c('pm')}>
                 <Icon name="plus" />
               </span>
             </summary>
             <p>
-              Yes, unless you tell it to wait. For each teammate you choose what it does on its own
-              and what waits for your yes in Needs you. Ready-made playbooks, like the support one,
-              ask before they send.
-            </p>
-          </details>
-          <details>
-            <summary>
-              What happens when my Mac goes to sleep?
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              Teammates on your Mac stop until it wakes up, and a routine due in the meantime is
-              skipped: you get a ticket saying so. With Cloud, they keep working on Brigade&apos;s
-              computer and routines run on time.
-            </p>
-          </details>
-          <details>
-            <summary>
-              I don&apos;t have a Mac.
-              <span className={c('pm')}>
-                <Icon name="plus" />
-              </span>
-            </summary>
-            <p>
-              Start with Cloud. Your teammates run on Brigade&apos;s cloud computer and you use
-              Brigade from any browser or your phone.
+              Brigade is free when teammates run on your own computer. Cloud is $99 a month per
+              workspace and gives them a computer of their own that keeps working when yours is off.
+              On top of that, you bring the Claude or ChatGPT plan you already pay for: we never
+              bill you for AI usage.
             </p>
           </details>
           <details>
@@ -234,9 +210,36 @@ export function Faq() {
               </span>
             </summary>
             <p>
-              Claude and ChatGPT plans, through Claude Code and Codex. Max or Pro gives the most
-              room. You can stack several accounts: when one runs out, the teammate continues on the
-              next account of the same provider.
+              Claude plans through Claude Code, and ChatGPT plans through Codex. Max or Pro gives
+              the most room. Pick a model per teammate, and stack several accounts: when one hits
+              its limit, the teammate carries on with the next account of the same provider, in the
+              middle of the task.
+            </p>
+          </details>
+          <details>
+            <summary>
+              How do I stay in control?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              For each teammate, you choose what it does on its own and what waits for your yes in
+              Needs you, which Apps it can reach, and daily caps on its threads, computer hours and
+              writes to each App. Every step it takes is in its thread, for you to read.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Why several teammates rather than one agent?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              One agent with every tool and no owner gets vague fast. Each teammate holds one job,
+              with its own Apps, memory and rules, so you see who did what and fix the one that is
+              off.
             </p>
           </details>
           <details>
@@ -247,8 +250,46 @@ export function Faq() {
               </span>
             </summary>
             <p>
-              In your workspace&apos;s vault. For a website, Brigade types the login for the
-              teammate, which never sees the password.
+              In your workspace&apos;s vault. When a teammate signs in to a website, Brigade types
+              the login for it: the teammate never sees the password, and it never ends up in a
+              thread.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Is my data used to train AI models?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              Not by us. The work runs on the AI plan you bring, so your data goes only to the
+              provider you picked, under the terms of your plan.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Can a teammate have its own email address?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              Yes. Turn on the Email App and each teammate gets an address of its own. It sends from
+              it, and replies come back to the teammate that started the conversation, not to your
+              inbox.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Can my team see the work?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              Yes. Invite them to your workspace: threads, tasks and files are shared, so nothing
+              sits in one person&apos;s chat history.
             </p>
           </details>
           <details>
@@ -259,8 +300,21 @@ export function Faq() {
               </span>
             </summary>
             <p>
-              Yes, the whole product is on GitHub under the MIT license, including the web app, the
-              server and the Mac app.
+              Yes. The whole product is on GitHub under the MIT license, so you can read every line
+              and run it yourself.
+            </p>
+          </details>
+          <details>
+            <summary>
+              What if I cancel?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              Cancel from Settings whenever you want: Cloud stops at the end of the month you paid
+              for. Your workspace stays, and your teammates can keep working for free on your own
+              computer.
             </p>
           </details>
         </div>
@@ -293,13 +347,10 @@ export function Footer() {
           Brigade
         </span>
         <nav aria-label="Footer">
-          <a href="/#pricing">Pricing</a>
-          <Link href="/how-it-works">How it works</Link>
           <a href={REPO_URL}>GitHub</a>
           <Link href={SIGN_IN}>Sign in</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
-          <span>MIT license</span>
           <span>© 2026</span>
         </nav>
       </div>
