@@ -151,9 +151,13 @@ export type ResendDomain = {
   }[]
 }
 
-export const createDomain = (name: string) =>
+/** A domain Brigade sends as, and receives for when its MX points to Resend (receiving). */
+export const createDomain = (name: string, receiving = false) =>
   resend<ResendDomain>('/domains', {
-    body: { name, capabilities: { sending: 'enabled', receiving: 'disabled' } },
+    body: {
+      name,
+      capabilities: { sending: 'enabled', receiving: receiving ? 'enabled' : 'disabled' },
+    },
   })
 export const getDomain = (id: string) => resend<ResendDomain>(`/domains/${encodeURIComponent(id)}`)
 export const verifyDomain = (id: string) =>

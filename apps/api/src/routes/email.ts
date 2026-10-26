@@ -2,8 +2,10 @@
 // address and domain, their forwarding), the rules' order and a rule tried on past mail, each
 // address's journal, a test mail, and cancelling a mail in its window.
 import {
+  CreateDomain,
   CreateInbox,
   EnableAgentAddress,
+  SetMailboxAddress,
   OrderRules,
   PreviewRule,
   UpdateInbox,
@@ -16,7 +18,16 @@ import { audit } from '../audit.js'
 import { triggersOf } from '../connectors/index.js'
 import type { ScopedDb } from '../db.js'
 import { createInbox, disableAddress, enableAgentAddress, suggestName } from '../mail/addresses.js'
-import { checkDomain, checkPublicAddress, setPublicAddress } from '../mail/domains.js'
+import {
+  addDomain,
+  checkDomain,
+  checkPublicAddress,
+  domainFor,
+  listDomains,
+  lookupDomain,
+  removeDomain,
+  setPublicAddress,
+} from '../mail/domains.js'
 import { addressOf, mailDomain } from '../mail/names.js'
 import { cancelMail } from '../mail/outbound.js'
 import { resendConfigured, sendEmail } from '../mail/resend.js'
@@ -42,6 +53,7 @@ async function view(
       id: string
       name: string
       status: string
+      receiving: string
       records: unknown
       checkedAt: Date | null
     } | null
@@ -81,6 +93,7 @@ async function view(
           id: a.domain.id,
           name: a.domain.name,
           status: a.domain.status,
+          receiving: a.domain.receiving,
           records: a.domain.records,
           checkedAt: a.domain.checkedAt?.toISOString() ?? null,
         }
@@ -164,8 +177,14 @@ export const email = new Hono<AppEnv>()
       where: { id: c.req.param('teammateId'), archivedAt: null },
     })
     if (!teammate) throw new HTTPException(404, { message: 'No such teammate' })
+    // Its address on one of the workspace's domains: checked before anything is turned on.
+    if (input.address) {
+      await domainFor(db, input.address)
+      await checkPublicAddress(db, input.address)
+    }
     const row = await enableAgentAddress(db, scope, teammate, input.name)
-    return c.json(await view(db, { ...row, domain: null }, await names(db)), 201)
+    if (input.address) await setPublicAddress(db, scope, row.id, input.address)
+    return c.json(await view(db, await loadAddress(db, row.id), await names(db)), 201)
   })
 
   /** Owners and admins: turn it off. The name stays the agent's for good. */
@@ -186,13 +205,16 @@ export const email = new Hono<AppEnv>()
       throw new HTTPException(409, { message: 'Turn the Email App on first' })
     const input = await parseBody(c.req.raw, CreateInbox)
     // Checked before the inbox is made, so a refused address leaves no inbox behind.
-    if (input.publicAddress) await checkPublicAddress(db, input.publicAddress)
+    if (input.publicAddress) {
+      await domainFor(db, input.publicAddress)
+      await checkPublicAddress(db, input.publicAddress)
+    }
     const row = await createInbox(db, scope, input)
     if (input.publicAddress)
       try {
         await setPublicAddress(db, scope, row.id, input.publicAddress)
       } catch (error) {
-        // Its domain refused (another workspace's, or Resend's answer): the new inbox goes too.
+        // Taken meanwhile (another request at the same moment): the new inbox goes too.
         await db.mailAddress.deleteMany({ where: { id: row.id } })
         if (row.connectionId) await db.connection.deleteMany({ where: { id: row.connectionId } })
         throw error
@@ -230,6 +252,49 @@ export const email = new Hono<AppEnv>()
     const inbox = await loadAddress(db, c.req.param('id'))
     if (inbox.kind !== 'inbox') throw new HTTPException(400, { message: 'Not an inbox' })
     await disableAddress(db, scope, inbox.id)
+    return c.body(null, 204)
+  })
+
+  /**
+   * Owners and admins: a mailbox's address, an agent's or a project's, on one of the workspace's
+   * domains, or null for Brigade's own only.
+   */
+  .patch('/addresses/:id', async (c) => {
+    const { db, scope } = c.var
+    requireRole(scope, 'owner', 'admin')
+    const { address } = await parseBody(c.req.raw, SetMailboxAddress)
+    const row = await loadAddress(db, c.req.param('id'))
+    await setPublicAddress(db, scope, row.id, address)
+    return c.json(await view(db, await loadAddress(db, row.id), await names(db)))
+  })
+
+  /** The workspace's domains, each with the mailboxes' addresses on it. */
+  .get('/domains', async (c) => c.json(await listDomains(c.var.db)))
+
+  /** Where a domain's mail goes now, before it is added: so how Brigade had best receive it. */
+  .get('/domains/lookup', async (c) => {
+    requireRole(c.var.scope, 'owner', 'admin')
+    return c.json(await lookupDomain(c.req.query('name') ?? ''))
+  })
+
+  /** Owners and admins: add a domain (to Resend too), receiving directly or by forwarding. */
+  .post('/domains', async (c) => {
+    const { db, scope } = c.var
+    requireRole(scope, 'owner', 'admin')
+    if (!(await db.app.count({ where: { key: 'email' } })))
+      throw new HTTPException(409, { message: 'Turn the Email App on first' })
+    const input = await parseBody(c.req.raw, CreateDomain)
+    const row = await addDomain(db, scope, input)
+    return c.json(
+      (await listDomains(db)).find((d) => d.id === row.id),
+      201,
+    )
+  })
+
+  /** Owners and admins: remove a domain no mailbox has an address on. */
+  .delete('/domains/:id', async (c) => {
+    requireRole(c.var.scope, 'owner', 'admin')
+    await removeDomain(c.var.db, c.var.scope, c.req.param('id'))
     return c.body(null, 204)
   })
 

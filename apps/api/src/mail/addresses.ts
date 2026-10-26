@@ -64,6 +64,18 @@ export async function boxOf(local: string): Promise<Box | null> {
 }
 
 /**
+ * The box an address on one of a workspace's own domains means, when that domain receives
+ * directly (its MX points to Brigade): the mailbox whose address it is, itself. Forwarded domains'
+ * mail arrives at the mailbox's address on Brigade's domain instead, so it is not looked up here.
+ */
+export async function directBoxOf(address: string): Promise<Box | null> {
+  const row = await prisma.mailAddress.findFirst({
+    where: { publicAddress: address, ...live, domain: { receiving: 'direct' } },
+  })
+  return row ? { address: row, projectId: null, alias: null, local: row.name } : null
+}
+
+/**
  * A project's name in addresses, set the first time it is needed, from its name: kept when the
  * project is renamed, and a slug once used is never another project's. A digit first would read
  * as a sign-up's token, so such a slug starts with "p-".
@@ -102,12 +114,17 @@ export async function variantLocal(
 /** An address as a thread shows and sends it, with its name: "Riley · Lovarank <riley.lovarank@…>". */
 export async function senderOfBox(
   db: ScopedDb,
-  address: Box['address'] & { domain?: { status: string } | null },
+  address: Box['address'] & { domain?: { name: string; status: string } | null },
   projectId: string | null,
 ) {
+  // A mailbox with an address on the workspace's domain always writes as it, never as its
+  // address on Brigade's: until that domain's records are verified, nothing goes out.
+  const own = address.publicAddress
+  if (own && address.domain?.status !== 'verified')
+    throw new HTTPException(409, {
+      message: `${own} cannot send yet: ${address.domain?.name ?? own.split('@')[1]} is waiting for its DNS records (Inbox › Mailboxes › Domains). Nothing was sent.`,
+    })
   if (address.kind === 'inbox') {
-    const own =
-      address.publicAddress && address.domain?.status === 'verified' ? address.publicAddress : null
     const project = address.projectId
       ? await db.project.findFirst({ where: { id: address.projectId }, select: { name: true } })
       : null
@@ -123,7 +140,9 @@ export async function senderOfBox(
     projectId ? db.project.findFirst({ where: { id: projectId }, select: { name: true } }) : null,
   ])
   const name = [teammate?.name ?? address.name, project?.name].filter(Boolean).join(' · ')
-  return { address: addressOf(await variantLocal(db, address, projectId)), name }
+  // Its own address on the workspace's domain whatever the project: a reply to it reaches the
+  // thread that wrote by its conversation (the thread waits on it), not by a project's variant.
+  return { address: own ?? addressOf(await variantLocal(db, address, projectId)), name }
 }
 
 /** The first free name for a teammate: its own, then -2, -3… across all of Brigade. */

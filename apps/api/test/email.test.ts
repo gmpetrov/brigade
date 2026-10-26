@@ -1482,12 +1482,12 @@ describe('a conversation’s thread that cannot take more now', { skip }, () => 
   })
 })
 
-describe('a shared mailbox made for an address people write to', { skip }, () => {
-  test('a refused address leaves no mailbox; one turned off lets its address go', async () => {
+describe('the workspace’s own domains, and mailboxes’ addresses on them', { skip }, () => {
+  test('a domain receives directly or by forwarding; any mailbox writes as its address there, never as Brigade’s', async () => {
     const db = scoped(a)
     const { auth } = await import('../src/auth.js')
     const { email } = await import('../src/routes/email.js')
-    const addresses = await import('../src/mail/addresses.js')
+    const { senderOfBox } = await import('../src/mail/addresses.js')
     const realSession = auth.api.getSession
     const previousFetch = globalThis.fetch
     ;(auth.api as any).getSession = async () => ({
@@ -1498,45 +1498,132 @@ describe('a shared mailbox made for an address people write to', { skip }, () =>
         activeWorkspaceId: a.workspaceId,
       },
     })
-    let resendRefuses = true
-    globalThis.fetch = (async (input: string | URL | Request) => {
-      if (!String(input).includes('/domains')) throw new Error(`unexpected request ${input}`)
-      return resendRefuses
-        ? json({ name: 'validation_error', message: 'Domain already exists' }, 422)
-        : json({ id: `dom-${id}`, name: 'freed', status: 'not_started', records: [] })
+    const forward = `forward-${id}.test`
+    const direct = `direct-${id}.test`
+    const refused = `refused-${id}.test`
+    const mx: Record<string, string[]> = {
+      [forward]: ['1 smtp.google.com.'],
+      [refused]: [],
+      [direct]: [],
+    }
+    const created: { name: string; receiving: string }[] = []
+    const removed: string[] = []
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.hostname === 'cloudflare-dns.com')
+        return json({
+          Status: 0,
+          Answer: (mx[url.searchParams.get('name')!] ?? []).map((data) => ({ type: 15, data })),
+        })
+      if (url.pathname === '/domains' && init?.method !== 'GET') {
+        const body = JSON.parse(String(init?.body)) as {
+          name: string
+          capabilities: { receiving: string }
+        }
+        if (body.name === refused)
+          return json({ name: 'validation_error', message: 'Domain already exists' }, 422)
+        created.push({ name: body.name, receiving: body.capabilities.receiving })
+        return json({ id: `dom-${body.name}`, name: body.name, status: 'not_started', records: [] })
+      }
+      if (url.pathname.startsWith('/domains/') && init?.method === 'DELETE') {
+        removed.push(url.pathname)
+        return json({ id: url.pathname.split('/')[2] })
+      }
+      // The rest of Resend (reading a received mail): the suite's own fake.
+      return previousFetch(input, init)
     }) as typeof fetch
-    const inboxes = () => db.mailAddress.count({ where: { kind: 'inbox', projectId } })
-    const add = (publicAddress: string) =>
-      email.request('/inboxes', {
-        method: 'POST',
+    const call = (path: string, method = 'GET', body?: unknown) =>
+      email.request(path, {
+        method,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ projectId, label: 'Support', publicAddress }),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       })
     try {
-      const before = await inboxes()
-      // Resend refuses the domain (another product's on the shared account): nothing is left.
-      const refused = await add(`support@refused-${id}.test`)
-      assert.equal(refused.status, 409, await refused.text())
-      // One of Brigade's own addresses: refused before anything is made.
-      const brigade = await add(`someone@mails.brigade.test`)
-      assert.equal(brigade.status, 400, await brigade.text())
-      assert.equal(await inboxes(), before)
+      // Where its mail goes now says how Brigade receives it.
+      const looked = (await (await call(`/domains/lookup?name=${forward}`)).json()) as {
+        suggested: string
+        mx: string[]
+      }
+      assert.deepEqual([looked.suggested, looked.mx], ['forward', ['smtp.google.com']])
+      assert.equal(
+        ((await (await call(`/domains/lookup?name=${direct}`)).json()) as { suggested: string })
+          .suggested,
+        'direct',
+      )
+      // Receiving directly would take a provider's mail away: refused.
+      assert.equal(
+        (await call('/domains', 'POST', { name: forward, receiving: 'direct' })).status,
+        400,
+      )
+      assert.equal((await call('/domains', 'POST', { name: 'mails.brigade.test' })).status, 400)
+      assert.equal((await call('/domains', 'POST', { name: refused })).status, 409)
+      assert.equal((await call('/domains', 'POST', { name: forward })).status, 201)
+      assert.equal((await call('/domains', 'POST', { name: direct })).status, 201)
+      assert.equal((await call('/domains', 'POST', { name: forward })).status, 409)
+      assert.deepEqual(created, [
+        { name: forward, receiving: 'disabled' },
+        { name: direct, receiving: 'enabled' },
+      ])
 
-      // An inbox turned off kept its address: a new one takes it.
+      // An agent's address on a domain: not before it is added, then its own.
+      const rileys = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+      const setAddress = (address: string | null) =>
+        call(`/addresses/${rileys.id}`, 'PATCH', { address })
+      const unknown = await setAddress(`riley@unknown-${id}.test`)
+      assert.equal(unknown.status, 400)
+      assert.match(await unknown.text(), /Add unknown-.* first/)
+      assert.equal((await setAddress(`riley@${direct}`)).status, 200)
+
+      // It writes as it only: until its domain is verified, nothing goes out.
+      const load = () =>
+        db.mailAddress.findFirstOrThrow({ where: { id: rileys.id }, include: { domain: true } })
+      await assert.rejects(senderOfBox(db, await load(), projectId), /cannot send yet/)
+      await db.mailDomain.updateMany({ where: { name: direct }, data: { status: 'verified' } })
+      assert.equal((await senderOfBox(db, await load(), projectId)).address, `riley@${direct}`)
+
+      // Mail to it on a direct domain arrives in its mailbox; on a forwarded one, only through
+      // the forward (to its address on Brigade's domain).
+      const [arrived] = await arrive(mail({ to: [`riley@${direct}`], subject: 'Direct' }))
+      assert.equal(arrived?.addressId, rileys.id)
+      const notForwarded = mail({ to: [`riley@${forward}`] })
+      assert.equal(await inbound.received(notForwarded), 0)
+
+      // A shared mailbox on a domain not added: refused before anything is made.
+      const inboxes = () => db.mailAddress.count({ where: { kind: 'inbox', projectId } })
+      const before = await inboxes()
+      const notAdded = await call('/inboxes', 'POST', {
+        projectId,
+        label: 'Support',
+        publicAddress: `support@unknown-${id}.test`,
+      })
+      assert.equal(notAdded.status, 400)
+      assert.equal(await inboxes(), before)
+      // A turned-off mailbox kept its address: a new one takes it.
       const old = await addresses.createInbox(db, ws(a), { projectId, label: 'Old' })
       await db.mailAddress.updateMany({
         where: { id: old.id },
-        data: { publicAddress: `help@freed-${id}.test`, releasedAt: new Date() },
+        data: { publicAddress: `help@${forward}`, releasedAt: new Date() },
       })
-      resendRefuses = false
-      const made = await add(`help@freed-${id}.test`)
+      const made = await call('/inboxes', 'POST', {
+        projectId,
+        label: 'Help',
+        publicAddress: `help@${forward}`,
+      })
       const body = (await made.json()) as { id: string; publicAddress: string }
       assert.equal(made.status, 201, JSON.stringify(body))
-      assert.equal(body.publicAddress, `help@freed-${id}.test`)
+      assert.equal(body.publicAddress, `help@${forward}`)
       assert.equal(
         (await db.mailAddress.findFirstOrThrow({ where: { id: old.id } })).publicAddress,
         null,
       )
+
+      // A domain goes only once no mailbox has an address on it.
+      const domains = (await (await call('/domains')).json()) as { id: string; name: string }[]
+      const directRow = domains.find((d) => d.name === direct)!
+      assert.equal((await call(`/domains/${directRow.id}`, 'DELETE')).status, 409)
+      assert.equal((await setAddress(null)).status, 200)
+      assert.equal((await call(`/domains/${directRow.id}`, 'DELETE')).status, 204)
+      assert.deepEqual(removed, [`/domains/dom-${direct}`])
     } finally {
       ;(auth.api as any).getSession = realSession
       globalThis.fetch = previousFetch

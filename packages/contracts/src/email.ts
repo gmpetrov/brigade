@@ -11,7 +11,57 @@ export const MailName = z
   .max(30)
   .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Lowercase letters, digits and hyphens only')
 
-export const EnableAgentAddress = z.object({ name: MailName.optional() })
+export const EnableAgentAddress = z.object({
+  name: MailName.optional(),
+  /** Its address on one of the workspace's domains (riley@acme.com), rather than Brigade's. */
+  address: z.string().trim().toLowerCase().email().optional(),
+})
+
+/** A mailbox's address: on one of the workspace's domains, or null for Brigade's own. */
+export const SetMailboxAddress = z.object({
+  address: z.string().trim().toLowerCase().email().nullable(),
+})
+
+/** How a domain's mail reaches Brigade. */
+export const DOMAIN_RECEIVING = ['direct', 'forward'] as const
+export type DomainReceiving = (typeof DOMAIN_RECEIVING)[number]
+
+/** A domain of the workspace's own (acme.com, or a subdomain: team.acme.com). */
+export const CreateDomain = z.object({
+  name: z.string().trim().toLowerCase().min(3).max(253),
+  /** Default: direct when its mail goes nowhere yet, forward when a provider (Google) has it. */
+  receiving: z.enum(DOMAIN_RECEIVING).optional(),
+})
+
+/** What Brigade sees of a domain before it is added: where its mail goes now. */
+export type DomainLookup = {
+  name: string
+  /** Its MX hosts, best first; empty when its mail goes nowhere. */
+  mx: string[]
+  /** Brigade's own receiving already (its MX points to it). */
+  brigade: boolean
+  suggested: DomainReceiving
+}
+
+/** A domain of the workspace, as Inbox › Mailboxes › Domains shows it. */
+export type MailDomainView = {
+  id: string
+  name: string
+  /** Its DNS records as Resend last checked them: sending, and receiving when direct. */
+  status: 'pending' | 'verified' | 'failed'
+  receiving: DomainReceiving
+  records: {
+    record: string
+    type: string
+    name: string
+    value: string
+    priority?: number
+    status: string
+  }[]
+  checkedAt: string | null
+  /** The mailboxes' addresses on it. */
+  addresses: string[]
+}
 
 export const CreateInbox = z.object({
   projectId: z.string(),

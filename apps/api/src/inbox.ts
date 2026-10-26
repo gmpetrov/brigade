@@ -89,7 +89,7 @@ export async function inboxSources(db: ScopedDb, scope: WorkspaceScope) {
       kind: 'email' as const,
       addressId: a.id as string | null,
       connectionId: a.connectionId!,
-      address: addressOf(a.name),
+      address: a.publicAddress ?? addressOf(a.name),
       label:
         a.kind === 'agent'
           ? (find(teammates, a.teammateId)?.name ?? a.name)
@@ -386,13 +386,16 @@ async function toItems(
       )
     const projectId = m.projectId ?? m.address?.projectId ?? m.session?.projectId ?? null
     const teammateId = m.session?.teammateId ?? m.address?.teammateId ?? null
+    // The address it came to as people know it: the mailbox's own on the workspace's domain,
+    // unless it came to a sign-up's or a project's variant on Brigade's.
     const to = m.address
-      ? addressOf(
-          m.alias?.local ??
-            (m.projectId
-              ? `${m.address.name}.${slugs.find((s) => s.projectId === m.projectId)?.slug ?? ''}`
-              : m.address.name),
-        )
+      ? m.alias?.local
+        ? addressOf(m.alias.local)
+        : m.projectId
+          ? addressOf(
+              `${m.address.name}.${slugs.find((s) => s.projectId === m.projectId)?.slug ?? ''}`,
+            )
+          : (m.address.publicAddress ?? addressOf(m.address.name))
       : (m.connection?.externalAccount ?? m.connection?.label ?? m.to[0] ?? '')
     return {
       id: `mail:${m.id}`,
