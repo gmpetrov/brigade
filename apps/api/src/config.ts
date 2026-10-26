@@ -92,7 +92,10 @@ const Env = z.object({
    * both, previews are at the provider's address.
    */
   PREVIEW_GATEWAY_URL: z.preprocess((v) => v || undefined, z.url().optional()),
-  /** Shared with the preview gateway (its SECRET): registers previews there. */
+  /**
+   * Shared with the preview gateway (its SECRET): registers previews there, and signs the
+   * access tokens that let people in.
+   */
   PREVIEW_GATEWAY_SECRET: z.string().min(32).optional(),
   /** Shared with the collab server: signs editors' tokens and authenticates its calls. */
   COLLAB_SECRET: z.string().min(32).optional(),
