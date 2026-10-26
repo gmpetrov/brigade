@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   api,
   isAdmin,
+  uploadToLibrary,
   useApi,
   type LibraryTree,
   type Me,
@@ -31,7 +32,6 @@ import {
   type SearchHit,
   type Teammate,
 } from '@/lib/api'
-import { API_URL } from '@/lib/config'
 
 /** The workspace's shared files and memory, and one search over both. */
 export default function LibraryPage() {
@@ -94,17 +94,10 @@ function LibraryView() {
     setError(undefined)
     for (const [i, { file, path }] of list.entries()) {
       setUploading(list.length > 1 ? `${i + 1} of ${list.length}` : file.name)
-      const form = new FormData()
-      form.set('file', file)
-      form.set('path', path)
-      const response = await fetch(`${API_URL}/api/library/upload`, {
-        method: 'POST',
-        credentials: 'include',
-        body: form,
-      })
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string }
-        setError(`${path}: ${body.error ?? response.statusText}`)
+      try {
+        await uploadToLibrary(path, file)
+      } catch (e) {
+        setError(`${path}: ${(e as Error).message}`)
         break
       }
     }

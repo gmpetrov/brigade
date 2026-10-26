@@ -1,5 +1,6 @@
 'use client'
 import {
+  LOGO_UPLOAD,
   PROJECT_LOGO_MAX,
   projectLogoPath,
   siteUrl,
@@ -38,7 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { api, type ProjectRef } from '@/lib/api'
+import { api, blobOfDataUrl, uploadFile, type ProjectRef } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
@@ -192,6 +193,12 @@ export async function shrinkLogo(dataUrl: string): Promise<string | null> {
   canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height)
   const png = canvas.toDataURL('image/png')
   return png.length * 0.75 <= PROJECT_LOGO_MAX ? png : null
+}
+
+/** Upload a logo (a data URL, as shrinkLogo gives) to the bucket: what a project or the workspace takes as its logo. */
+export async function uploadLogo(dataUrl: string): Promise<string> {
+  const upload = await uploadFile('logo', blobOfDataUrl(dataUrl), { name: 'logo' })
+  return `${LOGO_UPLOAD}${upload.id}`
 }
 
 type Step = 'waiting' | 'active' | 'done' | 'missed'
@@ -373,7 +380,7 @@ export function NewProjectDialog({
           name: name.trim(),
           brief: brief.trim(),
           ...(looksLikeSite(url) && { url: siteUrl(url) }),
-          ...(logo && { logo }),
+          ...(logo && { logo: await uploadLogo(logo) }),
         },
       })
       await reloadProjects()
