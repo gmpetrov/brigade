@@ -75,7 +75,7 @@ import {
   Reply,
   ShieldAlert,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { MediaPreview, MessageAttachments } from '@/components/attachments'
 import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
@@ -703,6 +703,68 @@ function MessageActions({ text, onReply }: { text: string; onReply?: () => void 
         >
           <Reply className="size-3.5" aria-hidden />
         </Button>
+      )}
+    </div>
+  )
+}
+
+/** How tall a person's message shows before the rest folds under Show more (about 16 lines). */
+const FOLDED_HEIGHT = 416
+
+/**
+ * A person's message bubble: a long one (a pasted page, a log) folds to its first lines,
+ * fading out, with Show more to unfold it in place.
+ */
+function MessageBubble({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  // Fold only when there is clearly more to show than a few lines.
+  const [long, setLong] = useState(false)
+  const bubble = useRef<HTMLDivElement>(null)
+  const body = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = body.current
+    if (!el) return
+    const measure = () => setLong(el.scrollHeight > FOLDED_HEIGHT + 80)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [text])
+  const folded = long && !open
+  return (
+    <div
+      ref={bubble}
+      className="min-w-0 rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground"
+    >
+      <div
+        ref={body}
+        className={cn(folded && 'overflow-hidden')}
+        style={
+          folded
+            ? {
+                maxHeight: FOLDED_HEIGHT,
+                maskImage: 'linear-gradient(to bottom, black 70%, transparent)',
+              }
+            : undefined
+        }
+      >
+        <MessageWithCode text={text} />
+      </div>
+      {long && (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => {
+            setOpen(!open)
+            // Folding a message read far down brings its start back into view.
+            if (open && bubble.current && bubble.current.getBoundingClientRect().top < 0)
+              bubble.current.scrollIntoView({ block: 'start' })
+          }}
+          className="mt-1.5 flex items-center gap-1 text-xs font-medium whitespace-normal text-primary-foreground/80 hover:text-primary-foreground"
+        >
+          {open ? 'Show less' : 'Show more'}
+          <ChevronDown className={cn('size-3.5', open && 'rotate-180')} aria-hidden />
+        </button>
       )}
     </div>
   )
@@ -1945,9 +2007,7 @@ export function ThreadItems({
                   text={text}
                   onReply={onReply && (() => onReply({ seq: item.seq, text: replyText(written) }))}
                 />
-                <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
-                  <MessageWithCode text={text} />
-                </div>
+                <MessageBubble text={text} />
               </div>
             )}
             {files.length > 0 && <MessageAttachments attachments={files} className="justify-end" />}
