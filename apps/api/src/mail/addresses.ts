@@ -122,7 +122,7 @@ export async function senderOfBox(
   const own = address.publicAddress
   if (own && address.domain?.status !== 'verified')
     throw new HTTPException(409, {
-      message: `${own} cannot send yet: ${address.domain?.name ?? own.split('@')[1]} is waiting for its DNS records (Inbox › Mailboxes › Domains). Nothing was sent.`,
+      message: `${own} cannot send yet: ${address.domain?.name ?? own.split('@')[1]} is waiting for its DNS records (Inbox › Mail settings › Domains). Nothing was sent.`,
     })
   if (address.kind === 'inbox') {
     const project = address.projectId

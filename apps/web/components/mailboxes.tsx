@@ -1,19 +1,20 @@
 'use client'
-// Inbox › Mailboxes: whatever receives mail for the workspace, in one place. The list, Add a
-// mailbox (an agent's address, a shared one for an address people already write to, a Gmail
-// account), and each mailbox's page: where its mail arrives, who handles it (its rules and
-// playbooks, in the order they apply), who reads and replies from it.
-import type { MailboxDetail, MailboxRule, MailboxSummary } from '@brigade/contracts'
+// Inbox › Mailboxes: whatever receives mail for the workspace, in one place. The list (agents',
+// shared, connected Gmail), Add a mailbox (an address on a domain, for an agent or a project), and
+// each mailbox's page: where its mail arrives and how it goes out, who handles it (its rules and
+// playbooks, in the order they apply), who reads and replies from it. Domains: mail-domains.tsx.
+import type { MailboxDetail, MailboxRule, MailboxSummary, MailDomainView } from '@brigade/contracts'
 import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { timeAgo, useDashboard } from '@/components/dashboard'
+import { MailSettingsHeader } from '@/components/mail-domains'
 import {
   AddRule,
   Address,
+  Dot,
   ErrorLine,
-  InboxArrival,
   rulesSummary,
   useAction,
 } from '@/components/project-email'
@@ -36,9 +37,9 @@ import { api, isAdmin, useApi, type EmailState, type MailJournalEntry } from '@/
 export const mailboxPath = (id: string) => `/app/inbox/mailboxes/${encodeURIComponent(id)}`
 
 const KIND: Record<MailboxSummary['kind'], string> = {
-  agent: "Agent's address",
-  inbox: 'Shared mailbox',
-  gmail: 'Gmail',
+  agent: "An agent's",
+  inbox: 'Shared',
+  gmail: 'Connected Gmail',
 }
 
 function Back({ href, children }: { href: string; children: ReactNode }) {
@@ -61,6 +62,12 @@ function MailboxIcon({ kind }: { kind: MailboxSummary['kind'] }) {
 // The list
 // ---------------------------------------------------------------------------
 
+const GROUPS: { kind: MailboxSummary['kind']; title: string }[] = [
+  { kind: 'agent', title: 'Agents' },
+  { kind: 'inbox', title: 'Shared' },
+  { kind: 'gmail', title: 'Connected Gmail' },
+]
+
 export function MailboxesView() {
   const params = useSearchParams()
   const list = useApi<MailboxSummary[]>('/inbox/mailboxes', ['mail.updated', 'connections.updated'])
@@ -68,25 +75,21 @@ export function MailboxesView() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6 md:px-6">
-      <Back href="/app/inbox">Inbox</Back>
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-extrabold tracking-tight">Mailboxes</h1>
-          <p className="text-sm text-muted-foreground">
-            Everything that receives mail: where it arrives, who handles it, who reads it.
-          </p>
-        </div>
-        {!adding && (
-          <Button size="sm" onClick={() => setAdding(true)}>
-            <Plus />
-            Add a mailbox
-          </Button>
-        )}
-      </header>
+      <MailSettingsHeader
+        tab="mailboxes"
+        action={
+          !adding && (
+            <Button size="sm" onClick={() => setAdding(true)}>
+              <Plus />
+              Add a mailbox
+            </Button>
+          )
+        }
+      />
 
       {adding && (
         <AddMailbox
-          initial={params.get('add') ?? ''}
+          owner={params.get('add') === 'shared' ? 'project' : 'agent'}
           teammateId={params.get('teammate') ?? undefined}
           onCancel={() => setAdding(false)}
         />
@@ -99,22 +102,32 @@ export function MailboxesView() {
       ) : list.data.length === 0 ? (
         <Card className="items-center gap-2 px-6 py-12 text-center">
           <p className="max-w-md text-sm text-muted-foreground">
-            No mailbox yet. Give an agent an address, receive what people send to support@…, or
-            connect a Gmail account.
+            No mailbox yet. Give an agent an address, or a project a shared one such as support@, or
+            connect a Gmail account in Settings › Apps.
           </p>
         </Card>
       ) : (
-        <Card className="gap-0 divide-y py-0">
-          {list.data.map((m) => (
-            <MailboxRow key={m.id} mailbox={m} />
-          ))}
-        </Card>
+        GROUPS.map(({ kind, title }) => {
+          const mailboxes = list.data!.filter((m) => m.kind === kind)
+          if (mailboxes.length === 0) return null
+          return (
+            <section key={kind} className="flex flex-col gap-2">
+              <h2 className="px-1 text-sm font-medium text-muted-foreground">{title}</h2>
+              <Card className="gap-0 divide-y py-0">
+                {mailboxes.map((m) => (
+                  <MailboxRow key={m.id} mailbox={m} />
+                ))}
+              </Card>
+            </section>
+          )
+        })
       )}
     </div>
   )
 }
 
 function MailboxRow({ mailbox: m }: { mailbox: MailboxSummary }) {
+  const waiting = m.domain && m.domain.status !== 'verified'
   return (
     <Link
       href={mailboxPath(m.id)}
@@ -124,16 +137,17 @@ function MailboxRow({ mailbox: m }: { mailbox: MailboxSummary }) {
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-baseline gap-2">
           <span className="min-w-0 truncate text-sm font-semibold">{m.name}</span>
-          <span className="flex-none text-xs text-muted-foreground">{KIND[m.kind]}</span>
+          {m.visibility === 'you' && (
+            <span className="flex-none text-xs text-muted-foreground">Only you</span>
+          )}
         </div>
-        <span className="truncate font-mono text-xs text-muted-foreground">
-          {m.publicAddress ? `${m.publicAddress} → ${m.address}` : m.address}
-        </span>
+        <span className="truncate font-mono text-xs text-muted-foreground">{m.address}</span>
         <span className="text-xs text-muted-foreground">
-          {m.ruleCount === 0
-            ? 'No rule: its mail waits for you'
-            : `${m.ruleCount} ${m.ruleCount === 1 ? 'rule' : 'rules'}`}
-          {m.visibility === 'you' && ' · Only you'}
+          {waiting
+            ? `Waiting for ${m.domain!.name}'s DNS records`
+            : m.ruleCount === 0
+              ? 'No rule: its mail waits for you'
+              : `${m.ruleCount} ${m.ruleCount === 1 ? 'rule' : 'rules'}`}
         </span>
       </div>
     </Link>
@@ -141,48 +155,80 @@ function MailboxRow({ mailbox: m }: { mailbox: MailboxSummary }) {
 }
 
 // ---------------------------------------------------------------------------
-// Add a mailbox: from what the person wants, not how it works
+// Add a mailbox: an address on a domain, for an agent or a project
 // ---------------------------------------------------------------------------
 
-type Choice = 'agent' | 'shared' | 'gmail'
-
-const CHOICES: { id: Choice; title: string; text: string }[] = [
-  {
-    id: 'shared',
-    title: 'Receive mail sent to an address you have',
-    text: 'support@yourcompany.com and the like: forward it here, and a teammate can answer it.',
-  },
-  {
-    id: 'agent',
-    title: 'Give an agent an address',
-    text: 'For signing up to services and writing to people, under its own name.',
-  },
-  {
-    id: 'gmail',
-    title: 'Connect a Gmail account',
-    text: 'Your agents read and send from it; what its rules take shows in the Inbox.',
-  },
-]
+/** Brigade's own domain in the domain picker. */
+const BRIGADE = 'brigade'
 
 function AddMailbox({
-  initial,
+  owner: initialOwner,
   teammateId,
   onCancel,
 }: {
-  initial: string
+  owner: 'agent' | 'project'
   teammateId?: string
   onCancel: () => void
 }) {
-  const { me } = useDashboard()
+  const router = useRouter()
+  const { me, teammates, projects } = useDashboard()
   const admin = isAdmin(me)
   const email = useApi<EmailState>('/email', ['mail.updated'])
-  const [choice, setChoice] = useState<Choice | undefined>(
-    CHOICES.some((c) => c.id === initial) ? (initial as Choice) : undefined,
+  const domains = useApi<MailDomainView[]>('/email/domains', ['mail.updated'])
+  const [owner, setOwner] = useState(initialOwner)
+  const [domain, setDomain] = useState(BRIGADE)
+  const [local, setLocal] = useState<string>()
+  const state = email.data
+  const taken = new Set(
+    (state?.addresses ?? []).filter((a) => a.kind === 'agent' && a.on).map((a) => a.teammate?.id),
+  )
+  const free = teammates.filter((t) => !taken.has(t.id))
+  const [picked, setAgentId] = useState(teammateId ?? '')
+  // The agents with a mailbox are known once the state loads: one of theirs is never picked.
+  const agentId = free.some((t) => t.id === picked) ? picked : (free[0]?.id ?? '')
+  const [projectId, setProjectId] = useState(projects.find((p) => !p.archivedAt)?.id ?? '')
+  const agent = owner === 'agent' && agentId ? agentId : null
+  // An agent's name on Brigade's domain: its own, or the one kept for it.
+  const suggestion = useApi<{ name: string; kept: boolean }>(
+    agent ? `/email/agents/${agent}/suggestion` : null,
   )
   const enable = useAction()
+  const add = useAction()
+  const brigade = domain === BRIGADE
+  const kept = agent && brigade && suggestion.data?.kept
+  const value =
+    local ?? (agent ? (suggestion.data?.name ?? '') : owner === 'project' ? 'support' : '')
+  const domainName = brigade ? (state?.domain ?? '') : domain
 
-  const needsEmail = choice === 'agent' || choice === 'shared'
-  const state = email.data
+  async function create(event: FormEvent) {
+    event.preventDefault()
+    const name = value.trim().toLowerCase()
+    if (!name) return
+    const custom = brigade ? undefined : `${name}@${domain}`
+    const made = await add.run(() =>
+      owner === 'agent'
+        ? api<{ id: string }>(`/email/agents/${agentId}`, {
+            method: 'POST',
+            body: custom ? { address: custom } : kept ? {} : { name },
+          })
+        : api<{ id: string }>('/email/inboxes', {
+            body: {
+              projectId,
+              label: (name.charAt(0).toUpperCase() + name.slice(1)).slice(0, 40),
+              ...(custom && { publicAddress: custom }),
+            },
+          }),
+    )
+    if (made) router.push(mailboxPath(`email:${made.id}`))
+  }
+
+  if (state && !state.available)
+    return (
+      <Card className="px-5 py-5 text-sm text-muted-foreground">
+        {state.unavailable ?? 'Brigade addresses are not available on this server.'}
+      </Card>
+    )
+
   return (
     <Card className="gap-4 px-5 py-5">
       <div className="flex items-center justify-between gap-3">
@@ -191,32 +237,11 @@ function AddMailbox({
           Cancel
         </Button>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        {CHOICES.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            aria-pressed={choice === c.id}
-            onClick={() => setChoice(c.id)}
-            className="flex flex-col gap-1 rounded-lg border p-3 text-left outline-none hover:bg-secondary/50 focus-visible:ring-2 focus-visible:ring-ring aria-pressed:border-primary aria-pressed:bg-primary/5"
-          >
-            <span className="text-sm font-semibold">{c.title}</span>
-            <span className="text-xs text-muted-foreground">{c.text}</span>
-          </button>
-        ))}
-      </div>
-
-      {needsEmail && state && !state.available && (
-        <p className="text-sm text-muted-foreground">
-          {state.unavailable ?? 'Brigade addresses are not available on this server.'}
-        </p>
-      )}
-      {needsEmail && state?.available && !state.enabled && (
+      {state && !state.enabled ? (
         <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted/60 px-4 py-3 text-sm">
           <span className="min-w-0 flex-[1_1_16rem]">
-            Brigade gives mailboxes addresses on{' '}
-            <span className="font-mono text-xs">{state.domain}</span>. Turn it on for the workspace
-            first.
+            Mailboxes have addresses on <span className="font-mono text-xs">{state.domain}</span>{' '}
+            and on your own domains. Turn them on for the workspace first.
           </span>
           {admin ? (
             <Button
@@ -236,181 +261,142 @@ function AddMailbox({
           )}
           <ErrorLine error={enable.error} />
         </div>
-      )}
-      {needsEmail && state?.enabled && !admin && (
+      ) : !admin ? (
         <p className="text-sm text-muted-foreground">An owner or admin adds mailboxes.</p>
-      )}
-      {choice === 'shared' && state?.enabled && admin && <AddShared />}
-      {choice === 'agent' && state?.enabled && admin && (
-        <AddAgent state={state} teammateId={teammateId} />
-      )}
-      {choice === 'gmail' && (
-        <p className="text-sm">
-          <Link href="/app/connections" className="font-medium text-primary hover:underline">
-            Connect Gmail in Settings › Apps
-          </Link>
-          <span className="text-muted-foreground">
-            , then give it to the teammates who use it. It shows here once connected.
-          </span>
-        </p>
+      ) : (
+        <form onSubmit={(e) => void create(e)} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label>For</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <div
+                role="radiogroup"
+                aria-label="Whose mailbox"
+                className="flex rounded-md border p-0.5"
+              >
+                {(
+                  [
+                    ['agent', 'An agent'],
+                    ['project', 'A project, shared'],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    aria-checked={owner === id}
+                    onClick={() => {
+                      setOwner(id)
+                      setLocal(undefined)
+                    }}
+                    className="rounded px-3 py-1 text-sm aria-checked:bg-secondary aria-checked:font-medium"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {owner === 'agent' ? (
+                free.length === 0 ? (
+                  <span className="text-sm text-muted-foreground">
+                    Every agent has a mailbox already.
+                  </span>
+                ) : (
+                  <Select
+                    value={agentId}
+                    onValueChange={(v) => {
+                      setAgentId(v)
+                      setLocal(undefined)
+                    }}
+                  >
+                    <SelectTrigger aria-label="Agent" className="w-48">
+                      <SelectValue placeholder="Pick an agent" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {free.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )
+              ) : (
+                <ProjectSelect
+                  value={projectId}
+                  onChange={setProjectId}
+                  none={false}
+                  className="w-48"
+                />
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="mailbox-local">Address</Label>
+            <div className="flex flex-wrap items-center gap-1">
+              <Input
+                id="mailbox-local"
+                value={value}
+                onChange={(e) => setLocal(e.target.value)}
+                disabled={!!kept}
+                className="w-44 font-mono"
+                maxLength={64}
+                required
+              />
+              <span className="font-mono text-sm text-muted-foreground">@</span>
+              <Select
+                value={domain}
+                onValueChange={(v) => {
+                  setDomain(v)
+                  setLocal(undefined)
+                }}
+              >
+                <SelectTrigger aria-label="Domain" className="w-56 font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={BRIGADE}>{state?.domain ?? 'Brigade'}</SelectItem>
+                  {(domains.data ?? []).map((d) => (
+                    <SelectItem key={d.id} value={d.name}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {kept
+                ? 'Its address before, kept for it: no one else gets it.'
+                : brigade && owner === 'project'
+                  ? `On ${domainName}, a shared mailbox gets a name of its own made from this one, such as support-askli-7f3k.`
+                  : brigade
+                    ? `Unique across Brigade; it stays this agent's for good.`
+                    : domains.data?.find((d) => d.name === domain)?.receiving === 'forward'
+                      ? `${domain}'s mail stays with its provider: the mailbox's page says where to forward ${value || 'it'}@${domain}.`
+                      : `Mail to it arrives directly once ${domain}'s DNS records are in.`}{' '}
+              <Link href="/app/inbox/domains" className="font-medium text-primary hover:underline">
+                Your domains
+              </Link>
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              type="submit"
+              size="sm"
+              disabled={add.busy || !value.trim() || (owner === 'agent' ? !agentId : !projectId)}
+            >
+              Add mailbox
+            </Button>
+            <ErrorLine error={add.error} />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            A Gmail account is connected in{' '}
+            <Link href="/app/connections" className="font-medium text-primary hover:underline">
+              Settings › Apps
+            </Link>
+            ; it shows here once connected.
+          </p>
+        </form>
       )}
     </Card>
-  )
-}
-
-/** A project's shared mailbox for an address people already write to, forwarded to it. */
-function AddShared() {
-  const router = useRouter()
-  const { projects } = useDashboard()
-  const [publicAddress, setPublicAddress] = useState('')
-  const [projectId, setProjectId] = useState(projects.find((p) => !p.archivedAt)?.id ?? '')
-  const action = useAction()
-
-  async function add(event: FormEvent) {
-    event.preventDefault()
-    const address = publicAddress.trim().toLowerCase()
-    if (!address || !projectId) return
-    const local = address.split('@')[0] ?? ''
-    const label = (local.charAt(0).toUpperCase() + local.slice(1)).slice(0, 40) || 'Support'
-    // One call: the address is checked first, and a refused one leaves no mailbox behind.
-    const made = await action.run(() =>
-      api<{ id: string }>('/email/inboxes', {
-        body: { projectId, label, publicAddress: address },
-      }),
-    )
-    if (made) router.push(mailboxPath(`email:${made.id}`))
-  }
-
-  return (
-    <form onSubmit={(e) => void add(e)} className="flex flex-col gap-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="shared-address">The address people write to</Label>
-          <Input
-            id="shared-address"
-            type="email"
-            value={publicAddress}
-            onChange={(e) => setPublicAddress(e.target.value)}
-            placeholder="support@yourcompany.com"
-            className="font-mono"
-            required
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="shared-project">Project</Label>
-          <ProjectSelect
-            id="shared-project"
-            value={projectId}
-            onChange={setProjectId}
-            none={false}
-          />
-        </div>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Brigade gives it an address of its own; its page then shows how to forward your address to
-        it, and checks that mail comes through.
-      </p>
-      <div className="flex items-center gap-3">
-        <Button
-          type="submit"
-          size="sm"
-          disabled={action.busy || !publicAddress.trim() || !projectId}
-        >
-          Add mailbox
-        </Button>
-        <ErrorLine error={action.error} />
-      </div>
-    </form>
-  )
-}
-
-/** An agent's own address, named after it (or a free variant of its name). */
-function AddAgent({ state, teammateId }: { state: EmailState; teammateId?: string }) {
-  const router = useRouter()
-  const { teammates } = useDashboard()
-  const taken = new Set(
-    state.addresses.filter((a) => a.kind === 'agent' && a.on).map((a) => a.teammate?.id),
-  )
-  const free = teammates.filter((t) => !taken.has(t.id))
-  const [chosen, setChosen] = useState(
-    free.find((t) => t.id === teammateId)?.id ?? free[0]?.id ?? '',
-  )
-  const suggestion = useApi<{ name: string; address: string; kept: boolean }>(
-    chosen ? `/email/agents/${chosen}/suggestion` : null,
-  )
-  const [name, setName] = useState<string>()
-  const action = useAction()
-  const value = name ?? suggestion.data?.name ?? ''
-  const kept = suggestion.data?.kept ?? false
-
-  if (free.length === 0)
-    return <p className="text-sm text-muted-foreground">Every agent has an address already.</p>
-
-  async function add(event: FormEvent) {
-    event.preventDefault()
-    if (!chosen) return
-    const made = await action.run(() =>
-      api<{ id: string }>(`/email/agents/${chosen}`, {
-        method: 'POST',
-        body: kept ? {} : { name: value.trim().toLowerCase() },
-      }),
-    )
-    if (made) router.push(mailboxPath(`email:${made.id}`))
-  }
-
-  return (
-    <form onSubmit={(e) => void add(e)} className="flex flex-col gap-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="agent-teammate">Agent</Label>
-          <Select
-            value={chosen}
-            onValueChange={(v) => {
-              setChosen(v)
-              setName(undefined)
-            }}
-          >
-            <SelectTrigger id="agent-teammate" className="w-full">
-              <SelectValue placeholder="Pick an agent" />
-            </SelectTrigger>
-            <SelectContent>
-              {free.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="agent-name">Address</Label>
-          <div className="flex items-center gap-1">
-            <Input
-              id="agent-name"
-              value={value}
-              onChange={(e) => setName(e.target.value)}
-              disabled={kept}
-              className="font-mono"
-              maxLength={30}
-            />
-            <span className="flex-none font-mono text-xs text-muted-foreground">
-              @{state.domain}
-            </span>
-          </div>
-          {kept && (
-            <span className="text-xs text-muted-foreground">
-              Its address before, kept for it: no one else gets it.
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={action.busy || !chosen || !value.trim()}>
-          Give the address
-        </Button>
-        <ErrorLine error={action.error} />
-      </div>
-    </form>
   )
 }
 
@@ -441,9 +427,7 @@ export function MailboxView({ id }: { id: string }) {
     'mail.updated',
     'connections.updated',
   ])
-  const email = useApi<EmailState>(id.startsWith('email:') ? '/email' : null, ['mail.updated'])
   const m = mailbox.data
-  const reload = () => Promise.all([mailbox.reload(), email.reload()])
 
   if (mailbox.error)
     return (
@@ -453,7 +437,6 @@ export function MailboxView({ id }: { id: string }) {
       </div>
     )
   if (!m) return <p className="px-6 py-6 text-sm text-muted-foreground">Loading…</p>
-  const inbox = email.data?.addresses.find((a) => a.id === m.addressId)
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6 md:px-6">
@@ -462,6 +445,7 @@ export function MailboxView({ id }: { id: string }) {
         <MailboxIcon kind={m.kind} />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <h1 className="text-2xl font-extrabold tracking-tight wrap-anywhere">{m.name}</h1>
+          <Address value={m.address} />
           <span className="text-sm text-muted-foreground">
             {KIND[m.kind]}
             {m.visibility === 'you' && ' · Only you see it'}
@@ -473,24 +457,19 @@ export function MailboxView({ id }: { id: string }) {
       </header>
 
       <Section step={1} title="Where its mail arrives">
-        {m.kind === 'inbox' && inbox ? (
-          <InboxArrival
-            inbox={inbox}
-            admin={m.manages}
-            reload={reload}
+        {m.kind === 'gmail' ? (
+          <GmailArrival mailbox={m} reload={mailbox.reload} />
+        ) : (
+          <MailboxArrival
+            mailbox={m}
+            reload={mailbox.reload}
             onTurnedOff={() => router.push('/app/inbox/mailboxes')}
           />
-        ) : m.kind === 'agent' ? (
-          <AgentArrival mailbox={m} onTurnedOff={() => router.push('/app/inbox/mailboxes')} />
-        ) : m.kind === 'gmail' ? (
-          <GmailArrival mailbox={m} reload={reload} />
-        ) : (
-          <p className="text-sm text-muted-foreground">Loading…</p>
         )}
       </Section>
 
       <Section step={2} title="Who handles it">
-        <MailboxRules mailbox={m} reload={reload} />
+        <MailboxRules mailbox={m} reload={mailbox.reload} />
       </Section>
 
       <Section step={3} title="Who reads and replies">
@@ -512,7 +491,7 @@ export function MailboxView({ id }: { id: string }) {
         )}
         <p className="text-sm text-muted-foreground">
           {m.kind === 'agent'
-            ? `Only ${m.teammate?.name ?? 'its agent'} reads and sends from its address.`
+            ? `Only ${m.teammate?.name ?? 'its agent'} reads and sends from it.`
             : 'The teammates given it read its mail and reply from it; give it to one on their page, under Access.'}{' '}
           {m.visibility === 'you'
             ? 'In the Inbox, only you see its mail.'
@@ -526,6 +505,266 @@ export function MailboxView({ id }: { id: string }) {
         </Card>
       )}
     </div>
+  )
+}
+
+type Forwarding =
+  | { found: false }
+  | { found: true; at: string; subject: string; code: string | null; link: string | null }
+
+/**
+ * A Brigade mailbox's way in and out: its address (changed to one on another domain), whether it
+ * receives (directly, or what to forward where) and sends (as its address only, once its domain's
+ * records are in), a test mail, and Turn off.
+ */
+function MailboxArrival({
+  mailbox: m,
+  reload,
+  onTurnedOff,
+}: {
+  mailbox: MailboxDetail
+  reload: () => Promise<unknown>
+  onTurnedOff: () => void
+}) {
+  const email = useApi<EmailState>('/email')
+  const domains = useApi<MailDomainView[]>(m.manages ? '/email/domains' : null, ['mail.updated'])
+  const journal = useApi<MailJournalEntry[]>(`/email/addresses/${m.addressId}/journal?limit=20`, [
+    'mail.updated',
+  ])
+  const forward = m.domain?.receiving === 'forward'
+  const forwarding = useApi<Forwarding>(
+    m.manages && forward ? `/email/addresses/${m.addressId}/forwarding` : null,
+  )
+  const [changing, setChanging] = useState(false)
+  const [note, setNote] = useState<string>()
+  const save = useAction()
+  const test = useAction()
+  const off = useAction()
+  const verified = !m.domain || m.domain.status === 'verified'
+  const forwarded = (journal.data ?? []).some(
+    (e) =>
+      e.direction === 'in' &&
+      e.route === 'test' &&
+      e.to.some((to) => to.toLowerCase().includes(m.address)),
+  )
+  const brigadeDomain = email.data?.domain ?? ''
+
+  async function sendTest() {
+    setNote(undefined)
+    const done = await test.run(() =>
+      api<{ sent: boolean; to: string }>(
+        `/email/addresses/${m.addressId}/test${m.internalAddress ? '?public=1' : ''}`,
+        { body: {} },
+      ),
+    )
+    if (!done) return
+    setNote(`Test mail sent to ${done.to}. It shows in the journal once it arrives.`)
+    for (const delay of [5000, 15000, 40000])
+      setTimeout(() => {
+        void journal.reload()
+        void forwarding.reload()
+      }, delay)
+  }
+
+  return (
+    <div className="flex flex-col gap-4 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <Address value={m.address} />
+        {m.manages && !changing && (
+          <Button variant="ghost" size="xs" onClick={() => setChanging(true)}>
+            Change
+          </Button>
+        )}
+      </div>
+      {changing && (
+        <ChangeAddress
+          mailbox={m}
+          brigadeDomain={brigadeDomain}
+          domains={domains.data ?? []}
+          busy={save.busy}
+          onCancel={() => setChanging(false)}
+          onSave={(address) =>
+            void save
+              .run(() =>
+                api(`/email/addresses/${m.addressId}`, { method: 'PATCH', body: { address } }),
+              )
+              .then(async (done) => {
+                if (done === undefined) return
+                setChanging(false)
+                await reload()
+              })
+          }
+        />
+      )}
+      <ErrorLine error={save.error} />
+
+      <ol className="flex flex-col gap-3">
+        <li className="flex items-start gap-2">
+          <Dot
+            tone={forward ? (forwarded ? 'success' : 'idle') : verified ? 'success' : 'idle'}
+            label="Receiving"
+          />
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="font-medium">
+              {forward
+                ? forwarded
+                  ? 'Receives: a test came through the forward'
+                  : 'Receives once its address is forwarded'
+                : verified
+                  ? 'Receives directly'
+                  : `Receives once ${m.domain!.name}'s DNS records are in`}
+            </span>
+            {forward && (
+              <>
+                <p className="text-muted-foreground">
+                  Forward {m.address} to{' '}
+                  <span className="font-mono text-xs">{m.internalAddress}</span> where{' '}
+                  {m.domain!.name}&apos;s mail is (Google Workspace: add {m.address} as an alias or
+                  a group, then in its Gmail, Settings › Forwarding and POP/IMAP › Add a forwarding
+                  address).
+                </p>
+                {forwarding.data?.found && (
+                  <div className="flex flex-col gap-1">
+                    {forwarding.data.code ? (
+                      <span className="flex items-center gap-1">
+                        Google&apos;s confirmation code: <Address value={forwarding.data.code} />
+                      </span>
+                    ) : (
+                      <span>Google&apos;s confirmation mail arrived.</span>
+                    )}
+                    {forwarding.data.link && (
+                      <a
+                        href={forwarding.data.link}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="w-fit font-medium text-primary hover:underline"
+                      >
+                        Confirm it on Google
+                      </a>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </li>
+        <li className="flex items-start gap-2">
+          <Dot tone={verified ? 'success' : 'idle'} label="Sending" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="font-medium">
+              {verified ? `Sends as ${m.address}` : 'Sends nothing yet'}
+            </span>
+            {!verified && (
+              <p className="text-muted-foreground">
+                Its mail goes out as {m.address} only, once {m.domain!.name}&apos;s DNS records are
+                in.{' '}
+                <Link
+                  href="/app/inbox/domains"
+                  className="font-medium text-primary hover:underline"
+                >
+                  Its records
+                </Link>
+              </p>
+            )}
+          </div>
+        </li>
+      </ol>
+
+      {m.manages && (
+        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+          <Button variant="outline" size="sm" disabled={test.busy} onClick={() => void sendTest()}>
+            Send a test mail
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={off.busy}
+            onClick={() =>
+              confirm('Mail to it will no longer arrive, and its rules stop.') &&
+              void off
+                .run(() =>
+                  m.kind === 'agent' && m.teammate
+                    ? api(`/email/agents/${m.teammate.id}`, { method: 'DELETE' })
+                    : api(`/email/inboxes/${m.addressId}`, { method: 'DELETE' }),
+                )
+                .then((done) => done !== undefined && onTurnedOff())
+            }
+          >
+            Turn off
+          </Button>
+        </div>
+      )}
+      {note && <p className="text-muted-foreground">{note}</p>}
+      <ErrorLine error={test.error ?? off.error} />
+    </div>
+  )
+}
+
+/** A mailbox's address moved to another domain: one of the workspace's, or Brigade's only. */
+function ChangeAddress({
+  mailbox: m,
+  brigadeDomain,
+  domains,
+  busy,
+  onCancel,
+  onSave,
+}: {
+  mailbox: MailboxDetail
+  brigadeDomain: string
+  domains: MailDomainView[]
+  busy: boolean
+  onCancel: () => void
+  onSave: (address: string | null) => void
+}) {
+  const [domain, setDomain] = useState(m.domain?.name ?? BRIGADE)
+  const [local, setLocal] = useState(m.domain ? m.address.split('@')[0]! : '')
+  const brigade = domain === BRIGADE
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        onSave(brigade ? null : `${local.trim().toLowerCase()}@${domain}`)
+      }}
+      className="flex flex-col gap-2 rounded-lg border bg-muted/50 p-3"
+    >
+      <div className="flex flex-wrap items-center gap-1">
+        {brigade ? (
+          <span className="font-mono text-sm">
+            {(m.internalAddress ?? m.address).split('@')[0]}
+          </span>
+        ) : (
+          <Input
+            aria-label="Address"
+            value={local}
+            onChange={(e) => setLocal(e.target.value)}
+            className="w-44 bg-card font-mono"
+            required
+          />
+        )}
+        <span className="font-mono text-sm text-muted-foreground">@</span>
+        <Select value={domain} onValueChange={setDomain}>
+          <SelectTrigger aria-label="Domain" className="w-56 bg-card font-mono">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={BRIGADE}>{brigadeDomain || 'Brigade'}</SelectItem>
+            {domains.map((d) => (
+              <SelectItem key={d.id} value={d.name}>
+                {d.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button type="submit" size="sm" disabled={busy || (!brigade && !local.trim())}>
+          Save
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   )
 }
 
@@ -571,32 +810,11 @@ function MailboxJournal({ mailbox: m }: { mailbox: MailboxDetail }) {
   const entries = useApi<MailJournalEntry[]>(`/email/addresses/${m.addressId}/journal?limit=50`, [
     'mail.updated',
   ])
-  const test = useAction()
-  const [note, setNote] = useState<string>()
-  const { reload } = entries
-
-  async function sendTest() {
-    setNote(undefined)
-    const done = await test.run(() =>
-      api<{ sent: boolean; to: string }>(`/email/addresses/${m.addressId}/test`, { body: {} }),
-    )
-    if (!done) return
-    setNote(`Test mail sent to ${done.to}. It shows here once it arrives.`)
-    setTimeout(() => void reload(), 6000)
-  }
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-bold">Journal</h2>
-        {m.manages && m.kind === 'agent' && (
-          <Button variant="outline" size="sm" disabled={test.busy} onClick={() => void sendTest()}>
-            Send a test mail
-          </Button>
-        )}
       </div>
-      {note && <p className="text-sm text-muted-foreground">{note}</p>}
-      <ErrorLine error={test.error} />
       {!entries.data ? (
         <p className="text-sm text-muted-foreground">{entries.error?.message ?? 'Loading…'}</p>
       ) : entries.data.length === 0 ? (
@@ -645,43 +863,6 @@ function MailboxJournal({ mailbox: m }: { mailbox: MailboxDetail }) {
             )
           })}
         </ul>
-      )}
-    </div>
-  )
-}
-
-function AgentArrival({
-  mailbox: m,
-  onTurnedOff,
-}: {
-  mailbox: MailboxDetail
-  onTurnedOff: () => void
-}) {
-  const off = useAction()
-  return (
-    <div className="flex flex-col gap-2 text-sm">
-      <Address value={m.address} />
-      <p className="text-muted-foreground">
-        Mail to it reaches {m.teammate?.name ?? 'its agent'}: replies to what it sent, codes from
-        services it signed up to, and what members write to it.
-      </p>
-      {m.manages && m.teammate && (
-        <div className="flex items-center gap-3">
-          <Button
-            variant="danger"
-            size="sm"
-            disabled={off.busy}
-            onClick={() =>
-              confirm("Mail to it will no longer arrive. The name stays this agent's.") &&
-              void off
-                .run(() => api(`/email/agents/${m.teammate!.id}`, { method: 'DELETE' }))
-                .then((done) => done !== undefined && onTurnedOff())
-            }
-          >
-            Turn off
-          </Button>
-          <ErrorLine error={off.error} />
-        </div>
       )}
     </div>
   )
@@ -1005,7 +1186,7 @@ export function ProjectMailboxes({ projectId }: { projectId: string }) {
               >
                 <span className="font-semibold">{m.name}</span>
                 <span className="truncate font-mono text-xs text-muted-foreground">
-                  {m.publicAddress ?? m.address}
+                  {m.address}
                 </span>
               </Link>
             </li>

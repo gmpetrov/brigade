@@ -1,8 +1,8 @@
 # Email
 
-Brigade's own addresses for agents, on its mail domain (`MAIL_DOMAIN`, `mails.brigade.lol` in
-production), received and sent through Resend: the **Email App** (`apps/api/src/mail/`,
-`connectors/email.ts`, `routes/email.ts`). The decision record is
+Brigade's own addresses for agents and projects, on its mail domain (`MAIL_DOMAIN`,
+`mails.brigade.lol` in production) and on the workspace's own domains, received and sent through
+Resend: the **Email App** (`apps/api/src/mail/`, `connectors/email.ts`, `routes/email.ts`). The decision record is
 `Projects/Brigade/decisions/agent-email-spec.md` in the library.
 
 ## Addresses
@@ -15,9 +15,13 @@ production), received and sent through Resend: the **Email App** (`apps/api/src/
     time it is needed, kept when the project is renamed or deleted, never another project's);
   - `riley.<project>.<token>@` is a sign-up address a thread made (`MailAlias`, `email_new_address`).
     The token starts with a digit, so it never reads as a project.
-- **A project's inbox** (kind `inbox`): a generated name (`support-lovarank-7f3k@`) that the
-  project's own address is forwarded to. It may have a public address (`support@lovarank.com`) and,
-  once its domain is verified (`MailDomain`, added to Resend for sending only), replies go out from it.
+- **A project's shared mailbox** (kind `inbox`): a generated name (`support-lovarank-7f3k@`).
+- **An address on the workspace's own domain** (`publicAddress`, `riley@acme.com`,
+  `support@acme.com`): any mailbox, an agent's or a project's, may have one, set when it is made or
+  later (`PATCH /api/email/addresses/:id`, null for Brigade's domain only). It is the address shown,
+  received and sent as; the name on Brigade's domain stays underneath (`internalAddress`), for the
+  forwarding. Its domain is added first (see Domains). Projects' variants and sign-up addresses stay
+  on Brigade's domain.
 - **Names are unique across Brigade and never given again.** `MailAddress.name` is unique, and its
   row has no link that a workspace's, teammate's or project's deletion would remove: turned off, it
   keeps its name (`releasedAt`), and turned on again, the same agent gets it back. A taken name is
@@ -29,11 +33,35 @@ production), received and sent through Resend: the **Email App** (`apps/api/src/
   be granted to another; an inbox is used only in its project's threads, by the teammates given it
   (a rule's teammate gets it when the rule is made).
 
+## Domains
+
+`/app/inbox/domains` (`apps/web/components/mail-domains.tsx`, `mail/domains.ts`,
+`GET|POST /api/email/domains`, `DELETE /api/email/domains/:id`): an owner or admin adds a domain
+once, then its mailboxes' addresses. One workspace per domain across Brigade (`MailDomain.name` is
+unique). Adding it reads its MX first (`GET /api/email/domains/lookup`, Cloudflare's DNS over HTTPS)
+and asks how its mail reaches Brigade (`MailDomain.receiving`):
+
+- **`forward`** (suggested when its MX points elsewhere, Google's say): its mail stays with its
+  provider, and each address is forwarded there to its mailbox's address on Brigade's domain. The
+  mailbox's page says what to forward where and shows Google's confirmation code. The domain is
+  added to Resend for sending only.
+- **`direct`** (suggested when it has no MX, or Resend's): its MX points to Resend's receiving, which
+  it is added to Resend for too, and mail to its addresses arrives as is. Refused while its MX points
+  to another provider: that would take its mail away from there. A subdomain (`team.acme.com`) is
+  the way to have both.
+
+Its DNS records (`MailDomain.records`, Resend's) are checked every ten minutes for three days, or at
+once with Check now. **A mailbox on a domain whose records are not in yet sends nothing**: the send
+is refused (409) and never goes out from its address on Brigade's domain instead, so replies always
+come from the address people wrote to. A domain is removed once no mailbox has an address on it.
+
 ## Receiving
 
 Resend's webhook (`POST /events/resend`, Svix-signed with `RESEND_WEBHOOK_SECRET`) applies to the
-whole Resend account, which other products share: only recipients on `MAIL_DOMAIN` are kept, and
-nothing of the others' mail is stored. Each box among the recipients gets one `MailMessage`, kept
+whole Resend account, which other products share: only recipients on `MAIL_DOMAIN`, and addresses
+of mailboxes on a workspace's domain that receives directly (`directBoxOf`), are kept, and nothing of
+the others' mail is stored. A forwarded mail is kept for the Brigade address it was forwarded to, and
+an address on a direct domain arrives in its mailbox's box with no project, as Brigade's own does. Each box among the recipients gets one `MailMessage`, kept
 at once (`status: pending`); its text, headers and SPF/DKIM/DMARC results are then read from Resend
 (`GET /emails/receiving/:id`) and it is delivered, in the background. A minute tick tries again what
 did not finish, waiting longer each time, and marks a mail failed after 8 tries. Calls to Resend go
@@ -70,7 +98,9 @@ A reply in a conversation the thread has gives it the new words only; `email_rea
 ## Sending
 
 `email_send` (a connector write) sends from the thread's box: the agent's variant, shown as
-"Riley · Lovarank", or the inbox (its public address once verified). Before anyone is asked
+"Riley · Lovarank", or the shared mailbox. A mailbox with an address on the workspace's domain
+sends as that address only, in every project, once its domain is verified, and refuses until then
+(`senderOfBox`). Before anyone is asked
 (`Operation.check`) and again after a person changed the draft (`mail/outbound.ts`):
 
 - a reply goes to its conversation's people only, unless `newRecipients` says so;
@@ -169,19 +199,22 @@ for the workspace, whatever it is underneath: an agent's address, a project's sh
 inbox address, usually with the address customers write to forwarded to it), a Gmail account. Its
 id is the Inbox's source id (`email:<address id>`, `gmail:<connection id>`).
 
-- **The list**: each mailbox, what it is, its address (and the public one forwarded to it), how
-  many rules handle it, and "Only you" for a member's own Gmail (another member's never shows).
-- **Add a mailbox** starts from what the person wants: receive mail sent to an address they have
-  (a shared mailbox in a project, its public address set; its page then shows the forwarding,
-  Google's confirmation code, the domain to reply from and a test), give an agent an address, or
-  connect a Gmail account (in Settings › Apps). It turns the Email App on first when needed.
-- **A mailbox's page** answers three questions: where its mail arrives (the arrival steps above; an
-  agent's address and Turn off; a Gmail account's "Show all its mail in the Inbox"), who handles it
+- **The list**, under Mail settings › Mailboxes (Domains is the other tab), in three groups:
+  agents', shared, connected Gmail. Each with its address, how many rules handle it (or that its
+  domain waits for its records), and "Only you" for a member's own Gmail (another member's never
+  shows).
+- **Add a mailbox** is one form: an address, its name `@` a domain (Brigade's or one of the
+  workspace's), for an agent or for a project (shared). On Brigade's domain an agent keeps the name
+  it had before, and a shared mailbox gets a generated one. A Gmail account is connected in
+  Settings › Apps. It turns the Email App on first when needed.
+- **A mailbox's page** answers three questions: where its mail arrives (its address, changed to
+  another domain there; whether it receives, directly or once forwarded, with what to forward where
+  and Google's confirmation code; whether it sends, and as what; a test mail; Turn off; a Gmail
+  account's "Show all its mail in the Inbox"), who handles it
   (its rules and its playbooks' rules in one list, in the order they apply, reordered there, a
   playbook's changed in the playbook; then what happens to the rest), and who reads and replies (the
   teammates given it, and who sees its mail in the Inbox). A Brigade mailbox's page also has its
-  journal (its latest mail both ways and where each went, never its text) and, for an agent's
-  address, a test mail. Rules are an owner's or admin's to change; a Gmail account's own member
+  journal (its latest mail both ways and where each went, never its text). Rules are an owner's or admin's to change; a Gmail account's own member
   chooses whether all its mail shows.
 - The other places only link here: a project's settings list its mailboxes, a teammate's Access card
   shows its address (or Give an address), the Email App's sheet turns it on, a Gmail account's menu

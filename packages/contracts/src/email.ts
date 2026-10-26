@@ -43,7 +43,7 @@ export type DomainLookup = {
   suggested: DomainReceiving
 }
 
-/** A domain of the workspace, as Inbox › Mailboxes › Domains shows it. */
+/** A domain of the workspace, as Inbox › Mail settings › Domains shows it. */
 export type MailDomainView = {
   id: string
   name: string

@@ -1,4 +1,4 @@
-// A workspace's own domains (acme.com, team.acme.com): added once in Inbox › Mailboxes › Domains,
+// A workspace's own domains (acme.com, team.acme.com): added once in Inbox › Mail settings › Domains,
 // then any of its mailboxes, an agent's or a project's, can have an address on one (riley@acme.com,
 // support@acme.com). A domain sends through Resend once its DNS records are in, and its mail reaches
 // Brigade one of two ways: directly (its MX points to Brigade's receiving) or by forwarding (its
@@ -215,7 +215,10 @@ export async function domainFor(db: ScopedDb, given: string) {
   const name = bareAddress(given).split('@')[1] ?? ''
   if (brigadeDomain(name)) throw new HTTPException(400, { message: 'That is Brigade’s own domain' })
   const domain = await db.mailDomain.findFirst({ where: { name } })
-  if (!domain) throw new HTTPException(400, { message: `Add ${name} in Mailboxes › Domains first` })
+  if (!domain)
+    throw new HTTPException(400, {
+      message: `Add ${name} in Inbox › Mail settings › Domains first`,
+    })
   return domain
 }
 
