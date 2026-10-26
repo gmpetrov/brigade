@@ -7,11 +7,26 @@ import {
   mentionsToText,
   type QueuedMessageAction,
 } from '@brigade/contracts'
-import { ChevronDown, Clock, CornerDownRight, Pencil, RotateCcw, Split, X } from 'lucide-react'
+import {
+  ChevronDown,
+  Clock,
+  CornerDownRight,
+  Ellipsis,
+  Pencil,
+  RotateCcw,
+  Split,
+  X,
+} from 'lucide-react'
 import { useState } from 'react'
 import { brigadeNote, notePreview } from '@/components/brigade-notes'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
@@ -82,6 +97,9 @@ export function QueuedMessages({
     return mentionsToText(forPeople(m.text)) || `${files} file${files === 1 ? '' : 's'}`
   }
   const cancellable = queued.filter((m) => mayChangeQueued(m.memberId, 'cancel'))
+  // One message needs no header: it sits on a single line, marked Queued.
+  const single = queued.length === 1
+  const shown = open || single
 
   return (
     <div className="mb-2 flex flex-col gap-1.5">
@@ -90,31 +108,33 @@ export function QueuedMessages({
           aria-label="Queued messages"
           className="overflow-hidden rounded-xl border bg-card text-sm shadow-sm"
         >
-          <button
-            type="button"
-            aria-expanded={open}
-            onClick={() => setOpen(!open)}
-            className="flex w-full items-center gap-2 px-5 py-2.5 text-left"
-            title={`${teammateName} reads them in order, after the current turn`}
-          >
-            <span className="shrink-0 font-medium">
-              {queued.length} message{queued.length === 1 ? '' : 's'} queued
-            </span>
-            {!open && (
-              <span className="min-w-0 truncate text-muted-foreground">
-                Next: {preview(queued[0]!)}
+          {!single && (
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={() => setOpen(!open)}
+              className="flex w-full items-center gap-2 px-5 py-2.5 text-left"
+              title={`${teammateName} reads them in order, after the current turn`}
+            >
+              <span className="shrink-0 font-medium">
+                {queued.length} message{queued.length === 1 ? '' : 's'} queued
               </span>
-            )}
-            <ChevronDown
-              aria-hidden
-              className={cn(
-                'ml-auto size-4 shrink-0 text-muted-foreground transition-transform',
-                open && 'rotate-180',
+              {!open && (
+                <span className="min-w-0 truncate text-muted-foreground">
+                  Next: {preview(queued[0]!)}
+                </span>
               )}
-            />
-          </button>
-          {open && (
-            <ul className="mx-5 divide-y border-t">
+              <ChevronDown
+                aria-hidden
+                className={cn(
+                  'ml-auto size-4 shrink-0 text-muted-foreground transition-transform',
+                  open && 'rotate-180',
+                )}
+              />
+            </button>
+          )}
+          {shown && (
+            <ul className={cn('divide-y', single ? 'mx-4' : 'mx-5 border-t')}>
               {queued.map((m) => {
                 const files = m.attachments.length
                 const from =
@@ -124,8 +144,16 @@ export function QueuedMessages({
                     : childNote(m.text) === 'task' || childNote(m.text) === 'parent'
                       ? 'From the parent thread'
                       : (brigadeNote(m.text, true)?.label ?? 'From Brigade'))
+                const parallel =
+                  canSteer &&
+                  canParallel &&
+                  m.waitingFor === 'turn' &&
+                  mayChangeQueued(m.memberId, 'parallel') &&
+                  !asksParallel(m.text)
+                const editable = mayChangeQueued(m.memberId, 'edit')
+                const removable = mayChangeQueued(m.memberId, 'cancel')
                 return (
-                  <li key={m.messageId} className="py-2.5">
+                  <li key={m.messageId} className={single ? 'py-2' : 'py-2.5'}>
                     {editing?.messageId === m.messageId ? (
                       <form
                         className="flex flex-col gap-2"
@@ -165,6 +193,14 @@ export function QueuedMessages({
                       </form>
                     ) : (
                       <div className="flex items-center gap-2">
+                        {single && (
+                          <span
+                            className="shrink-0 self-start rounded-md border px-1.5 py-px text-xs text-muted-foreground"
+                            title={`${teammateName} reads it after the current turn`}
+                          >
+                            Queued
+                          </span>
+                        )}
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <span className="line-clamp-2 wrap-anywhere whitespace-pre-wrap">
                             {preview(m)}
@@ -197,51 +233,56 @@ export function QueuedMessages({
                               Steer
                             </Button>
                           )}
-                          {canSteer &&
-                            canParallel &&
-                            m.waitingFor === 'turn' &&
-                            mayChangeQueued(m.memberId, 'parallel') &&
-                            !asksParallel(m.text) && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
+                          {(parallel || editable || removable) && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                aria-label="More actions"
+                                title="More"
                                 disabled={busy === m.messageId}
-                                onClick={() => void act(m.messageId, { action: 'parallel' })}
-                                aria-label="Run in parallel"
-                                title={`${teammateName} starts a child thread for it now and carries on with this turn`}
+                                className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-[state=open]:bg-accent data-[state=open]:text-foreground [&>svg]:size-4"
                               >
-                                <Split aria-hidden />
-                                <span className="max-sm:hidden">Parallel</span>
-                              </Button>
-                            )}
-                          {mayChangeQueued(m.memberId, 'edit') && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={busy === m.messageId}
-                              onClick={() =>
-                                setEditing({ messageId: m.messageId, text: forPeople(m.text) })
-                              }
-                              aria-label="Edit queued message"
-                              title="Edit"
-                            >
-                              <Pencil aria-hidden />
-                            </Button>
-                          )}
-                          {mayChangeQueued(m.memberId, 'cancel') && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={busy === m.messageId}
-                              onClick={() => void act(m.messageId, { action: 'cancel' })}
-                              aria-label="Cancel queued message"
-                              title="Cancel: it will not be sent"
-                            >
-                              <X aria-hidden />
-                            </Button>
+                                <Ellipsis aria-hidden />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                className="min-w-44"
+                                // Edit replaces the row: focus stays in its text box.
+                                onCloseAutoFocus={(e) => e.preventDefault()}
+                              >
+                                {parallel && (
+                                  <DropdownMenuItem
+                                    onSelect={() => void act(m.messageId, { action: 'parallel' })}
+                                    title={`${teammateName} starts a child thread for it now and carries on with this turn`}
+                                  >
+                                    <Split aria-hidden />
+                                    Run in parallel
+                                  </DropdownMenuItem>
+                                )}
+                                {editable && (
+                                  <DropdownMenuItem
+                                    onSelect={() =>
+                                      setEditing({
+                                        messageId: m.messageId,
+                                        text: forPeople(m.text),
+                                      })
+                                    }
+                                  >
+                                    <Pencil aria-hidden />
+                                    Edit
+                                  </DropdownMenuItem>
+                                )}
+                                {removable && (
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onSelect={() => void act(m.messageId, { action: 'cancel' })}
+                                    title="It will not be sent"
+                                  >
+                                    <X aria-hidden />
+                                    Remove
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
                         </div>
                       </div>
