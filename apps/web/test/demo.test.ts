@@ -286,3 +286,12 @@ test('every walkthrough the landing page offers plays to its end', async () => {
     )
   }
 })
+
+test('every teammate shown says its job', async () => {
+  const teammates = (await call('/teammates')).body as { name: string; title: string | null }[]
+  assert.deepEqual(
+    teammates.filter((t) => !t.title).map((t) => t.name),
+    [],
+  )
+  assert.equal(teammates.find((t) => t.name === 'Chief')?.title, 'Chief of staff')
+})
