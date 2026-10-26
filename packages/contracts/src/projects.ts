@@ -26,11 +26,19 @@ export const PROJECT_LOGO_TYPES = [
   'image/x-icon',
   'image/svg+xml',
 ] as const
-/** A logo as the dashboard sends it: a data URL of one of those types (a workspace's too). */
-export const Logo = z
-  .string()
-  .max(Math.ceil((PROJECT_LOGO_MAX * 4) / 3) + 64)
-  .regex(/^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/, 'A logo is an image')
+/** A logo uploaded straight to the bucket (purpose `logo`), as `upload:<its id>`. */
+export const LOGO_UPLOAD = 'upload:'
+/**
+ * A logo as the dashboard sends it (a workspace's too): an upload (LOGO_UPLOAD), or without
+ * R2 only (development), a data URL of one of those types.
+ */
+export const Logo = z.union([
+  z.string().regex(/^upload:[A-Za-z0-9_-]{1,64}$/),
+  z
+    .string()
+    .max(Math.ceil((PROJECT_LOGO_MAX * 4) / 3) + 64)
+    .regex(/^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/, 'A logo is an image'),
+])
 /** A library folder. */
 const Folder = LibraryPath
 /** owner/name; stored lowercase. */
