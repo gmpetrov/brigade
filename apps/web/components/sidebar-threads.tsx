@@ -7,8 +7,10 @@
 // the teammates and projects stay in reach however many there are; older ones load on asking.
 // Threads this member pinned sit above them, under Pinned, in the order they drag them to;
 // archived ones are out of both, and so are those the member put away for later, and the
-// filter lists each (Later with how many). Pinned and Threads each fold to their label alone (what waits
-// on a person is counted once, beside Home), and this browser remembers which are folded.
+// filter lists each (Later with how many). The teammates and projects stay in the order the
+// member drags them to, too (useSidebarOrder). Pinned, Threads, Teammates and Projects each
+// fold to their label alone (what waits on a person is counted once, beside Home), and this
+// browser remembers which are folded.
 // Inside Threads, the latest thread waiting on a person shows first, and the others behind a
 // "+N waiting on you".
 import {
@@ -24,7 +26,15 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
 import { TeammateTitle } from '@/components/teammate-title'
 import { ProjectIcon } from '@/components/projects'
@@ -53,7 +63,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { api, type ProjectSummary, type Teammate, type ThreadSummary } from '@/lib/api'
+import { api, useApi, type ProjectSummary, type Teammate, type ThreadSummary } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type Group = 'waiting' | 'working' | 'rest'
@@ -63,17 +73,23 @@ const CAP = 5
 /** Each "+N more" shows this many more; folding "Threads" goes back to the cap. */
 const STEP = 20
 
-/** Which of Pinned and Threads this browser folded. */
+/** Which of the sidebar's sections this browser folded. */
 const FOLDED_KEY = 'brigade:sidebar-folded'
-type Folded = { pinned: boolean; threads: boolean }
+const SECTIONS = ['pinned', 'threads', 'teammates', 'projects'] as const
+type Folded = Record<(typeof SECTIONS)[number], boolean>
 
 function useFolded() {
-  const [folded, setFolded] = useState<Folded>({ pinned: false, threads: false })
+  const [folded, setFolded] = useState<Folded>({
+    pinned: false,
+    threads: false,
+    teammates: false,
+    projects: false,
+  })
   // Read after the first render, so the server's page and the browser's agree.
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(FOLDED_KEY) ?? 'null') as Partial<Folded> | null
-      setFolded({ pinned: saved?.pinned === true, threads: saved?.threads === true })
+      setFolded(Object.fromEntries(SECTIONS.map((k) => [k, saved?.[k] === true])) as Folded)
     } catch {
       // Nothing saved, or not readable: both open.
     }
@@ -91,17 +107,39 @@ function useFolded() {
   return [folded, toggle] as const
 }
 
-/** A section's label, which folds it. */
+/**
+ * A section's label, which folds it; with `href`, the label opens that page and its chevron
+ * folds.
+ */
 function FoldButton({
   label,
   folded,
   onToggle,
+  href,
 }: {
   label: string
   folded: boolean
   onToggle: () => void
+  href?: string
 }) {
   const Chevron = folded ? ChevronDown : ChevronUp
+  if (href)
+    return (
+      <span className="-ml-1 flex items-center">
+        <Link href={href} className="hover:text-sidebar-foreground rounded-md px-1">
+          {label}
+        </Link>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={!folded}
+          aria-label={`${label}: ${folded ? 'show' : 'hide'}`}
+          className="hover:text-sidebar-foreground -ml-1 rounded-md px-1"
+        >
+          <Chevron className="size-3.5" />
+        </button>
+      </span>
+    )
   return (
     <button
       type="button"
@@ -115,6 +153,48 @@ function FoldButton({
     </button>
   )
 }
+
+/** The sidebar's lists the member orders by dragging. */
+export type SidebarList = 'teammates' | 'projects'
+
+/**
+ * The order this member dragged their teammates and projects to, in this workspace (the API
+ * keeps it): `sort` puts a list in it, those not placed yet at the end as they came, and
+ * `reorder` keeps a new one, shown at once.
+ */
+export function useSidebarOrder() {
+  const { data, setData, reload } = useApi<Record<SidebarList, string[]>>('/me/sidebar-order')
+  const sort = useCallback(
+    <T extends { id: string }>(list: SidebarList, items: T[]) => {
+      const ids = data?.[list]
+      if (!ids?.length) return items
+      const rank = (id: string) => {
+        const i = ids.indexOf(id)
+        return i < 0 ? ids.length : i
+      }
+      // Stable: those not placed keep the list's own order.
+      return [...items].sort((a, b) => rank(a.id) - rank(b.id))
+    },
+    [data],
+  )
+  const reorder = useCallback(
+    async (list: SidebarList, ids: string[]) => {
+      setData((d) => ({ teammates: [], projects: [], ...d, [list]: ids }))
+      try {
+        await api('/me/sidebar-order', { method: 'PUT', body: { list, ids } })
+      } catch (e) {
+        alert(e instanceof Error ? e.message : String(e))
+        // Back to where it was.
+        void reload()
+      }
+    },
+    [setData, reload],
+  )
+  return { sort, reorder }
+}
+
+/** The lists whose rows drag to another place. */
+type DragList = 'pinned' | SidebarList
 
 const groupOf = (status: string): Group =>
   status === 'waiting'
@@ -315,14 +395,18 @@ export function SidebarWork({
   admin,
   memberId,
   onNewProject,
+  onReorder,
   needsYou,
   rail,
 }: {
+  /** The teammates and projects in the member's order (useSidebarOrder). */
   teammates: Teammate[]
   projects: ProjectSummary[]
   admin: boolean
   memberId: string | null
   onNewProject: () => void
+  /** The member dragged a teammate or project to another place: the list's ids, in order. */
+  onReorder: (list: SidebarList, ids: string[]) => void
   /**
    * Threads with an open ticket waiting on this member or a task in Needs you, and what it
    * asks ("approve").
@@ -355,10 +439,11 @@ export function SidebarWork({
   const [older, setOlder] = useState<ThreadSummary[]>([])
   const [exhausted, setExhausted] = useState<string[]>([])
   const [loadingOlder, setLoadingOlder] = useState(false)
-  // Pinned as just dragged, until the list comes back in that order; and the drag under way:
-  // the row dragged, and where it would land (before or after the row under the pointer).
+  // Pinned as just dragged, until the list comes back in that order; and the drag under way
+  // (pinned, teammates or projects): the row dragged, and where it would land (before or after
+  // the row under the pointer, in the same list).
   const [pinOrder, setPinOrder] = useState<string[]>()
-  const [dragged, setDragged] = useState<string>()
+  const [dragged, setDragged] = useState<{ list: DragList; id: string }>()
   const [dropAt, setDropAt] = useState<{ id: string; after: boolean }>()
   const live = projects.filter((p) => !p.archivedAt)
   const teammate = teammates.find((t) => t.id === filter.teammateId)
@@ -437,12 +522,23 @@ export function SidebarWork({
       .sort((a, b) => rank(a) - rank(b) || a.pinnedAt!.localeCompare(b.pinnedAt!))
   }, [all, instead, pinOrder])
 
-  async function movePin(id: string, to: { id: string; after: boolean }) {
-    const ids = pinned.map((t) => t.id).filter((x) => x !== id)
+  /** The list's ids with `id` moved before or after `to`; undefined when nothing moves. */
+  function moved(list: { id: string }[], id: string, to: { id: string; after: boolean }) {
+    const ids = list.map((t) => t.id).filter((x) => x !== id)
     const at = ids.indexOf(to.id)
     if (at < 0) return
     ids.splice(at + (to.after ? 1 : 0), 0, id)
-    if (ids.every((x, i) => x === pinned[i]?.id)) return
+    if (ids.every((x, i) => x === list[i]?.id)) return
+    return ids
+  }
+  function move({ list, id }: { list: DragList; id: string }, to: { id: string; after: boolean }) {
+    if (list === 'pinned') return void movePin(id, to)
+    const ids = moved(list === 'teammates' ? teammates : live, id, to)
+    if (ids) onReorder(list, ids)
+  }
+  async function movePin(id: string, to: { id: string; after: boolean }) {
+    const ids = moved(pinned, id, to)
+    if (!ids) return
     setPinOrder(ids)
     try {
       await api('/threads/pins/order', { method: 'PUT', body: { ids } })
@@ -453,8 +549,8 @@ export function SidebarWork({
     // The list now has the order itself (or, failed, goes back to where it was).
     setPinOrder(undefined)
   }
-  // A pinned row's drag: picked up anywhere on it, it lands before or after the row last under
-  // the pointer, where the line shows. The whole sidebar takes the drop, so past the first or
+  // A row's drag (pinned, a teammate or a project): picked up anywhere on it, it lands before
+  // or after the row of its list last under the pointer, where the line shows. The whole sidebar takes the drop, so past the first or
   // last row it lands where the line still is; out of the sidebar, the line goes and so does
   // the drop. On the window, as the sidebar's padding and edge are in no row or group.
   const drop = useRef(dropAt)
@@ -472,7 +568,7 @@ export function SidebarWork({
       if (!inSidebar(e)) return
       e.preventDefault()
       const to = drop.current
-      if (to && to.id !== dragged) void movePin(dragged, to)
+      if (to && to.id !== dragged.id) move(dragged, to)
       setDragged(undefined)
       setDropAt(undefined)
     }
@@ -482,20 +578,21 @@ export function SidebarWork({
       window.removeEventListener('dragover', over)
       window.removeEventListener('drop', dropped)
     }
-    // movePin reads the pinned list of this render; a drag starts and ends within one list.
+    // move reads the lists of this render; a drag starts and ends within one list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragged])
-  const pinDrag = (id: string): ComponentProps<'li'> => ({
+  const dragRow = (list: DragList, id: string): ComponentProps<'li'> => ({
     draggable: true,
     onDragStart: (e) => {
       e.dataTransfer.effectAllowed = 'move'
-      e.dataTransfer.setData('application/x-brigade-pin', id)
+      e.dataTransfer.setData(`application/x-brigade-${list}`, id)
       e.dataTransfer.setDragImage(e.currentTarget, 16, 16)
-      setDragged(id)
+      setDragged({ list, id })
     },
-    // The window's handler then accepts it and takes the drop.
+    // The window's handler then accepts it and takes the drop. Over another list's row, the
+    // line stays where it was.
     onDragOver: (e) => {
-      if (!dragged) return
+      if (dragged?.list !== list) return
       const box = e.currentTarget.getBoundingClientRect()
       const after = e.clientY > box.top + box.height / 2
       if (dropAt?.id !== id || dropAt.after !== after) setDropAt({ id, after })
@@ -505,9 +602,10 @@ export function SidebarWork({
       setDropAt(undefined)
     },
     className: cn(
-      dragged === id && 'opacity-50',
+      dragged?.id === id && 'opacity-50',
       dropAt?.id === id &&
-        dragged !== id &&
+        dragged?.list === list &&
+        dragged.id !== id &&
         'before:bg-primary before:pointer-events-none before:absolute before:inset-x-2 before:z-10 before:h-0.5 before:rounded-full',
       dropAt?.id === id && (dropAt.after ? 'before:-bottom-px' : 'before:-top-px'),
     ),
@@ -762,7 +860,7 @@ export function SidebarWork({
           </SidebarGroupLabel>
           {!folded.pinned && (
             <SidebarGroupContent>
-              <SidebarMenu>{pinned.map((t) => row(t, pinDrag(t.id)))}</SidebarMenu>
+              <SidebarMenu>{pinned.map((t) => row(t, dragRow('pinned', t.id)))}</SidebarMenu>
             </SidebarGroupContent>
           )}
         </SidebarGroup>
@@ -947,7 +1045,13 @@ export function SidebarWork({
       </SidebarGroup>
 
       <SidebarGroup className="py-1 group-data-[collapsible=icon]:hidden">
-        <SidebarGroupLabel>Teammates</SidebarGroupLabel>
+        <SidebarGroupLabel>
+          <FoldButton
+            label="Teammates"
+            folded={folded.teammates}
+            onToggle={() => toggleFolded('teammates')}
+          />
+        </SidebarGroupLabel>
         {admin && (
           <SidebarGroupAction asChild title="New teammate">
             <Link href="/app/teammates/new">
@@ -956,71 +1060,86 @@ export function SidebarWork({
             </Link>
           </SidebarGroupAction>
         )}
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {teammates.map((t) => (
-              <SidebarRow
-                key={t.id}
-                active={filter.teammateId === t.id}
-                title={`${t.name}: its latest thread, and only its threads above`}
-                onClick={() => clickTeammate(t.id)}
-                icon={<TeammateAvatar teammate={t} className="size-5" />}
-                label={t.name}
-                badge={
-                  <TeammateTitle title={t.title} className="max-w-28 px-1.5 py-0 text-[11px]" />
-                }
-                action={{
-                  href: `/app/teammates/${t.id}`,
-                  label: `${t.name}'s settings`,
-                  icon: <Settings />,
-                }}
-              />
-            ))}
-          </SidebarMenu>
-        </SidebarGroupContent>
+        {!folded.teammates && (
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {teammates.map((t) => (
+                <SidebarRow
+                  key={t.id}
+                  drag={dragRow('teammates', t.id)}
+                  active={filter.teammateId === t.id}
+                  title={`${t.name}: its latest thread, and only its threads above`}
+                  onClick={() => clickTeammate(t.id)}
+                  icon={<TeammateAvatar teammate={t} className="size-5" />}
+                  label={t.name}
+                  badge={
+                    <TeammateTitle title={t.title} className="max-w-28 px-1.5 py-0 text-[11px]" />
+                  }
+                  action={{
+                    href: `/app/teammates/${t.id}`,
+                    label: `${t.name}'s settings`,
+                    icon: <Settings />,
+                  }}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        )}
       </SidebarGroup>
 
       <SidebarGroup className="py-1 group-data-[collapsible=icon]:hidden">
-        <SidebarGroupLabel asChild>
-          <Link href="/app/projects">Projects</Link>
+        <SidebarGroupLabel>
+          <FoldButton
+            label="Projects"
+            href="/app/projects"
+            folded={folded.projects}
+            onToggle={() => toggleFolded('projects')}
+          />
         </SidebarGroupLabel>
         <SidebarGroupAction title="New project" onClick={onNewProject}>
           <Plus />
           <span className="sr-only">New project</span>
         </SidebarGroupAction>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {live.map((p) => (
-              <SidebarRow
-                key={p.id}
-                active={
-                  filter.projectId === p.id ||
-                  pathname === `/app/projects/${p.id}` ||
-                  pathname.startsWith(`/app/projects/${p.id}/`)
-                }
-                title={`${p.name}: its page, and only its threads above`}
-                onClick={() => clickProject(p.id)}
-                icon={<ProjectIcon project={p} />}
-                label={p.name}
-              />
-            ))}
-            {live.length === 0 && (
-              <SidebarMenuItem>
-                <SidebarMenuButton className="text-muted-foreground" onClick={onNewProject}>
-                  <Plus />
-                  <span>New project</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-          </SidebarMenu>
-        </SidebarGroupContent>
+        {!folded.projects && (
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {live.map((p) => (
+                <SidebarRow
+                  key={p.id}
+                  drag={dragRow('projects', p.id)}
+                  active={
+                    filter.projectId === p.id ||
+                    pathname === `/app/projects/${p.id}` ||
+                    pathname.startsWith(`/app/projects/${p.id}/`)
+                  }
+                  title={`${p.name}: its page, and only its threads above`}
+                  onClick={() => clickProject(p.id)}
+                  icon={<ProjectIcon project={p} />}
+                  label={p.name}
+                />
+              ))}
+              {live.length === 0 && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton className="text-muted-foreground" onClick={onNewProject}>
+                    <Plus />
+                    <span>New project</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        )}
       </SidebarGroup>
     </>
   )
 }
 
-/** A teammate or project: opens its thread or page, and narrows the list above to it. */
+/**
+ * A teammate or project: opens its thread or page, and narrows the list above to it. Dragged,
+ * it goes to another place in its list.
+ */
 function SidebarRow({
+  drag,
   active,
   title,
   onClick,
@@ -1037,9 +1156,11 @@ function SidebarRow({
   /** Beside the label: a teammate's title. */
   badge?: ReactNode
   action?: { href: string; label: string; icon: ReactNode }
+  /** Its drag handlers and the drop line's class. */
+  drag?: ComponentProps<'li'>
 }) {
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem {...drag}>
       <SidebarMenuButton isActive={active} title={title} onClick={onClick}>
         {icon}
         <span className="truncate">{label}</span>

@@ -710,6 +710,8 @@ const CREATES =
   /^\/(teammates|teammates\/team|tasks|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|attachments\/uploads|library\/assets\/uploads|library\/(text|folders)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
 
 /** Gets the pattern's groups, the request's JSON body and its URL. */
+const sidebarOrder: Record<'teammates' | 'projects', string[]> = { teammates: [], projects: [] }
+
 type Handler = (params: [string, string], input: Json, url: URL) => Stored | unknown | undefined
 const ok = { ok: true }
 const routes: [string, RegExp, Handler][] = [
@@ -811,6 +813,17 @@ const routes: [string, RegExp, Handler][] = [
       patchThread(threadId, { [`${what === 'pin' ? 'pinned' : 'later'}At`]: null }),
       ok
     ),
+  ],
+  // The sidebar's teammates and projects, in the order dragged to, for this visit.
+  ['GET', /^\/me\/sidebar-order$/, () => structuredClone(sidebarOrder)],
+  [
+    'PUT',
+    /^\/me\/sidebar-order$/,
+    (_, input) => {
+      if (input.list === 'teammates' || input.list === 'projects')
+        sidebarOrder[input.list] = Array.isArray(input.ids) ? input.ids.map(String) : []
+      return { status: 204, body: null }
+    },
   ],
   [
     'POST',

@@ -66,6 +66,7 @@ export const ModelName = {
   Teammate: 'Teammate',
   ThreadRead: 'ThreadRead',
   ThreadPin: 'ThreadPin',
+  SidebarOrder: 'SidebarOrder',
   ThreadLater: 'ThreadLater',
   HomeDismissal: 'HomeDismissal',
   Session: 'Session',
@@ -359,6 +360,18 @@ export const ThreadPinScalarFieldEnum = {
 } as const
 
 export type ThreadPinScalarFieldEnum = (typeof ThreadPinScalarFieldEnum)[keyof typeof ThreadPinScalarFieldEnum]
+
+
+export const SidebarOrderScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  list: 'list',
+  ids: 'ids',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SidebarOrderScalarFieldEnum = (typeof SidebarOrderScalarFieldEnum)[keyof typeof SidebarOrderScalarFieldEnum]
 
 
 export const ThreadLaterScalarFieldEnum = {

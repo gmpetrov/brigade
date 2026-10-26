@@ -118,6 +118,12 @@ export type ThreadRead = Prisma.ThreadReadModel
  */
 export type ThreadPin = Prisma.ThreadPinModel
 /**
+ * Model SidebarOrder
+ * The order a member dragged a list of their sidebar to (its teammates or its projects), in a
+ * workspace: the ids, first to last. Those not in it follow, in the list's own order.
+ */
+export type SidebarOrder = Prisma.SidebarOrderModel
+/**
  * Model ThreadLater
  * A thread a member put away for later: out of their sidebar's list and of what waits on
  * them, under the filter's Later. Each member's own, like a pin. Anything new in the thread

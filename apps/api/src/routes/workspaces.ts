@@ -21,6 +21,13 @@ import {
   type AppEnv,
 } from '../scope.js'
 import { updateWorkspace } from '../workspace-settings.js'
+import { z } from 'zod'
+
+const SetSidebarOrder = z.object({
+  list: z.enum(['teammates', 'projects']),
+  ids: z.array(z.string().max(100)).max(500),
+})
+type SidebarList = z.infer<typeof SetSidebarOrder>['list']
 
 export const workspaces = new Hono<AppEnv>()
   .use(requireUser)
@@ -96,6 +103,36 @@ export const workspaces = new Hono<AppEnv>()
   .put('/me/suggestions', requireWorkspace, async (c) => {
     const { suggestions } = await parseBody(c.req.raw, SetSuggestions)
     await prisma.member.update({ where: { id: c.var.scope.memberId }, data: { suggestions } })
+    return c.body(null, 204)
+  })
+
+  /** The order this member dragged their sidebar's teammates and projects to, in this workspace. */
+  .get('/me/sidebar-order', requireWorkspace, async (c) => {
+    const { scope, db } = c.var
+    const rows = await db.sidebarOrder.findMany({ where: { memberId: scope.memberId } })
+    const of = (list: SidebarList) => rows.find((r) => r.list === list)?.ids ?? []
+    return c.json({ teammates: of('teammates'), projects: of('projects') })
+  })
+  .put('/me/sidebar-order', requireWorkspace, async (c) => {
+    const { scope, db } = c.var
+    const { list, ids } = await parseBody(c.req.raw, SetSidebarOrder)
+    await db.sidebarOrder.upsert({
+      where: {
+        memberId_workspaceId_list: {
+          memberId: scope.memberId,
+          workspaceId: scope.workspaceId,
+          list,
+        },
+      },
+      create: {
+        organizationId: scope.organizationId,
+        workspaceId: scope.workspaceId,
+        memberId: scope.memberId,
+        list,
+        ids,
+      },
+      update: { ids },
+    })
     return c.body(null, 204)
   })
 
