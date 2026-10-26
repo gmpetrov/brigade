@@ -44,7 +44,7 @@ function slot() {
 /** One call to Resend's API, as JSON. Retries a 429 or a 5xx a few times. */
 export async function resend<T>(
   path: string,
-  init: { method?: string; body?: unknown; idempotencyKey?: string } = {},
+  init: { method?: string; body?: unknown; idempotencyKey?: string; signal?: AbortSignal } = {},
 ): Promise<T> {
   if (!env.RESEND_API_KEY) throw new ResendError('Brigade has no Resend key (RESEND_API_KEY)', 503)
   for (let attempt = 0; ; attempt++) {
@@ -58,6 +58,7 @@ export async function resend<T>(
         ...(init.idempotencyKey ? { 'idempotency-key': init.idempotencyKey } : {}),
       },
       ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+      ...(init.signal ? { signal: init.signal } : {}),
     })
     const text = await response.text()
     if (response.ok) return (text ? JSON.parse(text) : {}) as T
@@ -162,8 +163,8 @@ export const createDomain = (name: string, receiving = false) =>
 export const getDomain = (id: string) => resend<ResendDomain>(`/domains/${encodeURIComponent(id)}`)
 export const verifyDomain = (id: string) =>
   resend<{ id: string }>(`/domains/${encodeURIComponent(id)}/verify`, { method: 'POST' })
-export const deleteDomain = (id: string) =>
-  resend<{ id: string }>(`/domains/${encodeURIComponent(id)}`, { method: 'DELETE' })
+export const deleteDomain = (id: string, signal?: AbortSignal) =>
+  resend<{ id: string }>(`/domains/${encodeURIComponent(id)}`, { method: 'DELETE', signal })
 
 /**
  * A Resend webhook's signature (Svix): an HMAC-SHA256, keyed by the secret after its whsec_

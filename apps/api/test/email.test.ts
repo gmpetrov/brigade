@@ -1753,8 +1753,12 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
     const dkim = `resend._domainkey.${name}`
     let txt: { Status: number; Answer?: { type: number; data: string }[] } = { Status: 3 }
     let deleting: 'fails' | 'pauses' | 'ok' = 'ok'
-    const paused = Promise.withResolvers<void>()
-    const resume = Promise.withResolvers<void>()
+    // Resend's DELETE held until the test lets it go.
+    const holdDelete = () => ({
+      paused: Promise.withResolvers<void>(),
+      resume: Promise.withResolvers<void>(),
+    })
+    let gate = holdDelete()
     const removed: string[] = []
     let resendSays = 'pending'
     const records = [
@@ -1784,8 +1788,8 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
       if (domain && init?.method === 'DELETE') {
         if (deleting === 'fails') throw new Error('Resend unreachable')
         if (deleting === 'pauses') {
-          paused.resolve()
-          await resume.promise
+          gate.paused.resolve()
+          await gate.resume.promise
         }
         removed.push(domain)
         return json({ id: domain })
@@ -1830,30 +1834,90 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
       await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /used by another workspace/)
       assert.equal(removed.length, 0)
 
-      // A takeover under way holds its claim: A's check cannot mark it verified meanwhile, nor can
-      // a second workspace's add start another.
+      // A takeover under way holds its claim: A's check cannot mark it verified meanwhile, a
+      // second workspace's add cannot start another, and no mailbox of A's gets an address on it.
       await prisma.mailDomain.updateMany({ where: { id: first.id }, data: { status: 'pending' } })
+      const late = await addresses.createInbox(dbA, ws(a), { projectId, label: 'Late' })
       deleting = 'pauses'
       const taking = domains.addDomain(dbB, ws(b), { name })
-      await paused.promise
+      await gate.paused.promise
       await assert.rejects(domains.checkDomain(dbA, first.id), /being taken over/)
       assert.equal(await status(), 'claimed')
       await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /used by another workspace/)
-      resume.resolve()
+      await assert.rejects(
+        domains.setPublicAddress(dbA, ws(a), late.id, `late@${name}`),
+        /being taken over/,
+      )
+      // One given just before the claim, still being written: it goes with the domain.
+      await prisma.mailAddress.update({
+        where: { id: late.id },
+        data: { publicAddress: `late@${name}`, domainId: first.id },
+      })
+      gate.resume.resolve()
       const taken = await taking
       assert.equal(taken.workspaceId, b.workspaceId)
       assert.deepEqual(removed, [first.resendDomainId])
       assert.equal(await status(), undefined)
-      const lost = await prisma.mailAddress.findUniqueOrThrow({ where: { id: desk.id } })
-      assert.deepEqual([lost.publicAddress, lost.domainId], [null, null])
+      for (const mailbox of [desk.id, late.id]) {
+        const lost = await prisma.mailAddress.findUniqueOrThrow({ where: { id: mailbox } })
+        assert.deepEqual([lost.publicAddress, lost.domainId], [null, null])
+      }
+      // One written after its domain went cannot point at it.
+      await assert.rejects(
+        prisma.mailAddress.update({
+          where: { id: late.id },
+          data: { publicAddress: `late@${name}`, domainId: first.id },
+        }),
+      )
+      // B gets the address A's mailbox had.
+      const bDesk = await addresses.createInbox(dbB, ws(b), {
+        projectId: (await prisma.project.create({ data: { ...b, name: 'Taker' } })).id,
+        label: 'Desk',
+      })
+      await domains.setPublicAddress(dbB, ws(b), bDesk.id, `late@${name}`)
       assert.ok(
         await prisma.auditEntry.findFirst({
           where: { workspaceId: a.workspaceId, action: 'email.domain.taken_over' },
         }),
       )
+      await domains.setPublicAddress(dbB, ws(b), bDesk.id, null)
       await domains.removeDomain(dbB, ws(b), taken.id)
+
+      // A takeover whose claim ran out while Resend held it (its call is bounded well within it,
+      // so this models a stopped clock) settles nothing: the domain A verified meanwhile stays A's,
+      // with its mailbox's address.
+      const kept = `kept-${id}.test`
+      resendSays = 'pending'
+      deleting = 'ok'
+      const second = await domains.addDomain(dbA, ws(a), { name: kept, receiving: 'direct' })
+      await domains.setPublicAddress(dbA, ws(a), desk.id, `desk@${kept}`)
+      await prisma.mailDomain.updateMany({
+        where: { id: second.id },
+        data: { createdAt: new Date(Date.now() - 4 * 86_400_000) },
+      })
+      gate = holdDelete()
+      deleting = 'pauses'
+      const stale = domains.addDomain(dbB, ws(b), { name: kept })
+      await gate.paused.promise
+      await prisma.mailDomain.updateMany({
+        where: { id: second.id },
+        data: { checkedAt: new Date(Date.now() - 11 * 60_000) },
+      })
+      resendSays = 'verified'
+      assert.equal((await domains.checkDomain(dbA, second.id)).status, 'verified')
+      gate.resume.resolve()
+      await assert.rejects(stale, /used by another workspace/)
+      assert.equal(
+        (await prisma.mailDomain.findUniqueOrThrow({ where: { id: second.id } })).status,
+        'verified',
+      )
+      assert.equal(
+        (await prisma.mailAddress.findUniqueOrThrow({ where: { id: desk.id } })).publicAddress,
+        `desk@${kept}`,
+      )
+      await domains.setPublicAddress(dbA, ws(a), desk.id, null)
     } finally {
-      resume.resolve()
+      gate.resume.resolve()
       globalThis.fetch = previousFetch
     }
   })

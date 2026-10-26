@@ -52,18 +52,20 @@ const brigadeDomain = (name: string) => name === mailDomain() || name.endsWith(`
  * exist (NXDOMAIN). Any other failure is a 502: a resolver failing is never an empty answer.
  */
 async function lookup(name: string, type: 'MX' | 'TXT') {
+  const unread = () => new HTTPException(502, { message: 'DNS could not be read, try again' })
   const response = await fetch(
     `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`,
-    { headers: { accept: 'application/dns-json' } },
-  )
-  if (!response.ok) throw new HTTPException(502, { message: 'DNS could not be read, try again' })
+    { headers: { accept: 'application/dns-json' }, signal: AbortSignal.timeout(10_000) },
+  ).catch(() => {
+    throw unread()
+  })
+  if (!response.ok) throw unread()
   const answer = (await response.json()) as {
     Status: number
     Answer?: { type: number; data: string }[]
   }
   if (answer.Status === 3) return null
-  if (answer.Status !== 0)
-    throw new HTTPException(502, { message: 'DNS could not be read, try again' })
+  if (answer.Status !== 0) throw unread()
   return (answer.Answer ?? []).filter((a) => a.type === (type === 'MX' ? 15 : 16))
 }
 
@@ -155,6 +157,8 @@ type DomainRow = NonNullable<Awaited<ReturnType<typeof prisma.mailDomain.findUni
  * finished: the domain is as it was.
  */
 const CLAIM_MS = 10 * 60_000
+/** The longest a takeover waits on Resend: well within its claim, so it never outlives it. */
+const TAKE_MS = 60_000
 const CLAIMED = 'claimed'
 const claimed = (row: { status: string; checkedAt: Date | null }, now = Date.now()) =>
   row.status === CLAIMED && !!row.checkedAt && row.checkedAt.getTime() > now - CLAIM_MS
@@ -198,15 +202,17 @@ async function recordsInDns(row: DomainRow) {
 
 /**
  * Another workspace's domain left unverified for three days, taken from it. Claimed first, in one
- * guarded write, so that from then on no check marks it verified; then its DKIM key is looked for
- * in its DNS (found: it is theirs after all, and stays); then it leaves Resend, its mailboxes lose
- * their addresses on it (they could never send or receive as them), and it goes. Anything failing
- * before it leaves Resend gives the claim back.
+ * guarded write, so that from then on no check marks it verified and no mailbox gets an address on
+ * it; then its DKIM key is looked for in its DNS (found: it is theirs after all, and stays); then
+ * it leaves Resend, it goes, and its mailboxes lose their addresses on it (they could never send or
+ * receive as them). The claim's time is its token: each step after Resend's goes on only while the
+ * claim is still this takeover's. Anything failing before it leaves Resend gives the claim back.
  */
 async function takeOver(other: DomainRow) {
   const scope = { organizationId: other.organizationId, workspaceId: other.workspaceId }
   const db = scoped(scope)
   const now = Date.now()
+  let token = new Date(now)
   const claim = await db.mailDomain.updateMany({
     where: {
       id: other.id,
@@ -216,17 +222,12 @@ async function takeOver(other: DomainRow) {
         { status: CLAIMED, checkedAt: { lte: new Date(now - CLAIM_MS) } },
       ],
     },
-    data: { status: CLAIMED, checkedAt: new Date(now) },
+    data: { status: CLAIMED, checkedAt: token },
   })
-  if (!claim.count)
-    throw new HTTPException(409, {
-      message: `${other.name} is used by another workspace on Brigade`,
-    })
-  const giveBack = () =>
-    db.mailDomain.updateMany({
-      where: { id: other.id, status: CLAIMED },
-      data: { status: other.status === CLAIMED ? 'pending' : other.status },
-    })
+  const lost = () =>
+    new HTTPException(409, { message: `${other.name} is used by another workspace on Brigade` })
+  if (!claim.count) throw lost()
+  const ours = () => ({ id: other.id, status: CLAIMED, checkedAt: token })
   let theirs = false
   try {
     theirs = await recordsInDns(other)
@@ -234,18 +235,34 @@ async function takeOver(other: DomainRow) {
       throw new HTTPException(409, {
         message: `${other.name}'s DNS has the records another workspace on Brigade was given: it is theirs`,
       })
-    if (other.resendDomainId) await removeFromResend(other.name, other.resendDomainId)
+    // Renewed just before Resend is asked, which takes TAKE_MS at most: the claim holds throughout.
+    const renewed = new Date()
+    const held = await db.mailDomain.updateMany({ where: ours(), data: { checkedAt: renewed } })
+    if (!held.count) throw lost()
+    token = renewed
+    if (other.resendDomainId)
+      await removeFromResend(other.name, other.resendDomainId, AbortSignal.timeout(TAKE_MS))
   } catch (error) {
-    await giveBack()
+    await db.mailDomain.updateMany({
+      where: ours(),
+      data: { status: other.status === CLAIMED ? 'pending' : other.status },
+    })
     // Theirs: Resend can mark it verified now.
     if (theirs) void checkDomain(db, other.id).catch(() => undefined)
     throw error
   }
+  // Only while still this takeover's: a claim it lost is someone else's to settle.
+  const gone = await db.mailDomain.deleteMany({ where: ours() })
+  if (!gone.count) {
+    console.error(`mail domain ${other.name}: its takeover lost its claim after Resend removed it`)
+    throw lost()
+  }
+  // Then its addresses, by name: one given while it went lands before this (and goes now) or
+  // after its domain went (refused: its domain is no more).
   await db.mailAddress.updateMany({
-    where: { domainId: other.id },
+    where: { publicAddress: { endsWith: `@${other.name}` } },
     data: { publicAddress: null, domainId: null },
   })
-  await db.mailDomain.deleteMany({ where: { id: other.id } })
   await audit({
     ...scope,
     actor: { type: 'system', id: 'brigade' },
@@ -256,8 +273,8 @@ async function takeOver(other: DomainRow) {
 }
 
 /** A domain out of Resend; gone already is as good. A 502 when Resend did not remove it. */
-async function removeFromResend(name: string, resendDomainId: string) {
-  await deleteDomain(resendDomainId).catch((error: unknown) => {
+async function removeFromResend(name: string, resendDomainId: string, signal?: AbortSignal) {
+  await deleteDomain(resendDomainId, signal).catch((error: unknown) => {
     if (error instanceof ResendError && error.status === 404) return
     console.warn(`mail domain ${name}: not removed from Resend`, error)
     throw new HTTPException(502, {
@@ -343,10 +360,14 @@ export async function setPublicAddress(
   }
   const domain = await domainFor(db, given)
   const address = await checkPublicAddress(db, given, mailbox.id)
-  await db.mailAddress.update({
-    where: { id: mailbox.id },
-    data: { publicAddress: address, domainId: domain.id },
-  })
+  await db.mailAddress
+    .update({ where: { id: mailbox.id }, data: { publicAddress: address, domainId: domain.id } })
+    .catch((error: unknown) => {
+      // Its domain went meanwhile (taken over by another workspace).
+      if ((error as { code?: string }).code === 'P2003')
+        throw new HTTPException(409, { message: `${domain.name} is no longer this workspace's` })
+      throw error
+    })
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
@@ -365,6 +386,10 @@ export async function domainFor(db: ScopedDb, given: string) {
   if (!domain)
     throw new HTTPException(400, {
       message: `Add ${name} in Inbox › Mail settings › Domains first`,
+    })
+  if (claimed(domain))
+    throw new HTTPException(409, {
+      message: `${name} is being taken over by a workspace on Brigade that added it after its three days`,
     })
   return domain
 }
