@@ -112,6 +112,14 @@ model Verification {
   @@index([identifier])
 }
 
+/// better-auth's rate limit (src/auth.ts): requests to sign in and to mail a code, per visitor and path.
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
 model Organization {
   id              String           @id
   name            String

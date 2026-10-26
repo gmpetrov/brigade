@@ -477,14 +477,6 @@ export type ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput = {
   deleteMany?: Prisma.ThreadPinScalarWhereInput | Prisma.ThreadPinScalarWhereInput[]
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type ThreadPinCreateNestedManyWithoutSessionInput = {
   create?: Prisma.XOR<Prisma.ThreadPinCreateWithoutSessionInput, Prisma.ThreadPinUncheckedCreateWithoutSessionInput> | Prisma.ThreadPinCreateWithoutSessionInput[] | Prisma.ThreadPinUncheckedCreateWithoutSessionInput[]
   connectOrCreate?: Prisma.ThreadPinCreateOrConnectWithoutSessionInput | Prisma.ThreadPinCreateOrConnectWithoutSessionInput[]

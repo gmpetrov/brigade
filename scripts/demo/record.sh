@@ -54,7 +54,7 @@ for _ in $(seq 1 60); do (echo >/dev/tcp/127.0.0.1/$DB_PORT) 2>/dev/null && brea
 
 say "The API, the dashboard and the sign-in proxy at $URL"
 node apps/api/scripts/playbooks.mjs
-(cd apps/api && PORT=$API_PORT API_URL=$URL WEB_URL=$URL \
+(cd apps/api && PORT=$API_PORT API_URL=$URL WEB_URL=$URL PASSWORD_SIGN_IN=true \
   "${PNPM[@]}" exec tsx --env-file-if-exists=.env src/index.ts) >"$WORK/api.log" 2>&1 &
 # Its own build folder: a dev server already running in apps/web holds .next.
 (cd apps/web && NEXT_DIST_DIR=.next-demo-record NEXT_PUBLIC_API_URL=$URL \

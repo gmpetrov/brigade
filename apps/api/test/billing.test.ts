@@ -21,6 +21,8 @@ const fromEnvFile = () => {
 process.env.DATABASE_URL ??= fromEnvFile() ?? 'postgresql://test@localhost/test'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
+// An owner signs up with a password, quicker here than a mailed code.
+process.env.PASSWORD_SIGN_IN = 'true'
 // Billing on, with a key that reaches nothing: every Stripe call billing makes is faked below.
 process.env.STRIPE_SECRET_KEY = 'sk_test_never_called'
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_billing_test'

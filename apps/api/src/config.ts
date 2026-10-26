@@ -102,6 +102,18 @@ const Env = z.object({
    */
   CROSS_SITE_COOKIES: z.stringbool().default(false),
   /**
+   * Sign-in with a password. Off by default: members sign in with Google or a code mailed
+   * to them (src/sign-in-code.ts), which proves they own the address. On locally and in
+   * previews (.env.example), where the dev accounts have a password (prisma/seed.ts).
+   */
+  PASSWORD_SIGN_IN: z.stringbool().default(false),
+  /**
+   * Cloudflare Turnstile's secret key: a sign-in code is mailed only after the visitor
+   * passed its check (the dashboard has the widget's site key, NEXT_PUBLIC_TURNSTILE_SITE_KEY).
+   * Without it, no check.
+   */
+  TURNSTILE_SECRET_KEY: z.string().optional(),
+  /**
    * Web push to the dashboard (src/notifications.ts): a P-256 key pair, base64url, from
    * `pnpm --filter @brigade/api vapid`. Without them, notifications are off.
    */

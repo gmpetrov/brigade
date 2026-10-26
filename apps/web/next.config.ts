@@ -62,6 +62,23 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
       ]
     },
   }),
+  // The dashboard, built: no other site may show it in a frame, where a page of theirs could
+  // lead a member's clicks on it (an approval, a merge). Not `next dev`: a thread's preview of
+  // Brigade shows its dashboard in www.brigade.lol's frame.
+  ...(!DEMO &&
+    phase !== PHASE_DEVELOPMENT_SERVER && {
+      async headers() {
+        return [
+          {
+            source: '/:path*',
+            headers: [
+              { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+              { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+            ],
+          },
+        ]
+      },
+    }),
   // Another build folder, beside a dev server that holds .next (scripts/demo/record.sh).
   ...(process.env.NEXT_DIST_DIR && { distDir: process.env.NEXT_DIST_DIR }),
   // Dev tunnels that serve this dashboard (see apps/web/.env.local).

@@ -159,7 +159,12 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   @mentions joins the thread and answers next (only the chief can bring in teammates not yet in a thread, protocol
   18), and bigger work becomes a task. Onboarding names the project (organization and first workspace), then asks
   for an AI account: the dashboard stays closed until the member has one that has worked in that workspace.
-- **Sign-in is email and password** for now. Invitations by email come with step 10.
+- **Sign-in is Google or a code mailed to the address** (`src/sign-in-code.ts`, better-auth's emailOTP), which
+  also signs up a new address: an account is only made by someone who reads its mail, and an invitation is only taken
+  by a proven address. Passwords are off (`PASSWORD_SIGN_IN`), except locally and in previews for the dev accounts.
+  Sign-in requests are rate-limited per visitor (`cf-connecting-ip`, counted in the `RateLimit` table), and with
+  `TURNSTILE_SECRET_KEY` (API) and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (dashboard) a code is mailed only after
+  Cloudflare Turnstile's check.
 - **The runner ships its own pinned pnpm** (10.x), because the Claude Code adapter installs its bridge with
   `pnpm install --frozen-lockfile` and older global pnpm versions reject its lockfile.
 - **Sign-in never needs access to the computer** (changes the spec's "sign in through takeover"). The runner runs the
