@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   formatMention,
+  taskBrief,
   taskComment,
   type ApiToRunner,
   type RunnerToApi,
@@ -228,7 +229,13 @@ const member = (scope: WorkspaceScope): Actor => ({ type: 'member', id: scope.me
  * Who acts on a task: a member, or a teammate on behalf of its thread's
  * starter, whose accounts any thread it starts runs on.
  */
-export type By = { scope: Scope; memberId: string; actor: Actor }
+export type By = {
+  scope: Scope
+  memberId: string
+  actor: Actor
+  /** A teammate's call: its name and its thread's title, which the threads it starts name. */
+  from?: { name: string; threadTitle: string }
+}
 
 export const byMember = (scope: WorkspaceScope): By => ({
   scope,
@@ -540,7 +547,11 @@ async function startTask(
       computer: computer ?? (await computerFor(db, by.memberId, teammate.harness)),
       memberId: by.memberId,
       title: task.title,
-      text: brief(task),
+      // A teammate's task is not the member's word: its brief says who wrote it.
+      text: by.from
+        ? taskBrief({ ...task, from: by.from.name, threadTitle: by.from.threadTitle })
+        : brief(task),
+      ...(by.actor.type === 'teammate' ? { byTeammateId: by.actor.id } : {}),
       taskId: task.id,
       projectId: task.projectId,
     })
@@ -1093,6 +1104,7 @@ export async function handleTaskCall(
     scope,
     memberId: session.startedByMemberId,
     actor: { type: 'teammate', id: teammate.id },
+    from: { name: teammate.name, threadTitle: session.title },
   }
   const op = call.operation
   if (session.playbookRunId) {
