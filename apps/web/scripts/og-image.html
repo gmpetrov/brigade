@@ -1,0 +1,131 @@
+<!doctype html>
+<!-- The landing's link preview (app/opengraph-image.png, 1200×630): the hero's title and a
+     pile of its pebbles (components/landing/dancers.tsx). To change it, edit this page, then
+     render it from apps/web:
+     google-chrome --headless --hide-scrollbars --window-size=1200,630 --virtual-time-budget=5000 \
+       --screenshot=app/opengraph-image.png scripts/og-image.html -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=block"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        /* The landing's dark theme (app/theme.css) */
+        background: oklch(0.2223 0.006 271.1393);
+        color: oklch(0.9551 0 0);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .brand {
+        position: absolute;
+        left: 72px;
+        top: 64px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 40px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .brand svg {
+        width: 50px;
+        height: 50px;
+      }
+      h1 {
+        position: absolute;
+        left: 72px;
+        top: 222px;
+        margin: 0;
+        font-size: 100px;
+        line-height: 0.96;
+        font-weight: 800;
+        letter-spacing: -0.055em;
+      }
+      h1 em {
+        font-style: normal;
+        color: oklch(0.6132 0.2294 291.7437);
+      }
+      .pb {
+        position: absolute;
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute">
+      <defs>
+        <symbol id="smile" viewBox="0 0 100 100">
+          <path
+            fill="currentColor"
+            d="M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z"
+          />
+          <g fill="none" stroke="#1b1230" stroke-width="6" stroke-linecap="round">
+            <path d="M34.5 44Q40.5 28 46.5 44" />
+            <path d="M53.5 44Q59.5 28 65.5 44" />
+          </g>
+        </symbol>
+        <symbol id="open" viewBox="0 0 100 100">
+          <path
+            fill="currentColor"
+            d="M56 0A44 56 0 0 1 100 56A40 44 0 0 1 60 100A60 54 0 0 1 0 46A56 46 0 0 1 56 0Z"
+          />
+          <g fill="none" stroke="#1b1230" stroke-width="6" stroke-linecap="round">
+            <path d="M40.5 34V45" />
+            <path d="M59.5 34V45" />
+          </g>
+        </symbol>
+      </defs>
+    </svg>
+    <div class="brand">
+      <svg style="color: oklch(0.6132 0.2294 291.7437)"><use href="#smile" /></svg>Brigade
+    </div>
+    <h1><em>AI teammates</em><br />that run your<br />whole company</h1>
+    <!-- The dancers' colours, eyes left to right as on the landing -->
+    <svg
+      class="pb"
+      style="left: 828px; top: 420px; width: 216px; height: 216px; color: oklch(0.78 0.16 155)"
+    >
+      <use href="#smile" />
+    </svg>
+    <svg
+      class="pb"
+      style="left: 1008px; top: 396px; width: 228px; height: 228px; color: oklch(0.74 0.17 50)"
+    >
+      <use href="#open" />
+    </svg>
+    <svg
+      class="pb"
+      style="left: 1056px; top: 168px; width: 180px; height: 180px; color: oklch(0.62 0.22 290)"
+    >
+      <use href="#open" />
+    </svg>
+    <svg
+      class="pb"
+      style="left: 876px; top: 204px; width: 192px; height: 192px; color: oklch(0.87 0.14 90)"
+    >
+      <use href="#smile" />
+    </svg>
+    <svg
+      class="pb"
+      style="left: 948px; top: 12px; width: 156px; height: 156px; color: oklch(0.72 0.13 250)"
+    >
+      <use href="#open" />
+    </svg>
+    <svg
+      class="pb"
+      style="left: 1104px; top: -36px; width: 144px; height: 144px; color: oklch(0.8 0.08 20)"
+    >
+      <use href="#smile" />
+    </svg>
+  </body>
+</html>

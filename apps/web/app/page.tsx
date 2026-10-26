@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   description,
   alternates: { canonical: SITE_URL },
   openGraph: { type: 'website', url: SITE_URL, siteName: 'Brigade', title, description },
-  twitter: { card: 'summary', title, description },
+  twitter: { card: 'summary_large_image', title, description },
 }
 
 const jsonLd = {

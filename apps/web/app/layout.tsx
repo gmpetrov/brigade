@@ -6,6 +6,8 @@ import { themeFontHrefs } from './theme-fonts'
 import './globals.css'
 
 export const metadata: Metadata = {
+  // Makes the link preview's address (app/opengraph-image.png) absolute, as sites that read it need.
+  metadataBase: new URL('https://www.brigade.lol'),
   title: 'Brigade',
   description: 'The control plane for a business run with AI teammates.',
   // Added to the Home Screen, it opens as an app: the only way an iPhone gets notifications.
@@ -34,12 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         ))}
       </head>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
       </body>
