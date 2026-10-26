@@ -74,7 +74,8 @@ const { values, positionals } = parseArgs({
   options: {
     api: { type: 'string', default: 'http://localhost:3001' },
     name: { type: 'string', default: hostname() },
-    concurrency: { type: 'string', default: '4' },
+    /** Turns at once across threads: 8 on a cloud computer, which teammates share, 4 elsewhere. */
+    concurrency: { type: 'string', default: CLOUD ? '8' : '4' },
     version: { type: 'boolean' },
     /** Set on a workspace cloud computer: no member's own logins live there. */
     cloud: { type: 'boolean' },
