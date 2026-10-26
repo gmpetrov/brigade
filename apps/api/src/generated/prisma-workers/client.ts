@@ -66,6 +66,11 @@ export type AuthAccount = Prisma.AuthAccountModel
  */
 export type Verification = Prisma.VerificationModel
 /**
+ * Model RateLimit
+ * better-auth's rate limit (src/auth.ts): requests to sign in and to mail a code, per visitor and path.
+ */
+export type RateLimit = Prisma.RateLimitModel
+/**
  * Model Organization
  * 
  */

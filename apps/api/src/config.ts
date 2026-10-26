@@ -92,7 +92,10 @@ const Env = z.object({
    * both, previews are at the provider's address.
    */
   PREVIEW_GATEWAY_URL: z.preprocess((v) => v || undefined, z.url().optional()),
-  /** Shared with the preview gateway (its SECRET): registers previews there. */
+  /**
+   * Shared with the preview gateway (its SECRET): registers previews there, and signs the
+   * access tokens that let people in.
+   */
   PREVIEW_GATEWAY_SECRET: z.string().min(32).optional(),
   /** Shared with the collab server: signs editors' tokens and authenticates its calls. */
   COLLAB_SECRET: z.string().min(32).optional(),
@@ -101,6 +104,18 @@ const Env = z.object({
    * session cookies are SameSite=None and partitioned, so the frame keeps them.
    */
   CROSS_SITE_COOKIES: z.stringbool().default(false),
+  /**
+   * Sign-in with a password. Off by default: members sign in with Google or a code mailed
+   * to them (src/sign-in-code.ts), which proves they own the address. On locally and in
+   * previews (.env.example), where the dev accounts have a password (prisma/seed.ts).
+   */
+  PASSWORD_SIGN_IN: z.stringbool().default(false),
+  /**
+   * Cloudflare Turnstile's secret key: a sign-in code is mailed only after the visitor
+   * passed its check (the dashboard has the widget's site key, NEXT_PUBLIC_TURNSTILE_SITE_KEY).
+   * Without it, no check.
+   */
+  TURNSTILE_SECRET_KEY: z.string().optional(),
   /**
    * Web push to the dashboard (src/notifications.ts): a P-256 key pair, base64url, from
    * `pnpm --filter @brigade/api vapid`. Without them, notifications are off.

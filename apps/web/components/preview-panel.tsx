@@ -42,13 +42,15 @@ export const PREVIEW_PANEL = 'preview'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { openCodeTab, setCodePanel, useCodePanel } from '@/lib/code-tabs'
-import { typedPath, withPath } from '@/lib/preview-path'
+import { previewOrigin, typedPath, withPath } from '@/lib/preview-path'
 import { cn } from '@/lib/utils'
 
 export type ThreadPreview = PreviewInfo & { teammateId?: string }
 
 /** How often an open panel says it is still open. Previews stop after 30 minutes unused. */
 const TOUCH_MS = 2 * 60_000
+/** How long the address's access token (5 minutes) is used again before a fresh one is asked for. */
+const TOKEN_REUSE_MS = 3 * 60_000
 /** How often a starting preview's latest output is read. */
 const TAIL_MS = 2000
 
@@ -238,20 +240,53 @@ function LivePreviewPanel({
     coding ? code.find : undefined,
   )
 
+  // The latest address handed out and when it was asked for: its access token lets people in
+  // for 5 minutes. Kept together, so a token is reused only with the time it was asked.
+  const issued = useRef<{ url: string; at: number }>(undefined)
   // The address, once per run of the preview.
   useEffect(() => {
     setOpened(undefined)
+    issued.current = undefined
     if (!running) return setView(undefined)
     let live = true
     setError(undefined)
+    const at = Date.now()
     api<PreviewView>(`/threads/${threadId}/preview`, { body: {} }).then(
-      (v) => live && setView(v),
+      (v) => {
+        if (!live) return
+        issued.current = { url: v.url, at }
+        setView(v)
+      },
       (e: Error) => live && setError(e.message),
     )
     return () => {
       live = false
     }
   }, [threadId, preview.previewId, running])
+
+  // The address again for a new tab or the frame loaded again, with a fresh token once the
+  // one it has is old; a copied link always gets one (whoever opens it may take a while).
+  const fresh = useCallback(
+    async (reuse = true) => {
+      const last = issued.current
+      if (reuse && last && Date.now() - last.at < TOKEN_REUSE_MS) return last.url
+      const at = Date.now()
+      const { url } = await api<PreviewView>(`/threads/${threadId}/preview`, { body: {} })
+      issued.current = { url, at }
+      return url
+    },
+    [threadId],
+  )
+  const reload = (path?: string) =>
+    void fresh().then(
+      (url) => {
+        setView((v) => v && { ...v, url })
+        const at = path ?? opened?.path
+        setOpened(at === undefined ? undefined : { path: at, url: withPath(url, at) })
+        setFrame((n) => n + 1)
+      },
+      (e: Error) => setError(e.message),
+    )
 
   // Still open: keep it running.
   const live = previewLive(preview)
@@ -341,11 +376,7 @@ function LivePreviewPanel({
             className={cn('mr-1 size-2 shrink-0 rounded-full', status.dot)}
           />
           {view && (
-            <BarButton
-              label="Reload"
-              title="Reload the page"
-              onClick={() => setFrame((n) => n + 1)}
-            >
+            <BarButton label="Reload" title="Reload the page" onClick={() => reload()}>
               <RotateCw aria-hidden />
             </BarButton>
           )}
@@ -354,10 +385,7 @@ function LivePreviewPanel({
               key={preview.previewId}
               page={select.page ?? opened?.path ?? new URL(view.url).pathname}
               onOpen={(path) => {
-                if (!select.navigate(path)) {
-                  setOpened({ path, url: withPath(view.url, path) })
-                  setFrame((n) => n + 1)
-                }
+                if (!select.navigate(path)) reload(path)
               }}
             />
           ) : (
@@ -383,13 +411,18 @@ function LivePreviewPanel({
               <BarButton
                 label={copied ? 'Copied' : 'Copy link'}
                 title={
-                  copied ? 'Copied' : 'Copy link: anyone with it can open the preview while it runs'
+                  copied
+                    ? 'Copied'
+                    : 'Copy link: whoever opens it in the next 5 minutes can use the preview while it runs'
                 }
                 onClick={() =>
-                  void navigator.clipboard.writeText(view.url).then(() => {
-                    setCopied(true)
-                    setTimeout(() => setCopied(false), 1500)
-                  })
+                  void copyAddress(() => fresh(false)).then(
+                    () => {
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 1500)
+                    },
+                    (e: Error) => setError(e.message),
+                  )
                 }
               >
                 {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
@@ -400,6 +433,10 @@ function LivePreviewPanel({
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Open in a new tab"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    void openAddress(() => fresh()).catch((error: Error) => setError(error.message))
+                  }}
                 >
                   <ExternalLink aria-hidden className="size-3.5" />
                 </a>
@@ -785,6 +822,39 @@ function BarButton({
   )
 }
 
+/**
+ * Open an address asked for now in a new tab. The tab opens at once, in the click, so popup
+ * blockers allow it; its address follows when ready.
+ */
+async function openAddress(address: () => Promise<string>) {
+  const tab = window.open('about:blank', '_blank')
+  if (tab) tab.opener = null
+  try {
+    const url = await address()
+    if (tab) tab.location.href = url
+    else window.open(url, '_blank', 'noopener')
+  } catch (error) {
+    tab?.close()
+    throw error
+  }
+}
+
+/**
+ * Copy an address asked for now. Safari lets a click write the clipboard only while it
+ * handles it: a ClipboardItem takes the address still to come.
+ */
+async function copyAddress(address: () => Promise<string>) {
+  const text = address()
+  if (typeof ClipboardItem !== 'undefined')
+    try {
+      const blob = text.then((url) => new Blob([url], { type: 'text/plain' }))
+      return await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })])
+    } catch {
+      // A browser whose ClipboardItem takes no promise: the text once it is there.
+    }
+  return navigator.clipboard.writeText(await text)
+}
+
 function usePreviewSelect(
   url: string | undefined,
   previewId: string,
@@ -799,11 +869,14 @@ function usePreviewSelect(
   const latest = useRef({ on, onPick, onCode })
   latest.current = { on, onPick, onCode }
   const origin = url ? new URL(url).origin : undefined
+  // The page's own origin, as its ready said: the address's, or a grant of it in Safari's frame.
+  const pageOrigin = useRef<string>(undefined)
 
   useEffect(() => {
     setAvailable(false)
     setOn(false)
     setPage(undefined)
+    pageOrigin.current = undefined
   }, [previewId, origin])
 
   const send = useCallback(
@@ -811,7 +884,7 @@ function usePreviewSelect(
       origin &&
       frame.current?.contentWindow?.postMessage(
         { source: 'brigade', type: 'select', on: value },
-        origin,
+        pageOrigin.current ?? origin,
       ),
     [origin],
   )
@@ -829,16 +902,18 @@ function usePreviewSelect(
         page?: unknown
       } | null
       if (
-        e.origin !== origin ||
+        !previewOrigin(e.origin, origin) ||
         e.source !== frame.current?.contentWindow ||
         data?.source !== 'brigade-preview'
       )
         return
       if (data.type === 'ready') {
+        pageOrigin.current = e.origin
         setAvailable(true)
         // A page it navigated to starts with select mode off; either way it then says where it is.
         if (latest.current.on) send(true)
-        else frame.current?.contentWindow?.postMessage({ source: 'brigade', type: 'hello' }, origin)
+        else
+          frame.current?.contentWindow?.postMessage({ source: 'brigade', type: 'hello' }, e.origin)
       } else if (data.type === 'location') {
         if (typeof data.page === 'string') setPage(data.page)
       } else if (data.type === 'stopped') setOn(false)
@@ -875,7 +950,10 @@ function usePreviewSelect(
       const target = frame.current?.contentWindow
       // Only a page that said where it is opens a path: older scripts say ready, not that.
       if (page === undefined || !origin || !target) return false
-      target.postMessage({ source: 'brigade', type: 'navigate', page: path }, origin)
+      target.postMessage(
+        { source: 'brigade', type: 'navigate', page: path },
+        pageOrigin.current ?? origin,
+      )
       return true
     },
     [page, origin],

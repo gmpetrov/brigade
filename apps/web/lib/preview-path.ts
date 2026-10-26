@@ -29,3 +29,24 @@ export function typedPath(text: string) {
   // A path that resolves to `//host` (`/a/..//host`) stays one.
   return pathname.replace(/^\/+/, '/') + search + hash
 }
+
+/**
+ * Whether a page's origin is the preview's at `origin`: the same, or a grant of it, where the
+ * preview gateway sends a browser that drops its cookie in the dashboard's frame (Safari):
+ * https://<id>-<grant>.brigade.surf for https://<id>.brigade.surf.
+ */
+export function previewOrigin(candidate: string, origin: string) {
+  if (candidate === origin) return true
+  if (!URL.canParse(candidate) || !URL.canParse(origin)) return false
+  const page = new URL(candidate)
+  const preview = new URL(origin)
+  if (page.protocol !== 'https:' || preview.protocol !== 'https:' || page.port !== preview.port)
+    return false
+  const [id, ...domain] = preview.hostname.split('.')
+  const [label, ...rest] = page.hostname.split('.')
+  return (
+    !!domain.length &&
+    rest.join('.') === domain.join('.') &&
+    new RegExp(`^${id}-[a-z2-7]{36}$`).test(label!)
+  )
+}

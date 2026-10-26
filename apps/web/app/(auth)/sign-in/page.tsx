@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { BrigadeMark } from '@/components/brigade-mark'
+import { EmailSignIn } from '@/components/email-sign-in'
 import { GoogleSignIn } from '@/components/google-sign-in'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,6 +13,9 @@ import { authClient } from '@/lib/auth-client'
 import { inCaptureWindow, signInWithBrowser } from '@/lib/brigade-app'
 import { afterSignIn, markSignedIn } from '@/lib/signed-in'
 
+/** The dev accounts' passwords (apps/api/prisma/seed.ts): only `next dev`, as the API allows them only there. */
+const PASSWORDS = process.env.NODE_ENV === 'development'
+
 export default function SignIn() {
   const router = useRouter()
   const [error, setError] = useState<string>()
@@ -19,6 +23,7 @@ export default function SignIn() {
   // In Brigade.app's window, the browser signs in (lib/brigade-app.ts): its own session is
   // out of reach here. 'waiting': the browser is open; 'form': the form here after all.
   const [app, setApp] = useState<'browser' | 'waiting' | 'form'>()
+  const [password, setPassword] = useState(false)
   // Back from Google with ?error=: the API names what went wrong. With ?signed, signed in
   // with Google on the way to ?next=. In Brigade.app's window, with ?desktop_code= and
   // ?verifier=: the browser's sign-in, brought back by the app.
@@ -56,6 +61,13 @@ export default function SignIn() {
     }
   }
 
+  function signedIn() {
+    markSignedIn()
+    const next = afterSignIn()
+    if (next === '/app') router.push(next)
+    else location.assign(next)
+  }
+
   async function submit(form: FormData) {
     setError(undefined)
     setBusy(true)
@@ -65,10 +77,7 @@ export default function SignIn() {
         password: String(form.get('password')),
       })
       if (error) return setError(error.message ?? 'Could not sign in')
-      markSignedIn()
-      const next = afterSignIn()
-      if (next === '/app') router.push(next)
-      else location.assign(next)
+      signedIn()
     } catch {
       setError('Could not reach Brigade. Check your connection and try again.')
     } finally {
@@ -111,31 +120,47 @@ export default function SignIn() {
           <Card>
             <CardContent className="flex flex-col gap-5">
               <GoogleSignIn onError={setError} />
+              {!password && error && <p className="text-sm text-destructive-text">{error}</p>}
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="h-px flex-1 bg-border" />
                 or
                 <span className="h-px flex-1 bg-border" />
               </div>
-              <form action={submit} className="flex flex-col gap-5">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" autoComplete="email" required />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                  />
-                </div>
-                {error && <p className="text-sm text-destructive-text">{error}</p>}
-                <Button type="submit" size="lg" className="w-full" disabled={busy}>
-                  Sign in
-                </Button>
-              </form>
+              {password ? (
+                <form action={submit} className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" name="email" type="email" autoComplete="email" required />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                    />
+                  </div>
+                  {error && <p className="text-sm text-destructive-text">{error}</p>}
+                  <Button type="submit" size="lg" className="w-full" disabled={busy}>
+                    Sign in
+                  </Button>
+                </form>
+              ) : (
+                <EmailSignIn submitLabel="Sign in" onSignedIn={signedIn} />
+              )}
+              {PASSWORDS && (
+                <button
+                  type="button"
+                  onClick={() => setPassword(!password)}
+                  className="self-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+                >
+                  {password
+                    ? 'Sign in with a code instead'
+                    : 'Sign in with a password (dev accounts)'}
+                </button>
+              )}
             </CardContent>
           </Card>
         )}

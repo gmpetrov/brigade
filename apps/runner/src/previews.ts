@@ -192,18 +192,28 @@ export type PreviewControl = {
   /** Setups the repository's checkout here has for other tools (orca.yaml, …), to start from. */
   otherSetups(repository: string): Promise<string[]>
   stop(): Promise<{ stopped: boolean }>
-  logs(lines?: number): {
+  logs(lines?: number): Promise<{
     status: PreviewInfo['status'] | 'none'
     /** Where the app answers for a person, by port, while it runs: to test on it. */
     origins?: Record<number, string>
+    /**
+     * On a cloud computer, the preview's address with an access token for a few minutes: open
+     * it first in a browser, which it lets in to `origins` for this run. They alone answer 403.
+     */
+    open?: string
     logs: string
-  }
+  }>
 }
 
 export type PreviewResult = {
   status: PreviewInfo['status']
   /** Where the app answers for a person, by port, with no token. */
   origins: Record<number, string>
+  /**
+   * On a cloud computer, the preview's address with an access token for a few minutes: open
+   * it first in a browser, which it lets in to `origins` for this run. They alone answer 403.
+   */
+  open?: string
   reason?: string
   logs?: string
   /** The names of the repository's preview variables the app got. */
@@ -406,16 +416,33 @@ export class Previews {
       stop: async () => ({
         stopped: await this.stop(seat.sessionId, 'Stopped by the teammate'),
       }),
-      logs: (lines) => {
+      logs: async (lines) => {
         const preview = this.previews.get(seat.sessionId)
         if (preview) preview.lastUsed = Date.now()
+        const running = preview?.info.status === 'running'
+        const open = running ? await this.openUrl(preview) : undefined
         return {
           status: preview?.info.status ?? 'none',
-          ...(preview?.info.status === 'running' ? { origins: preview.origins } : {}),
+          ...(running ? { origins: preview.origins } : {}),
+          ...(open ? { open } : {}),
           logs: preview ? this.tail(preview, lines) : '',
         }
       },
     }
+  }
+
+  /**
+   * The address a browser opens first on a cloud computer: the preview gateway lets in only
+   * whoever comes with an access token. None on a member's own machine, where it is localhost.
+   */
+  private async openUrl(preview: Preview) {
+    if (!this.options.viewUrl) return undefined
+    return this.options
+      .viewUrl(preview.seat.sessionId, preview.info.publicPort ?? preview.info.port)
+      .catch((error: unknown) => {
+        console.warn(`no address with a token for ${preview.seat.sessionId}: ${String(error)}`)
+        return undefined
+      })
   }
 
   /** Someone has the preview open: it does not expire meanwhile. */
@@ -739,6 +766,8 @@ export class Previews {
     await this.untilReady(preview, waitFor(preview.input), signal)
 
     const result: PreviewResult = { status: preview.info.status, origins }
+    const open = preview.info.status === 'running' ? await this.openUrl(preview) : undefined
+    if (open) result.open = open
     if (preview.info.reason) result.reason = preview.info.reason
     if (preview.variables.length) result.variables = preview.variables
     if (preview.notes.length) result.notes = preview.notes

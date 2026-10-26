@@ -1,13 +1,14 @@
-import { betterAuth } from 'better-auth'
+import { type BetterAuthPlugin, betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { APIError } from 'better-auth/api'
-import { organization } from 'better-auth/plugins'
+import { captcha, emailOTP, organization } from 'better-auth/plugins'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { guardOrganizationDeletion } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { desktopSignIn } from './desktop-sign-in.js'
+import { CODE_MINUTES, sendSignInCode } from './sign-in-code.js'
 
 /** Audit actors are members. Fall back to the user when no membership exists yet. */
 async function memberActor(organizationId: string, userId: string) {
@@ -17,13 +18,37 @@ async function memberActor(organizationId: string, userId: string) {
   return { type: 'member' as const, id: member?.id ?? userId }
 }
 
+/**
+ * The limit on an auth request, or none. better-auth's defaults stand for signing in and
+ * mailing a code (3 in 10 seconds, 3 a minute per visitor), and 100 in 10 seconds for the rest.
+ */
+function limitOf(request: Request, rule: { window: number; max: number }) {
+  // Locally and in previews, no request says who sent it: all would share one count.
+  if (!request.headers.has('cf-connecting-ip')) return false as const
+  const path = new URL(request.url).pathname.slice('/api/auth'.length)
+  // Session reads: every page asks, and each count is a write.
+  if (path === '/get-session' || path.startsWith('/organization/')) return false as const
+  // A few typos; each code also takes only 5 tries (allowedAttempts).
+  if (path === '/sign-in/email-otp') return { window: 60, max: 10 }
+  return rule
+}
+
 export const auth = betterAuth({
   baseURL: env.API_URL,
   basePath: '/api/auth',
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: env.WEB_URL,
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
-  emailAndPassword: { enabled: true },
+  // Off in production (config.ts): an address is only ever proven by its mail, with a code
+  // (emailOTP below) or by Google.
+  emailAndPassword: { enabled: env.PASSWORD_SIGN_IN },
+  // Counted in the database, so a restart doesn't reset the counts, per visitor as
+  // Cloudflare saw them (X-Forwarded-For is whatever the client sent).
+  rateLimit: {
+    enabled: true,
+    storage: 'database',
+    customRules: { '/**': limitOf },
+  },
   // The OAuth client connections use (src/connectors/google-oauth.ts), with the
   // redirect URI {API_URL}/api/auth/callback/google added to it.
   ...(env.GOOGLE_CLIENT_ID &&
@@ -48,12 +73,34 @@ export const auth = betterAuth({
     },
   },
   account: { modelName: 'authAccount' },
-  ...(env.CROSS_SITE_COOKIES && {
-    advanced: { defaultCookieAttributes: { sameSite: 'none', secure: true, partitioned: true } },
-  }),
+  advanced: {
+    ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] },
+    ...(env.CROSS_SITE_COOKIES && {
+      defaultCookieAttributes: { sameSite: 'none', secure: true, partitioned: true },
+    }),
+  },
   plugins: [
     desktopSignIn(),
+    emailOTP({
+      otpLength: 6,
+      expiresIn: CODE_MINUTES * 60,
+      allowedAttempts: 5,
+      storeOTP: 'hashed',
+      sendVerificationOTP: async ({ email, otp, type }) => {
+        if (type === 'sign-in') await sendSignInCode(email, otp)
+      },
+    }),
+    // In the list either way: a spread would cost the organization plugin's types.
+    env.TURNSTILE_SECRET_KEY
+      ? captcha({
+          provider: 'cloudflare-turnstile',
+          secretKey: env.TURNSTILE_SECRET_KEY,
+          endpoints: ['/email-otp/send-verification-otp', '/sign-up/email'],
+        })
+      : ({ id: 'no-captcha' } satisfies BetterAuthPlugin),
     organization({
+      // An invitation goes to an address: only its proven owner may take it.
+      requireEmailVerificationOnInvitation: true,
       organizationHooks: {
         afterCreateOrganization: async ({ organization, user }) =>
           audit({

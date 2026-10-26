@@ -507,14 +507,6 @@ export type AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput = {
   deleteMany?: Prisma.AuditEntryScalarWhereInput | Prisma.AuditEntryScalarWhereInput[]
 }
 
-export type BigIntFieldUpdateOperationsInput = {
-  set?: bigint | number
-  increment?: bigint | number
-  decrement?: bigint | number
-  multiply?: bigint | number
-  divide?: bigint | number
-}
-
 export type AuditEntryCreateWithoutWorkspaceInput = {
   id?: bigint | number
   organizationId: string

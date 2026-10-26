@@ -22,6 +22,9 @@ if ! grep -q '^VAPID_PRIVATE_KEY=.' apps/api/.env; then
   node apps/api/scripts/vapid.mjs >>apps/api/.env
 fi
 
+# The dev accounts sign in with their password, which production turns off.
+grep -q '^PASSWORD_SIGN_IN=' apps/api/.env || echo 'PASSWORD_SIGN_IN=true' >>apps/api/.env
+
 say "Installing dependencies"
 install_deps
 

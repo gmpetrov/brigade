@@ -1,6 +1,22 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { typedPath, withPath } from '../lib/preview-path'
+import { previewOrigin, typedPath, withPath } from '../lib/preview-path'
+
+test("a page at a grant of the preview's address is the preview's", () => {
+  const origin = `https://${'a'.repeat(26)}.brigade.surf`
+  const grant = `https://${'a'.repeat(26)}-${'b'.repeat(36)}.brigade.surf`
+  assert.equal(previewOrigin(origin, origin), true)
+  assert.equal(previewOrigin(grant, origin), true)
+  // Another preview's grant, another domain, a grant too short, plain HTTP, a deeper host.
+  const other = `https://${'c'.repeat(26)}-${'b'.repeat(36)}.brigade.surf`
+  assert.equal(previewOrigin(other, origin), false)
+  assert.equal(previewOrigin(grant.replace('brigade.surf', 'evil.example'), origin), false)
+  assert.equal(previewOrigin(`https://${'a'.repeat(26)}-bbb.brigade.surf`, origin), false)
+  assert.equal(previewOrigin(grant.replace('https:', 'http:'), origin), false)
+  assert.equal(previewOrigin(grant.replace('https://', 'https://x.'), origin), false)
+  assert.equal(previewOrigin('null', origin), false)
+  assert.equal(previewOrigin('http://localhost:3000', 'http://localhost:3000'), true)
+})
 
 test('what a person types is a path on the preview', () => {
   assert.equal(typedPath('/app'), '/app')
