@@ -1746,6 +1746,49 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
       globalThis.fetch = previousFetch
     }
   })
+  test('a check reads Resend first and asks it to verify only when it is not verifying already', async () => {
+    const domains = await import('../src/mail/domains.js')
+    const previousFetch = globalThis.fetch
+    const name = `checked-${id}.test`
+    // As Resend does: asking it to verify puts the domain back to pending, records passed or not.
+    let resendSays = 'not_started'
+    let asked = 0
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.hostname === 'cloudflare-dns.com') return json({ Status: 0, Answer: [] })
+      const domain = /^\/domains\/([^/]+)/.exec(url.pathname)?.[1]
+      if (url.pathname === '/domains' && init?.method === 'POST')
+        return json({ id: `dom-${name}`, name, status: resendSays, records: [] })
+      if (domain && url.pathname.endsWith('/verify')) {
+        asked++
+        resendSays = 'pending'
+        return json({ id: domain })
+      }
+      if (domain && init?.method === 'DELETE') return json({ id: domain })
+      if (domain) return json({ id: domain, status: resendSays, records: [] })
+      return previousFetch(input, init)
+    }) as typeof fetch
+    try {
+      const db = scoped(a)
+      const row = await domains.addDomain(db, ws(a), { name, receiving: 'direct' })
+      // Not started: asked once, then left to verify.
+      assert.equal((await domains.checkDomain(db, row.id)).status, 'pending')
+      assert.equal((await domains.checkDomain(db, row.id)).status, 'pending')
+      assert.equal(asked, 1)
+      // Its records passed: the next check sees it, rather than asking again.
+      resendSays = 'verified'
+      assert.equal((await domains.checkDomain(db, row.id)).status, 'verified')
+      assert.equal(asked, 1)
+      // Resend gave up on it (records not in yet): asked again.
+      await db.mailDomain.updateMany({ where: { id: row.id }, data: { status: 'pending' } })
+      resendSays = 'failed'
+      await domains.checkDomain(db, row.id)
+      assert.equal(asked, 2)
+      await domains.removeDomain(db, ws(a), row.id)
+    } finally {
+      globalThis.fetch = previousFetch
+    }
+  })
   test('a domain another workspace added is theirs once verified, for three days, or while its records are in its DNS; else it is taken from them, a claim at a time', async () => {
     const domains = await import('../src/mail/domains.js')
     const previousFetch = globalThis.fetch

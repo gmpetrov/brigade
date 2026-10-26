@@ -442,8 +442,10 @@ export async function checkPublicAddress(db: ScopedDb, given: string, exceptId?:
 }
 
 /**
- * Ask Resend to check a domain's records now, and keep what it says: never over a takeover's claim
- * (`takeOver`), which wins from the moment it is made.
+ * Read what Resend says of a domain's records, and keep it: never over a takeover's claim
+ * (`takeOver`), which wins from the moment it is made. Resend is asked to verify it only when it
+ * is not verifying it already: asking again puts a domain back to pending, even one whose records
+ * just passed, so asking at each check would keep it pending for good.
  */
 export async function checkDomain(db: ScopedDb, domainId: string) {
   const row = await db.mailDomain.findFirst({ where: { id: domainId } })
@@ -452,8 +454,11 @@ export async function checkDomain(db: ScopedDb, domainId: string) {
     message: `${row.name} is being taken over by a workspace on Brigade that added it after its three days`,
   })
   if (claimed(row)) throw taking
-  if (row.status !== 'verified') await verifyDomain(row.resendDomainId).catch(() => undefined)
-  const domain = await getDomain(row.resendDomainId)
+  let domain = await getDomain(row.resendDomainId)
+  if (domain.status !== 'verified' && domain.status !== 'pending') {
+    await verifyDomain(row.resendDomainId).catch(() => undefined)
+    domain = await getDomain(row.resendDomainId)
+  }
   const kept = await db.mailDomain.updateMany({
     where: { id: row.id, ...unclaimed() },
     data: { status: statusOf(domain.status), records: recordsOf(domain), checkedAt: new Date() },

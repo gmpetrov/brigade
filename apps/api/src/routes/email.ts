@@ -298,7 +298,7 @@ export const email = new Hono<AppEnv>()
     return c.body(null, 204)
   })
 
-  /** Ask Resend to check a domain's DNS records now. */
+  /** Read Resend's check of a domain's DNS records now (`checkDomain`). */
   .post('/domains/:id/check', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
     const row = await checkDomain(c.var.db, c.req.param('id'))
