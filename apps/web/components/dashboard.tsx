@@ -50,7 +50,7 @@ import { NewProjectDialog, ProjectIcon } from '@/components/projects'
 import { SearchDialog } from '@/components/search'
 import { SidebarResizer, useSidebarWidth } from '@/components/sidebar-resizer'
 import { RailMenu } from '@/components/rail-menu'
-import { SidebarWork } from '@/components/sidebar-threads'
+import { SidebarWork, useSidebarOrder } from '@/components/sidebar-threads'
 import { QuickThread } from '@/components/quick-thread'
 import {
   preloadThreadPanel,
@@ -242,6 +242,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const teammates = useApi<Teammate[]>('/teammates', ['teammates.updated'])
   const projects = useApi<ProjectSummary[]>('/projects', ['projects.updated'])
   const reloadProjects = projects.reload
+  // The sidebar's teammates and projects, in the order the member dragged them to.
+  const sidebarOrder = useSidebarOrder()
+  const sidebarTeammates = sidebarOrder.sort('teammates', teammates.data ?? [])
+  const sidebarProjects = sidebarOrder.sort('projects', projects.data ?? [])
   const [creatingProject, setCreatingProject] = useState(false)
   const mac = useIsMac()
   const { theme = 'dark', setTheme } = useTheme()
@@ -497,11 +501,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   </SidebarMenu>
                 </SidebarGroup>
                 <SidebarWork
-                  teammates={teammates.data ?? []}
-                  projects={projects.data ?? []}
+                  teammates={sidebarTeammates}
+                  projects={sidebarProjects}
                   admin={isAdmin(data)}
                   memberId={data.memberId}
                   onNewProject={() => setCreatingProject(true)}
+                  onReorder={sidebarOrder.reorder}
                   needsYou={needsYou}
                   rail={
                     <>
@@ -510,7 +515,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         label="Projects"
                         href="/app/projects"
                         active={pathname.startsWith('/app/projects')}
-                        items={(projects.data ?? [])
+                        items={sidebarProjects
                           .filter((p) => !p.archivedAt)
                           .map((p) => ({
                             href: `/app/projects/${p.id}`,
@@ -519,7 +524,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                           }))}
                         action={{ label: 'New project', onSelect: () => setCreatingProject(true) }}
                       />
-                      <TeammatesRailMenu teammates={teammates.data ?? []} admin={isAdmin(data)} />
+                      <TeammatesRailMenu teammates={sidebarTeammates} admin={isAdmin(data)} />
                     </>
                   }
                 />

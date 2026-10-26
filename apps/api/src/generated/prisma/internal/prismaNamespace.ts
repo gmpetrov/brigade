@@ -412,6 +412,7 @@ export const ModelName = {
   Teammate: 'Teammate',
   ThreadRead: 'ThreadRead',
   ThreadPin: 'ThreadPin',
+  SidebarOrder: 'SidebarOrder',
   ThreadLater: 'ThreadLater',
   HomeDismissal: 'HomeDismissal',
   Session: 'Session',
@@ -484,7 +485,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle"
+    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1595,6 +1596,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ThreadPinCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ThreadPinCountAggregateOutputType> | number
+        }
+      }
+    }
+    SidebarOrder: {
+      payload: Prisma.$SidebarOrderPayload<ExtArgs>
+      fields: Prisma.SidebarOrderFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SidebarOrderFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SidebarOrderFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload>
+        }
+        findFirst: {
+          args: Prisma.SidebarOrderFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SidebarOrderFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload>
+        }
+        findMany: {
+          args: Prisma.SidebarOrderFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload>[]
+        }
+        create: {
+          args: Prisma.SidebarOrderCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload>
+        }
+        createMany: {
+          args: Prisma.SidebarOrderCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SidebarOrderCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload>[]
+        }
+        delete: {
+          args: Prisma.SidebarOrderDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload>
+        }
+        update: {
+          args: Prisma.SidebarOrderUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload>
+        }
+        deleteMany: {
+          args: Prisma.SidebarOrderDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SidebarOrderUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SidebarOrderUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload>[]
+        }
+        upsert: {
+          args: Prisma.SidebarOrderUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SidebarOrderPayload>
+        }
+        aggregate: {
+          args: Prisma.SidebarOrderAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSidebarOrder>
+        }
+        groupBy: {
+          args: Prisma.SidebarOrderGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SidebarOrderGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SidebarOrderCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SidebarOrderCountAggregateOutputType> | number
         }
       }
     }
@@ -6075,6 +6150,18 @@ export const ThreadPinScalarFieldEnum = {
 export type ThreadPinScalarFieldEnum = (typeof ThreadPinScalarFieldEnum)[keyof typeof ThreadPinScalarFieldEnum]
 
 
+export const SidebarOrderScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  list: 'list',
+  ids: 'ids',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SidebarOrderScalarFieldEnum = (typeof SidebarOrderScalarFieldEnum)[keyof typeof SidebarOrderScalarFieldEnum]
+
+
 export const ThreadLaterScalarFieldEnum = {
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
@@ -8001,6 +8088,7 @@ export type GlobalOmitConfig = {
   teammate?: Prisma.TeammateOmit
   threadRead?: Prisma.ThreadReadOmit
   threadPin?: Prisma.ThreadPinOmit
+  sidebarOrder?: Prisma.SidebarOrderOmit
   threadLater?: Prisma.ThreadLaterOmit
   homeDismissal?: Prisma.HomeDismissalOmit
   session?: Prisma.SessionOmit
