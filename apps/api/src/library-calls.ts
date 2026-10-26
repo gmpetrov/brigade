@@ -80,7 +80,12 @@ export async function handleLibraryCall(
   }
 
   if (op.name === 'skill_proposal')
-    return done(await proposeSkill(db, scope, teammate, session.id, op.proposal))
+    try {
+      return done(await proposeSkill(db, scope, teammate, session.id, op.proposal))
+    } catch (error) {
+      if (error instanceof HTTPException) return fail(error.message)
+      throw error
+    }
 
   if (op.name === 'move' || op.name === 'delete') {
     const to = op.name === 'move' ? op.to : undefined

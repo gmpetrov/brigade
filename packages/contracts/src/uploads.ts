@@ -3,6 +3,7 @@
 // checks and records the result. A file for the library, a skill or a logo is
 // held as an upload until it is used (`uploadId`); see apps/api/src/uploads.ts.
 import { z } from 'zod'
+import { ATTACHMENT_MAX } from './attachments.js'
 import { LIBRARY_FILE_MAX } from './library.js'
 import { PROJECT_LOGO_MAX } from './projects.js'
 import { SKILL_FILE_MAX, SKILL_PACK_MAX } from './skills.js'
@@ -87,3 +88,22 @@ export const UploadRef = z.object({ uploadId: z.string().min(1).max(64) })
 
 /** Largest image or PDF a teammate's event carries, put in its thread's bucket folder. */
 export const THREAD_FILE_MAX = 32 * 1024 * 1024
+
+/**
+ * A runner starts the upload of a file a teammate sends with a connector call or a child's
+ * report: POST /runner/attachments/uploads, then PUT the bytes to the ticket's URL, then
+ * POST /runner/attachments/<id>/complete with RunnerUploadDone.
+ */
+export const StartRunnerAttachment = z.object({
+  sessionId: z.string().min(1).max(64),
+  teammateId: z.string().min(1).max(64).optional(),
+  name: z.string().trim().min(1).max(500),
+  size: z.number().int().min(0).max(ATTACHMENT_MAX, 'Files can be up to 25 MB'),
+  /** The runner hashed it: the bytes in the bucket must match. */
+  sha256: Sha256,
+  contentType: z.string().max(200).optional(),
+})
+export type StartRunnerAttachment = z.input<typeof StartRunnerAttachment>
+
+/** A runner's upload reached the bucket: the SHA-256 its bytes must have. */
+export const RunnerUploadDone = z.object({ sha256: Sha256 })

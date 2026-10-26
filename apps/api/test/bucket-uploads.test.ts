@@ -1,0 +1,124 @@
+import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
+import { mkdtemp, readFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { test } from 'node:test'
+import { strToU8, zipSync } from 'fflate'
+
+// The pieces every upload straight to the bucket goes through (bucket.ts, object-check.ts):
+// the stand-in a client PUTs to without R2, the copy inside the bucket, and the check that
+// reads an object back as it streams. Without R2, in a folder of the test's own; nothing
+// here reaches a database.
+process.env.DATABASE_URL ??= 'postgresql://test@localhost/test'
+process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
+process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
+process.env.BUCKET_DIR = await mkdtemp(join(tmpdir(), 'bucket-uploads-'))
+const { copyObject, objectSize, putObject, readHead, uploadTarget } =
+  await import('../src/bucket.js')
+const { inspectObject, EXTRACT_MAX } = await import('../src/object-check.js')
+const { localBucket } = await import('../src/routes/bucket.js')
+const { Hono } = await import('hono')
+
+const app = new Hono().route('/api/bucket', localBucket)
+const put = (url: string, body: Uint8Array, headers: Record<string, string> = {}) =>
+  app.request(url, {
+    method: 'PUT',
+    body,
+    headers: { 'content-length': String(body.byteLength), ...headers },
+  })
+const sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
+
+test('without R2, a client PUTs to the signed path of the stand-in, exactly the signed size', async () => {
+  const bytes = strToU8('hello, bucket')
+  const target = await uploadTarget('org/ws/uploads/a1', bytes.byteLength, 'text/plain')
+  assert.match(target.url, /^\/api\/bucket\?/)
+  assert.equal(target.headers['content-type'], 'text/plain')
+  assert.equal((await put(target.url, bytes)).status, 200)
+  assert.deepEqual(
+    new Uint8Array(await readFile(join(process.env.BUCKET_DIR!, 'org/ws/uploads/a1'))),
+    bytes,
+  )
+  // More or fewer bytes than signed for: refused, and the object keeps what it held.
+  assert.equal((await put(target.url, strToU8('hello, bucket!'))).status, 400)
+  assert.equal((await put(target.url, strToU8('hello'))).status, 400)
+  assert.equal(await objectSize('org/ws/uploads/a1'), bytes.byteLength)
+})
+
+test('a path whose signature, key or size was changed, or that expired, is refused', async () => {
+  const target = await uploadTarget('org/ws/uploads/a2', 3, 'text/plain')
+  const url = new URL(target.url, 'http://api')
+  const tampered = (name: string, value: string) => {
+    const changed = new URL(url)
+    changed.searchParams.set(name, value)
+    return `${changed.pathname}${changed.search}`
+  }
+  assert.equal((await put(tampered('key', 'org/ws/library/x'), strToU8('abc'))).status, 403)
+  assert.equal((await put(tampered('size', '4'), strToU8('abcd'))).status, 403)
+  assert.equal((await put(tampered('sig', '00'.repeat(32)), strToU8('abc'))).status, 403)
+  assert.equal((await put(tampered('expires', '1'), strToU8('abc'))).status, 403)
+  assert.equal(await objectSize('org/ws/library/x'), null)
+})
+
+test('an object is copied inside the bucket; a missing one is false', async () => {
+  await putObject('org/ws/uploads/c1', strToU8('copied'), 'text/plain')
+  assert.equal(await copyObject('org/ws/uploads/c1', 'org/ws/library/d1', 'text/plain'), true)
+  assert.equal(new TextDecoder().decode((await readHead('org/ws/library/d1', 100))!), 'copied')
+  assert.equal(await copyObject('org/ws/uploads/none', 'org/ws/library/d2'), false)
+  assert.equal(await readHead('org/ws/library/d2', 10), null)
+})
+
+test('a check reads size, SHA-256, the real type and the text as the object streams', async () => {
+  const text = strToU8('# Refunds\n\nWithin 30 days, café.')
+  await putObject('org/ws/uploads/t1', text, 'text/markdown')
+  const read = await inspectObject('org/ws/uploads/t1', { name: 'refunds.md', text: true })
+  assert.equal(read?.size, text.byteLength)
+  assert.equal(read?.sha256, sha(text))
+  assert.equal(read?.contentType, 'text/markdown')
+  assert.equal(read?.text, '# Refunds\n\nWithin 30 days, café.')
+  // Text only when asked for.
+  assert.equal((await inspectObject('org/ws/uploads/t1', { name: 'refunds.md' }))?.text, '')
+
+  // A file that claims a type shown inline must be one.
+  await putObject('org/ws/uploads/p1', strToU8('<script>alert(1)</script>'), 'image/png')
+  const fake = await inspectObject('org/ws/uploads/p1', { name: 'shot.png' })
+  assert.equal(fake?.contentType, 'application/octet-stream')
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])
+  await putObject('org/ws/uploads/p2', png, 'image/png')
+  assert.equal(
+    (await inspectObject('org/ws/uploads/p2', { name: 'shot.png' }))?.contentType,
+    'image/png',
+  )
+
+  // Not UTF-8: kept, not searchable.
+  await putObject('org/ws/uploads/b1', new Uint8Array([0xff, 0xfe, 0x41]), 'text/plain')
+  assert.equal((await inspectObject('org/ws/uploads/b1', { name: 'a.txt', text: true }))?.text, '')
+
+  assert.equal(await inspectObject('org/ws/uploads/none', { name: 'a.txt' }), null)
+})
+
+test('a check stops once more bytes came than allowed', async () => {
+  await putObject('org/ws/uploads/m1', new Uint8Array(5000), 'application/octet-stream')
+  const read = await inspectObject('org/ws/uploads/m1', { name: 'a.bin', max: 1000 })
+  assert.ok(read && read.size > 1000)
+})
+
+test('an Office file is read for its text, up to EXTRACT_MAX', async () => {
+  const docx = zipSync({
+    'word/document.xml': strToU8(
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Quarterly plan</w:t></w:r></w:p></w:body></w:document>',
+    ),
+    '[Content_Types].xml': strToU8('<Types/>'),
+  })
+  await putObject('org/ws/uploads/o1', docx, 'application/octet-stream')
+  const read = await inspectObject('org/ws/uploads/o1', { name: 'plan.docx', text: true })
+  assert.equal(read?.sha256, sha(docx))
+  assert.equal(read?.text.trim(), 'Quarterly plan')
+  // Larger: kept and checked, not read for its text.
+  const large = new Uint8Array(EXTRACT_MAX + 1)
+  large.set(docx)
+  await putObject('org/ws/uploads/o2', large, 'application/octet-stream')
+  const big = await inspectObject('org/ws/uploads/o2', { name: 'big.docx', text: true })
+  assert.equal(big?.size, EXTRACT_MAX + 1)
+  assert.equal(big?.text, '')
+})

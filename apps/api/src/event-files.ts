@@ -2,7 +2,9 @@
 // a PDF it read) arrive in its events as base64, hundreds of kB each: most of what the
 // database held, sent again to every page that opens the thread. Each goes to the bucket
 // once, and the stored event keeps its name in its place (STORED_FILE), which the
-// dashboard shows from there.
+// dashboard shows from there. Runners from DIRECT_UPLOAD_PROTOCOL on do this themselves:
+// they PUT each file to a signed URL (routes/runner-files.ts) and send its name; this is
+// for older runners, whose events still carry the bytes.
 import { createHash } from 'node:crypto'
 import { STORED_FILE } from '@brigade/contracts'
 import { putObject, threadFileKey } from './bucket.js'
@@ -53,6 +55,8 @@ export function fileIn(text: string): File | undefined {
 }
 
 /**
+ * Runners before DIRECT_UPLOAD_PROTOCOL only: remove once MIN_PROTOCOL_VERSION reaches it.
+ *
  * The value with each file in it replaced by STORED_FILE and the file's name, the
  * files put in the thread's folder in the bucket first. The value as it was when none
  * is in it, or when the bucket refuses one: an event is stored whole rather than lose

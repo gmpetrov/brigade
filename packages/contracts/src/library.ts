@@ -226,6 +226,11 @@ export type LibraryPreview = z.infer<typeof LibraryPreview>
 export const MoveLibraryFile = z.object({ path: LibraryPath })
 export const WriteLibraryText = z.object({ text: z.string().max(5_000_000) })
 export const CreateLibraryText = z.object({ path: LibraryPath, text: z.string().max(5_000_000) })
+/** A file uploaded straight to the bucket (POST /api/uploads), saved at a path. */
+export const SaveLibraryUpload = z.object({
+  path: LibraryPath,
+  uploadId: z.string().min(1).max(64),
+})
 export const WriteMemory = z.object({ text: z.string().max(MEMORY_MAX) })
 
 /** Where a memory line came from, as the dashboard shows it. */
