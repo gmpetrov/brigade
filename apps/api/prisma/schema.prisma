@@ -2487,3 +2487,20 @@ model ContactHandle {
 
   @@unique([workspaceId, kind, value])
 }
+
+/// A problem with Brigade itself that its operators are alerted to (src/ops/): one row per
+/// problem, by key, kept once resolved so it is not alerted again right away.
+model OpsAlert {
+  /// What it is about, e.g. api-errors or computer:<id>.
+  key        String    @id
+  /// critical or warning.
+  severity   String
+  title      String
+  detail     String    @default("")
+  firstAt    DateTime  @default(now())
+  lastAt     DateTime  @default(now())
+  /// When operators were last told about it.
+  notifiedAt DateTime?
+  /// Null while it lasts.
+  resolvedAt DateTime?
+}

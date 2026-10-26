@@ -46,6 +46,7 @@ import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery
 import type { Session } from './generated/prisma/client.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
 import type { WorkspaceScope } from './scope.js'
+import { noteFailure } from './ops/failures.js'
 
 type RunnerConn = {
   runnerId: string
@@ -124,6 +125,15 @@ export function dropRunner(computerId: string) {
 function restartTimedOut(runner: { computerId: string; workspaceId: string }) {
   restarting.delete(runner.computerId)
   if (runners.has(runner.computerId)) return
+  // A cloud computer's, for operators: a laptop may well sleep through its restart.
+  void prisma.computer
+    .findUnique({ where: { id: runner.computerId }, select: { kind: true } })
+    .then(
+      (c) =>
+        c?.kind === 'cloud' &&
+        noteFailure('runner-restart', `runner of ${runner.computerId} not back after its update`),
+    )
+    .catch(() => {})
   broadcast(runner.workspaceId, computerUpdated(runner.computerId))
   // A thread waiting to leave it leaves without its folders.
   void movesOn(runner.computerId).catch(console.error)
@@ -351,6 +361,15 @@ export const watchRunners = () =>
       console.warn(
         `runner of ${conn.computerId} silent for ${Math.round((now - conn.heardAt) / 1000)} s: forgotten`,
       )
+      // A cloud computer's, for operators: a member's laptop that sleeps goes silent too.
+      const computerId = conn.computerId
+      void prisma.computer
+        .findUnique({ where: { id: computerId }, select: { kind: true } })
+        .then(
+          (c) =>
+            c?.kind === 'cloud' && noteFailure('runner-silent', `runner of ${computerId} silent`),
+        )
+        .catch(() => {})
       dropRunner(conn.computerId)
     }
   }, 30_000)
@@ -1045,6 +1064,12 @@ export function runnerSocket(runner: {
         session.status,
       )
       await prisma.session.update({ where: { id: session.id }, data: { lastSeq, status } })
+      if (status === 'failed' && session.status !== 'failed') {
+        const error = fresh.findLast((e) => e.event.type === 'error')?.event
+        noteFailure('turn', error && 'message' in error ? error.message : 'failed', {
+          workspaceId: session.workspaceId,
+        })
+      }
       broadcast(session.workspaceId, { type: 'events', events: fresh }, session.id)
       // Its status changed, or its preview did: the sidebar marks a thread with one up.
       if (status !== session.status || fresh.some((e) => e.event.type === 'preview.changed'))

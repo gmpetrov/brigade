@@ -27,6 +27,7 @@ import { actingTeammate, loadThread } from './thread-spec.js'
 import { projectWhere, usableProject } from './projects.js'
 import { handleWakeup, isWakeupOperation } from './wakeups.js'
 import { startThread } from './work.js'
+import { noteFailure } from './ops/failures.js'
 
 /** A thread still `starting` after this is taken as lost (e.g. its queued prompt went with a restart). */
 const STARTING_STALE_MS = 15 * 60_000
@@ -447,7 +448,10 @@ export function watchSchedules() {
     setTimeout(
       () =>
         void tick()
-          .catch((error) => console.error('schedule tick failed', error))
+          .catch((error) => {
+            console.error('schedule tick failed', error)
+            noteFailure('job:schedules', error)
+          })
           .finally(later),
       60_000 - (Date.now() % 60_000) + 250,
     )

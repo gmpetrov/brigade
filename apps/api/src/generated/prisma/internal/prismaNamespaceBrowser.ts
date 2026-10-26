@@ -123,7 +123,8 @@ export const ModelName = {
   MailMessage: 'MailMessage',
   MailDomain: 'MailDomain',
   Contact: 'Contact',
-  ContactHandle: 'ContactHandle'
+  ContactHandle: 'ContactHandle',
+  OpsAlert: 'OpsAlert'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -1442,6 +1443,20 @@ export const ContactHandleScalarFieldEnum = {
 } as const
 
 export type ContactHandleScalarFieldEnum = (typeof ContactHandleScalarFieldEnum)[keyof typeof ContactHandleScalarFieldEnum]
+
+
+export const OpsAlertScalarFieldEnum = {
+  key: 'key',
+  severity: 'severity',
+  title: 'title',
+  detail: 'detail',
+  firstAt: 'firstAt',
+  lastAt: 'lastAt',
+  notifiedAt: 'notifiedAt',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type OpsAlertScalarFieldEnum = (typeof OpsAlertScalarFieldEnum)[keyof typeof OpsAlertScalarFieldEnum]
 
 
 export const SortOrder = {

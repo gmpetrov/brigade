@@ -20,6 +20,7 @@ import { loadThread } from './thread-spec.js'
 import { settleOverdueChildren } from './children.js'
 import { settleOverdueDryRuns } from './playbook-dry-runs.js'
 import { promptThread } from './work.js'
+import { noteFailure } from './ops/failures.js'
 
 type WakeupOperation = Extract<
   ScheduleOperation,
@@ -275,7 +276,10 @@ export function watchWakeups() {
     setTimeout(
       () =>
         void fireDueWakeups()
-          .catch((error) => console.error('wake-up tick failed', error))
+          .catch((error) => {
+            console.error('wake-up tick failed', error)
+            noteFailure('job:wakeups', error)
+          })
           .finally(later),
       60_000 - (Date.now() % 60_000) + 500,
     )
