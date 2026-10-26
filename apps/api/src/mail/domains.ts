@@ -205,8 +205,8 @@ async function recordsInDns(row: DomainRow) {
  * guarded write, so that from then on no check marks it verified and no mailbox gets an address on
  * it; then its DKIM key is looked for in its DNS (found: it is theirs after all, and stays); then
  * it leaves Resend, it goes, and its mailboxes lose their addresses on it (they could never send or
- * receive as them). The claim's time is its token: each step after Resend's goes on only while the
- * claim is still this takeover's. Anything failing before it leaves Resend gives the claim back.
+ * receive as them), in one transaction. The claim's time is its token: each step after Resend's
+ * goes on only while the claim is still this takeover's. Anything failing gives the claim back.
  */
 async function takeOver(other: DomainRow) {
   const scope = { organizationId: other.organizationId, workspaceId: other.workspaceId }
@@ -251,18 +251,33 @@ async function takeOver(other: DomainRow) {
     if (theirs) void checkDomain(db, other.id).catch(() => undefined)
     throw error
   }
-  // Only while still this takeover's: a claim it lost is someone else's to settle.
-  const gone = await db.mailDomain.deleteMany({ where: ours() })
-  if (!gone.count) {
-    console.error(`mail domain ${other.name}: its takeover lost its claim after Resend removed it`)
-    throw lost()
-  }
-  // Then its addresses, by name: one given while it went lands before this (and goes now) or
-  // after its domain went (refused: its domain is no more).
-  await db.mailAddress.updateMany({
-    where: { publicAddress: { endsWith: `@${other.name}` } },
-    data: { publicAddress: null, domainId: null },
-  })
+  // In one transaction, only while still this takeover's (a claim it lost is someone else's to
+  // settle): the domain goes, then its addresses, by name. One given while it went lands before
+  // (and goes now) or after (refused: its domain is no more); nothing is left half done.
+  await prisma
+    .$transaction(async (tx) => {
+      const gone = await tx.mailDomain.deleteMany({
+        where: { ...ours(), workspaceId: other.workspaceId },
+      })
+      if (!gone.count) {
+        console.error(
+          `mail domain ${other.name}: its takeover lost its claim after Resend removed it`,
+        )
+        throw lost()
+      }
+      await tx.mailAddress.updateMany({
+        where: { workspaceId: other.workspaceId, publicAddress: { endsWith: `@${other.name}` } },
+        data: { publicAddress: null, domainId: null },
+      })
+    })
+    .catch(async (error: unknown) => {
+      // Out of Resend already (a second removal there is a 404, as good): taken again at once.
+      await db.mailDomain.updateMany({
+        where: ours(),
+        data: { status: other.status === CLAIMED ? 'pending' : other.status },
+      })
+      throw error
+    })
   await audit({
     ...scope,
     actor: { type: 'system', id: 'brigade' },

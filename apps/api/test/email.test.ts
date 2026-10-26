@@ -1916,6 +1916,47 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
         `desk@${kept}`,
       )
       await domains.setPublicAddress(dbA, ws(a), desk.id, null)
+
+      // Cut off as it settles (here: its addresses' update refused by the database): nothing is
+      // left half done, the domain is as it was, and adding it again finishes the takeover.
+      const cut = `cut-${id}.test`
+      resendSays = 'pending'
+      deleting = 'ok'
+      const third = await domains.addDomain(dbA, ws(a), { name: cut, receiving: 'direct' })
+      await domains.setPublicAddress(dbA, ws(a), desk.id, `desk@${cut}`)
+      await prisma.mailDomain.updateMany({
+        where: { id: third.id },
+        data: { createdAt: new Date(Date.now() - 4 * 86_400_000) },
+      })
+      const trigger = `brigade_test_cut_${id.replace(/-/g, '')}`
+      await prisma.$executeRawUnsafe(
+        `CREATE FUNCTION ${trigger}() RETURNS trigger AS $$ BEGIN IF OLD."publicAddress" = 'desk@${cut}' AND NEW."publicAddress" IS NULL THEN RAISE EXCEPTION 'cut off'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql`,
+      )
+      await prisma.$executeRawUnsafe(
+        `CREATE TRIGGER ${trigger} BEFORE UPDATE ON "MailAddress" FOR EACH ROW EXECUTE FUNCTION ${trigger}()`,
+      )
+      try {
+        await assert.rejects(domains.addDomain(dbB, ws(b), { name: cut }), /cut off/)
+      } finally {
+        await prisma.$executeRawUnsafe(`DROP TRIGGER ${trigger} ON "MailAddress"`)
+        await prisma.$executeRawUnsafe(`DROP FUNCTION ${trigger}()`)
+      }
+      assert.equal(
+        (await prisma.mailDomain.findUniqueOrThrow({ where: { id: third.id } })).status,
+        'pending',
+      )
+      assert.equal(
+        (await prisma.mailAddress.findUniqueOrThrow({ where: { id: desk.id } })).publicAddress,
+        `desk@${cut}`,
+      )
+      const retaken = await domains.addDomain(dbB, ws(b), { name: cut })
+      assert.equal(
+        (await prisma.mailAddress.findUniqueOrThrow({ where: { id: desk.id } })).publicAddress,
+        null,
+      )
+      await domains.setPublicAddress(dbB, ws(b), bDesk.id, `desk@${cut}`)
+      await domains.setPublicAddress(dbB, ws(b), bDesk.id, null)
+      await domains.removeDomain(dbB, ws(b), retaken.id)
     } finally {
       gate.resume.resolve()
       globalThis.fetch = previousFetch

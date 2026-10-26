@@ -57,8 +57,9 @@ in its public DNS (read by Brigade itself, failing closed). Past that, a workspa
 it over (`takeOver`): one guarded write claims it first (`status: claimed`, for ten minutes at
 most), after which no check marks it verified and no mailbox gets an address on it; then its DNS
 is read, the claim is renewed and it leaves Resend (a call bounded to a minute, well within the
-claim), then it goes, and only then are the other workspace's addresses on it cleared, by name (one
-written meanwhile lands before, and is cleared, or after, and is refused: its domain is gone). Each
+claim), then, in one transaction, it goes and the other workspace's addresses on it are cleared, by
+name (one written meanwhile lands before, and is cleared, or after, and is refused: its domain is
+gone); cut off there, nothing is half done, and adding it again finishes. Each
 step after Resend's goes on only while the claim is still this takeover's, its time its token. An
 `email.domain.taken_over` audit entry says so. A failure before it leaves Resend gives the claim
 back. **A mailbox on a domain whose
