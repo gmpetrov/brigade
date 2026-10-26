@@ -21,7 +21,10 @@ import {
 } from './resend.js'
 
 const CHECK_EVERY_MS = 10 * 60_000
-/** Past this, a domain whose records never showed is marked failed (it can be checked again). */
+/**
+ * Past this, a domain whose records never showed is marked failed (it can be checked again), and
+ * another workspace may add it instead: the one whose records then show is the one that owns it.
+ */
 const GIVE_UP_MS = 3 * 86_400_000
 
 const DOMAIN = /^(?=.{3,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
@@ -88,7 +91,10 @@ export async function lookupDomain(given: string): Promise<DomainLookup> {
 
 /**
  * Add a domain to the workspace (and to Resend: sending, and receiving when direct). Receiving
- * directly is refused while its mail goes to another provider: it would take that mail away.
+ * directly is refused while its mail goes to another provider: it would take that mail away. A
+ * domain another workspace added is theirs once verified, and for three days before that; past
+ * them, still unverified, it is taken from them (`takeOver`), so nobody keeps a domain they only
+ * claimed from the workspace that owns it.
  */
 export async function addDomain(
   db: ScopedDb,
@@ -99,13 +105,14 @@ export async function addDomain(
   const { name } = lookup
   if (await db.mailDomain.findFirst({ where: { name }, select: { id: true } }))
     throw new HTTPException(409, { message: `${name} is already added` })
-  if (await prisma.mailDomain.findUnique({ where: { name }, select: { id: true } }))
-    throw new HTTPException(409, { message: `${name} is used by another workspace on Brigade` })
+  const other = await prisma.mailDomain.findUnique({ where: { name } })
+  if (other) await stillTheirs(other)
   const receiving = input.receiving ?? lookup.suggested
   if (receiving === 'direct' && lookup.mx.length > 0 && !lookup.brigade)
     throw new HTTPException(400, {
       message: `${name}'s mail goes to ${lookup.mx[0]}: receiving it directly would take it from there. Forward its addresses, or use a subdomain such as team.${name}.`,
     })
+  if (other) await takeOver(other)
   const created = await createDomain(name, receiving === 'direct').catch((error: unknown) => {
     // Already in Resend's account (added by hand, or by another product on the shared account).
     throw new HTTPException(409, {
@@ -130,6 +137,70 @@ export async function addDomain(
     data: { name, receiving },
   })
   return row
+}
+
+type DomainRow = NonNullable<Awaited<ReturnType<typeof prisma.mailDomain.findUnique>>>
+
+/**
+ * A 409 while another workspace's domain is still theirs: verified (Resend asked again first, as
+ * its records may have shown since the last check), or added less than three days ago.
+ */
+async function stillTheirs(other: DomainRow) {
+  const db = scoped({ organizationId: other.organizationId, workspaceId: other.workspaceId })
+  const status =
+    other.status === 'verified' || !other.resendDomainId
+      ? other.status
+      : (
+          await checkDomain(db, other.id).catch((error: unknown) => {
+            // Gone from Resend: never verified there.
+            if (error instanceof ResendError && error.status === 404) return other
+            throw new HTTPException(502, {
+              message: `Resend could not say whether ${other.name} is verified: try again in a moment`,
+            })
+          })
+        ).status
+  if (status === 'verified')
+    throw new HTTPException(409, {
+      message: `${other.name} is used by another workspace on Brigade`,
+    })
+  const free = other.createdAt.getTime() + GIVE_UP_MS
+  if (Date.now() < free)
+    throw new HTTPException(409, {
+      message: `Another workspace on Brigade added ${other.name} and has until ${new Date(free).toUTCString()} to verify it. If ${other.name} is yours, add it after that.`,
+    })
+}
+
+/**
+ * Another workspace's domain left unverified for three days, taken from it: from Resend, then its
+ * mailboxes' addresses on it (they could never send or receive as them), then the domain.
+ */
+async function takeOver(other: DomainRow) {
+  const scope = { organizationId: other.organizationId, workspaceId: other.workspaceId }
+  const db = scoped(scope)
+  if (other.resendDomainId) await removeFromResend(other.name, other.resendDomainId)
+  await db.mailAddress.updateMany({
+    where: { domainId: other.id },
+    data: { publicAddress: null, domainId: null },
+  })
+  await db.mailDomain.deleteMany({ where: { id: other.id } })
+  await audit({
+    ...scope,
+    actor: { type: 'system', id: 'brigade' },
+    action: 'email.domain.taken_over',
+    target: { type: 'mail_domain', id: other.id },
+    data: { name: other.name, reason: 'not verified within three days' },
+  })
+}
+
+/** A domain out of Resend; gone already is as good. A 502 when Resend did not remove it. */
+async function removeFromResend(name: string, resendDomainId: string) {
+  await deleteDomain(resendDomainId).catch((error: unknown) => {
+    if (error instanceof ResendError && error.status === 404) return
+    console.warn(`mail domain ${name}: not removed from Resend`, error)
+    throw new HTTPException(502, {
+      message: `Resend did not remove ${name}: try again in a moment`,
+    })
+  })
 }
 
 /** The workspace's domains, each with the mailboxes' addresses on it. */
@@ -171,15 +242,7 @@ export async function removeDomain(db: ScopedDb, scope: WorkspaceScope, id: stri
     throw new HTTPException(409, {
       message: `Mailboxes still have addresses on ${row.name}: change them first`,
     })
-  if (row.resendDomainId)
-    await deleteDomain(row.resendDomainId).catch((error: unknown) => {
-      // Gone from Resend already: nothing left there.
-      if (error instanceof ResendError && error.status === 404) return
-      console.warn(`mail domain ${row.name}: not removed from Resend`, error)
-      throw new HTTPException(502, {
-        message: `Resend did not remove ${row.name}: try again in a moment`,
-      })
-    })
+  if (row.resendDomainId) await removeFromResend(row.name, row.resendDomainId)
   // Turned-off mailboxes let it go too.
   await db.mailAddress.updateMany({
     where: { domainId: row.id },

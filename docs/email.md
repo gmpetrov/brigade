@@ -51,7 +51,11 @@ and asks how its mail reaches Brigade (`MailDomain.receiving`):
   the way to have both.
 
 Its DNS records (`MailDomain.records`, Resend's) are checked every ten minutes for three days, or at
-once with Check now; until then, it receives nothing directly either. **A mailbox on a domain whose
+once with Check now; until then, it receives nothing directly either. A domain another workspace
+added is theirs once verified, and for its first three days; past them and still unverified (Resend
+is asked again first), a workspace adding it takes it over (`takeOver`): it leaves Resend, the other
+workspace's mailboxes lose their addresses on it, and an `email.domain.taken_over` audit entry says
+so. Whoever owns it is the one whose records then show. **A mailbox on a domain whose
 records are not in yet sends nothing**: the send
 is refused (409) and never goes out from its address on Brigade's domain instead, so replies always
 come from the address people wrote to. A domain is removed once no mailbox has an address on it,

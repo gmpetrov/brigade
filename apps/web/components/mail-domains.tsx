@@ -343,6 +343,12 @@ function DomainCard({
           ? `Mail to its addresses stays with ${d.name}'s mail provider; each mailbox's page says where to forward its address.`
           : `Its MX points to Brigade: mail to any of its mailboxes' addresses arrives directly.`}
       </p>
+      {!verified && (
+        <p className="text-sm text-muted-foreground">
+          Add its records within 3 days. After that, while they are not in, another workspace on
+          Brigade can add {d.name} instead.
+        </p>
+      )}
       {d.addresses.length > 0 && (
         <p className="text-sm">
           <span className="text-muted-foreground">Addresses: </span>

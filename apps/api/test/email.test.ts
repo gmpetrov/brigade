@@ -1746,4 +1746,72 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
       globalThis.fetch = previousFetch
     }
   })
+  test('a domain another workspace added is theirs once verified or for three days; unverified past that, it is taken from them', async () => {
+    const domains = await import('../src/mail/domains.js')
+    const previousFetch = globalThis.fetch
+    const name = `taken-${id}.test`
+    const verified = new Set<string>()
+    const removed: string[] = []
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.hostname === 'cloudflare-dns.com') return json({ Status: 0, Answer: [] })
+      const domain = /^\/domains\/([^/]+)/.exec(url.pathname)?.[1]
+      if (url.pathname === '/domains' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { name: string }
+        return json({
+          id: `dom-${body.name}-${removed.length}`,
+          name: body.name,
+          status: 'not_started',
+          records: [],
+        })
+      }
+      if (domain && url.pathname.endsWith('/verify')) return json({ id: domain })
+      if (domain && init?.method === 'DELETE') {
+        removed.push(domain)
+        return json({ id: domain })
+      }
+      if (domain)
+        return json({
+          id: domain,
+          status: verified.has(domain) ? 'verified' : 'pending',
+          records: [],
+        })
+      return previousFetch(input, init)
+    }) as typeof fetch
+    try {
+      const dbA = scoped(a)
+      const dbB = scoped(b)
+      const first = await domains.addDomain(dbA, ws(a), { name, receiving: 'direct' })
+      const desk = await addresses.createInbox(dbA, ws(a), { projectId, label: 'Taken' })
+      await domains.setPublicAddress(dbA, ws(a), desk.id, `desk@${name}`)
+      // Within its three days: still A's.
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /has until .* to verify it/)
+      // Past them, but its records showed meanwhile: A's for good, and now marked so.
+      const old = new Date(Date.now() - 4 * 86_400_000)
+      await prisma.mailDomain.updateMany({ where: { id: first.id }, data: { createdAt: old } })
+      verified.add(first.resendDomainId!)
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /used by another workspace/)
+      assert.equal(
+        (await prisma.mailDomain.findUniqueOrThrow({ where: { id: first.id } })).status,
+        'verified',
+      )
+      // Never verified past them: B takes it, and A's mailbox loses its address there.
+      verified.clear()
+      await prisma.mailDomain.updateMany({ where: { id: first.id }, data: { status: 'failed' } })
+      const taken = await domains.addDomain(dbB, ws(b), { name })
+      assert.equal(taken.workspaceId, b.workspaceId)
+      assert.deepEqual(removed, [first.resendDomainId])
+      assert.equal(await prisma.mailDomain.findUnique({ where: { id: first.id } }), null)
+      const lost = await prisma.mailAddress.findUniqueOrThrow({ where: { id: desk.id } })
+      assert.deepEqual([lost.publicAddress, lost.domainId], [null, null])
+      assert.ok(
+        await prisma.auditEntry.findFirst({
+          where: { workspaceId: a.workspaceId, action: 'email.domain.taken_over' },
+        }),
+      )
+      await domains.removeDomain(dbB, ws(b), taken.id)
+    } finally {
+      globalThis.fetch = previousFetch
+    }
+  })
 })
