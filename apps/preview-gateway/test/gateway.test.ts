@@ -291,9 +291,16 @@ test('a request with the cookie goes to the provider with its token, without the
   assert.equal(seen[0]!.redirect, 'manual')
   assert.equal(response.headers.get('location'), `${origin}/next?x=1`)
 
-  // Registered in this isolate: no read of the database for its requests.
+  // Each request reads its route, none is kept; a page's requests at the same time share one read.
+  const before = reads()
   await call(env, `${origin}/other.css`, { headers: { cookie } })
-  assert.equal(reads(), 0)
+  assert.equal(reads(), before + 1)
+  await Promise.all(
+    ['/a.js', '/b.js', '/c.css'].map((path) =>
+      call(env, `${origin}${path}`, { headers: { cookie } }),
+    ),
+  )
+  assert.equal(reads(), before + 2)
 })
 
 test("where the browser drops the cookie (Safari's frame), a grant in the host lets it in", async () => {
@@ -399,6 +406,51 @@ test("a stopped preview's address answers 404; started again, the run before's c
   await registered(env)
   globalThis.fetch = (async () => new Response('ok')) as typeof fetch
   assert.equal((await call(env, `${origin}/`, { headers: { cookie: fresh } })).status, 200)
+})
+
+test("dropped in another isolate, a route lets its cookie and grant in nowhere, the next thread's app least of all", async () => {
+  // Two isolates of the gateway on one database: a module of its own each.
+  const other = (await import('../src/index.ts?another-isolate')).default
+  const callOther = (env: Env, input: string, init?: RequestInit) =>
+    other.fetch(new Request(input, init) as never, env, {} as never) as Promise<Response>
+  const { db, rows } = fakeDb()
+  const env = envWith(db)
+  const { origin, id } = await registered(env)
+  const cookie = await signIn(env, origin)
+  const grant = `https://${await grantLabel('s3cret', id, (await nonceOf(env, origin))!)}.brigade.surf`
+  // This isolate has served the route.
+  globalThis.fetch = (async () => new Response('thread A')) as typeof fetch
+  assert.equal((await call(env, `${origin}/`, { headers: { cookie } })).status, 200)
+  assert.equal((await call(env, `${grant}/`)).status, 200)
+
+  // The other one drops it, and a private thread's preview takes the provider's address.
+  const json = { authorization: 'Bearer s3cret', 'content-type': 'application/json' }
+  const routes = 'https://brigade.surf/routes'
+  const body = (value: unknown) => JSON.stringify(value)
+  assert.equal(
+    (
+      await callOther(env, routes, {
+        method: 'DELETE',
+        headers: json,
+        body: body({ thread: THREAD }),
+      })
+    ).status,
+    204,
+  )
+  const taken = await callOther(env, routes, {
+    method: 'POST',
+    headers: json,
+    body: body({ thread: 'cmthreadbbbb0002', url: `${UPSTREAM}?_token=tok` }),
+  })
+  assert.equal(taken.status, 200)
+  assert.deepEqual(
+    rows().map((r) => r.thread),
+    ['cmthreadbbbb0002'],
+  )
+
+  noProvider()
+  assert.equal((await call(env, `${origin}/`, { headers: { cookie } })).status, 404)
+  assert.equal((await call(env, `${grant}/`)).status, 404)
 })
 
 test('an unknown id, a deeper host or the apex answers 404 without reaching the provider', async () => {

@@ -31,8 +31,8 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   of `brigade.surf`, which Cloudflare's free certificate covers
   (`*.brigade.surf`); `<id>.preview.brigade.surf` would need Advanced
   Certificate Manager. Costs: Workers requests (a dev server's page can make
-  hundreds), a D1 read per preview per isolate every 30 seconds, and an
-  HMAC per request.
+  hundreds), a D1 read per request (requests at the same time in an isolate
+  share one), and an HMAC per request.
 - **A preview's address is its thread's, and ends with it.** The provider's
   address depends only on the computer and the port, and a repository's
   previews get the same port on a computer (below): when the id was an HMAC
@@ -50,7 +50,10 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   registered it again), or its thread is deleted, the API drops its route
   (`DELETE /routes`, tried three times): its address answers 404. Each new
   route gets a nonce, which ends the cookies and grants made for the run
-  before. Other isolates see a dropped route within 30 seconds (their cache).
+  before. The gateway reads the route for each request and keeps none: with
+  a cache, an isolate kept a dropped route for its 30 seconds, and the old
+  thread's cookie reached the next thread's app at that address (review of
+  #414).
 - **Access proof at the gateway.** The id lets nobody in by itself. The API
   hands whoever may see the thread the address with `?_brigade=<expiry>.<mac>`
   (HMAC of the id and expiry with the shared secret, 5 minutes;

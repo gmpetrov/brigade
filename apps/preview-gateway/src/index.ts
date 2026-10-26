@@ -94,26 +94,21 @@ export function hostOnly(setCookie: string) {
   ].join(';')
 }
 
-// Routes this isolate has read: a page's requests (hundreds for a dev server) read the
-// database once in a while. A route dropped in another isolate (a preview stopped, another
-// thread took its address) still works here until its entry is this old.
-const cache = new Map<string, { route: Route; at: number }>()
-const CACHE_MS = 30_000
+// A route is read from the database for each request, never kept: a route dropped or taken
+// over in another isolate (a preview stopped, another thread took its address) must stop
+// working at once, or the old thread's cookie would reach the new thread's app. Requests
+// asking at the same time (a page's burst) share one read.
+const reading = new Map<string, Promise<Route | null>>()
 
-async function route(env: Env, id: string): Promise<Route | null> {
-  const hit = cache.get(id)
-  if (hit && Date.now() - hit.at < CACHE_MS) return hit.route
-  const row = await env.DB.prepare('SELECT thread, origin, token, nonce FROM previews WHERE id = ?')
+function route(env: Env, id: string): Promise<Route | null> {
+  const pending = reading.get(id)
+  if (pending) return pending
+  const read = env.DB.prepare('SELECT thread, origin, token, nonce FROM previews WHERE id = ?')
     .bind(id)
     .first<Route>()
-  if (row) cache.set(id, { route: row, at: Date.now() })
-  else cache.delete(id)
-  return row
-}
-
-/** Forget, in this isolate, the routes of a thread or at an address. */
-function uncache(drop: (route: Route) => boolean) {
-  for (const [id, hit] of cache) if (drop(hit.route)) cache.delete(id)
+    .finally(() => reading.delete(id))
+  reading.set(id, read)
+  return read
 }
 
 const authorized = (request: Request, env: Env) =>
@@ -154,8 +149,6 @@ async function register(request: Request, env: Env) {
   ])
   const nonce = saved?.results[0]?.nonce
   if (!nonce) return new Response('The route was not saved', { status: 503 })
-  uncache((r) => r.thread === thread || r.origin === url.origin)
-  cache.set(id, { route: { thread, origin: url.origin, token, nonce }, at: Date.now() })
   return Response.json({ origin: `https://${id}.${env.DOMAIN}` })
 }
 
@@ -165,7 +158,6 @@ async function revoke(request: Request, env: Env) {
   const thread = typeof body?.thread === 'string' ? body.thread : ''
   if (!THREAD.test(thread)) return new Response('Expected {"thread"}', { status: 400 })
   await env.DB.prepare('DELETE FROM previews WHERE thread = ?').bind(thread).run()
-  uncache((r) => r.thread === thread)
   return new Response(null, { status: 204 })
 }
 

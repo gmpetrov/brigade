@@ -240,17 +240,23 @@ function LivePreviewPanel({
     coding ? code.find : undefined,
   )
 
-  // When the address was asked for: its access token lets people in for 5 minutes.
-  const asked = useRef(0)
+  // The latest address handed out and when it was asked for: its access token lets people in
+  // for 5 minutes. Kept together, so a token is reused only with the time it was asked.
+  const issued = useRef<{ url: string; at: number }>(undefined)
   // The address, once per run of the preview.
   useEffect(() => {
     setOpened(undefined)
+    issued.current = undefined
     if (!running) return setView(undefined)
     let live = true
     setError(undefined)
-    asked.current = Date.now()
+    const at = Date.now()
     api<PreviewView>(`/threads/${threadId}/preview`, { body: {} }).then(
-      (v) => live && setView(v),
+      (v) => {
+        if (!live) return
+        issued.current = { url: v.url, at }
+        setView(v)
+      },
       (e: Error) => live && setError(e.message),
     )
     return () => {
@@ -262,11 +268,14 @@ function LivePreviewPanel({
   // one it has is old; a copied link always gets one (whoever opens it may take a while).
   const fresh = useCallback(
     async (reuse = true) => {
-      if (reuse && view && Date.now() - asked.current < TOKEN_REUSE_MS) return view.url
-      asked.current = Date.now()
-      return (await api<PreviewView>(`/threads/${threadId}/preview`, { body: {} })).url
+      const last = issued.current
+      if (reuse && last && Date.now() - last.at < TOKEN_REUSE_MS) return last.url
+      const at = Date.now()
+      const { url } = await api<PreviewView>(`/threads/${threadId}/preview`, { body: {} })
+      issued.current = { url, at }
+      return url
     },
-    [threadId, view],
+    [threadId],
   )
   const reload = (path?: string) =>
     void fresh().then(
