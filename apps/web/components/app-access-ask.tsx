@@ -194,13 +194,28 @@ export function AppAccessAsk({
   const [picked, setPicked] = useState<string>()
   const chosen = options.find((c) => c.id === (picked ?? preferred?.id))
   const [waiting, setWaiting] = useState(false)
-  /** The expired account being signed in to again, and the accounts there were before. */
-  const [reconnecting, setReconnecting] = useState<{ id: string; before: string[] }>()
+  /**
+   * The account being signed in to again (its sign-in expired, or it lacks the permission asked
+   * for), when it last changed, and the accounts there were before.
+   */
+  const [reconnecting, setReconnecting] = useState<{ id: string; at: string; before: string[] }>()
   // The same account back, else one the person signed in to instead (another mailbox).
   const reconnected = reconnecting
-    ? (givable.find((c) => c.id === reconnecting.id) ??
+    ? (givable.find((c) => c.id === reconnecting.id && c.updatedAt !== reconnecting.at) ??
       givable.find((c) => !reconnecting.before.includes(c.id)))
     : undefined
+  // A permission the account lacks: its owner signs in to it again and allows it there. An
+  // active account too, which the access alone would not fix.
+  const permission = ask.app.permission?.trim() || undefined
+  const signInAgain =
+    !!chosen &&
+    !!SIGN_IN[kind] &&
+    (chosen.status === 'needs_reauth' ||
+      (!!permission && !repository && chosen.createdByMemberId === me.memberId))
+  const chosenOwner =
+    chosen && chosen.createdByMemberId !== me.memberId
+      ? (data.data?.members[chosen.createdByMemberId] ?? 'the member who connected it')
+      : undefined
   const [error, setError] = useState<string>()
   const access = ask.app.scope === 'read' ? 'read' : 'read and write'
   const give = (connectionId: string | undefined) =>
@@ -225,8 +240,8 @@ export function AppAccessAsk({
     return () => clearInterval(timer)
   }, [waiting, givable.length, reconnected?.id])
 
-  /** Sign in at the provider: a new account, or the expired one given (the API renews it). */
-  async function connect(region?: string, expiredId?: string) {
+  /** Sign in at the provider: a new account, or the one given again (the API renews it). */
+  async function connect(region?: string, again?: Connection) {
     setError(undefined)
     const route = SIGN_IN[kind]
     if (!route) return
@@ -237,13 +252,15 @@ export function AppAccessAsk({
             ...(route === 'github' ? {} : { kind }),
             ...(region ? { region } : {}),
             ...(returnTo ? { returnTo } : {}),
-            ...(route === 'mcp' && expiredId ? { reconnect: expiredId } : {}),
+            ...(route === 'mcp' && again ? { reconnect: again.id } : {}),
           },
         })
         return url
       })
       if (!inWindow) return
-      setReconnecting(expiredId ? { id: expiredId, before: givable.map((c) => c.id) } : undefined)
+      setReconnecting(
+        again ? { id: again.id, at: again.updatedAt, before: givable.map((c) => c.id) } : undefined,
+      )
       setWaiting(true)
     } catch (e) {
       setError((e as Error).message)
@@ -280,11 +297,12 @@ export function AppAccessAsk({
                 </SelectContent>
               </Select>
             )}
-            {chosen?.status === 'needs_reauth' ? (
-              // Its sign-in expired: signing in again renews it, and the access goes with it.
+            {signInAgain ? (
+              // Its sign-in expired, or it lacks the permission: signing in again renews it, and
+              // the access goes with it.
               <RegionMenu
                 regions={data.data.catalog[kind]?.regions}
-                onPick={(region) => void connect(region, chosen.id)}
+                onPick={(region) => void connect(region, chosen)}
               >
                 <Button
                   size="sm"
@@ -292,7 +310,7 @@ export function AppAccessAsk({
                   onClick={
                     data.data.catalog[kind]?.regions
                       ? undefined
-                      : () => void connect(undefined, chosen.id)
+                      : () => void connect(undefined, chosen)
                   }
                 >
                   {options.length > 1
@@ -300,6 +318,10 @@ export function AppAccessAsk({
                     : `Reconnect ${chosen.externalAccount ?? chosen.label}`}
                 </Button>
               </RegionMenu>
+            ) : permission && chosenOwner ? (
+              <span className="text-sm text-muted-foreground">
+                Only {chosenOwner} can reconnect {chosen?.externalAccount ?? name} to allow it.
+              </span>
             ) : (
               <Button size="sm" onClick={() => give(chosen?.id)}>
                 Give {askerName} {access} access
@@ -387,6 +409,12 @@ export function AppAccessAsk({
           </>
         )}
       </div>
+      {permission && (
+        <p className="text-sm text-muted-foreground">
+          On {name}&apos;s page, also allow{' '}
+          <span className="font-medium text-foreground">{permission}</span>.
+        </p>
+      )}
       {waiting && repository && (
         <p className="text-sm text-muted-foreground">
           Pick <code>{repository}</code> on GitHub, in the tab that opened. {askerName} gets{' '}

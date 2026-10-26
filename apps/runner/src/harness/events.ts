@@ -161,6 +161,9 @@ export function ticketResult(asks: Ask[], answer: TicketAnswer) {
               ? {
                   note:
                     `The person gave you ${ask.app.scope === 'read' ? 'read' : 'read and write'} access to ${ask.what} from the ticket. ` +
+                    (ask.app.permission
+                      ? `They signed in to it again to allow ${ask.app.permission}: try the refused call again. `
+                      : '') +
                     (ask.app.kind === 'mcp'
                       ? 'Its tools are yours in this thread from now on: carry on with them.'
                       : ask.app.repository

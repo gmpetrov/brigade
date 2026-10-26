@@ -762,7 +762,9 @@ const APP_ACCOUNTS =
   'stop to explain it or guess why: open a ticket (`open_ticket`) with an `access` ask of kind `connection`, `app` ' +
   "of that App's kind with the scope you need and `account` naming it as the person wrote it. Once they grant it, " +
   'its tools reach you in this thread; check the account in their description before you use them, then finish ' +
-  'the task.'
+  'the task. When your tools reach the account but a call is refused for a permission it lacks, one the person ' +
+  "allows on the provider's consent page (such as Cloudflare's), open the same ask with `permission` naming it: " +
+  'the ticket reconnects the account in one click, so do not write the steps yourself.'
 
 /** The vault, and getting a login or key it lacks without stopping the work. */
 const credentials = (browser: Browser) =>

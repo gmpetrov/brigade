@@ -300,6 +300,12 @@ export const Ask = z.discriminatedUnion('type', [
         /** The account the teammate means, as its row shows it (the Gmail address): picked first. */
         account: z.string().max(320).optional(),
         /**
+         * A permission the account lacks, which the person allows on the provider's consent page
+         * as they sign in to it again (Cloudflare's "Account API Tokens: Write"). The ticket offers
+         * to reconnect the account, and the access goes once it is reconnected.
+         */
+        permission: z.string().max(300).optional(),
+        /**
          * The teammate the access is for, by id or name, when not the one asking: one a playbook
          * it installs hands this App to (its developer). Unset: the one asking.
          */

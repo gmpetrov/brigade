@@ -154,13 +154,19 @@ export function AppSheet({
         })
         return url
       })
-      if (inWindow) setWaiting({ before, since: Date.now(), reconnecting })
+      // When the account last changed: signing in to it again changes it, even while active.
+      const at = accounts.find((a) => a.id === reconnecting)?.updatedAt
+      if (inWindow) setWaiting({ before, since: Date.now(), reconnecting, at })
     })
   // While the sign-in tab is open: look for the new account every few seconds, for a while.
-  const [waiting, setWaiting] = useState<{ before: number; since: number; reconnecting?: string }>()
-  const reconnected =
-    !!waiting?.reconnecting &&
-    accounts.find((a) => a.id === waiting.reconnecting)?.status === 'active'
+  const [waiting, setWaiting] = useState<{
+    before: number
+    since: number
+    reconnecting?: string
+    at?: string
+  }>()
+  const again = waiting?.reconnecting && accounts.find((a) => a.id === waiting.reconnecting)
+  const reconnected = !!again && again.status === 'active' && again.updatedAt !== waiting?.at
   useEffect(() => {
     if (!waiting) return
     if (accounts.length > waiting.before || reconnected) return setWaiting(undefined)
@@ -635,6 +641,10 @@ function Account({
             )}
             {!custom && (
               <DropdownMenuItem onSelect={() => setOpen('log')}>Call log</DropdownMenuItem>
+            )}
+            {/* Signing in again while it works: to allow a permission left out at its consent. */}
+            {mine && !custom && c.kind !== 'github' && c.status === 'active' && !regions && (
+              <DropdownMenuItem onSelect={() => onReconnect()}>Reconnect</DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={() => setOpen('triggers')}>
               {panels.triggers}

@@ -41,6 +41,31 @@ test('a granted App tells the teammate its tools are there', () => {
   assert.doesNotMatch(declined, /cloudflare_/)
 })
 
+test('a permission the account lacks stays on the ask, and the teammate tries again once given', () => {
+  const asks = ticketAsks({
+    title: 'Cloudflare token',
+    asks: [
+      {
+        type: 'access',
+        kind: 'connection',
+        what: 'Cloudflare',
+        app: { kind: 'cloudflare', scope: 'read_write', permission: 'Account API Tokens: Write' },
+      },
+    ],
+  })!.asks
+  assert.equal(
+    (asks[0] as { app?: { permission?: string } }).app?.permission,
+    'Account API Tokens: Write',
+  )
+  const text = JSON.stringify(
+    ticketResult(asks, {
+      action: 'answered',
+      replies: { a1: { type: 'access', granted: true, connectionId: 'c1' } },
+    }),
+  )
+  assert.match(text, /allow Account API Tokens: Write: try the refused call again/)
+})
+
 test('something else in place of a ticket reaches the teammate as what to do instead', () => {
   const asks = ticketAsks({
     title: 'R2 key',

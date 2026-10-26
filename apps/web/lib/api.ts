@@ -645,6 +645,8 @@ export type Connection = {
   externalUrl: string | null
   status: 'active' | 'needs_reauth' | 'removed'
   createdAt: string
+  /** Changes when its owner signs in to it again, as well as with its settings. */
+  updatedAt: string
   grants: { teammateId: string; scope: 'read' | 'read_write' }[]
   /** How its triggers' events reach Brigade: one per watched resource. */
   subscriptions: {
