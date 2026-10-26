@@ -292,7 +292,12 @@ async function deliverOnce(
     const perDay =
       Number((trigger.options as Record<string, string>)?.perDay) || RULE_THREADS_PER_DAY
     const started = await db.session.count({
-      where: { triggerId: trigger.id, createdAt: { gt: new Date(Date.now() - 86_400_000) } },
+      where: {
+        triggerId: trigger.id,
+        createdAt: { gt: new Date(Date.now() - 86_400_000) },
+        // Its own thread, made by a try a crash cut off, is this event's: not one more.
+        ...(once.threadId ? { NOT: { id: once.threadId } } : {}),
+      },
     })
     if (started >= perDay) {
       const message = `the rule "${trigger.label}" started its ${perDay} threads of the last 24 hours`
@@ -332,9 +337,18 @@ async function deliverOnce(
   if (!computer) return failed('the workspace has no computer')
 
   // A playbook's trigger: each event a run, within its runs a day (past them, the event waits).
-  const run = trigger.playbookInstallationId
-    ? await beginRun(db, trigger.playbookInstallationId, event.conversationKey)
+  // The thread a cut-off try made has its run already: taken up with it, not a second one.
+  const resumed = once.threadId
+    ? await db.session.findFirst({
+        where: { id: once.threadId },
+        select: { playbookRunId: true },
+      })
     : null
+  const run = resumed?.playbookRunId
+    ? { runId: resumed.playbookRunId }
+    : trigger.playbookInstallationId
+      ? await beginRun(db, trigger.playbookInstallationId, event.conversationKey)
+      : null
   if (run && 'skipped' in run) return { skipped: run.skipped }
   if (run && 'limit' in run) return { error: run.limit }
   const runId = run?.runId

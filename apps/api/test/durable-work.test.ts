@@ -628,7 +628,10 @@ describe('work kept in the database', { skip: !database && 'no database answers'
 
     // Cut off after its thread was made, before its first message was kept: the thread's id was
     // chosen with the claim, so the next try takes that thread up and sends its message, once.
-    const made = await deliver(trigger, event('evt-4'))
+    // A mailbox's rule that may start 4 threads a day, its 4th being this one: the thread the
+    // cut-off try made does not count against it twice.
+    trigger.options = { perDay: '4' }
+    const made = await deliver(trigger, { ...event('evt-4'), mailbox: true })
     assert.ok('ok' in made)
     const claim4 = await db.triggerDelivery.findFirstOrThrow({
       where: { triggerId: trigger.id, eventId: 'evt-4' },
@@ -638,7 +641,8 @@ describe('work kept in the database', { skip: !database && 'no database answers'
       where: { id: claim4.id },
       data: { status: 'starting', updatedAt: new Date(Date.now() - 30 * 60_000) },
     })
-    const resumed = await deliver(trigger, event('evt-4'))
+    const resumed = await deliver(trigger, { ...event('evt-4'), mailbox: true })
+    trigger.options = {}
     assert.deepEqual(resumed, { ok: true, threadId: made.threadId, paused: false })
     assert.equal(await db.session.count({ where: { triggerId: trigger.id } }), 4)
     assert.equal(await prisma.runnerCommand.count({ where: { id: `delivery:${claim4.id}` } }), 1)
