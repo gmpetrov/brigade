@@ -5,7 +5,8 @@
 // runner's token; only threads on its computer. A thread deleted since is 410 Gone.
 //   POST   /runner/folders/<thread>/<teammate>/upload  { size }  → a signed PUT URL, or { url: null }
 //   PUT    /runner/folders/<thread>/<teammate>   the archive, through the API (no R2: development)
-//   POST   /runner/folders/<thread>/<teammate>/done    { size }  → checked in the bucket
+//   POST   /runner/folders/<thread>/<teammate>/done    { size }  → checked in the bucket: its size,
+//          and that it is a gzip archive (else removed, 409)
 //   GET    the same, to put the folder back: redirects to a signed URL with R2
 //   DELETE the same, once it is back on disk
 //   GET    /runner/folders/<thread>/<teammate>/conversation  what was said up to its move to this computer
@@ -22,6 +23,7 @@ import {
   presignGet,
   presignPut,
   putObject,
+  readHead,
 } from '../bucket.js'
 import { prisma, scoped } from '../db.js'
 import { authenticateRunner } from '../hub.js'
@@ -108,6 +110,14 @@ export const runnerFolders = new Hono<{ Variables: { runner: Runner } }>()
       throw new HTTPException(409, {
         message: `The bucket has ${stored ?? 'no'} bytes for this archive, not ${size}`,
       })
+    // Up to 4 GB: not hashed, but it must at least be what the runner makes (tar.gz).
+    const head = await readHead(key, 2)
+    if (!head || head[0] !== 0x1f || head[1] !== 0x8b) {
+      await deleteObject(key)
+      throw new HTTPException(409, {
+        message: 'The bucket holds no gzip archive for this folder; upload it again',
+      })
+    }
     await audit({
       organizationId: c.var.runner.organizationId,
       workspaceId: c.var.runner.workspaceId,

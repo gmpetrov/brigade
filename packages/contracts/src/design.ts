@@ -235,11 +235,17 @@ export const DesignEditResult = z.object({ sha256: z.string(), updatedAt: z.stri
 export type DesignEditResult = z.infer<typeof DesignEditResult>
 
 /** The canvas's picture of a design's first board, for the gallery, after a person's edits. */
-export const SaveDesignThumbnail = z.object({
-  path: LibraryPath,
-  /** PNG, base64 (no data: prefix). */
-  png: z.string().max(3_000_000),
-})
+export const SaveDesignThumbnail = z
+  .object({
+    path: LibraryPath,
+    /** The PNG uploaded straight to the bucket (POST /api/uploads, purpose library). */
+    uploadId: z.string().min(1).max(64).optional(),
+    /** PNG, base64 (no data: prefix): only without R2, in development. */
+    png: z.string().max(3_000_000).optional(),
+  })
+  .refine((t) => (t.uploadId === undefined) !== (t.png === undefined), {
+    message: 'Give the upload or the picture',
+  })
 
 /** Files of a design a person changed since a thread last saved them: `design_edits`. */
 export const DesignPersonEdit = z.object({

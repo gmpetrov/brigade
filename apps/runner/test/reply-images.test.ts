@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { STORED_FILE } from '@brigade/contracts'
 import { imageStore, imagesIn, keepReplyImages } from '../src/reply-images.js'
+import type { UploadError } from '../src/uploads.js'
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])
 
@@ -73,8 +74,11 @@ test('an image the bucket refuses is left out, for the thread to read from the c
   assert.deepEqual(images, {})
 })
 
-/** An API that answers the ticket with `signed` (a URL on itself, or null), recording each request. */
-async function fakeApi(signed: boolean, status = 200) {
+/**
+ * An API that answers the ticket with `signed` (a URL on itself, or null), recording each
+ * request. `status`: what the PUT gets; `complete`: what each complete gets, in turn.
+ */
+async function fakeApi(signed: boolean, status = 200, complete: number[] = []) {
   const seen: { method: string; url: string; auth?: string; type?: string; size: number }[] = []
   const server = createServer((req, res) => {
     const chunks: Buffer[] = []
@@ -88,9 +92,9 @@ async function fakeApi(signed: boolean, status = 200) {
         ...(req.headers['content-type'] ? { type: req.headers['content-type'] } : {}),
         size: body.length,
       })
+      res.setHeader('content-type', 'application/json')
       if (req.url!.endsWith('/upload')) {
         const { port } = server.address() as AddressInfo
-        res.setHeader('content-type', 'application/json')
         return res.end(
           JSON.stringify(
             signed
@@ -102,6 +106,10 @@ async function fakeApi(signed: boolean, status = 200) {
           ),
         )
       }
+      if (req.url!.endsWith('/complete')) {
+        res.statusCode = complete.shift() ?? 200
+        return res.end(res.statusCode === 200 ? '{"ok":true}' : '{"error":"no match"}')
+      }
       res.statusCode = status
       res.end('{}')
     })
@@ -111,7 +119,9 @@ async function fakeApi(signed: boolean, status = 200) {
   return { seen, apiUrl: `http://127.0.0.1:${port}`, close: () => server.close() }
 }
 
-test('an image goes to the signed URL, without the runner token', async () => {
+const ticketSize = JSON.stringify({ size: PNG.length }).length
+
+test('an image goes to the signed URL, without the runner token, then is checked', async () => {
   const api = await fakeApi(true)
   try {
     await imageStore({ apiUrl: api.apiUrl, token: 't0k' })('s1', 'abc.png', PNG, 'image/png')
@@ -121,16 +131,52 @@ test('an image goes to the signed URL, without the runner token', async () => {
         url: '/runner/files/s1/abc.png/upload',
         auth: 'Bearer t0k',
         type: 'application/json',
-        size: JSON.stringify({ size: PNG.length }).length,
+        size: ticketSize,
       },
       { method: 'PUT', url: '/bucket?sig=1', type: 'image/png', size: PNG.length },
+      {
+        method: 'POST',
+        url: '/runner/files/s1/abc.png/complete',
+        auth: 'Bearer t0k',
+        type: 'application/json',
+        size: ticketSize,
+      },
     ])
   } finally {
     api.close()
   }
 })
 
-test('without R2 it goes through the API; a refusal is an error', async () => {
+test('an image that did not arrive whole is sent again, once', async () => {
+  const api = await fakeApi(true, 200, [400])
+  try {
+    await imageStore({ apiUrl: api.apiUrl, token: 't0k' })('s1', 'abc.png', PNG, 'image/png')
+    assert.deepEqual(
+      api.seen.map((r) => `${r.method} ${r.url}`),
+      [
+        'POST /runner/files/s1/abc.png/upload',
+        'PUT /bucket?sig=1',
+        'POST /runner/files/s1/abc.png/complete',
+        'POST /runner/files/s1/abc.png/upload',
+        'PUT /bucket?sig=1',
+        'POST /runner/files/s1/abc.png/complete',
+      ],
+    )
+  } finally {
+    api.close()
+  }
+  const twice = await fakeApi(true, 200, [400, 400])
+  try {
+    await assert.rejects(
+      imageStore({ apiUrl: twice.apiUrl, token: 't0k' })('s1', 'abc.png', PNG, 'image/png'),
+      (error: UploadError) => error.status === 400,
+    )
+  } finally {
+    twice.close()
+  }
+})
+
+test('without R2 it goes through the API, then is checked; a refusal is an error', async () => {
   const api = await fakeApi(false)
   try {
     await imageStore({ apiUrl: api.apiUrl, token: 't0k' })('s1', 'abc.png', PNG, 'image/png')
@@ -141,6 +187,7 @@ test('without R2 it goes through the API; a refusal is an error', async () => {
       type: 'image/png',
       size: PNG.length,
     })
+    assert.equal(api.seen[2]!.url, '/runner/files/s1/abc.png/complete')
   } finally {
     api.close()
   }
@@ -148,7 +195,7 @@ test('without R2 it goes through the API; a refusal is an error', async () => {
   try {
     await assert.rejects(
       imageStore({ apiUrl: refusing.apiUrl, token: 't0k' })('s1', 'abc.png', PNG, 'image/png'),
-      /the bucket refused the image \(403\)/,
+      /the API refused the upload \(403\)/,
     )
   } finally {
     refusing.close()

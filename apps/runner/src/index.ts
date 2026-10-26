@@ -49,15 +49,17 @@ import {
 import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys, usePersonPath, type Transcript } from './harness/index.js'
+import { EventFiles } from './event-files.js'
 import { Outbox } from './outbox.js'
 import { imageStore } from './reply-images.js'
+import { bundleStore, libraryMessage } from './uploads.js'
 import { MemoryGuard } from './memory-guard.js'
 import { runnerCgroups } from './preview-cgroup.js'
 import { Previews } from './previews.js'
 import { processGroups } from './process-groups.js'
 import { teammateUser } from './teammates.js'
 import { Threads, threadFolder } from './threads.js'
-import { prefetch, sweep, type BackupName, type BundleStore } from './repos.js'
+import { prefetch, sweep } from './repos.js'
 import { Updater } from './updater.js'
 import { sendUsageRunsTo } from './usage.js'
 import { noteHandOver, takeHandOver } from './hand-over.js'
@@ -159,39 +161,13 @@ async function start() {
       console.warn(`could not look for what the runner before left: ${String(error)}`),
   )
   const outbox = new Outbox(paths.outbox)
+  const eventFiles = new EventFiles({ store: imageStore(config), outbox })
   const library = new Library(config)
   void library.cleanTemp()
   const attachments = new Attachments(config)
   void attachments.cleanCache()
   // Git backups GitHub would not take, kept in the API's bucket.
-  const bundleUrl = (b: BackupName) =>
-    new URL(
-      `/runner/backups/${[...b.repository.split('/'), b.sessionId, b.teammateId, b.folder]
-        .map(encodeURIComponent)
-        .join('/')}`,
-      config.apiUrl,
-    )
-  const bundles: BundleStore = {
-    put: async (backup, bundle) => {
-      const response = await fetch(bundleUrl(backup), {
-        method: 'PUT',
-        headers: {
-          authorization: `Bearer ${config.token}`,
-          'content-type': 'application/x-git-bundle',
-        },
-        body: new Uint8Array(bundle),
-      })
-      if (!response.ok) throw new Error(`the API refused the backup (${response.status})`)
-    },
-    get: async (backup) => {
-      const response = await fetch(bundleUrl(backup), {
-        headers: { authorization: `Bearer ${config.token}` },
-      })
-      if (response.status === 404) return null
-      if (!response.ok) throw new Error(`the API refused the backup (${response.status})`)
-      return Buffer.from(await response.arrayBuffer())
-    },
-  }
+  const bundles = bundleStore(config)
   // Thread folders archived to free disk, in the API's bucket until their thread comes back.
   // The bytes go straight to and from R2 through signed URLs.
   const folderRequest = async (f: FolderName, path: string, init: RequestInit = {}) => {
@@ -367,8 +343,13 @@ async function start() {
         return ((await response.json()) as { transcript: Transcript }).transcript
       },
     },
-    callLibrary: (sessionId, teammateId, { operation }) =>
-      connection.callLibrary({ sessionId, teammateId, operation }),
+    // A save's bytes and a proposal's files go to the bucket first: the socket carries only their references.
+    callLibrary: async (sessionId, teammateId, { operation }) =>
+      connection.callLibrary({
+        sessionId,
+        teammateId,
+        operation: await libraryMessage(config, { sessionId, teammateId }, operation),
+      }),
     callTask: (sessionId, teammateId, { operation }) =>
       connection.callTask({ sessionId, teammateId, operation }),
     callSchedule: (sessionId, teammateId, { operation, toolCallId, toolName, input }) =>
@@ -742,6 +723,8 @@ async function start() {
     (message) => void onCommand(message),
     hello,
     (bundle, required) => updater.offer(bundle, required),
+    // Images and PDFs in events go to the bucket first: the socket carries their names only.
+    (events, send) => eventFiles.take(events, send),
   )
   connection.start()
 

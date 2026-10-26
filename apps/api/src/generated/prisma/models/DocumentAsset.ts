@@ -44,6 +44,7 @@ export type DocumentAssetMinAggregateOutputType = {
   name: string | null
   contentType: string | null
   size: number | null
+  sha256: string | null
   status: $Enums.AttachmentStatus | null
   uploadedByMemberId: string | null
   createdAt: Date | null
@@ -58,6 +59,7 @@ export type DocumentAssetMaxAggregateOutputType = {
   name: string | null
   contentType: string | null
   size: number | null
+  sha256: string | null
   status: $Enums.AttachmentStatus | null
   uploadedByMemberId: string | null
   createdAt: Date | null
@@ -72,6 +74,7 @@ export type DocumentAssetCountAggregateOutputType = {
   name: number
   contentType: number
   size: number
+  sha256: number
   status: number
   uploadedByMemberId: number
   createdAt: number
@@ -96,6 +99,7 @@ export type DocumentAssetMinAggregateInputType = {
   name?: true
   contentType?: true
   size?: true
+  sha256?: true
   status?: true
   uploadedByMemberId?: true
   createdAt?: true
@@ -110,6 +114,7 @@ export type DocumentAssetMaxAggregateInputType = {
   name?: true
   contentType?: true
   size?: true
+  sha256?: true
   status?: true
   uploadedByMemberId?: true
   createdAt?: true
@@ -124,6 +129,7 @@ export type DocumentAssetCountAggregateInputType = {
   name?: true
   contentType?: true
   size?: true
+  sha256?: true
   status?: true
   uploadedByMemberId?: true
   createdAt?: true
@@ -225,6 +231,7 @@ export type DocumentAssetGroupByOutputType = {
   name: string
   contentType: string
   size: number
+  sha256: string
   status: $Enums.AttachmentStatus
   uploadedByMemberId: string | null
   createdAt: Date
@@ -262,6 +269,7 @@ export type DocumentAssetWhereInput = {
   name?: Prisma.StringFilter<"DocumentAsset"> | string
   contentType?: Prisma.StringFilter<"DocumentAsset"> | string
   size?: Prisma.IntFilter<"DocumentAsset"> | number
+  sha256?: Prisma.StringFilter<"DocumentAsset"> | string
   status?: Prisma.EnumAttachmentStatusFilter<"DocumentAsset"> | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.StringNullableFilter<"DocumentAsset"> | string | null
   createdAt?: Prisma.DateTimeFilter<"DocumentAsset"> | Date | string
@@ -277,6 +285,7 @@ export type DocumentAssetOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   contentType?: Prisma.SortOrder
   size?: Prisma.SortOrder
+  sha256?: Prisma.SortOrder
   status?: Prisma.SortOrder
   uploadedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -295,6 +304,7 @@ export type DocumentAssetWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"DocumentAsset"> | string
   contentType?: Prisma.StringFilter<"DocumentAsset"> | string
   size?: Prisma.IntFilter<"DocumentAsset"> | number
+  sha256?: Prisma.StringFilter<"DocumentAsset"> | string
   status?: Prisma.EnumAttachmentStatusFilter<"DocumentAsset"> | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.StringNullableFilter<"DocumentAsset"> | string | null
   createdAt?: Prisma.DateTimeFilter<"DocumentAsset"> | Date | string
@@ -310,6 +320,7 @@ export type DocumentAssetOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   contentType?: Prisma.SortOrder
   size?: Prisma.SortOrder
+  sha256?: Prisma.SortOrder
   status?: Prisma.SortOrder
   uploadedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -332,6 +343,7 @@ export type DocumentAssetScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"DocumentAsset"> | string
   contentType?: Prisma.StringWithAggregatesFilter<"DocumentAsset"> | string
   size?: Prisma.IntWithAggregatesFilter<"DocumentAsset"> | number
+  sha256?: Prisma.StringWithAggregatesFilter<"DocumentAsset"> | string
   status?: Prisma.EnumAttachmentStatusWithAggregatesFilter<"DocumentAsset"> | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"DocumentAsset"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"DocumentAsset"> | Date | string
@@ -345,6 +357,7 @@ export type DocumentAssetCreateInput = {
   name: string
   contentType: string
   size: number
+  sha256?: string
   status?: $Enums.AttachmentStatus
   uploadedByMemberId?: string | null
   createdAt?: Date | string
@@ -360,6 +373,7 @@ export type DocumentAssetUncheckedCreateInput = {
   name: string
   contentType: string
   size: number
+  sha256?: string
   status?: $Enums.AttachmentStatus
   uploadedByMemberId?: string | null
   createdAt?: Date | string
@@ -373,6 +387,7 @@ export type DocumentAssetUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.StringFieldUpdateOperationsInput | string
   size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAttachmentStatusFieldUpdateOperationsInput | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -388,6 +403,7 @@ export type DocumentAssetUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.StringFieldUpdateOperationsInput | string
   size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAttachmentStatusFieldUpdateOperationsInput | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -402,6 +418,7 @@ export type DocumentAssetCreateManyInput = {
   name: string
   contentType: string
   size: number
+  sha256?: string
   status?: $Enums.AttachmentStatus
   uploadedByMemberId?: string | null
   createdAt?: Date | string
@@ -415,6 +432,7 @@ export type DocumentAssetUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.StringFieldUpdateOperationsInput | string
   size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAttachmentStatusFieldUpdateOperationsInput | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -429,6 +447,7 @@ export type DocumentAssetUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.StringFieldUpdateOperationsInput | string
   size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAttachmentStatusFieldUpdateOperationsInput | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -453,6 +472,7 @@ export type DocumentAssetCountOrderByAggregateInput = {
   name?: Prisma.SortOrder
   contentType?: Prisma.SortOrder
   size?: Prisma.SortOrder
+  sha256?: Prisma.SortOrder
   status?: Prisma.SortOrder
   uploadedByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -471,6 +491,7 @@ export type DocumentAssetMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   contentType?: Prisma.SortOrder
   size?: Prisma.SortOrder
+  sha256?: Prisma.SortOrder
   status?: Prisma.SortOrder
   uploadedByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -485,6 +506,7 @@ export type DocumentAssetMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   contentType?: Prisma.SortOrder
   size?: Prisma.SortOrder
+  sha256?: Prisma.SortOrder
   status?: Prisma.SortOrder
   uploadedByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -548,6 +570,7 @@ export type DocumentAssetCreateWithoutDocumentInput = {
   name: string
   contentType: string
   size: number
+  sha256?: string
   status?: $Enums.AttachmentStatus
   uploadedByMemberId?: string | null
   createdAt?: Date | string
@@ -561,6 +584,7 @@ export type DocumentAssetUncheckedCreateWithoutDocumentInput = {
   name: string
   contentType: string
   size: number
+  sha256?: string
   status?: $Enums.AttachmentStatus
   uploadedByMemberId?: string | null
   createdAt?: Date | string
@@ -604,6 +628,7 @@ export type DocumentAssetScalarWhereInput = {
   name?: Prisma.StringFilter<"DocumentAsset"> | string
   contentType?: Prisma.StringFilter<"DocumentAsset"> | string
   size?: Prisma.IntFilter<"DocumentAsset"> | number
+  sha256?: Prisma.StringFilter<"DocumentAsset"> | string
   status?: Prisma.EnumAttachmentStatusFilter<"DocumentAsset"> | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.StringNullableFilter<"DocumentAsset"> | string | null
   createdAt?: Prisma.DateTimeFilter<"DocumentAsset"> | Date | string
@@ -617,6 +642,7 @@ export type DocumentAssetCreateManyDocumentInput = {
   name: string
   contentType: string
   size: number
+  sha256?: string
   status?: $Enums.AttachmentStatus
   uploadedByMemberId?: string | null
   createdAt?: Date | string
@@ -630,6 +656,7 @@ export type DocumentAssetUpdateWithoutDocumentInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.StringFieldUpdateOperationsInput | string
   size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAttachmentStatusFieldUpdateOperationsInput | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -643,6 +670,7 @@ export type DocumentAssetUncheckedUpdateWithoutDocumentInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.StringFieldUpdateOperationsInput | string
   size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAttachmentStatusFieldUpdateOperationsInput | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -656,6 +684,7 @@ export type DocumentAssetUncheckedUpdateManyWithoutDocumentInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.StringFieldUpdateOperationsInput | string
   size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumAttachmentStatusFieldUpdateOperationsInput | $Enums.AttachmentStatus
   uploadedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -672,6 +701,7 @@ export type DocumentAssetSelect<ExtArgs extends runtime.Types.Extensions.Interna
   name?: boolean
   contentType?: boolean
   size?: boolean
+  sha256?: boolean
   status?: boolean
   uploadedByMemberId?: boolean
   createdAt?: boolean
@@ -687,6 +717,7 @@ export type DocumentAssetSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   name?: boolean
   contentType?: boolean
   size?: boolean
+  sha256?: boolean
   status?: boolean
   uploadedByMemberId?: boolean
   createdAt?: boolean
@@ -702,6 +733,7 @@ export type DocumentAssetSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   name?: boolean
   contentType?: boolean
   size?: boolean
+  sha256?: boolean
   status?: boolean
   uploadedByMemberId?: boolean
   createdAt?: boolean
@@ -717,13 +749,14 @@ export type DocumentAssetSelectScalar = {
   name?: boolean
   contentType?: boolean
   size?: boolean
+  sha256?: boolean
   status?: boolean
   uploadedByMemberId?: boolean
   createdAt?: boolean
   checkedAt?: boolean
 }
 
-export type DocumentAssetOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "documentId" | "name" | "contentType" | "size" | "status" | "uploadedByMemberId" | "createdAt" | "checkedAt", ExtArgs["result"]["documentAsset"]>
+export type DocumentAssetOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "documentId" | "name" | "contentType" | "size" | "sha256" | "status" | "uploadedByMemberId" | "createdAt" | "checkedAt", ExtArgs["result"]["documentAsset"]>
 export type DocumentAssetInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   document?: boolean | Prisma.DocumentAsset$documentArgs<ExtArgs>
 }
@@ -754,6 +787,10 @@ export type $DocumentAssetPayload<ExtArgs extends runtime.Types.Extensions.Inter
     name: string
     contentType: string
     size: number
+    /**
+     * Read back from the bucket once its upload finished; empty for files from before.
+     */
+    sha256: string
     status: $Enums.AttachmentStatus
     uploadedByMemberId: string | null
     createdAt: Date
@@ -1192,6 +1229,7 @@ export interface DocumentAssetFieldRefs {
   readonly name: Prisma.FieldRef<"DocumentAsset", 'String'>
   readonly contentType: Prisma.FieldRef<"DocumentAsset", 'String'>
   readonly size: Prisma.FieldRef<"DocumentAsset", 'Int'>
+  readonly sha256: Prisma.FieldRef<"DocumentAsset", 'String'>
   readonly status: Prisma.FieldRef<"DocumentAsset", 'AttachmentStatus'>
   readonly uploadedByMemberId: Prisma.FieldRef<"DocumentAsset", 'String'>
   readonly createdAt: Prisma.FieldRef<"DocumentAsset", 'DateTime'>

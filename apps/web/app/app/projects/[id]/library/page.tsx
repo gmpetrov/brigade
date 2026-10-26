@@ -6,8 +6,7 @@ import { isAdmin, useDashboard } from '@/components/dashboard'
 import { join, LibraryBrowser } from '@/components/library-browser'
 import { useProject } from '@/components/project-shell'
 import { Button } from '@/components/ui/button'
-import { useApi, type LibraryTree } from '@/lib/api'
-import { API_URL } from '@/lib/config'
+import { uploadToLibrary, useApi, type LibraryTree } from '@/lib/api'
 
 /** The library opened at the project's folder. Above it, the rest of the library is a click away. */
 export default function ProjectLibrary() {
@@ -24,17 +23,10 @@ export default function ProjectLibrary() {
     setError(undefined)
     for (const [i, { file, path }] of list.entries()) {
       setUploading(list.length > 1 ? `${i + 1} of ${list.length}` : file.name)
-      const form = new FormData()
-      form.set('file', file)
-      form.set('path', path)
-      const response = await fetch(`${API_URL}/api/library/upload`, {
-        method: 'POST',
-        credentials: 'include',
-        body: form,
-      })
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string }
-        setError(`${path}: ${body.error ?? response.statusText}`)
+      try {
+        await uploadToLibrary(path, file)
+      } catch (e) {
+        setError(`${path}: ${(e as Error).message}`)
         break
       }
     }

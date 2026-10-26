@@ -342,7 +342,8 @@ export function TicketRow({
 function SkillProposalDetail({ ticket: t }: { ticket: Ticket }) {
   const skill = t.payload.skill!
   const previous = t.payload.previous
-  const files = skill.files.map((f) => f.path)
+  // Its files: inline from older runners, by reference (`refs`) since direct uploads.
+  const files = [...skill.files, ...(t.payload.refs ?? [])].map((f) => f.path)
   return (
     <>
       <p className="mt-1.5 text-sm">

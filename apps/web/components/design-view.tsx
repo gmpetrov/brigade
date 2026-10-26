@@ -69,7 +69,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { api } from '@/lib/api'
+import { api, blobOfDataUrl, uploadFile } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
@@ -201,14 +201,17 @@ function DesignFrame({
       thumbnail.current = setTimeout(() => {
         canvas.current
           ?.capture(first.key, { ratio: 0.5, maxHeight: first.height ?? screenHeight(first.width) })
-          .then(([image]) =>
-            image
-              ? api('/designs/thumbnail', {
-                  method: 'PUT',
-                  body: { path: f, png: image.data.slice(image.data.indexOf(',') + 1) },
-                })
-              : undefined,
-          )
+          .then(async ([image]) => {
+            if (!image) return
+            // The picture goes to the bucket, then the API files it as the design's thumbnail.
+            const upload = await uploadFile('library', blobOfDataUrl(image.data), {
+              name: `${f}/thumbnail.png`,
+            })
+            await api('/designs/thumbnail', {
+              method: 'PUT',
+              body: { path: f, uploadId: upload.id },
+            })
+          })
           .catch(() => undefined)
       }, 3000)
     },

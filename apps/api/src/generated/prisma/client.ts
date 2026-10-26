@@ -338,9 +338,17 @@ export type BucketCleanup = Prisma.BucketCleanupModel
  */
 export type AuditEntry = Prisma.AuditEntryModel
 /**
- * Model Attachment
+ * Model Upload
  * A file's bytes (in the bucket, keyed by id) and where they came from. One
  * file can be in several threads, e.g. an email two triggers matched.
+ * A file uploaded straight to the bucket (uploads.ts), held under `uploadKey` until it is used:
+ * saved to the library, read as a skill pack, kept as a skill's file or a logo. The sweep
+ * removes those never used, bytes first.
+ */
+export type Upload = Prisma.UploadModel
+/**
+ * Model Attachment
+ * 
  */
 export type Attachment = Prisma.AttachmentModel
 /**

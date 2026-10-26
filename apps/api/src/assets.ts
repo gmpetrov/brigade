@@ -1,8 +1,9 @@
 // Files put in documents from the editor: images, video, audio, PDFs. Bytes in
 // the bucket under <organization>/<workspace>/assets/<id>; the document's text
 // refers to each as `asset:<id>`. With R2 the browser uploads straight to the
-// bucket and reads through short-lived signed URLs; without it (development)
-// both go through the API. The hourly sweep keeps the bucket to what some
+// bucket and reads through short-lived signed URLs, and the API reads each upload
+// back as it streams to check it; without it (development) both go through the
+// API. The hourly sweep keeps the bucket to what some
 // document still refers to.
 import {
   ASSET_MAX,
@@ -12,6 +13,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
+import { createHash } from 'node:crypto'
 import {
   assetKey,
   deleteObject,
@@ -23,6 +25,7 @@ import {
 } from './bucket.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
 import { contentTypeFor, isMarkdown, readLibraryFile } from './library.js'
+import { detectType, HEAD_BYTES, inspectObject } from './object-check.js'
 
 /** Shown in the page where it is: what cannot run script, even from the API's origin. */
 const INLINE =
@@ -76,19 +79,36 @@ export async function startAssetUpload(
   return { row, ...upload }
 }
 
-/** The browser's upload reached the bucket, at the size it announced: ready. */
+/**
+ * The browser's upload reached the bucket: read back as it streams (never held whole), it
+ * must be the size it announced. Its SHA-256 is kept, and the type its bytes bear out: a file
+ * that claims a type shown inline (an image, a PDF) but is not one is served as a download.
+ */
 export async function finishAssetUpload(db: ScopedDb, scope: Scope, id: string, memberId: string) {
   const row = await db.documentAsset.findFirst({ where: { id, uploadedByMemberId: memberId } })
   if (!row) throw new HTTPException(404, { message: 'Upload not found' })
   if (row.status === 'ready') return row
-  const size = await objectSize(assetKey(scope, id))
+  const key = assetKey(scope, id)
+  const size = await objectSize(key)
   if (size === null)
     throw new HTTPException(409, { message: 'The file has not reached storage; upload it again' })
-  if (size !== row.size || size > ASSET_MAX) {
+  const mismatch = async () => {
     await removeAsset(row.id, scope)
-    throw new HTTPException(400, { message: 'The upload does not match the file; upload it again' })
+    return new HTTPException(400, {
+      message: 'The upload does not match the file; upload it again',
+    })
   }
-  const ready = await db.documentAsset.update({ where: { id }, data: { status: 'ready' } })
+  if (size !== row.size || size > ASSET_MAX) throw await mismatch()
+  const inspected = await inspectObject(key, {
+    name: row.name,
+    contentType: row.contentType,
+    max: row.size,
+  })
+  if (!inspected || inspected.size !== row.size) throw await mismatch()
+  const ready = await db.documentAsset.update({
+    where: { id },
+    data: { status: 'ready', sha256: inspected.sha256, contentType: inspected.contentType },
+  })
   await auditAdded(scope, memberId, ready)
   return ready
 }
@@ -103,22 +123,20 @@ export async function storeAsset(
     throw new HTTPException(413, { message: 'Files can be up to 25 MB here' })
   const document = await editableDocument(db, input.documentId)
   const name = safeFileName(input.file.name)
-  const contentType = contentTypeFor(name, input.file.type)
+  const bytes = new Uint8Array(await input.file.arrayBuffer())
+  const contentType = detectType(name, bytes.subarray(0, HEAD_BYTES), input.file.type)
   const row = await db.documentAsset.create({
     data: {
       documentId: document.id,
       name,
       contentType,
-      size: input.file.size,
+      size: bytes.byteLength,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
       uploadedByMemberId: input.memberId,
     } as never,
   })
   try {
-    await putObject(
-      assetKey(scope, row.id),
-      new Uint8Array(await input.file.arrayBuffer()),
-      contentType,
-    )
+    await putObject(assetKey(scope, row.id), bytes, contentType)
   } catch (error) {
     await db.documentAsset.delete({ where: { id: row.id } })
     throw error

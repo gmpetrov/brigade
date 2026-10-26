@@ -7,7 +7,7 @@ import { useDashboard } from '@/components/dashboard'
 import { useDocumentPanel } from '@/components/document-panel'
 import { ProjectMailboxes } from '@/components/mailboxes'
 import { useProject } from '@/components/project-shell'
-import { ProjectLogoPreview, shrinkLogo } from '@/components/projects'
+import { ProjectLogoPreview, shrinkLogo, uploadLogo } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -119,7 +119,7 @@ export default function ProjectSettings() {
   async function save(event: FormEvent) {
     event.preventDefault()
     if (!name.trim()) return setError('Name the project')
-    const ok = await run(() =>
+    const ok = await run(async () =>
       api(`/projects/${project.id}`, {
         method: 'PATCH',
         body: {
@@ -127,7 +127,8 @@ export default function ProjectSettings() {
           icon: icon.trim() || null,
           brief: brief.trim(),
           url: url.trim() ? siteUrl(url) : null,
-          ...(logo !== undefined && { logo }),
+          // A new logo goes to the bucket first; null removes it.
+          ...(logo !== undefined && { logo: logo && (await uploadLogo(logo)) }),
           folder: folder.trim() || null,
           preferredConnectionIds: preferred,
           reviewPolicy,

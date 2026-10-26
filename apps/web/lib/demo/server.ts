@@ -707,7 +707,7 @@ function unarchive(threadId: string) {
 
 const OFF = 'That is off in the demo workspace. Sign up to do it for real.'
 const CREATES =
-  /^\/(teammates|teammates\/team|tasks|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|attachments\/uploads|library\/assets\/uploads|library\/(text|folders)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
+  /^\/(teammates|teammates\/team|tasks|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|uploads|attachments\/uploads|library\/assets\/uploads|library\/(text|folders|files)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
 
 /** Gets the pattern's groups, the request's JSON body and its URL. */
 const sidebarOrder: Record<'teammates' | 'projects', string[]> = { teammates: [], projects: [] }
@@ -850,7 +850,6 @@ const routes: [string, RegExp, Handler][] = [
   // page shows errors, rather than open nothing.
   ['POST', CREATES, () => ({ status: 403, body: { error: OFF } })],
   ['PUT', /^\/library\/(text|folders)$/, () => ({ status: 403, body: { error: OFF } })],
-  ['POST', /^\/library\/upload$/, () => ({ status: 403, body: { error: OFF } })],
   // Signing out of the demo leads to signing up for real.
   ['POST', /^\/auth\/sign-out$/, () => ({ success: true })],
   [

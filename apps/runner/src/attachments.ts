@@ -24,6 +24,7 @@ import type { ReadableStream } from 'node:stream/web'
 import { ATTACHMENTS_DIR, type ThreadAttachmentRef } from '@brigade/contracts'
 import { HOME, paths, type RunnerConfig } from './config.js'
 import { ensureUser } from './teammates.js'
+import { answer, apiPost, sha256Hex, upload, type Ticket } from './uploads.js'
 
 /** Fetched files, shared by the teammates of a thread: one download each. Only the runner reads it. */
 const CACHE_DIR = join(HOME, 'attachments')
@@ -75,25 +76,40 @@ export class Attachments {
     return failed
   }
 
-  /** Send a teammate's file to the API, to go with a connector call. Returns its id there. */
+  /**
+   * Send a teammate's file to go with a connector call: straight to the bucket at a
+   * URL the API signs, then checked there. Returns its id.
+   */
   async upload(input: { sessionId: string; teammateId: string; name: string; bytes: Buffer }) {
-    const query = new URLSearchParams({
-      sessionId: input.sessionId,
-      teammateId: input.teammateId,
-      name: input.name,
-    })
-    const response = await fetch(new URL(`/runner/attachments?${query}`, this.config.apiUrl), {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${this.config.token}`,
-        'content-type': 'application/octet-stream',
-      },
-      body: new Uint8Array(input.bytes),
-    })
-    const body = (await response.json().catch(() => ({}))) as { id?: string; error?: string }
-    if (!response.ok || !body.id)
-      throw new Error(`Could not send ${input.name}: ${body.error ?? response.status}`)
-    return body.id
+    const { bytes, ...rest } = input
+    const sha256 = sha256Hex(bytes)
+    try {
+      const { id } = await upload(this.config, bytes, {
+        start: async () =>
+          answer<Ticket & { id: string }>(
+            await apiPost(this.config, '/runner/attachments/uploads', {
+              ...rest,
+              size: bytes.length,
+              sha256,
+            }),
+            'the file',
+          ),
+        complete: async (ticket) =>
+          answer<{ id: string }>(
+            await apiPost(
+              this.config,
+              `/runner/attachments/${encodeURIComponent(ticket.id)}/complete`,
+              { sha256 },
+            ),
+            'the file',
+          ),
+      })
+      return id
+    } catch (error) {
+      throw new Error(
+        `Could not send ${input.name}: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
   }
 
   /**

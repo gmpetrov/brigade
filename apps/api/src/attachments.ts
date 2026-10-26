@@ -26,11 +26,12 @@ import {
   presignPut,
   putObject,
   putObjectStream,
-  streamObject,
+  uploadTarget,
 } from './bucket.js'
 import type { ConnectorContext, ExternalFile, OpenedFile } from './connectors/types.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { contentTypeFor, extractText } from './library.js'
+import { detectType, inspectObject } from './object-check.js'
 
 /** Programs and installers: never taken from outside (an email, a chat), where they are a common lure. */
 export const PROGRAM =
@@ -38,24 +39,6 @@ export const PROGRAM =
 
 /** Small inline images in an email are signatures and logos, not something it is about. */
 const INLINE_IMAGE_MIN = 20 * 1024
-
-/** Leading bytes of the types the dashboard shows inline: a file that claims one must be one. */
-const MAGIC: Record<string, (b: Uint8Array) => boolean> = {
-  'application/pdf': (b) => ascii(b, 0, 5) === '%PDF-',
-  'image/png': (b) => b[0] === 0x89 && ascii(b, 1, 4) === 'PNG',
-  'image/jpeg': (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
-  'image/gif': (b) => ascii(b, 0, 4) === 'GIF8',
-  'image/webp': (b) => ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 12) === 'WEBP',
-}
-const ascii = (b: Uint8Array, from: number, to: number) =>
-  String.fromCharCode(...b.subarray(from, to))
-
-/** The file's type from its name, checked against its bytes for types shown inline. */
-function detectType(name: string, bytes: Uint8Array, given?: string | null) {
-  const type = contentTypeFor(name, given)
-  const check = MAGIC[type]
-  return check && !check(bytes) ? 'application/octet-stream' : type
-}
 
 const sha256 = (data: Uint8Array) => createHash('sha256').update(data).digest('hex')
 
@@ -311,12 +294,55 @@ export async function startUpload(
 }
 
 /**
- * The browser finished its upload: the bytes are read back from the bucket
- * and checked like any other file, then it is ready to send.
+ * A runner starts the upload of a file a teammate sends with a connector call (an email's
+ * attachment, a Drive upload) or a child's report: a pending file of its thread, and where
+ * to PUT exactly its size. Checked against the runner's SHA-256 by finishUpload.
  */
-export async function finishUpload(db: ScopedDb, scope: Scope, id: string, memberId: string) {
+export async function startTeammateUpload(
+  db: ScopedDb,
+  scope: Scope,
+  input: { name: string; size: number; contentType?: string; sessionId: string },
+) {
+  if (input.size > ATTACHMENT_MAX)
+    throw new HTTPException(413, { message: 'Files can be up to 25 MB' })
+  const name = safeFileName(input.name)
+  const contentType = contentTypeFor(name, input.contentType)
+  const row = await db.attachment.create({
+    data: {
+      name,
+      contentType,
+      size: input.size,
+      status: 'pending',
+      source: 'teammate',
+      sessionId: input.sessionId,
+    } as never,
+  })
+  const upload = await uploadTarget(attachmentKey(scope, row.id), input.size, contentType)
+  return { row, ...upload }
+}
+
+/** Who finishes an upload: the member who started it, or a runner for a teammate's thread. */
+export type Uploader = { memberId: string } | { sessionId: string }
+
+/**
+ * The upload finished: the bytes are read back from the bucket as they stream (never held
+ * whole, but a PDF's for its text) and checked like any other file, then it is ready to send.
+ * A teammate's file must also have the SHA-256 its runner gave.
+ */
+export async function finishUpload(
+  db: ScopedDb,
+  scope: Scope,
+  id: string,
+  by: Uploader,
+  expected: { sha256?: string } = {},
+) {
   const row = await db.attachment.findFirst({
-    where: { id, source: 'upload', uploadedByMemberId: memberId },
+    where: {
+      id,
+      ...('memberId' in by
+        ? { source: 'upload', uploadedByMemberId: by.memberId }
+        : { source: 'teammate', sessionId: by.sessionId }),
+    },
   })
   if (!row) throw new HTTPException(404, { message: 'Upload not found' })
   if (row.status === 'ready') return row
@@ -324,45 +350,36 @@ export async function finishUpload(db: ScopedDb, scope: Scope, id: string, membe
     throw new HTTPException(409, { message: 'This upload cannot be completed' })
   const key = attachmentKey(scope, id)
   const mismatch = async () => {
-    await deleteAttachment(db, scope, { type: 'member', id: memberId }, id)
+    if ('memberId' in by) await deleteAttachment(db, scope, { type: 'member', id: by.memberId }, id)
+    else await removeCopy(db, scope, id)
     return new HTTPException(400, {
       message: 'The upload does not match the file; upload it again',
     })
   }
-  // A large video is never held whole: its size and hash are read as it streams by.
-  if (row.size > ATTACHMENT_MAX) {
-    const size = await objectSize(key)
-    if (size === null)
-      throw new HTTPException(409, { message: 'The file has not reached storage; upload it again' })
-    if (size !== row.size || size > uploadMax(row.contentType)) throw await mismatch()
-    const hashed = await streamSha256(key)
-    if (!hashed || hashed.size !== row.size) throw await mismatch()
-    // No type is checked against video bytes (none shows inline from a sniff), and video has no text.
-    return db.attachment.update({
-      where: { id },
-      data: { sha256: hashed.sha256, text: '', status: 'ready' },
-    })
-  }
-  const bytes = await getObject(key)
-  if (!bytes)
+  const size = await objectSize(key)
+  if (size === null)
     throw new HTTPException(409, { message: 'The file has not reached storage; upload it again' })
-  if (bytes.byteLength !== row.size) throw await mismatch()
+  if (size !== row.size || size > uploadMax(row.contentType)) throw await mismatch()
+  // A video has no text, and no type is checked against its bytes (none shows inline from a sniff).
+  const video = row.size > ATTACHMENT_MAX
+  const inspected = await inspectObject(key, {
+    name: row.name,
+    contentType: row.contentType,
+    text: !video,
+    max: row.size,
+  })
+  if (!inspected || inspected.size !== row.size) throw await mismatch()
+  if (expected.sha256 && inspected.sha256 !== expected.sha256) throw await mismatch()
   // The type the bytes bear out is the one recorded; the API serves files with it, not the bucket's.
-  const fields = await inspect(row.name, bytes, row.contentType)
-  return db.attachment.update({ where: { id }, data: { ...fields, status: 'ready' } })
-}
-
-/** The object's SHA-256 and size, read chunk by chunk. */
-async function streamSha256(key: string) {
-  const stream = await streamObject(key)
-  if (!stream) return null
-  const hash = createHash('sha256')
-  let size = 0
-  for await (const chunk of stream as unknown as AsyncIterable<Uint8Array>) {
-    hash.update(chunk)
-    size += chunk.byteLength
-  }
-  return { sha256: hash.digest('hex'), size }
+  return db.attachment.update({
+    where: { id },
+    data: {
+      sha256: inspected.sha256,
+      text: inspected.text,
+      ...(video ? {} : { contentType: inspected.contentType }),
+      status: 'ready',
+    },
+  })
 }
 
 /** A file the API does not read whole: its bytes go straight from the bucket. */
@@ -381,7 +398,7 @@ export async function sweepUploads() {
       threads: { none: {} },
       OR: [
         {
-          source: { in: ['upload', 'connector'] },
+          source: { in: ['upload', 'connector', 'teammate'] },
           status: 'pending',
           createdAt: { lt: new Date(now - PENDING_MS) },
         },

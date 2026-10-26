@@ -48,8 +48,7 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { api, ApiError, useApi } from '@/lib/api'
-import { API_URL } from '@/lib/config'
+import { api, uploadFile, useApi } from '@/lib/api'
 import { ProjectIcon } from '@/components/projects'
 
 type Scope = { everywhere: boolean; teammateIds: string[]; projectIds: string[] }
@@ -106,13 +105,8 @@ function useWhere() {
 /** Read an upload or a GitHub address into skills to review. */
 async function readImport(from: { file: File } | { url: string }): Promise<SkillImport> {
   if ('url' in from) return api<SkillImport>('/skills/import/github', { body: { url: from.url } })
-  const response = await fetch(
-    `${API_URL}/api/skills/import?name=${encodeURIComponent(from.file.name)}`,
-    { method: 'POST', credentials: 'include', body: from.file },
-  )
-  const body = (await response.json().catch(() => ({}))) as SkillImport & { error?: string }
-  if (!response.ok) throw new ApiError(body.error ?? response.statusText, response.status)
-  return body
+  const upload = await uploadFile('skill_pack', from.file)
+  return api<SkillImport>('/skills/import/upload', { body: { uploadId: upload.id } })
 }
 
 /** The GitHub owner of a pack's source, for its picture: `cloudflare` for github.com/cloudflare/skills. */
