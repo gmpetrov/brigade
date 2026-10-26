@@ -109,12 +109,14 @@ conversation (a box's `conversationId`, a Gmail thread). Every source keeps its 
 table, `MailMessage`, so one query lists, filters and pages them all; a new source (a chat) only
 has to keep its messages there.
 
-- **Sources**: Brigade's addresses, as they receive mail; and Gmail accounts shared with the
-  workspace that their owner or an admin put in the Inbox (`Connection.inbox`, "Show in the Inbox"
-  in the account's menu), as their inbox reader reads them (`src/mail/gmail-inbox.ts`: `connectionId`,
-  `sourceId`, box `gmail:<connection id>`, without promotions and social). Such an account is read
-  even without triggers. A member's own Gmail never shows, and a shared account stays out until
-  someone puts it in: it may still hold personal mail.
+- **Sources**: Brigade's addresses, as they receive mail; and Gmail accounts, as their inbox reader
+  reads them (`src/mail/gmail-inbox.ts`: `connectionId`, `sourceId`, box `gmail:<connection id>`).
+  A shared account its owner or an admin put in the Inbox (`Connection.inbox`, "Show all its mail
+  in the Inbox" in the account's menu) shows all its mail, without promotions and social, and is
+  read even without triggers. Any other account, a member's own included, shows only the mail that
+  went to a thread (`TAKEN_ROUTES`: a rule's or a playbook's, one waiting on a reply in its
+  conversation, one a person handed it to); the rest, personal mail, is never kept. A member's own
+  account shows to them alone; a shared one to everyone.
 - **A conversation** shows as its latest received mail (its head), with its number of mails. Its
   status is the head's, in the query (SQL, `DISTINCT ON` box and conversation, so paging is right
   whatever the view): `waiting` (nobody took it: `box`, `cap`, `loop`, or not delivered yet, and not

@@ -49,17 +49,33 @@ export type InboxFilters = {
 const admin = (scope: WorkspaceScope) => scope.role === 'owner' || scope.role === 'admin'
 
 /**
- * The mailboxes the Inbox shows: Brigade's addresses, and the Gmail accounts shared with the
- * workspace that their owner or an admin put in it. A member's own Gmail never shows.
+ * Gmail's mail that went to a thread (a rule's or a playbook's, one waiting on a reply in its
+ * conversation, one a person handed it to): kept and shown even when the account is not in the
+ * Inbox, so a playbook's mail shows without the rest of the mailbox (src/mail/gmail-inbox.ts).
  */
-export async function inboxSources(db: ScopedDb) {
+export const TAKEN_ROUTES = ['rule', 'cap', 'awaited', 'handed']
+
+/**
+ * The mailboxes the Inbox shows this member: Brigade's addresses, and the Gmail accounts it may
+ * read. A shared account put in the Inbox shows all its mail; another one, shared or this
+ * member's own (only to them), the mail its rules and playbooks took. Another member's own never.
+ */
+export async function inboxSources(db: ScopedDb, scope: WorkspaceScope) {
+  const taken = { OR: [{ triggers: { some: {} } }, { mailMessages: { some: {} } }] }
   const [addresses, gmail, teammates, projects] = await Promise.all([
     db.mailAddress.findMany({
       where: { releasedAt: null, connectionId: { not: null } },
       orderBy: { createdAt: 'asc' },
     }),
     db.connection.findMany({
-      where: { kind: 'gmail', status: { not: 'removed' }, reach: 'workspace', inbox: true },
+      where: {
+        kind: 'gmail',
+        status: { not: 'removed' },
+        OR: [
+          { reach: 'workspace', OR: [{ inbox: true }, taken] },
+          { reach: 'mine', createdByMemberId: scope.memberId, ...taken },
+        ],
+      },
       orderBy: { createdAt: 'asc' },
     }),
     db.teammate.findMany({ select: { id: true, name: true } }),
@@ -80,6 +96,7 @@ export async function inboxSources(db: ScopedDb) {
           : `${a.displayName ?? 'Inbox'}${find(projects, a.projectId) ? ` · ${find(projects, a.projectId)!.name}` : ''}`,
       teammate: a.kind === 'agent' ? find(teammates, a.teammateId) : null,
       project: a.kind === 'inbox' ? find(projects, a.projectId) : null,
+      all: true,
     })),
     ...gmail.map((c) => ({
       id: `gmail:${c.id}`,
@@ -90,16 +107,34 @@ export async function inboxSources(db: ScopedDb) {
       label: c.externalAccount ?? c.label,
       teammate: null,
       project: null,
+      /** All its mail, or only what went to a thread. */
+      all: c.reach === 'workspace' && c.inbox,
     })),
   ]
 }
 export type InboxSource = Awaited<ReturnType<typeof inboxSources>>[number]
 
-/** The mail of these sources: Brigade's by address, Gmail's by account. */
+const gmailIds = (sources: InboxSource[], all: boolean) =>
+  sources.filter((s) => s.kind === 'gmail' && s.all === all).map((s) => s.connectionId)
+
+/** The mail of these sources: Brigade's by address, Gmail's by account (or what went to a thread). */
 const ofSources = (sources: InboxSource[]): Prisma.MailMessageWhereInput => ({
   OR: [
     { addressId: { in: sources.flatMap((s) => (s.addressId ? [s.addressId] : [])) } },
-    { connectionId: { in: sources.filter((s) => s.kind === 'gmail').map((s) => s.connectionId) } },
+    { connectionId: { in: gmailIds(sources, true) } },
+    { connectionId: { in: gmailIds(sources, false) }, route: { in: TAKEN_ROUTES } },
+  ],
+})
+
+/**
+ * Of a conversation's mails, those these sources show: of a Gmail account showing only what went
+ * to a thread, never its other mail (kept while it was in the Inbox), opened, counted or searched.
+ */
+const shownOf = (sources: InboxSource[]): Prisma.MailMessageWhereInput => ({
+  OR: [
+    { connectionId: null },
+    { connectionId: { notIn: gmailIds(sources, false) } },
+    { route: { in: TAKEN_ROUTES } },
   ],
 })
 
@@ -123,10 +158,9 @@ const heads = (scope: WorkspaceScope, sources: InboxSource[]) => sql`
     and (${anyOf(
       sql`m."addressId"`,
       sources.flatMap((s) => (s.addressId ? [s.addressId] : [])),
-    )} or ${anyOf(
-      sql`m."connectionId"`,
-      sources.filter((s) => s.kind === 'gmail').map((s) => s.connectionId),
-    )})
+    )} or ${anyOf(sql`m."connectionId"`, gmailIds(sources, true))}
+    or (${anyOf(sql`m."connectionId"`, gmailIds(sources, false))}
+      and m.route in (${Prisma.join(TAKEN_ROUTES)})))
   order by m.box, m."conversationId", m."receivedAt" desc, m.id desc`
 
 /** Nobody took it, and no person marked it done (h: a head). */
@@ -182,13 +216,15 @@ const readableSql = (scope: WorkspaceScope) =>
           and y."aliasId" not in (select a.id from "MailAlias" a
             join "Session" s on s.id = a."sessionId" where s."startedByMemberId" = ${scope.memberId}))`
 
-/** One of its mails matches each filter (x: a mail of the conversation). */
-function matchSql(scope: WorkspaceScope, filters: InboxFilters) {
+/** One of its mails matches each filter (x: a mail of the conversation, one its source shows). */
+function matchSql(scope: WorkspaceScope, filters: InboxFilters, sources: InboxSource[]) {
   const conditions: Prisma.Sql[] = []
   const some = (condition: Prisma.Sql, received = true) =>
     sql`exists (select 1 from "MailMessage" x
       where x."workspaceId" = ${scope.workspaceId} and x.status <> 'cancelled'
         ${received ? sql`and x.direction = 'in'` : sql``}
+        and (x."connectionId" is null or not ${anyOf(sql`x."connectionId"`, gmailIds(sources, false))}
+          or x.route in (${Prisma.join(TAKEN_ROUTES)}))
         and x.box = h.box and x."conversationId" = h."conversationId" and ${condition})`
   if (filters.teammateId)
     conditions.push(sql`(x."addressId" in (select id from "MailAddress" where "teammateId" = ${filters.teammateId})
@@ -210,7 +246,7 @@ function matchSql(scope: WorkspaceScope, filters: InboxFilters) {
 
 /** The list, newest conversation first, whatever the sources, filtered and paged in one query. */
 export async function listInbox(db: ScopedDb, scope: WorkspaceScope, filters: InboxFilters) {
-  const sources = await inboxSources(db)
+  const sources = await inboxSources(db, scope)
   const wanted = sources.filter(
     (s) => !filters.source || s.id === filters.source || s.kind === filters.source,
   )
@@ -221,7 +257,7 @@ export async function listInbox(db: ScopedDb, scope: WorkspaceScope, filters: In
         select h.id, h."receivedAt" from h
         where ${statusSql(scope, filters.status ?? 'waiting')}
           and ${before ? sql`(h."receivedAt" < ${before.at} or (h."receivedAt" = ${before.at} and h.id < ${before.id}))` : sql`true`}
-          and ${matchSql(scope, filters)}
+          and ${matchSql(scope, filters, wanted)}
         order by h."receivedAt" desc, h.id desc
         limit ${PAGE + 1}`
     : []
@@ -232,7 +268,7 @@ export async function listInbox(db: ScopedDb, scope: WorkspaceScope, filters: In
   })
   const ordered = page.flatMap((r) => rows.filter((m) => m.id === r.id))
   return {
-    items: await toItems(db, scope, ordered),
+    items: await toItems(db, scope, ordered, wanted),
     sources: sources.map(({ id, kind, label, address, teammate, project }) => ({
       id,
       kind,
@@ -258,7 +294,7 @@ export function parseCursor(cursor: string) {
  * took, or whose reply waits for this member's approval).
  */
 export async function waitingCount(db: ScopedDb, scope: WorkspaceScope) {
-  const sources = await inboxSources(db)
+  const sources = await inboxSources(db, scope)
   if (!sources.length) return 0
   const [row] = await prisma.$queryRaw<{ n: number }[]>`
     with h as (${heads(scope, sources)})
@@ -298,7 +334,12 @@ const waiting = (m: Row) =>
 /** The mails of these conversations, both ways, but those cancelled before they left. */
 const SHOWN: Prisma.MailMessageWhereInput = { status: { not: 'cancelled' } }
 
-async function toItems(db: ScopedDb, scope: WorkspaceScope, rows: Row[]): Promise<InboxItem[]> {
+async function toItems(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  rows: Row[],
+  sources: InboxSource[],
+): Promise<InboxItem[]> {
   const keys = rows.map((r) => ({ box: r.box, conversationId: r.conversationId }))
   const [rules, teammates, projects, slugs, counts, signUps, mails] = await Promise.all([
     db.trigger.findMany({
@@ -311,7 +352,7 @@ async function toItems(db: ScopedDb, scope: WorkspaceScope, rows: Row[]): Promis
     rows.length
       ? db.mailMessage.groupBy({
           by: ['box', 'conversationId'],
-          where: { ...SHOWN, OR: keys },
+          where: { ...SHOWN, OR: keys, AND: [shownOf(sources)] },
           _count: { _all: true },
         })
       : [],
@@ -463,10 +504,10 @@ function nextOf(
 // ---------------------------------------------------------------------------
 
 /** A mail this member may see, or a 404: one of the Inbox's sources, never another's. */
-async function load(db: ScopedDb, itemId: string) {
+async function load(db: ScopedDb, scope: WorkspaceScope, itemId: string, known?: InboxSource[]) {
   const [kind, id] = itemId.split(':')
   if (kind !== 'mail' || !id) throw new HTTPException(404, { message: 'No such item' })
-  const sources = await inboxSources(db)
+  const sources = known ?? (await inboxSources(db, scope))
   const m = await db.mailMessage.findFirst({
     where: { id, direction: 'in', AND: [ofSources(sources)] },
     include,
@@ -476,15 +517,16 @@ async function load(db: ScopedDb, itemId: string) {
 }
 
 /** A mail's conversation, oldest first, both ways, and its latest received mail (its head). */
-async function conversationOf(db: ScopedDb, itemId: string) {
-  const m = await load(db, itemId)
+async function conversationOf(db: ScopedDb, scope: WorkspaceScope, itemId: string) {
+  const sources = await inboxSources(db, scope)
+  const m = await load(db, scope, itemId, sources)
   const mails = await db.mailMessage.findMany({
-    where: { ...SHOWN, box: m.box, conversationId: m.conversationId },
+    where: { ...SHOWN, box: m.box, conversationId: m.conversationId, AND: [shownOf(sources)] },
     include,
     orderBy: [{ receivedAt: 'asc' }, { id: 'asc' }],
   })
   const head = mails.filter((x) => x.direction === 'in').at(-1) ?? m
-  return { head, mails }
+  return { head, mails, sources }
 }
 
 type MailFile = {
@@ -511,7 +553,7 @@ export async function openFile(
   itemId: string,
   fileId: string,
 ): Promise<{ link: string } | { attachment: { id: string; name: string; contentType: string } }> {
-  const m = await load(db, itemId)
+  const m = await load(db, scope, itemId)
   const shown = (await readItem(db, scope, itemId)).messages.find((x) => x.id === `mail:${m.id}`)
   const file = ((m.attachments ?? []) as MailFile[]).find((a) => a.id === fileId)
   if (!shown || shown.hidden || !file) throw new HTTPException(404, { message: 'No such file' })
@@ -559,8 +601,8 @@ export async function readItem(
   scope: WorkspaceScope,
   itemId: string,
 ): Promise<InboxDetail> {
-  const { head, mails } = await conversationOf(db, itemId)
-  const [item] = await toItems(db, scope, [head])
+  const { head, mails, sources } = await conversationOf(db, scope, itemId)
+  const [item] = await toItems(db, scope, [head], sources)
   const mailbox = head.address?.connectionId ?? head.connectionId
   // Brigade's rules are per project variant of the address; Gmail's, the account's.
   const projectId = head.address ? (head.projectId ?? head.address.projectId ?? null) : undefined
@@ -654,7 +696,7 @@ async function handableTeammates(db: ScopedDb, connectionId: string | null) {
 
 /** Mark a conversation done, or not done again: its mails received so far. */
 export async function setDone(db: ScopedDb, scope: WorkspaceScope, itemId: string, done: boolean) {
-  const m = await load(db, itemId)
+  const m = await load(db, scope, itemId)
   await db.mailMessage.updateMany({
     where: { box: m.box, conversationId: m.conversationId, direction: 'in' },
     data: done
@@ -710,7 +752,7 @@ export async function handItem(
   input: { teammateId: string; note?: string; projectId?: string | null },
 ) {
   // The conversation goes, from its latest mail, with the earlier ones for context.
-  const { head: m } = await conversationOf(db, itemId)
+  const { head: m } = await conversationOf(db, scope, itemId)
   const detail = await readItem(db, scope, itemId)
   if (detail.messages.some((x) => x.hidden))
     throw new HTTPException(403, { message: 'This sign-up mail is its thread’s' })
