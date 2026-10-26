@@ -81,6 +81,14 @@ function useTurnstile(slot: React.RefObject<HTMLDivElement | null>) {
   }
 }
 
+/** The API's errors on a code (better-auth's emailOTP), said plainly. */
+function codeError(error: { code?: string; status?: number }) {
+  if (error.code === 'INVALID_OTP') return 'That code is not right. Check it, or send a new one.'
+  if (error.code === 'OTP_EXPIRED') return 'This code has expired. Send a new one.'
+  if (error.code === 'TOO_MANY_ATTEMPTS') return 'Too many tries with this code. Send a new one.'
+  if (error.status === 429) return 'Too many tries. Wait a minute, then try again.'
+}
+
 /**
  * Signs in, or up, with a code mailed to the address (the API's emailOTP): an account is
  * only made by someone who reads its mail. With `withName`, a new account takes the name.
@@ -114,7 +122,7 @@ export function EmailSignIn({
           ? { headers: { 'x-captcha-response': turnstile.token } }
           : undefined,
       })
-      if (error) return setError(error.message ?? 'Could not send the code')
+      if (error) return setError(codeError(error) ?? error.message ?? 'Could not send the code')
       setCode('')
       setSent(true)
     } catch {
@@ -134,7 +142,7 @@ export function EmailSignIn({
         otp: code.replace(/\s/g, ''),
         ...(withName && name.trim() ? { name: name.trim() } : {}),
       })
-      if (error) return setError(error.message ?? 'Could not sign in')
+      if (error) return setError(codeError(error) ?? error.message ?? 'Could not sign in')
       onSignedIn()
     } catch {
       setError('Could not reach Brigade. Check your connection and try again.')
