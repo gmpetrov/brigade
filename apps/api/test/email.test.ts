@@ -58,6 +58,8 @@ describe('names', () => {
     assert.match(names.nameProblem('r') ?? '', /2 to 30/)
     assert.match(names.nameProblem('support') ?? '', /reserved/)
     assert.match(names.nameProblem('postmaster') ?? '', /reserved/)
+    for (const word of ['chief', 'georges', 'brigade', 'contact', 'sales'])
+      assert.match(names.nameProblem(word) ?? '', /reserved/, word)
   })
 
   test('candidates: the teammate’s own name first, then -2, -3', () => {
@@ -65,6 +67,7 @@ describe('names', () => {
     assert.deepEqual([first, second, third], ['riley-bot', 'riley-bot-2', 'riley-bot-3'])
     // A reserved or too short name starts at -2.
     assert.equal(take(names.candidates('Support'), 1)[0], 'support-2')
+    assert.equal(take(names.candidates('Chief'), 1)[0], 'chief-2')
     assert.equal(take(names.candidates('R'), 1)[0], 'r-agent')
   })
 
