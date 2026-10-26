@@ -82,6 +82,7 @@ import { createLocalSandboxSession, freePort, stopGroup } from './local-sandbox.
 import { claimHandOver, type HandedOver } from '../hand-over.js'
 import { bridgeBrowser, threadNet } from '../thread-net.js'
 import { ReplyWatch, terminalTools } from './replies.js'
+import { callFiles } from './call-files.js'
 import { readCommand, reportWithFiles } from './report-files.js'
 import {
   ASK_USER_TOOL,
@@ -1430,15 +1431,16 @@ export class HarnessThread {
   }
 
   /**
-   * A connector call that sends files (an email's attachments): the teammate
-   * names them by path; they go to the API first, and the call carries their ids.
+   * A connector call that sends files (an email's attachments, a Drive upload): the teammate
+   * names them by path, a list or a single one; they go to the API first, and the call
+   * carries their ids in the same shape.
    */
   private async callWithFiles(call: Parameters<ConnectorCaller>[0]) {
     const field = this.spec.connectors
       .find((c) => c.connectionId === call.connectionId)
       ?.operations.find((o) => o.name === call.operation)?.filesField
     const input = call.input as Record<string, unknown> | null
-    const files = field && input && Array.isArray(input[field]) ? (input[field] as unknown[]) : []
+    const { paths: files, place } = callFiles(field && input ? input[field] : undefined)
     if (!field || files.length === 0) return this.callConnector(call)
     const ids = []
     for (const file of files) {
@@ -1453,7 +1455,7 @@ export class HarnessThread {
         }),
       )
     }
-    return this.callConnector({ ...call, input: { ...input, [field]: ids } })
+    return this.callConnector({ ...call, input: { ...input, [field]: place(ids) } })
   }
 
   /**
