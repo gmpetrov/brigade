@@ -52,10 +52,12 @@ and asks how its mail reaches Brigade (`MailDomain.receiving`):
 
 Its DNS records (`MailDomain.records`, Resend's) are checked every ten minutes for three days, or at
 once with Check now; until then, it receives nothing directly either. A domain another workspace
-added is theirs once verified, and for its first three days; past them and still unverified (Resend
-is asked again first), a workspace adding it takes it over (`takeOver`): it leaves Resend, the other
+added is theirs once verified, for its first three days, and while the DKIM key Resend gave them is
+in its public DNS (read by Brigade itself, failing closed). Past that, a workspace adding it takes
+it over (`takeOver`): one guarded write claims it first (`status: claimed`, for ten minutes at
+most), after which no check marks it verified; then its DNS is read, it leaves Resend, the other
 workspace's mailboxes lose their addresses on it, and an `email.domain.taken_over` audit entry says
-so. Whoever owns it is the one whose records then show. **A mailbox on a domain whose
+so. A failure before it leaves Resend gives the claim back. **A mailbox on a domain whose
 records are not in yet sends nothing**: the send
 is refused (409) and never goes out from its address on Brigade's domain instead, so replies always
 come from the address people wrote to. A domain is removed once no mailbox has an address on it,

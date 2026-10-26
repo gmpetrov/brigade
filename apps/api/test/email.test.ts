@@ -1746,15 +1746,30 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
       globalThis.fetch = previousFetch
     }
   })
-  test('a domain another workspace added is theirs once verified or for three days; unverified past that, it is taken from them', async () => {
+  test('a domain another workspace added is theirs once verified, for three days, or while its records are in its DNS; else it is taken from them, a claim at a time', async () => {
     const domains = await import('../src/mail/domains.js')
     const previousFetch = globalThis.fetch
     const name = `taken-${id}.test`
-    const verified = new Set<string>()
+    const dkim = `resend._domainkey.${name}`
+    let txt: { Status: number; Answer?: { type: number; data: string }[] } = { Status: 3 }
+    let deleting: 'fails' | 'pauses' | 'ok' = 'ok'
+    const paused = Promise.withResolvers<void>()
+    const resume = Promise.withResolvers<void>()
     const removed: string[] = []
+    let resendSays = 'pending'
+    const records = [
+      {
+        record: 'DKIM',
+        type: 'TXT',
+        name: 'resend._domainkey',
+        value: 'p=KEY A',
+        status: 'pending',
+      },
+    ]
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input))
-      if (url.hostname === 'cloudflare-dns.com') return json({ Status: 0, Answer: [] })
+      if (url.hostname === 'cloudflare-dns.com')
+        return json(url.searchParams.get('name') === dkim ? txt : { Status: 0, Answer: [] })
       const domain = /^\/domains\/([^/]+)/.exec(url.pathname)?.[1]
       if (url.pathname === '/domains' && init?.method === 'POST') {
         const body = JSON.parse(String(init.body)) as { name: string }
@@ -1762,20 +1777,20 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
           id: `dom-${body.name}-${removed.length}`,
           name: body.name,
           status: 'not_started',
-          records: [],
+          records,
         })
       }
       if (domain && url.pathname.endsWith('/verify')) return json({ id: domain })
       if (domain && init?.method === 'DELETE') {
+        if (deleting === 'fails') throw new Error('Resend unreachable')
+        if (deleting === 'pauses') {
+          paused.resolve()
+          await resume.promise
+        }
         removed.push(domain)
         return json({ id: domain })
       }
-      if (domain)
-        return json({
-          id: domain,
-          status: verified.has(domain) ? 'verified' : 'pending',
-          records: [],
-        })
+      if (domain) return json({ id: domain, status: resendSays, records })
       return previousFetch(input, init)
     }) as typeof fetch
     try {
@@ -1784,24 +1799,51 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
       const first = await domains.addDomain(dbA, ws(a), { name, receiving: 'direct' })
       const desk = await addresses.createInbox(dbA, ws(a), { projectId, label: 'Taken' })
       await domains.setPublicAddress(dbA, ws(a), desk.id, `desk@${name}`)
-      // Within its three days: still A's.
+      const status = async () =>
+        (await prisma.mailDomain.findUnique({ where: { id: first.id } }))?.status
+      // As it was (its check, started for A when its key was found, may have made it pending).
+      const asItWas = async () => assert.ok(['failed', 'pending'].includes((await status())!))
+      // Within its three days: A's.
       await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /has until .* to verify it/)
-      // Past them, but its records showed meanwhile: A's for good, and now marked so.
-      const old = new Date(Date.now() - 4 * 86_400_000)
-      await prisma.mailDomain.updateMany({ where: { id: first.id }, data: { createdAt: old } })
-      verified.add(first.resendDomainId!)
+      await prisma.mailDomain.updateMany({
+        where: { id: first.id },
+        data: { createdAt: new Date(Date.now() - 4 * 86_400_000), status: 'failed' },
+      })
+      // Past them, but A's DKIM key is in its DNS (split in quoted strings, as TXT is): A's,
+      // given back as it was.
+      txt = { Status: 0, Answer: [{ type: 16, data: '"p=KEY" " A"' }] }
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /it is theirs/)
+      await asItWas()
+      // DNS failing proves nothing either way: nothing is taken.
+      txt = { Status: 2 }
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /DNS could not be read/)
+      await asItWas()
+      // Resend not removing it: nothing is taken.
+      txt = { Status: 3 }
+      deleting = 'fails'
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /try again/)
+      await asItWas()
+      // Verified meanwhile by A's own check: A's for good.
+      resendSays = 'verified'
+      await domains.checkDomain(dbA, first.id)
+      deleting = 'ok'
       await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /used by another workspace/)
-      assert.equal(
-        (await prisma.mailDomain.findUniqueOrThrow({ where: { id: first.id } })).status,
-        'verified',
-      )
-      // Never verified past them: B takes it, and A's mailbox loses its address there.
-      verified.clear()
-      await prisma.mailDomain.updateMany({ where: { id: first.id }, data: { status: 'failed' } })
-      const taken = await domains.addDomain(dbB, ws(b), { name })
+      assert.equal(removed.length, 0)
+
+      // A takeover under way holds its claim: A's check cannot mark it verified meanwhile, nor can
+      // a second workspace's add start another.
+      await prisma.mailDomain.updateMany({ where: { id: first.id }, data: { status: 'pending' } })
+      deleting = 'pauses'
+      const taking = domains.addDomain(dbB, ws(b), { name })
+      await paused.promise
+      await assert.rejects(domains.checkDomain(dbA, first.id), /being taken over/)
+      assert.equal(await status(), 'claimed')
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /used by another workspace/)
+      resume.resolve()
+      const taken = await taking
       assert.equal(taken.workspaceId, b.workspaceId)
       assert.deepEqual(removed, [first.resendDomainId])
-      assert.equal(await prisma.mailDomain.findUnique({ where: { id: first.id } }), null)
+      assert.equal(await status(), undefined)
       const lost = await prisma.mailAddress.findUniqueOrThrow({ where: { id: desk.id } })
       assert.deepEqual([lost.publicAddress, lost.domainId], [null, null])
       assert.ok(
@@ -1811,6 +1853,7 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
       )
       await domains.removeDomain(dbB, ws(b), taken.id)
     } finally {
+      resume.resolve()
       globalThis.fetch = previousFetch
     }
   })

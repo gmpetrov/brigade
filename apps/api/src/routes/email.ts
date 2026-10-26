@@ -92,7 +92,7 @@ async function view(
       ? {
           id: a.domain.id,
           name: a.domain.name,
-          status: a.domain.status,
+          status: a.domain.status === 'claimed' ? 'pending' : a.domain.status,
           receiving: a.domain.receiving,
           records: a.domain.records,
           checkedAt: a.domain.checkedAt?.toISOString() ?? null,

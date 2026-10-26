@@ -66,7 +66,9 @@ async function rows(
           ? {
               id: a.domain.id,
               name: a.domain.name,
-              status: a.domain.status as 'pending' | 'verified' | 'failed',
+              // A takeover's claim (mail/domains.ts) is not verified either.
+              status: (a.domain.status === 'claimed' ? 'pending' : a.domain.status) as
+                'pending' | 'verified' | 'failed',
               receiving: a.domain.receiving as 'direct' | 'forward',
             }
           : null,

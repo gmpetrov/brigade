@@ -47,10 +47,13 @@ const statusOf = (resendStatus: string) =>
 
 const brigadeDomain = (name: string) => name === mailDomain() || name.endsWith(`.${mailDomain()}`)
 
-/** A domain's MX hosts, best first, from public DNS (Cloudflare's, over HTTPS). */
-export async function mxOf(name: string): Promise<string[]> {
+/**
+ * Public DNS (Cloudflare's, over HTTPS): a name's records of a type, or null when the name does not
+ * exist (NXDOMAIN). Any other failure is a 502: a resolver failing is never an empty answer.
+ */
+async function lookup(name: string, type: 'MX' | 'TXT') {
   const response = await fetch(
-    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=MX`,
+    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`,
     { headers: { accept: 'application/dns-json' } },
   )
   if (!response.ok) throw new HTTPException(502, { message: 'DNS could not be read, try again' })
@@ -58,13 +61,18 @@ export async function mxOf(name: string): Promise<string[]> {
     Status: number
     Answer?: { type: number; data: string }[]
   }
-  // NOERROR only: a resolver's failure is not a domain without mail.
-  if (answer.Status === 3)
-    throw new HTTPException(400, { message: `${name} is not in DNS: check its spelling` })
+  if (answer.Status === 3) return null
   if (answer.Status !== 0)
     throw new HTTPException(502, { message: 'DNS could not be read, try again' })
-  return (answer.Answer ?? [])
-    .filter((a) => a.type === 15)
+  return (answer.Answer ?? []).filter((a) => a.type === (type === 'MX' ? 15 : 16))
+}
+
+/** A domain's MX hosts, best first. */
+export async function mxOf(name: string): Promise<string[]> {
+  const answers = await lookup(name, 'MX')
+  if (!answers)
+    throw new HTTPException(400, { message: `${name} is not in DNS: check its spelling` })
+  return answers
     .map((a) => {
       const [priority, host] = a.data.trim().split(/\s+/)
       return { priority: Number(priority), host: (host ?? '').replace(/\.$/, '').toLowerCase() }
@@ -106,7 +114,7 @@ export async function addDomain(
   if (await db.mailDomain.findFirst({ where: { name }, select: { id: true } }))
     throw new HTTPException(409, { message: `${name} is already added` })
   const other = await prisma.mailDomain.findUnique({ where: { name } })
-  if (other) await stillTheirs(other)
+  if (other) stillTheirs(other)
   const receiving = input.receiving ?? lookup.suggested
   if (receiving === 'direct' && lookup.mx.length > 0 && !lookup.brigade)
     throw new HTTPException(400, {
@@ -142,24 +150,22 @@ export async function addDomain(
 type DomainRow = NonNullable<Awaited<ReturnType<typeof prisma.mailDomain.findUnique>>>
 
 /**
- * A 409 while another workspace's domain is still theirs: verified (Resend asked again first, as
- * its records may have shown since the last check), or added less than three days ago.
+ * A takeover in progress (`takeOver`): the domain is `claimed`, its claim's time in `checkedAt`.
+ * Nothing marks it verified meanwhile. A claim older than this was left by a takeover that never
+ * finished: the domain is as it was.
  */
-async function stillTheirs(other: DomainRow) {
-  const db = scoped({ organizationId: other.organizationId, workspaceId: other.workspaceId })
-  const status =
-    other.status === 'verified' || !other.resendDomainId
-      ? other.status
-      : (
-          await checkDomain(db, other.id).catch((error: unknown) => {
-            // Gone from Resend: never verified there.
-            if (error instanceof ResendError && error.status === 404) return other
-            throw new HTTPException(502, {
-              message: `Resend could not say whether ${other.name} is verified: try again in a moment`,
-            })
-          })
-        ).status
-  if (status === 'verified')
+const CLAIM_MS = 10 * 60_000
+const CLAIMED = 'claimed'
+const claimed = (row: { status: string; checkedAt: Date | null }, now = Date.now()) =>
+  row.status === CLAIMED && !!row.checkedAt && row.checkedAt.getTime() > now - CLAIM_MS
+/** Not claimed by a takeover now: what a check may write over. */
+const unclaimed = (now = Date.now()) => ({
+  NOT: { status: CLAIMED, checkedAt: { gt: new Date(now - CLAIM_MS) } },
+})
+
+/** A 409 while another workspace's domain is plainly still theirs: verified, or under three days. */
+function stillTheirs(other: DomainRow) {
+  if (other.status === 'verified' || claimed(other))
     throw new HTTPException(409, {
       message: `${other.name} is used by another workspace on Brigade`,
     })
@@ -171,13 +177,70 @@ async function stillTheirs(other: DomainRow) {
 }
 
 /**
- * Another workspace's domain left unverified for three days, taken from it: from Resend, then its
- * mailboxes' addresses on it (they could never send or receive as them), then the domain.
+ * Whether the DKIM key Resend gave a domain's row is in the domain's public DNS: whoever put it
+ * there controls the domain, verified by Resend or not yet. Brigade reads it itself rather than
+ * asking Resend, whose verification runs later.
+ */
+async function recordsInDns(row: DomainRow) {
+  const keys = ((row.records ?? []) as { record?: string; name?: string; value?: string }[]).filter(
+    (r) => r.record === 'DKIM' && r.name && r.value,
+  )
+  for (const key of keys) {
+    // Its selector (resend._domainkey), under the domain itself whatever zone Resend names it in.
+    const selector = key.name!.split('._domainkey')[0]
+    const found = await lookup(`${selector}._domainkey.${row.name}`, 'TXT')
+    const want = key.value!.replace(/\s+/g, '')
+    if (found?.some((a) => a.data.replace(/"\s*"/g, '').replace(/["\s]/g, '').includes(want)))
+      return true
+  }
+  return false
+}
+
+/**
+ * Another workspace's domain left unverified for three days, taken from it. Claimed first, in one
+ * guarded write, so that from then on no check marks it verified; then its DKIM key is looked for
+ * in its DNS (found: it is theirs after all, and stays); then it leaves Resend, its mailboxes lose
+ * their addresses on it (they could never send or receive as them), and it goes. Anything failing
+ * before it leaves Resend gives the claim back.
  */
 async function takeOver(other: DomainRow) {
   const scope = { organizationId: other.organizationId, workspaceId: other.workspaceId }
   const db = scoped(scope)
-  if (other.resendDomainId) await removeFromResend(other.name, other.resendDomainId)
+  const now = Date.now()
+  const claim = await db.mailDomain.updateMany({
+    where: {
+      id: other.id,
+      createdAt: { lt: new Date(now - GIVE_UP_MS) },
+      OR: [
+        { status: { in: ['pending', 'failed'] } },
+        { status: CLAIMED, checkedAt: { lte: new Date(now - CLAIM_MS) } },
+      ],
+    },
+    data: { status: CLAIMED, checkedAt: new Date(now) },
+  })
+  if (!claim.count)
+    throw new HTTPException(409, {
+      message: `${other.name} is used by another workspace on Brigade`,
+    })
+  const giveBack = () =>
+    db.mailDomain.updateMany({
+      where: { id: other.id, status: CLAIMED },
+      data: { status: other.status === CLAIMED ? 'pending' : other.status },
+    })
+  let theirs = false
+  try {
+    theirs = await recordsInDns(other)
+    if (theirs)
+      throw new HTTPException(409, {
+        message: `${other.name}'s DNS has the records another workspace on Brigade was given: it is theirs`,
+      })
+    if (other.resendDomainId) await removeFromResend(other.name, other.resendDomainId)
+  } catch (error) {
+    await giveBack()
+    // Theirs: Resend can mark it verified now.
+    if (theirs) void checkDomain(db, other.id).catch(() => undefined)
+    throw error
+  }
   await db.mailAddress.updateMany({
     where: { domainId: other.id },
     data: { publicAddress: null, domainId: null },
@@ -221,7 +284,8 @@ const viewOf = (
 ): MailDomainView => ({
   id: row.id,
   name: row.name,
-  status: row.status as MailDomainView['status'],
+  // A takeover's claim, or one left by a takeover that never finished: not verified, as before.
+  status: (row.status === CLAIMED ? 'pending' : row.status) as MailDomainView['status'],
   receiving: row.receiving as DomainReceiving,
   records: row.records as MailDomainView['records'],
   checkedAt: row.checkedAt?.toISOString() ?? null,
@@ -334,16 +398,25 @@ export async function checkPublicAddress(db: ScopedDb, given: string, exceptId?:
   return address
 }
 
-/** Ask Resend to check a domain's records now, and keep what it says. */
+/**
+ * Ask Resend to check a domain's records now, and keep what it says: never over a takeover's claim
+ * (`takeOver`), which wins from the moment it is made.
+ */
 export async function checkDomain(db: ScopedDb, domainId: string) {
   const row = await db.mailDomain.findFirst({ where: { id: domainId } })
   if (!row?.resendDomainId) throw new HTTPException(404, { message: 'No such domain' })
+  const taking = new HTTPException(409, {
+    message: `${row.name} is being taken over by a workspace on Brigade that added it after its three days`,
+  })
+  if (claimed(row)) throw taking
   if (row.status !== 'verified') await verifyDomain(row.resendDomainId).catch(() => undefined)
   const domain = await getDomain(row.resendDomainId)
-  return db.mailDomain.update({
-    where: { id: row.id },
+  const kept = await db.mailDomain.updateMany({
+    where: { id: row.id, ...unclaimed() },
     data: { status: statusOf(domain.status), records: recordsOf(domain), checkedAt: new Date() },
   })
+  if (!kept.count) throw taking
+  return db.mailDomain.findFirstOrThrow({ where: { id: row.id } })
 }
 
 /** The minute tick: each pending domain is checked every ten minutes, for three days. */
@@ -360,10 +433,17 @@ export async function checkDomains(now = Date.now()) {
     try {
       const checked = await checkDomain(db, row.id)
       if (checked.status === 'pending' && now - row.createdAt.getTime() > GIVE_UP_MS)
-        await db.mailDomain.updateMany({ where: { id: row.id }, data: { status: 'failed' } })
+        await db.mailDomain.updateMany({
+          where: { id: row.id, status: 'pending' },
+          data: { status: 'failed' },
+        })
     } catch (error) {
       console.warn(`mail domain ${row.name}: not checked`, error)
-      await db.mailDomain.updateMany({ where: { id: row.id }, data: { checkedAt: new Date(now) } })
+      // A takeover's claim keeps its own time.
+      await db.mailDomain.updateMany({
+        where: { id: row.id, status: 'pending' },
+        data: { checkedAt: new Date(now) },
+      })
     }
   }
 }
