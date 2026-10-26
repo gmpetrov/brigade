@@ -53,8 +53,8 @@ export type Env = {
 type Route = { thread: string; origin: string; token: string; nonce: string }
 
 /** The provider's names: the token in the address it gives, and the cookie it trades it for. */
-export const TOKEN_PARAM = '_token'
-export const TOKEN_COOKIE = '_port_auth'
+const TOKEN_PARAM = '_token'
+const TOKEN_COOKIE = '_port_auth'
 
 /** A host here: the id (26 base32 characters, 130 bits), then a grant for Safari's frame. */
 const HOST = /^([a-z2-7]{26})(?:-([a-z2-7]{36}))?$/
