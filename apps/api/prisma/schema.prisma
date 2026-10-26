@@ -1761,6 +1761,8 @@ model Upload {
   teammateId     String?
   /// Read at completion for a library file, for search.
   text           String           @default("")
+  /// The completion that marked it ready: its checked bytes are at checkedUploadKey(id, checked).
+  checked        String           @default("")
   createdAt      DateTime         @default(now())
 
   @@index([workspaceId, createdAt])

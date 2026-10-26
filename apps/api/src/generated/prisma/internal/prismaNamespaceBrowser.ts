@@ -1039,6 +1039,7 @@ export const UploadScalarFieldEnum = {
   sessionId: 'sessionId',
   teammateId: 'teammateId',
   text: 'text',
+  checked: 'checked',
   createdAt: 'createdAt'
 } as const
 

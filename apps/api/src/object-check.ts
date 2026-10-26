@@ -117,23 +117,49 @@ const ENTITY = /&(?:#(\d+)|#x([0-9a-f]+)|(amp|lt|gt|quot|apos));/gi
 const NAMED: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 
 /**
- * An Office file's text as its zip streams by: only the parts that hold text are inflated,
- * and of each only its runs of text are kept, up to INDEX_CHARS. A damaged file gives ''.
+ * Compressed bytes given to the inflater at once: deflate expands at most about 1032 times, so
+ * whatever an entry holds, one call never makes more than about 1 MB.
+ */
+const INFLATE_SLICE = 1024
+/** Inflated bytes read from an Office file's text parts, at most: past it, its text so far. */
+const INFLATE_MAX = 16 * 1024 * 1024
+/** One tag longer than this is not text: dropped rather than held. */
+const PENDING_MAX = 1024 * 1024
+
+/**
+ * An Office file's text as its zip streams by: only the parts that hold text are inflated, a
+ * little at a time and up to INFLATE_MAX, and of each only its runs of text are kept, up to
+ * INDEX_CHARS. A damaged file gives ''.
  */
 function officeReader(contentType: string) {
   const parts = OFFICE_PARTS[contentType]!
   let text = ''
   let failed = false
+  // Enough read (the text kept for search, or INFLATE_MAX): nothing more is inflated.
+  let done = false
+  let inflated = 0
   const unzip = new Unzip((entry) => {
-    if (!parts.test(entry.name) || failed) return
+    if (!parts.test(entry.name) || failed || done) return
     const decoder = new TextDecoder()
     let pending = ''
+    let skipping = false
     entry.ondata = (error, data, final) => {
       if (error) {
         failed = true
         return
       }
-      if (text.length >= INDEX_CHARS) return
+      if (done) return
+      inflated += data.byteLength
+      if (skipping) {
+        // Past a run too long to be text: nothing is decoded until the next tag.
+        const tag = data.indexOf(0x3c)
+        if (tag < 0) {
+          if (inflated >= INFLATE_MAX) done = true
+          return
+        }
+        skipping = false
+        data = data.subarray(tag)
+      }
       pending += decoder.decode(data, { stream: !final })
       // What follows the last complete tag waits for the rest of it.
       const cut = final ? pending.length : pending.lastIndexOf('<')
@@ -141,30 +167,35 @@ function officeReader(contentType: string) {
       pending = pending.slice(Math.max(cut, 0))
       // A run split across chunks: wait for its closing tag.
       const open = ready.search(/<(?:[wa]:)?t(?:\s[^>]*)?>[^<]*$/)
-      const done = open >= 0 && !final ? ready.slice(0, open) : ready
+      const complete = open >= 0 && !final ? ready.slice(0, open) : ready
       if (open >= 0 && !final) pending = ready.slice(open) + pending
-      for (const m of done.matchAll(RUN)) text += m[1] !== undefined ? decode(m[1]) : '\n'
-      if (pending.length > 1024 * 1024) pending = '' // One tag this long is not text.
+      for (const m of complete.matchAll(RUN)) text += m[1] !== undefined ? decode(m[1]) : '\n'
+      if (pending.length > PENDING_MAX) {
+        pending = ''
+        skipping = true
+      }
+      if (text.length >= INDEX_CHARS || inflated >= INFLATE_MAX) done = true
     }
     entry.start()
   })
   unzip.register(UnzipInflate)
   return {
     push(chunk: Uint8Array) {
-      if (failed) return
-      try {
-        unzip.push(chunk)
-      } catch {
-        failed = true
-      }
+      for (let at = 0; at < chunk.byteLength && !failed && !done; at += INFLATE_SLICE)
+        try {
+          unzip.push(chunk.subarray(at, at + INFLATE_SLICE))
+        } catch {
+          failed = true
+        }
     },
     text() {
       if (failed) return ''
-      try {
-        unzip.push(new Uint8Array(0), true)
-      } catch {
-        return ''
-      }
+      if (!done)
+        try {
+          unzip.push(new Uint8Array(0), true)
+        } catch {
+          return ''
+        }
       return failed ? '' : text.replace(/\n{3,}/g, '\n\n').trim()
     },
   }

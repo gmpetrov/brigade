@@ -17,6 +17,7 @@ CREATE TABLE "Upload" (
     "sessionId" TEXT,
     "teammateId" TEXT,
     "text" TEXT NOT NULL DEFAULT '',
+    "checked" TEXT NOT NULL DEFAULT '',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Upload_pkey" PRIMARY KEY ("id")

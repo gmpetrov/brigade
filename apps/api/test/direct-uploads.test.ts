@@ -624,3 +624,67 @@ test('saves that overlap keep each version the bytes its hash names', { skip }, 
   assert.ok(versions.length >= 1)
   for (const v of versions) assert.equal(sha((await getObject(versionKey(scope, v.id)))!), v.sha256)
 })
+
+test(
+  'completions that overlap: the ready upload names the very bytes it checked',
+  { skip },
+  async () => {
+    const { completeFileUpload, readyUpload, uploadBytesKey } = await import('../src/uploads.js')
+    const { getObject, listObjects, checkedUploadsPrefix } = await import('../src/bucket.js')
+    const db = scoped(scope)
+    const owner = { memberId: ids.member }
+    const first = strToU8('version one')
+    const start = await app.request(
+      '/api/uploads',
+      json({ purpose: 'library', name: 'two.txt', size: first.length }),
+    )
+    const ticket = (await start.json()) as {
+      id: string
+      url: string
+      headers: Record<string, string>
+    }
+    const put = (body: Uint8Array) =>
+      app.request(ticket.url, { method: 'PUT', headers: ticket.headers, body })
+    assert.equal((await put(first)).status, 200)
+    // A has checked and copied the first bytes; before it marks the upload ready, the URL is
+    // replayed with others of the same size and B checks, copies and marks those.
+    const pausing = new Proxy(db, {
+      get(target, prop) {
+        if (prop !== 'upload') return Reflect.get(target, prop)
+        return new Proxy(target.upload, {
+          get(model, key) {
+            if (key !== 'updateMany') return Reflect.get(model, key)
+            return async (args: never) => {
+              await put(strToU8('version two'))
+              await completeFileUpload(db, scope, owner, ticket.id)
+              return model.updateMany(args)
+            }
+          },
+        })
+      },
+    })
+    await completeFileUpload(pausing, scope, owner, ticket.id)
+    const row = await readyUpload(db, owner, ticket.id, 'library')
+    assert.equal(row.sha256, sha(strToU8('version two')))
+    assert.equal(sha((await getObject(uploadBytesKey(scope, row)))!), row.sha256)
+    // A's copy is not left behind.
+    assert.deepEqual(await listObjects(checkedUploadsPrefix(scope, ticket.id)), [
+      uploadBytesKey(scope, row),
+    ])
+  },
+)
+
+test('the sweep removes upload bytes no row names, whenever they landed', { skip }, async () => {
+  const { sweepOrphanUploads } = await import('../src/uploads.js')
+  const { checkedUploadKey } = await import('../src/bucket.js')
+  // A slow PUT that finished after its row was swept, and a checked copy whose delete failed.
+  await putObject(uploadKey(scope, 'gone1'), strToU8('late'), 'text/plain')
+  await putObject(checkedUploadKey(scope, 'gone2', 'a1'), strToU8('left'), 'text/plain')
+  // An upload under way keeps its bytes.
+  const live = await ready('library', 'live.txt', strToU8('still here'))
+  const row = await prisma.upload.findUniqueOrThrow({ where: { id: live } })
+  await sweepOrphanUploads()
+  assert.equal(await objectSize(uploadKey(scope, 'gone1')), null)
+  assert.equal(await objectSize(checkedUploadKey(scope, 'gone2', 'a1')), null)
+  assert.equal(await objectSize(checkedUploadKey(scope, live, row.checked)), 'still here'.length)
+})

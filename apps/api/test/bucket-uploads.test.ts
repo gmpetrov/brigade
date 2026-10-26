@@ -140,3 +140,38 @@ test("an Office file's text is read from its XML parts as they unzip, at any siz
   assert.equal(pdf?.contentType, 'application/pdf')
   assert.equal(pdf?.text, '')
 })
+
+test('an Office file that inflates far past its size is read a little at a time, and stops', async () => {
+  // 128 MiB of text in one run, a few hundred kB compressed.
+  // Built by hand: the long run, deflated as it is made, never whole in this test either.
+  const { Zip, ZipDeflate } = await import('fflate')
+  const chunks: Uint8Array[] = []
+  const zip = new Zip((error, data) => {
+    if (error) throw error
+    chunks.push(data)
+  })
+  const part = new ZipDeflate('word/document.xml', { level: 9 })
+  zip.add(part)
+  part.push(strToU8('<w:document><w:body><w:p><w:r><w:t>'))
+  const block = new Uint8Array(1024 * 1024).fill(0x61)
+  for (let i = 0; i < 128; i++) part.push(block)
+  part.push(strToU8('</w:t></w:r></w:p></w:body></w:document>'), true)
+  zip.end()
+  const bomb = new Uint8Array(chunks.reduce((n, c) => n + c.byteLength, 0))
+  let at = 0
+  for (const c of chunks) {
+    bomb.set(c, at)
+    at += c.byteLength
+  }
+  assert.ok(bomb.byteLength < 1024 * 1024)
+  await putObject('org/ws/uploads/bomb', bomb, 'application/octet-stream')
+  // Run with --expose-gc (the package's test script): what came before is not counted.
+  global.gc?.()
+  const before = process.memoryUsage().rss
+  const read = await inspectObject('org/ws/uploads/bomb', { name: 'bomb.docx', text: true })
+  const grew = process.memoryUsage().rss - before
+  assert.equal(read?.size, bomb.byteLength)
+  assert.ok((read?.text.length ?? 0) <= 400_000)
+  // Far less than the 128 MiB it inflates to (the old way held it all, and more).
+  if (global.gc) assert.ok(grew < 48 * 1024 * 1024, `grew by ${Math.round(grew / 1024 / 1024)} MB`)
+})

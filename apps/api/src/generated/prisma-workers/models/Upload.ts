@@ -53,6 +53,7 @@ export type UploadMinAggregateOutputType = {
   sessionId: string | null
   teammateId: string | null
   text: string | null
+  checked: string | null
   createdAt: Date | null
 }
 
@@ -71,6 +72,7 @@ export type UploadMaxAggregateOutputType = {
   sessionId: string | null
   teammateId: string | null
   text: string | null
+  checked: string | null
   createdAt: Date | null
 }
 
@@ -89,6 +91,7 @@ export type UploadCountAggregateOutputType = {
   sessionId: number
   teammateId: number
   text: number
+  checked: number
   createdAt: number
   _all: number
 }
@@ -117,6 +120,7 @@ export type UploadMinAggregateInputType = {
   sessionId?: true
   teammateId?: true
   text?: true
+  checked?: true
   createdAt?: true
 }
 
@@ -135,6 +139,7 @@ export type UploadMaxAggregateInputType = {
   sessionId?: true
   teammateId?: true
   text?: true
+  checked?: true
   createdAt?: true
 }
 
@@ -153,6 +158,7 @@ export type UploadCountAggregateInputType = {
   sessionId?: true
   teammateId?: true
   text?: true
+  checked?: true
   createdAt?: true
   _all?: true
 }
@@ -258,6 +264,7 @@ export type UploadGroupByOutputType = {
   sessionId: string | null
   teammateId: string | null
   text: string
+  checked: string
   createdAt: Date
   _count: UploadCountAggregateOutputType | null
   _avg: UploadAvgAggregateOutputType | null
@@ -299,6 +306,7 @@ export type UploadWhereInput = {
   sessionId?: Prisma.StringNullableFilter<"Upload"> | string | null
   teammateId?: Prisma.StringNullableFilter<"Upload"> | string | null
   text?: Prisma.StringFilter<"Upload"> | string
+  checked?: Prisma.StringFilter<"Upload"> | string
   createdAt?: Prisma.DateTimeFilter<"Upload"> | Date | string
 }
 
@@ -317,6 +325,7 @@ export type UploadOrderByWithRelationInput = {
   sessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   teammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   text?: Prisma.SortOrder
+  checked?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -338,6 +347,7 @@ export type UploadWhereUniqueInput = Prisma.AtLeast<{
   sessionId?: Prisma.StringNullableFilter<"Upload"> | string | null
   teammateId?: Prisma.StringNullableFilter<"Upload"> | string | null
   text?: Prisma.StringFilter<"Upload"> | string
+  checked?: Prisma.StringFilter<"Upload"> | string
   createdAt?: Prisma.DateTimeFilter<"Upload"> | Date | string
 }, "id">
 
@@ -356,6 +366,7 @@ export type UploadOrderByWithAggregationInput = {
   sessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   teammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   text?: Prisma.SortOrder
+  checked?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.UploadCountOrderByAggregateInput
   _avg?: Prisma.UploadAvgOrderByAggregateInput
@@ -382,6 +393,7 @@ export type UploadScalarWhereWithAggregatesInput = {
   sessionId?: Prisma.StringNullableWithAggregatesFilter<"Upload"> | string | null
   teammateId?: Prisma.StringNullableWithAggregatesFilter<"Upload"> | string | null
   text?: Prisma.StringWithAggregatesFilter<"Upload"> | string
+  checked?: Prisma.StringWithAggregatesFilter<"Upload"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Upload"> | Date | string
 }
 
@@ -400,6 +412,7 @@ export type UploadCreateInput = {
   sessionId?: string | null
   teammateId?: string | null
   text?: string
+  checked?: string
   createdAt?: Date | string
 }
 
@@ -418,6 +431,7 @@ export type UploadUncheckedCreateInput = {
   sessionId?: string | null
   teammateId?: string | null
   text?: string
+  checked?: string
   createdAt?: Date | string
 }
 
@@ -436,6 +450,7 @@ export type UploadUpdateInput = {
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   text?: Prisma.StringFieldUpdateOperationsInput | string
+  checked?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -454,6 +469,7 @@ export type UploadUncheckedUpdateInput = {
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   text?: Prisma.StringFieldUpdateOperationsInput | string
+  checked?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -472,6 +488,7 @@ export type UploadCreateManyInput = {
   sessionId?: string | null
   teammateId?: string | null
   text?: string
+  checked?: string
   createdAt?: Date | string
 }
 
@@ -490,6 +507,7 @@ export type UploadUpdateManyMutationInput = {
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   text?: Prisma.StringFieldUpdateOperationsInput | string
+  checked?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -508,6 +526,7 @@ export type UploadUncheckedUpdateManyInput = {
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   text?: Prisma.StringFieldUpdateOperationsInput | string
+  checked?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -526,6 +545,7 @@ export type UploadCountOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   text?: Prisma.SortOrder
+  checked?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -548,6 +568,7 @@ export type UploadMaxOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   text?: Prisma.SortOrder
+  checked?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -566,6 +587,7 @@ export type UploadMinOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   text?: Prisma.SortOrder
+  checked?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -590,6 +612,7 @@ export type UploadSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   sessionId?: boolean
   teammateId?: boolean
   text?: boolean
+  checked?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["upload"]>
 
@@ -608,6 +631,7 @@ export type UploadSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   sessionId?: boolean
   teammateId?: boolean
   text?: boolean
+  checked?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["upload"]>
 
@@ -626,6 +650,7 @@ export type UploadSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   sessionId?: boolean
   teammateId?: boolean
   text?: boolean
+  checked?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["upload"]>
 
@@ -644,10 +669,11 @@ export type UploadSelectScalar = {
   sessionId?: boolean
   teammateId?: boolean
   text?: boolean
+  checked?: boolean
   createdAt?: boolean
 }
 
-export type UploadOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "purpose" | "name" | "contentType" | "size" | "sha256" | "status" | "memberId" | "computerId" | "sessionId" | "teammateId" | "text" | "createdAt", ExtArgs["result"]["upload"]>
+export type UploadOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "purpose" | "name" | "contentType" | "size" | "sha256" | "status" | "memberId" | "computerId" | "sessionId" | "teammateId" | "text" | "checked" | "createdAt", ExtArgs["result"]["upload"]>
 
 export type $UploadPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Upload"
@@ -688,6 +714,10 @@ export type $UploadPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
      * Read at completion for a library file, for search.
      */
     text: string
+    /**
+     * The completion that marked it ready: its checked bytes are at checkedUploadKey(id, checked).
+     */
+    checked: string
     createdAt: Date
   }, ExtArgs["result"]["upload"]>
   composites: {}
@@ -1126,6 +1156,7 @@ export interface UploadFieldRefs {
   readonly sessionId: Prisma.FieldRef<"Upload", 'String'>
   readonly teammateId: Prisma.FieldRef<"Upload", 'String'>
   readonly text: Prisma.FieldRef<"Upload", 'String'>
+  readonly checked: Prisma.FieldRef<"Upload", 'String'>
   readonly createdAt: Prisma.FieldRef<"Upload", 'DateTime'>
 }
     

@@ -12,11 +12,15 @@ import {
   type UploadPurpose,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { randomUUID } from 'node:crypto'
 import {
   checkedUploadKey,
+  checkedUploadsPrefix,
   copyObject,
   deleteObject,
+  listObjects,
   objectSize,
+  uploadsPrefixes,
   UPLOAD_URL_SECONDS,
   uploadKey,
   uploadTarget,
@@ -132,27 +136,35 @@ export async function completeFileUpload(
     throw new HTTPException(400, { message: 'The upload does not match the file; upload it again' })
   }
   // The very version checked, where no signed URL reaches: a PUT since (a replay of the URL)
-  // changed it, and it is refused.
-  if (
-    !(await copyObject(key, checkedUploadKey(scope, id), inspected.contentType, {
-      ifMatch: inspected.etag,
-    }))
-  ) {
+  // changed it, and it is refused. Each completion copies to a key of its own.
+  const attempt = randomUUID().replaceAll('-', '')
+  const checked = checkedUploadKey(scope, id, attempt)
+  if (!(await copyObject(key, checked, inspected.contentType, { ifMatch: inspected.etag }))) {
     await discardUpload(scope, id)
     throw new HTTPException(400, {
       message: 'The upload changed while it was checked; upload it again',
     })
   }
-  await deleteObject(key).catch(() => undefined)
-  return db.upload.update({
-    where: { id },
+  // Only one completion marks it ready, with the hash of the very bytes it copied; another
+  // that ran alongside, or a discard meanwhile, leaves this copy unused.
+  const claimed = await db.upload.updateMany({
+    where: { id, status: 'pending' },
     data: {
       sha256: inspected.sha256,
       contentType: inspected.contentType,
       text: inspected.text,
+      checked: attempt,
       status: 'ready',
     },
   })
+  if (claimed.count === 0) {
+    await deleteObject(checked).catch(() => undefined)
+    const now = await db.upload.findFirst({ where: { id } })
+    if (now?.status === 'ready') return now
+    throw new HTTPException(409, { message: 'This upload was used or refused; upload it again' })
+  }
+  await deleteObject(key).catch(() => undefined)
+  return db.upload.findFirstOrThrow({ where: { id } })
 }
 
 /** A checked upload of the owner's, for this purpose: what is used to save it where it belongs. */
@@ -169,7 +181,8 @@ export async function readyUpload(
 }
 
 /** Where a checked upload's bytes are, to copy or read them: never changed once checked. */
-export const uploadBytesKey = (scope: Scope, row: { id: string }) => checkedUploadKey(scope, row.id)
+export const uploadBytesKey = (scope: Scope, row: { id: string; checked: string }) =>
+  checkedUploadKey(scope, row.id, row.checked)
 
 /**
  * Copy an upload's bytes to where they belong, inside the bucket. With a type, stored with it.
@@ -177,11 +190,11 @@ export const uploadBytesKey = (scope: Scope, row: { id: string }) => checkedUplo
  */
 export async function copyUpload(
   scope: Scope,
-  row: { id: string },
+  row: { id: string; checked: string },
   to: string,
   contentType?: string,
 ) {
-  if (!(await copyObject(checkedUploadKey(scope, row.id), to, contentType)))
+  if (!(await copyObject(uploadBytesKey(scope, row), to, contentType)))
     throw new HTTPException(409, { message: 'The upload is gone; upload it again' })
 }
 
@@ -198,7 +211,7 @@ export async function discardUpload(scope: Scope, id: string) {
 async function deleteBytes(scope: Scope, id: string) {
   try {
     await deleteObject(uploadKey(scope, id))
-    await deleteObject(checkedUploadKey(scope, id))
+    for (const key of await listObjects(checkedUploadsPrefix(scope, id))) await deleteObject(key)
     return true
   } catch (error) {
     console.warn(`upload ${id}: bytes not deleted: ${String(error)}`)
@@ -228,6 +241,43 @@ export async function sweepFileUploads() {
     if (await deleteBytes(scope, row.id)) await prisma.upload.deleteMany({ where: { id: row.id } })
   }
   if (rows.length > 0) console.log(`uploads: removed ${rows.length} upload(s) done with`)
+  await sweepOrphanUploads()
+}
+
+/** An upload's id in its bucket key: `…/uploads/<id>` or `…/uploads-checked/<id>/<attempt>`. */
+const UPLOAD_ID = /\/uploads(?:-checked)?\/([A-Za-z0-9_-]{1,64})(?:\/|$)/
+
+/**
+ * Bytes no upload's row names any more: a PUT still under way when its row was swept (a slow
+ * one, accepted before its URL expired), or a delete that failed after its row went. Found by
+ * listing each workspace's upload folders, so no time window bounds what is removed: an object
+ * there exists only for a row made before its URL was signed.
+ */
+export async function sweepOrphanUploads() {
+  const workspaces = await prisma.workspace.findMany({
+    select: { id: true, organizationId: true },
+  })
+  let removed = 0
+  for (const workspace of workspaces) {
+    const scope = { organizationId: workspace.organizationId, workspaceId: workspace.id }
+    const keys = (await Promise.all(uploadsPrefixes(scope).map(listObjects))).flat()
+    if (keys.length === 0) continue
+    const ids = [...new Set(keys.map((k) => k.match(UPLOAD_ID)?.[1]).filter(Boolean))] as string[]
+    const known = new Set(
+      (await prisma.upload.findMany({ where: { id: { in: ids } }, select: { id: true } })).map(
+        (r) => r.id,
+      ),
+    )
+    for (const key of keys) {
+      const id = key.match(UPLOAD_ID)?.[1]
+      if (!id || known.has(id)) continue
+      await deleteObject(key).then(
+        () => removed++,
+        (error: unknown) => console.warn(`${key}: not deleted: ${String(error)}`),
+      )
+    }
+  }
+  if (removed > 0) console.log(`uploads: removed ${removed} object(s) no upload names`)
 }
 
 /** Whether a bucket object is there at this size: a skill file a runner uploaded, say. */

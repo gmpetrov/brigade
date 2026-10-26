@@ -4,7 +4,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
 import { copyFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative, sep } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { STORED_FILE_NAME } from '@brigade/contracts'
@@ -105,14 +105,29 @@ export function uploadKey(scope: Scope, uploadId: string) {
   return `${scope.organizationId}/${scope.workspaceId}/uploads/${uploadId}`
 }
 
-/**
- * The bucket key of an upload's bytes once checked: copied there from the very version read,
- * where no signed URL reaches, so a PUT replayed later cannot change what was checked.
- */
-export function checkedUploadKey(scope: Scope, uploadId: string) {
+/** The bucket folder of an upload's checked bytes (one object per completion that checked them). */
+export function checkedUploadsPrefix(scope: Scope, uploadId: string) {
   for (const part of [scope.organizationId, scope.workspaceId, uploadId])
     if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
-  return `${scope.organizationId}/${scope.workspaceId}/uploads-checked/${uploadId}`
+  return `${scope.organizationId}/${scope.workspaceId}/uploads-checked/${uploadId}/`
+}
+
+/**
+ * The bucket key of an upload's bytes once checked: copied there from the very version read,
+ * where no signed URL reaches, so a PUT replayed later cannot change what was checked. Each
+ * completion copies to a key of its own (`attempt`); the one that marks the upload ready wins.
+ */
+export function checkedUploadKey(scope: Scope, uploadId: string, attempt: string) {
+  if (!SAFE.test(attempt)) throw new Error('Invalid bucket key part')
+  return `${checkedUploadsPrefix(scope, uploadId)}${attempt}`
+}
+
+/** The bucket folders of a workspace's uploads, to find what no upload's row names any more. */
+export function uploadsPrefixes(scope: Scope) {
+  for (const part of [scope.organizationId, scope.workspaceId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  const base = `${scope.organizationId}/${scope.workspaceId}`
+  return [`${base}/uploads/`, `${base}/uploads-checked/`]
 }
 
 const REPO_PART = /^[a-z0-9_.-]{1,100}$/
@@ -465,10 +480,11 @@ export async function streamRange(
 export async function listObjects(prefix: string): Promise<string[]> {
   if (!prefix.endsWith('/')) throw new Error('List a folder')
   if (!r2) {
-    const entries = await readdir(join(env.BUCKET_DIR, prefix), { withFileTypes: true }).catch(
-      () => [],
-    )
-    return entries.filter((e) => e.isFile()).map((e) => `${prefix}${e.name}`)
+    const root = join(env.BUCKET_DIR, prefix)
+    const entries = await readdir(root, { withFileTypes: true, recursive: true }).catch(() => [])
+    return entries
+      .filter((e) => e.isFile() && !e.name.endsWith('.part'))
+      .map((e) => `${prefix}${relative(root, join(e.parentPath, e.name)).split(sep).join('/')}`)
   }
   const keys: string[] = []
   let token: string | undefined
