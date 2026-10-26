@@ -346,6 +346,11 @@ export async function startThread(
           /** In a playbook's run: the teammate setting it works as, whose Apps alone it has. */
           playbookTeammate?: string | null
         }
+    /**
+     * A teammate started it for the member (a task it created): the first message is the
+     * teammate's, not the member's, though the thread runs on the member's accounts.
+     */
+    byTeammateId?: string
     /** Uploaded by the member (or, for a trigger, taken from the event), given with the first message. */
     attachmentIds?: string[]
     /** The files came from a connection (a member's email to an agent), not the member's uploads. */
@@ -440,7 +445,9 @@ export async function startThread(
   const started = audit({
     ...scope,
     actor: !input.origin
-      ? { type: 'member', id: input.memberId }
+      ? input.byTeammateId
+        ? { type: 'teammate', id: input.byTeammateId }
+        : { type: 'member', id: input.memberId }
       : input.origin.kind === 'trigger'
         ? { type: 'system', id: `trigger:${input.origin.triggerId}` }
         : input.origin.kind === 'schedule'
@@ -466,7 +473,7 @@ export async function startThread(
     thread,
     {
       text: input.text,
-      memberId: input.origin ? null : input.memberId,
+      memberId: input.origin || input.byTeammateId ? null : input.memberId,
       teammateIds,
       attachments,
     },
