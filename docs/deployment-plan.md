@@ -73,7 +73,11 @@ Cloudflare shipped first, more simply than the phases below:
   - The API's deploy migrates the database first, with the `DATABASE_URL` build secret.
   - The previews gateway's (`brigade-preview-gateway`, brigade.surf) applies its D1
     migrations first. It builds only when `apps/preview-gateway` (its tests aside), the
-    root package files, `patches` or `scripts/deploy` change.
+    root package files, `patches` or `scripts/deploy` change. It and the API deploy side
+    by side, in no set order, so each works with the other's previous version: an API
+    that sends no thread gets a 400 from a gateway with routes per thread and hands out
+    the provider's address, as when the gateway is down; a gateway from before ignores
+    the thread and the access token, and answers 404 to `DELETE /routes` (docs/previews.md).
   - A deploy keeps the secrets a Worker has, and no file in the repository holds them:
     - `brigade-api` reads all its settings from secrets.
       `pnpm --filter @brigade/api exec wrangler secret list` names them. Billing's

@@ -20,17 +20,75 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   Playwright's WebKit on October 24, 2026). So people open
   `https://<id>.brigade.surf`, and the Worker adds the token to each request:
   the browser needs no cookie of the provider's. The API registers the
-  provider's address with the shared secret (`PREVIEW_GATEWAY_URL`,
-  `PREVIEW_GATEWAY_SECRET`, `src/preview-gateway.ts`) and hands out the
-  gateway's address, also as `BRIGADE_PREVIEW_URL`; without them, or when the
-  gateway does not answer, the provider's. The id is an HMAC of the provider's
-  address (130 bits): it is what lets a person in, as the token in the
-  provider's address did. The runner's proxy gives the app the gateway's host
-  as `Host` and `X-Forwarded-Host`, as a real deploy would. On one level of
-  `brigade.surf`, which Cloudflare's free certificate covers (`*.brigade.surf`);
-  `<id>.preview.brigade.surf` would need Advanced Certificate Manager. Costs:
-  Workers requests (a dev server's page can make hundreds) and a D1 read per
-  preview per isolate.
+  thread's preview with the shared secret (`PREVIEW_GATEWAY_URL`,
+  `PREVIEW_GATEWAY_SECRET`, `src/preview-gateway.ts`), and hands out the
+  gateway's address with an access token (below), and without it as
+  `BRIGADE_PREVIEW_URL`. Without the gateway set up, the provider's address.
+  When the gateway does not answer, the app gets the provider's origin and
+  nobody gets an address: the provider's with its token would open every
+  later preview at that port. The runner's proxy gives the app the gateway's
+  host as `Host` and `X-Forwarded-Host`, as a real deploy would. On one level
+  of `brigade.surf`, which Cloudflare's free certificate covers
+  (`*.brigade.surf`); `<id>.preview.brigade.surf` would need Advanced
+  Certificate Manager. Costs: Workers requests (a dev server's page can make
+  hundreds), a D1 read per preview per isolate every 30 seconds, and an
+  HMAC per request.
+- **A preview's address is its thread's, and ends with it.** The provider's
+  address depends only on the computer and the port, and a repository's
+  previews get the same port on a computer (below): when the id was an HMAC
+  of that address, every thread previewing the same repository on that
+  computer had the same address, routes were never deleted, and the id was
+  all it took, so whoever once had it (a member since removed, someone it was
+  pasted to) reached any later preview there, another member's private
+  thread's too (security audit, October 26, 2026). The id is now an HMAC of
+  the thread and the provider's address (130 bits). The API registers it at
+  each start (`preview.expose`) and each open, and the gateway keeps one
+  route per thread and one thread per provider address (`previews` in its
+  D1): registering drops the thread's route elsewhere and any other thread's
+  at that address, before the new app runs there. When a preview stops or
+  fails for good (not when the next one replaces it, which may already have
+  registered it again), or its thread is deleted, the API drops its route
+  (`DELETE /routes`, tried three times): its address answers 404. Each new
+  route gets a nonce, which ends the cookies and grants made for the run
+  before. Other isolates see a dropped route within 30 seconds (their cache).
+- **Access proof at the gateway.** The id lets nobody in by itself. The API
+  hands whoever may see the thread the address with `?_brigade=<expiry>.<mac>`
+  (HMAC of the id and expiry with the shared secret, 5 minutes;
+  `apps/preview-gateway/src/access.ts`), which the dashboard's frame, Open in
+  a new tab, Copy link and the runner's check open. The gateway trades it for
+  its own cookie, `__Host-brigade` (`Secure; HttpOnly; SameSite=None;
+Partitioned`, no `Domain`, path `/`: this host only, kept for the
+  dashboard's frame; bound to the run's nonce, 12 hours at most), and
+  redirects to the address without it, so the app never sees it. The cookie
+  never goes to the app. Anything else gets a page that says to open the
+  preview from Brigade (403).
+  - **Where the browser drops that cookie** (Safari, and so every browser on
+    an iPhone, in the dashboard's frame), the gateway sees it missing on the
+    redirect that sets it (`_brigade_cookie=1`) and sends the frame to a
+    grant in the host instead: `<id>-<grant>.brigade.surf`, the grant being
+    its expiry and an HMAC of the id, the run's nonce and that expiry (36
+    characters, 12 hours). There the host is what lets the page in, as the
+    id alone did before, but only for that run and that long. The app is
+    still told the preview's own address: the gateway rewrites the Origin and
+    Referer it gets to it, its redirects to it back to the grant, and a page at
+    the grant may call the preview's own address (an absolute
+    `BRIGADE_PREVIEW_URL_<port>`) with CORS, its grant as Origin. The
+    dashboard's panel talks to a page there as to its own address
+    (`previewOrigin`).
+  - **Fresh tokens.** The dashboard asks for the address again for a new tab
+    or loading the frame again once the one it has is over 3 minutes old, and
+    always for Copy link. A copied link opens the preview for whoever opens
+    it within 5 minutes, then while it runs, at most 12 hours.
+  - **Teammates' browsers.** `start_preview` and `preview_logs` answer `open`,
+    the address with a token, asked for each time, for the teammate's browser
+    to open before testing at `origins`.
+- **Cookies for their own host only.** `brigade.surf` is not on the Public
+  Suffix List, so an app could set `Domain=brigade.surf` cookies that every
+  other preview's requests carry, and the gateway passed on to their apps.
+  The gateway removes `Domain` from every `Set-Cookie` an app sends (the
+  runner's proxy also does over HTTPS), which makes it the preview's host's
+  only, and drops any the app sets for the provider's token or the
+  gateway's own cookie.
 - **The gateway answers `Cache-Control: private, no-cache`** (the app's own when
   it says `no-store`). Cloudflare's Browser Cache TTL made a dev server's
   `no-cache` scripts four hours, and Turbopack keeps a chunk's name when an
@@ -253,10 +311,12 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   stops its thread's preview. Saved setups are listed with their repository
   (its page under Pull requests, and the Repos tab of each project that links
   it), where an owner or admin forgets one.
-- **A stable address per repository.** A repository's preview gets its proxy
-  port from its name (30000 + a hash), so its address stays the same on that
-  computer: an OAuth callback registered once keeps working. Across computers
-  it changes until previews have their own domain.
+- **A stable address per thread.** A repository's preview gets its proxy
+  port from its name (30000 + a hash), so its address at the provider stays
+  the same on that computer. Its address people open is the thread's too
+  (above): it stays the same across the thread's runs, so an OAuth callback
+  registered once keeps working in that thread, and another thread, or
+  another computer, has another.
 - **Each teammate has its own Docker.** Projects run their database, cache and
   mail with `docker compose`; giving teammates the root daemon's socket would
   make them root. The root setup installs what rootless Docker needs (`uidmap`,
@@ -322,12 +382,27 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   WebKit dropped an app's rewritten session cookie in the frame): pages load in
   the pane through the gateway, but signing in to the app there needs the new
   tab.
-- **The gateway's host is what lets people in**, for as long as the provider
-  keeps the preview's address. The gateway answers `Referrer-Policy:
+- **In Safari's frame, the grant's host is what lets people in**, for the
+  preview's run and 12 hours at most. The gateway answers `Referrer-Policy:
 same-origin` (over the app's own), so links, images and fonts do not send it
   to other sites; a page's `<meta name="referrer">` can still loosen that, and a
   cross-origin request with CORS (a font from Google Fonts, an API the app
-  calls) sends it as its `Origin`.
+  calls) sends it as its `Origin`. There, a script, image or style the app
+  loads from its own absolute address (not a path) is refused: it carries
+  neither the cookie nor the grant.
+- **The app's server cannot call its own public address**: the gateway lets
+  in only browsers that came with a token, so a server-side fetch of
+  `BRIGADE_PREVIEW_URL` gets 403. It calls itself at localhost.
+- **Dropping a route can fail** (the gateway does not answer three times):
+  the address then leads nowhere once the preview's port closed, until the
+  next preview at that provider address, of any thread, drops it. Previews
+  lost with their runner (the computer stopped) report no stop, and are left
+  the same way.
+- **Access tokens are not tied to the run**: one minted just before a
+  preview stops still lets in, for its 5 minutes, the same thread's next run.
+- **Old addresses.** Provider addresses with their token handed out before
+  the gateway (`https://box-….on.boat.dev?_token=…`) still work at the
+  provider for as long as it keeps that token.
 - **Google, GitHub and Microsoft sign-in** refuse to load in a frame on another
   site, whatever the cookies.
 - **Picking elements** sees only the page's DOM: its picture is the DOM drawn
@@ -336,9 +411,11 @@ same-origin` (over the app's own), so links, images and fonts do not send it
   exposes `_debugSource`), only its components' names: opening its code finds
   it by its text. A page whose CSP forbids `'self'` scripts, or a compressed
   page the app sends whatever it is asked, gets no select button.
-- **Cookies set by scripts** (`document.cookie`) do not pass the proxy. Rare for
-  sessions; storage (`localStorage`, as Supabase and Firebase use) works in the
-  frame, kept for it.
+- **Cookies set by scripts** (`document.cookie`) do not pass the proxy or the
+  gateway. Rare for sessions; storage (`localStorage`, as Supabase and Firebase
+  use) works in the frame, kept for it. A script can still set a
+  `Domain=brigade.surf` cookie that other previews' apps receive: only the
+  Public Suffix List (below) stops that.
 - **The provider's own token cookie** works in a cross-site frame in Chrome only:
   without the gateway, Safari's pane stays white.
 - **Rootless Docker** cannot bind ports under 1024 and keeps images in each
@@ -369,8 +446,9 @@ same-origin` (over the app's own), so links, images and fonts do not send it
    through the preview gateway (above).
 2. **That domain on the Public Suffix List** (github.com/publicsuffix/list), as
    `vercel.app`, `netlify.app`, `github.io` and `csb.app` are. Without it every
-   preview is the same site as every other, and one customer's preview can set
-   cookies another's receives. Neither `brigade.surf` nor `boat.dev` is on the list. Inclusion takes
+   preview is the same site as every other, and one customer's preview's scripts
+   can set cookies another's receives (the gateway strips `Domain` only from
+   `Set-Cookie` headers). Neither `brigade.surf` nor `boat.dev` is on the list. Inclusion takes
    weeks: start early.
 3. **Test in Safari and Firefox**: signing in to an app in the pane.
 4. **Check the teammates' Docker on a cloud computer** after deploying the API

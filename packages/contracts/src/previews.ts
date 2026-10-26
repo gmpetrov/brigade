@@ -103,7 +103,10 @@ export type PreviewAction = z.infer<typeof PreviewAction>
 
 /** The address a person opens a preview at. */
 export const PreviewView = z.object({
-  /** Opens the app, signed in to it when the address needs a token. Never logged. */
+  /**
+   * Opens the app, with what lets a person in when the address needs it: the preview
+   * gateway's access token, good for 5 minutes. Never logged.
+   */
   url: z.url(),
   /**
    * The app runs on a member's own machine: the address works only there.
