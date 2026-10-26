@@ -16,7 +16,7 @@ import { audit } from '../audit.js'
 import { triggersOf } from '../connectors/index.js'
 import type { ScopedDb } from '../db.js'
 import { createInbox, disableAddress, enableAgentAddress, suggestName } from '../mail/addresses.js'
-import { checkDomain, setPublicAddress } from '../mail/domains.js'
+import { checkDomain, checkPublicAddress, setPublicAddress } from '../mail/domains.js'
 import { addressOf, mailDomain } from '../mail/names.js'
 import { cancelMail } from '../mail/outbound.js'
 import { resendConfigured, sendEmail } from '../mail/resend.js'
@@ -185,8 +185,19 @@ export const email = new Hono<AppEnv>()
     if (!(await db.app.count({ where: { key: 'email' } })))
       throw new HTTPException(409, { message: 'Turn the Email App on first' })
     const input = await parseBody(c.req.raw, CreateInbox)
+    // Checked before the inbox is made, so a refused address leaves no inbox behind.
+    if (input.publicAddress) await checkPublicAddress(db, input.publicAddress)
     const row = await createInbox(db, scope, input)
-    return c.json(await view(db, { ...row, domain: null }, await names(db)), 201)
+    if (input.publicAddress)
+      try {
+        await setPublicAddress(db, scope, row.id, input.publicAddress)
+      } catch (error) {
+        // Its domain refused (another workspace's, or Resend's answer): the new inbox goes too.
+        await db.mailAddress.deleteMany({ where: { id: row.id } })
+        if (row.connectionId) await db.connection.deleteMany({ where: { id: row.connectionId } })
+        throw error
+      }
+    return c.json(await view(db, await loadAddress(db, row.id), await names(db)), 201)
   })
 
   /** Owners and admins: its name on what it sends, and the address customers write to. */

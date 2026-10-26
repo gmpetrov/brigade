@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { useDocumentPanel } from '@/components/document-panel'
-import { ProjectEmail } from '@/components/project-email'
+import { ProjectMailboxes } from '@/components/mailboxes'
 import { useProject } from '@/components/project-shell'
 import { ProjectLogoPreview, shrinkLogo } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
@@ -357,7 +357,7 @@ export default function ProjectSettings() {
         </div>
       </form>
 
-      <ProjectEmail projectId={project.id} projectName={project.name} />
+      <ProjectMailboxes projectId={project.id} />
 
       <Section
         title="Memory"

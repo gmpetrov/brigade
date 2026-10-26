@@ -20,6 +20,7 @@ import {
   FileText,
   Mail,
   Search,
+  Settings,
   ShieldAlert,
   Undo2,
   X,
@@ -367,9 +368,20 @@ export function InboxView() {
         <header className="flex flex-col gap-3 border-b px-4 pt-6 pb-3 md:px-5">
           <div className="flex items-baseline gap-2">
             <h1 className="text-2xl font-extrabold tracking-tight">Inbox</h1>
-            <span className="truncate text-sm text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
               Every email your mailboxes received
             </span>
+            {/* The Inbox's own settings: its mailboxes, where mail arrives and who handles it. */}
+            <Button
+              asChild
+              variant="ghost"
+              size="icon-sm"
+              className="flex-none self-center text-muted-foreground"
+            >
+              <Link href="/app/inbox/mailboxes" aria-label="Mailboxes" title="Mailboxes">
+                <Settings />
+              </Link>
+            </Button>
           </div>
           <div className="relative">
             <Search

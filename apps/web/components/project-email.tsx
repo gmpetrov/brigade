@@ -1,10 +1,10 @@
 'use client'
-import { ArrowDown, ArrowUp, Check, Copy, EllipsisVertical, Trash2 } from 'lucide-react'
-import Link from 'next/link'
+// A Brigade mailbox's pieces for its page (components/mailboxes.tsx): where a project's shared
+// mailbox gets its mail (forwarding, domain, a test), and a rule to add on a mailbox.
+import { Check, Copy, EllipsisVertical } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { isAdmin, useDashboard } from '@/components/dashboard'
+import { useDashboard } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
@@ -22,18 +22,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  api,
-  useApi,
-  type EmailState,
-  type MailAddress,
-  type MailJournalEntry,
-  type Trigger,
-} from '@/lib/api'
+import { api, useApi, type MailAddress, type MailJournalEntry } from '@/lib/api'
 import { cn } from '@/lib/utils'
-
-/** A rule is a trigger of event email_received on the inbox's connection. */
-type Rule = Trigger & { position: number }
 
 type Forwarding =
   | { found: false }
@@ -43,7 +33,7 @@ type PreviewResult = { id: string; from: string; subject: string; at: string; ma
 
 type Tone = 'success' | 'failed' | 'idle'
 
-function Dot({ tone, label }: { tone: Tone; label?: string }) {
+export function Dot({ tone, label }: { tone: Tone; label?: string }) {
   return (
     <span
       className={cn(
@@ -59,7 +49,7 @@ function Dot({ tone, label }: { tone: Tone; label?: string }) {
   )
 }
 
-function CopyButton({ text }: { text: string }) {
+export function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
   return (
     <button
@@ -84,7 +74,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 /** An address in mono with its Copy button. */
-function Address({ value }: { value: string }) {
+export function Address({ value }: { value: string }) {
   return (
     <span className="inline-flex min-w-0 items-center gap-1">
       <code className="min-w-0 font-mono text-xs break-all">{value}</code>
@@ -94,7 +84,7 @@ function Address({ value }: { value: string }) {
 }
 
 /** One action's busy flag and error, shown inline beside it. */
-function useAction() {
+export function useAction() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   async function run<T>(action: () => Promise<T>): Promise<T | undefined> {
@@ -112,7 +102,7 @@ function useAction() {
   return { busy, error, run }
 }
 
-function ErrorLine({ error }: { error?: string }) {
+export function ErrorLine({ error }: { error?: string }) {
   return error ? <p className="text-sm text-destructive-text">{error}</p> : null
 }
 
@@ -125,7 +115,7 @@ const when = (iso: string) =>
   })
 
 /** "From @acme.com · Subject has "invoice" · Skips automatic mail · 50 threads a day max" */
-function rulesSummary(options: Record<string, string>) {
+export function rulesSummary(options: Record<string, string>) {
   const parts: string[] = []
   if (options.from?.trim()) parts.push(`From ${options.from.trim()}`)
   if (options.subject?.trim()) parts.push(`Subject has "${options.subject.trim()}"`)
@@ -135,215 +125,24 @@ function rulesSummary(options: Record<string, string>) {
   return parts.join(' · ')
 }
 
-/** Where a received mail went, in plain words. */
-function destination(entry: MailJournalEntry) {
-  if (entry.direction === 'out') return entry.status === 'sent' ? 'Sent' : `Sent · ${entry.status}`
-  switch (entry.route) {
-    case 'awaited':
-      return 'To the thread waiting for it'
-    case 'conversation':
-      return "To its conversation's thread"
-    case 'member':
-      return "A member's request"
-    case 'rule':
-      return entry.rule ? `Rule "${entry.rule.label}"` : 'A rule'
-    case 'handed':
-      return 'Handed to a teammate from the Inbox'
-    case 'read':
-      return 'Taken by the thread that read it'
-    case 'box':
-      return 'Left in the inbox'
-    case 'duplicate':
-      return 'Already delivered from another address'
-    case 'loop':
-      return 'Stopped: looks like a loop'
-    case 'cap':
-      return 'Rule over its daily limit'
-    case 'own_copy':
-      return 'A reply sent from the mailbox itself'
-    case 'bounce':
-      return 'Delivery failure'
-    case 'test':
-      return 'Test mail'
-    default:
-      return 'Being delivered'
-  }
-}
-
 function recordTone(status: string): Tone {
   return status === 'verified' ? 'success' : status === 'failed' ? 'failed' : 'idle'
 }
 
-/** A project's email: its agents' addresses here, its shared inboxes and who answers them. */
-export function ProjectEmail({
-  projectId,
-  projectName,
-}: {
-  projectId: string
-  projectName: string
-}) {
-  const { me } = useDashboard()
-  const admin = isAdmin(me)
-  const email = useApi<EmailState>('/email', ['mail.updated', 'connections.updated'])
-  const triggers = useApi<Rule[]>(`/triggers?project=${encodeURIComponent(projectId)}`)
-  const state = email.data
-  if (!state?.available) return null
-
-  const reload = () => Promise.all([email.reload(), triggers.reload()])
-  const inboxes = state.addresses.filter(
-    (a) => a.kind === 'inbox' && a.project?.id === projectId && a.on,
-  )
-  const agents = state.addresses
-    .filter((a) => a.kind === 'agent' && a.on)
-    .flatMap((a) =>
-      a.variants
-        .filter((v) => v.projectId === projectId)
-        .map((v) => ({ id: a.id, teammate: a.teammate, address: v.address })),
-    )
-
-  return (
-    <Card className="gap-4 px-6 py-5">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-base font-bold">Email</h2>
-        <p className="max-w-prose text-sm text-muted-foreground">
-          Shared inboxes for the project, such as one for support, and which teammate answers each
-          email.
-        </p>
-      </div>
-      {!state.enabled ? (
-        <p className="text-sm text-muted-foreground">
-          <Link href="/app/connections" className="font-medium text-primary hover:underline">
-            Turn the Email App on in Settings › Apps to give this project inboxes.
-          </Link>
-        </p>
-      ) : (
-        <>
-          {agents.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold">Agents' addresses in this project</h3>
-              <ul className="flex flex-col gap-1">
-                {agents.map((a) => (
-                  <li key={a.address} className="flex flex-wrap items-center gap-2 text-sm">
-                    <span>{a.teammate?.name ?? 'Agent'}</span>
-                    <span className="text-muted-foreground">·</span>
-                    <Address value={a.address} />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {inboxes.map((inbox) => (
-            <InboxBlock
-              key={inbox.id}
-              inbox={inbox}
-              admin={admin}
-              projectId={projectId}
-              rules={(triggers.data ?? [])
-                .filter(
-                  (t) => t.connectionId === inbox.connectionId && t.event === 'email_received',
-                )
-                .sort((a, b) => a.position - b.position || a.createdAt.localeCompare(b.createdAt))}
-              setRules={(next) =>
-                triggers.setData((all) =>
-                  all
-                    ? [...all.filter((t) => t.connectionId !== inbox.connectionId), ...next]
-                    : all,
-                )
-              }
-              reload={reload}
-            />
-          ))}
-          {inboxes.length === 0 && !admin && (
-            <p className="text-sm text-muted-foreground">No inbox yet.</p>
-          )}
-          {admin && <AddInbox projectId={projectId} projectName={projectName} reload={reload} />}
-        </>
-      )}
-    </Card>
-  )
-}
-
-function AddInbox({
-  projectId,
-  projectName,
-  reload,
-}: {
-  projectId: string
-  projectName: string
-  reload: () => Promise<unknown>
-}) {
-  const [label, setLabel] = useState('')
-  const [displayName, setDisplayName] = useState('')
-  const action = useAction()
-
-  async function add(event: FormEvent) {
-    event.preventDefault()
-    if (!label.trim()) return
-    const made = await action.run(() =>
-      api<MailAddress>('/email/inboxes', {
-        body: {
-          projectId,
-          label: label.trim(),
-          ...(displayName.trim() && { displayName: displayName.trim() }),
-        },
-      }),
-    )
-    if (!made) return
-    setLabel('')
-    setDisplayName('')
-    await reload()
-  }
-
-  return (
-    <form onSubmit={(e) => void add(e)} className="flex flex-col gap-3 rounded-lg border p-4">
-      <h3 className="text-sm font-semibold">Add an inbox</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={`inbox-label-${projectId}`}>Label</Label>
-          <Input
-            id={`inbox-label-${projectId}`}
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="Support"
-            maxLength={40}
-            required
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={`inbox-name-${projectId}`}>Display name (optional)</Label>
-          <Input
-            id={`inbox-name-${projectId}`}
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder={`${projectName} support`}
-            maxLength={80}
-          />
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <Button type="submit" variant="outline" size="sm" disabled={action.busy || !label.trim()}>
-          Add inbox
-        </Button>
-        <ErrorLine error={action.error} />
-      </div>
-    </form>
-  )
-}
-
-function InboxBlock({
+/**
+ * Where a project's shared mailbox gets its mail: its own address, the one customers write to
+ * forwarded to it (with Google's confirmation code), the domain its replies go out from, a test.
+ */
+export function InboxArrival({
   inbox,
   admin,
-  projectId,
-  rules,
-  setRules,
   reload,
+  onTurnedOff,
 }: {
   inbox: MailAddress
   admin: boolean
-  projectId: string
-  rules: Rule[]
-  setRules: (rules: Rule[]) => void
   reload: () => Promise<unknown>
+  onTurnedOff?: () => void
 }) {
   const journal = useApi<MailJournalEntry[]>(`/email/addresses/${inbox.id}/journal?limit=20`, [
     'mail.updated',
@@ -352,14 +151,12 @@ function InboxBlock({
     admin && inbox.publicAddress ? `/email/addresses/${inbox.id}/forwarding` : null,
   )
   const [publicDraft, setPublicDraft] = useState(inbox.publicAddress ?? '')
-  const [showMail, setShowMail] = useState(false)
   const [sent, setSent] = useState<string>()
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const off = useAction()
   const savePublic = useAction()
   const check = useAction()
   const test = useAction()
-  const order = useAction()
 
   useEffect(() => setPublicDraft(inbox.publicAddress ?? ''), [inbox.publicAddress])
   useEffect(() => () => timers.current.forEach(clearTimeout), [])
@@ -385,7 +182,10 @@ function InboxBlock({
       await api(`/email/inboxes/${inbox.id}`, { method: 'DELETE' })
       return true
     })
-    if (done) await reload()
+    if (done) {
+      onTurnedOff?.()
+      await reload()
+    }
   }
 
   async function savePublicAddress(event: FormEvent) {
@@ -414,7 +214,7 @@ function InboxBlock({
       ),
     )
     if (!done) return
-    setSent(`Sent to ${done.to}. It shows under Recent mail once it arrives.`)
+    setSent(`Sent to ${done.to}. It shows in the Inbox once it arrives.`)
     for (const delay of [5000, 15000, 40000])
       timers.current.push(
         setTimeout(() => {
@@ -422,24 +222,6 @@ function InboxBlock({
           void forwarding.reload()
         }, delay),
       )
-  }
-
-  async function move(index: number, by: -1 | 1) {
-    const next = [...rules]
-    const [moved] = next.splice(index, 1)
-    next.splice(index + by, 0, moved!)
-    setRules(next.map((r, position) => ({ ...r, position })))
-    const done = await order.run(() =>
-      api('/email/rules/order', { method: 'PUT', body: { triggerIds: next.map((r) => r.id) } }),
-    )
-    if (!done) await reload()
-  }
-
-  async function removeRule(rule: Rule) {
-    if (!confirm(`Delete the rule "${rule.label}"? Mail it took then goes to the next rule.`))
-      return
-    await order.run(() => api(`/triggers/${rule.id}`, { method: 'DELETE' }))
-    await reload()
   }
 
   return (
@@ -643,7 +425,7 @@ function InboxBlock({
                     disabled={test.busy}
                     onClick={() => void sendTest(false)}
                   >
-                    To the inbox
+                    To the mailbox
                   </Button>
                   {publicAddress && (
                     <Button
@@ -664,143 +446,11 @@ function InboxBlock({
           </li>
         </ol>
       </div>
-
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold">Who answers</h3>
-        {rules.length > 0 ? (
-          <ol className="flex flex-col divide-y rounded-md border">
-            {rules.map((rule, index) => (
-              <li key={rule.id} className="flex items-start gap-3 px-3 py-2 text-sm">
-                <span className="w-4 flex-none text-right text-muted-foreground tabular-nums">
-                  {index + 1}
-                </span>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span>
-                    <span className="font-semibold">{rule.label}</span>{' '}
-                    <span className="text-muted-foreground">→ {rule.teammate.name}</span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {rulesSummary(rule.options)}
-                  </span>
-                  {rule.instructions && (
-                    <span
-                      className="line-clamp-2 text-xs text-muted-foreground"
-                      title={rule.instructions}
-                    >
-                      {rule.instructions}
-                    </span>
-                  )}
-                </div>
-                {admin && (
-                  <div className="flex flex-none items-center gap-0.5">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      disabled={order.busy || index === 0}
-                      onClick={() => void move(index, -1)}
-                      aria-label={`Move "${rule.label}" up`}
-                      title="Move up"
-                    >
-                      <ArrowUp />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      disabled={order.busy || index === rules.length - 1}
-                      onClick={() => void move(index, 1)}
-                      aria-label={`Move "${rule.label}" down`}
-                      title="Move down"
-                    >
-                      <ArrowDown />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      size="icon-xs"
-                      disabled={order.busy}
-                      onClick={() => void removeRule(rule)}
-                      aria-label={`Delete "${rule.label}"`}
-                      title="Delete"
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="text-sm text-muted-foreground">No rule yet: no teammate answers it.</p>
-        )}
-        <ErrorLine error={order.error} />
-        <p className="text-sm text-muted-foreground">
-          Each email goes to the first rule that matches it. Mail no rule takes stays in the inbox
-          for 30 days, readable by the project's agents.
-        </p>
-        {admin && inbox.connectionId && (
-          <AddRule connectionId={inbox.connectionId} projectId={projectId} reload={reload} />
-        )}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="-ml-3"
-            onClick={() => setShowMail((v) => !v)}
-            aria-expanded={showMail}
-          >
-            {showMail ? 'Hide recent mail' : 'Show recent mail'}
-          </Button>
-        </div>
-        {showMail &&
-          (entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {journal.data ? 'No mail yet.' : (journal.error?.message ?? 'Loading…')}
-            </p>
-          ) : (
-            <ul className="flex flex-col divide-y rounded-md border">
-              {entries.map((e) => (
-                <li key={e.id} className="flex flex-col gap-0.5 px-3 py-2 text-sm">
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="min-w-0 truncate font-medium">
-                      {e.subject || '(no subject)'}
-                    </span>
-                    <span className="ml-auto flex-none text-xs text-muted-foreground">
-                      {when(e.at)}
-                    </span>
-                  </div>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {e.direction === 'out' ? `To ${e.to.join(', ')}` : e.from}
-                  </span>
-                  <span className="text-xs">
-                    {destination(e)}
-                    {e.thread && (
-                      <>
-                        {' · '}
-                        <Link
-                          href={`/app/threads/${e.thread.id}`}
-                          className="text-primary hover:underline"
-                        >
-                          {e.thread.title || 'Open the thread'}
-                        </Link>
-                      </>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ))}
-      </div>
     </section>
   )
 }
 
-/** A rule on a Brigade mailbox: here for a project's inbox, and from the Inbox for any address. */
+/** A rule on a Brigade mailbox: from its page, and from the Inbox for an unassigned mail. */
 export function AddRule({
   connectionId,
   projectId,

@@ -12,6 +12,7 @@ import {
   setDone,
   waitingCount,
 } from '../inbox.js'
+import { listMailboxes, readMailbox } from '../mailboxes.js'
 import { INLINE } from './attachments.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
@@ -36,6 +37,12 @@ export const inbox = new Hono<AppEnv>()
       }),
     )
   })
+
+  /** Every mailbox, and one whole (Inbox › Mailboxes). */
+  .get('/mailboxes', async (c) => c.json(await listMailboxes(c.var.db, c.var.scope)))
+  .get('/mailboxes/:id', async (c) =>
+    c.json(await readMailbox(c.var.db, c.var.scope, c.req.param('id'))),
+  )
 
   /** What waits on a person, counted beside Inbox in the sidebar. */
   .get('/count', async (c) => c.json({ waiting: await waitingCount(c.var.db, c.var.scope) }))

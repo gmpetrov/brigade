@@ -7,6 +7,7 @@ import { MixpanelMcpHint } from '@/components/mixpanel-mcp-hint'
 import { RegionMenu } from '@/components/region-menu'
 import { CloseButton } from '@/components/close-button'
 import { EmailApp } from '@/components/email-app'
+import { mailboxPath } from '@/components/mailboxes'
 import { ConnectionTriggers } from '@/components/connection-triggers'
 import { useDashboard, timeAgo } from '@/components/dashboard'
 import { McpServerCard } from '@/components/mcp-server-card'
@@ -18,7 +19,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -669,25 +669,13 @@ function Account({
                 </DropdownMenuRadioGroup>
               </>
             )}
-            {/*
-              All of a shared mailbox's mail in the Inbox, for everyone: its owner's or an admin's
-              choice. Without it the Inbox shows only the mail its rules and playbooks take.
-            */}
-            {c.kind === 'gmail' && (
+            {/* Its mailbox (what shows in the Inbox, its rules): in Inbox › Mailboxes. */}
+            {c.kind === 'gmail' && (c.reach === 'workspace' || mine) && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={c.inbox && c.reach === 'workspace'}
-                  disabled={!manages || c.reach !== 'workspace'}
-                  onCheckedChange={(inbox) => void update({ inbox: inbox === true })}
-                  title={
-                    c.reach === 'workspace'
-                      ? 'Everyone in the workspace sees all its mail in the Inbox. Without it, only the mail its rules and playbooks take.'
-                      : 'The Inbox shows you the mail its rules and playbooks take. Share it with every thread to show all its mail.'
-                  }
-                >
-                  Show all its mail in the Inbox
-                </DropdownMenuCheckboxItem>
+                <DropdownMenuItem asChild>
+                  <Link href={mailboxPath(`gmail:${c.id}`)}>Mailbox</Link>
+                </DropdownMenuItem>
               </>
             )}
             {manages && !custom && (

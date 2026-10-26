@@ -19,6 +19,8 @@ export const CreateInbox = z.object({
   label: z.string().trim().min(1).max(40),
   /** The name on what it sends. Default: the project's. */
   displayName: z.string().trim().min(1).max(80).optional(),
+  /** The address customers write to (support@acme.com): checked first, the inbox made with it. */
+  publicAddress: z.string().trim().email().optional(),
 })
 
 export const UpdateInbox = z.object({

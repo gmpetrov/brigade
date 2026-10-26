@@ -1830,3 +1830,63 @@ describe('what comes next: a reply to approve, a reply set for later', { skip },
     assert.equal((await message(1)).canCancel, false)
   })
 })
+
+describe('mailboxes', { skip }, () => {
+  test('every mailbox in one list; one whole, with its rules in order and who reads it', async () => {
+    const db = scoped(scope)
+    const { listMailboxes, readMailbox } = await import('../src/mailboxes.js')
+    const ids = async (who: 0 | 1) => (await listMailboxes(db, as(who))).map((m) => m.id)
+    // Brigade's addresses and the shared Gmail accounts for everyone; a member's own, to them.
+    for (const who of [0, 1] as const) {
+      const seen = await ids(who)
+      assert.ok(seen.includes(`email:${agent.id}`))
+      assert.ok(seen.includes(`email:${support.id}`))
+      assert.ok(seen.includes(`gmail:${gmailShared}`))
+      assert.ok(seen.includes(`gmail:${gmailNotListed}`))
+    }
+    assert.ok((await ids(1)).includes(`gmail:${gmailBobs}`))
+    assert.ok(!(await ids(0)).includes(`gmail:${gmailBobs}`))
+    await assert.rejects(readMailbox(db, as(0), `gmail:${gmailBobs}`), /No such mailbox/)
+
+    // The support mailbox: its rules in the order they apply, the teammate given it.
+    const rule = (label: string, position: number) =>
+      db.trigger.create({
+        data: {
+          connectionId: support.connectionId,
+          teammateId: cody.id,
+          createdByMemberId: members[0]!,
+          label,
+          event: 'email_received',
+          position,
+          projectId,
+        } as never,
+      })
+    const second = await rule('Billing', 1)
+    const first = await rule('Urgent', 0)
+    const mailbox = await readMailbox(db, as(1), `email:${support.id}`)
+    assert.equal(mailbox.kind, 'inbox')
+    assert.equal(mailbox.project?.id, projectId)
+    assert.deepEqual(
+      mailbox.rules.map((r) => [r.id, r.playbook]),
+      [
+        [first.id, null],
+        [second.id, null],
+      ],
+    )
+    assert.deepEqual(
+      mailbox.readers.map((t) => t.name),
+      ['Cody'],
+    )
+    // Only owners and admins change Brigade's mailboxes.
+    assert.equal(mailbox.manages, false)
+    assert.equal((await readMailbox(db, as(0), `email:${support.id}`)).manages, true)
+    const listed = (await listMailboxes(db, as(0))).find((m) => m.id === `email:${support.id}`)
+    assert.equal(listed?.ruleCount, 2)
+    // Bob's own Gmail: his to see and to show whole or not; its rules are an owner's or admin's.
+    const bobs = await readMailbox(db, as(1), `gmail:${gmailBobs}`)
+    assert.equal(bobs.visibility, 'you')
+    assert.equal(bobs.accountOwner, true)
+    assert.equal(bobs.manages, false)
+    await db.trigger.deleteMany({ where: { id: { in: [first.id, second.id] } } })
+  })
+})

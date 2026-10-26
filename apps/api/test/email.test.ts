@@ -1478,3 +1478,65 @@ describe('a conversation’s thread that cannot take more now', { skip }, () => 
     }
   })
 })
+
+describe('a shared mailbox made for an address people write to', { skip }, () => {
+  test('a refused address leaves no mailbox; one turned off lets its address go', async () => {
+    const db = scoped(a)
+    const { auth } = await import('../src/auth.js')
+    const { email } = await import('../src/routes/email.js')
+    const addresses = await import('../src/mail/addresses.js')
+    const realSession = auth.api.getSession
+    const previousFetch = globalThis.fetch
+    ;(auth.api as any).getSession = async () => ({
+      user: { id: users[0]! },
+      session: {
+        id: 'test-session',
+        activeOrganizationId: a.organizationId,
+        activeWorkspaceId: a.workspaceId,
+      },
+    })
+    let resendRefuses = true
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      if (!String(input).includes('/domains')) throw new Error(`unexpected request ${input}`)
+      return resendRefuses
+        ? json({ name: 'validation_error', message: 'Domain already exists' }, 422)
+        : json({ id: `dom-${id}`, name: 'freed', status: 'not_started', records: [] })
+    }) as typeof fetch
+    const inboxes = () => db.mailAddress.count({ where: { kind: 'inbox', projectId } })
+    const add = (publicAddress: string) =>
+      email.request('/inboxes', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ projectId, label: 'Support', publicAddress }),
+      })
+    try {
+      const before = await inboxes()
+      // Resend refuses the domain (another product's on the shared account): nothing is left.
+      const refused = await add(`support@refused-${id}.test`)
+      assert.equal(refused.status, 409, await refused.text())
+      // One of Brigade's own addresses: refused before anything is made.
+      const brigade = await add(`someone@mails.brigade.test`)
+      assert.equal(brigade.status, 400, await brigade.text())
+      assert.equal(await inboxes(), before)
+
+      // An inbox turned off kept its address: a new one takes it.
+      const old = await addresses.createInbox(db, ws(a), { projectId, label: 'Old' })
+      await db.mailAddress.updateMany({
+        where: { id: old.id },
+        data: { publicAddress: `help@freed-${id}.test`, releasedAt: new Date() },
+      })
+      resendRefuses = false
+      const made = await add(`help@freed-${id}.test`)
+      const body = (await made.json()) as { id: string; publicAddress: string }
+      assert.equal(made.status, 201, JSON.stringify(body))
+      assert.equal(body.publicAddress, `help@freed-${id}.test`)
+      assert.equal(
+        (await db.mailAddress.findFirstOrThrow({ where: { id: old.id } })).publicAddress,
+        null,
+      )
+    } finally {
+      ;(auth.api as any).getSession = realSession
+      globalThis.fetch = previousFetch
+    }
+  })
+})

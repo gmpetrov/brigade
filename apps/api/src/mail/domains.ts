@@ -48,6 +48,21 @@ export async function setPublicAddress(
     })
     return null
   }
+  const address = await checkPublicAddress(db, given, inbox.id)
+  const domain = await claimDomain(db, scope, address.split('@')[1]!)
+  await db.mailAddress.update({
+    where: { id: inbox.id },
+    data: { publicAddress: address, domainId: domain.id },
+  })
+  return domain
+}
+
+/**
+ * An address customers write to, checked before it is given to an inbox (or one made for it):
+ * well formed, not Brigade's own, and no other live inbox's. An inbox of this workspace turned
+ * off lets it go. Returns it bare and lower-cased.
+ */
+export async function checkPublicAddress(db: ScopedDb, given: string, exceptId?: string) {
   const address = bareAddress(given)
   const name = address.split('@')[1] ?? ''
   if (!/^[^@\s]+@[^@\s]+$/.test(address) || !DOMAIN.test(name))
@@ -55,16 +70,20 @@ export async function setPublicAddress(
   if (name === mailDomain() || name.endsWith(`.${mailDomain()}`))
     throw new HTTPException(400, { message: 'That is already one of Brigade’s addresses' })
   const taken = await prisma.mailAddress.findFirst({
-    where: { publicAddress: address, NOT: { id: inbox.id } },
-    select: { id: true },
+    where: { publicAddress: address, ...(exceptId ? { NOT: { id: exceptId } } : {}) },
+    select: { id: true, releasedAt: true, workspaceId: true },
   })
-  if (taken) throw new HTTPException(409, { message: `${address} is already another inbox’s` })
-  const domain = await claimDomain(db, scope, name)
-  await db.mailAddress.update({
-    where: { id: inbox.id },
-    data: { publicAddress: address, domainId: domain.id },
-  })
-  return domain
+  if (taken) {
+    const own = await db.mailAddress.findFirst({ where: { id: taken.id }, select: { id: true } })
+    if (!own || !taken.releasedAt)
+      throw new HTTPException(409, { message: `${address} is already another inbox’s` })
+    // This workspace's inbox turned off: the address is free again.
+    await db.mailAddress.updateMany({
+      where: { id: taken.id },
+      data: { publicAddress: null, domainId: null },
+    })
+  }
+  return address
 }
 
 /** The workspace's row for a domain: made (and added to Resend) the first time. */
