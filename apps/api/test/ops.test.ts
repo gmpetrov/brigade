@@ -42,11 +42,12 @@ async function reachable() {
 const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env DATABASE_URL)'
 
 const { onRaise, REMIND_MS, FLAP_MS, raise, resolve, settle } = await import('../src/ops/alerts.js')
-const { judge, RULES, computerProblem, workerProblems, STUCK_MS, OFFLINE_MS } =
-  await import('../src/ops/checks.js')
+const checks = await import('../src/ops/checks.js')
+const { judge, RULES, computerProblem, workerProblems, STUCK_MS, OFFLINE_MS } = checks
 const { noteFailure, failuresOf, summary, clearFailures } = await import('../src/ops/failures.js')
 const { sendNotice, noticeText } = await import('../src/ops/send.js')
 const { diagnose, watchdog, STALLED_MS } = await import('../src/ops/watchdog.js')
+const { prisma } = await import('../src/db.js')
 
 const MIN = 60_000
 const t0 = new Date('2026-10-26T12:00:00Z')
@@ -264,7 +265,29 @@ describe('the watchdog', () => {
       /stopped/,
     )
     assert.equal(diagnose({ upForMs: MIN, checksAt: 0 }, now), null)
-    assert.match(diagnose({ upForMs: STALLED_MS + 1, checksAt: 0 }, now) ?? '', /never started/)
+    assert.match(diagnose({ upForMs: STALLED_MS + 1, checksAt: 0 }, now) ?? '', /never succeeded/)
+    assert.match(
+      diagnose({ upForMs: 60 * MIN, checksAt: now - STALLED_MS - 1, error: 'db gone' }, now) ?? '',
+      /Last failure: db gone/,
+    )
+  })
+
+  test('checks that cannot reach the database do not count as run', async () => {
+    const saved = { alerts: prisma.opsAlert.findMany, computers: prisma.computer.findMany }
+    const down = async () => {
+      throw new Error('database unavailable')
+    }
+    Object.assign(prisma.opsAlert, { findMany: down })
+    Object.assign(prisma.computer, { findMany: down })
+    try {
+      const before = checks.lastChecksAt
+      await checks.runChecks(now)
+      assert.equal(checks.lastChecksAt, before)
+      assert.match(checks.lastCheckError ?? '', /database unavailable/)
+    } finally {
+      Object.assign(prisma.opsAlert, { findMany: saved.alerts })
+      Object.assign(prisma.computer, { findMany: saved.computers })
+    }
   })
 
   test('tells once an hour while it lasts, then that it is back', async () => {
@@ -282,8 +305,6 @@ describe('the watchdog', () => {
     )
   })
 })
-
-const { prisma } = await import('../src/db.js')
 
 describe('alerts in the database', { skip }, () => {
   const prefix = `test-ops-${Date.now()}:`
@@ -314,6 +335,37 @@ describe('alerts in the database', { skip }, () => {
     await raise({ key, severity: 'critical', title: 'B' }, at(2 * MIN))
     assert.equal(posted.length, 2)
     assert.notEqual((await prisma.opsAlert.findUniqueOrThrow({ where: { key } })).notifiedAt, null)
+  })
+
+  test('a turn for the worse that could not be sent is sent on the next run', async () => {
+    const key = `${prefix}d`
+    await raise({ key, severity: 'warning', title: 'D' }, at(0))
+    answer = () => new Response('down', { status: 503 })
+    await raise({ key, severity: 'critical', title: 'D' }, at(MIN))
+    answer = () => new Response('ok')
+    await raise({ key, severity: 'critical', title: 'D' }, at(2 * MIN))
+    await raise({ key, severity: 'critical', title: 'D' }, at(3 * MIN))
+    assert.equal(posted.length, 3)
+    assert.equal(JSON.parse(posted[2]!.body).severity, 'critical')
+    const row = await prisma.opsAlert.findUniqueOrThrow({ where: { key } })
+    assert.equal(row.severity, 'critical')
+  })
+
+  test('an end that could not be told stays open and is told on the next run', async () => {
+    const key = `${prefix}e`
+    await raise({ key, severity: 'warning', title: 'E' }, at(0))
+    answer = () => new Response('down', { status: 503 })
+    await resolve(key, at(MIN))
+    assert.equal((await prisma.opsAlert.findUniqueOrThrow({ where: { key } })).resolvedAt, null)
+    answer = () => new Response('ok')
+    await resolve(key, at(2 * MIN))
+    await resolve(key, at(3 * MIN))
+    assert.deepEqual(
+      posted.map((p) => JSON.parse(p.body).kind),
+      ['firing', 'resolved', 'resolved'],
+    )
+    const row = await prisma.opsAlert.findUniqueOrThrow({ where: { key } })
+    assert.deepEqual(row.resolvedAt, at(2 * MIN))
   })
 
   test('critical stays critical while it lasts', async () => {

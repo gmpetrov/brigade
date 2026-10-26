@@ -377,8 +377,13 @@ async function checkWorkers(now: number) {
   )
 }
 
-/** When the checks last ran to the end: the Worker's cron (src/worker.ts) alerts when they stop. */
+/**
+ * When the checks that need the database last succeeded, and why they failed since: the
+ * Worker's cron (src/worker.ts) alerts when they stop. One that cannot reach the database
+ * cannot alert either, so it counts as stopped.
+ */
 export let lastChecksAt = 0
+export let lastCheckError: string | null = null
 
 let runs = 0
 let running = false
@@ -390,18 +395,22 @@ export async function runChecks(now = Date.now()) {
   if (running) return
   running = true
   try {
+    // The first two need only the database; the others, Cloudflare's and Stripe's APIs too.
     const steps: [string, () => Promise<unknown>][] = [
       ['failures', () => checkFailures(now)],
       ['computers', () => checkComputers(now)],
     ]
+    let failed: string | null = null
     if (runs % 5 === 0) steps.push(['workers', () => checkWorkers(now)])
     if (runs % 30 === 0) steps.push(['stripe endpoint', () => checkStripeEndpoint(now)])
     runs++
-    for (const [name, step] of steps)
-      await step().catch((error: unknown) =>
-        console.error(`ops: ${name} check failed: ${String(error)}`),
-      )
-    lastChecksAt = Date.now()
+    for (const [i, [name, step]] of steps.entries())
+      await step().catch((error: unknown) => {
+        console.error(`ops: ${name} check failed: ${String(error)}`)
+        if (i < 2) failed ??= `${name} check: ${String(error).slice(0, 300)}`
+      })
+    lastCheckError = failed
+    if (!failed) lastChecksAt = Date.now()
   } finally {
     running = false
   }

@@ -52,7 +52,8 @@ operators hear:
 - when it ends (`resolved`), if they were told it started.
 
 A problem back within 30 minutes of its end is the same one: a `reminder`, not a new one.
-A notice no destination took is sent again on the next run.
+A notice no destination took is sent again on the next run: a problem whose end could not be
+told stays open until it is, and a turn for the worse that was not sent is tried again.
 
 ## What is checked
 
@@ -72,7 +73,7 @@ A notice no destination took is sent again on the next run.
 | `computer:<id>`     | A cloud computer in `error`, stuck `creating`/`starting` for 20 min without its runner, or `running` with no runner for 10 min | critical, critical, warning            |
 | `disk:<computerId>` | A `disk_full` ticket open on a cloud computer                                                                                  | warning                                |
 | `worker:<script>`   | A `brigade-*` Worker's or Durable Object's failed invocations (exceptions, exceeded limits), as Cloudflare counts them         | 5 / 50 in 10 min (checked every 5 min) |
-| `api-down`          | The watchdog: the Api object does not answer, or its checks stopped                                                            | critical                               |
+| `api-down`          | The watchdog: the Api object does not answer, or its checks fail                                                               | critical                               |
 
 A failure-count problem ends once none came for a while (15 minutes to 3 hours, by kind).
 Computers of a workspace without a plan are meant to be off and are not checked.
@@ -88,8 +89,9 @@ not Brigade's: those are not alerted on.
 Every check above runs in the Api object, so none can say the object itself is down. The
 Worker's cron (`scheduled` in `src/worker.ts`, each minute) pings the object, three times
 20 seconds apart before it counts as down (a deploy resets the object), and its answer says
-when the checks last ran. When the object does not answer, or its checks have not run for 10
-minutes, the cron sends `api-down` itself, at most once an hour, and `resolved` once it is
+when the checks that need the database last succeeded: a database out of reach stops them,
+and they could not alert on it themselves. When the object does not answer, or those checks
+have not succeeded for 10 minutes, the cron sends `api-down` itself, at most once an hour, and `resolved` once it is
 back. It reads the same secrets as the API.
 
 A whole Worker that does not deploy or load (its cron with it) is not seen from inside

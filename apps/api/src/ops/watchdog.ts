@@ -4,7 +4,13 @@
 import { sendNotice, type Destinations, type Notice } from './send.js'
 
 /** What the Api object's ping says (src/worker.ts). */
-export type Pulse = { upForMs: number; checksAt: number }
+export type Pulse = {
+  upForMs: number
+  /** When the ops checks last succeeded; 0 before they first did. */
+  checksAt: number
+  /** Why they failed since, if they did: the database out of reach, say. */
+  error?: string | null
+}
 
 /** Checks that have not run for this long have stopped (they run each minute). */
 export const STALLED_MS = 10 * 60_000
@@ -12,10 +18,11 @@ export const STALLED_MS = 10 * 60_000
 /** What is wrong, from the pings of one cron run: null when it is fine. */
 export function diagnose(pulse: Pulse | Error, now: number): string | null {
   if (pulse instanceof Error) return `The Api object does not answer: ${pulse.message}`
+  const why = pulse.error ? ` Last failure: ${pulse.error}` : ''
   if (pulse.checksAt && now - pulse.checksAt > STALLED_MS)
-    return `Its jobs stopped: the ops checks last ran ${Math.round((now - pulse.checksAt) / 60_000)} min ago.`
+    return `Its checks stopped: they last succeeded ${Math.round((now - pulse.checksAt) / 60_000)} min ago.${why}`
   if (!pulse.checksAt && pulse.upForMs > STALLED_MS)
-    return `Its jobs never started: up for ${Math.round(pulse.upForMs / 60_000)} min without running the ops checks.`
+    return `Its checks never succeeded: up for ${Math.round(pulse.upForMs / 60_000)} min.${why}`
   return null
 }
 

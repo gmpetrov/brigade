@@ -40,8 +40,8 @@ export class Api extends DurableObject<Env> {
 
   /** Keeps the object up (src/jobs.ts runs in it), and says whether its jobs run. */
   async ping(): Promise<Pulse> {
-    const { lastChecksAt } = await import('./ops/checks.js')
-    return { upForMs: Date.now() - startedAt.at, checksAt: lastChecksAt }
+    const { lastChecksAt, lastCheckError } = await import('./ops/checks.js')
+    return { upForMs: Date.now() - startedAt.at, checksAt: lastChecksAt, error: lastCheckError }
   }
 }
 

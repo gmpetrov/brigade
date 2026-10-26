@@ -92,8 +92,14 @@ export async function raise(alert: Alert, now = new Date()) {
       at: now,
     }))
   // While it lasts, it stays as bad as it got: a count that wavers around a threshold
-  // would otherwise tell it worse again each time it crosses.
-  const kept = !step.reopen && row?.severity === 'critical' ? 'critical' : alert.severity
+  // would otherwise tell it worse again each time it crosses. Only once told: a turn for
+  // the worse that was not sent keeps the row as it was, so the next run tells it.
+  const escalationLost = !step.reopen && step.notify === 'firing' && !notified && row
+  const kept = escalationLost
+    ? (row.severity as Severity)
+    : !step.reopen && row?.severity === 'critical'
+      ? 'critical'
+      : alert.severity
   const data = {
     severity: kept,
     title: alert.title,
@@ -111,13 +117,16 @@ export async function raise(alert: Alert, now = new Date()) {
   })
 }
 
-/** The problem is gone. Operators who were told it started are told it ended. */
+/**
+ * The problem is gone. Operators who were told it started are told it ended; until that is
+ * sent, it stays open, and the check's next run, still finding it gone, tries again.
+ */
 export async function resolve(key: string, now = new Date()) {
   const row = await prisma.opsAlert.findUnique({ where: { key } })
   if (!row || row.resolvedAt) return
-  await prisma.opsAlert.update({ where: { key }, data: { resolvedAt: now } })
-  if (row.notifiedAt)
-    await tell({
+  // Nowhere to tell (no destination set any more): it ends without being told.
+  if (row.notifiedAt && alertsConfigured()) {
+    const told = await tell({
       kind: 'resolved',
       key,
       severity: row.severity as Severity,
@@ -126,6 +135,9 @@ export async function resolve(key: string, now = new Date()) {
       firstAt: row.firstAt,
       at: now,
     })
+    if (!told) return
+  }
+  await prisma.opsAlert.update({ where: { key }, data: { resolvedAt: now } })
 }
 
 /**
