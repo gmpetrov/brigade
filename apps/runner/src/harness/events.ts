@@ -295,6 +295,13 @@ export const answered = (event: AgentEvent) =>
   event.source === 'harness' &&
   (event.value as { subtype?: unknown } | null)?.subtype === 'brigade_answered'
 
+/** The bridge's word on whether the turn only waits on background work, from a harness event. */
+export function backgroundWait(event: AgentEvent): boolean | undefined {
+  if (event.type !== 'raw' || event.source !== 'harness') return
+  const value = event.value as { type?: unknown; subtype?: unknown; waiting?: unknown } | null
+  if (value?.type === 'system' && value.subtype === 'brigade_waiting') return value.waiting === true
+}
+
 type Part = { type: string; [key: string]: any }
 
 const count = (n: unknown) =>

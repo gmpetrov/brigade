@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index e8da8699576b55f0cc271d7839d01d51cc5d649a..a186c6c50d6bf9c4b660f8de8ae90b9ddea85353 100644
+index e8da8699576b55f0cc271d7839d01d51cc5d649a..3422e4eba26b101805de0a216e62015b953e6b5b 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1126,6 +1126,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
@@ -141,7 +141,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..a186c6c50d6bf9c4b660f8de8ae90b9d
  	try {
  		for await (const msg of q) {
  			if (abortCtl.signal.aborted) break;
-@@ -1799,7 +1885,48 @@ async function runTurn(start, turn) {
+@@ -1799,7 +1885,54 @@ async function runTurn(start, turn) {
  			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
@@ -161,10 +161,16 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..a186c6c50d6bf9c4b660f8de8ae90b9d
  			emitStreamEvent(msg);
 +			messages++;
 +			clearTimeout(reportTimer);
-+			if (type === "system" && msg.subtype === "task_started" && HELD_TASKS.has(msg.task_type)) heldTasks.add(msg.task_id);
++			// A task runs again under the id it reported with (an agent sent a message, SendMessage):
++			// its next end reports back too, so its earlier notification no longer counts.
++			if (type === "system" && msg.subtype === "task_started" && HELD_TASKS.has(msg.task_type)) {
++				heldTasks.add(msg.task_id);
++				notified.delete(msg.task_id);
++			}
 +			if (type === "system" && msg.subtype === "background_tasks_changed" && Array.isArray(msg.tasks)) {
 +				const now = new Set(msg.tasks.filter((t) => !t.ambient && HELD_TASKS.has(t.task_type)).map((t) => t.task_id));
 +				for (const id of now) heldTasks.add(id);
++				for (const id of now) if (!running.has(id)) notified.delete(id);
 +				// One that stopped running reports back, whether this or its notification comes first.
 +				for (const id of running) if (!now.has(id) && !notified.has(id)) ended.add(id);
 +				running = now;
@@ -190,7 +196,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..a186c6c50d6bf9c4b660f8de8ae90b9d
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -1835,28 +1962,45 @@ async function runTurn(start, turn) {
+@@ -1835,28 +1968,45 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -244,7 +250,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..a186c6c50d6bf9c4b660f8de8ae90b9d
  		if (hardAbortTimer != null) clearTimeout(hardAbortTimer);
  		turn.abortSignal.removeEventListener("abort", onHostAbort);
  		queryInput.close();
-@@ -1865,6 +2009,9 @@ async function runTurn(start, turn) {
+@@ -1865,6 +2015,9 @@ async function runTurn(start, turn) {
  		} catch {}
  	}
  	if (emittedTerminalError) return;

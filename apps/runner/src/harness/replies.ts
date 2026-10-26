@@ -3,8 +3,12 @@
 // text, even when the reply came before a later tool call (a card, its plan, a
 // wake-up): told it showed nothing, the teammate wrote its answer a second time.
 // The runner tells Claude Code that every tool may end a turn (terminalTools),
-// and asks itself, once, when the turn is over and it knows all of it.
+// and asks itself, once, when the turn is over and it knows all of it. A turn
+// that ended while it still waited on work it started in the background, before
+// it read what that work reported, is asked to read it (the bridge closed it too
+// early, and nothing else would wake it).
 import { ASIDE_TOOLS, bareToolName, hasVisibleText, type AgentEvent } from '@brigade/contracts'
+import { backgroundWait } from './events.js'
 
 /** For a turn that ended with nothing the person can read. */
 export const NO_REPLY =
@@ -17,6 +21,12 @@ export const AFTER_STEP =
   'read what you wrote before it, so do not repeat that: write what they need to know since, as text, in a ' +
   'line when that is enough. A card you showed stays under it: do not show it again.'
 
+/** For a turn that ended while it waited on its background work, before it read what that work reported. */
+export const UNREAD_WORK =
+  'Your turn ended while you were still waiting on work you started in the background (an agent, a command, ' +
+  'a Monitor), before you read what it reported. Read what it reported now and carry on where you left off. ' +
+  'If it reported nothing, or stopped, say where things stand.'
+
 /**
  * What the person has read of a teammate's turn: nothing yet, text with a step
  * of work after it, or text after its last step (asides such as a card do not
@@ -25,10 +35,13 @@ export const AFTER_STEP =
  */
 export class ReplyWatch {
   private read: 'nothing' | 'before' | 'after' | 'unknown' = 'unknown'
+  /** The bridge's last word: the turn only waits on its background work (brigade_waiting). */
+  private background = false
 
   /** A person's message starts the turn. */
   start() {
     this.read = 'nothing'
+    this.background = false
   }
 
   /** A person's message steered into the turn: it needs a reply of its own, after what they read. */
@@ -39,9 +52,12 @@ export class ReplyWatch {
   /** The turn goes on after a restart. */
   resume() {
     this.read = 'unknown'
+    this.background = false
   }
 
   see(event: AgentEvent) {
+    const waiting = backgroundWait(event)
+    if (waiting !== undefined) this.background = waiting
     if (event.type === 'message.done' && hasVisibleText(event.text)) this.read = 'after'
     else if (event.type === 'tool.started' && !ASIDE_TOOLS.has(bareToolName(event.toolName)))
       this.owe()
@@ -52,14 +68,24 @@ export class ReplyWatch {
     if (this.read === 'after') this.read = 'before'
   }
 
-  /** The turn owes the person a reply (what ask asks for), without asking. */
+  /** The turn owes the person a reply, or owes reading its background work (what ask asks for), without asking. */
   owes() {
-    return this.read === 'nothing' || this.read === 'before'
+    return this.background || this.read === 'nothing' || this.read === 'before'
   }
 
-  /** What to tell the teammate once its turn is over, if it owes the person a reply. Asked once. */
+  /**
+   * What to tell the teammate once its turn is over, if it owes reading its background work or
+   * the person a reply. Asked once: reading that work, it writes its reply too.
+   */
   ask(): string | undefined {
-    const ask = this.read === 'nothing' ? NO_REPLY : this.read === 'before' ? AFTER_STEP : undefined
+    const ask = this.background
+      ? UNREAD_WORK
+      : this.read === 'nothing'
+        ? NO_REPLY
+        : this.read === 'before'
+          ? AFTER_STEP
+          : undefined
+    this.background = false
     if (ask) this.read = 'unknown'
     return ask
   }

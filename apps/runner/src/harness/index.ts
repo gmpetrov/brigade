@@ -157,6 +157,7 @@ export type ThreadContext = {
 export type { CredentialRequester } from '../credentials.js'
 
 export { stripApiKeys, usePersonPath } from './env.js'
+export { backgroundWait } from './events.js'
 
 const execFileAsync = promisify(execFile)
 

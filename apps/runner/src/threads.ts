@@ -43,6 +43,7 @@ import { keepReplyImages, type StoreImage } from './reply-images.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
 import {
+  backgroundWait,
   HarnessThread,
   runOnce,
   type ConnectorCaller,
@@ -142,13 +143,6 @@ type Seat = {
   waiting: boolean
   /** Memory lines learned since the session started that it was told (memoryNews). */
   told: Set<string>
-}
-
-/** The bridge's word on whether the turn only waits on background work, from a harness event. */
-function backgroundWait(event: AgentEvent): boolean | undefined {
-  if (event.type !== 'raw' || event.source !== 'harness') return
-  const value = event.value as { type?: unknown; subtype?: unknown; waiting?: unknown } | null
-  if (value?.type === 'system' && value.subtype === 'brigade_waiting') return value.waiting === true
 }
 
 /** A turn's answer as the thread shows it (turnAnswer), joined. */

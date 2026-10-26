@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { AgentEvent } from '@brigade/contracts'
-import { AFTER_STEP, NO_REPLY, ReplyWatch, terminalTools } from '../src/harness/replies.js'
+import {
+  AFTER_STEP,
+  NO_REPLY,
+  ReplyWatch,
+  terminalTools,
+  UNREAD_WORK,
+} from '../src/harness/replies.js'
 import { EventMapper } from '../src/harness/events.js'
 
 const at = '2026-10-16T18:00:00.000Z'
@@ -66,6 +72,42 @@ test('a message steered into the turn needs a reply of its own, after what was r
   const silent = turn(call('bash'))
   silent.steered()
   assert.equal(silent.ask(), NO_REPLY)
+})
+
+/** The bridge's word: the turn only waits on its background work, or is at it again. */
+const waiting = (value: boolean): AgentEvent => ({
+  at,
+  type: 'raw',
+  source: 'harness',
+  value: { type: 'system', subtype: 'brigade_waiting', waiting: value },
+})
+
+test('a turn that ended while it waited on its background work is asked to read what it reported', () => {
+  // Its answer said it waits on an agent; the turn closed before the agent's report was read.
+  const watch = turn(call('Agent'), text('Three of four reports are in; waiting on the last one.'))
+  watch.see(waiting(true))
+  assert.equal(watch.owes(), true, 'the turn is not over for everyone')
+  assert.equal(watch.ask(), UNREAD_WORK)
+  assert.equal(watch.ask(), undefined, 'asked once')
+  // Reading its report, it answered: nothing to ask.
+  const read = turn(call('Agent'), text('Waiting on the last report.'), waiting(true))
+  read.see(waiting(false))
+  read.see(text('All four reports are in: here is the comparison.'))
+  assert.equal(read.ask(), undefined)
+  // Reading it, it worked on and wrote nothing after: asked what came of it, as any turn.
+  const quiet = turn(text('Waiting on the last report.'), waiting(true), waiting(false))
+  quiet.see(call('bash'))
+  assert.equal(quiet.ask(), AFTER_STEP)
+})
+
+test("a turn's background work starts over with each message, and after a restart", () => {
+  const watch = turn(text('Waiting on it.'), waiting(true))
+  watch.start()
+  watch.see(text('Here you go.'))
+  assert.equal(watch.ask(), undefined)
+  const resumed = turn(waiting(true))
+  resumed.resume()
+  assert.equal(resumed.ask(), undefined)
 })
 
 test('a card written at the end of the reply is its card, and no part of its text', () => {
