@@ -19,7 +19,7 @@ import type {
 } from './connectors/types.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { loadThread } from './thread-spec.js'
-import { promptThread, promptWithAttachments, startThread } from './work.js'
+import { promptWithAttachments, startThread } from './work.js'
 
 const include = { teammate: true, connection: true } as const
 type Trigger = NonNullable<Awaited<ReturnType<typeof findTrigger>>>
@@ -50,8 +50,8 @@ const CLAIM_STALE_MS = 10 * 60_000
 const DELIVERIES_KEPT_MS = 30 * 24 * 60 * 60_000
 
 type Claim =
-  /** Ours to deliver; a try before ours may have started its thread already. */
-  | { id: string; threadId?: string }
+  /** Ours to deliver, with the id its new thread takes (a try before ours may have made it). */
+  | { id: string; threadId: string }
   | { duplicate: true; threadId?: string }
   /** Another try is on it right now: this one is tried again later, in case that one dies. */
   | { busy: true }
@@ -63,9 +63,15 @@ type Claim =
  */
 async function claimDelivery(db: ScopedDb, triggerId: string, eventId: string): Promise<Claim> {
   try {
+    // The id of the thread it may start, chosen with the claim: a try after a crash finds it.
     const row = await db.triggerDelivery.create({
-      data: { triggerId, eventId: eventId.slice(0, 500), status: 'starting' } as never,
-      select: { id: true },
+      data: {
+        triggerId,
+        eventId: eventId.slice(0, 500),
+        status: 'starting',
+        threadId: randomUUID(),
+      } as never,
+      select: { id: true, threadId: true },
     })
     // Delivered before deliveries had their own row: its audit entry says so.
     const seen = await db.auditEntry.findFirst({
@@ -75,7 +81,7 @@ async function claimDelivery(db: ScopedDb, triggerId: string, eventId: string): 
         data: { path: ['eventId'], equals: eventId },
       },
     })
-    if (!seen) return row
+    if (!seen) return { id: row.id, threadId: row.threadId! }
     const { threadId } = (seen.data ?? {}) as { threadId?: string }
     await db.triggerDelivery.updateMany({
       where: { id: row.id },
@@ -93,11 +99,16 @@ async function claimDelivery(db: ScopedDb, triggerId: string, eventId: string): 
     row.status === 'failed' ||
     (row.status === 'starting' && row.updatedAt.getTime() < Date.now() - CLAIM_STALE_MS)
   if (stale) {
+    // Its thread is kept, unless that one could not start (failed): then a new one.
+    const failed =
+      !row.threadId ||
+      (await db.session.count({ where: { id: row.threadId, status: 'failed' } })) > 0
+    const threadId = failed ? randomUUID() : row.threadId!
     const { count } = await db.triggerDelivery.updateMany({
       where: { id: row.id, status: row.status, updatedAt: row.updatedAt },
-      data: { status: 'starting' },
+      data: { status: 'starting', threadId },
     })
-    if (count === 1) return { id: row.id, ...(row.threadId ? { threadId: row.threadId } : {}) }
+    if (count === 1) return { id: row.id, threadId }
   }
   // Being started by another try: not done yet, so tried again later rather than taken as done.
   if (row.status === 'starting' || row.status === 'failed') return { busy: true }
@@ -137,32 +148,9 @@ export async function deliver(
   // Its prompt's id is the delivery's: a try after a crash sends it once (src/runner-commands.ts).
   const commandId = `delivery:${claim.id}`
   try {
-    // A try before this one started the thread and was cut off: its first message goes, once.
-    const begun =
-      claim.threadId &&
-      (await db.session.findFirst({
-        where: { id: claim.threadId, status: { not: 'failed' } },
-        select: { id: true },
-      }))
-    if (begun) {
-      const outcome = await promptThread(
-        db,
-        { organizationId: trigger.organizationId, workspaceId: trigger.workspaceId },
-        await loadThread(db, begun.id),
-        { text: event.text, memberId: null },
-        { commandId },
-      )
-      if (outcome === 'offline') {
-        await settle({ status: 'failed' })
-        return { error: 'the computer is offline' }
-      }
-      await settle({ status: 'done', threadId: begun.id })
-      return { ok: true, threadId: begun.id, paused: outcome === 'paused' }
-    }
-    const delivery = await deliverOnce(trigger, event, {
-      commandId,
-      created: (threadId) => settle({ status: 'starting', threadId }),
-    })
+    // A try before this one that was cut off may have made the thread: it is taken up, its first
+    // message sent once.
+    const delivery = await deliverOnce(trigger, event, { commandId, threadId: claim.threadId })
     await settle(
       'error' in delivery
         ? { status: 'failed' }
@@ -197,8 +185,8 @@ async function deliverOnce(
      */
     mailbox?: boolean
   },
-  /** A delivery's stable prompt id, and where its new thread's id is kept as soon as it exists. */
-  once: { commandId?: string; created?: (threadId: string) => Promise<unknown> } = {},
+  /** A delivery's stable ids: its prompt's, and its new thread's. */
+  once: { commandId?: string; threadId?: string } = {},
 ): Promise<Delivery> {
   const scope: Scope = { organizationId: trigger.organizationId, workspaceId: trigger.workspaceId }
   const db = scoped(scope)
@@ -236,7 +224,12 @@ async function deliverOnce(
   const ongoing =
     event.conversationKey &&
     (await db.session.findFirst({
-      where: { triggerId: trigger.id, conversationKey: event.conversationKey },
+      where: {
+        triggerId: trigger.id,
+        conversationKey: event.conversationKey,
+        // Its own thread, made by a try a crash cut off, is taken up as a new one (startThread).
+        ...(once.threadId ? { NOT: { id: once.threadId } } : {}),
+      },
       orderBy: { createdAt: 'desc' },
     }))
   // A person took it over: the conversation stays theirs. The event waits in the thread, as a
@@ -358,7 +351,8 @@ async function deliverOnce(
       projectId: trigger.projectId,
       ...(runId ? { playbookRunId: runId } : {}),
       ...(event.mailbox ? { quiet: true } : {}),
-      ...once,
+      ...(once.commandId ? { commandId: once.commandId } : {}),
+      ...(once.threadId ? { id: once.threadId } : {}),
     })
     if (runId) await settleRun(db, runId, outcome === 'offline' ? null : thread.id)
     if (outcome === 'offline') return failed('the computer is offline')

@@ -625,6 +625,48 @@ describe('work kept in the database', { skip: !database && 'no database answers'
       1,
       'one first message',
     )
+
+    // Cut off after its thread was made, before its first message was kept: the thread's id was
+    // chosen with the claim, so the next try takes that thread up and sends its message, once.
+    const made = await deliver(trigger, event('evt-4'))
+    assert.ok('ok' in made)
+    const claim4 = await db.triggerDelivery.findFirstOrThrow({
+      where: { triggerId: trigger.id, eventId: 'evt-4' },
+    })
+    await prisma.runnerCommand.deleteMany({ where: { id: `delivery:${claim4.id}` } })
+    await db.triggerDelivery.updateMany({
+      where: { id: claim4.id },
+      data: { status: 'starting', updatedAt: new Date(Date.now() - 30 * 60_000) },
+    })
+    const resumed = await deliver(trigger, event('evt-4'))
+    assert.deepEqual(resumed, { ok: true, threadId: made.threadId, paused: false })
+    assert.equal(await db.session.count({ where: { triggerId: trigger.id } }), 4)
+    assert.equal(await prisma.runnerCommand.count({ where: { id: `delivery:${claim4.id}` } }), 1)
+
+    // Held by a cap, then cut off: the next try is held by the same card, never past the cap.
+    await db.teammate.updateMany({ where: { id: ids.sam }, data: { caps: { threadsPerDay: 0 } } })
+    try {
+      const capped = await deliver(trigger, event('evt-5'))
+      assert.ok('ok' in capped && capped.paused, JSON.stringify(capped))
+      const claim5 = await db.triggerDelivery.findFirstOrThrow({
+        where: { triggerId: trigger.id, eventId: 'evt-5' },
+      })
+      await db.triggerDelivery.updateMany({
+        where: { id: claim5.id },
+        data: { status: 'starting', updatedAt: new Date(Date.now() - 30 * 60_000) },
+      })
+      const again5 = await deliver(trigger, event('evt-5'))
+      assert.deepEqual(again5, { ok: true, threadId: capped.threadId, paused: true })
+      assert.equal(await prisma.runnerCommand.count({ where: { id: `delivery:${claim5.id}` } }), 0)
+      assert.equal(
+        await db.ticket.count({
+          where: { sessionId: capped.threadId, type: 'cap', status: 'open' },
+        }),
+        1,
+      )
+    } finally {
+      await db.teammate.updateMany({ where: { id: ids.sam }, data: { caps: {} } })
+    }
   })
 
   test('a wake-up fired again after a restart cut it off reaches its thread once', async () => {
@@ -701,5 +743,68 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     await settleHeldCalls()
     assert.equal((await db.heldCall.findFirstOrThrow({ where: { id: held.id } })).status, 'done')
     assert.equal(await db.wakeup.count({ where: { sourceId: `held:${ticket.id}` } }), 1)
+  })
+
+  test('a wake-up a cap holds, fired again after a restart, opens one card and goes once', async () => {
+    const { fireDueWakeups } = await import('../src/wakeups.js')
+    const { resolveTicket } = await import('../src/decide.js')
+    const runner = await connect()
+    await db.teammate.updateMany({
+      where: { id: ids.sam },
+      data: { caps: { computerHoursPerDay: 0 } },
+    })
+    try {
+      const wakeup = await db.wakeup.create({
+        data: {
+          sessionId: ids.session,
+          teammateId: ids.sam,
+          kind: 'reply',
+          note: 'capped reply',
+          wakeAt: new Date(Date.now() - 1000),
+        } as never,
+      })
+      await fireDueWakeups()
+      await db.wakeup.updateMany({
+        where: { id: wakeup.id },
+        data: { status: 'pending', firedAt: null },
+      })
+      await fireDueWakeups()
+      const cards = await db.ticket.findMany({
+        where: {
+          sessionId: ids.session,
+          type: 'cap',
+          status: 'open',
+          payload: { path: ['pending', 'commandId'], equals: `wakeup:${wakeup.id}` },
+        },
+      })
+      assert.equal(cards.length, 1, JSON.stringify(cards.map((c) => [c.title, c.payload])))
+      assert.equal(
+        await db.ticket.count({
+          where: {
+            sessionId: ids.session,
+            type: 'cap',
+            payload: { path: ['pending', 'text'], equals: 'capped reply' },
+          },
+        }),
+        1,
+        'no second card for the same prompt',
+      )
+      await resolveTicket(
+        { ...scope, memberId: ids.owner, userId: `owner-${suffix}`, role: 'owner' },
+        cards[0]!.id,
+        { approved: true },
+      )
+      assert.equal(runner.sent.filter((m) => m.commandId === `wakeup:${wakeup.id}`).length, 1)
+      // Fired again once more: it went already.
+      await db.wakeup.updateMany({
+        where: { id: wakeup.id },
+        data: { status: 'pending', firedAt: null },
+      })
+      await fireDueWakeups()
+      assert.equal(runner.sent.filter((m) => m.commandId === `wakeup:${wakeup.id}`).length, 1)
+    } finally {
+      await db.teammate.updateMany({ where: { id: ids.sam }, data: { caps: {} } })
+      runner.handle.onClose()
+    }
   })
 })

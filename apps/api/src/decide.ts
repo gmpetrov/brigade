@@ -421,6 +421,8 @@ type TicketPayload = {
     teammateIds?: string[]
     handoff?: boolean
     attachments?: ThreadAttachmentRef[]
+    /** Its stable id (a wake-up's, a delivery's), kept so it reaches the thread once. */
+    commandId?: string
   }
   /** A sign-in ticket's account. */
   accountId?: string
@@ -521,7 +523,11 @@ export async function resolveTicket(
     if (!ticket.sessionId) return { ok: true, live: false }
     const thread = await loadThread(db, ticket.sessionId)
     if (input.approved && payload.pending) {
-      await promptThread(db, scope, thread, payload.pending, { skipCaps: true })
+      const { commandId, ...pending } = payload.pending
+      await promptThread(db, scope, thread, pending, {
+        skipCaps: true,
+        ...(commandId ? { commandId } : {}),
+      })
     } else {
       // Never started: done. Started before: it waits for its next message.
       const status = thread.lastSeq > 0 ? 'idle' : 'done'
