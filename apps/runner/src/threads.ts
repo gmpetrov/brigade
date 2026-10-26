@@ -19,6 +19,7 @@ import {
   mentionedIds,
   MessageAttachment,
   THREAD_NOTE_SOURCE,
+  TURN_WAITING_SOURCE,
   turnAnswer,
   visibleChars,
   type AgentEvent,
@@ -29,6 +30,7 @@ import {
   type ThreadPrompt,
   type ThreadSpec,
   type TurnEntry,
+  type TurnWaiting,
 } from '@brigade/contracts'
 import type { Attachments, Folder } from './attachments.js'
 import type { Folders } from './folders.js'
@@ -218,6 +220,8 @@ type Thread = {
   controller: AbortController | undefined
   /** The turn running now, and whose. */
   running?: { teammateId: string; turnId: string }
+  /** Whose turn waits for a free slot on this computer, all its turns being taken. */
+  slotWait?: TurnWaiting
   /** Messages not yet read: queued, held or being steered, by id. */
   messages: Map<string, Message>
   /** A memory run is queued or running: a new message waits for it. */
@@ -771,7 +775,17 @@ export class Threads {
       try {
         // Taken over while waiting in the queue: the turn does not happen.
         if (thread.takeover) return
-        await this.acquire()
+        // Every slot taken: the thread shows its teammate waiting, with how many turns run.
+        await this.acquire((running) => {
+          thread.slotWait = { teammateId: me, running }
+          this.options.emit(spec.sessionId, {
+            at: new Date().toISOString(),
+            type: 'raw',
+            source: TURN_WAITING_SOURCE,
+            value: thread.slotWait,
+          })
+        })
+        thread.slotWait = undefined
         acquired = true
         // The runner is stopping: the API still has the turn, and gives it to the next runner.
         if (this.stopping) return
@@ -868,6 +882,7 @@ export class Threads {
           thread.controller = undefined
         }
         this.pending--
+        thread.slotWait = undefined
         if (acquired) this.release()
       }
     })
@@ -1103,6 +1118,12 @@ export class Threads {
         )
       return
     }
+    if (thread.slotWait?.teammateId === spec.teammate.id)
+      return this.emitQueued(
+        spec.sessionId,
+        message,
+        `${name} is waiting for ${turnsRunning(thread.slotWait.running)} to end, so it runs when its turn comes.`,
+      )
     if (thread.running?.teammateId !== spec.teammate.id)
       return this.emitQueued(
         spec.sessionId,
@@ -1585,11 +1606,13 @@ export class Threads {
     return seat
   }
 
-  private async acquire() {
+  /** A slot for a turn or a memory run; `waits` is told when there is none free now. */
+  private async acquire(waits?: (running: number) => void) {
     if (this.running < this.options.concurrency) {
       this.running++
       return
     }
+    waits?.(this.running)
     await new Promise<void>((resolve) => this.waiters.push(resolve))
   }
 
@@ -1607,6 +1630,10 @@ export function threadFolder(teammateId: string, sessionId: string) {
     ? { workDir: `${teammateHome(user)}/threads/${sessionId}`, runAs: user }
     : { workDir: paths.threadDir(teammateId, sessionId) }
 }
+
+/** "the turn running on this computer", "one of the 4 turns running on this computer". */
+export const turnsRunning = (n: number) =>
+  n === 1 ? 'the turn running on this computer' : `one of the ${n} turns running on this computer`
 
 const minutes = (ms: number) =>
   ms < 60_000

@@ -24,6 +24,8 @@ import {
   STORED_FILE_NAME,
   SUGGEST_REPLIES_TOOL,
   THREAD_NOTE_SOURCE,
+  TURN_WAITING_SOURCE,
+  type TurnWaiting,
   hasVisibleText,
   SuggestedReplies,
   safeChoices,
@@ -138,6 +140,7 @@ import {
   type ThreadChild,
 } from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
+import { slotWait } from '@/lib/slot-wait'
 import { cn } from '@/lib/utils'
 
 export type Item =
@@ -227,6 +230,8 @@ export type Item =
    * set the teammate going again, no message steered in: what came before answered.
    */
   | { kind: 'woke'; key: string; at: number }
+  /** A turn waits for a free slot on its computer, all of them taken by other turns. */
+  | { kind: 'slot'; key: string; at: number; teammateId: string; running: number }
   | { kind: 'turn'; key: string; finishReason: string; startedAt?: number; at: number }
   | { kind: 'error'; key: string; message: string }
   /** settles: something happened that the buttons asked before it no longer fit (thread.note). */
@@ -513,7 +518,10 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             add({ kind: 'note', key: `n${seq}`, text: e.value })
           else if (e.source === THREAD_NOTE_SOURCE && typeof e.value === 'string')
             add({ kind: 'note', key: `n${seq}`, text: e.value, settles: true })
-          else if (e.source === 'harness') {
+          else if (e.source === TURN_WAITING_SOURCE) {
+            const { teammateId, running } = e.value as TurnWaiting
+            add({ kind: 'slot', key: `q${seq}`, at: Date.parse(e.at), teammateId, running })
+          } else if (e.source === 'harness') {
             background = backgroundTasks(background, e.value)
             const waiting = backgroundWait(e.value)
             if (waiting === false && idle === 'waiting')
@@ -1765,7 +1773,8 @@ function Answering({
   since,
 }: {
   teammate: { name: string }
-  phase: 'starting' | 'reading' | 'thinking'
+  /** slot: its turn waits for one of that many turns running on its computer to end. */
+  phase: 'starting' | 'reading' | 'thinking' | { slot: number }
   since?: number
 }) {
   const [now, setNow] = useState(() => Date.now())
@@ -1775,11 +1784,12 @@ function Answering({
     return () => clearInterval(timer)
   }, [since])
   const ms = since === undefined ? 0 : now - since
-  const doing = {
-    starting: 'is starting up',
-    reading: 'is reading your message',
-    thinking: 'is thinking',
-  }[phase]
+  const doing =
+    typeof phase === 'object'
+      ? `is waiting for ${phase.slot === 1 ? 'the turn' : `one of the ${phase.slot} turns`} running on this computer to end`
+      : { starting: 'is starting up', reading: 'is reading your message', thinking: 'is thinking' }[
+          phase
+        ]
   return (
     // Fading in is an animation too: on the line itself it would replace the shimmer.
     <div role="status" className="animate-in self-start text-sm duration-300 fade-in">
@@ -2444,18 +2454,29 @@ export function ThreadItems({
         )
       case 'start':
       case 'woke':
+      case 'slot':
         return null
     }
   }
   const nodes = layoutThread(items, working)
-  // Working, and nothing from the teammate since the last message (or only its turn starting).
+  // Working, and nothing from the teammate since the last message (or only its turn waiting
+  // for a slot, then starting).
   const lastUser = items.findLastIndex((it) => it.kind === 'user' && !it.steeredTo)
   const since = items.slice(lastUser + 1)
   const waiting =
-    working && lastUser >= 0 && since.every((it) => it.kind === 'start')
-      ? (since.at(-1) as Extract<Item, { kind: 'start' }> | undefined)
+    working && lastUser >= 0 && since.every((it) => it.kind === 'start' || it.kind === 'slot')
+      ? (since.at(-1) as Extract<Item, { kind: 'start' | 'slot' }> | undefined)
       : false
   const waitingFor = waiting !== false && (byId.get(waiting?.teammateId ?? '') ?? teammate)
+  // A turn waiting for a slot, even after output of its own (resumed) or another's reply.
+  const slot = working ? slotWait(items) : undefined
+  const slotTeammate = slot && (byId.get(slot.teammateId) ?? teammate)
+  // Counted from its turn starting, else from the message.
+  const from = waiting
+    ? waiting.at
+    : lastUser >= 0
+      ? (items[lastUser] as Extract<Item, { kind: 'user' }>).at
+      : undefined
   const show = (list: Node[]): React.ReactNode[] =>
     list.map((node) =>
       node.type === 'item' ? (
@@ -2490,11 +2511,13 @@ export function ThreadItems({
         <EventsWaiting since={eventsWaitingSince} />
       ) : working && computerDown ? (
         <ComputerAway computer={computerDown} teammate={waitingFor || teammate} />
+      ) : slot && slotTeammate ? (
+        <Answering teammate={slotTeammate} phase={{ slot: slot.running }} since={slot.at} />
       ) : waitingFor ? (
         <Answering
           teammate={waitingFor}
           phase={waiting ? 'thinking' : starting ? 'starting' : 'reading'}
-          {...(waiting ? { since: waiting.at } : {})}
+          {...(from !== undefined ? { since: from } : {})}
         />
       ) : (
         working && nodes.running !== undefined && <WorkingFor since={nodes.running} />

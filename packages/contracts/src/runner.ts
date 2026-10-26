@@ -585,6 +585,13 @@ export type ThreadPrompt = z.infer<typeof ThreadPrompt>
 /** A raw event's source for a thread.note: settles what was asked before it, as a reply does. */
 export const THREAD_NOTE_SOURCE = 'note'
 
+/**
+ * A raw event's source for a turn that waits for a free slot on its computer, the runner
+ * running as many turns as it may at once: its value is a TurnWaiting. Its turn.started ends the wait.
+ */
+export const TURN_WAITING_SOURCE = 'turn.waiting'
+export type TurnWaiting = { teammateId: string; running: number }
+
 export const ApiToRunner = z.discriminatedUnion('type', [
   /** bundle: the SHA-256 of the runner bundle the API serves; a runner with another one updates. */
   z.object({
