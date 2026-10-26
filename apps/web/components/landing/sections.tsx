@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { c } from './parts'
+import { AppLogo, c } from './parts'
 
 /** The four tiles, on a band in the dark theme whatever the page's theme. */
 export function Tiles() {
@@ -11,16 +11,17 @@ export function Tiles() {
             Teammates that work the way you do.
           </h2>
           <p className={c('lead')}>
-            They sign in to your tools, learn a task from watching you, keep what your team decided,
-            and work on a schedule.
+            They have their own computer, learn a task from watching you, keep what your team
+            decided, and start on their own.
           </p>
         </div>
         <div className={c('tk-grid')}>
           <article className={c('tk')}>
             <div className={c('tk-copy')}>
-              <h3>Works in your tools</h3>
+              <h3>A computer of its own</h3>
               <p>
-                Gmail, Stripe, GitHub, Notion and its own browser. On your Mac, any app you have.
+                Each teammate signs in to websites in its own browser, with the logins you keep in
+                the vault, and works in Gmail, Stripe, GitHub or Notion through Apps.
               </p>
             </div>
             <div className={c('demo')} aria-hidden="true">
@@ -28,12 +29,12 @@ export function Tiles() {
                 <div className={c('comp-h')}>
                   <b>Computer</b>
                   <span className={c('xg end')}>
-                    <span className={c('badge run ta-a')}>working</span>
-                    <span className={c('badge wait ta-b')}>you&apos;re in control</span>
+                    <span className={c('badge wait ta-a')}>login from your vault</span>
+                    <span className={c('badge run ta-b')}>working</span>
                   </span>
                 </div>
                 <div className={c('comp-sub')}>
-                  Sign in to Gmail so I can work the support inbox.
+                  Signing in to the supplier portal to get October&apos;s invoices.
                 </div>
                 <div className={c('desk')}>
                   <i className={c('wp w1')}></i>
@@ -44,34 +45,36 @@ export function Tiles() {
                       <i></i>
                       <i></i>
                       <i></i>
-                      <span>mail.google.com</span>
+                      <span>billing.supplier.io</span>
                     </div>
                     <div className={c('win-b xg blk-g')}>
-                      <div className={c('inbox ta-a')}>
-                        <div className={c('ir')}>
-                          <span className={c('d')}></span>
-                          <b>Where is my invoice?</b>
-                          <span>jo@northwind.io</span>
-                        </div>
-                        <div className={c('ir')}>
-                          <span className={c('d')}></span>
-                          <b>Export does nothing</b>
-                          <span>tom@lumen.co</span>
-                        </div>
-                        <div className={c('ir')}>
-                          <b>How do I add a seat?</b>
-                          <span>mei@acme.com</span>
-                        </div>
-                        <div className={c('ir')}>
-                          <b>Refund for October</b>
-                          <span>ines@fieldwork.io</span>
-                        </div>
-                      </div>
-                      <div className={c('signin ta-b')}>
-                        <div className={c('si-t')}>Sign in to continue</div>
-                        <div className={c('sfld')}>sam@acme.com</div>
+                      <div className={c('signin ta-a')}>
+                        <div className={c('si-t')}>Sign in to Supplier billing</div>
+                        <div className={c('sfld')}>billing@acme.com</div>
                         <div className={c('sfld')}>••••••••••</div>
-                        <div className={c('btn-c ta-btn')}>Continue</div>
+                        <div className={c('btn-c')}>Continue</div>
+                      </div>
+                      <div className={c('inbox ta-b')}>
+                        <div className={c('ir')}>
+                          <b>Invoice · September</b>
+                          <span>€240.00</span>
+                          <span className={c('dl-b')}>PDF</span>
+                        </div>
+                        <div className={c('ir')}>
+                          <b>Invoice · August</b>
+                          <span>€240.00</span>
+                          <span className={c('dl-b')}>PDF</span>
+                        </div>
+                        <div className={c('ir')}>
+                          <span className={c('d')}></span>
+                          <b>Invoice · October</b>
+                          <span>€310.00</span>
+                          <span className={c('dl-b ta-btn')}>PDF</span>
+                        </div>
+                        <div className={c('saved')}>
+                          <span className={c('dot ok')}></span>
+                          Saved to Google Drive
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -90,17 +93,18 @@ export function Tiles() {
 
           <article className={c('tk')}>
             <div className={c('tk-copy')}>
-              <h3>Show it once</h3>
+              <h3>Teach them a task</h3>
               <p>
-                Do a task once while a teammate watches. It writes the steps down as a skill, ready
-                to use once you approve it.
+                Take over a teammate&apos;s computer and do the task once while it watches. It
+                writes the steps down as a skill, and does it on its own once you approve. On
+                Brigade&apos;s cloud computer for now.
               </p>
             </div>
             <div className={c('demo')} aria-hidden="true">
               <div className={c('rec2')}>
                 <div className={c('rec-bar xg blk-g')}>
                   <div className={c('rb tb-a')}>
-                    <span>Riley is watching and learning</span>
+                    <span>You&apos;re in control · Riley is learning</span>
                     <span className={c('timer')}>
                       <span className={c('rdot')}></span>
                       <span className={c('xg')}>
@@ -196,10 +200,10 @@ export function Tiles() {
 
           <article className={c('tk')}>
             <div className={c('tk-copy')}>
-              <h3>Runs on a schedule</h3>
+              <h3>Starts on its own</h3>
               <p>
-                Set a routine once and it runs on time. With Cloud, it runs overnight while your Mac
-                sleeps.
+                A failed payment in Stripe, a new issue on GitHub, a customer&apos;s email: a
+                teammate picks it up the moment it happens. Or set a routine and it runs on time.
               </p>
             </div>
             <div className={c('demo')} aria-hidden="true">
@@ -218,42 +222,56 @@ export function Tiles() {
                   <span className={c('sc-l')}>Routines · Acme</span>
                 </div>
                 <div className={c('rt')}>
-                  <span className={c('when')}>07:00</span>
+                  <span className={c('when ev')}>
+                    <AppLogo kind="stripe" />
+                    <span className={c('ev-t')}>Payment failed</span>
+                  </span>
                   <span className={c('what')}>
-                    Triage the inbox
-                    <span className={c('k')}>Sam · sorts the night&apos;s emails</span>
+                    Northwind&apos;s card was declined
+                    <span className={c('k')}>Sam · sends them a new payment link</span>
                   </span>
                   <span className={c('xg end')}>
-                    <span className={c('badge r1a')}>scheduled</span>
+                    <span className={c('badge r1a')}>listening</span>
                     <span className={c('badge run r1b')}>running</span>
                     <span className={c('badge ok r1c')}>done</span>
                   </span>
                 </div>
                 <div className={c('rt')}>
-                  <span className={c('when')}>07:00</span>
+                  <span className={c('when ev')}>
+                    <AppLogo kind="github" />
+                    <span className={c('ev-t')}>New issue</span>
+                  </span>
                   <span className={c('what')}>
-                    Chase failed payments<span className={c('k')}>Sam · reminders for yes</span>
+                    Export does nothing
+                    <span className={c('k')}>Riley · reproduces it, opens a fix</span>
                   </span>
                   <span className={c('xg end')}>
-                    <span className={c('badge r2a')}>scheduled</span>
+                    <span className={c('badge r2a')}>listening</span>
                     <span className={c('badge run r2b')}>running</span>
                     <span className={c('badge ok r2c')}>done</span>
                   </span>
                 </div>
                 <div className={c('rt')}>
-                  <span className={c('when')}>Mon 09:00</span>
+                  <span className={c('when ev')}>
+                    <AppLogo kind="gmail" />
+                    <span className={c('ev-t')}>New email</span>
+                  </span>
                   <span className={c('what')}>
-                    Send the week&apos;s numbers
-                    <span className={c('k')}>Riley · to your inbox</span>
+                    From a customer<span className={c('k')}>Sam · drafts the reply</span>
                   </span>
                   <span className={c('xg end')}>
-                    <span className={c('badge')}>scheduled</span>
+                    <span className={c('badge')}>listening</span>
                   </span>
                 </div>
                 <div className={c('rt')}>
-                  <span className={c('when')}>Fri 16:00</span>
+                  <span className={c('when ev')}>
+                    <span className={c('ev-clock')}>
+                      <span>Mon</span> <span>09:00</span>
+                    </span>
+                  </span>
                   <span className={c('what')}>
-                    Weekly release notes<span className={c('k')}>Mark · to the changelog</span>
+                    Send the week&apos;s numbers
+                    <span className={c('k')}>Riley · to your inbox</span>
                   </span>
                   <span className={c('xg end')}>
                     <span className={c('badge')}>scheduled</span>

@@ -21,7 +21,6 @@ const tiles: Tile[] = [
     x: '37.2%',
     y: '8%',
     path: 'M435 51 C491 51 547 152 547 253',
-    glow: 'g0',
   },
   { kind: 'linear', name: 'Linear', x: '62.8%', y: '8%', path: 'M733 51 C677 51 621 152 621 253' },
   {
@@ -37,7 +36,6 @@ const tiles: Tile[] = [
     x: '94.9%',
     y: '43.8%',
     path: 'M1109 280 C912 280 715 295 715 310',
-    glow: 'g2',
   },
   {
     kind: 'mixpanel',
@@ -45,7 +43,6 @@ const tiles: Tile[] = [
     x: '91.3%',
     y: '68.2%',
     path: 'M1066 436 C885 436 705 393 705 349',
-    glow: 'g3',
   },
   {
     kind: 'github',
@@ -53,6 +50,7 @@ const tiles: Tile[] = [
     x: '74.5%',
     y: '86.8%',
     path: 'M871 556 C763 556 656 467 656 379',
+    glow: 'g1',
   },
   {
     kind: 'posthog',
@@ -60,6 +58,7 @@ const tiles: Tile[] = [
     x: '50%',
     y: '93.8%',
     path: 'M584 600 C584 600 584 495 584 390',
+    glow: 'g3',
   },
   {
     kind: 'supabase',
@@ -74,6 +73,7 @@ const tiles: Tile[] = [
     x: '8.7%',
     y: '68.2%',
     path: 'M102 436 C283 436 463 393 463 349',
+    glow: 'g2',
   },
   {
     kind: 'notion',
@@ -88,19 +88,15 @@ const tiles: Tile[] = [
     x: '15.7%',
     y: '21.3%',
     path: 'M183 137 C334 137 484 205 484 274',
-    glow: 'g1',
+    glow: 'g0',
   },
 ]
 
 const steps = [
-  {
-    kind: 'google_calendar',
-    cls: 'ap-step ap1',
-    text: 'Found Thursday 10:00 with jo@northwind.io',
-  },
-  { kind: 'gmail', cls: 'ap-step ap2', text: 'Read the last 6 emails with Jo' },
-  { kind: 'stripe', cls: 'ap-step ap3', text: 'Northwind is on Pro, renews in 3 weeks' },
-  { kind: 'mixpanel', cls: 'ap-step ap4', text: 'Their usage is up 32% this month' },
+  { kind: 'gmail', cls: 'ap-step ap1', text: "Found Jo's request for CSV export" },
+  { kind: 'github', cls: 'ap-step ap2', text: 'Merged #214 · CSV export on Reports' },
+  { kind: 'google_drive', cls: 'ap-step ap3', text: 'Saved a 30-second demo to Drive' },
+  { kind: 'posthog', cls: 'ap-step ap4', text: '4 accounts exported a CSV in the first hour' },
 ] as const
 
 function Logo({ kind }: { kind: Tile['kind'] }) {
@@ -117,7 +113,8 @@ function Mention({ kind, name }: { kind: ProviderKind; name: string }) {
   )
 }
 
-/** Apps: the tools teammates work in, around a thread whose request uses four of them. Its
+/** Apps: the tools teammates work in, around a thread whose request (a customer's feature,
+ * shipped and announced) uses four of them. Its
  * four steps are there from the start, greyed, and tick off as each App sends its pulse. */
 export function Apps() {
   return (
@@ -128,8 +125,8 @@ export function Apps() {
             Plugged into your stack.
           </h2>
           <p className={c('lead')}>
-            Connect Gmail, Google Calendar, Stripe, Mixpanel and more once. Ask in a message, and
-            your teammate pulls from each of them for you.
+            Connect Gmail, GitHub, Google Drive, PostHog and more once. Ask in a message, and your
+            teammate works across them for you, from the code to the customer.
           </p>
         </div>
 
@@ -174,17 +171,16 @@ export function Apps() {
             <div className={c('ap-msg ap-me')}>
               <span className={c('av xs')}>A</span>
               <span>
-                Prep me for tomorrow&apos;s call with Northwind. Check{' '}
-                <Mention kind="google_calendar" name="Google Calendar" /> and{' '}
-                <Mention kind="gmail" name="Gmail" />, their plan in{' '}
-                <Mention kind="stripe" name="Stripe" /> and their usage in{' '}
-                <Mention kind="mixpanel" name="Mixpanel" />.
+                Jo at Northwind asked for CSV export in <Mention kind="gmail" name="Gmail" />. Build
+                it, save a short demo to <Mention kind="google_drive" name="Google Drive" />, send
+                it to Jo, and tell me how it&apos;s used in{' '}
+                <Mention kind="posthog" name="PostHog" />.
               </span>
             </div>
             <div className={c('ap-steps')}>
               {steps.map((s) => (
                 <div key={s.kind} className={c(s.cls)}>
-                  <ProviderLogo kind={s.kind} />
+                  <Logo kind={s.kind} />
                   <span>{s.text}</span>
                   <span className={c('ap-ok')}>
                     <Icon name="check" />
@@ -195,8 +191,8 @@ export function Apps() {
             <div className={c('ap-msg ap5')}>
               <span className={c('av xs sam')}>S</span>
               <span>
-                Your brief is ready. Northwind is growing fast, asked about SSO twice, and renews in
-                3 weeks. Want me to draft the agenda?
+                CSV export is live and Jo has the demo. Four accounts used it already. Want me to
+                post the demo for your other users?
               </span>
             </div>
           </div>
