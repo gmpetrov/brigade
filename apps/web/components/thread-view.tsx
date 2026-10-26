@@ -140,6 +140,7 @@ import {
   type ThreadChild,
 } from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
+import { slotWait } from '@/lib/slot-wait'
 import { cn } from '@/lib/utils'
 
 export type Item =
@@ -2467,7 +2468,10 @@ export function ThreadItems({
       ? (since.at(-1) as Extract<Item, { kind: 'start' | 'slot' }> | undefined)
       : false
   const waitingFor = waiting !== false && (byId.get(waiting?.teammateId ?? '') ?? teammate)
-  // Counted from its turn starting or waiting, else from the message.
+  // A turn waiting for a slot, even after output of its own (resumed) or another's reply.
+  const slot = working ? slotWait(items) : undefined
+  const slotTeammate = slot && (byId.get(slot.teammateId) ?? teammate)
+  // Counted from its turn starting, else from the message.
   const from = waiting
     ? waiting.at
     : lastUser >= 0
@@ -2507,18 +2511,12 @@ export function ThreadItems({
         <EventsWaiting since={eventsWaitingSince} />
       ) : working && computerDown ? (
         <ComputerAway computer={computerDown} teammate={waitingFor || teammate} />
+      ) : slot && slotTeammate ? (
+        <Answering teammate={slotTeammate} phase={{ slot: slot.running }} since={slot.at} />
       ) : waitingFor ? (
         <Answering
           teammate={waitingFor}
-          phase={
-            waiting?.kind === 'slot'
-              ? { slot: waiting.running }
-              : waiting
-                ? 'thinking'
-                : starting
-                  ? 'starting'
-                  : 'reading'
-          }
+          phase={waiting ? 'thinking' : starting ? 'starting' : 'reading'}
           {...(from !== undefined ? { since: from } : {})}
         />
       ) : (
