@@ -241,6 +241,9 @@ model Workspace {
   schedules             Schedule[]
   wakeups               Wakeup[]
   replyWatches          ReplyWatch[]
+  heldCalls             HeldCall[]
+  runnerCommands        RunnerCommand[]
+  triggerDeliveries     TriggerDelivery[]
   projects              Project[]
   projectRepositories   ProjectRepository[]
   auditEntries          AuditEntry[]
@@ -310,6 +313,7 @@ model Computer {
   runner         Runner?
   sessions       Session[]
   accounts       Account[]
+  commands       RunnerCommand[]
 
   @@index([workspaceId])
   @@index([workspaceId, memberId, machineId])
@@ -590,6 +594,9 @@ model Session {
   /// Times a teammate set to be prompted here again.
   wakeups              Wakeup[]
   replyWatches         ReplyWatch[]
+  /// Calls waiting on a person's decision, and commands on their way to its computer.
+  heldCalls            HeldCall[]
+  runnerCommands       RunnerCommand[]
   /// Schedules whose runs report here, as its children.
   reportingSchedules   Schedule[]         @relation("ScheduleParent")
   /// The playbook run it belongs to: its root thread and the root's children (src/playbooks.ts).
@@ -1367,6 +1374,7 @@ model Trigger {
   position               Int                   @default(0)
   createdAt              DateTime              @default(now())
   sessions               Session[]
+  deliveries             TriggerDelivery[]
 
   @@index([workspaceId])
   @@index([connectionId])
@@ -1406,6 +1414,9 @@ model Subscription {
   expiresAt          DateTime?
   /// The last failure to subscribe or read, shown on the connection.
   error              String?
+  /// When its reader tries again: set before each read and cleared once it finished, so a read a
+  /// restart cut off, or one that failed, is tried again by the minute's tick.
+  retryAt            DateTime?
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
@@ -2547,4 +2558,129 @@ model OpsAlert {
   notifiedSeverity String?
   /// Null while it lasts.
   resolvedAt DateTime?
+}
+
+enum HeldCallStatus {
+  /// Its ticket is open.
+  waiting
+  /// A person decided; the call is made next (the minute's tick makes one a restart cut off).
+  decided
+  /// Being made. One left here by a restart is never made again: its thread is told.
+  running
+  done
+  /// Its ticket closed without a decision for it.
+  expired
+}
+
+/// A call a teammate made that waits for a person's decision in a ticket (src/held-calls.ts): an
+/// App's write, a credential, a trigger. Kept so the decision is acted on whenever it comes, after
+/// any restart of the API or the runner, exactly once; an identical call meanwhile joins its ticket.
+model HeldCall {
+  id             String         @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  teammateId     String
+  ticketId       String         @unique
+  /// connector, credential or trigger.
+  kind           String
+  /// SHA-256 of the kind, the teammate, the tool and its arguments. A partial unique index keeps
+  /// one waiting call per thread and fingerprint (migration 20261027090000_durable_work).
+  fingerprint    String
+  /// The call as the runner sent it, without its callId. A secret to save is sealed in the vault.
+  request        Json
+  status         HeldCallStatus @default(waiting)
+  /// The person's decision, once made.
+  decision       Json?
+  /// ok and error, and how the thread heard it (live, or a wake-up).
+  result         Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([sessionId])
+}
+
+enum RunnerCommandStatus {
+  /// Not acknowledged by the runner yet: sent again when it says hello, and each few minutes.
+  pending
+  /// The runner acknowledged it, or took it without acknowledging (one before OUTBOX_PROTOCOL).
+  acked
+  /// Not through in 24 hours: a ticket says so.
+  failed
+  /// Moot by the time it could go (an interrupt, a browser window): dropped.
+  expired
+}
+
+/// A command for a computer's runner (src/runner-commands.ts): sent at once as before, kept until
+/// the runner acknowledges it, and sent again when it reconnects, so neither a restart of the API,
+/// a computer that takes long to start, nor a connection that died unnoticed loses it.
+model RunnerCommand {
+  /// The command's commandId.
+  id             String              @id
+  organizationId String
+  workspaceId    String
+  workspace      Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  computerId     String
+  computer       Computer            @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  sessionId      String?
+  session        Session?            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type           String
+  message        Json
+  status         RunnerCommandStatus @default(pending)
+  /// Times it was sent.
+  attempts       Int                 @default(0)
+  sentAt         DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+/// One event a trigger took (src/triggers.ts): one row per trigger and event id, claimed before
+/// its thread starts, so a vendor's retry, a second reader or a retry after a crash starts no
+/// second thread.
+model TriggerDelivery {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  triggerId      String
+  trigger        Trigger   @relation(fields: [triggerId], references: [id], onDelete: Cascade)
+  eventId        String
+  /// starting while its thread is being started; then the outcome (started, queued, held, paused,
+  /// loop, capped…), or failed when it may be tried again.
+  status         String
+  threadId       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([triggerId, eventId])
+}
+
+enum InboundEventStatus {
+  pending
+  done
+  failed
+}
+
+/// A vendor's webhook as it came (src/inbound.ts): kept, answered 2xx, then processed from here
+/// on the minute's tick with retries, so a restart or a failure loses no event, and a vendor's
+/// retry of one is processed once (source and external id).
+model InboundEvent {
+  id         String             @id @default(cuid())
+  /// github, stripe:<subscription id>, hook:<trigger id>.
+  source     String
+  /// The vendor's id for it (GitHub's delivery, Stripe's event), or a hash of a custom app's body.
+  externalId String
+  type       String
+  payload    Json
+  status     InboundEventStatus @default(pending)
+  attempts   Int                @default(0)
+  /// When it is tried (again).
+  nextAt     DateTime           @default(now())
+  error      String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@unique([source, externalId])
 }

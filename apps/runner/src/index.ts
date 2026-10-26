@@ -51,6 +51,7 @@ import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys, usePersonPath, type Transcript } from './harness/index.js'
 import { EventFiles } from './event-files.js'
 import { Outbox } from './outbox.js'
+import { SeenCommands } from './seen-commands.js'
 import { imageStore } from './reply-images.js'
 import { bundleStore, libraryMessage } from './uploads.js'
 import { MemoryGuard } from './memory-guard.js'
@@ -720,11 +721,12 @@ async function start() {
   connection = new Connection(
     config,
     outbox,
-    (message) => void onCommand(message),
+    (message) => onCommand(message),
     hello,
     (bundle, required) => updater.offer(bundle, required),
     // Images and PDFs in events go to the bucket first: the socket carries their names only.
     (events, send) => eventFiles.take(events, send),
+    new SeenCommands(join(paths.state, 'commands-seen.json')),
   )
   connection.start()
 

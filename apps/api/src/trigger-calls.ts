@@ -2,14 +2,15 @@
 // started. A trigger lets an outside event start work, on the accounts of the member who
 // asked, so each one waits for an owner's or admin's approval in a ticket, as one made on
 // the Apps page is theirs alone. The call waits for the decision (like a connector write),
-// so the teammate gets the trigger's URL in the same turn and can finish setting it up.
+// so the teammate gets the trigger's URL in the same turn and can finish setting it up; decided
+// after the call stopped waiting, the trigger is made then and the thread told (src/held-calls.ts).
 import type { ApiToRunner, ScheduleOperation, TriggerProposalPayload } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { appCatalog, triggerCatalog, triggersOf } from './connectors/index.js'
 import type { ConnectorKind } from './connectors/types.js'
-import { awaitDecision } from './connector-calls.js'
 import type { Scope, ScopedDb } from './db.js'
+import { holdCall, type Live, type Resume } from './held-calls.js'
 import { createConnection } from './routes/connections.js'
 import { createTrigger, urlOf } from './routes/triggers.js'
 import type { WorkspaceScope } from './scope.js'
@@ -44,9 +45,12 @@ export async function handleTriggerCall(
   session: Session,
   teammate: Teammate,
   op: Operation,
-  /** Tells the runner the call waits for a person, with the ticket it waits on. */
-  pending: (message: { ticketId: string; target: string; reason: string }) => void,
-): Promise<Output> {
+  /**
+   * The runner's call, which waits for a person with its ticket (src/held-calls.ts); or, carried
+   * out once they decided, their decision (resume).
+   */
+  call: { callId: string; request: object; live: Live; resume?: Resume },
+): Promise<Output | { held: true }> {
   if (op.name === 'list_triggers') {
     const [connections, mine] = await Promise.all([
       db.connection.findMany({
@@ -155,30 +159,40 @@ export async function handleTriggerCall(
     ...(custom ? { verification: op.verification } : {}),
     ...(op.reason ? { reason: op.reason } : {}),
   }
-  const ticket = await db.ticket.create({
-    data: {
+  if (!call.resume) {
+    await holdCall(db, {
+      kind: 'trigger',
       sessionId: session.id,
-      type: 'approval',
-      title: `${teammate.name}: add the trigger "${op.label}"`,
-      payload: payload as never,
-    } as never,
-  })
-  await audit({
-    ...scope,
-    actor: { type: 'teammate', id: teammate.id },
-    action: 'trigger.proposed',
-    target: { type: 'ticket', id: ticket.id },
-    data: { app, event: op.event, label: op.label, sessionId: session.id },
-  })
-  pending({
-    ticketId: ticket.id,
-    target: op.label,
-    reason:
-      `${teammate.name} asks to start a thread on each "${definition.label}" event from ${app}, with standing ` +
-      `instructions, on the accounts of the member who started this thread. Only an owner or admin can allow it.` +
-      (op.reason ? ` ${op.reason}` : ''),
-  })
-  const decided = await awaitDecision(ticket.id)
+      teammateId: teammate.id,
+      callId: call.callId,
+      same: op,
+      request: () => call.request,
+      ticket: {
+        type: 'approval',
+        title: `${teammate.name}: add the trigger "${op.label}"`,
+        payload,
+      },
+      opened: (ticketId) =>
+        audit({
+          ...scope,
+          actor: { type: 'teammate', id: teammate.id },
+          action: 'trigger.proposed',
+          target: { type: 'ticket', id: ticketId },
+          data: { app, event: op.event, label: op.label, sessionId: session.id },
+        }),
+      pending: {
+        target: op.label,
+        reason:
+          `${teammate.name} asks to start a thread on each "${definition.label}" event from ${app}, with standing ` +
+          `instructions, on the accounts of the member who started this thread. Only an owner or admin can allow it.` +
+          (op.reason ? ` ${op.reason}` : ''),
+      },
+      live: call.live,
+    })
+    return { held: true }
+  }
+  const decided = call.resume.decision
+  const ticket = { id: decided.ticketId }
   const decision = { ticketId: ticket.id, approved: decided.approved, memberId: decided.memberId }
   if (!decided.approved)
     return {

@@ -303,7 +303,9 @@ base, sha)`) so that `prisma migrate dev` doesn't see it as drift.
 None of this changes behaviour on Node.
 
 1. **`background()`** replaces work fired after a response with `void`:
-   - `routes/github-webhook.ts:146` and `:149`
+   - ~~`routes/github-webhook.ts:146` and `:149`~~ Done: GitHub's deliveries are kept and processed
+     from `InboundEvent` (`inbound.ts`); the `void` left starts their processing early, and the
+     minute's tick does it if the process stops.
    - `collab.ts:62`
    - `library-history.ts:267`
    - `pull-requests.ts:932`
@@ -329,18 +331,26 @@ None of this changes behaviour on Node.
 
 3. **State shared between requests moves out of memory**, into Postgres:
    - `cloud.ts:17` `lastActive` → `Computer.lastActiveAt`, written at most once a minute.
-   - The `retryAt` values in `gmail.ts:94` and `google-calendar.ts:147` → database
-     columns.
+   - ~~The `retryAt` values in `gmail.ts:94` and `google-calendar.ts:147` → database
+     columns.~~ Done: `Subscription.retryAt`, set before each read.
    - `connectors/google-calendar.ts:69` `own` → a table. Without it, a teammate's own
      calendar edits trigger it again.
    - `cloud.ts:154`, `:190`, `:223` and `:259`: the in-flight and "already tried" markers
      → columns.
-   - `logins.ts:18` `byLoginId`, the runner queue `queued` (`hub.ts:152`) and `terminals`
-     (`hub.ts:1141`).
-4. **Approvals that can be resumed.** Today an open promise waits for the approval, for
-   hours if need be (`connector-calls.ts:35`, awaited at `:178` and `credentials.ts:266`).
-   Instead, the pending call is stored, and `decideTicket` finishes it, even after the API
-   restarted.
+   - ~~The runner queue `queued` (`hub.ts:152`)~~ Done: commands with a `commandId` are
+     `RunnerCommand` rows until the runner acknowledges them (`runner-commands.ts`, protocol 43),
+     sent again on hello. What stays in memory is a person's live work, which an API restart ends
+     anyway, as it ends the dashboard's socket: a sign-in (`logins.ts` `byLoginId`; a runner's
+     hello now also ends sign-ins this process never knew, so no account stays signing in), a
+     terminal (`terminals`), and the few commands without an id (`account.login.start`,
+     `terminal.open`).
+4. ~~**Approvals that can be resumed.**~~ Done: a call waiting on a ticket is a `HeldCall` row
+   (`held-calls.ts`) for connector writes, credentials and triggers; `decideTicket` makes it
+   whenever the decision comes, its result goes to the tool or, failing that, to the thread
+   through a wake-up, and an identical call joins the open ticket. Webhooks likewise:
+   Stripe's, custom apps' and GitHub's events are `InboundEvent` rows processed with retries,
+   GitHub's failed deliveries are asked for again, and triggers claim each event in
+   `TriggerDelivery` (unique) instead of looking for an audit entry.
 5. **Locks become `pg_advisory_xact_lock` or conditional updates:** `subscriptions/common.ts:36`,
    `designs.ts:490` and `collab.ts:83`. Awaiting another request's promise doesn't work
    across isolates.

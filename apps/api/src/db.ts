@@ -29,6 +29,8 @@ const UNSCOPED = new Set([
   // A workspace's plan, an organization's deletion under way: src/billing.ts's only.
   'BillingSubscription',
   'BillingClosing',
+  // Webhooks as they came, before anyone knows whose they are: src/inbound.ts's only.
+  'InboundEvent',
 ])
 const READS_AND_BULK = new Set([
   'findUnique',

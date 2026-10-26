@@ -390,3 +390,33 @@ export const MailSender = {
 } as const
 
 export type MailSender = (typeof MailSender)[keyof typeof MailSender]
+
+
+export const HeldCallStatus = {
+  waiting: 'waiting',
+  decided: 'decided',
+  running: 'running',
+  done: 'done',
+  expired: 'expired'
+} as const
+
+export type HeldCallStatus = (typeof HeldCallStatus)[keyof typeof HeldCallStatus]
+
+
+export const RunnerCommandStatus = {
+  pending: 'pending',
+  acked: 'acked',
+  failed: 'failed',
+  expired: 'expired'
+} as const
+
+export type RunnerCommandStatus = (typeof RunnerCommandStatus)[keyof typeof RunnerCommandStatus]
+
+
+export const InboundEventStatus = {
+  pending: 'pending',
+  done: 'done',
+  failed: 'failed'
+} as const
+
+export type InboundEventStatus = (typeof InboundEventStatus)[keyof typeof InboundEventStatus]

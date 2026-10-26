@@ -494,3 +494,31 @@ export type ContactHandle = Prisma.ContactHandleModel
  * problem, by key, kept once resolved so it is not alerted again right away.
  */
 export type OpsAlert = Prisma.OpsAlertModel
+/**
+ * Model HeldCall
+ * A call a teammate made that waits for a person's decision in a ticket (src/held-calls.ts): an
+ * App's write, a credential, a trigger. Kept so the decision is acted on whenever it comes, after
+ * any restart of the API or the runner, exactly once; an identical call meanwhile joins its ticket.
+ */
+export type HeldCall = Prisma.HeldCallModel
+/**
+ * Model RunnerCommand
+ * A command for a computer's runner (src/runner-commands.ts): sent at once as before, kept until
+ * the runner acknowledges it, and sent again when it reconnects, so neither a restart of the API,
+ * a computer that takes long to start, nor a connection that died unnoticed loses it.
+ */
+export type RunnerCommand = Prisma.RunnerCommandModel
+/**
+ * Model TriggerDelivery
+ * One event a trigger took (src/triggers.ts): one row per trigger and event id, claimed before
+ * its thread starts, so a vendor's retry, a second reader or a retry after a crash starts no
+ * second thread.
+ */
+export type TriggerDelivery = Prisma.TriggerDeliveryModel
+/**
+ * Model InboundEvent
+ * A vendor's webhook as it came (src/inbound.ts): kept, answered 2xx, then processed from here
+ * on the minute's tick with retries, so a restart or a failure loses no event, and a vendor's
+ * retry of one is processed once (source and external id).
+ */
+export type InboundEvent = Prisma.InboundEventModel

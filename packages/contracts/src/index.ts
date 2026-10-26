@@ -82,8 +82,10 @@ export * from './usage.js'
  * 42: uploads straight to the bucket: library saves (`save`'s `upload`), skill proposals (`refs`) and
  *     the images and PDFs of events (STORED_FILE) by reference, each file PUT to a signed URL first;
  *     connector-call files and git backups by signed URL too (DIRECT_UPLOAD_PROTOCOL).
+ * 43: commands with a commandId are acknowledged (command.ack), and one seen before is ignored: the
+ *     API sends again what is not acknowledged.
  */
-export const PROTOCOL_VERSION = 42
+export const PROTOCOL_VERSION = 43
 /**
  * Runners from this version on never send a file's bytes to the API: they PUT them to signed
  * bucket URLs and send references. The API still takes the bytes of older runners (base64 in
@@ -91,6 +93,11 @@ export const PROTOCOL_VERSION = 42
  * /runner/backups); once MIN_PROTOCOL_VERSION reaches this, those paths can go.
  */
 export const DIRECT_UPLOAD_PROTOCOL = 42
+/**
+ * Runners from this version on acknowledge commands by id and ignore one they saw already: the API
+ * keeps each until acknowledged and sends it again on reconnect (apps/api/src/runner-commands.ts).
+ */
+export const OUTBOX_PROTOCOL = 43
 /** Runners from this version on write files people edit and find a preview element's source. */
 export const CODE_EDIT_PROTOCOL = 39
 /** Runners from this version on list, find and search a working folder for the code panel (thread.code). */

@@ -12,7 +12,7 @@ import { prisma, scoped, type Scope } from '../db.js'
 import { automatic, bounced, wakeOnReply } from '../replies.js'
 import { dispatch } from '../triggers.js'
 import { inInbox, keepGmail } from '../mail/gmail-inbox.js'
-import { reachable, serially, type Target } from './common.js'
+import { reachable, retryLater, serially, type Target } from './common.js'
 
 const RESOURCE = 'inbox'
 /** Renew a watch once it has less than this left (Google suggests renewing daily). */
@@ -97,7 +97,6 @@ export async function syncGmail(target: Target) {
 
 /** After a failed read, the mail waits this long before the next try. */
 const RETRY_MS = 5 * 60_000
-export const retryAt = new Map<string, number>()
 
 /**
  * Read what is new in the inbox since the cursor and offer each email to the
@@ -111,6 +110,8 @@ export const readInbox = (subscriptionId: string) =>
       include: { connection: true },
     })
     if (!sub?.cursor || sub.connection.status !== 'active') return
+    // Read again later unless this read finishes (a restart may cut it off).
+    await retryLater(sub.id, Date.now() + RETRY_MS)
     const scope: Scope = { organizationId: sub.organizationId, workspaceId: sub.workspaceId }
     const db = scoped(scope)
     const fetch = await authorisedFetch(db, scope, sub.connection)
@@ -202,7 +203,7 @@ export const readInbox = (subscriptionId: string) =>
               payload,
             })
             if (delivered.failed) {
-              retryAt.set(sub.id, Date.now() + RETRY_MS)
+              await retryLater(sub.id, Date.now() + RETRY_MS)
               return save({ cursor })
             }
             await keepGmail(
@@ -223,10 +224,10 @@ export const readInbox = (subscriptionId: string) =>
         pageToken = page.nextPageToken
         if (!pageToken) cursor = page.historyId
       } while (pageToken)
-      retryAt.delete(sub.id)
+      await retryLater(sub.id, null)
       await save({ cursor, error: null })
     } catch (error) {
-      retryAt.set(sub.id, Date.now() + RETRY_MS)
+      await retryLater(sub.id, Date.now() + RETRY_MS)
       await save({ cursor, error: error instanceof Error ? error.message : String(error) })
       throw error
     }

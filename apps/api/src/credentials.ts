@@ -22,10 +22,10 @@ import {
   type TicketAnswer,
 } from '@brigade/contracts'
 import { audit } from './audit.js'
-import { awaitDecision, type Decision } from './connector-calls.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
+import { holdCall, onDecided, type Decision, type Live, type Resume } from './held-calls.js'
 import { actingTeammate } from './thread-spec.js'
-import { openSecret, replaceSecret, sealSecret } from './vault.js'
+import { deleteSecret, openSecret, replaceSecret, sealSecret } from './vault.js'
 
 type Row = {
   id: string
@@ -200,11 +200,17 @@ async function grantWithoutAsking(
 type Request = Extract<RunnerToApi, { type: 'credential.request' }>
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
 
+/**
+ * A teammate's credential request. One that asks a person is held with its ticket
+ * (src/held-calls.ts) and carried out once they decide, with `resume`.
+ */
 export async function handleCredentialRequest(
   runner: Runner,
   request: Request,
   reply: (message: ApiToRunner) => void,
+  options: { alive?: Live['alive']; resume?: Resume } = {},
 ) {
+  const { resume } = options
   const scope: Scope = { organizationId: runner.organizationId, workspaceId: runner.workspaceId }
   const db = scoped(scope)
   type Decided = { ticketId: string; approved: boolean; memberId: string }
@@ -233,7 +239,10 @@ export async function handleCredentialRequest(
   const teammate = await actingTeammate(db, session, request.teammateId)
   if (!teammate) return fail('That teammate is not in this thread')
 
-  /** Open a ticket on the credential, tell the runner, and wait for a person. */
+  /**
+   * Open a ticket on the credential and tell the runner it waits (null: the request is held, and
+   * carried out once a person decides), or, carrying it out, the person's decision.
+   */
   async function ask(ticket: {
     action: CredentialAction
     title: string
@@ -242,10 +251,40 @@ export async function handleCredentialRequest(
     /** The person may also allow it for good. */
     always: boolean
     payload: Record<string, unknown>
-  }): Promise<{ decided: Decision; decision: Decided }> {
-    const row = await db.ticket.create({
-      data: {
-        sessionId: session!.id,
+  }): Promise<{ decided: Decision; decision: Decided } | null> {
+    if (resume)
+      return {
+        decided: resume.decision,
+        decision: {
+          ticketId: resume.decision.ticketId,
+          approved: resume.decision.approved,
+          memberId: resume.decision.memberId,
+        },
+      }
+    const { callId, ...asked } = request
+    await holdCall(db, {
+      kind: 'credential',
+      sessionId: session!.id,
+      teammateId: teammate!.id,
+      callId,
+      same: asked,
+      // A secret to save waits sealed in the vault, never in the row.
+      request: async () =>
+        asked.save?.secret
+          ? {
+              ...asked,
+              save: {
+                ...asked.save,
+                secret: undefined,
+                sealedSecretId: await sealSecret(db, scope, { secret: asked.save.secret }),
+              },
+            }
+          : asked,
+      discard: async (kept) => {
+        const sealed = (kept as { save?: { sealedSecretId?: string } }).save?.sealedSecretId
+        if (sealed) await deleteSecret(db, sealed)
+      },
+      ticket: {
         type: 'approval',
         title: ticket.title,
         payload: {
@@ -255,21 +294,15 @@ export async function handleCredentialRequest(
           reason: ticket.reason,
           ...(ticket.always ? { always: true } : {}),
         },
-      } as never,
+      },
+      pending: {
+        target: ticket.target,
+        reason: ticket.reason,
+        ...(ticket.always ? { always: true } : {}),
+      },
+      live: { reply, alive: options.alive ?? (() => true) },
     })
-    reply({
-      type: 'connector.pending',
-      callId: request.callId,
-      ticketId: row.id,
-      target: ticket.target,
-      reason: ticket.reason,
-      ...(ticket.always ? { always: true } : {}),
-    })
-    const decided = await awaitDecision(row.id)
-    return {
-      decided,
-      decision: { ticketId: row.id, approved: decided.approved, memberId: decided.memberId },
-    }
+    return null
   }
   const denied = (decided: Decision, decision: Decided) =>
     fail(`A person denied this${decided.reason ? `: ${decided.reason}` : ''}`, decision)
@@ -374,6 +407,7 @@ export async function handleCredentialRequest(
             },
           },
     )
+    if (!asked) return
     decision = asked.decision
     if (!asked.decided.approved) return denied(asked.decided, asked.decision)
     if (asked.decided.always)
@@ -384,6 +418,16 @@ export async function handleCredentialRequest(
         teammate.id,
         asked.decided.memberId,
         asked.decision.ticketId,
+      )
+    // Approved while nothing waited for the secret any more: allowed in this thread from now on
+    // (approvedInThread), released when the teammate asks again. A secret never goes in a message.
+    if (resume?.detached)
+      return succeed(
+        {
+          detached: true,
+          note: `${credential.name} is allowed in this thread now: call ${use === 'browser' ? 'fill_credential' : 'use_credential'} again to use it.`,
+        },
+        decision,
       )
   }
 
@@ -425,6 +469,7 @@ export async function handleCredentialRequest(
         always: true,
         payload: { credential: input.name, kind: input.kind, details },
       })
+      if (!asked) return
       if (!asked.decided.approved) return denied(asked.decided, asked.decision)
       const vaultSecretId = await sealSecret(db, scope, {
         [SECRET_FIELD[input.kind]]: input.secret,
@@ -500,6 +545,7 @@ export async function handleCredentialRequest(
         secretReplaced: Boolean(input.secret),
       },
     })
+    if (!asked) return
     if (!asked.decided.approved) return denied(asked.decided, asked.decision)
     if (input.secret) await replaceCredentialSecret(db, scope, row, input.secret)
     const { name, ...detailChanges } = changes
@@ -528,3 +574,30 @@ export async function handleCredentialRequest(
     return succeed(summarize(updated), asked.decision)
   }
 }
+
+/**
+ * Carried out once decided, after any restart: the request as the runner sent it, its secret to
+ * save taken back from the vault, where it waited, and removed from there after.
+ */
+onDecided('credential', async (runner, request, reply, resume) => {
+  const db = scoped({ organizationId: runner.organizationId, workspaceId: runner.workspaceId })
+  const save = request.save as { sealedSecretId?: string } | undefined
+  const sealed = save?.sealedSecretId
+  const secret = sealed
+    ? (await openSecret<{ secret: string }>(db, runner, sealed)).secret
+    : undefined
+  try {
+    await handleCredentialRequest(
+      runner,
+      {
+        ...request,
+        ...(save ? { save: { ...save, sealedSecretId: undefined, secret } } : {}),
+        type: 'credential.request',
+      } as Request,
+      reply,
+      { resume },
+    )
+  } finally {
+    if (sealed) await deleteSecret(db, sealed)
+  }
+})

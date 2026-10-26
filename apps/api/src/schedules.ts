@@ -21,6 +21,7 @@ import { triageRun } from './playbook-autonomy.js'
 import { beginRun, reportRun, settleRun } from './playbooks.js'
 import { handleReviewCall, isReviewOperation } from './reviews.js'
 import { handleTriggerCall } from './trigger-calls.js'
+import { onDecided, type Live, type Resume } from './held-calls.js'
 import { broadcastSchedule, isOnline } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate, loadThread } from './thread-spec.js'
@@ -492,6 +493,7 @@ export async function handleScheduleCall(
   runner: Runner,
   call: Extract<RunnerToApi, { type: 'schedule.call' }>,
   reply: (message: ApiToRunner) => void,
+  options: { alive?: Live['alive']; resume?: Resume } = {},
 ) {
   const scope: Scope = { organizationId: runner.organizationId, workspaceId: runner.workspaceId }
   const db = scoped(scope)
@@ -538,14 +540,15 @@ export async function handleScheduleCall(
   }
   // And triggers, which wait for an admin's approval: the call says so while it waits.
   if (isTriggerOperation(op)) {
-    const { decision, ...result } = await handleTriggerCall(
-      db,
-      scope,
-      session,
-      teammate,
-      op,
-      (asked) => reply({ type: 'connector.pending', callId: call.callId, ...asked }),
-    )
+    const answer = await handleTriggerCall(db, scope, session, teammate, op, {
+      callId: call.callId,
+      request: { sessionId: call.sessionId, teammateId: call.teammateId, operation: op },
+      live: { reply, alive: options.alive ?? (() => true) },
+      ...(options.resume ? { resume: options.resume } : {}),
+    })
+    // Held for an admin's decision: the result comes once they decide (src/held-calls.ts).
+    if ('held' in answer) return
+    const { decision, ...result } = answer
     // With the decision, for the thread to show it on the approval.
     return reply({
       type: 'connector.result',
@@ -618,3 +621,13 @@ export async function handleScheduleCall(
     throw error
   }
 }
+
+/** A trigger an admin decided on, made after any restart: the call as the runner sent it. */
+onDecided('trigger', (runner, request, reply, resume) =>
+  handleScheduleCall(
+    runner,
+    { ...request, type: 'schedule.call' } as Extract<RunnerToApi, { type: 'schedule.call' }>,
+    reply,
+    { resume },
+  ),
+)

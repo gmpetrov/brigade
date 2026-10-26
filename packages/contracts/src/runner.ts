@@ -244,6 +244,11 @@ export const RunnerToApi = z.discriminatedUnion('type', [
    */
   z.object({ type: z.literal('runner.restarting') }),
   z.object({ type: z.literal('command.failed'), commandId: z.string(), error: z.string() }),
+  /**
+   * The commands it took, by commandId (OUTBOX_PROTOCOL): the API stops sending them again. Also
+   * sent for one it had seen already, which it ignored.
+   */
+  z.object({ type: z.literal('command.ack'), commandIds: z.array(z.string()).min(1).max(500) }),
   z.object({ type: z.literal('terminal.output'), terminalId: z.string(), data: z.string() }),
   z.object({
     type: z.literal('terminal.exit'),
