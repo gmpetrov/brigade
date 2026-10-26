@@ -17,6 +17,11 @@ export function installDemo() {
   if (location.pathname.startsWith(`/app/threads/${DEMO_THREAD}`))
     return location.replace(`/app${location.search}`)
 
+  // Every visit starts with Chief in Home's message box, as a new workspace does: not the
+  // teammate the last walkthrough picked, which the dashboard remembers in this browser
+  // (LAST_TEAMMATE in components/new-thread.tsx).
+  localStorage.removeItem('brigade.home.teammate')
+
   const realFetch = window.fetch.bind(window)
   window.fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url

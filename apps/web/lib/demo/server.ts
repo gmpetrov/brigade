@@ -47,6 +47,8 @@ const SHOWN_THREADS = [
   'Launch post outline',
 ]
 const HIDDEN_TEAMMATES = ['Kai']
+// Each one shown says its job (the sample was recorded before Chief and Maya had a title).
+const TITLES: Record<string, string> = { Chief: 'Chief of staff', Maya: 'Marketing lead' }
 // The tickets as recorded, before calm() empties the lists: a new approval copies one of its kind.
 const ticketTemplates = structuredClone(body<Json[]>('GET /tickets') ?? [])
 calm()
@@ -89,6 +91,10 @@ function calm() {
   const attention = body<Json>('GET /pulls/attention')
   if (attention) Object.assign(attention, { pulls: [], count: 0, open: 0 })
   teammates.splice(0, teammates.length, ...teammates.filter((t) => !mates.has(t.id)))
+  walk((o) => {
+    if ('harness' in o && typeof o.name === 'string' && TITLES[o.name] && !o.title)
+      o.title = TITLES[o.name]
+  })
 }
 
 /** Every object in every response, for a change that shows wherever the thing is. */

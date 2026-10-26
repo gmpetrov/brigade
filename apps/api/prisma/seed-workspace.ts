@@ -119,7 +119,7 @@ export async function seedWorkspace(users: Users) {
     libraryAccess?: 'read' | 'read_write'
     archivedAt?: Date
   }) => prisma.teammate.create({ data: { ...inWorkspace, ...data, createdAt: days(29) } })
-  const chief = await teammate({ name: 'Chief', kind: 'chief' })
+  const chief = await teammate({ name: 'Chief', kind: 'chief', title: 'Chief of staff' })
   const riley = await teammate({
     name: 'Riley',
     title: 'Software engineer',
@@ -142,6 +142,7 @@ export async function seedWorkspace(users: Users) {
   })
   const maya = await teammate({
     name: 'Maya',
+    title: 'Marketing lead',
     instructions:
       'Marketing: newsletter, launch posts and the blog, in the brand voice (Marketing/brand-voice.md).',
     libraryAccess: 'read_write',
