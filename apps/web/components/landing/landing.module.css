@@ -2473,6 +2473,44 @@ svg.i {
 .ta-cur {
   transform: translate(46%, 80%);
 }
+/* The invoice card's download pill, and the line saying where the file went. */
+.ir .dl-b {
+  display: inline-block;
+  font: 600 10px var(--font-sans);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.saved {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 14px 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  opacity: 0;
+  animation: k-saved 9s ease-in-out infinite;
+}
+@keyframes k-saved {
+  0%,
+  62% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  66%,
+  92% {
+    opacity: 1;
+    transform: none;
+  }
+  96%,
+  100% {
+    opacity: 0;
+  }
+}
 
 .rec2 {
   display: flex;
@@ -2743,6 +2781,11 @@ svg.i {
     left: 8%;
     right: 8%;
   }
+  /* The PDF pill sits further right in the wider window. */
+  .ta-cur {
+    --pdf-x: 80%;
+    --pdf-y: 63%;
+  }
   .ir span {
     display: none;
   }
@@ -2910,27 +2953,28 @@ svg.i {
 .ta-b {
   animation: ta-b 9s ease-in-out infinite;
 }
+/* The cursor on the computer card: the email field, Continue, then October's PDF. */
 @keyframes ta-cur {
   0.00% {
     transform: translate(72%, 84%);
   }
   11.11% {
-    transform: translate(30%, 34%);
+    transform: translate(34%, 46%);
   }
   18.89% {
-    transform: translate(30%, 34%);
+    transform: translate(34%, 46%);
   }
   27.78% {
-    transform: translate(36%, 52%);
+    transform: translate(50%, 78%);
   }
   37.78% {
-    transform: translate(36%, 52%);
+    transform: translate(50%, 78%);
   }
   51.11% {
-    transform: translate(46%, 80%);
+    transform: translate(var(--pdf-x, 78%), var(--pdf-y, 55%));
   }
   64.44% {
-    transform: translate(46%, 80%);
+    transform: translate(var(--pdf-x, 78%), var(--pdf-y, 55%));
   }
   95.56% {
     transform: translate(72%, 84%);
