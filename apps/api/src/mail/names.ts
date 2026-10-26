@@ -9,25 +9,45 @@ export const NAME_MIN = 2
 export const NAME_MAX = 30
 const NAME = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
-/** Words no one may take: they read as the domain's own roles, or as Brigade speaking. */
+/**
+ * Words no one may take: they read as the domain's own roles, as Brigade speaking, or as one of its
+ * people. Checked when a name is first given; a name already given stays its owner's.
+ */
 export const RESERVED = new Set([
+  // The domain's own roles (RFC 2142 and the usual ones).
   'abuse',
   'admin',
   'administrator',
-  'billing',
-  'brigade',
-  'help',
   'hostmaster',
-  'info',
   'mailer-daemon',
   'no-reply',
   'noreply',
   'postmaster',
   'root',
   'security',
-  'support',
-  'team',
   'webmaster',
+  // What reads as Brigade speaking, or a company's shared desks.
+  'accounts',
+  'alerts',
+  'billing',
+  'bot',
+  'brigade',
+  'chief',
+  'contact',
+  'hello',
+  'help',
+  'info',
+  'legal',
+  'mail',
+  'news',
+  'notifications',
+  'privacy',
+  'sales',
+  'support',
+  'system',
+  'team',
+  // Brigade's people.
+  'georges',
 ])
 
 /** Why a name cannot be taken, or null when it can (taken by someone else aside). */

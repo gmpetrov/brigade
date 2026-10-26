@@ -22,7 +22,8 @@ production), received and sent through Resend: the **Email App** (`apps/api/src/
   row has no link that a workspace's, teammate's or project's deletion would remove: turned off, it
   keeps its name (`releasedAt`), and turned on again, the same agent gets it back. A taken name is
   offered as `name-2`, `name-3`… Names are 2 to 30 lowercase letters, digits and hyphens, never a
-  reserved word (`support`, `admin`, `postmaster`…, `mail/names.ts`).
+  reserved word (the domain's roles such as `postmaster`, shared desks such as `support` or `sales`,
+  Brigade's own such as `brigade` or `chief`, and its people's names: `RESERVED` in `mail/names.ts`).
 - **Each address is an account of the Email App** (a `Connection` of kind `email`, auth `brigade`:
   no credential, Brigade's Resend key). An agent's address is granted to that agent alone and cannot
   be granted to another; an inbox is used only in its project's threads, by the teammates given it
