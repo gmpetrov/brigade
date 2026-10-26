@@ -1219,6 +1219,9 @@ export class HarnessThread {
   ) {
     const from = this.saved?.accountId ?? this.current.id
     await this.drop()
+    // The new session signs in with the spec's account (attach): without this, a switch
+    // mid-turn started it on the account that had just run out.
+    this.spec = { ...this.spec, account }
     this.emit({
       type: 'account.switched',
       fromAccountId: from,
