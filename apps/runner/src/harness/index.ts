@@ -1041,9 +1041,13 @@ export class HarnessThread {
       if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
       if (mapper.exhausted) return { kind: 'exhausted', resetsAt: mapper.exhausted.resetsAt }
       if (live.session.hasUnfinishedTurn()) return { kind: 'done', result: { status: 'waiting' } }
-      // An error reported inside the stream fails the turn (it was already emitted).
-      if (mapper.error && !signal.aborted)
+      // An error reported inside the stream fails the turn (it was already emitted). The harness
+      // reports a fatal one there too, not by throwing (its bridge killed: its channel stays
+      // closed), so the session goes as after a throw, and the next message starts clean.
+      if (mapper.error && !signal.aborted) {
+        await this.drop()
         return { kind: 'done', result: { status: 'failed', error: mapper.error } }
+      }
       this.emit({
         type: 'turn.completed',
         finishReason: signal.aborted ? 'interrupted' : mapper.finishReason,
