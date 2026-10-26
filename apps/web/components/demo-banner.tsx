@@ -23,7 +23,7 @@ export function DemoBanner({ place }: { place: 'sidebar' | 'phone' }) {
           target="_top"
           className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline"
         >
-          Start free on your Mac
+          Sign up free
           <ArrowRight className="size-3.5" aria-hidden />
         </a>
       </div>
@@ -45,15 +45,15 @@ export function DemoBanner({ place }: { place: 'sidebar' | 'phone' }) {
             'bg-primary text-primary-foreground mt-2.5 flex h-8 items-center justify-center gap-1 rounded-full px-3 font-semibold transition-opacity hover:opacity-90',
           )}
         >
-          Start free on your Mac
+          Sign up free
           <ArrowRight className="size-3.5" aria-hidden />
         </a>
       </div>
       <a
         href={SIGN_UP_URL}
         target="_top"
-        title="Demo workspace: start free on your Mac"
-        aria-label="Demo workspace: start free on your Mac"
+        title="Demo workspace: sign up free"
+        aria-label="Demo workspace: sign up free"
         className="bg-primary text-primary-foreground hidden size-8 items-center justify-center rounded-full group-data-[collapsible=icon]:flex"
       >
         <ArrowRight className="size-4" aria-hidden />

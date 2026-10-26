@@ -35,7 +35,61 @@ const me = body<{ memberId: string; user: { name: string } }>('GET /me')!
 const teammates =
   body<{ id: string; name: string; harness: string; model: string | null }[]>('GET /teammates') ??
   []
+
+// What a first-time visitor sees: three teammates with a job each and a few quiet threads. The
+// sample workspace has more (a failed upgrade, a stalled thread, App writes waiting in their raw
+// form), right for trying the dashboard, noise for someone meeting Brigade. The rest stays out
+// of every list, and no ticket waits: the walkthroughs (lib/demo/tour.ts) start their own
+// threads and ask for their own approvals.
+const SHOWN_THREADS = [
+  'Annual billing toggle on the pricing page',
+  'Weekly support digest',
+  'Launch post outline',
+]
+const HIDDEN_TEAMMATES = ['Kai']
+// The tickets as recorded, before calm() empties the lists: a new approval copies one of its kind.
+const ticketTemplates = structuredClone(body<Json[]>('GET /tickets') ?? [])
+calm()
 const pulls = demoPulls(store)
+
+function calm() {
+  const hidden = new Set(
+    (body<Json[]>('GET /threads') ?? [])
+      .filter((t) => !SHOWN_THREADS.includes(String(t.title)))
+      .map((t) => String(t.id)),
+  )
+  const mates = new Set(teammates.filter((t) => HIDDEN_TEAMMATES.includes(t.name)).map((t) => t.id))
+  const ref = (v: unknown) => (v && typeof v === 'object' ? String((v as Json).id) : undefined)
+  const gone = (o: Json) =>
+    (typeof o.title === 'string' && 'status' in o && hidden.has(String(o.id))) ||
+    hidden.has(String(o.sessionId)) ||
+    hidden.has(ref(o.session) ?? '') ||
+    hidden.has(ref(o.thread) ?? '') ||
+    // Home's loose ends: a missed routine, a quiet thread, an offer left unanswered.
+    o.kind === 'stalled' ||
+    o.kind === 'proposal' ||
+    (o.kind === 'routine' && 'error' in o) ||
+    (mates.has(String(o.id)) && 'harness' in o)
+  const prune = (value: unknown): unknown => {
+    if (Array.isArray(value))
+      return value
+        .filter((v) => !(v && typeof v === 'object' && !Array.isArray(v) && gone(v as Json)))
+        .map(prune)
+    if (value && typeof value === 'object')
+      for (const [k, v] of Object.entries(value)) (value as Json)[k] = prune(v)
+    return value
+  }
+  for (const [key, stored] of store)
+    // A hidden thread's own page stays as it was, should a link still lead there.
+    if (!/^GET \/threads\/[^/?]+(\/events)?$/.test(key)) stored.body = prune(stored.body)
+  // Nothing waits on the visitor yet: the walkthrough's own approval is the first thing that does.
+  for (const [key, stored] of store) if (key.startsWith('GET /tickets')) stored.body = []
+  // No pull request waits either: the walkthroughs open theirs (and demoPulls() builds the open
+  // ones from this list).
+  const attention = body<Json>('GET /pulls/attention')
+  if (attention) Object.assign(attention, { pulls: [], count: 0, open: 0 })
+  teammates.splice(0, teammates.length, ...teammates.filter((t) => !mates.has(t.id)))
+}
 
 /** Every object in every response, for a change that shows wherever the thing is. */
 function walk(visit: (o: Json, parent: unknown[] | Json) => void) {
@@ -491,7 +545,7 @@ function requestApproval(
   const approvalId = `demo-approval-${id()}`
   const thread = body<Json>(`GET /threads/${threadId}`)
   const teammate = teammates.find((t) => t.id === teammateId)
-  const template = (body<Ticket[]>('GET /tickets') ?? []).find(
+  const template = (ticketTemplates as Ticket[]).find(
     (t) => t.payload?.operation === ask.operation,
   ) as (Ticket & Json) | undefined
   const ticket = {
@@ -500,7 +554,7 @@ function requestApproval(
     sessionId: threadId,
     type: 'approval',
     status: 'open',
-    title: `${teammate?.name ?? 'Teammate'}: ${ask.operation.replace(/_/g, ' ')} (${ask.target})`,
+    title: `${teammate?.name ?? 'Teammate'} wants to ${ask.target}`,
     payload: {
       input: ask.input,
       target: ask.target,
@@ -645,7 +699,7 @@ function unarchive(threadId: string) {
   }
 }
 
-const OFF = 'That is off in the demo workspace. Start free on your Mac to do it for real.'
+const OFF = 'That is off in the demo workspace. Sign up to do it for real.'
 const CREATES =
   /^\/(teammates|teammates\/team|tasks|projects|projects\/site(\/brief)?|schedules|credentials|triggers|accounts|workspaces|attachments\/uploads|library\/assets\/uploads|library\/(text|folders)|skills\/packs|skills\/import.*|connections\/.+|computers\/(link-code|cloud)|billing\/(checkout|portal)|notifications\/devices)$/
 

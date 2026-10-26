@@ -85,47 +85,68 @@ test('the recorded workspace answers, and what was not recorded is a 404', async
 })
 
 test('approving a ticket closes it and its thread goes on', async () => {
+  // The quiet workspace has no write waiting: a walkthrough asks for one.
+  const { STORIES } = await import('../lib/demo/tour')
+  const teammates = (await call('/teammates')).body as { id: string; name: string }[]
+  const sam = teammates.find((t) => t.name === 'Sam')!
+  const started = await call('/threads', {
+    body: { text: STORIES.payment.ask, teammateId: sam.id },
+  })
+  const threadId = started.body.id as string
+  await until(async () => (await call(`/threads/${threadId}`)).body.status === 'waiting', 30_000)
   const tickets = (await call('/tickets')).body as {
     id: string
     type: string
     sessionId: string
     payload: any
   }[]
-  const refund = tickets.find((t) => t.payload?.operation === 'stripe_api_write')
-  assert.ok(refund, 'the sample workspace has a refund waiting')
-  await call(`/tickets/${refund.id}/resolve`, { body: { approved: true } })
+  const email = tickets.find(
+    (t) => t.sessionId === threadId && t.payload?.operation === 'gmail_send',
+  )
+  assert.ok(email, 'the email waits for a person')
+  await call(`/tickets/${email.id}/resolve`, { body: { approved: true } })
   const after = (await call('/tickets')).body as { id: string }[]
-  assert.ok(!after.some((t) => t.id === refund.id))
-  await until(async () => (await call(`/threads/${refund.sessionId}`)).body.status === 'idle')
-  const page = (await call(`/threads/${refund.sessionId}/events`)).body
+  assert.ok(!after.some((t) => t.id === email.id))
+  await until(async () => (await call(`/threads/${threadId}`)).body.status === 'idle')
+  const page = (await call(`/threads/${threadId}/events`)).body
   const types = [...page.context, ...page.events].map((e: any) => e.event.type)
   assert.ok(types.includes('approval.resolved'))
   assert.equal(types.at(-1), 'turn.completed')
   // The call the approval held is the one that finishes: no second one, none left open.
   const all = [...page.context, ...page.events].map((e: any) => e.event)
-  const started = all.filter((e: any) => e.type === 'tool.started').map((e: any) => e.toolCallId)
+  const opened = all.filter((e: any) => e.type === 'tool.started').map((e: any) => e.toolCallId)
   const finished = new Set(
     all.filter((e: any) => e.type === 'tool.finished').map((e: any) => e.toolCallId),
   )
   assert.deepEqual(
-    started.filter((id: string) => !finished.has(id)),
+    opened.filter((id: string) => !finished.has(id)),
     [],
   )
   assert.equal(
-    all.filter((e: any) => e.type === 'tool.started' && e.toolName.endsWith('stripe_api_write'))
-      .length,
+    all.filter(
+      (e: any) => e.type === 'tool.started' && e.toolName.endsWith('gmail_send_support_acme_test'),
+    ).length,
     1,
   )
 })
 
 test('merging a pull request takes it off what waits on a person', async () => {
+  // Nothing waits at first: a walkthrough opens the pull request.
+  assert.equal((await call('/pulls/attention')).body.pulls.length, 0)
+  const { STORIES } = await import('../lib/demo/tour')
+  const teammates = (await call('/teammates')).body as { id: string; name: string }[]
+  const riley = teammates.find((t) => t.name === 'Riley')!
+  const { body } = await call('/threads', {
+    body: { text: STORIES.feature.ask, teammateId: riley.id },
+  })
+  await until(async () => (await call(`/threads/${body.id}`)).body.status === 'idle', 30_000)
   const before = (await call('/pulls/attention')).body
-  assert.ok(before.pulls.some((p: any) => p.number === 146))
-  assert.equal((await call('/pulls/acme/web/146/state')).body.state, 'open')
-  await call('/pulls/acme/web/146/merge', { body: { method: 'squash' } })
-  assert.equal((await call('/pulls/acme/web/146/state')).body.state, 'merged')
+  assert.ok(before.pulls.some((p: any) => p.number === 154))
+  assert.equal((await call('/pulls/acme/web/154/state')).body.state, 'open')
+  await call('/pulls/acme/web/154/merge', { body: { method: 'squash' } })
+  assert.equal((await call('/pulls/acme/web/154/state')).body.state, 'merged')
   const after = (await call('/pulls/attention')).body
-  assert.equal(after.count, before.count - 1)
+  assert.ok(!after.pulls.some((p: any) => p.number === 154))
 })
 
 test('a new thread opens on the message, and its teammate answers it', async () => {
@@ -141,7 +162,7 @@ test('a new thread opens on the message, and its teammate answers it', async () 
   await until(async () => (await call(`/threads/${body.id}`)).body.status === 'idle')
   const events = (await call(`/threads/${body.id}/events`)).body.events.map((e: any) => e.event)
   assert.equal(events[0].type, 'message.user')
-  assert.ok(events.some((e: any) => e.type === 'message.done' && /wait on you/.test(e.text)))
+  assert.ok(events.some((e: any) => e.type === 'message.done' && /waits? on you/.test(e.text)))
 })
 
 test('an archived thread moves to Archived, and back', async () => {
@@ -213,4 +234,55 @@ test('the walkthrough: a fix, its merge, the replies once allowed, then a routin
   )
   const routines = (await call('/schedules')).body as { title: string; teammateId: string }[]
   assert.ok(routines.some((r) => r.title === 'Morning bug reports' && r.teammateId === riley.id))
+})
+
+test('a first visit is calm: a few threads, no failure, no raw App write, no teammate without a job', async () => {
+  const { DEMO_THREAD } = await import('../lib/demo/flag')
+  // The sample's own threads, not the ones the tests before started.
+  const threads = (
+    (await call('/threads')).body as { id: string; title: string; status: string }[]
+  ).filter((t) => !t.id.startsWith(DEMO_THREAD))
+  assert.deepEqual(threads.map((t) => t.title).sort(), [
+    'Annual billing toggle on the pricing page',
+    'Launch post outline',
+    'Weekly support digest',
+  ])
+  assert.ok(!threads.some((t) => t.status === 'failed'))
+  const tickets = JSON.stringify((await call('/tickets?status=open')).body)
+  assert.ok(!tickets.includes('PostRefunds'))
+  const home = (await call('/home')).body as { looseEnds: { kind: string }[] }
+  assert.ok(!home.looseEnds.some((l) => l.kind === 'stalled' || l.kind === 'routine'))
+  const teammates = (await call('/teammates')).body as { name: string }[]
+  assert.ok(!teammates.some((t) => t.name === 'Kai'))
+})
+
+test('every walkthrough the landing page offers plays to its end', async () => {
+  const { STORIES } = await import('../lib/demo/tour')
+  const teammates = (await call('/teammates')).body as { id: string; name: string }[]
+  for (const [name, story] of Object.entries(STORIES)) {
+    const who = teammates.find((t) => t.name === story.teammate)!
+    const { body } = await call('/threads', { body: { text: story.ask, teammateId: who.id } })
+    const id = body.id as string
+    const status = async () => (await call(`/threads/${id}`)).body.status
+    const events = async () =>
+      ((await call(`/threads/${id}/events`)).body.events as { event: any }[]).map((e) => e.event)
+    for (const press of story.presses) {
+      if (press.startsWith('Merge #')) {
+        await until(async () => (await status()) === 'idle', 30_000)
+        await call(`/pulls/acme/web/${press.slice(7)}/merge`, { body: { method: 'squash' } })
+      } else {
+        await until(async () => (await status()) === 'waiting', 30_000)
+        const asked = (await events()).findLast((e) => e.type === 'approval.requested')
+        assert.ok(asked, name)
+        await call(`/threads/${id}/approvals`, {
+          body: { approvalId: asked.approvalId, approved: true },
+        })
+      }
+    }
+    await until(async () => (await status()) === 'idle', 30_000)
+    assert.ok(
+      (await events()).some((e) => e.type === 'message.done' && e.text.includes(story.done)),
+      name,
+    )
+  }
 })

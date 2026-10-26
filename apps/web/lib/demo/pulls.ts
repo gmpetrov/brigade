@@ -331,6 +331,38 @@ export function mergedPull(pull: DemoPull): DemoPull {
   }
 }
 
+const CSV_EXPORT: DiffFile[] = [
+  {
+    path: 'app/invoices/export-csv.ts',
+    previousPath: null,
+    status: 'added',
+    additions: 8,
+    deletions: 0,
+    patch: `@@ -0,0 +1,8 @@
++import type { Invoice } from './types'
++
++/** One row per invoice, totals in cents, for Export as CSV. */
++export function toCsv(invoices: Invoice[]) {
++  const head = 'number,customer,date,total_cents'
++  const rows = invoices.map((i) => [i.number, i.customer, i.date, i.totalCents].join(','))
++  return [head, ...rows].join('\\n')
++}`,
+  },
+  {
+    path: 'app/invoices/invoices-toolbar.tsx',
+    previousPath: null,
+    status: 'modified',
+    additions: 3,
+    deletions: 0,
+    patch: `@@ -12,6 +12,9 @@ export function InvoicesToolbar({ invoices }: Props) {
+       <Filters />
++      <Button variant="outline" onClick={() => download(toCsv(invoices), 'invoices.csv')}>
++        <Download /> Export as CSV
++      </Button>
+     </div>`,
+  },
+]
+
 const EXPORT_FIX: DiffFile[] = [
   {
     path: 'app/reports/export-button.tsx',
@@ -368,11 +400,23 @@ const EXPORT_FIX: DiffFile[] = [
 ]
 
 /** What a teammate's scripted run can open (lib/demo/scripts.ts). */
-export type NewPull = 'annual' | 'export'
+export type NewPull = 'annual' | 'export' | 'csv'
 
 /** The pull request a teammate opens in the demo: the annual billing toggle, or the export fix. */
 export function newPull(threadId: string, teammate: Ref, kind: NewPull = 'annual') {
   const slug = teammate.name.toLowerCase()
+  if (kind === 'csv')
+    return make({
+      number: 154,
+      title: 'Invoices: export as CSV',
+      head: `brigade/${slug}-invoices-csv`,
+      body: 'Northwind asked to export their invoices. An Export as CSV button on Invoices downloads one row per invoice, totals in cents. Covered by a test.',
+      files: CSV_EXPORT,
+      author: teammate,
+      session: { id: threadId, title: 'CSV export for Northwind' },
+      review: { state: 'skipped', reason: 'A new button and a tested helper' },
+      updatedAt: new Date().toISOString(),
+    })
   if (kind === 'export')
     return make({
       number: 153,

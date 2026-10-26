@@ -1,20 +1,31 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { DEMO_URL } from '@/lib/demo/flag'
+import type { Story } from '@/lib/demo/tour'
 import { c, Icon } from './parts'
 
 // Wide enough for the dashboard's own layout, sidebar and all: narrower, the picture and a
 // link to open the demo on its own.
 const WIDE = '(min-width: 900px)'
 
+// The walkthroughs a visitor picks from, above the window (lib/demo/tour.ts plays each one).
+const STORIES: { id: Story; label: string }[] = [
+  { id: 'bug', label: 'Fix a customer’s bug' },
+  { id: 'feature', label: 'Ship a requested feature' },
+  { id: 'call', label: 'Prep a sales call' },
+  { id: 'payment', label: 'Chase a failed payment' },
+]
+
 /**
  * The live demo (demo.brigade.lol, docs/demo.md) under the hero: the real dashboard on a
- * sample workspace, running in a window on the page as soon as it opens. Its picture shows
- * while it loads, and on a phone, where the button opens the demo on its own.
+ * sample workspace, running in a window on the page as soon as it opens, playing the story
+ * picked above it. Its picture shows while it loads, and on a phone, where the button opens
+ * the demo on its own.
  */
 export function LiveDemo() {
   const [wide, setWide] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [story, setStory] = useState<Story>('bug')
   useEffect(() => {
     const query = window.matchMedia(WIDE)
     const update = () => setWide(query.matches)
@@ -25,6 +36,24 @@ export function LiveDemo() {
   return (
     <section id="demo" aria-label="Live demo" className={c('live-demo')}>
       <div className={c('wrap')}>
+        {wide && (
+          <div className={c('demo-stories')} role="group" aria-label="Pick a story to watch">
+            {STORIES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                aria-pressed={story === s.id}
+                className={c('demo-story')}
+                onClick={() => {
+                  setLoaded(false)
+                  setStory(s.id)
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className={c('demo-win')}>
           <div className={c('demo-bar')}>
             <i></i>
@@ -44,8 +73,10 @@ export function LiveDemo() {
             <img className={c('demo-shot dark-only')} src="/landing/demo-dark.webp" alt="" />
             {wide ? (
               <iframe
-                // ?tour: a cursor walks through a job on its own until the visitor takes over (lib/demo/tour.ts).
-                src={`${DEMO_URL}/app?tour`}
+                // ?tour=<story>: a cursor walks through a job on its own until the visitor takes
+                // over (lib/demo/tour.ts). Another story loads the demo afresh.
+                key={story}
+                src={`${DEMO_URL}/app?tour=${story}`}
                 title="Brigade demo workspace: click around, nothing here is real"
                 allow="clipboard-write"
                 className={c(loaded ? 'shown' : '')}
