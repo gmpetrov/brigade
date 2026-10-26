@@ -2283,6 +2283,7 @@ export type PreviewTools = {
   ): Promise<{
     status: string
     origins: Record<number, string>
+    open?: string
     reason?: string
     logs?: string
     variables?: string[]
@@ -2335,7 +2336,12 @@ export type PreviewTools = {
   /** Setups the repository's checkout has for other tools (orca.yaml, …). */
   otherSetups(repository: string): Promise<string[]>
   stop(): Promise<{ stopped: boolean }>
-  logs(lines?: number): { status: string; origins?: Record<number, string>; logs: string }
+  logs(lines?: number): Promise<{
+    status: string
+    origins?: Record<number, string>
+    open?: string
+    logs: string
+  }>
 }
 
 type PreviewInput = {
@@ -2400,6 +2406,8 @@ export function previewTools(
         "(/__ports/<port>/), each port's address in BRIGADE_PREVIEW_URL_<port>. Put what the app needs in `env`, " +
         'where ${BRIGADE_PREVIEW_URL} and ${BRIGADE_PREVIEW_URL_<port>} become the addresses (e.g. NEXTAUTH_URL, ' +
         'NEXT_PUBLIC_API_URL, auth callback URLs, allowed origins), and `envFile` if the app reads only its file. ' +
+        'On a cloud computer that address lets in only browsers that came from Brigade (or opened `open`, in the ' +
+        "result): the app's server must call itself at localhost, not there. " +
         "The repository's preview variables, which people set (ask with a variables ask in open_ticket), come on " +
         'top of `env`; the result lists their names. ' +
         "The proxy makes the app's cookies work in the dashboard's frame, shows a waiting page while the app starts, " +
@@ -2629,7 +2637,9 @@ export function previewTools(
       description:
         "The latest output of this thread's preview (its dev server's console), e.g. to see why a page fails, " +
         'and, while it runs, its address by port (`origins`): test in your browser there rather than starting ' +
-        'a copy of your own.',
+        'a copy of your own. On a cloud computer, open `open` first: the preview lets in only a browser that ' +
+        'came with its token (for 5 minutes, then for the run), and answers 403 otherwise, also to requests ' +
+        "the app's server makes to its own public address (use localhost there).",
       inputSchema: jsonSchema<{ lines?: number }>({
         type: 'object',
         properties: { lines: { type: 'number', description: 'How many lines (default 100)' } },

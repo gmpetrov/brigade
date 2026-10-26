@@ -36,16 +36,58 @@ const control = new Previews({
 }).forSeat(seat)
 
 test('a running preview’s logs give its address; none without one', async () => {
-  assert.deepEqual(control.logs(), { status: 'none', logs: '' })
+  assert.deepEqual(await control.logs(), { status: 'none', logs: '' })
 
   const port = await freePort()
   const script = `require('http').createServer((q, s) => s.end('hi')).listen(${port}, '127.0.0.1')`
   const result = await control.start({ command: `node -e ${JSON.stringify(script)}`, port })
   assert.equal(result.status, 'running')
 
-  const logs = control.logs()
+  const logs = await control.logs()
   assert.equal(logs.status, 'running')
   assert.deepEqual(logs.origins, result.origins)
   assert.match(logs.origins?.[port] ?? '', /^http:\/\/localhost:\d+$/)
+  // On a member's machine there is nothing to open first.
+  assert.equal(logs.open, undefined)
   await control.stop()
+})
+
+test('on a cloud computer, the address to open first, with its token, asked for each time', async () => {
+  const asked: [string, number][] = []
+  let fails = false
+  const cloudWork = join(home, 'teammates', 'tm1', 'threads', 's2')
+  await mkdir(cloudWork, { recursive: true })
+  const cloudSeat = { sessionId: 's2', teammateId: 'tm1', workDir: cloudWork }
+  const cloud = new Previews({
+    emit: () => undefined,
+    expose: null,
+    viewUrl: async (sessionId, port) => {
+      asked.push([sessionId, port])
+      if (fails) throw new Error('The preview gateway did not answer')
+      return `https://abc.brigade.surf/?_brigade=t${asked.length}`
+    },
+    recipes: async () => ({ recipe: null }),
+    seat: () => cloudSeat,
+    stateFile: join(home, 'state', 'previews-cloud.json'),
+  }).forSeat(cloudSeat)
+
+  const port = await freePort()
+  const script = `require('http').createServer((q, s) => s.end('hi')).listen(${port}, '127.0.0.1')`
+  const result = await cloud.start({
+    command: `node -e ${JSON.stringify(script)}`,
+    port,
+    paths: [],
+  })
+  assert.equal(result.status, 'running')
+  assert.match(result.open ?? '', /^https:\/\/abc\.brigade\.surf\/\?_brigade=t\d+$/)
+  const before = asked.length
+  const logs = await cloud.logs()
+  assert.equal(logs.open, `https://abc.brigade.surf/?_brigade=t${before + 1}`)
+  assert.equal(asked.at(-1)![0], 's2')
+  // The gateway down: the rest of the answer still comes.
+  fails = true
+  const without = await cloud.logs()
+  assert.equal(without.status, 'running')
+  assert.equal(without.open, undefined)
+  await cloud.stop()
 })
