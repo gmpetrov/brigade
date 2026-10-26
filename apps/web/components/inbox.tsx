@@ -367,9 +367,15 @@ export function InboxView() {
         <header className="flex flex-col gap-3 border-b px-4 pt-6 pb-3 md:px-5">
           <div className="flex items-baseline gap-2">
             <h1 className="text-2xl font-extrabold tracking-tight">Inbox</h1>
-            <span className="truncate text-sm text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
               Every email your mailboxes received
             </span>
+            <Link
+              href="/app/inbox/mailboxes"
+              className="flex-none text-sm font-medium text-primary hover:underline"
+            >
+              Mailboxes
+            </Link>
           </div>
           <div className="relative">
             <Search

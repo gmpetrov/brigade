@@ -135,3 +135,54 @@ export const HandInboxItem = z.object({
   /** Its thread's project, for Gmail. Default: the item's; Brigade's mail stays in its mailbox's. */
   projectId: z.string().nullish(),
 })
+
+/**
+ * A mailbox: whatever receives mail for the workspace, in one list (Inbox › Mailboxes): an
+ * agent's address, a project's shared mailbox (support@…, forwarded to it), a Gmail account.
+ * Its id is the Inbox's source id: email:<address id> or gmail:<connection id>.
+ */
+export type MailboxSummary = {
+  id: string
+  kind: 'agent' | 'inbox' | 'gmail'
+  /** Riley · Support (Askli) · georges@acme.com */
+  name: string
+  /** Where its mail arrives: Brigade's address, or the Gmail account. */
+  address: string
+  /** The address customers write to, forwarded here (a project's mailbox). */
+  publicAddress: string | null
+  project: { id: string; name: string } | null
+  teammate: { id: string; name: string } | null
+  /** Its rules and playbooks. */
+  ruleCount: number
+  /** Who sees its mail in the Inbox: everyone, or only you (your own Gmail). */
+  visibility: 'workspace' | 'you'
+  /** Gmail: all its mail shows in the Inbox, not only what went to a thread. */
+  showAll: boolean
+}
+
+/** One way a mailbox's mail goes to a teammate: a rule, or a playbook's (changed in it). */
+export type MailboxRule = {
+  id: string
+  label: string
+  teammate: { id: string; name: string }
+  options: Record<string, string>
+  instructions: string | null
+  position: number
+  /** The project its threads start in (an agent's address: the project's variant it watches). */
+  project: { id: string; name: string } | null
+  playbook: { id: string; name: string; status: string } | null
+}
+
+/** A mailbox, whole: where its mail arrives, who handles it (in order), who reads and replies. */
+export type MailboxDetail = MailboxSummary & {
+  addressId: string | null
+  connectionId: string
+  /** This member may change it: an owner or admin, or a Gmail account's own member. */
+  manages: boolean
+  /** In the order they apply: the first that matches takes the mail. */
+  rules: MailboxRule[]
+  /** The teammates given it: they read it and reply from it. */
+  readers: { id: string; name: string }[]
+  /** Gmail: shared with the workspace's threads, or only its member's. */
+  reach: 'workspace' | 'mine' | null
+}

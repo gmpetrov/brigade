@@ -159,3 +159,27 @@ has to keep its messages there.
   `Inbox`), whose header, sender and subject open the conversation here (`inboxItem` in the event).
   Like a mailbox rule's, the thread stays out of the sidebar and Home (`Session.quiet`) until a person
   writes in it, pins it or a ticket opens; the Inbox links to it.
+
+## Mailboxes
+
+`/app/inbox/mailboxes` (`apps/web/components/mailboxes.tsx`, `apps/api/src/mailboxes.ts`,
+`GET /api/inbox/mailboxes[/:id]`): the one place mail is set up. A mailbox is whatever receives mail
+for the workspace, whatever it is underneath: an agent's address, a project's shared mailbox (an
+inbox address, usually with the address customers write to forwarded to it), a Gmail account. Its
+id is the Inbox's source id (`email:<address id>`, `gmail:<connection id>`).
+
+- **The list**: each mailbox, what it is, its address (and the public one forwarded to it), how
+  many rules handle it, and "Only you" for a member's own Gmail (another member's never shows).
+- **Add a mailbox** starts from what the person wants: receive mail sent to an address they have
+  (a shared mailbox in a project, its public address set; its page then shows the forwarding,
+  Google's confirmation code, the domain to reply from and a test), give an agent an address, or
+  connect a Gmail account (in Settings › Apps). It turns the Email App on first when needed.
+- **A mailbox's page** answers three questions: where its mail arrives (the arrival steps above; an
+  agent's address and Turn off; a Gmail account's "Show all its mail in the Inbox"), who handles it
+  (its rules and its playbooks' rules in one list, in the order they apply, reordered there, a
+  playbook's changed in the playbook; then what happens to the rest), and who reads and replies (the
+  teammates given it, and who sees its mail in the Inbox).
+- The other places only link here: a project's settings list its mailboxes, a teammate's Access card
+  shows its address (or Give an address), the Email App's sheet turns it on, a Gmail account's menu
+  opens its mailbox. Projects' variants of an agent's address and sign-up addresses stay out of
+  sight.
