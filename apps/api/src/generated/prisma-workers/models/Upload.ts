@@ -674,7 +674,7 @@ export type $UploadPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
      */
     sha256: string
     /**
-     * pending until its bytes are checked, then ready.
+     * pending until its bytes are checked, then ready; blocked once used, refused or abandoned.
      */
     status: $Enums.AttachmentStatus
     /**

@@ -12,7 +12,15 @@ import {
   type UploadPurpose,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
-import { copyObject, deleteObject, objectSize, uploadKey, uploadTarget } from './bucket.js'
+import {
+  checkedUploadKey,
+  copyObject,
+  deleteObject,
+  objectSize,
+  UPLOAD_URL_SECONDS,
+  uploadKey,
+  uploadTarget,
+} from './bucket.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { contentTypeFor } from './library.js'
 import { inspectObject } from './object-check.js'
@@ -25,6 +33,11 @@ type Row = Awaited<ReturnType<ScopedDb['upload']['findFirstOrThrow']>>
 
 /** An upload whose client went away (its URL works 10 minutes). */
 const PENDING_MS = 60 * 60_000
+/**
+ * A used or refused upload's row stays until its signed URL no longer works, so the sweep
+ * also removes what a PUT made late (or replayed) after its bytes were deleted.
+ */
+const URL_LIFE_MS = UPLOAD_URL_SECONDS * 1000 + 5 * 60_000
 /** A checked upload never used. */
 const UNUSED_MS = 24 * 3600_000
 
@@ -95,6 +108,8 @@ export async function completeFileUpload(
   const row = await db.upload.findFirst({ where: { id, ...ownerWhere(owner) } })
   if (!row) throw new HTTPException(404, { message: 'Upload not found' })
   if (row.status === 'ready') return row
+  if (row.status !== 'pending')
+    throw new HTTPException(409, { message: 'This upload was used or refused; upload it again' })
   const key = uploadKey(scope, id)
   const size = await objectSize(key)
   if (size === null)
@@ -116,6 +131,19 @@ export async function completeFileUpload(
     await discardUpload(scope, id)
     throw new HTTPException(400, { message: 'The upload does not match the file; upload it again' })
   }
+  // The very version checked, where no signed URL reaches: a PUT since (a replay of the URL)
+  // changed it, and it is refused.
+  if (
+    !(await copyObject(key, checkedUploadKey(scope, id), inspected.contentType, {
+      ifMatch: inspected.etag,
+    }))
+  ) {
+    await discardUpload(scope, id)
+    throw new HTTPException(400, {
+      message: 'The upload changed while it was checked; upload it again',
+    })
+  }
+  await deleteObject(key).catch(() => undefined)
   return db.upload.update({
     where: { id },
     data: {
@@ -140,8 +168,8 @@ export async function readyUpload(
   return row
 }
 
-/** Where an upload's bytes are, to copy or read them. */
-export const uploadBytesKey = (scope: Scope, row: { id: string }) => uploadKey(scope, row.id)
+/** Where a checked upload's bytes are, to copy or read them: never changed once checked. */
+export const uploadBytesKey = (scope: Scope, row: { id: string }) => checkedUploadKey(scope, row.id)
 
 /**
  * Copy an upload's bytes to where they belong, inside the bucket. With a type, stored with it.
@@ -153,41 +181,53 @@ export async function copyUpload(
   to: string,
   contentType?: string,
 ) {
-  if (!(await copyObject(uploadKey(scope, row.id), to, contentType)))
+  if (!(await copyObject(checkedUploadKey(scope, row.id), to, contentType)))
     throw new HTTPException(409, { message: 'The upload is gone; upload it again' })
 }
 
-/** Its bytes, then its row: a row stays while its bytes could not go, for the sweep to try again. */
+/**
+ * Done with an upload (used, refused or abandoned): its bytes go, and it can no longer be
+ * used. Its row stays until its URL no longer works, for the sweep to remove what a late PUT
+ * leaves. False when the bytes could not go: the sweep tries again.
+ */
 export async function discardUpload(scope: Scope, id: string) {
+  await scoped(scope).upload.updateMany({ where: { id }, data: { status: 'blocked' } })
+  return deleteBytes(scope, id)
+}
+
+async function deleteBytes(scope: Scope, id: string) {
   try {
     await deleteObject(uploadKey(scope, id))
+    await deleteObject(checkedUploadKey(scope, id))
+    return true
   } catch (error) {
     console.warn(`upload ${id}: bytes not deleted: ${String(error)}`)
     return false
   }
-  await scoped(scope).upload.deleteMany({ where: { id } })
-  return true
 }
 
-/** Remove uploads never completed or never used, across workspaces, bytes first. */
+/**
+ * Remove uploads never completed, never used, or done with, across workspaces: once their
+ * signed URL no longer works, bytes first, then the row (kept while its bytes could not go).
+ */
 export async function sweepFileUploads() {
   const now = Date.now()
   const rows = await prisma.upload.findMany({
     where: {
       OR: [
         { status: 'pending', createdAt: { lt: new Date(now - PENDING_MS) } },
+        { status: 'blocked', createdAt: { lt: new Date(now - URL_LIFE_MS) } },
         { createdAt: { lt: new Date(now - UNUSED_MS) } },
       ],
     },
     orderBy: { createdAt: 'asc' },
     take: 500,
   })
-  for (const row of rows)
-    await discardUpload(
-      { organizationId: row.organizationId, workspaceId: row.workspaceId },
-      row.id,
-    )
-  if (rows.length > 0) console.log(`uploads: removed ${rows.length} unused upload(s)`)
+  for (const row of rows) {
+    const scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
+    if (await deleteBytes(scope, row.id)) await prisma.upload.deleteMany({ where: { id: row.id } })
+  }
+  if (rows.length > 0) console.log(`uploads: removed ${rows.length} upload(s) done with`)
 }
 
 /** Whether a bucket object is there at this size: a skill file a runner uploaded, say. */

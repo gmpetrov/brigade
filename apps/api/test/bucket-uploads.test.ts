@@ -16,7 +16,7 @@ process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
 process.env.BUCKET_DIR = await mkdtemp(join(tmpdir(), 'bucket-uploads-'))
 const { copyObject, objectSize, putObject, readHead, uploadTarget } =
   await import('../src/bucket.js')
-const { inspectObject, EXTRACT_MAX } = await import('../src/object-check.js')
+const { inspectObject } = await import('../src/object-check.js')
 const { localBucket } = await import('../src/routes/bucket.js')
 const { Hono } = await import('hono')
 
@@ -103,22 +103,40 @@ test('a check stops once more bytes came than allowed', async () => {
   assert.ok(read && read.size > 1000)
 })
 
-test('an Office file is read for its text, up to EXTRACT_MAX', async () => {
+test("an Office file's text is read from its XML parts as they unzip, at any size", async () => {
   const docx = zipSync({
-    'word/document.xml': strToU8(
-      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Quarterly plan</w:t></w:r></w:p></w:body></w:document>',
-    ),
     '[Content_Types].xml': strToU8('<Types/>'),
+    'word/document.xml': strToU8(
+      '<w:document xmlns:w="w"><w:body><w:p><w:r><w:t>Quarterly</w:t></w:r><w:r><w:t xml:space="preserve"> plan &amp; budget</w:t></w:r></w:p>' +
+        `<w:p><w:r><w:t>${'word '.repeat(50_000)}</w:t></w:r></w:p><w:p><w:r><w:t>The end</w:t></w:r></w:p></w:body></w:document>`,
+    ),
+    // Bytes no text is in: never inflated for it.
+    'word/media/image1.png': new Uint8Array(3 * 1024 * 1024).map((_, i) => (i * 7919) % 251),
   })
   await putObject('org/ws/uploads/o1', docx, 'application/octet-stream')
   const read = await inspectObject('org/ws/uploads/o1', { name: 'plan.docx', text: true })
   assert.equal(read?.sha256, sha(docx))
-  assert.equal(read?.text.trim(), 'Quarterly plan')
-  // Larger: kept and checked, not read for its text.
-  const large = new Uint8Array(EXTRACT_MAX + 1)
-  large.set(docx)
-  await putObject('org/ws/uploads/o2', large, 'application/octet-stream')
-  const big = await inspectObject('org/ws/uploads/o2', { name: 'big.docx', text: true })
-  assert.equal(big?.size, EXTRACT_MAX + 1)
-  assert.equal(big?.text, '')
+  assert.ok(read?.text.startsWith('Quarterly plan & budget\n'))
+  assert.ok(read?.text.endsWith('The end'))
+
+  const xlsx = zipSync({
+    'xl/sharedStrings.xml': strToU8('<sst><si><t>Revenue</t></si><si><t>Costs</t></si></sst>'),
+    'xl/worksheets/sheet1.xml': strToU8(
+      '<worksheet><sheetData><row><c t="inlineStr"><is><t>Q3</t></is></c></row></sheetData></worksheet>',
+    ),
+  })
+  await putObject('org/ws/uploads/o2', xlsx, 'application/octet-stream')
+  const sheet = await inspectObject('org/ws/uploads/o2', { name: 'numbers.xlsx', text: true })
+  assert.deepEqual(sheet?.text.split(/\s+/), ['Revenue', 'Costs', 'Q3'])
+
+  // A damaged one, and a PDF (whose text needs the whole file): kept, not searchable.
+  await putObject('org/ws/uploads/o3', docx.subarray(0, 2000), 'application/octet-stream')
+  assert.equal(
+    (await inspectObject('org/ws/uploads/o3', { name: 'cut.docx', text: true }))?.text,
+    '',
+  )
+  await putObject('org/ws/uploads/o4', strToU8('%PDF-1.7\nhello'), 'application/pdf')
+  const pdf = await inspectObject('org/ws/uploads/o4', { name: 'a.pdf', text: true })
+  assert.equal(pdf?.contentType, 'application/pdf')
+  assert.equal(pdf?.text, '')
 })

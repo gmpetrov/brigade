@@ -98,11 +98,21 @@ export function threadFileKey(scope: Scope, sessionId: string, name: string) {
   return `${threadFilesPrefix(scope, sessionId)}${name}`
 }
 
-/** The bucket key of an upload's bytes, held until it is used (uploads.ts). */
+/** The bucket key an upload's client PUTs to, with its signed URL (uploads.ts). */
 export function uploadKey(scope: Scope, uploadId: string) {
   for (const part of [scope.organizationId, scope.workspaceId, uploadId])
     if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
   return `${scope.organizationId}/${scope.workspaceId}/uploads/${uploadId}`
+}
+
+/**
+ * The bucket key of an upload's bytes once checked: copied there from the very version read,
+ * where no signed URL reaches, so a PUT replayed later cannot change what was checked.
+ */
+export function checkedUploadKey(scope: Scope, uploadId: string) {
+  for (const part of [scope.organizationId, scope.workspaceId, uploadId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/uploads-checked/${uploadId}`
 }
 
 const REPO_PART = /^[a-z0-9_.-]{1,100}$/
@@ -137,7 +147,7 @@ const url = (key: string) => `${r2!.base}/${key.split('/').map(encodeURIComponen
 export const directUploads = Boolean(r2)
 
 /** How long a signed upload URL works. */
-const UPLOAD_URL_SECONDS = 10 * 60
+export const UPLOAD_URL_SECONDS = 10 * 60
 
 /**
  * A short-lived URL a browser can PUT one object to, without credentials.
@@ -303,11 +313,22 @@ export async function putObjectStream(
  * Copy an object to another key inside the bucket (S3 CopyObject): the API never holds its
  * bytes. With a type, the copy is stored with it. False when the source is not there.
  */
-export async function copyObject(from: string, to: string, contentType?: string) {
+export async function copyObject(
+  from: string,
+  to: string,
+  contentType?: string,
+  /** Only the version of the source with this tag (openObject's): false when it changed since. */
+  options: { ifMatch?: string } = {},
+) {
   if (!r2) {
+    const source = join(env.BUCKET_DIR, from)
+    if (options.ifMatch !== undefined) {
+      const found = await stat(source).catch(() => null)
+      if (!found || localTag(found) !== options.ifMatch) return false
+    }
     const target = join(env.BUCKET_DIR, to)
     await mkdir(dirname(target), { recursive: true })
-    return copyFile(join(env.BUCKET_DIR, from), target).then(
+    return copyFile(source, target).then(
       () => true,
       (error: NodeJS.ErrnoException) => {
         if (error.code === 'ENOENT') return false
@@ -320,17 +341,52 @@ export async function copyObject(from: string, to: string, contentType?: string)
     method: 'PUT',
     headers: {
       'x-amz-copy-source': `${bucket}/${from.split('/').map(encodeURIComponent).join('/')}`,
+      ...(options.ifMatch ? { 'x-amz-copy-source-if-match': options.ifMatch } : {}),
       ...(contentType
         ? { 'x-amz-metadata-directive': 'REPLACE', 'content-type': contentType }
         : {}),
     },
   })
-  if (response.status === 404) return false
+  if (response.status === 404 || response.status === 412) {
+    await response.body?.cancel()
+    return false
+  }
   // S3 may answer 200 with an error in the body when a copy fails part way.
   const body = await response.text()
   if (!response.ok || body.includes('<Error>'))
     throw new Error(`bucket copy failed: ${response.status} ${body.slice(0, 200)}`)
   return true
+}
+
+/** The stand-in's tag of a file: a PUT writes a new one (putLocalStream renames into place). */
+const localTag = (found: { ino: number; mtimeMs: number; size: number }) =>
+  `${found.ino}-${found.mtimeMs}-${found.size}`
+
+/**
+ * The object's bytes as they arrive, with the tag of the version read (its ETag): a copy
+ * made with it (copyObject's ifMatch) is of these bytes, whatever a PUT did since. Null when
+ * it is gone.
+ */
+export async function openObject(
+  key: string,
+): Promise<{ body: ReadableStream<Uint8Array>; etag: string } | null> {
+  if (!r2) {
+    const file = join(env.BUCKET_DIR, key)
+    const found = await stat(file).catch(() => null)
+    if (!found) return null
+    return {
+      body: Readable.toWeb(createReadStream(file)) as ReadableStream<Uint8Array>,
+      etag: localTag(found),
+    }
+  }
+  const response = await r2.client.fetch(url(key))
+  if (response.status === 404) return null
+  const etag = response.headers.get('etag')
+  if (!response.ok || !response.body || !etag) {
+    await response.body?.cancel()
+    throw new Error(`bucket get failed: ${response.status}`)
+  }
+  return { body: response.body, etag }
 }
 
 /** The object's first bytes (up to `length`), or null when it is gone. */

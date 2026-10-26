@@ -118,6 +118,10 @@ async function upload(
     complete: () => app.request(`/api/uploads/${ticket.id}/complete`, { method: 'POST' }),
   }
 }
+/** Whether an upload can still be used: one used, refused or discarded is kept a while, blocked. */
+const usable = async (id: string) =>
+  ((await prisma.upload.findUnique({ where: { id } }))?.status ?? 'blocked') !== 'blocked'
+
 async function ready(purpose: string, name: string, bytes: Uint8Array, contentType = '') {
   const u = await upload(purpose, name, bytes, contentType)
   assert.equal(u.put.status, 200)
@@ -219,14 +223,14 @@ test('a completion that does not match the file is refused and removed', { skip 
   })
   assert.equal(wrongHash.put.status, 200)
   assert.equal((await wrongHash.complete()).status, 400)
-  assert.equal(await prisma.upload.findUnique({ where: { id: wrongHash.id } }), null)
+  assert.equal(await usable(wrongHash.id), false)
   assert.equal(await objectSize(uploadKey(scope, wrongHash.id)), null)
 
   // Other bytes than it started with, put at its key behind the signed URL's back.
   const wrongSize = await upload('library', 'b.txt', bytes, 'text/plain')
   await putObject(uploadKey(scope, wrongSize.id), strToU8('hello, longer'), 'text/plain')
   assert.equal((await wrongSize.complete()).status, 400)
-  assert.equal(await prisma.upload.findUnique({ where: { id: wrongSize.id } }), null)
+  assert.equal(await usable(wrongSize.id), false)
 
   // The signed URL takes exactly its size.
   const short = await upload('library', 'c.txt', bytes, 'text/plain', { size: 10 })
@@ -256,7 +260,7 @@ test('the library saves an upload, with a version, once for the same bytes', { s
   )
   assert.ok(existsSync(versionFile))
   // The upload is gone once used.
-  assert.equal(await prisma.upload.findUnique({ where: { id: first } }), null)
+  assert.equal(await usable(first), false)
   assert.equal(await objectSize(uploadKey(scope, first)), null)
   // Its text is searchable.
   const hits = await search(scope, { query: 'platypus', limit: 5, memberId: ids.member })
@@ -316,7 +320,7 @@ test("a design's picture is saved from an upload, a PNG only", { skip }, async (
 
   const fake = await ready('library', 'thumbnail.png', strToU8('not a png at all'))
   assert.equal((await put({ path: 'Designs/home.design', uploadId: fake })).status, 400)
-  assert.equal(await prisma.upload.findUnique({ where: { id: fake } }), null)
+  assert.equal(await usable(fake), false)
   // Not a design folder.
   const other = await ready('library', 'thumbnail.png', PNG)
   assert.equal((await put({ path: 'Plans', uploadId: other })).status, 400)
@@ -351,7 +355,7 @@ test('a skill pack is read from an upload as it streams, as from its bytes', { s
   const script = pdf.files.find((f) => f.path === 'scripts/read.py')!
   assert.equal(await objectSize(skillFileKey(scope, script.sha256)), 8)
   assert.deepEqual(preview.skills.find((s) => s.name === 'notes')!.skipped, ['big.bin'])
-  assert.equal(await prisma.upload.findUnique({ where: { id: uploadId } }), null)
+  assert.equal(await usable(uploadId), false)
 
   // A lone SKILL.md.
   const md = await ready(
@@ -387,11 +391,11 @@ test('a logo is kept from an upload, by the type its bytes bear out', { skip }, 
   assert.match(workspace.logo!, /\.png$/)
   const kept = await readLogo(workspaceLogoKey(scope, workspace.logo!), workspace.logo!)
   assert.equal(sha(kept!.bytes), sha(PNG))
-  assert.equal(await prisma.upload.findUnique({ where: { id: logo } }), null)
+  assert.equal(await usable(logo), false)
 
   const text = await ready('logo', 'logo.png', strToU8('hello, not an image'))
   await assert.rejects(updateWorkspace(scope, { logo: `upload:${text}` }), /PNG, JPEG/)
-  assert.equal(await prisma.upload.findUnique({ where: { id: text } }), null)
+  assert.equal(await usable(text), false)
   await assert.rejects(updateWorkspace(scope, { logo: 'upload:nope' }), /Upload not found/)
 })
 
@@ -463,7 +467,7 @@ test("a runner's library file is uploaded, checked, then saved by its id", { ski
   })
   assert.equal(doc.sha256, sha(bytes))
   assert.equal(doc.updatedInSessionId, seat.sessionId)
-  assert.equal(await prisma.upload.findUnique({ where: { id: uploadId } }), null)
+  assert.equal(await usable(uploadId), false)
   // Used once.
   const again = await libraryCall({ name: 'save', path: 'Reports/r.txt', upload: { id: uploadId } })
   assert.equal(again.ok, false)
@@ -502,3 +506,121 @@ test(
     ])
   },
 )
+
+test(
+  'a PUT replayed after completion changes nothing that was checked, and the sweep removes it',
+  { skip },
+  async () => {
+    const original = strToU8('trusted text')
+    const replacement = strToU8('changed text')
+    const start = await app.request(
+      '/api/uploads',
+      json({ purpose: 'library', name: 'replay.txt', size: original.length }),
+    )
+    const ticket = (await start.json()) as {
+      id: string
+      url: string
+      headers: Record<string, string>
+    }
+    const put = (body: Uint8Array) =>
+      app.request(ticket.url, { method: 'PUT', headers: ticket.headers, body })
+    assert.equal((await put(original)).status, 200)
+    assert.equal(
+      (await app.request(`/api/uploads/${ticket.id}/complete`, { method: 'POST' })).status,
+      200,
+    )
+    // The signed URL still works for a while: a replay lands, but not where the checked bytes are.
+    assert.equal((await put(replacement)).status, 200)
+    const saved = await app.request(
+      '/api/library/files',
+      json({ path: 'replay.txt', uploadId: ticket.id }),
+    )
+    assert.equal(saved.status, 201, await saved.clone().text())
+    const row = await scoped(scope).document.findFirstOrThrow({ where: { path: 'replay.txt' } })
+    const { getObject } = await import('../src/bucket.js')
+    assert.equal(row.sha256, sha(original))
+    assert.equal(sha((await getObject(documentKey(scope, row.id)))!), sha(original))
+    // Used: its row stays, refused for another use, until its URL no longer works.
+    const used = await scoped(scope).upload.findFirstOrThrow({ where: { id: ticket.id } })
+    assert.equal(used.status, 'blocked')
+    const again = await app.request(
+      '/api/library/files',
+      json({ path: 'replay-2.txt', uploadId: ticket.id }),
+    )
+    assert.equal(again.status, 409)
+    assert.equal((await put(replacement)).status, 200)
+    // Past the URL's life, the sweep removes what the late PUT left, then the row.
+    await prisma.upload.update({
+      where: { id: ticket.id },
+      data: { createdAt: new Date(Date.now() - 16 * 60_000) },
+    })
+    const { sweepFileUploads } = await import('../src/uploads.js')
+    await sweepFileUploads()
+    assert.equal(await objectSize(uploadKey(scope, ticket.id)), null)
+    assert.equal(await scoped(scope).upload.count({ where: { id: ticket.id } }), 0)
+  },
+)
+
+test('bytes changed between their check and their copy are refused', { skip }, async () => {
+  const { copyObject, openObject, putObject } = await import('../src/bucket.js')
+  await putObject('org-x/ws-x/uploads/raced', strToU8('first'), 'text/plain')
+  const read = await openObject('org-x/ws-x/uploads/raced')
+  await read!.body.cancel()
+  await new Promise((resolve) => setTimeout(resolve, 5))
+  await putObject('org-x/ws-x/uploads/raced', strToU8('other'), 'text/plain')
+  assert.equal(
+    await copyObject('org-x/ws-x/uploads/raced', 'org-x/ws-x/uploads-checked/raced', undefined, {
+      ifMatch: read!.etag,
+    }),
+    false,
+  )
+  assert.equal(await objectSize('org-x/ws-x/uploads-checked/raced'), null)
+})
+
+test('saves that overlap keep each version the bytes its hash names', { skip }, async () => {
+  const { saveLibraryFile } = await import('../src/library.js')
+  const { getObject, versionKey } = await import('../src/bucket.js')
+  const { readyUpload, uploadBytesKey } = await import('../src/uploads.js')
+  const db = scoped(scope)
+  const actor = { type: 'member' as const, id: ids.member }
+  await saveLibraryFile(db, scope, actor, { path: 'race.txt', bytes: strToU8('initial') })
+  const a = await readyUpload(
+    db,
+    { memberId: ids.member },
+    await ready('library', 'race.txt', strToU8('version A')),
+    'library',
+  )
+  const b = await readyUpload(
+    db,
+    { memberId: ids.member },
+    await ready('library', 'race.txt', strToU8('version B')),
+    'library',
+  )
+  // B is saved between A's write and A's version.
+  const racing = new Proxy(db, {
+    get(target, prop) {
+      if (prop !== 'document') return Reflect.get(target, prop)
+      return new Proxy(target.document, {
+        get(model, key) {
+          if (key !== 'update') return Reflect.get(model, key)
+          return async (args: never) => {
+            const row = await model.update(args)
+            await saveLibraryFile(db, scope, actor, {
+              path: 'race.txt',
+              upload: { key: uploadBytesKey(scope, b), ...b },
+            })
+            return row
+          }
+        },
+      })
+    },
+  })
+  await saveLibraryFile(racing, scope, actor, {
+    path: 'race.txt',
+    upload: { key: uploadBytesKey(scope, a), ...a },
+  })
+  const row = await db.document.findFirstOrThrow({ where: { path: 'race.txt' } })
+  const versions = await db.documentVersion.findMany({ where: { documentId: row.id } })
+  assert.ok(versions.length >= 1)
+  for (const v of versions) assert.equal(sha((await getObject(versionKey(scope, v.id)))!), v.sha256)
+})

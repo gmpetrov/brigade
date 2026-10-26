@@ -1752,7 +1752,7 @@ model Upload {
   size           Int
   /// The runner's, checked once the bytes are in; else the bytes' own, read then.
   sha256         String           @default("")
-  /// pending until its bytes are checked, then ready.
+  /// pending until its bytes are checked, then ready; blocked once used, refused or abandoned.
   status         AttachmentStatus @default(pending)
   /// Who started it: a member, or a runner for a teammate of a thread on its computer.
   memberId       String?

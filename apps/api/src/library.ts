@@ -268,7 +268,7 @@ export async function saveLibraryFile(
     db,
     scope,
     row,
-    'bytes' in input ? input.bytes : { key: documentKey(scope, row.id) },
+    'bytes' in input ? input.bytes : { key: input.upload.key },
     actor,
     {
       sessionId,
