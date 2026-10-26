@@ -8,7 +8,7 @@ import { c, Icon } from './parts'
 // link to open the demo on its own.
 const WIDE = '(min-width: 900px)'
 
-// The walkthroughs a visitor picks from, above the window (lib/demo/tour.ts plays each one).
+// The walkthroughs a visitor picks from, the window's tabs (lib/demo/tour.ts plays each one).
 const STORIES: { id: Story; label: string }[] = [
   { id: 'bug', label: 'Fix a customer’s bug' },
   { id: 'feature', label: 'Ship a requested feature' },
@@ -19,7 +19,7 @@ const STORIES: { id: Story; label: string }[] = [
 /**
  * The live demo (demo.brigade.lol, docs/demo.md) under the hero: the real dashboard on a
  * sample workspace, running in a window on the page as soon as it opens, playing the story
- * picked above it. Its picture shows while it loads, and on a phone, where the button opens
+ * picked in its tabs. Its picture shows while it loads, and on a phone, where the button opens
  * the demo on its own.
  */
 export function LiveDemo() {
@@ -36,32 +36,36 @@ export function LiveDemo() {
   return (
     <section id="demo" aria-label="Live demo" className={c('live-demo')}>
       <div className={c('wrap')}>
-        {wide && (
-          <div className={c('demo-stories')} role="group" aria-label="Pick a story to watch">
-            {STORIES.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                aria-pressed={story === s.id}
-                className={c('demo-story')}
-                onClick={() => {
-                  setLoaded(false)
-                  setStory(s.id)
-                }}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
         <div className={c('demo-win')}>
           <div className={c('demo-bar')}>
             <i></i>
             <i></i>
             <i></i>
-            <span className={c('demo-url mono')}>
-              <span className={c('dot ok')}></span>demo.brigade.lol
-            </span>
+            {wide ? (
+              // The stories are the window's tabs, as in a browser: picking one loads it.
+              <div className={c('demo-tabs')} role="tablist" aria-label="Stories to watch">
+                {STORIES.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={story === s.id}
+                    className={c('demo-tab')}
+                    onClick={() => {
+                      if (story === s.id) return
+                      setLoaded(false)
+                      setStory(s.id)
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span className={c('demo-url mono')}>
+                <span className={c('dot ok')}></span>demo.brigade.lol
+              </span>
+            )}
             <a href={`${DEMO_URL}/app`} target="_blank" rel="noopener">
               Open full screen <Icon name="arrow" />
             </a>
