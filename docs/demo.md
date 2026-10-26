@@ -32,17 +32,29 @@ request leaves the browser; a reload starts over.
   Any other write succeeds and changes nothing. Attaching or uploading a file says it is
   off in the demo.
 
+- **A calm first visit.** The sample workspace has more than a newcomer should meet (a failed
+  upgrade, a stalled thread, App writes waiting in their raw form). On load, `calm()` in
+  `lib/demo/server.ts` keeps three threads in the lists (`SHOWN_THREADS`), hides Kai, empties
+  Tickets and the pull requests that wait, and drops Home's loose ends. A hidden thread's own
+  page stays, should a link lead there.
+- **Four walkthroughs.** `/app?tour=<story>` plays one (`STORIES` in `lib/demo/tour.ts`): `bug`
+  (fix a customer's bug, the default), `feature` (ship a requested feature and announce it),
+  `call` (prep a sales call) and `payment` (chase a failed payment). Each asks a teammate from
+  Home, then presses what waits for a person (a merge, an email) until the teammate's last
+  reply. The landing page picks one with the buttons above its window
+  (`components/landing/live-demo.tsx`).
 - **What needs a computer** (the app preview, a teammate's screen, a terminal) shows
   what it would be instead (`components/demo-machine.tsx`).
 - **The sign.** A card at the foot of the sidebar (a strip atop the page on a phone) says
-  it is a demo, with "Start free on your Mac" to www.brigade.lol/sign-up
+  it is a demo, with "Sign up free" to www.brigade.lol/sign-up
   (`components/demo-banner.tsx`). Signing out goes there too; `/`, `/sign-in` and
   `/onboarding` open Home, and the pages are `noindex` (`next.config.ts`). In the landing
   page's frame, the sign hides (below).
 
 The scripted replies only show what Brigade does: approvals follow each teammate's
 permissions, a push opens the ticket in the app, account failover stays within one
-provider, full computer use is on a Mac, and only built-in Apps are named.
+provider, full computer use is on a Mac, and only built-in Apps are named. Nothing in the
+demo talks about the visitor's Mac.
 
 ## Recording the fixtures again
 
@@ -94,23 +106,32 @@ opens (`components/landing/live-demo.tsx`), as squad.so and x.ai/bot do. A pictu
 900px, the dashboard would show its phone layout in a small box, so the picture stays, with a
 button that opens the demo on its own. The demo allows only www.brigade.lol (and localhost) to
 frame it (`frame-ancestors`, `next.config.ts`); in the frame, its own sign hides, the page
-around it being the sign, and "Start free on your Mac" opens in the whole window. Take the
+around it being the sign, and "Sign up free" opens in the whole window. Take the
 pictures again after a visible change to Home, without the demo's sign.
 
 ## The walkthrough
 
-In the landing page's frame, the demo opens on `/app?tour`, and plays a walkthrough on its own
-once most of the frame is in view (`lib/demo/tour.ts`, `components/demo-tour.tsx`), as
-x.ai/bot does: a cursor marked "You" (the visitor, signed in as Ada) asks Riley, from Home, to
-fix the export button a customer reported. Riley fixes it and opens a pull request (scripted in
-`lib/demo/scripts.ts`); the cursor merges it, which has Riley draft the replies to the three
-customers who asked; sending waits for a person, and the cursor allows it in the thread; then
-it asks for the same with every bug report, and Riley makes it a routine. It takes about 45 seconds.
+In the landing page's frame, the demo opens on `/app?tour=<story>`, the story the buttons above
+the window picked, and plays a walkthrough on its own once most of the frame is in view
+(`lib/demo/tour.ts`, `components/demo-tour.tsx`), as x.ai/bot does: a cursor marked "You" (the
+visitor, signed in as Ada) asks a teammate from Home, the teammate's side plays as scripted in
+`lib/demo/scripts.ts`, and the cursor presses what waits for a person until it is done:
+
+- `bug`: Riley fixes the export button a customer reported; the cursor merges #153, then
+  allows the replies to the three customers who asked.
+- `feature`: Riley ships the CSV export Jo at Northwind asked for; the cursor merges #154, then
+  allows the email to Jo with a demo recorded in the browser and saved to Drive.
+- `call`: Sam prepares tomorrow's call with Northwind from the calendar, the inbox, Stripe and
+  PostHog; the cursor allows the agenda to Jo.
+- `payment`: Sam finds why Globex's payment failed; the cursor allows the email with the link
+  to pay with a new card.
+
+Each takes 15 to 35 seconds.
 
 It drives the real dashboard with events no person made: the visitor's first click, key,
 scroll or touch in the frame stops it, and a violet "Your turn · click around" pill offers a replay (Home
-again, `/app?tour`, which starts the demo over). A thread the visitor started lives in memory:
+again, `/app?tour=<story>`, which starts the demo over). A thread the visitor started lives in memory:
 reloaded on its address, the demo opens Home instead (`lib/demo/install.ts`). It finds what to click by what the page shows (the teammate menu,
-"Merge #153", "Allow"): a change to those labels needs the same change in `lib/demo/tour.ts`.
-`pnpm test` plays its scenario against the demo's server; the clicks themselves are checked
+"Merge #153", "Merge #154", "Allow"): a change to those labels needs the same change in `lib/demo/tour.ts`.
+`pnpm test` plays every story against the demo's server; the clicks themselves are checked
 by running it in a browser.

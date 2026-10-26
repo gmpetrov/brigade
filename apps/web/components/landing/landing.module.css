@@ -5125,6 +5125,39 @@ a.lgr:hover .tt {
 .live-demo {
   padding: 0 0 96px;
 }
+/* The stories to watch, above the window: one is playing. */
+.demo-stories {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.demo-story {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.demo-story:hover {
+  color: var(--foreground);
+}
+.demo-story[aria-pressed='true'] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+}
 /* A violet light rising from behind the demo window, as if the product lit the page. The
    hero sits above it (.hero's z-index), so it never tints the title or the button. */
 .live-demo .wrap {

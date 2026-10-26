@@ -1,7 +1,8 @@
-// The demo's walkthrough, played on its own in the landing page's frame (demo.brigade.lol/app?tour):
-// a cursor marked "You" (the visitor, as Ada, the workspace's owner) uses the real dashboard, the
-// way squad.so and x.ai/bot show theirs. It asks Riley to fix the export button, merges his pull request, lets the replies to the
-// customers go, and makes it a routine; the teammate's side is scripted in lib/demo/scripts.ts.
+// The demo's walkthroughs, played on their own in the landing page's frame
+// (demo.brigade.lol/app?tour=<story>, the landing page's picker chooses): a cursor marked "You"
+// (the visitor, as Ada, the workspace's owner) uses the real dashboard. It asks a teammate for
+// a job, then approves what waits for it (a merge, an email) until the job is done; the
+// teammate's side is scripted in lib/demo/scripts.ts.
 // It acts through the page's own elements, with events no person made: the first one a person
 // makes (a click, a key, the wheel) stops it, and the dashboard is theirs.
 
@@ -11,6 +12,38 @@ export const TOUR_PARAM = 'tour'
 export const TOUR_ASK =
   'A customer says the export button on Reports does nothing. Fix it and tell the customers who asked.'
 export const TOUR_ROUTINE = 'Great. Do the same for every bug report that comes in.'
+
+/** Each walkthrough: whom the cursor asks, what, the buttons it presses in turn, and the words
+ * in the teammate's last reply that say it's done. */
+export const STORIES = {
+  bug: {
+    teammate: 'Riley',
+    ask: TOUR_ASK,
+    presses: ['Merge #153', 'Allow'],
+    done: 'Sent to the 3 customers',
+  },
+  feature: {
+    teammate: 'Riley',
+    ask: 'Jo at Northwind asked for CSV export on Invoices. Ship it, record a short demo and send it to Jo.',
+    presses: ['Merge #154', 'Allow'],
+    done: 'CSV export is live',
+  },
+  call: {
+    teammate: 'Sam',
+    ask: 'Prep me for tomorrow’s call with Northwind.',
+    presses: ['Allow'],
+    done: 'Agenda for tomorrow',
+  },
+  payment: {
+    teammate: 'Sam',
+    ask: 'Globex’s payment failed in Stripe. Sort it out.',
+    presses: ['Allow'],
+    done: 'Your card expired',
+  },
+} as const
+export type Story = keyof typeof STORIES
+export const storyOf = (value: string | null): Story =>
+  value && value in STORIES ? (value as Story) : 'bug'
 
 export class Stopped extends Error {}
 
@@ -127,9 +160,10 @@ export async function send(stage: Stage, editor: HTMLElement) {
 
 const EDITOR = '[contenteditable="true"]'
 
-/** The walkthrough itself. Resolves once the cursor is done; throws Stopped when a person takes over. */
-export async function play(stage: Stage) {
+/** A walkthrough. Resolves once the cursor is done; throws Stopped when a person takes over. */
+export async function play(stage: Stage, story: Story = 'bug') {
   const { signal } = stage
+  const { teammate, ask, presses, done } = STORIES[story]
   // Home: the message box, and who it goes to.
   const picker = await waitFor(() => last('button[aria-label$="Change teammate"]'), signal)
   await waitFor(() => last(EDITOR), signal)
@@ -137,29 +171,23 @@ export async function play(stage: Stage) {
   await sleep(900, signal)
 
   await press(stage, picker)
-  const riley = await waitFor(() => byText('[role="menuitem"]', 'Riley'), signal)
-  await press(stage, riley)
+  const who = await waitFor(() => byText('[role="menuitem"]', teammate), signal)
+  await press(stage, who)
   const box = await waitFor(() => last(EDITOR), signal)
-  await type(stage, box, TOUR_ASK)
+  await type(stage, box, ask)
   await send(stage, box)
 
-  // The thread: Riley fixes it and offers the merge.
+  // The thread: the teammate works, and each thing that waits for a person gets a yes.
   await waitFor(() => location.pathname.startsWith('/app/threads/'), signal)
-  const merge = await waitFor(() => byText('button', 'Merge #153'), signal, 60_000)
-  await sleep(1400, signal)
-  await press(stage, merge)
-
-  // Once merged, the replies to the customers wait for Ada's OK.
-  const allow = await waitFor(() => byText('button', /^Allow$/), signal, 60_000)
-  await sleep(1600, signal)
-  await press(stage, allow)
-
-  // Sent: then make it a routine.
-  await waitFor(() => byText('p', 'Sent to the 3 customers'), signal, 30_000)
+  for (const label of presses) {
+    const button = await waitFor(
+      () => byText('button', label === 'Allow' ? /^Allow$/ : label),
+      signal,
+      60_000,
+    )
+    await sleep(1500, signal)
+    await press(stage, button)
+  }
+  await waitFor(() => byText('p', done), signal, 30_000)
   await sleep(1500, signal)
-  const reply = await waitFor(() => last(EDITOR), signal)
-  await type(stage, reply, TOUR_ROUTINE)
-  await send(stage, reply)
-  await waitFor(() => byText('p', 'Morning bug reports'), signal, 30_000)
-  await sleep(1200, signal)
 }

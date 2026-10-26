@@ -90,6 +90,7 @@ const norm = (text: string) =>
 export function replyTo(text: string, ctx: Context): Run {
   const said = norm(text)
   const teammate = ctx.thread?.teammate ?? ctx.teammates[0] ?? { id: '', name: 'Riley' }
+  if (/csv export|asked for csv/.test(said)) return shipFeature(ctx, teammate)
   if (/build it|open a pr|annual billing|billing toggle/.test(said))
     return buildToggle(ctx, teammate)
   if (/^not yet/.test(said))
@@ -97,13 +98,15 @@ export function replyTo(text: string, ctx: Context): Run {
   if (/export button|export is broken|export doesn't work/.test(said))
     return fixExport(ctx, teammate)
   if (/every bug report|each bug report/.test(said)) return bugRoutine(ctx, teammate)
+  if (/prep me|call with northwind|brief me/.test(said)) return prepCall(teammate)
+  if (/payment failed|card was declined|failed payment/.test(said)) return failedPayment(teammate)
   if (/summar/.test(said)) return summarize(ctx)
   if (/waiting on me|needs me|my tickets|what's waiting/.test(said)) return waiting(ctx)
   if (/digest|support/.test(said)) return digest(ctx)
   return {
     steps: [
       {
-        say: `In the demo, ${teammate.name} knows a few tasks: building the annual billing toggle on Acme’s pricing page and opening its pull request, fixing the export button on Reports, summarizing a thread, listing what waits on you, and writing the weekly support digest. Pick one below.\n\nIn your own workspace, teammates work on what you ask, on your Mac or a cloud computer, with your own Claude or Codex subscription.`,
+        say: `In the demo, ${teammate.name} knows a few tasks: fixing the export button on Reports, building the CSV export Northwind asked for, prepping your call with Northwind, chasing Globex’s failed payment, building the annual billing toggle on Acme’s pricing page, summarizing a thread, listing what waits on you, and writing the weekly support digest. Pick one below.\n\nIn your own workspace, teammates work on what you ask, on your own computer or a cloud computer, with your own Claude or Codex subscription.`,
         ms: 700,
       },
     ],
@@ -208,7 +211,7 @@ function fixExport(ctx: Context, teammate: Ref): Run {
             subject: 'Re: Export button',
             body: 'Hi,\n\nThanks for telling us: the export button on Reports works again. It was a bug on our side, now fixed and covered by a test.\n\nThe Acme team',
           },
-          target: `email to ${customers.join(', ')}: "Re: Export button"`,
+          target: `email ${customers.join(', ')}: “Re: Export button”`,
         },
         ms: 600,
       },
@@ -270,6 +273,193 @@ function fixExport(ctx: Context, teammate: Ref): Run {
       },
     ],
     merge: 'Merge #153',
+  }
+}
+
+/**
+ * A walkthrough: a customer's request, shipped and announced. Jo at Northwind asked for CSV
+ * export on Invoices; the teammate builds it and opens a pull request. Once a person merges it,
+ * it records a short demo in its browser, saves it to Drive and drafts the email to Jo, which
+ * waits for the person's OK.
+ */
+function shipFeature(ctx: Context, teammate: Ref): Run {
+  const slug = teammate.name.toLowerCase()
+  const jo = 'jo@northwind.test'
+  const announce: Run = {
+    teammateId: teammate.id,
+    steps: [
+      { say: 'Merged: CSV export ships with main. Now a short demo for Jo.', ms: 500 },
+      bash(
+        'pnpm playwright test demo/invoices-export --video on',
+        '✓ invoices › export as CSV (28s)\nVideo: demo/csv-export.webm',
+        1600,
+      ),
+      {
+        tool: tool('google_drive_upload_file'),
+        input: { path: 'demo/csv-export.webm', folder: 'Product demos' },
+        output: { name: 'csv-export.webm', link: 'https://drive.google.com/file/d/demo' },
+        takes: 1000,
+      },
+      {
+        say: 'Recorded a 28-second demo of the export and saved it to Drive. I drafted the email to Jo with the link. Sending waits for your OK.',
+      },
+      {
+        approval: {
+          tool: tool('gmail_send_support_acme_test'),
+          operation: 'gmail_send',
+          input: {
+            to: jo,
+            subject: 'CSV export is live',
+            body: 'Hi Jo,\n\nYou asked for it, it’s live: Invoices now has an Export as CSV button. Here’s a 28-second demo: https://drive.google.com/file/d/demo\n\nThe Acme team',
+          },
+          target: `email ${jo}: “CSV export is live”`,
+        },
+        ms: 600,
+      },
+    ],
+  }
+  return {
+    steps: [
+      { say: 'On it: CSV export on Invoices, then a pull request.', ms: 500 },
+      {
+        tool: tool('gmail_search_support_acme_test'),
+        input: { query: 'from:jo@northwind.test csv' },
+        output: { messages: 1, subject: 'Can we export invoices as CSV?' },
+        takes: 800,
+      },
+      {
+        tool: tool('checkout_repository'),
+        input: { repository: 'acme/web' },
+        output: { directory: 'web', branch: `brigade/${slug}-invoices-csv` },
+        takes: 800,
+      },
+      { file: 'web/app/invoices/export-csv.ts', ms: 900 },
+      { file: 'web/app/invoices/invoices-toolbar.tsx', ms: 700 },
+      { file: 'web/app/invoices/export-csv.test.ts', ms: 600 },
+      bash(
+        'pnpm test invoices',
+        '✓ export-csv › one row per invoice, totals in cents\nTests: 38 passed, 38 total',
+        1300,
+      ),
+      {
+        tool: tool('github_create_pull_request'),
+        input: {
+          repository: 'acme/web',
+          title: 'Invoices: export as CSV',
+          head: `brigade/${slug}-invoices-csv`,
+          base: 'main',
+          review: { wanted: false, reason: 'A new button and a tested helper' },
+        },
+        output: { number: 154, url: 'https://github.com/acme/web/pull/154', state: 'open' },
+        takes: 900,
+        then: () => void ctx.actions.openPull(ctx.threadId, teammate, 'csv', announce),
+      },
+      {
+        say: 'Done: [acme/web#154](https://github.com/acme/web/pull/154) adds Export as CSV on Invoices, one row per invoice, with a test. Once it’s merged, I’ll record a demo and tell Jo.',
+      },
+    ],
+    merge: 'Merge #154',
+  }
+}
+
+/**
+ * A walkthrough: a brief before a sales call, from the calendar, the inbox, Stripe and usage.
+ * It ends on the agenda for Jo, which waits for the person's OK.
+ */
+function prepCall(teammate: Ref): Run {
+  const jo = 'jo@northwind.test'
+  return {
+    teammateId: teammate.id,
+    steps: [
+      { say: 'On it: your call with Northwind.', ms: 500 },
+      {
+        tool: tool('google_calendar_list_events'),
+        input: { query: 'Northwind', days: 2 },
+        output: { events: [{ title: 'Northwind · renewal', start: 'tomorrow 10:00' }] },
+        takes: 800,
+      },
+      {
+        tool: tool('gmail_search_support_acme_test'),
+        input: { query: 'from:northwind.test newer_than:30d' },
+        output: { messages: 6 },
+        takes: 900,
+      },
+      {
+        tool: tool('stripe_api_read'),
+        input: { customer: 'Northwind' },
+        output: { plan: 'Pro', seats: 12, renews: 'in 3 weeks' },
+        takes: 800,
+      },
+      {
+        tool: tool('posthog_query'),
+        input: { query: 'weekly active users, Northwind, last 30 days' },
+        output: { change: '+32%' },
+        takes: 900,
+      },
+      {
+        say: '**Northwind, tomorrow 10:00**\n\n- On **Pro**, 12 seats, renews in 3 weeks.\n- Usage is **up 32%** this month.\n- Jo asked about **SSO** twice in their last 6 emails.\n\nA good moment to offer Business, which has SSO. I drafted a short agenda for Jo. Sending waits for your OK.',
+      },
+      {
+        approval: {
+          tool: tool('gmail_send_support_acme_test'),
+          operation: 'gmail_send',
+          input: {
+            to: jo,
+            subject: 'Agenda for tomorrow',
+            body: 'Hi Jo,\n\nFor tomorrow at 10:00: your renewal, how the team uses Acme today, and SSO, which you asked about.\n\nSee you then,\nAda',
+          },
+          target: `email ${jo}: “Agenda for tomorrow”`,
+        },
+        ms: 600,
+      },
+    ],
+  }
+}
+
+/**
+ * A walkthrough: Stripe says a customer's payment failed. The teammate finds why and drafts
+ * the email with a link to update the card, which waits for the person's OK.
+ */
+function failedPayment(teammate: Ref): Run {
+  const sara = 'sara@globex.test'
+  return {
+    teammateId: teammate.id,
+    steps: [
+      { say: 'On it: Globex’s payment.', ms: 500 },
+      {
+        tool: tool('stripe_api_read'),
+        input: { customer: 'Globex', resource: 'invoices', status: 'open' },
+        output: {
+          invoice: 'in_1Demo',
+          amount: '$490.00',
+          failure: 'card_declined: expired card',
+          hosted_invoice_url: 'https://invoice.stripe.com/i/demo',
+        },
+        takes: 1000,
+      },
+      {
+        tool: tool('gmail_search_support_acme_test'),
+        input: { query: 'from:globex.test billing' },
+        output: { messages: 1, contact: sara },
+        takes: 800,
+      },
+      {
+        say: 'The card on file expired, so October’s $490 invoice failed. I drafted a short email to Sara at Globex with the link to pay it with a new card. Sending waits for your OK.',
+      },
+      {
+        approval: {
+          tool: tool('gmail_send_support_acme_test'),
+          operation: 'gmail_send',
+          input: {
+            to: sara,
+            subject: 'Your card expired',
+            body: 'Hi Sara,\n\nOctober’s invoice ($490) didn’t go through: the card on file expired. You can pay it with a new card here: https://invoice.stripe.com/i/demo\n\nThanks,\nThe Acme team',
+          },
+          target: `email ${sara}: “Your card expired”`,
+        },
+        ms: 600,
+      },
+    ],
   }
 }
 

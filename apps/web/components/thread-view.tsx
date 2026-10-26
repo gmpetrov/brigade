@@ -809,6 +809,14 @@ function receivedEmail(text: string) {
 const json = (value: unknown) =>
   typeof value === 'string' ? value : JSON.stringify(value, null, 2)
 
+/** An approval's question in words, for the writes people meet most: its tool name otherwise. */
+function approvalAsk(toolName: string) {
+  const name = bareToolName(toolName)
+  if (isEmailSend(toolName) || /^gmail_send(_|$)/.test(name)) return 'Allow sending this email?'
+  if (/^github_merge_pull_request(_|$)/.test(name)) return 'Allow merging this pull request?'
+  return null
+}
+
 function toolSummary(toolName: string, input: unknown) {
   const i = (input ?? {}) as Record<string, unknown>
   const value = i.command ?? i.file_path ?? i.path ?? i.pattern ?? i.url ?? i.query ?? i.description
@@ -1211,7 +1219,7 @@ function ToolLine({ toolName, input }: { toolName: string; input: unknown }) {
         <span className="flex-none">{verb}</span>
       ) : (
         <code className="flex-none font-mono text-xs font-medium text-foreground/80">
-          {toolName}
+          {bareToolName(toolName)}
         </code>
       )}
       <span className={cn('min-w-0 truncate', verb && 'font-mono text-xs text-foreground/80')}>
@@ -2223,8 +2231,12 @@ export function ThreadItems({
             <div className="flex items-start gap-2">
               <ShieldAlert aria-hidden className="mt-0.5 size-4 flex-none text-warning" />
               <div className="min-w-0 flex-1 font-semibold">
-                Allow <code className="font-mono text-sm">{item.toolName}</code>{' '}
-                {toolSummary(item.toolName, item.input)}?
+                {approvalAsk(item.toolName) ?? (
+                  <>
+                    Allow <code className="font-mono text-sm">{item.toolName}</code>{' '}
+                    {toolSummary(item.toolName, item.input)}?
+                  </>
+                )}
               </div>
               {item.resolved && (
                 <StatusBadge

@@ -2,7 +2,7 @@
 import { MousePointer2, RotateCcw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { DEMO } from '@/lib/demo/flag'
-import { play, Stopped, TOUR_PARAM } from '@/lib/demo/tour'
+import { play, Stopped, storyOf, TOUR_PARAM } from '@/lib/demo/tour'
 
 /**
  * The demo's walkthrough (lib/demo/tour.ts), on demo.brigade.lol/app?tour: the landing page's
@@ -15,6 +15,7 @@ export function DemoTour() {
 
   useEffect(() => {
     if (!DEMO || !new URLSearchParams(location.search).has(TOUR_PARAM)) return
+    const story = storyOf(new URLSearchParams(location.search).get(TOUR_PARAM))
     setState('waiting')
     const abort = new AbortController()
     const kinds = ['pointerdown', 'keydown', 'wheel', 'touchstart']
@@ -45,7 +46,7 @@ export function DemoTour() {
       window.confirm = () => true
       restore = () => (window.confirm = confirm)
       setState('playing')
-      play({ signal: abort.signal, cursor: cursor.current })
+      play({ signal: abort.signal, cursor: cursor.current }, story)
         .catch((e) => {
           if (!(e instanceof Stopped)) console.error(e)
         })
@@ -91,7 +92,11 @@ export function DemoTour() {
           <button
             type="button"
             // From the start, Home: a reload anywhere else would replay from where it ended.
-            onClick={() => location.assign(`/app?${TOUR_PARAM}`)}
+            onClick={() =>
+              location.assign(
+                `/app?${TOUR_PARAM}=${storyOf(new URLSearchParams(location.search).get(TOUR_PARAM))}`,
+              )
+            }
             className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 font-semibold transition-colors hover:bg-white/30"
           >
             <RotateCcw className="size-3.5" aria-hidden />
