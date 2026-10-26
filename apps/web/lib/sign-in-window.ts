@@ -26,3 +26,27 @@ export async function openSignIn(address: (returnTo?: string) => Promise<string>
     throw error
   }
 }
+
+/** What the sign-in tab came back with: the account signed in to, or why it was not. */
+export type SignInResult = { connected?: string; error?: string }
+
+const CHANNEL = 'brigade-sign-in'
+
+/**
+ * The sign-in tab tells the pages that wait for it. Only a sign-in that went through names an
+ * account: a change to the account's settings meanwhile says nothing.
+ */
+export function tellSignIn(result: SignInResult) {
+  if (typeof BroadcastChannel === 'undefined') return
+  const channel = new BroadcastChannel(CHANNEL)
+  channel.postMessage(result)
+  channel.close()
+}
+
+/** Listen for the sign-in tab's result; returns the cleanup. */
+export function onSignIn(listener: (result: SignInResult) => void) {
+  if (typeof BroadcastChannel === 'undefined') return () => {}
+  const channel = new BroadcastChannel(CHANNEL)
+  channel.onmessage = (event: MessageEvent<SignInResult>) => listener(event.data)
+  return () => channel.close()
+}

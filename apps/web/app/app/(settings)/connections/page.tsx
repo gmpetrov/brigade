@@ -7,6 +7,7 @@ import { AppSheet } from '@/components/app-sheet'
 import { ConnectApps, type Open } from '@/components/connect-apps'
 import { Skills } from '@/components/skills'
 import { useApi, type ConnectionsResponse, type Trigger, type TriggerCatalog } from '@/lib/api'
+import { tellSignIn } from '@/lib/sign-in-window'
 
 /** Why an account was not connected, from the error a provider's redirect brought back. */
 const CONNECT_ERRORS: Record<string, string> = {
@@ -35,15 +36,18 @@ export default function AppsPage() {
 function Apps() {
   const params = useSearchParams()
   // Back from a provider in the sign-in tab: the page that opened it shows the account.
-  if (params.get('popup')) return <SignedIn error={params.get('error')} />
+  if (params.get('popup'))
+    return <SignedIn connected={params.get('connected')} error={params.get('error')} />
   return <AppsList />
 }
 
 /** The sign-in tab's last page: closes itself, or says to. */
-function SignedIn({ error }: { error: string | null }) {
+function SignedIn({ connected, error }: { connected: string | null; error: string | null }) {
   useEffect(() => {
+    // The page that opened the tab learns which account signed in, before the tab closes.
+    tellSignIn({ ...(connected ? { connected } : {}), ...(error ? { error } : {}) })
     if (!error) window.close()
-  }, [error])
+  }, [connected, error])
   return (
     <div className="flex flex-col gap-2 py-16 text-center">
       <p className="font-semibold">{error ? 'The account was not connected.' : 'Connected.'}</p>
