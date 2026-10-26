@@ -608,7 +608,9 @@ export async function threadAddress(
     include: { domain: true },
   })
   if (!address) return null
-  if (address.kind === 'inbox') return (await senderOfBox(db, address, null)).address
+  // The address it writes as: the workspace's domain's when it has one (sending waits for it).
+  if (address.publicAddress) return address.publicAddress
+  if (address.kind === 'inbox') return addressOf(address.name)
   return addressOf(await variantLocal(db, address, projectId))
 }
 

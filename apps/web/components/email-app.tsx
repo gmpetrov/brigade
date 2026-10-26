@@ -85,7 +85,7 @@ export function AgentEmailRow({
       <span className="flex min-w-0 flex-[1_1_12rem] flex-col">
         <span className="truncate text-sm font-semibold">Mailbox</span>
         <span className="truncate font-mono text-xs text-muted-foreground">
-          {on && mine ? mine.address : 'No address'}
+          {on && mine ? (mine.publicAddress ?? mine.address) : 'No address'}
         </span>
       </span>
       {on && mine ? (

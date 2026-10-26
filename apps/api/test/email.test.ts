@@ -1482,12 +1482,12 @@ describe('a conversation’s thread that cannot take more now', { skip }, () => 
   })
 })
 
-describe('a shared mailbox made for an address people write to', { skip }, () => {
-  test('a refused address leaves no mailbox; one turned off lets its address go', async () => {
+describe('the workspace’s own domains, and mailboxes’ addresses on them', { skip }, () => {
+  test('a domain receives directly or by forwarding; any mailbox writes as its address there, never as Brigade’s', async () => {
     const db = scoped(a)
     const { auth } = await import('../src/auth.js')
     const { email } = await import('../src/routes/email.js')
-    const addresses = await import('../src/mail/addresses.js')
+    const { senderOfBox } = await import('../src/mail/addresses.js')
     const realSession = auth.api.getSession
     const previousFetch = globalThis.fetch
     ;(auth.api as any).getSession = async () => ({
@@ -1498,47 +1498,467 @@ describe('a shared mailbox made for an address people write to', { skip }, () =>
         activeWorkspaceId: a.workspaceId,
       },
     })
-    let resendRefuses = true
-    globalThis.fetch = (async (input: string | URL | Request) => {
-      if (!String(input).includes('/domains')) throw new Error(`unexpected request ${input}`)
-      return resendRefuses
-        ? json({ name: 'validation_error', message: 'Domain already exists' }, 422)
-        : json({ id: `dom-${id}`, name: 'freed', status: 'not_started', records: [] })
+    const forward = `forward-${id}.test`
+    const direct = `direct-${id}.test`
+    const refused = `refused-${id}.test`
+    const mx: Record<string, string[]> = {
+      [forward]: ['1 smtp.google.com.'],
+      [refused]: [],
+      [direct]: [],
+    }
+    const created: { name: string; receiving: string }[] = []
+    const removed: string[] = []
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.hostname === 'cloudflare-dns.com')
+        return json({
+          Status: 0,
+          Answer: (mx[url.searchParams.get('name')!] ?? []).map((data) => ({ type: 15, data })),
+        })
+      if (url.pathname === '/domains' && init?.method !== 'GET') {
+        const body = JSON.parse(String(init?.body)) as {
+          name: string
+          capabilities: { receiving: string }
+        }
+        if (body.name === refused)
+          return json({ name: 'validation_error', message: 'Domain already exists' }, 422)
+        created.push({ name: body.name, receiving: body.capabilities.receiving })
+        return json({ id: `dom-${body.name}`, name: body.name, status: 'not_started', records: [] })
+      }
+      if (url.pathname.startsWith('/domains/') && init?.method === 'DELETE') {
+        removed.push(url.pathname)
+        return json({ id: url.pathname.split('/')[2] })
+      }
+      // The rest of Resend (reading a received mail): the suite's own fake.
+      return previousFetch(input, init)
     }) as typeof fetch
-    const inboxes = () => db.mailAddress.count({ where: { kind: 'inbox', projectId } })
-    const add = (publicAddress: string) =>
-      email.request('/inboxes', {
-        method: 'POST',
+    const call = (path: string, method = 'GET', body?: unknown) =>
+      email.request(path, {
+        method,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ projectId, label: 'Support', publicAddress }),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       })
     try {
-      const before = await inboxes()
-      // Resend refuses the domain (another product's on the shared account): nothing is left.
-      const refused = await add(`support@refused-${id}.test`)
-      assert.equal(refused.status, 409, await refused.text())
-      // One of Brigade's own addresses: refused before anything is made.
-      const brigade = await add(`someone@mails.brigade.test`)
-      assert.equal(brigade.status, 400, await brigade.text())
-      assert.equal(await inboxes(), before)
+      // Where its mail goes now says how Brigade receives it.
+      const looked = (await (await call(`/domains/lookup?name=${forward}`)).json()) as {
+        suggested: string
+        mx: string[]
+      }
+      assert.deepEqual([looked.suggested, looked.mx], ['forward', ['smtp.google.com']])
+      assert.equal(
+        ((await (await call(`/domains/lookup?name=${direct}`)).json()) as { suggested: string })
+          .suggested,
+        'direct',
+      )
+      // Receiving directly would take a provider's mail away: refused.
+      assert.equal(
+        (await call('/domains', 'POST', { name: forward, receiving: 'direct' })).status,
+        400,
+      )
+      assert.equal((await call('/domains', 'POST', { name: 'mails.brigade.test' })).status, 400)
+      assert.equal((await call('/domains', 'POST', { name: refused })).status, 409)
+      assert.equal((await call('/domains', 'POST', { name: forward })).status, 201)
+      assert.equal((await call('/domains', 'POST', { name: direct })).status, 201)
+      assert.equal((await call('/domains', 'POST', { name: forward })).status, 409)
+      assert.deepEqual(created, [
+        { name: forward, receiving: 'disabled' },
+        { name: direct, receiving: 'enabled' },
+      ])
 
-      // An inbox turned off kept its address: a new one takes it.
+      // An agent's address on a domain: not before it is added, then its own.
+      const rileys = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+      const setAddress = (address: string | null) =>
+        call(`/addresses/${rileys.id}`, 'PATCH', { address })
+      const unknown = await setAddress(`riley@unknown-${id}.test`)
+      assert.equal(unknown.status, 400)
+      assert.match(await unknown.text(), /Add unknown-.* first/)
+      assert.equal((await setAddress(`riley@${direct}`)).status, 200)
+
+      // It writes as it only: until its domain is verified, nothing goes out.
+      const load = () =>
+        db.mailAddress.findFirstOrThrow({ where: { id: rileys.id }, include: { domain: true } })
+      await assert.rejects(senderOfBox(db, await load(), projectId), /cannot send yet/)
+      await db.mailDomain.updateMany({ where: { name: direct }, data: { status: 'verified' } })
+      assert.equal((await senderOfBox(db, await load(), projectId)).address, `riley@${direct}`)
+
+      // Mail to it on a direct domain arrives in its mailbox; on a forwarded one, only through
+      // the forward (to its address on Brigade's domain).
+      const [arrived] = await arrive(mail({ to: [`riley@${direct}`], subject: 'Direct' }))
+      assert.equal(arrived?.addressId, rileys.id)
+      const notForwarded = mail({ to: [`riley@${forward}`] })
+      assert.equal(await inbound.received(notForwarded), 0)
+
+      // A shared mailbox on a domain not added: refused before anything is made.
+      const inboxes = () => db.mailAddress.count({ where: { kind: 'inbox', projectId } })
+      const before = await inboxes()
+      const notAdded = await call('/inboxes', 'POST', {
+        projectId,
+        label: 'Support',
+        publicAddress: `support@unknown-${id}.test`,
+      })
+      assert.equal(notAdded.status, 400)
+      assert.equal(await inboxes(), before)
+      // A turned-off mailbox kept its address: a new one takes it.
       const old = await addresses.createInbox(db, ws(a), { projectId, label: 'Old' })
       await db.mailAddress.updateMany({
         where: { id: old.id },
-        data: { publicAddress: `help@freed-${id}.test`, releasedAt: new Date() },
+        data: { publicAddress: `help@${forward}`, releasedAt: new Date() },
       })
-      resendRefuses = false
-      const made = await add(`help@freed-${id}.test`)
+      const made = await call('/inboxes', 'POST', {
+        projectId,
+        label: 'Help',
+        publicAddress: `help@${forward}`,
+      })
       const body = (await made.json()) as { id: string; publicAddress: string }
       assert.equal(made.status, 201, JSON.stringify(body))
-      assert.equal(body.publicAddress, `help@freed-${id}.test`)
+      assert.equal(body.publicAddress, `help@${forward}`)
       assert.equal(
         (await db.mailAddress.findFirstOrThrow({ where: { id: old.id } })).publicAddress,
         null,
       )
+
+      // A domain goes only once no mailbox has an address on it.
+      const domains = (await (await call('/domains')).json()) as { id: string; name: string }[]
+      const directRow = domains.find((d) => d.name === direct)!
+      assert.equal((await call(`/domains/${directRow.id}`, 'DELETE')).status, 409)
+      assert.equal((await setAddress(null)).status, 200)
+      assert.equal((await call(`/domains/${directRow.id}`, 'DELETE')).status, 204)
+      assert.deepEqual(removed, [`/domains/dom-${direct}`])
     } finally {
       ;(auth.api as any).getSession = realSession
+      globalThis.fetch = previousFetch
+    }
+  })
+  test('replies come back to the project that wrote, a domain only claimed receives nothing, and DNS or Resend failing changes nothing', async () => {
+    const db = scoped(a)
+    const domains = await import('../src/mail/domains.js')
+    const previousFetch = globalThis.fetch
+    const name = `replies-${id}.test`
+    const claimed = `claimed-${id}.test`
+    let deleting: 'fails' | 'gone' | 'ok' = 'fails'
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.hostname === 'cloudflare-dns.com') {
+        const asked = url.searchParams.get('name')!
+        return json({
+          Status: asked.startsWith('servfail-') ? 2 : asked.startsWith('nx-') ? 3 : 0,
+          Answer: [],
+        })
+      }
+      if (url.pathname === '/domains' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { name: string }
+        return json({ id: `dom-${body.name}`, name: body.name, status: 'not_started', records: [] })
+      }
+      if (url.pathname.startsWith('/domains/') && init?.method === 'DELETE') {
+        if (deleting === 'fails') throw new Error('Resend unreachable')
+        if (deleting === 'gone') return json({ message: 'Domain not found' }, 404)
+        return json({ id: url.pathname.split('/')[2] })
+      }
+      return previousFetch(input, init)
+    }) as typeof fetch
+    try {
+      // A resolver's failure is not a domain without mail: nothing is suggested from it.
+      await assert.rejects(domains.lookupDomain(`servfail-${id}.test`), /DNS could not be read/)
+      await assert.rejects(domains.lookupDomain(`nx-${id}.test`), /not in DNS/)
+
+      // Riley writes from a Lovarank thread as riley@ its domain; the reply, to that one address
+      // with no project, goes back to Lovarank's conversation and its thread.
+      await domains.addDomain(db, ws(a), { name, receiving: 'direct' })
+      await db.mailDomain.updateMany({ where: { name }, data: { status: 'verified' } })
+      const rileys = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+      await domains.setPublicAddress(db, ws(a), rileys.id, `riley@${name}`)
+      const address = await db.mailAddress.findFirstOrThrow({
+        where: { id: rileys.id },
+        include: { domain: true },
+      })
+      const session = await thread('member', { projectId })
+      const write = async (subject: string, messageId: string) => {
+        const sent = await outbound.sendDraft(db, a, {
+          address,
+          thread: session,
+          teammateId: riley.id,
+          draft: { to: ['partner@outside.test'], subject, text: 'Shall we?' },
+          callId: randomUUID(),
+        })
+        const out = await prisma.mailMessage.findUniqueOrThrow({ where: { id: sent.id } })
+        assert.equal(out.fromAddress, `riley@${name}`)
+        await outbound.statusChanged('email.sent', {
+          email_id: out.resendId!,
+          message_id: messageId,
+        })
+        return out
+      }
+      const first = await write('Directly', `<direct-${id}@ses.test>`)
+      const [direct] = await arrive(
+        mail({
+          to: [`riley@${name}`],
+          from: 'partner@outside.test',
+          subject: 'Re: Directly',
+          headers: { 'in-reply-to': `<direct-${id}@ses.test>` },
+        }),
+      )
+      assert.deepEqual(
+        [direct!.projectId, direct!.box, direct!.conversationId, direct!.sessionId],
+        [projectId, first.box, first.conversationId, session.id],
+      )
+      // Forwarded to its address on Brigade's domain: the same.
+      const second = await write('Forwarded', `<forwarded-${id}@ses.test>`)
+      const [forwarded] = await arrive(
+        mail({
+          to: [`${rileys.name}@mails.brigade.test`],
+          from: 'partner@outside.test',
+          subject: 'Re: Forwarded',
+          headers: { references: `<forwarded-${id}@ses.test>` },
+        }),
+      )
+      assert.deepEqual(
+        [forwarded!.projectId, forwarded!.conversationId, forwarded!.sessionId],
+        [projectId, second.conversationId, session.id],
+      )
+      // New mail to it answers nothing: no project.
+      const [fresh] = await arrive(mail({ to: [`riley@${name}`], subject: 'Hello' }))
+      assert.equal(fresh!.projectId, null)
+
+      // A domain claimed but never verified gets no copy of mail that only names its address.
+      await domains.addDomain(db, ws(a), { name: claimed, receiving: 'direct' })
+      const desk = await addresses.createInbox(db, ws(a), { projectId, label: 'Desk' })
+      await domains.setPublicAddress(db, ws(a), desk.id, `desk@${claimed}`)
+      const named = await arrive(
+        mail({ to: [`${rileys.name}@mails.brigade.test`, `desk@${claimed}`], subject: 'Both' }),
+      )
+      assert.deepEqual(
+        named.map((m) => m.addressId),
+        [rileys.id],
+      )
+      assert.equal(await inbound.received(mail({ to: [`desk@${claimed}`] })), 0)
+
+      // Resend not removing a domain leaves it here, to try again; gone there already, it goes.
+      const claimedRow = await db.mailDomain.findFirstOrThrow({ where: { name: claimed } })
+      await domains.setPublicAddress(db, ws(a), desk.id, null)
+      await assert.rejects(domains.removeDomain(db, ws(a), claimedRow.id), /try again/)
+      assert.ok(await db.mailDomain.findFirst({ where: { id: claimedRow.id } }))
+      deleting = 'gone'
+      await domains.removeDomain(db, ws(a), claimedRow.id)
+      assert.equal(await db.mailDomain.findFirst({ where: { id: claimedRow.id } }), null)
+
+      await domains.setPublicAddress(db, ws(a), rileys.id, null)
+    } finally {
+      globalThis.fetch = previousFetch
+    }
+  })
+  test('a domain another workspace added is theirs once verified, for three days, or while its records are in its DNS; else it is taken from them, a claim at a time', async () => {
+    const domains = await import('../src/mail/domains.js')
+    const previousFetch = globalThis.fetch
+    const name = `taken-${id}.test`
+    const dkim = `resend._domainkey.${name}`
+    let txt: { Status: number; Answer?: { type: number; data: string }[] } = { Status: 3 }
+    let deleting: 'fails' | 'pauses' | 'ok' = 'ok'
+    // Resend's DELETE held until the test lets it go.
+    const holdDelete = () => ({
+      paused: Promise.withResolvers<void>(),
+      resume: Promise.withResolvers<void>(),
+    })
+    let gate = holdDelete()
+    const removed: string[] = []
+    let resendSays = 'pending'
+    const records = [
+      {
+        record: 'DKIM',
+        type: 'TXT',
+        name: 'resend._domainkey',
+        value: 'p=KEY A',
+        status: 'pending',
+      },
+    ]
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.hostname === 'cloudflare-dns.com')
+        return json(url.searchParams.get('name') === dkim ? txt : { Status: 0, Answer: [] })
+      const domain = /^\/domains\/([^/]+)/.exec(url.pathname)?.[1]
+      if (url.pathname === '/domains' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { name: string }
+        return json({
+          id: `dom-${body.name}-${removed.length}`,
+          name: body.name,
+          status: 'not_started',
+          records,
+        })
+      }
+      if (domain && url.pathname.endsWith('/verify')) return json({ id: domain })
+      if (domain && init?.method === 'DELETE') {
+        if (deleting === 'fails') throw new Error('Resend unreachable')
+        if (deleting === 'pauses') {
+          gate.paused.resolve()
+          await gate.resume.promise
+        }
+        removed.push(domain)
+        return json({ id: domain })
+      }
+      if (domain) return json({ id: domain, status: resendSays, records })
+      return previousFetch(input, init)
+    }) as typeof fetch
+    try {
+      const dbA = scoped(a)
+      const dbB = scoped(b)
+      const first = await domains.addDomain(dbA, ws(a), { name, receiving: 'direct' })
+      const desk = await addresses.createInbox(dbA, ws(a), { projectId, label: 'Taken' })
+      await domains.setPublicAddress(dbA, ws(a), desk.id, `desk@${name}`)
+      const status = async () =>
+        (await prisma.mailDomain.findUnique({ where: { id: first.id } }))?.status
+      // As it was (its check, started for A when its key was found, may have made it pending).
+      const asItWas = async () => assert.ok(['failed', 'pending'].includes((await status())!))
+      // Within its three days: A's.
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /has until .* to verify it/)
+      await prisma.mailDomain.updateMany({
+        where: { id: first.id },
+        data: { createdAt: new Date(Date.now() - 4 * 86_400_000), status: 'failed' },
+      })
+      // Past them, but A's DKIM key is in its DNS (split in quoted strings, as TXT is): A's,
+      // given back as it was.
+      txt = { Status: 0, Answer: [{ type: 16, data: '"p=KEY" " A"' }] }
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /it is theirs/)
+      await asItWas()
+      // DNS failing proves nothing either way: nothing is taken.
+      txt = { Status: 2 }
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /DNS could not be read/)
+      await asItWas()
+      // Resend not removing it: nothing is taken.
+      txt = { Status: 3 }
+      deleting = 'fails'
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /try again/)
+      await asItWas()
+      // Verified meanwhile by A's own check: A's for good.
+      resendSays = 'verified'
+      await domains.checkDomain(dbA, first.id)
+      deleting = 'ok'
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /used by another workspace/)
+      assert.equal(removed.length, 0)
+
+      // A takeover under way holds its claim: A's check cannot mark it verified meanwhile, a
+      // second workspace's add cannot start another, and no mailbox of A's gets an address on it.
+      await prisma.mailDomain.updateMany({ where: { id: first.id }, data: { status: 'pending' } })
+      const late = await addresses.createInbox(dbA, ws(a), { projectId, label: 'Late' })
+      deleting = 'pauses'
+      const taking = domains.addDomain(dbB, ws(b), { name })
+      await gate.paused.promise
+      await assert.rejects(domains.checkDomain(dbA, first.id), /being taken over/)
+      assert.equal(await status(), 'claimed')
+      await assert.rejects(domains.addDomain(dbB, ws(b), { name }), /used by another workspace/)
+      await assert.rejects(
+        domains.setPublicAddress(dbA, ws(a), late.id, `late@${name}`),
+        /being taken over/,
+      )
+      // One given just before the claim, still being written: it goes with the domain.
+      await prisma.mailAddress.update({
+        where: { id: late.id },
+        data: { publicAddress: `late@${name}`, domainId: first.id },
+      })
+      gate.resume.resolve()
+      const taken = await taking
+      assert.equal(taken.workspaceId, b.workspaceId)
+      assert.deepEqual(removed, [first.resendDomainId])
+      assert.equal(await status(), undefined)
+      for (const mailbox of [desk.id, late.id]) {
+        const lost = await prisma.mailAddress.findUniqueOrThrow({ where: { id: mailbox } })
+        assert.deepEqual([lost.publicAddress, lost.domainId], [null, null])
+      }
+      // One written after its domain went cannot point at it.
+      await assert.rejects(
+        prisma.mailAddress.update({
+          where: { id: late.id },
+          data: { publicAddress: `late@${name}`, domainId: first.id },
+        }),
+      )
+      // B gets the address A's mailbox had.
+      const bDesk = await addresses.createInbox(dbB, ws(b), {
+        projectId: (await prisma.project.create({ data: { ...b, name: 'Taker' } })).id,
+        label: 'Desk',
+      })
+      await domains.setPublicAddress(dbB, ws(b), bDesk.id, `late@${name}`)
+      assert.ok(
+        await prisma.auditEntry.findFirst({
+          where: { workspaceId: a.workspaceId, action: 'email.domain.taken_over' },
+        }),
+      )
+      await domains.setPublicAddress(dbB, ws(b), bDesk.id, null)
+      await domains.removeDomain(dbB, ws(b), taken.id)
+
+      // A takeover whose claim ran out while Resend held it (its call is bounded well within it,
+      // so this models a stopped clock) settles nothing: the domain A verified meanwhile stays A's,
+      // with its mailbox's address.
+      const kept = `kept-${id}.test`
+      resendSays = 'pending'
+      deleting = 'ok'
+      const second = await domains.addDomain(dbA, ws(a), { name: kept, receiving: 'direct' })
+      await domains.setPublicAddress(dbA, ws(a), desk.id, `desk@${kept}`)
+      await prisma.mailDomain.updateMany({
+        where: { id: second.id },
+        data: { createdAt: new Date(Date.now() - 4 * 86_400_000) },
+      })
+      gate = holdDelete()
+      deleting = 'pauses'
+      const stale = domains.addDomain(dbB, ws(b), { name: kept })
+      await gate.paused.promise
+      await prisma.mailDomain.updateMany({
+        where: { id: second.id },
+        data: { checkedAt: new Date(Date.now() - 11 * 60_000) },
+      })
+      resendSays = 'verified'
+      assert.equal((await domains.checkDomain(dbA, second.id)).status, 'verified')
+      gate.resume.resolve()
+      await assert.rejects(stale, /used by another workspace/)
+      assert.equal(
+        (await prisma.mailDomain.findUniqueOrThrow({ where: { id: second.id } })).status,
+        'verified',
+      )
+      assert.equal(
+        (await prisma.mailAddress.findUniqueOrThrow({ where: { id: desk.id } })).publicAddress,
+        `desk@${kept}`,
+      )
+      await domains.setPublicAddress(dbA, ws(a), desk.id, null)
+
+      // Cut off as it settles (here: its addresses' update refused by the database): nothing is
+      // left half done, the domain is as it was, and adding it again finishes the takeover.
+      const cut = `cut-${id}.test`
+      resendSays = 'pending'
+      deleting = 'ok'
+      const third = await domains.addDomain(dbA, ws(a), { name: cut, receiving: 'direct' })
+      await domains.setPublicAddress(dbA, ws(a), desk.id, `desk@${cut}`)
+      await prisma.mailDomain.updateMany({
+        where: { id: third.id },
+        data: { createdAt: new Date(Date.now() - 4 * 86_400_000) },
+      })
+      const trigger = `brigade_test_cut_${id.replace(/-/g, '')}`
+      await prisma.$executeRawUnsafe(
+        `CREATE FUNCTION ${trigger}() RETURNS trigger AS $$ BEGIN IF OLD."publicAddress" = 'desk@${cut}' AND NEW."publicAddress" IS NULL THEN RAISE EXCEPTION 'cut off'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql`,
+      )
+      await prisma.$executeRawUnsafe(
+        `CREATE TRIGGER ${trigger} BEFORE UPDATE ON "MailAddress" FOR EACH ROW EXECUTE FUNCTION ${trigger}()`,
+      )
+      try {
+        await assert.rejects(domains.addDomain(dbB, ws(b), { name: cut }), /cut off/)
+      } finally {
+        await prisma.$executeRawUnsafe(`DROP TRIGGER ${trigger} ON "MailAddress"`)
+        await prisma.$executeRawUnsafe(`DROP FUNCTION ${trigger}()`)
+      }
+      assert.equal(
+        (await prisma.mailDomain.findUniqueOrThrow({ where: { id: third.id } })).status,
+        'pending',
+      )
+      assert.equal(
+        (await prisma.mailAddress.findUniqueOrThrow({ where: { id: desk.id } })).publicAddress,
+        `desk@${cut}`,
+      )
+      const retaken = await domains.addDomain(dbB, ws(b), { name: cut })
+      assert.equal(
+        (await prisma.mailAddress.findUniqueOrThrow({ where: { id: desk.id } })).publicAddress,
+        null,
+      )
+      await domains.setPublicAddress(dbB, ws(b), bDesk.id, `desk@${cut}`)
+      await domains.setPublicAddress(dbB, ws(b), bDesk.id, null)
+      await domains.removeDomain(dbB, ws(b), retaken.id)
+    } finally {
+      gate.resume.resolve()
       globalThis.fetch = previousFetch
     }
   })
