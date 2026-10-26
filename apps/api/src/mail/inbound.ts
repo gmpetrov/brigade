@@ -226,7 +226,11 @@ async function readMail(db: ScopedDb, scope: Scope, row: Row): Promise<Row> {
   const inReplyTo = messageIds(headerOf(email.headers, 'in-reply-to'))[0] ?? null
   const references = messageIds(headerOf(email.headers, 'references')).slice(-50)
   const sender = await senderOf(db, scope, email.from, fromName, email.authentication)
-  const conversationId = await conversationOf(db, row, [inReplyTo, ...references])
+  const project = await replyProject(db, row, [inReplyTo, ...references])
+  const conversationId = await conversationOf(db, project ? { ...row, ...project } : row, [
+    inReplyTo,
+    ...references,
+  ])
   const attachments = (email.attachments ?? []).map((a) => ({
     id: a.id,
     filename: a.filename,
@@ -253,6 +257,7 @@ async function readMail(db: ScopedDb, scope: Scope, row: Row): Promise<Row> {
       messageId: email.message_id ?? row.messageId,
       inReplyTo,
       references,
+      ...(project ?? {}),
       conversationId,
       sender: sender.kind,
       memberId: sender.memberId ?? null,
@@ -262,6 +267,36 @@ async function readMail(db: ScopedDb, scope: Scope, row: Row): Promise<Row> {
   })
   const read = (await loadRow(row.id)) as Row
   return Object.assign(read, { senderLine: sender.line, senderInfo: sender })
+}
+
+/**
+ * An agent with an address on the workspace's own domain writes as it from every project, but mail
+ * to it comes in once, with no project (directly, or forwarded to its address on Brigade's domain).
+ * A reply to what it wrote from a project goes back to that project's box: found by the Message-ID
+ * of its own mail there, sent as that address, so nothing else crosses from one project to another.
+ */
+async function replyProject(db: ScopedDb, row: Row, ids: (string | null)[]) {
+  const own = row.address.publicAddress
+  const wanted = ids.filter((id): id is string => !!id)
+  if (!own || row.address.kind !== 'agent' || row.projectId || row.aliasId || !wanted.length)
+    return null
+  const sent = await db.mailMessage.findMany({
+    where: {
+      addressId: row.addressId,
+      direction: 'out',
+      fromAddress: own,
+      projectId: { not: null },
+      messageId: { in: wanted },
+    },
+    select: { messageId: true, box: true, projectId: true },
+  })
+  const match = [wanted[0]!, ...wanted.slice(1).reverse()]
+    .map((id) => sent.find((m) => m.messageId === id))
+    .find((m) => m !== undefined)
+  if (!match) return null
+  // Sent to the project's own variant too: that copy is the project's already.
+  if (await db.mailMessage.count({ where: { resendId: row.resendId, box: match.box } })) return null
+  return { box: match.box, projectId: match.projectId }
 }
 
 /**

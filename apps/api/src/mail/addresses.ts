@@ -67,10 +67,17 @@ export async function boxOf(local: string): Promise<Box | null> {
  * The box an address on one of a workspace's own domains means, when that domain receives
  * directly (its MX points to Brigade): the mailbox whose address it is, itself. Forwarded domains'
  * mail arrives at the mailbox's address on Brigade's domain instead, so it is not looked up here.
+ * Only once the domain is verified: its records in its DNS show it is the workspace's. A domain
+ * only claimed would otherwise get a copy of any mail that names one of its addresses, sent to
+ * another workspace's mailbox.
  */
 export async function directBoxOf(address: string): Promise<Box | null> {
   const row = await prisma.mailAddress.findFirst({
-    where: { publicAddress: address, ...live, domain: { receiving: 'direct' } },
+    where: {
+      publicAddress: address,
+      ...live,
+      domain: { receiving: 'direct', status: 'verified' },
+    },
   })
   return row ? { address: row, projectId: null, alias: null, local: row.name } : null
 }

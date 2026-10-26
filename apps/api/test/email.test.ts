@@ -1629,4 +1629,121 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
       globalThis.fetch = previousFetch
     }
   })
+  test('replies come back to the project that wrote, a domain only claimed receives nothing, and DNS or Resend failing changes nothing', async () => {
+    const db = scoped(a)
+    const domains = await import('../src/mail/domains.js')
+    const previousFetch = globalThis.fetch
+    const name = `replies-${id}.test`
+    const claimed = `claimed-${id}.test`
+    let deleting: 'fails' | 'gone' | 'ok' = 'fails'
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.hostname === 'cloudflare-dns.com') {
+        const asked = url.searchParams.get('name')!
+        return json({
+          Status: asked.startsWith('servfail-') ? 2 : asked.startsWith('nx-') ? 3 : 0,
+          Answer: [],
+        })
+      }
+      if (url.pathname === '/domains' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { name: string }
+        return json({ id: `dom-${body.name}`, name: body.name, status: 'not_started', records: [] })
+      }
+      if (url.pathname.startsWith('/domains/') && init?.method === 'DELETE') {
+        if (deleting === 'fails') throw new Error('Resend unreachable')
+        if (deleting === 'gone') return json({ message: 'Domain not found' }, 404)
+        return json({ id: url.pathname.split('/')[2] })
+      }
+      return previousFetch(input, init)
+    }) as typeof fetch
+    try {
+      // A resolver's failure is not a domain without mail: nothing is suggested from it.
+      await assert.rejects(domains.lookupDomain(`servfail-${id}.test`), /DNS could not be read/)
+      await assert.rejects(domains.lookupDomain(`nx-${id}.test`), /not in DNS/)
+
+      // Riley writes from a Lovarank thread as riley@ its domain; the reply, to that one address
+      // with no project, goes back to Lovarank's conversation and its thread.
+      await domains.addDomain(db, ws(a), { name, receiving: 'direct' })
+      await db.mailDomain.updateMany({ where: { name }, data: { status: 'verified' } })
+      const rileys = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+      await domains.setPublicAddress(db, ws(a), rileys.id, `riley@${name}`)
+      const address = await db.mailAddress.findFirstOrThrow({
+        where: { id: rileys.id },
+        include: { domain: true },
+      })
+      const session = await thread('member', { projectId })
+      const write = async (subject: string, messageId: string) => {
+        const sent = await outbound.sendDraft(db, a, {
+          address,
+          thread: session,
+          teammateId: riley.id,
+          draft: { to: ['partner@outside.test'], subject, text: 'Shall we?' },
+          callId: randomUUID(),
+        })
+        const out = await prisma.mailMessage.findUniqueOrThrow({ where: { id: sent.id } })
+        assert.equal(out.fromAddress, `riley@${name}`)
+        await outbound.statusChanged('email.sent', {
+          email_id: out.resendId!,
+          message_id: messageId,
+        })
+        return out
+      }
+      const first = await write('Directly', `<direct-${id}@ses.test>`)
+      const [direct] = await arrive(
+        mail({
+          to: [`riley@${name}`],
+          from: 'partner@outside.test',
+          subject: 'Re: Directly',
+          headers: { 'in-reply-to': `<direct-${id}@ses.test>` },
+        }),
+      )
+      assert.deepEqual(
+        [direct!.projectId, direct!.box, direct!.conversationId, direct!.sessionId],
+        [projectId, first.box, first.conversationId, session.id],
+      )
+      // Forwarded to its address on Brigade's domain: the same.
+      const second = await write('Forwarded', `<forwarded-${id}@ses.test>`)
+      const [forwarded] = await arrive(
+        mail({
+          to: [`${rileys.name}@mails.brigade.test`],
+          from: 'partner@outside.test',
+          subject: 'Re: Forwarded',
+          headers: { references: `<forwarded-${id}@ses.test>` },
+        }),
+      )
+      assert.deepEqual(
+        [forwarded!.projectId, forwarded!.conversationId, forwarded!.sessionId],
+        [projectId, second.conversationId, session.id],
+      )
+      // New mail to it answers nothing: no project.
+      const [fresh] = await arrive(mail({ to: [`riley@${name}`], subject: 'Hello' }))
+      assert.equal(fresh!.projectId, null)
+
+      // A domain claimed but never verified gets no copy of mail that only names its address.
+      await domains.addDomain(db, ws(a), { name: claimed, receiving: 'direct' })
+      const desk = await addresses.createInbox(db, ws(a), { projectId, label: 'Desk' })
+      await domains.setPublicAddress(db, ws(a), desk.id, `desk@${claimed}`)
+      const named = await arrive(
+        mail({ to: [`${rileys.name}@mails.brigade.test`, `desk@${claimed}`], subject: 'Both' }),
+      )
+      assert.deepEqual(
+        named.map((m) => m.addressId),
+        [rileys.id],
+      )
+      assert.equal(await inbound.received(mail({ to: [`desk@${claimed}`] })), 0)
+
+      // Resend not removing a domain leaves it here, to try again; gone there already, it goes.
+      const claimedRow = await db.mailDomain.findFirstOrThrow({ where: { name: claimed } })
+      await domains.setPublicAddress(db, ws(a), desk.id, null)
+      await assert.rejects(domains.removeDomain(db, ws(a), claimedRow.id), /try again/)
+      assert.ok(await db.mailDomain.findFirst({ where: { id: claimedRow.id } }))
+      deleting = 'gone'
+      await domains.removeDomain(db, ws(a), claimedRow.id)
+      assert.equal(await db.mailDomain.findFirst({ where: { id: claimedRow.id } }), null)
+
+      await domains.setPublicAddress(db, ws(a), rileys.id, null)
+    } finally {
+      globalThis.fetch = previousFetch
+    }
+  })
 })

@@ -51,17 +51,23 @@ and asks how its mail reaches Brigade (`MailDomain.receiving`):
   the way to have both.
 
 Its DNS records (`MailDomain.records`, Resend's) are checked every ten minutes for three days, or at
-once with Check now. **A mailbox on a domain whose records are not in yet sends nothing**: the send
+once with Check now; until then, it receives nothing directly either. **A mailbox on a domain whose
+records are not in yet sends nothing**: the send
 is refused (409) and never goes out from its address on Brigade's domain instead, so replies always
-come from the address people wrote to. A domain is removed once no mailbox has an address on it.
+come from the address people wrote to. A domain is removed once no mailbox has an address on it,
+from Resend first: when Resend does not remove it, it stays, to be removed again. Its MX is read
+only from an answer without error: a resolver failing is not a domain without mail.
 
 ## Receiving
 
 Resend's webhook (`POST /events/resend`, Svix-signed with `RESEND_WEBHOOK_SECRET`) applies to the
 whole Resend account, which other products share: only recipients on `MAIL_DOMAIN`, and addresses
-of mailboxes on a workspace's domain that receives directly (`directBoxOf`), are kept, and nothing of
-the others' mail is stored. A forwarded mail is kept for the Brigade address it was forwarded to, and
-an address on a direct domain arrives in its mailbox's box with no project, as Brigade's own does. Each box among the recipients gets one `MailMessage`, kept
+of mailboxes on a workspace's domain that receives directly and is verified (`directBoxOf`: a domain
+only claimed gets nothing), are kept, and nothing of the others' mail is stored. A forwarded mail is
+kept for the Brigade address it was forwarded to, and an address on a direct domain arrives in its
+mailbox's box with no project, as Brigade's own does. An agent writing from a project as its
+address on the workspace's domain gets the reply in that project's box all the same: the reply
+answers the Message-ID of a mail it sent as that address there (`replyProject`). Each box among the recipients gets one `MailMessage`, kept
 at once (`status: pending`); its text, headers and SPF/DKIM/DMARC results are then read from Resend
 (`GET /emails/receiving/:id`) and it is delivered, in the background. A minute tick tries again what
 did not finish, waiting longer each time, and marks a mail failed after 8 tries. Calls to Resend go

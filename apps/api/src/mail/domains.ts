@@ -11,7 +11,14 @@ import { audit } from '../audit.js'
 import { prisma, scoped, type ScopedDb } from '../db.js'
 import type { WorkspaceScope } from '../scope.js'
 import { bareAddress, mailDomain } from './names.js'
-import { createDomain, deleteDomain, getDomain, verifyDomain, type ResendDomain } from './resend.js'
+import {
+  createDomain,
+  deleteDomain,
+  getDomain,
+  ResendError,
+  verifyDomain,
+  type ResendDomain,
+} from './resend.js'
 
 const CHECK_EVERY_MS = 10 * 60_000
 /** Past this, a domain whose records never showed is marked failed (it can be checked again). */
@@ -48,6 +55,11 @@ export async function mxOf(name: string): Promise<string[]> {
     Status: number
     Answer?: { type: number; data: string }[]
   }
+  // NOERROR only: a resolver's failure is not a domain without mail.
+  if (answer.Status === 3)
+    throw new HTTPException(400, { message: `${name} is not in DNS: check its spelling` })
+  if (answer.Status !== 0)
+    throw new HTTPException(502, { message: 'DNS could not be read, try again' })
   return (answer.Answer ?? [])
     .filter((a) => a.type === 15)
     .map((a) => {
@@ -145,7 +157,10 @@ const viewOf = (
   addresses: (row.addresses ?? []).flatMap((a) => (a.publicAddress ? [a.publicAddress] : [])),
 })
 
-/** Remove a domain no mailbox has an address on: from Resend too. */
+/**
+ * Remove a domain no mailbox has an address on: from Resend first. When Resend does not remove it,
+ * it stays here too, so removing it can be tried again (Resend would refuse to add it again).
+ */
 export async function removeDomain(db: ScopedDb, scope: WorkspaceScope, id: string) {
   const row = await db.mailDomain.findFirst({
     where: { id },
@@ -157,9 +172,14 @@ export async function removeDomain(db: ScopedDb, scope: WorkspaceScope, id: stri
       message: `Mailboxes still have addresses on ${row.name}: change them first`,
     })
   if (row.resendDomainId)
-    await deleteDomain(row.resendDomainId).catch((error: unknown) =>
-      console.warn(`mail domain ${row.name}: not removed from Resend`, error),
-    )
+    await deleteDomain(row.resendDomainId).catch((error: unknown) => {
+      // Gone from Resend already: nothing left there.
+      if (error instanceof ResendError && error.status === 404) return
+      console.warn(`mail domain ${row.name}: not removed from Resend`, error)
+      throw new HTTPException(502, {
+        message: `Resend did not remove ${row.name}: try again in a moment`,
+      })
+    })
   // Turned-off mailboxes let it go too.
   await db.mailAddress.updateMany({
     where: { domainId: row.id },
