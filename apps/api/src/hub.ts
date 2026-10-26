@@ -27,6 +27,7 @@ import { handleTaskCall } from './tasks.js'
 import {
   handlePreviewCall,
   handlePreviewExpose,
+  notePreviewEvents,
   settlePreviewLogs,
   settlePreviewStart,
 } from './app-previews.js'
@@ -1074,6 +1075,8 @@ export function runnerSocket(runner: {
       // Its status changed, or its preview did: the sidebar marks a thread with one up.
       if (status !== session.status || fresh.some((e) => e.event.type === 'preview.changed'))
         broadcastThreadStatus(session.workspaceId, session.id, status)
+      // A preview that stopped for good: its public address stops working.
+      notePreviewEvents(session.id, fresh)
       // A move waiting on the turn goes once it ends.
       if (status !== session.status && session.move)
         void movesOn(runner.computerId, session.id).catch(console.error)

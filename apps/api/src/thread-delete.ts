@@ -12,6 +12,7 @@ import {
   repoBackupKey,
   threadFilesPrefix,
 } from './bucket.js'
+import { forgetPreviewAddress } from './cloud.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
 import { broadcastSchedule, runnerProtocol, sendToRunner } from './hub.js'
 
@@ -159,6 +160,8 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
     target: { type: 'thread', id: sessionId },
     data: { title: thread.title, objects: keys.length },
   })
+  // Its preview's address on the gateway, which would otherwise outlive it.
+  forgetPreviewAddress(sessionId)
   // Its folders on its computer go too, or nothing ever removes them there. A computer
   // offline now is told when it tries to archive one (runner-folders.ts, 410).
   if (thread.computerId && (runnerProtocol(thread.computerId) ?? 0) >= DELETE_PROTOCOL)

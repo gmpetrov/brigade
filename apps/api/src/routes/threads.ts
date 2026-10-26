@@ -1388,9 +1388,9 @@ export const threads = new Hono<AppEnv>()
 
   /**
    * Open the thread's live preview: the address of the app its teammate runs.
-   * On the workspace computer the provider hosts it publicly, behind a token
-   * only people who may see the thread get; on a member's own machine it is
-   * that machine's localhost. touch: the dashboard still has it open, which
+   * On the workspace computer it is public on the preview gateway, with an
+   * access token for a few minutes that only people who may see the thread
+   * get; on a member's own machine it is that machine's localhost. touch: the dashboard still has it open, which
    * keeps it (and the workspace computer) from stopping.
    */
   .post('/:id/preview', async (c) => {
@@ -1413,7 +1413,11 @@ export const threads = new Hono<AppEnv>()
     const port = preview.publicPort ?? preview.port
     if (thread.computer.kind !== 'cloud')
       return c.json({ url: `http://localhost:${port}`, local: true } satisfies PreviewView)
-    const { url } = await hostedPort(thread.computer, port)
+    const { url } = await hostedPort(thread.computer, port, thread.id)
+    if (!url)
+      throw new HTTPException(503, {
+        message: 'The preview gateway did not answer. Try again in a moment.',
+      })
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },

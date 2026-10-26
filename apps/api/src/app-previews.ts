@@ -15,11 +15,12 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
-import { cloudAvailable, ensureRunning, hostedPort } from './cloud.js'
+import { cloudAvailable, ensureRunning, forgetPreviewAddress, hostedPort } from './cloud.js'
 import { prisma, scoped, type Prisma } from './db.js'
 import type { ScopedDb } from './db.js'
 import { runnerProtocol, runnerStartedAt, sendToRunner } from './hub.js'
 import { latestEvents } from './latest-events.js'
+import { previewEnded } from './preview-gateway.js'
 import { variableNames, variableValues } from './preview-variables.js'
 import { actingTeammate, currentTeammate, type LoadedThread } from './thread-spec.js'
 
@@ -93,6 +94,11 @@ export async function previewStates(db: ScopedDb, sessionIds: string[]) {
     )
   }
   return states
+}
+
+/** A thread's preview ended: its address on the preview gateway stops working. */
+export function notePreviewEvents(sessionId: string, events: { event: { type: string } }[]) {
+  if (previewEnded(events)) forgetPreviewAddress(sessionId)
 }
 
 /** Stop a thread's preview if one runs, saying why (its pull request merged). */
@@ -230,9 +236,10 @@ export async function handlePreviewExpose(
   const origins: Record<number, string> = {}
   const urls: Record<number, string> = {}
   for (const port of call.ports) {
-    const hosted = await hostedPort(session.computer, port)
+    const hosted = await hostedPort(session.computer, port, session.id)
     origins[port] = hosted.origin
-    if (call.token) urls[port] = hosted.url
+    if (call.token && !hosted.url) return fail('The preview gateway did not answer')
+    if (call.token) urls[port] = hosted.url!
   }
   reply({
     type: 'connector.result',

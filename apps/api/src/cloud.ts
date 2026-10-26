@@ -21,7 +21,7 @@ import {
   setupScript,
 } from './cloud-bootstrap.js'
 import { restored } from './cloud-restore.js'
-import { throughGateway } from './preview-gateway.js'
+import { forgetThread, throughGateway } from './preview-gateway.js'
 import { issueLinkCode } from './link-codes.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { noteFailure } from './ops/failures.js'
@@ -374,8 +374,17 @@ export async function desktopUrl(computer: { providerRef: unknown }) {
   }
 }
 
-/** A port of a cloud computer on a public address (a thread's preview). */
-export async function hostedPort(computer: { providerRef: unknown }, port: number) {
+/**
+ * A port of a cloud computer on a public address, for a thread's preview: the app's own
+ * address (origin), and what lets a person in (url). Behind the preview gateway, url is null
+ * when it does not answer: the provider's address with its token would open every later
+ * preview at that port, any thread's, for as long as the provider keeps it.
+ */
+export async function hostedPort(
+  computer: { providerRef: unknown },
+  port: number,
+  thread: string,
+): Promise<{ origin: string; url: string | null }> {
   const ref = refOf(computer)
   if (!provider || !ref)
     throw new HTTPException(409, { message: 'No cloud provider for this computer' })
@@ -387,7 +396,13 @@ export async function hostedPort(computer: { providerRef: unknown }, port: numbe
       message: `The cloud computer's provider did not host the preview: ${await providerReason(error)}`,
     })
   }
-  return throughGateway(hosted, gateway)
+  if (!gateway) return hosted
+  return (await throughGateway(hosted, gateway, thread)) ?? { origin: hosted.origin, url: null }
+}
+
+/** A thread's preview stopped, or the thread is deleted: its address on the gateway stops working. */
+export function forgetPreviewAddress(thread: string) {
+  if (gateway) void forgetThread(gateway, thread)
 }
 
 /** The setup last tried per computer, so a failing one is not retried on every connect. */
