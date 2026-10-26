@@ -64,6 +64,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { api, useApi, type ProjectSummary, type Teammate, type ThreadSummary } from '@/lib/api'
+import { latestSave } from '@/lib/latest-save'
 import { cn } from '@/lib/utils'
 
 type Group = 'waiting' | 'working' | 'rest'
@@ -177,16 +178,20 @@ export function useSidebarOrder() {
     },
     [data],
   )
+  // A save per list at a time, the latest asked for: drags in quick succession reach the
+  // server in order, so the last one stays. Failed, the list goes back to what it holds.
+  const saves = useRef<Partial<Record<SidebarList, (ids: string[]) => Promise<void>>>>({})
   const reorder = useCallback(
-    async (list: SidebarList, ids: string[]) => {
+    (list: SidebarList, ids: string[]) => {
       setData((d) => ({ teammates: [], projects: [], ...d, [list]: ids }))
-      try {
-        await api('/me/sidebar-order', { method: 'PUT', body: { list, ids } })
-      } catch (e) {
-        alert(e instanceof Error ? e.message : String(e))
-        // Back to where it was.
-        void reload()
-      }
+      saves.current[list] ??= latestSave(
+        (ids: string[]) => api('/me/sidebar-order', { method: 'PUT', body: { list, ids } }),
+        (e) => {
+          alert(e instanceof Error ? e.message : String(e))
+          void reload()
+        },
+      )
+      void saves.current[list](ids)
     },
     [setData, reload],
   )
