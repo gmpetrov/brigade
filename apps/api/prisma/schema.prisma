@@ -2446,6 +2446,9 @@ model MailDomain {
   resendDomainId    String?
   /// pending, verified or failed, as Resend last said.
   status            String        @default("pending")
+  /// How its mail reaches Brigade: forward (its mail stays with its provider, Google's say, and each
+  /// address is forwarded to its Brigade mailbox) or direct (its MX points to Brigade's receiving).
+  receiving         String        @default("forward")
   /// The DNS records to add: [{ record, type, name, value, priority?, status }].
   records           Json          @default("[]")
   createdByMemberId String

@@ -59,8 +59,19 @@ async function rows(
           a.kind === 'agent'
             ? (teammate?.name ?? a.name)
             : `${a.displayName ?? a.name}${project ? ` · ${project.name}` : ''}`,
-        address: addressOf(a.name),
-        publicAddress: a.publicAddress,
+        // The address people see: on the workspace's domain when it has one there.
+        address: a.publicAddress ?? addressOf(a.name),
+        internalAddress: a.publicAddress ? addressOf(a.name) : null,
+        domain: a.domain
+          ? {
+              id: a.domain.id,
+              name: a.domain.name,
+              // A takeover's claim (mail/domains.ts) is not verified either.
+              status: (a.domain.status === 'claimed' ? 'pending' : a.domain.status) as
+                'pending' | 'verified' | 'failed',
+              receiving: a.domain.receiving as 'direct' | 'forward',
+            }
+          : null,
         project,
         teammate,
         visibility: 'workspace' as const,
@@ -77,7 +88,8 @@ async function rows(
       kind: 'gmail' as const,
       name: c.externalAccount ?? c.label,
       address: c.externalAccount ?? c.label,
-      publicAddress: null,
+      internalAddress: null,
+      domain: null,
       project: null,
       teammate: null,
       visibility: c.reach === 'workspace' ? ('workspace' as const) : ('you' as const),
@@ -99,7 +111,8 @@ const summary = (
   kind: row.kind,
   name: row.name,
   address: row.address,
-  publicAddress: row.publicAddress,
+  internalAddress: row.internalAddress,
+  domain: row.domain,
   project: row.project,
   teammate: row.teammate,
   ruleCount,

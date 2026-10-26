@@ -1408,6 +1408,7 @@ export const MailDomainScalarFieldEnum = {
   name: 'name',
   resendDomainId: 'resendDomainId',
   status: 'status',
+  receiving: 'receiving',
   records: 'records',
   createdByMemberId: 'createdByMemberId',
   checkedAt: 'checkedAt',

@@ -32,6 +32,7 @@ export type MailDomainMinAggregateOutputType = {
   name: string | null
   resendDomainId: string | null
   status: string | null
+  receiving: string | null
   createdByMemberId: string | null
   checkedAt: Date | null
   createdAt: Date | null
@@ -45,6 +46,7 @@ export type MailDomainMaxAggregateOutputType = {
   name: string | null
   resendDomainId: string | null
   status: string | null
+  receiving: string | null
   createdByMemberId: string | null
   checkedAt: Date | null
   createdAt: Date | null
@@ -58,6 +60,7 @@ export type MailDomainCountAggregateOutputType = {
   name: number
   resendDomainId: number
   status: number
+  receiving: number
   records: number
   createdByMemberId: number
   checkedAt: number
@@ -74,6 +77,7 @@ export type MailDomainMinAggregateInputType = {
   name?: true
   resendDomainId?: true
   status?: true
+  receiving?: true
   createdByMemberId?: true
   checkedAt?: true
   createdAt?: true
@@ -87,6 +91,7 @@ export type MailDomainMaxAggregateInputType = {
   name?: true
   resendDomainId?: true
   status?: true
+  receiving?: true
   createdByMemberId?: true
   checkedAt?: true
   createdAt?: true
@@ -100,6 +105,7 @@ export type MailDomainCountAggregateInputType = {
   name?: true
   resendDomainId?: true
   status?: true
+  receiving?: true
   records?: true
   createdByMemberId?: true
   checkedAt?: true
@@ -187,6 +193,7 @@ export type MailDomainGroupByOutputType = {
   name: string
   resendDomainId: string | null
   status: string
+  receiving: string
   records: runtime.JsonValue
   createdByMemberId: string
   checkedAt: Date | null
@@ -222,6 +229,7 @@ export type MailDomainWhereInput = {
   name?: Prisma.StringFilter<"MailDomain"> | string
   resendDomainId?: Prisma.StringNullableFilter<"MailDomain"> | string | null
   status?: Prisma.StringFilter<"MailDomain"> | string
+  receiving?: Prisma.StringFilter<"MailDomain"> | string
   records?: Prisma.JsonFilter<"MailDomain">
   createdByMemberId?: Prisma.StringFilter<"MailDomain"> | string
   checkedAt?: Prisma.DateTimeNullableFilter<"MailDomain"> | Date | string | null
@@ -238,6 +246,7 @@ export type MailDomainOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   resendDomainId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
+  receiving?: Prisma.SortOrder
   records?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   checkedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -257,6 +266,7 @@ export type MailDomainWhereUniqueInput = Prisma.AtLeast<{
   workspaceId?: Prisma.StringFilter<"MailDomain"> | string
   resendDomainId?: Prisma.StringNullableFilter<"MailDomain"> | string | null
   status?: Prisma.StringFilter<"MailDomain"> | string
+  receiving?: Prisma.StringFilter<"MailDomain"> | string
   records?: Prisma.JsonFilter<"MailDomain">
   createdByMemberId?: Prisma.StringFilter<"MailDomain"> | string
   checkedAt?: Prisma.DateTimeNullableFilter<"MailDomain"> | Date | string | null
@@ -273,6 +283,7 @@ export type MailDomainOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   resendDomainId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
+  receiving?: Prisma.SortOrder
   records?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   checkedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -293,6 +304,7 @@ export type MailDomainScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"MailDomain"> | string
   resendDomainId?: Prisma.StringNullableWithAggregatesFilter<"MailDomain"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"MailDomain"> | string
+  receiving?: Prisma.StringWithAggregatesFilter<"MailDomain"> | string
   records?: Prisma.JsonWithAggregatesFilter<"MailDomain">
   createdByMemberId?: Prisma.StringWithAggregatesFilter<"MailDomain"> | string
   checkedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"MailDomain"> | Date | string | null
@@ -306,6 +318,7 @@ export type MailDomainCreateInput = {
   name: string
   resendDomainId?: string | null
   status?: string
+  receiving?: string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId: string
   checkedAt?: Date | string | null
@@ -322,6 +335,7 @@ export type MailDomainUncheckedCreateInput = {
   name: string
   resendDomainId?: string | null
   status?: string
+  receiving?: string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId: string
   checkedAt?: Date | string | null
@@ -336,6 +350,7 @@ export type MailDomainUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   resendDomainId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiving?: Prisma.StringFieldUpdateOperationsInput | string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -352,6 +367,7 @@ export type MailDomainUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   resendDomainId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiving?: Prisma.StringFieldUpdateOperationsInput | string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -367,6 +383,7 @@ export type MailDomainCreateManyInput = {
   name: string
   resendDomainId?: string | null
   status?: string
+  receiving?: string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId: string
   checkedAt?: Date | string | null
@@ -380,6 +397,7 @@ export type MailDomainUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   resendDomainId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiving?: Prisma.StringFieldUpdateOperationsInput | string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -394,6 +412,7 @@ export type MailDomainUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   resendDomainId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiving?: Prisma.StringFieldUpdateOperationsInput | string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -423,6 +442,7 @@ export type MailDomainCountOrderByAggregateInput = {
   name?: Prisma.SortOrder
   resendDomainId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  receiving?: Prisma.SortOrder
   records?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   checkedAt?: Prisma.SortOrder
@@ -437,6 +457,7 @@ export type MailDomainMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   resendDomainId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  receiving?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   checkedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -450,6 +471,7 @@ export type MailDomainMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   resendDomainId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  receiving?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   checkedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -520,6 +542,7 @@ export type MailDomainCreateWithoutWorkspaceInput = {
   name: string
   resendDomainId?: string | null
   status?: string
+  receiving?: string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId: string
   checkedAt?: Date | string | null
@@ -534,6 +557,7 @@ export type MailDomainUncheckedCreateWithoutWorkspaceInput = {
   name: string
   resendDomainId?: string | null
   status?: string
+  receiving?: string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId: string
   checkedAt?: Date | string | null
@@ -578,6 +602,7 @@ export type MailDomainScalarWhereInput = {
   name?: Prisma.StringFilter<"MailDomain"> | string
   resendDomainId?: Prisma.StringNullableFilter<"MailDomain"> | string | null
   status?: Prisma.StringFilter<"MailDomain"> | string
+  receiving?: Prisma.StringFilter<"MailDomain"> | string
   records?: Prisma.JsonFilter<"MailDomain">
   createdByMemberId?: Prisma.StringFilter<"MailDomain"> | string
   checkedAt?: Prisma.DateTimeNullableFilter<"MailDomain"> | Date | string | null
@@ -591,6 +616,7 @@ export type MailDomainCreateWithoutAddressesInput = {
   name: string
   resendDomainId?: string | null
   status?: string
+  receiving?: string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId: string
   checkedAt?: Date | string | null
@@ -606,6 +632,7 @@ export type MailDomainUncheckedCreateWithoutAddressesInput = {
   name: string
   resendDomainId?: string | null
   status?: string
+  receiving?: string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId: string
   checkedAt?: Date | string | null
@@ -635,6 +662,7 @@ export type MailDomainUpdateWithoutAddressesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   resendDomainId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiving?: Prisma.StringFieldUpdateOperationsInput | string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -650,6 +678,7 @@ export type MailDomainUncheckedUpdateWithoutAddressesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   resendDomainId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiving?: Prisma.StringFieldUpdateOperationsInput | string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -663,6 +692,7 @@ export type MailDomainCreateManyWorkspaceInput = {
   name: string
   resendDomainId?: string | null
   status?: string
+  receiving?: string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId: string
   checkedAt?: Date | string | null
@@ -676,6 +706,7 @@ export type MailDomainUpdateWithoutWorkspaceInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   resendDomainId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiving?: Prisma.StringFieldUpdateOperationsInput | string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -690,6 +721,7 @@ export type MailDomainUncheckedUpdateWithoutWorkspaceInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   resendDomainId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiving?: Prisma.StringFieldUpdateOperationsInput | string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -704,6 +736,7 @@ export type MailDomainUncheckedUpdateManyWithoutWorkspaceInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   resendDomainId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiving?: Prisma.StringFieldUpdateOperationsInput | string
   records?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   checkedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -749,6 +782,7 @@ export type MailDomainSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   name?: boolean
   resendDomainId?: boolean
   status?: boolean
+  receiving?: boolean
   records?: boolean
   createdByMemberId?: boolean
   checkedAt?: boolean
@@ -766,6 +800,7 @@ export type MailDomainSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   name?: boolean
   resendDomainId?: boolean
   status?: boolean
+  receiving?: boolean
   records?: boolean
   createdByMemberId?: boolean
   checkedAt?: boolean
@@ -781,6 +816,7 @@ export type MailDomainSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   name?: boolean
   resendDomainId?: boolean
   status?: boolean
+  receiving?: boolean
   records?: boolean
   createdByMemberId?: boolean
   checkedAt?: boolean
@@ -796,6 +832,7 @@ export type MailDomainSelectScalar = {
   name?: boolean
   resendDomainId?: boolean
   status?: boolean
+  receiving?: boolean
   records?: boolean
   createdByMemberId?: boolean
   checkedAt?: boolean
@@ -803,7 +840,7 @@ export type MailDomainSelectScalar = {
   updatedAt?: boolean
 }
 
-export type MailDomainOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "resendDomainId" | "status" | "records" | "createdByMemberId" | "checkedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["mailDomain"]>
+export type MailDomainOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "resendDomainId" | "status" | "receiving" | "records" | "createdByMemberId" | "checkedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["mailDomain"]>
 export type MailDomainInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   addresses?: boolean | Prisma.MailDomain$addressesArgs<ExtArgs>
@@ -832,6 +869,11 @@ export type $MailDomainPayload<ExtArgs extends runtime.Types.Extensions.Internal
      * pending, verified or failed, as Resend last said.
      */
     status: string
+    /**
+     * How its mail reaches Brigade: forward (its mail stays with its provider, Google's say, and each
+     * address is forwarded to its Brigade mailbox) or direct (its MX points to Brigade's receiving).
+     */
+    receiving: string
     /**
      * The DNS records to add: [{ record, type, name, value, priority?, status }].
      */
@@ -1271,6 +1313,7 @@ export interface MailDomainFieldRefs {
   readonly name: Prisma.FieldRef<"MailDomain", 'String'>
   readonly resendDomainId: Prisma.FieldRef<"MailDomain", 'String'>
   readonly status: Prisma.FieldRef<"MailDomain", 'String'>
+  readonly receiving: Prisma.FieldRef<"MailDomain", 'String'>
   readonly records: Prisma.FieldRef<"MailDomain", 'Json'>
   readonly createdByMemberId: Prisma.FieldRef<"MailDomain", 'String'>
   readonly checkedAt: Prisma.FieldRef<"MailDomain", 'DateTime'>

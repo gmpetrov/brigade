@@ -146,10 +146,17 @@ export type MailboxSummary = {
   kind: 'agent' | 'inbox' | 'gmail'
   /** Riley · Support (Askli) · georges@acme.com */
   name: string
-  /** Where its mail arrives: Brigade's address, or the Gmail account. */
+  /** Its address, the one people see: on Brigade's domain or one of the workspace's, or Gmail's. */
   address: string
-  /** The address customers write to, forwarded here (a project's mailbox). */
-  publicAddress: string | null
+  /** Its address on Brigade's domain, when it has one elsewhere: where that one is forwarded. */
+  internalAddress: string | null
+  /** The workspace's domain its address is on, if any: sending and receiving go by it. */
+  domain: {
+    id: string
+    name: string
+    status: 'pending' | 'verified' | 'failed'
+    receiving: 'direct' | 'forward'
+  } | null
   project: { id: string; name: string } | null
   teammate: { id: string; name: string } | null
   /** Its rules and playbooks. */

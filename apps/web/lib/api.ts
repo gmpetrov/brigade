@@ -1137,13 +1137,14 @@ export type MailAddress = {
   project: { id: string; name: string } | null
   /** An agent's address in each project it was used in: riley.lovarank@… */
   variants: { projectId: string; project: string; address: string }[]
-  /** inbox: the address customers write to, forwarded here, and replies go out from once verified. */
+  /** Its address on one of the workspace's domains, when it has one: it receives and sends as it. */
   publicAddress: string | null
   displayName: string | null
   domain: {
     id: string
     name: string
     status: 'pending' | 'verified' | 'failed' | string
+    receiving: 'direct' | 'forward'
     records: {
       record: string
       type: string
