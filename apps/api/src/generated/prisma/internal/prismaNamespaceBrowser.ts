@@ -102,6 +102,7 @@ export const ModelName = {
   DocumentAsset: 'DocumentAsset',
   BucketCleanup: 'BucketCleanup',
   AuditEntry: 'AuditEntry',
+  Upload: 'Upload',
   Attachment: 'Attachment',
   ThreadAttachment: 'ThreadAttachment',
   DesignSystem: 'DesignSystem',
@@ -991,6 +992,7 @@ export const DocumentAssetScalarFieldEnum = {
   name: 'name',
   contentType: 'contentType',
   size: 'size',
+  sha256: 'sha256',
   status: 'status',
   uploadedByMemberId: 'uploadedByMemberId',
   createdAt: 'createdAt',
@@ -1025,6 +1027,28 @@ export const AuditEntryScalarFieldEnum = {
 } as const
 
 export type AuditEntryScalarFieldEnum = (typeof AuditEntryScalarFieldEnum)[keyof typeof AuditEntryScalarFieldEnum]
+
+
+export const UploadScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  purpose: 'purpose',
+  name: 'name',
+  contentType: 'contentType',
+  size: 'size',
+  sha256: 'sha256',
+  status: 'status',
+  memberId: 'memberId',
+  computerId: 'computerId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  text: 'text',
+  checked: 'checked',
+  createdAt: 'createdAt'
+} as const
+
+export type UploadScalarFieldEnum = (typeof UploadScalarFieldEnum)[keyof typeof UploadScalarFieldEnum]
 
 
 export const AttachmentScalarFieldEnum = {

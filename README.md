@@ -233,7 +233,7 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   API before the runner died.
 - **Commands to runners** (`apps/api/src/runner-commands.ts`). Each command with a `commandId` (a message, a
   person's answer, a retry, a takeover) is a `RunnerCommand` row before it is sent. It is still sent at once; the row
-  is the safety net. Runners from protocol 42 (`OUTBOX_PROTOCOL`) acknowledge each by id (`command.ack`) and ignore an
+  is the safety net. Runners from protocol 43 (`OUTBOX_PROTOCOL`) acknowledge each by id (`command.ack`) and ignore an
   id they have seen (`apps/runner/src/seen-commands.ts`, kept on disk), so the API sends what is not acknowledged again
   when the runner says hello and, while it stays connected, two minutes after each send. Commands for a cloud computer
   that is starting wait in the table however long it takes, across API restarts, and a computer that never came up is

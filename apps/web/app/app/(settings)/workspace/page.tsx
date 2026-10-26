@@ -5,7 +5,7 @@
 import { Pencil } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { isAdmin, useDashboard, WorkspaceMark } from '@/components/dashboard'
-import { shrinkLogo } from '@/components/projects'
+import { shrinkLogo, uploadLogo } from '@/components/projects'
 import { Card } from '@/components/ui/card'
 import {
   DropdownMenu,
@@ -50,7 +50,12 @@ export default function WorkspacePage() {
     setStatus({ saving: true })
     const run = queue.current.then(async () => {
       try {
-        await api('/workspace', { method: 'PATCH', body })
+        // A new logo (a data URL) goes to the bucket first; null removes it.
+        const logo = body.logo && (await uploadLogo(body.logo))
+        await api('/workspace', {
+          method: 'PATCH',
+          body: body.logo === undefined ? body : { ...body, logo },
+        })
         await reloadMe()
         setStatus({ saved: true })
       } catch (e) {

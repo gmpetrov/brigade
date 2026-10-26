@@ -1671,6 +1671,8 @@ model DocumentAsset {
   name               String
   contentType        String
   size               Int
+  /// Read back from the bucket once its upload finished; empty for files from before.
+  sha256             String           @default("")
   status             AttachmentStatus @default(ready)
   uploadedByMemberId String?
   createdAt          DateTime         @default(now())
@@ -1745,6 +1747,39 @@ enum AttachmentStatus {
 
 /// A file's bytes (in the bucket, keyed by id) and where they came from. One
 /// file can be in several threads, e.g. an email two triggers matched.
+/// A file uploaded straight to the bucket (uploads.ts), held under `uploadKey` until it is used:
+/// saved to the library, read as a skill pack, kept as a skill's file or a logo. The sweep
+/// removes those never used, bytes first.
+model Upload {
+  id             String           @id @default(cuid())
+  organizationId String
+  /// No relation: a deleted workspace's uploads are found by the sweep and their bytes removed.
+  workspaceId    String
+  /// library, skill_pack, skill_file or logo (UPLOAD_PURPOSES).
+  purpose        String
+  /// The file's name, or its library path.
+  name           String
+  contentType    String
+  size           Int
+  /// The runner's, checked once the bytes are in; else the bytes' own, read then.
+  sha256         String           @default("")
+  /// pending until its bytes are checked, then ready; blocked once used, refused or abandoned.
+  status         AttachmentStatus @default(pending)
+  /// Who started it: a member, or a runner for a teammate of a thread on its computer.
+  memberId       String?
+  computerId     String?
+  sessionId      String?
+  teammateId     String?
+  /// Read at completion for a library file, for search.
+  text           String           @default("")
+  /// The completion that marked it ready: its checked bytes are at checkedUploadKey(id, checked).
+  checked        String           @default("")
+  createdAt      DateTime         @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([createdAt])
+}
+
 model Attachment {
   id                 String             @id @default(cuid())
   organizationId     String

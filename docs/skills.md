@@ -60,7 +60,8 @@ read. Memory holds facts: its core is always loaded, its topics when the work to
   generated CLAUDE.md, which keeps a line saying when to read each. Names starting with
   `brigade-` are reserved, as are the names of Brigade's own commands (`/design`, `/visual`, `/image`).
 - **Import, never sync.** A `SKILL.md`, a `.zip` or `.skill` (one skill folder or many), or
-  a GitHub repository or folder (`POST /api/skills/import`, `/import/github`; a private one
+  a GitHub repository or folder (an upload straight to the bucket, `POST /api/uploads` then
+  `POST /api/skills/import/upload`, read back as it streams; `/import/github`; a private one
   through the workspace's GitHub connection) is read into skills to review: their files go
   to the bucket then, the skills only once someone adds them. One new skill opens in the
   editor; several, or an update of a pack, in a checklist whose ticks are the switches.

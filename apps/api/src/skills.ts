@@ -25,7 +25,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import type { z } from 'zod'
 import { audit, type Actor } from './audit.js'
-import { getObject, putObject, skillFileKey } from './bucket.js'
+import { getObject, objectSize, putObject, skillFileKey } from './bucket.js'
 import type { Scope, ScopedDb } from './db.js'
 import { actorNames } from './library-history.js'
 import type { FoundSkill } from './skill-import.js'
@@ -496,12 +496,19 @@ export async function proposeSkill(
   sessionId: string,
   proposal: SkillProposal,
 ) {
-  const { skill } = proposal
+  const { skill, refs } = proposal
+  // Its files the runner uploaded first (POST /runner/uploads, skill_file): each must be there.
+  for (const ref of refs)
+    if ((await objectSize(skillFileKey(scope, ref.sha256))) !== ref.size)
+      throw new HTTPException(400, {
+        message: `The file ${ref.path} was not uploaded; propose the skill again`,
+      })
   const existing = await db.skill.findFirst({ where: { name: skill.name } })
   const payload: SkillProposalPayload = {
     skillAction: existing ? 'update' : 'create',
     ...(existing ? { skillId: existing.id } : {}),
     skill,
+    ...(refs.length ? { refs } : {}),
     ...(existing
       ? {
           previous: {
@@ -563,7 +570,8 @@ export async function decideSkillProposal(
     if (!skill.success)
       throw new HTTPException(400, { message: 'This proposal is not a valid skill' })
     const existing = await db.skill.findFirst({ where: { name: skill.data.name } })
-    const proposed = await storeText(scope, skill.data.files)
+    // Text inline (a runner before DIRECT_UPLOAD_PROTOCOL), or files it uploaded.
+    const proposed = [...(await storeText(scope, skill.data.files)), ...(payload.refs ?? [])]
     const kept = existing
       ? refsOf(existing).filter((f) => !proposed.some((p) => p.path === f.path))
       : []

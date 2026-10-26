@@ -6,7 +6,14 @@ import { TRASH_DAYS, VERSIONS_KEPT, type LibraryActor } from '@brigade/contracts
 import { HTTPException } from 'hono/http-exception'
 import { sweepAssets } from './assets.js'
 import { audit, type Actor } from './audit.js'
-import { deleteObject, documentKey, getObject, putObject, versionKey } from './bucket.js'
+import {
+  copyObject,
+  deleteObject,
+  documentKey,
+  getObject,
+  putObject,
+  versionKey,
+} from './bucket.js'
 import { notifyCollab } from './collab.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { notifyLibraryChanged } from './hub.js'
@@ -31,7 +38,8 @@ export async function recordVersion(
   db: ScopedDb,
   scope: Scope,
   row: Saved,
-  bytes: Uint8Array,
+  /** Its bytes, or the bucket key they are at (copied there, never read by the API). */
+  bytes: Uint8Array | { key: string },
   actor: Actor,
   options: { sessionId?: string | null; restoredFromId?: string } = {},
 ) {
@@ -55,8 +63,13 @@ export async function recordVersion(
     size: row.size,
     sha256: row.sha256,
   }
+  const keep = async (key: string) => {
+    if (bytes instanceof Uint8Array) return putObject(key, bytes, row.contentType)
+    if (!(await copyObject(bytes.key, key, row.contentType)))
+      throw new Error(`${bytes.key} is not in the bucket`)
+  }
   if (fold) {
-    await putObject(versionKey(scope, latest.id), bytes, row.contentType)
+    await keep(versionKey(scope, latest.id))
     return db.documentVersion.update({ where: { id: latest.id }, data: fields })
   }
   const version = await db.documentVersion.create({
@@ -69,7 +82,7 @@ export async function recordVersion(
       restoredFromId: options.restoredFromId ?? null,
     } as never,
   })
-  await putObject(versionKey(scope, version.id), bytes, row.contentType).catch(async (error) => {
+  await keep(versionKey(scope, version.id)).catch(async (error) => {
     await db.documentVersion.delete({ where: { id: version.id } })
     throw error
   })
@@ -110,8 +123,6 @@ export async function ensureFirstVersion(
 ) {
   if (await db.documentVersion.findFirst({ where: { documentId: row.id }, select: { id: true } }))
     return
-  const bytes = await getObject(documentKey(scope, row.id))
-  if (!bytes) return
   const version = await db.documentVersion.create({
     data: {
       documentId: row.id,
@@ -125,7 +136,16 @@ export async function ensureFirstVersion(
       createdAt: row.updatedAt,
     } as never,
   })
-  await putObject(versionKey(scope, version.id), bytes, row.contentType)
+  // Copied inside the bucket: the API never holds the file.
+  const copied = await copyObject(
+    documentKey(scope, row.id),
+    versionKey(scope, version.id),
+    row.contentType,
+  ).catch(async (error) => {
+    await db.documentVersion.delete({ where: { id: version.id } })
+    throw error
+  })
+  if (!copied) await db.documentVersion.delete({ where: { id: version.id } })
 }
 
 /** A version's bytes. */

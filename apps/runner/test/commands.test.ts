@@ -57,6 +57,7 @@ function runner(
     },
     async () => ({}),
     () => false,
+    undefined,
     new SeenCommands(seenFile),
   )
   connection.start()

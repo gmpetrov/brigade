@@ -1,9 +1,10 @@
 // The one bucket (Cloudflare R2, through its S3 API). Every key starts with
 // the organization and workspace (spec hard constraint 5); callers pass a
 // scope and a document id, never a path from request input.
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { copyFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { dirname, join, relative, sep } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { STORED_FILE_NAME } from '@brigade/contracts'
@@ -97,6 +98,38 @@ export function threadFileKey(scope: Scope, sessionId: string, name: string) {
   return `${threadFilesPrefix(scope, sessionId)}${name}`
 }
 
+/** The bucket key an upload's client PUTs to, with its signed URL (uploads.ts). */
+export function uploadKey(scope: Scope, uploadId: string) {
+  for (const part of [scope.organizationId, scope.workspaceId, uploadId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/uploads/${uploadId}`
+}
+
+/** The bucket folder of an upload's checked bytes (one object per completion that checked them). */
+export function checkedUploadsPrefix(scope: Scope, uploadId: string) {
+  for (const part of [scope.organizationId, scope.workspaceId, uploadId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/uploads-checked/${uploadId}/`
+}
+
+/**
+ * The bucket key of an upload's bytes once checked: copied there from the very version read,
+ * where no signed URL reaches, so a PUT replayed later cannot change what was checked. Each
+ * completion copies to a key of its own (`attempt`); the one that marks the upload ready wins.
+ */
+export function checkedUploadKey(scope: Scope, uploadId: string, attempt: string) {
+  if (!SAFE.test(attempt)) throw new Error('Invalid bucket key part')
+  return `${checkedUploadsPrefix(scope, uploadId)}${attempt}`
+}
+
+/** The bucket folders of a workspace's uploads, to find what no upload's row names any more. */
+export function uploadsPrefixes(scope: Scope) {
+  for (const part of [scope.organizationId, scope.workspaceId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  const base = `${scope.organizationId}/${scope.workspaceId}`
+  return [`${base}/uploads/`, `${base}/uploads-checked/`]
+}
+
 const REPO_PART = /^[a-z0-9_.-]{1,100}$/
 
 /**
@@ -129,7 +162,7 @@ const url = (key: string) => `${r2!.base}/${key.split('/').map(encodeURIComponen
 export const directUploads = Boolean(r2)
 
 /** How long a signed upload URL works. */
-const UPLOAD_URL_SECONDS = 10 * 60
+export const UPLOAD_URL_SECONDS = 10 * 60
 
 /**
  * A short-lived URL a browser can PUT one object to, without credentials.
@@ -145,6 +178,65 @@ export async function presignPut(key: string, size: number, contentType: string)
   })
   // The browser sets content-length itself; it only sends the type.
   return { url: signed.url, headers: { 'content-type': contentType } }
+}
+
+/**
+ * Where a client PUTs one object: R2's signed URL, or without R2 (development only: production
+ * refuses to start without it) a signed path of the API's stand-in, PUT /api/bucket (routes/bucket.ts),
+ * which the client resolves against the API's address. Either takes exactly `size` bytes.
+ */
+export async function uploadTarget(key: string, size: number, contentType: string) {
+  if (r2) return presignPut(key, size, contentType)
+  const expires = String(Math.floor(Date.now() / 1000) + UPLOAD_URL_SECONDS)
+  const query = new URLSearchParams({ key, size: String(size), type: contentType, expires })
+  query.set('sig', localSignature(query))
+  return { url: `/api/bucket?${query}`, headers: { 'content-type': contentType } }
+}
+
+const localSignature = (query: URLSearchParams) =>
+  createHmac('sha256', `bucket-upload:${env.BETTER_AUTH_SECRET}`)
+    .update(['key', 'size', 'type', 'expires'].map((k) => query.get(k) ?? '').join('\n'))
+    .digest('hex')
+
+/** What a signed path of the stand-in allows: the key and size, or null when it is not one, or expired. */
+export function localUploadAllowed(query: URLSearchParams) {
+  if (r2) return null
+  const sig = Buffer.from(query.get('sig') ?? '', 'hex')
+  const expected = Buffer.from(localSignature(query), 'hex')
+  if (sig.length !== expected.length || !timingSafeEqual(sig, expected)) return null
+  if (Number(query.get('expires')) * 1000 < Date.now()) return null
+  return {
+    key: query.get('key')!,
+    size: Number(query.get('size')),
+    contentType: query.get('type')!,
+  }
+}
+
+/**
+ * Write a stream to the stand-in's folder, as it arrives: exactly `size` bytes, or nothing
+ * (the object keeps what it held). Development only, without R2.
+ */
+export async function putLocalStream(key: string, body: ReadableStream<Uint8Array>, size: number) {
+  if (r2) throw new Error('The stand-in is for development without R2')
+  const file = join(env.BUCKET_DIR, key)
+  await mkdir(dirname(file), { recursive: true })
+  const partial = `${file}.${process.pid}-${Date.now()}.part`
+  let read = 0
+  const count = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, out) {
+      read += chunk.byteLength
+      if (read > size) throw new Error('More bytes than signed for')
+      out.enqueue(chunk)
+    },
+  })
+  try {
+    await pipeline(Readable.fromWeb(body.pipeThrough(count) as never), createWriteStream(partial))
+    if (read !== size) throw new Error(`${read} bytes came, not ${size}`)
+    await rename(partial, file)
+  } catch (error) {
+    await rm(partial, { force: true })
+    throw error
+  }
 }
 
 /** How long a signed download URL works. */
@@ -232,6 +324,95 @@ export async function putObjectStream(
   if (!response.ok) throw new Error(`bucket put failed: ${response.status}`)
 }
 
+/**
+ * Copy an object to another key inside the bucket (S3 CopyObject): the API never holds its
+ * bytes. With a type, the copy is stored with it. False when the source is not there.
+ */
+export async function copyObject(
+  from: string,
+  to: string,
+  contentType?: string,
+  /** Only the version of the source with this tag (openObject's): false when it changed since. */
+  options: { ifMatch?: string } = {},
+) {
+  if (!r2) {
+    const source = join(env.BUCKET_DIR, from)
+    if (options.ifMatch !== undefined) {
+      const found = await stat(source).catch(() => null)
+      if (!found || localTag(found) !== options.ifMatch) return false
+    }
+    const target = join(env.BUCKET_DIR, to)
+    await mkdir(dirname(target), { recursive: true })
+    return copyFile(source, target).then(
+      () => true,
+      (error: NodeJS.ErrnoException) => {
+        if (error.code === 'ENOENT') return false
+        throw error
+      },
+    )
+  }
+  const bucket = new URL(r2.base).pathname
+  const response = await r2.client.fetch(url(to), {
+    method: 'PUT',
+    headers: {
+      'x-amz-copy-source': `${bucket}/${from.split('/').map(encodeURIComponent).join('/')}`,
+      ...(options.ifMatch ? { 'x-amz-copy-source-if-match': options.ifMatch } : {}),
+      ...(contentType
+        ? { 'x-amz-metadata-directive': 'REPLACE', 'content-type': contentType }
+        : {}),
+    },
+  })
+  if (response.status === 404 || response.status === 412) {
+    await response.body?.cancel()
+    return false
+  }
+  // S3 may answer 200 with an error in the body when a copy fails part way.
+  const body = await response.text()
+  if (!response.ok || body.includes('<Error>'))
+    throw new Error(`bucket copy failed: ${response.status} ${body.slice(0, 200)}`)
+  return true
+}
+
+/** The stand-in's tag of a file: a PUT writes a new one (putLocalStream renames into place). */
+const localTag = (found: { ino: number; mtimeMs: number; size: number }) =>
+  `${found.ino}-${found.mtimeMs}-${found.size}`
+
+/**
+ * The object's bytes as they arrive, with the tag of the version read (its ETag): a copy
+ * made with it (copyObject's ifMatch) is of these bytes, whatever a PUT did since. Null when
+ * it is gone.
+ */
+export async function openObject(
+  key: string,
+): Promise<{ body: ReadableStream<Uint8Array>; etag: string } | null> {
+  if (!r2) {
+    const file = join(env.BUCKET_DIR, key)
+    const found = await stat(file).catch(() => null)
+    if (!found) return null
+    return {
+      body: Readable.toWeb(createReadStream(file)) as ReadableStream<Uint8Array>,
+      etag: localTag(found),
+    }
+  }
+  const response = await r2.client.fetch(url(key))
+  if (response.status === 404) return null
+  const etag = response.headers.get('etag')
+  if (!response.ok || !response.body || !etag) {
+    await response.body?.cancel()
+    throw new Error(`bucket get failed: ${response.status}`)
+  }
+  return { body: response.body, etag }
+}
+
+/** The object's first bytes (up to `length`), or null when it is gone. */
+export async function readHead(key: string, length: number): Promise<Uint8Array | null> {
+  const part = await streamRange(key, `bytes=0-${length - 1}`)
+  if (!part) return null
+  // Past its end: an empty object.
+  if (part.status === 416) return new Uint8Array(0)
+  return new Uint8Array(await new Response(part.body).arrayBuffer())
+}
+
 /** The object's bytes, or null when it is gone. */
 export async function getObject(key: string): Promise<Uint8Array | null> {
   if (!r2) return readFile(join(env.BUCKET_DIR, key)).catch(() => null)
@@ -299,10 +480,11 @@ export async function streamRange(
 export async function listObjects(prefix: string): Promise<string[]> {
   if (!prefix.endsWith('/')) throw new Error('List a folder')
   if (!r2) {
-    const entries = await readdir(join(env.BUCKET_DIR, prefix), { withFileTypes: true }).catch(
-      () => [],
-    )
-    return entries.filter((e) => e.isFile()).map((e) => `${prefix}${e.name}`)
+    const root = join(env.BUCKET_DIR, prefix)
+    const entries = await readdir(root, { withFileTypes: true, recursive: true }).catch(() => [])
+    return entries
+      .filter((e) => e.isFile() && !e.name.endsWith('.part'))
+      .map((e) => `${prefix}${relative(root, join(e.parentPath, e.name)).split(sep).join('/')}`)
   }
   const keys: string[] = []
   let token: string | undefined

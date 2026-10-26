@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+  fromTaskBrief,
   fromTaskComment,
   scheduledRunMessage,
   scheduledRunNote,
+  taskBrief,
   taskComment,
   wakeupMessage,
   wakeupNote,
@@ -57,4 +59,14 @@ test('a task comment reads back', () => {
   const c = { from: 'Ada', threadTitle: 'Deploy', text: 'Done.' }
   assert.deepEqual(fromTaskComment(taskComment(c)), c)
   assert.equal(fromTaskComment('**Ada** said hi'), null)
+})
+
+test('a task brief a teammate wrote reads back', () => {
+  const b = { from: 'Riley', threadTitle: 'Ops', title: 'Fix it', description: 'Then ship.' }
+  assert.deepEqual(fromTaskBrief(taskBrief(b)), {
+    from: 'Riley',
+    threadTitle: 'Ops',
+    text: '**Fix it**\n\nThen ship.',
+  })
+  assert.equal(fromTaskBrief('**Fix it**\n\nThen ship.'), null)
 })

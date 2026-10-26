@@ -5,6 +5,7 @@ import {
   ApiToBrowser,
   ApiToRunner,
   BrowserToApi,
+  DIRECT_UPLOAD_PROTOCOL,
   HEARTBEAT_PROTOCOL,
   MIN_PROTOCOL_VERSION,
   OUTBOX_PROTOCOL,
@@ -1061,6 +1062,16 @@ export function runnerSocket(runner: {
       console.warn(`runner ${runner.id}: command ${message.commandId} failed: ${message.error}`)
   }
 
+  let warnedInline = false
+  /** A runner that uploads files itself still sent one inline: said once per connection. */
+  function noteInlineFiles() {
+    if (warnedInline || !conn || conn.protocolVersion < DIRECT_UPLOAD_PROTOCOL) return
+    warnedInline = true
+    console.warn(
+      `runner ${runner.id} (protocol ${conn.protocolVersion}) sent a file inline in its events`,
+    )
+  }
+
   async function storeAll(events: SequencedEvent[], ws: WSContext) {
     // One thread's events failing to store must not hold back the others' in the batch.
     for (const [sessionId, ofThread] of Map.groupBy(events, (e) => e.sessionId))
@@ -1099,12 +1110,15 @@ export function runnerSocket(runner: {
       data: event as unknown as Prisma.InputJsonValue,
       at: new Date(event.at),
     })
-    // Images and PDFs go to the bucket, not the database (event-files.ts).
+    // Images and PDFs go to the bucket, not the database (event-files.ts). Runners from
+    // DIRECT_UPLOAD_PROTOCOL on put them there first and send only their names.
     const kept = await Promise.all(
-      events.map(async ({ seq, event }) => ({
-        seq,
-        event: await keepFilesApart(session, session.id, storableJson(event)),
-      })),
+      events.map(async ({ seq, event }) => {
+        const storable = storableJson(event)
+        const apart = await keepFilesApart(session, session.id, storable)
+        if (apart !== storable) noteInlineFiles()
+        return { seq, event: apart }
+      }),
     )
     const all = kept.map((e) => rows(e.seq, e.event))
     const refused = await prisma.sessionEvent.createMany({ data: all, skipDuplicates: true }).then(

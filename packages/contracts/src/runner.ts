@@ -395,13 +395,22 @@ export const RunnerToApi = z.discriminatedUnion('type', [
         query: z.string().trim().min(1).max(500),
         limit: z.number().int().min(1).max(20).default(8),
       }),
-      z.object({
-        name: z.literal('save'),
-        path: LibraryPath,
-        /** The file's bytes, base64. */
-        content: z.string(),
-        contentType: z.string().max(200).optional(),
-      }),
+      z
+        .object({
+          name: z.literal('save'),
+          path: LibraryPath,
+          /** The file, uploaded for the library first (POST /runner/uploads, then its complete). */
+          upload: z.object({ id: z.string().min(1).max(64) }).optional(),
+          /**
+           * The file's bytes, base64: runners before DIRECT_UPLOAD_PROTOCOL only. Remove once
+           * MIN_PROTOCOL_VERSION reaches it.
+           */
+          content: z.string().optional(),
+          contentType: z.string().max(200).optional(),
+        })
+        .refine((op) => (op.upload === undefined) !== (op.content === undefined), {
+          message: 'an upload or the content, one of them',
+        }),
       /** Move or rename a file, or a folder with everything in it. */
       z.object({ name: z.literal('move'), path: LibraryPath, to: LibraryPath }),
       /** Put a file, or a folder with everything in it, in the trash. */

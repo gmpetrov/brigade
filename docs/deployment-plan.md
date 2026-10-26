@@ -338,7 +338,7 @@ None of this changes behaviour on Node.
    - `cloud.ts:154`, `:190`, `:223` and `:259`: the in-flight and "already tried" markers
      → columns.
    - ~~The runner queue `queued` (`hub.ts:152`)~~ Done: commands with a `commandId` are
-     `RunnerCommand` rows until the runner acknowledges them (`runner-commands.ts`, protocol 42),
+     `RunnerCommand` rows until the runner acknowledges them (`runner-commands.ts`, protocol 43),
      sent again on hello. What stays in memory is a person's live work, which an API restart ends
      anyway, as it ends the dashboard's socket: a sign-in (`logins.ts` `byLoginId`; a runner's
      hello now also ends sign-ins this process never knew, so no account stays signing in), a

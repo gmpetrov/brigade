@@ -36,6 +36,7 @@ import { Hono, type MiddlewareHandler } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import type { z } from 'zod'
 import { audit, type Actor } from './audit.js'
+import { directUploads, readHead } from './bucket.js'
 import { env } from './config.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { bridgeScript } from './design-bridge.js'
@@ -43,6 +44,7 @@ import { annotate, applyEdits, EditError } from './design-source.js'
 import { moveFolder, trashFolder } from './library-folders.js'
 import { actorNames } from './library-history.js'
 import { readLibraryFile, saveLibraryFile } from './library.js'
+import { discardUpload, readyUpload, uploadBytesKey } from './uploads.js'
 
 type Row = Awaited<ReturnType<ScopedDb['designSystem']['findFirstOrThrow']>>
 
@@ -572,14 +574,31 @@ export async function saveDesignThumbnail(
   const folder = input.path.replace(/\/+$/, '')
   if (designFolderOf(folder) !== folder || !(await libraryRow(db, `${folder}/${DESIGN_ENTRY}`)))
     throw new HTTPException(400, { message: 'That is not a design folder' })
-  const bytes = Buffer.from(input.png, 'base64')
-  if (bytes.byteLength > THUMBNAIL_MAX || !PNG_SIGNATURE.every((b, i) => bytes[i] === b))
+  const path = `${folder}/${DESIGN_THUMBNAIL}`
+  const isPng = (head: Uint8Array | null) =>
+    head !== null && PNG_SIGNATURE.every((b, i) => head[i] === b)
+  if (input.uploadId) {
+    // Uploaded straight to the bucket by the canvas, and checked (uploads.ts).
+    const upload = await readyUpload(db, { memberId: actor.id }, input.uploadId, 'library')
+    const key = uploadBytesKey(scope, upload)
+    if (upload.size > THUMBNAIL_MAX || !isPng(await readHead(key, PNG_SIGNATURE.length))) {
+      await discardUpload(scope, upload.id)
+      throw new HTTPException(400, { message: 'A PNG picture up to 2 MB' })
+    }
+    await saveLibraryFile(db, scope, actor, {
+      path,
+      contentType: 'image/png',
+      upload: { key, size: upload.size, sha256: upload.sha256, text: '' },
+    })
+    await discardUpload(scope, upload.id)
+    return
+  }
+  // The picture in the body: only without R2, in development.
+  if (directUploads) throw new HTTPException(400, { message: 'Upload to the bucket' })
+  const bytes = Buffer.from(input.png ?? '', 'base64')
+  if (bytes.byteLength > THUMBNAIL_MAX || !isPng(bytes))
     throw new HTTPException(400, { message: 'A PNG picture up to 2 MB' })
-  await saveLibraryFile(db, scope, actor, {
-    path: `${folder}/${DESIGN_THUMBNAIL}`,
-    bytes,
-    contentType: 'image/png',
-  })
+  await saveLibraryFile(db, scope, actor, { path, bytes, contentType: 'image/png' })
 }
 
 /**

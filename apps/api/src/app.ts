@@ -13,6 +13,7 @@ import { authenticateRunner, browserSocket, runnerSocket } from './hub.js'
 import { accounts } from './routes/accounts.js'
 import { documentAssets } from './routes/assets.js'
 import { attachments } from './routes/attachments.js'
+import { localBucket } from './routes/bucket.js'
 import { billing } from './routes/billing.js'
 import { usage } from './routes/usage.js'
 import { collab } from './routes/collab.js'
@@ -36,6 +37,8 @@ import { runnerAttachments } from './routes/runner-attachments.js'
 import { runnerSkillFiles } from './routes/runner-skill-files.js'
 import { runnerBackups } from './routes/runner-backups.js'
 import { runnerFiles } from './routes/runner-files.js'
+import { runnerUploads } from './routes/runner-uploads.js'
+import { uploads } from './routes/uploads.js'
 import { runnerFolders } from './routes/runner-folders.js'
 import { runnerLibrary } from './routes/runner-library.js'
 import { schedules } from './routes/schedules.js'
@@ -119,6 +122,8 @@ app.get('/api/billing/return', async (c) => {
 // Brigade's OAuth client ID metadata document, read by MCP servers' authorization servers.
 app.get('/api/mcp/client.json', (c) => c.json(mcpClientDocument()))
 app.use('/api/connections/oauth/*', signInFirst)
+// The bucket's stand-in for uploads without R2 (development): signed paths, no session.
+app.route('/api/bucket', localBucket)
 app.route('/api', workspaces)
 app.route('/api/teammates', teammates)
 app.route('/api/computers', computers)
@@ -142,6 +147,7 @@ app.route('/api/design-systems', designSystems)
 app.route('/api/skills', skills)
 app.route('/api/designs', designs)
 app.route('/api/attachments', attachments)
+app.route('/api/uploads', uploads)
 app.route('/api/repositories', repositories)
 app.route('/api/home', home)
 app.route('/api/pulls', pulls)
@@ -155,6 +161,7 @@ app.route('/runner/library', runnerLibrary)
 app.route('/runner/backups', runnerBackups)
 app.route('/runner/folders', runnerFolders)
 app.route('/runner/files', runnerFiles)
+app.route('/runner/uploads', runnerUploads)
 app.route('/runner/attachments', runnerAttachments)
 app.route('/runner/skill-files', runnerSkillFiles)
 // Git for teammates, proxied to GitHub. Authenticated by a thread's git token, not a session.

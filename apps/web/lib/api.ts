@@ -16,6 +16,9 @@ import type {
   CredentialKind,
   CredentialSummary,
   DocumentAsset,
+  FileUploadInfo,
+  FileUploadTicket,
+  LibraryFile,
   MergeStatus,
   PlaybookHomeLine,
   PlaybookPromotionPayload,
@@ -25,6 +28,7 @@ import type {
   TriggerProposalPayload,
   TaskColumn,
   TaskPriority,
+  UploadPurpose,
   UploadTicket,
 } from '@brigade/contracts'
 import { useCallback, useEffect, useState } from 'react'
@@ -134,6 +138,59 @@ export async function uploadAttachment(
     void api(`/attachments/${id}`, { method: 'DELETE' }).catch(() => undefined)
     throw error
   }
+}
+
+/**
+ * Upload a file for the library, a skill import or a logo straight to the
+ * bucket, reporting progress from 0 to 1. Resolves once the API checked it;
+ * then use it by its id (`uploadId`). Without R2 the API signs a URL of its own.
+ */
+export async function uploadFile(
+  purpose: UploadPurpose,
+  file: Blob & { name?: string },
+  options: { name?: string; onProgress?: (fraction: number) => void; signal?: AbortSignal } = {},
+): Promise<FileUploadInfo> {
+  const ticket = await api<FileUploadTicket>('/uploads', {
+    body: {
+      purpose,
+      name: options.name || file.name || 'file',
+      size: file.size,
+      contentType: file.type,
+    },
+  })
+  try {
+    const url = ticket.url.startsWith('/') ? `${API_URL}${ticket.url}` : ticket.url
+    await send(
+      { method: ticket.method, url, headers: ticket.headers, credentials: false },
+      file,
+      options.onProgress ?? (() => {}),
+      options.signal,
+    )
+    return await api<FileUploadInfo>(`/uploads/${ticket.id}/complete`, { body: {} })
+  } catch (error) {
+    // The half-done upload goes; the API would sweep it later anyway.
+    void api(`/uploads/${ticket.id}`, { method: 'DELETE' }).catch(() => undefined)
+    throw error
+  }
+}
+
+/** A data URL's bytes, as a Blob of its type. */
+export function blobOfDataUrl(dataUrl: string): Blob {
+  const comma = dataUrl.indexOf(',')
+  const head = dataUrl.slice(5, comma)
+  const type = head.split(';')[0] ?? ''
+  const data = dataUrl.slice(comma + 1)
+  if (!head.endsWith(';base64')) return new Blob([decodeURIComponent(data)], { type })
+  const binary = atob(data)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return new Blob([bytes], { type })
+}
+
+/** Upload a file from the computer to the library at `path`. */
+export async function uploadToLibrary(path: string, file: File): Promise<LibraryFile> {
+  const upload = await uploadFile('library', file, { name: path })
+  return api<LibraryFile>('/library/files', { body: { path, uploadId: upload.id } })
 }
 
 /**

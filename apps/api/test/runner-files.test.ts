@@ -155,14 +155,20 @@ test(
   },
 )
 
-test('another computer, a bad name, a PDF or a deleted thread is refused', { skip }, async () => {
-  assert.equal((await ticket(`/${threadId}/${name}`, PNG.length, otherToken)).status, 404)
-  assert.equal((await ticket(`/${threadId}/shot.png`, PNG.length)).status, 400)
-  assert.equal((await ticket(`/${threadId}/${name.replace('.png', '.pdf')}`, 10)).status, 400)
-  assert.equal((await ticket(`/${threadId}/${name}`, 11 * 1024 * 1024)).status, 400)
-  assert.equal((await ticket(`/missing-${id}/${name}`, PNG.length)).status, 410)
-  assert.equal((await ticket(`/${threadId}/${name}`, PNG.length, 'unknown')).status, 401)
-})
+test(
+  'another computer, a bad name, a large file or a deleted thread is refused',
+  { skip },
+  async () => {
+    assert.equal((await ticket(`/${threadId}/${name}`, PNG.length, otherToken)).status, 404)
+    assert.equal((await ticket(`/${threadId}/shot.png`, PNG.length)).status, 400)
+    assert.equal((await ticket(`/${threadId}/${name.replace('.png', '.svg')}`, 10)).status, 400)
+    // A PDF of an event is kept there too.
+    assert.equal((await ticket(`/${threadId}/${name.replace('.png', '.pdf')}`, 10)).status, 200)
+    assert.equal((await ticket(`/${threadId}/${name}`, 33 * 1024 * 1024)).status, 400)
+    assert.equal((await ticket(`/missing-${id}/${name}`, PNG.length)).status, 410)
+    assert.equal((await ticket(`/${threadId}/${name}`, PNG.length, 'unknown')).status, 401)
+  },
+)
 
 const LATER = 16 * 60_000
 const cleanup = (sessionId: string) => prisma.bucketCleanup.findUnique({ where: { sessionId } })

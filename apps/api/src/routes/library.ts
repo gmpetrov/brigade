@@ -7,7 +7,9 @@ import {
   LibraryPath,
   MoveLibraryFile,
   MoveLibraryFolder,
+  SaveLibraryUpload,
   SetFolderAccess,
+  LIBRARY_FILE_MAX,
   TRASH_DAYS,
   WriteLibraryText,
   WriteMemory,
@@ -20,7 +22,7 @@ import {
 } from '@brigade/contracts'
 import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { documentKey, versionKey } from '../bucket.js'
+import { directUploads, documentKey, versionKey } from '../bucket.js'
 import { collabEnabled, COLLAB_PARTY, cursorColor, editToken } from '../collab.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
@@ -63,6 +65,7 @@ import {
 import { libraryPreview } from '../previews.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import { serveObject } from '../serve-object.js'
+import { discardUpload, readyUpload, uploadBytesKey } from '../uploads.js'
 
 /** Types the browser may show inline from the API's origin; anything else downloads. */
 const INLINE =
@@ -243,9 +246,39 @@ export const library = new Hono<AppEnv>()
     return c.body(null, 204)
   })
 
-  /** Upload one file (multipart: `file`, and `path` to put it somewhere other than its name). */
+  /** Save a file uploaded straight to the bucket (POST /api/uploads, then its complete). */
+  .post('/files', async (c) => {
+    const { scope, db } = c.var
+    const { path, uploadId } = await parseBody(c.req.raw, SaveLibraryUpload)
+    const upload = await readyUpload(db, { memberId: scope.memberId }, uploadId, 'library')
+    const row = await saveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: scope.memberId },
+      {
+        path,
+        contentType: upload.contentType,
+        upload: {
+          key: uploadBytesKey(scope, upload),
+          size: upload.size,
+          sha256: upload.sha256,
+          text: upload.text,
+        },
+      },
+    )
+    await discardUpload(scope, upload.id)
+    return c.json(await libraryFileOf(db, row), 201)
+  })
+
+  /**
+   * Upload one file (multipart: `file`, and `path` to put it somewhere other than its name).
+   * Only without R2 (development): with it, files go straight to the bucket (/files).
+   */
   .post('/upload', async (c) => {
     const { scope, db } = c.var
+    if (directUploads) throw new HTTPException(400, { message: 'Upload to the bucket' })
+    if (Number(c.req.header('content-length') ?? 0) > LIBRARY_FILE_MAX + 64 * 1024)
+      throw new HTTPException(413, { message: 'Files in the library can be up to 25 MB' })
     const form = await c.req.parseBody()
     const file = form.file
     if (!(file instanceof File)) throw new HTTPException(400, { message: 'Attach a file' })

@@ -89,6 +89,34 @@ export class Outbox {
   }
 
   /**
+   * Keep these events in place of the pending ones with the same seq: their files taken
+   * out (event-files.ts). Those acknowledged since are left alone.
+   */
+  replace(sessionId: string, events: SequencedEvent[]) {
+    const stream = this.streams.get(sessionId)
+    if (!stream) return
+    const bySeq = new Map(events.map((e) => [e.seq, e]))
+    let changed = false
+    stream.pending = stream.pending.map((e) => {
+      const replaced = bySeq.get(e.seq)
+      if (!replaced) return e
+      changed = true
+      return replaced
+    })
+    if (changed)
+      writeAtomic(
+        this.file(sessionId),
+        stream.pending.map((e) => JSON.stringify(e) + '\n').join(''),
+      )
+  }
+
+  /** Forget a thread's pending events, as if acknowledged: it was deleted. */
+  drop(sessionId: string) {
+    const stream = this.streams.get(sessionId)
+    if (stream) this.ack(sessionId, stream.lastSeq)
+  }
+
+  /**
    * The thread moved to this computer, its last event then numbered `seq`:
    * its events here go on after it. Whatever this computer still held of it
    * from before it left is out of date: dropped. True on a new arrival.

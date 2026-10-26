@@ -22,7 +22,7 @@ export async function updateWorkspace(
       ? undefined
       : input.logo === null
         ? null
-        : await storeLogo(input.logo, (version) => workspaceLogoKey(scope, version))
+        : await storeLogo(scope, input.logo, (version) => workspaceLogoKey(scope, version))
   const { count } = await prisma.workspace.updateMany({
     where: { id: scope.workspaceId, ...(logo !== undefined && { logo: before.logo }) },
     data: {

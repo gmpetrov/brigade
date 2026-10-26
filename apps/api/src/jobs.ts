@@ -21,6 +21,7 @@ import { watchWakeups } from './wakeups.js'
 import { watchMail } from './mail/jobs.js'
 import { noteFailure } from './ops/failures.js'
 import { watchOps } from './ops/checks.js'
+import { sweepFileUploads } from './uploads.js'
 
 let started = false
 
@@ -68,6 +69,7 @@ export function startJobs() {
     }
     void sweepUploads().catch(failed('upload'))
     void sweepAssets().catch(failed('asset'))
+    void sweepFileUploads().catch(failed('file upload'))
     void sweepTrash().catch(failed('trash'))
     void sweepDoneTasks().catch(failed('done task'))
     void sweepDeletedThreadFiles().catch(failed('deleted thread'))

@@ -9,7 +9,7 @@ import {
   parseSkillMarkdown,
   skillSlug,
 } from '@brigade/contracts'
-import { unzipSync } from 'fflate'
+import { Unzip, UnzipInflate, unzipSync } from 'fflate'
 import { HTTPException } from 'hono/http-exception'
 
 /** One skill an upload holds: its SKILL.md read, the files beside it as bytes. */
@@ -41,28 +41,144 @@ const ignored = (path: string) =>
   path.startsWith('__MACOSX/') ||
   path.split('/').some((part) => part.startsWith('.') || part === 'node_modules')
 
+const UNREADABLE = 'Upload a SKILL.md, or a .zip or .skill of a skill folder or of many'
+const isZip = (head: Uint8Array) => head[0] === 0x50 && head[1] === 0x4b
+const baseName = (fileName: string) =>
+  fileName.replace(/^.*[\\/]/, '').replace(/\.(md|zip|skill)$/i, '')
+
+/** A lone SKILL.md's skill. */
+function loneSkill(bytes: Uint8Array, base: string) {
+  const markdown = decode(bytes)
+  if (markdown === null) throw new HTTPException(400, { message: UNREADABLE })
+  return fromMarkdown(markdown, '', base === 'SKILL' ? '' : base, [], [])
+}
+
 /**
  * Every skill in a SKILL.md or a zip (Claude's `.skill` files are zips), its
  * files those under its folder that no deeper skill holds. `within` keeps those
  * under one folder of the zip.
  */
 export function readSkills(fileName: string, bytes: Uint8Array, within = ''): FoundSkill[] {
-  const base = fileName.replace(/^.*[\\/]/, '').replace(/\.(md|zip|skill)$/i, '')
-  const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b
-  if (!isZip) {
-    const markdown = decode(bytes)
-    if (markdown === null)
-      throw new HTTPException(400, {
-        message: 'Upload a SKILL.md, or a .zip or .skill of a skill folder or of many',
-      })
-    return [fromMarkdown(markdown, '', base === 'SKILL' ? '' : base, [], [])]
-  }
+  const base = baseName(fileName)
+  if (!isZip(bytes)) return [loneSkill(bytes, base)]
   let entries: Record<string, Uint8Array>
   try {
     entries = unzipSync(bytes)
   } catch {
     throw new HTTPException(400, { message: 'That zip could not be read' })
   }
+  return skillsIn(base, entries, within)
+}
+
+/**
+ * The same, read from a stream (an upload in the bucket), never held whole: a zip is
+ * unpacked as it comes, keeping only the files a skill would keep, at most SKILL_PACK_MAX
+ * bytes of them unpacked (a zip bomb is refused). A SKILL.md is at most SKILL_FILE_MAX.
+ */
+export async function readSkillsStream(
+  fileName: string,
+  stream: ReadableStream<Uint8Array>,
+): Promise<FoundSkill[]> {
+  const base = baseName(fileName)
+  const reader = stream.getReader()
+  // Its first bytes tell a zip from a SKILL.md.
+  const first: Uint8Array[] = []
+  let read = 0
+  let done = false
+  while (read < 2 && !done) {
+    const next = await reader.read()
+    if (next.done) {
+      done = true
+    } else {
+      first.push(next.value)
+      read += next.value.byteLength
+    }
+  }
+  const head = Buffer.concat(first)
+  const tooLarge = () => {
+    void reader.cancel().catch(() => undefined)
+    return new HTTPException(413, { message: 'Skills to import can be up to 50 MB unpacked' })
+  }
+  if (!isZip(head)) {
+    const chunks: Uint8Array[] = [head]
+    while (read <= SKILL_FILE_MAX && !done) {
+      const next = await reader.read()
+      if (next.done) break
+      chunks.push(next.value)
+      read += next.value.byteLength
+    }
+    if (read > SKILL_FILE_MAX) {
+      void reader.cancel().catch(() => undefined)
+      throw new HTTPException(413, { message: 'A SKILL.md can be up to 10 MB' })
+    }
+    return [loneSkill(Buffer.concat(chunks), base)]
+  }
+  // Kept files by path, in the zip's order; null for one too large to keep.
+  const entries: Record<string, Uint8Array | null> = {}
+  let kept = 0
+  let failed = null as 'zip' | 'size' | null
+  const unzip = new Unzip((file) => {
+    if (ignored(file.name)) return
+    const isEntry = file.name === SKILL_ENTRY || file.name.endsWith(`/${SKILL_ENTRY}`)
+    const parts: Uint8Array[] = []
+    let size = 0
+    entries[file.name] = null
+    file.ondata = (error, chunk, final) => {
+      if (error) {
+        failed ??= 'zip'
+        return
+      }
+      size += chunk.byteLength
+      kept += chunk.byteLength
+      if (kept > SKILL_PACK_MAX) {
+        failed ??= 'size'
+        file.terminate()
+        return
+      }
+      // A file too large is named among those left out, its bytes not kept.
+      if (!isEntry && size > SKILL_FILE_MAX) {
+        kept -= size
+        parts.length = 0
+        file.terminate()
+        return
+      }
+      parts.push(chunk)
+      if (final) entries[file.name] = parts.length === 1 ? parts[0]! : Buffer.concat(parts)
+    }
+    try {
+      file.start()
+    } catch {
+      // A compression it cannot unpack: left out.
+    }
+  })
+  unzip.register(UnzipInflate)
+  try {
+    unzip.push(head, done)
+    while (!done && !failed) {
+      const next = await reader.read()
+      if (next.done) {
+        unzip.push(new Uint8Array(0), true)
+        break
+      }
+      unzip.push(next.value)
+    }
+  } catch {
+    failed ??= 'zip'
+  }
+  if (failed === 'size') throw tooLarge()
+  if (failed) {
+    void reader.cancel().catch(() => undefined)
+    throw new HTTPException(400, { message: 'That zip could not be read' })
+  }
+  return skillsIn(base, entries, '')
+}
+
+/** The skills in a zip's files (null: one too large to keep, named among those left out). */
+function skillsIn(
+  base: string,
+  entries: Record<string, Uint8Array | null>,
+  within: string,
+): FoundSkill[] {
   const prefix = within ? `${within.replace(/^\/+|\/+$/g, '')}/` : ''
   const paths = Object.keys(entries).filter((p) => !ignored(p) && p.startsWith(prefix))
   const roots = paths
@@ -77,14 +193,15 @@ export function readSkills(fileName: string, bytes: Uint8Array, within = ''): Fo
   const owner = (path: string) =>
     roots.filter((r) => path.startsWith(r)).sort((a, b) => b.length - a.length)[0]
   return roots.map((root) => {
-    const markdown = decode(entries[`${root}${SKILL_ENTRY}`]!) ?? ''
+    const entry = entries[`${root}${SKILL_ENTRY}`]
+    const markdown = (entry && decode(entry)) ?? ''
     const files: FoundSkill['files'] = []
     const skipped: string[] = []
     for (const path of paths) {
       if (path === `${root}${SKILL_ENTRY}` || owner(path) !== root) continue
       const relative = path.slice(root.length)
-      const file = entries[path]!
-      if (file.byteLength > SKILL_FILE_MAX || files.length >= SKILL_FILES_MAX) {
+      const file = entries[path]
+      if (!file || file.byteLength > SKILL_FILE_MAX || files.length >= SKILL_FILES_MAX) {
         skipped.push(relative)
         continue
       }
