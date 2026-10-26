@@ -912,7 +912,13 @@ export async function beginRun(
   db: ScopedDb,
   installationId: string,
   conversationKey?: string,
+  /**
+   * The run's id, chosen beforehand (a trigger delivery's, from its thread's): begun again after
+   * a restart cut it off, the run begun then is the one, counted once.
+   */
+  id?: string,
 ): Promise<RunStart> {
+  if (id && (await db.playbookRun.count({ where: { id, installationId } }))) return { runId: id }
   const installation = await db.playbookInstallation.findFirst({ where: { id: installationId } })
   if (!installation) return { skipped: 'the playbook is gone' }
   if (installation.status !== 'active') return { skipped: `the playbook is ${installation.status}` }
@@ -945,7 +951,11 @@ export async function beginRun(
     return { limit: message }
   }
   const run = await db.playbookRun.create({
-    data: { installationId, conversationKey: conversationKey ?? null } as never,
+    data: {
+      ...(id ? { id } : {}),
+      installationId,
+      conversationKey: conversationKey ?? null,
+    } as never,
   })
   return { runId: run.id }
 }
