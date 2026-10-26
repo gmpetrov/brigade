@@ -512,6 +512,38 @@ describe('the Inbox', { skip }, () => {
     assert.deepEqual(await subjects(1, `gmail:${gmailBobs}`), ['Support bob'])
     assert.deepEqual(await subjects(0, `gmail:${gmailBobs}`), [])
     assert.deepEqual(await subjects(1, `gmail:${gmailNotListed}`), ['Support shared'])
+    // Mail kept while the shared account showed all its mail (before it was switched off), in the
+    // same conversation: not opened with it, counted or found.
+    const sharedTaken = await prisma.mailMessage.findFirstOrThrow({
+      where: { connectionId: gmailNotListed },
+    })
+    await prisma.mailMessage.create({
+      data: {
+        ...scope,
+        connectionId: gmailNotListed,
+        box: sharedTaken.box,
+        sourceId: `untaken-${id}`,
+        conversationId: sharedTaken.conversationId,
+        direction: 'in',
+        status: 'done',
+        route: 'box',
+        fromAddress: 'someone@outside.test',
+        subject: 'Private',
+        text: `private words ${id}`,
+        receivedAt: new Date(Date.now() - 3600_000),
+      } as never,
+    })
+    const opened = await inbox.readItem(scoped(scope), as(0), `mail:${sharedTaken.id}`)
+    assert.deepEqual(
+      opened.messages.map((m) => m.id),
+      [`mail:${sharedTaken.id}`],
+    )
+    assert.equal(opened.count, 1)
+    const found = await inbox.listInbox(scoped(scope), as(0), {
+      status: 'all',
+      q: `private words ${id}`,
+    })
+    assert.deepEqual(found.items, [])
     const bobs = await prisma.mailMessage.findFirstOrThrow({ where: { connectionId: gmailBobs } })
     await assert.rejects(inbox.readItem(scoped(scope), as(0), `mail:${bobs.id}`), /No such item/)
     assert.equal(

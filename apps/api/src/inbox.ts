@@ -126,6 +126,18 @@ const ofSources = (sources: InboxSource[]): Prisma.MailMessageWhereInput => ({
   ],
 })
 
+/**
+ * Of a conversation's mails, those these sources show: of a Gmail account showing only what went
+ * to a thread, never its other mail (kept while it was in the Inbox), opened, counted or searched.
+ */
+const shownOf = (sources: InboxSource[]): Prisma.MailMessageWhereInput => ({
+  OR: [
+    { connectionId: null },
+    { connectionId: { notIn: gmailIds(sources, false) } },
+    { route: { in: TAKEN_ROUTES } },
+  ],
+})
+
 // ---------------------------------------------------------------------------
 // Conversations: the list shows one row per conversation (a box's conversationId, Gmail's
 // thread), its latest mail in front. Its status is that mail's: a new mail after "done" waits
@@ -204,13 +216,15 @@ const readableSql = (scope: WorkspaceScope) =>
           and y."aliasId" not in (select a.id from "MailAlias" a
             join "Session" s on s.id = a."sessionId" where s."startedByMemberId" = ${scope.memberId}))`
 
-/** One of its mails matches each filter (x: a mail of the conversation). */
-function matchSql(scope: WorkspaceScope, filters: InboxFilters) {
+/** One of its mails matches each filter (x: a mail of the conversation, one its source shows). */
+function matchSql(scope: WorkspaceScope, filters: InboxFilters, sources: InboxSource[]) {
   const conditions: Prisma.Sql[] = []
   const some = (condition: Prisma.Sql, received = true) =>
     sql`exists (select 1 from "MailMessage" x
       where x."workspaceId" = ${scope.workspaceId} and x.status <> 'cancelled'
         ${received ? sql`and x.direction = 'in'` : sql``}
+        and (x."connectionId" is null or not ${anyOf(sql`x."connectionId"`, gmailIds(sources, false))}
+          or x.route in (${Prisma.join(TAKEN_ROUTES)}))
         and x.box = h.box and x."conversationId" = h."conversationId" and ${condition})`
   if (filters.teammateId)
     conditions.push(sql`(x."addressId" in (select id from "MailAddress" where "teammateId" = ${filters.teammateId})
@@ -243,7 +257,7 @@ export async function listInbox(db: ScopedDb, scope: WorkspaceScope, filters: In
         select h.id, h."receivedAt" from h
         where ${statusSql(scope, filters.status ?? 'waiting')}
           and ${before ? sql`(h."receivedAt" < ${before.at} or (h."receivedAt" = ${before.at} and h.id < ${before.id}))` : sql`true`}
-          and ${matchSql(scope, filters)}
+          and ${matchSql(scope, filters, wanted)}
         order by h."receivedAt" desc, h.id desc
         limit ${PAGE + 1}`
     : []
@@ -254,7 +268,7 @@ export async function listInbox(db: ScopedDb, scope: WorkspaceScope, filters: In
   })
   const ordered = page.flatMap((r) => rows.filter((m) => m.id === r.id))
   return {
-    items: await toItems(db, scope, ordered),
+    items: await toItems(db, scope, ordered, wanted),
     sources: sources.map(({ id, kind, label, address, teammate, project }) => ({
       id,
       kind,
@@ -320,7 +334,12 @@ const waiting = (m: Row) =>
 /** The mails of these conversations, both ways, but those cancelled before they left. */
 const SHOWN: Prisma.MailMessageWhereInput = { status: { not: 'cancelled' } }
 
-async function toItems(db: ScopedDb, scope: WorkspaceScope, rows: Row[]): Promise<InboxItem[]> {
+async function toItems(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  rows: Row[],
+  sources: InboxSource[],
+): Promise<InboxItem[]> {
   const keys = rows.map((r) => ({ box: r.box, conversationId: r.conversationId }))
   const [rules, teammates, projects, slugs, counts, signUps, mails] = await Promise.all([
     db.trigger.findMany({
@@ -333,7 +352,7 @@ async function toItems(db: ScopedDb, scope: WorkspaceScope, rows: Row[]): Promis
     rows.length
       ? db.mailMessage.groupBy({
           by: ['box', 'conversationId'],
-          where: { ...SHOWN, OR: keys },
+          where: { ...SHOWN, OR: keys, AND: [shownOf(sources)] },
           _count: { _all: true },
         })
       : [],
@@ -485,10 +504,10 @@ function nextOf(
 // ---------------------------------------------------------------------------
 
 /** A mail this member may see, or a 404: one of the Inbox's sources, never another's. */
-async function load(db: ScopedDb, scope: WorkspaceScope, itemId: string) {
+async function load(db: ScopedDb, scope: WorkspaceScope, itemId: string, known?: InboxSource[]) {
   const [kind, id] = itemId.split(':')
   if (kind !== 'mail' || !id) throw new HTTPException(404, { message: 'No such item' })
-  const sources = await inboxSources(db, scope)
+  const sources = known ?? (await inboxSources(db, scope))
   const m = await db.mailMessage.findFirst({
     where: { id, direction: 'in', AND: [ofSources(sources)] },
     include,
@@ -499,14 +518,15 @@ async function load(db: ScopedDb, scope: WorkspaceScope, itemId: string) {
 
 /** A mail's conversation, oldest first, both ways, and its latest received mail (its head). */
 async function conversationOf(db: ScopedDb, scope: WorkspaceScope, itemId: string) {
-  const m = await load(db, scope, itemId)
+  const sources = await inboxSources(db, scope)
+  const m = await load(db, scope, itemId, sources)
   const mails = await db.mailMessage.findMany({
-    where: { ...SHOWN, box: m.box, conversationId: m.conversationId },
+    where: { ...SHOWN, box: m.box, conversationId: m.conversationId, AND: [shownOf(sources)] },
     include,
     orderBy: [{ receivedAt: 'asc' }, { id: 'asc' }],
   })
   const head = mails.filter((x) => x.direction === 'in').at(-1) ?? m
-  return { head, mails }
+  return { head, mails, sources }
 }
 
 type MailFile = {
@@ -581,8 +601,8 @@ export async function readItem(
   scope: WorkspaceScope,
   itemId: string,
 ): Promise<InboxDetail> {
-  const { head, mails } = await conversationOf(db, scope, itemId)
-  const [item] = await toItems(db, scope, [head])
+  const { head, mails, sources } = await conversationOf(db, scope, itemId)
+  const [item] = await toItems(db, scope, [head], sources)
   const mailbox = head.address?.connectionId ?? head.connectionId
   // Brigade's rules are per project variant of the address; Gmail's, the account's.
   const projectId = head.address ? (head.projectId ?? head.address.projectId ?? null) : undefined
