@@ -178,7 +178,10 @@ id is the Inbox's source id (`email:<address id>`, `gmail:<connection id>`).
   agent's address and Turn off; a Gmail account's "Show all its mail in the Inbox"), who handles it
   (its rules and its playbooks' rules in one list, in the order they apply, reordered there, a
   playbook's changed in the playbook; then what happens to the rest), and who reads and replies (the
-  teammates given it, and who sees its mail in the Inbox).
+  teammates given it, and who sees its mail in the Inbox). A Brigade mailbox's page also has its
+  journal (its latest mail both ways and where each went, never its text) and, for an agent's
+  address, a test mail. Rules are an owner's or admin's to change; a Gmail account's own member
+  chooses whether all its mail shows.
 - The other places only link here: a project's settings list its mailboxes, a teammate's Access card
   shows its address (or Give an address), the Email App's sheet turns it on, a Gmail account's menu
   opens its mailbox. Projects' variants of an agent's address and sign-up addresses stay out of

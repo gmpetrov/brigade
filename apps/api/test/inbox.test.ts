@@ -1882,10 +1882,11 @@ describe('mailboxes', { skip }, () => {
     assert.equal((await readMailbox(db, as(0), `email:${support.id}`)).manages, true)
     const listed = (await listMailboxes(db, as(0))).find((m) => m.id === `email:${support.id}`)
     assert.equal(listed?.ruleCount, 2)
-    // Bob's own Gmail: his to see and change.
+    // Bob's own Gmail: his to see and to show whole or not; its rules are an owner's or admin's.
     const bobs = await readMailbox(db, as(1), `gmail:${gmailBobs}`)
     assert.equal(bobs.visibility, 'you')
-    assert.equal(bobs.manages, true)
+    assert.equal(bobs.accountOwner, true)
+    assert.equal(bobs.manages, false)
     await db.trigger.deleteMany({ where: { id: { in: [first.id, second.id] } } })
   })
 })

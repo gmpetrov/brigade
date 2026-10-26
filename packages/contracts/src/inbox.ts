@@ -177,8 +177,10 @@ export type MailboxRule = {
 export type MailboxDetail = MailboxSummary & {
   addressId: string | null
   connectionId: string
-  /** This member may change it: an owner or admin, or a Gmail account's own member. */
+  /** This member may change it (its rules, its address): an owner or admin. */
   manages: boolean
+  /** A Gmail account this member connected: they choose whether all its mail shows. */
+  accountOwner: boolean
   /** In the order they apply: the first that matches takes the mail. */
   rules: MailboxRule[]
   /** The teammates given it: they read it and reply from it. */

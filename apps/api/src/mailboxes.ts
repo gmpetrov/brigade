@@ -68,6 +68,7 @@ async function rows(
         addressId: a.id as string | null,
         connectionId: a.connectionId!,
         manages: admin(scope),
+        accountOwner: false,
         reach: null,
       }
     }),
@@ -83,7 +84,8 @@ async function rows(
       showAll: c.reach === 'workspace' && c.inbox,
       addressId: null as string | null,
       connectionId: c.id,
-      manages: admin(scope) || c.createdByMemberId === scope.memberId,
+      manages: admin(scope),
+      accountOwner: c.createdByMemberId === scope.memberId,
       reach: c.reach as 'workspace' | 'mine',
     })),
   ]
@@ -166,6 +168,7 @@ export async function readMailbox(
     addressId: row.addressId,
     connectionId: row.connectionId,
     manages: row.manages,
+    accountOwner: row.accountOwner,
     rules,
     readers: grants.map((g) => g.teammate),
     reach: row.reach,
