@@ -1,0 +1,596 @@
+import assert from 'node:assert/strict'
+import { createHmac, randomUUID } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
+import { after, before, describe, test } from 'node:test'
+import { parseEnv } from 'node:util'
+import { OUTBOX_PROTOCOL } from '@brigade/contracts'
+
+// Work the API keeps as rows rather than in its memory (docs/deployment-plan.md, Phase 2), against
+// the API's development database (apps/api/.env), in an organization of its own removed at the
+// end; skipped when no database answers:
+// - a write held for approval is made once when the decision comes after an API restart, and its
+//   result reaches the thread as a message; an identical call meanwhile joins the open ticket;
+// - a command for a runner is kept until acknowledged: sent again after a reconnect, not once
+//   acknowledged, and still sent to a cloud computer that took more than 10 minutes to start;
+// - a GitHub delivery kept before a restart is processed by the tick, once, and a delivery sent
+//   again is recognised;
+// - two tries at once to deliver one event to a trigger start one thread, and a try a crash cut
+//   off is taken over.
+const envFile = new URL('../.env', import.meta.url)
+if (!process.env.DATABASE_URL && existsSync(envFile))
+  process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
+process.env.DATABASE_URL ??= 'postgresql://localhost:1/none'
+process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
+process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
+const WEBHOOK_SECRET = 'durable-work-secret'
+process.env.GITHUB_APP_WEBHOOK_SECRET = WEBHOOK_SECRET
+
+const { prisma, scoped } = await import('../src/db.js')
+const database = await Promise.race([
+  prisma.$queryRaw`select 1`.then(() => true),
+  new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
+]).catch(() => false)
+
+/** What a fake runner's socket was sent, as the hub sends it. */
+type Sent = { type: string; commandId?: string; callId?: string; [key: string]: unknown }
+const socket = () => {
+  const sent: Sent[] = []
+  return { sent, ws: { send: (raw: string) => sent.push(JSON.parse(raw)), close: () => {} } }
+}
+
+const until = async (check: () => Promise<boolean> | boolean, what: string) => {
+  for (let i = 0; i < 200; i++) {
+    if (await check()) return
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  assert.fail(`timed out waiting for ${what}`)
+}
+
+describe('work kept in the database', { skip: !database && 'no database answers' }, () => {
+  const suffix = randomUUID().slice(0, 8)
+  const ids = {} as Record<
+    'org' | 'workspace' | 'owner' | 'laptop' | 'cloud' | 'runner' | 'sam' | 'gmail' | 'session',
+    string
+  >
+  let db: ReturnType<typeof scoped>
+  let scope: { organizationId: string; workspaceId: string }
+  const realFetch = globalThis.fetch
+  /** Gmail's sends, as the stub received them. */
+  const sends: unknown[] = []
+
+  before(async () => {
+    ids.org = `org-durable-${suffix}`
+    await prisma.organization.create({
+      data: { id: ids.org, name: 'Durable', slug: `durable-${suffix}` },
+    })
+    await prisma.user.create({
+      data: { id: `owner-${suffix}`, name: 'Ada', email: `owner-${suffix}@test.local` },
+    })
+    ids.owner = `m-owner-${suffix}`
+    await prisma.member.create({
+      data: { id: ids.owner, organizationId: ids.org, userId: `owner-${suffix}`, role: 'owner' },
+    })
+    ids.workspace = (
+      await prisma.workspace.create({ data: { organizationId: ids.org, name: 'Durable' } })
+    ).id
+    scope = { organizationId: ids.org, workspaceId: ids.workspace }
+    db = scoped(scope)
+    ids.laptop = (
+      await db.computer.create({
+        data: { kind: 'member_machine', memberId: ids.owner, name: 'Laptop', status: 'running' },
+      } as never)
+    ).id
+    ids.cloud = (
+      await db.computer.create({
+        data: { kind: 'cloud', name: 'Cloud', status: 'stopped' },
+      } as never)
+    ).id
+    ids.runner = (
+      await db.runner.create({
+        data: { computerId: ids.laptop, tokenHash: `hash-${suffix}` },
+      } as never)
+    ).id
+    for (const computerId of [ids.laptop, ids.cloud])
+      await db.account.create({
+        data: {
+          memberId: ids.owner,
+          computerId,
+          provider: 'claude_code',
+          label: 'Claude',
+          status: 'ready',
+        },
+      } as never)
+    // Sam asks before each write through an App.
+    ids.sam = (
+      await db.teammate.create({
+        data: { name: `Sam ${suffix}`, permissionPolicy: { connectorWrites: 'ask' } },
+      } as never)
+    ).id
+    const { sealSecret } = await import('../src/vault.js')
+    const app = await db.app.create({
+      data: { key: 'gmail', createdByMemberId: ids.owner } as never,
+    })
+    ids.gmail = (
+      await db.connection.create({
+        data: {
+          appId: app.id,
+          kind: 'gmail',
+          label: 'Gmail',
+          externalAccount: 'support@acme.test',
+          createdByMemberId: ids.owner,
+          vaultSecretId: await sealSecret(db, scope, {
+            accessToken: 'token',
+            refreshToken: null,
+            expiresAt: Date.now() + 3600_000,
+          }),
+        } as never,
+      })
+    ).id
+    await db.grant.create({
+      data: { teammateId: ids.sam, connectionId: ids.gmail, scope: 'read_write' } as never,
+    })
+    ids.session = (
+      await db.session.create({
+        data: {
+          teammateId: ids.sam,
+          startedByMemberId: ids.owner,
+          computerId: ids.laptop,
+          title: 'Refund',
+          status: 'waiting',
+        } as never,
+      })
+    ).id
+    await db.threadTeammate.create({
+      data: { sessionId: ids.session, teammateId: ids.sam } as never,
+    })
+    // Gmail answers sends; nothing else leaves.
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      const href = String(url instanceof Request ? url.url : url)
+      if (href.includes('/messages/send')) {
+        sends.push(JSON.parse(String(init?.body ?? '{}')))
+        return Response.json({ id: `m-${sends.length}` })
+      }
+      if (href.includes('/settings/sendAs')) return Response.json({ sendAs: [] })
+      return Response.json({}, { status: 404 })
+    }) as typeof fetch
+  })
+
+  after(async () => {
+    globalThis.fetch = realFetch
+    if (ids.workspace) await prisma.workspace.deleteMany({ where: { id: ids.workspace } })
+    await prisma.member.deleteMany({ where: { organizationId: ids.org } })
+    await prisma.organization.deleteMany({ where: { id: ids.org } })
+    await prisma.user.deleteMany({ where: { id: `owner-${suffix}` } })
+    await prisma.inboundEvent.deleteMany({ where: { externalId: { contains: suffix } } })
+  })
+
+  const mail = {
+    to: ['jane@customer.test'],
+    subject: `Your refund ${suffix}`,
+    body: 'It is on its way.',
+  }
+
+  /** Sam sends the mail, as its runner asks; what the runner hears, and when its call ends. */
+  function send(alive: () => boolean = () => true) {
+    const heard: Sent[] = []
+    const done = import('../src/connector-calls.js').then(({ handleConnectorCall }) =>
+      handleConnectorCall(
+        { computerId: ids.laptop, ...scope },
+        {
+          type: 'connector.call',
+          callId: randomUUID(),
+          sessionId: ids.session,
+          teammateId: ids.sam,
+          connectionId: ids.gmail,
+          operation: 'gmail_send',
+          input: mail,
+        },
+        (message) => heard.push(message as Sent),
+        { alive },
+      ),
+    )
+    return { heard, done }
+  }
+  const pendingOf = async (heard: Sent[]) => {
+    await until(() => heard.some((m) => m.type === 'connector.pending'), 'the call to wait')
+    return heard.find((m) => m.type === 'connector.pending')!.ticketId as string
+  }
+
+  test('a decision after an API restart: the write is made once, and the thread hears it', async () => {
+    const { decideTicket } = await import('../src/connector-calls.js')
+    const { forgetWaiters } = await import('../src/held-calls.js')
+    const before = sends.length
+    const call = send()
+    const ticketId = await pendingOf(call.heard)
+    const held = await db.heldCall.findFirstOrThrow({ where: { ticketId } })
+    assert.equal(held.status, 'waiting')
+    assert.equal(held.kind, 'connector')
+
+    // The API restarts: nothing waits for the decision in this process any more.
+    forgetWaiters()
+    await call.done
+    assert.equal(
+      await decideTicket({ ...scope, memberId: ids.owner }, ticketId, { approved: true }),
+      true,
+    )
+    await until(
+      async () => (await db.heldCall.findFirst({ where: { ticketId } }))?.status === 'done',
+      'the held call to be made',
+    )
+    assert.equal(sends.length - before, 1, 'sent once')
+    const calls = await db.connectionCall.findMany({ where: { ticketId } })
+    assert.deepEqual(
+      calls.map((c) => c.result),
+      ['ok'],
+    )
+    // The runner never heard: the thread does, as a message for Sam.
+    assert.equal(
+      call.heard.filter((m) => m.type === 'connector.result').length,
+      0,
+      'no tool waits for it',
+    )
+    const wakeup = await db.wakeup.findFirstOrThrow({ where: { sourceId: `held:${ticketId}` } })
+    assert.equal(wakeup.kind, 'reply')
+    assert.equal(wakeup.teammateId, ids.sam)
+    assert.match(wakeup.note, /approved/)
+    assert.match(wakeup.note, /do not make it again/)
+    assert.match(wakeup.note, /m-\d+/, 'with its result')
+
+    // Deciding again does nothing more.
+    assert.equal(
+      await decideTicket({ ...scope, memberId: ids.owner }, ticketId, { approved: true }),
+      false,
+    )
+    const { settleHeldCalls } = await import('../src/held-calls.js')
+    await settleHeldCalls()
+    assert.equal(sends.length - before, 1)
+  })
+
+  test('a decision the restart caught before the call was made: the tick makes it, once', async () => {
+    const { decideTicket } = await import('../src/connector-calls.js')
+    const { forgetWaiters, settleHeldCalls } = await import('../src/held-calls.js')
+    const before = sends.length
+    const call = send()
+    const ticketId = await pendingOf(call.heard)
+    forgetWaiters()
+    await call.done
+    // Decided, and the API stopped before it made the call (as decideTicket leaves it then).
+    await db.heldCall.updateMany({
+      where: { ticketId },
+      data: {
+        status: 'decided',
+        decision: { approved: true, memberId: ids.owner },
+        updatedAt: new Date(Date.now() - 5 * 60_000),
+      },
+    })
+    await db.ticket.updateMany({ where: { id: ticketId }, data: { status: 'approved' } })
+    await settleHeldCalls()
+    assert.equal((await db.heldCall.findFirstOrThrow({ where: { ticketId } })).status, 'done')
+    assert.equal(sends.length - before, 1)
+    await settleHeldCalls()
+    assert.equal(sends.length - before, 1, 'never twice')
+    void decideTicket
+  })
+
+  test('one cut off while it was made is not made again: the thread is told to check', async () => {
+    const { forgetWaiters, settleHeldCalls } = await import('../src/held-calls.js')
+    const before = sends.length
+    const call = send()
+    const ticketId = await pendingOf(call.heard)
+    forgetWaiters()
+    await call.done
+    await db.heldCall.updateMany({
+      where: { ticketId },
+      data: {
+        status: 'running',
+        decision: { approved: true, memberId: ids.owner },
+        updatedAt: new Date(Date.now() - 20 * 60_000),
+      },
+    })
+    await settleHeldCalls()
+    assert.equal(sends.length, before, 'not sent again')
+    const wakeup = await db.wakeup.findFirstOrThrow({ where: { sourceId: `held:${ticketId}` } })
+    assert.match(wakeup.note, /may or may not have gone through/)
+  })
+
+  test('the same call again while its ticket is open joins it: one card, one send, both hear', async () => {
+    const { decideTicket } = await import('../src/connector-calls.js')
+    const before = sends.length
+    const tickets = await db.ticket.count({ where: { sessionId: ids.session } })
+    // The first call's connection drops (alive no more); the teammate calls again, as told.
+    let first = true
+    const one = send(() => first)
+    const ticketId = await pendingOf(one.heard)
+    first = false
+    const two = send()
+    assert.equal(await pendingOf(two.heard), ticketId, 'the same ticket')
+    // And a third at the same moment as a fourth: still one ticket.
+    const three = send()
+    const four = send()
+    assert.equal(await pendingOf(three.heard), ticketId)
+    assert.equal(await pendingOf(four.heard), ticketId)
+    assert.equal(await db.ticket.count({ where: { sessionId: ids.session } }), tickets + 1)
+
+    await decideTicket({ ...scope, memberId: ids.owner }, ticketId, { approved: true })
+    await Promise.all([one.done, two.done, three.done, four.done])
+    assert.equal(sends.length - before, 1, 'one mail')
+    for (const call of [two, three, four]) {
+      const result = call.heard.find((m) => m.type === 'connector.result')
+      assert.equal(result?.ok, true)
+      assert.deepEqual(result?.decision, { ticketId, approved: true, memberId: ids.owner })
+    }
+    assert.equal(
+      one.heard.filter((m) => m.type === 'connector.result').length,
+      0,
+      'its socket is gone',
+    )
+    // Tools heard it: no message in the thread for it.
+    assert.equal(await db.wakeup.count({ where: { sourceId: `held:${ticketId}` } }), 0)
+  })
+
+  test('a denial after a restart: nothing is sent, and the thread hears why', async () => {
+    const { decideTicket } = await import('../src/connector-calls.js')
+    const { forgetWaiters } = await import('../src/held-calls.js')
+    const before = sends.length
+    const call = send()
+    const ticketId = await pendingOf(call.heard)
+    forgetWaiters()
+    await call.done
+    await decideTicket({ ...scope, memberId: ids.owner }, ticketId, {
+      approved: false,
+      reason: 'Not this customer',
+    })
+    await until(
+      async () => (await db.heldCall.findFirst({ where: { ticketId } }))?.status === 'done',
+      'the denial to be taken',
+    )
+    assert.equal(sends.length, before)
+    const wakeup = await db.wakeup.findFirstOrThrow({ where: { sourceId: `held:${ticketId}` } })
+    assert.match(wakeup.note, /denied/)
+    assert.match(wakeup.note, /Not this customer/)
+  })
+
+  // -------------------------------------------------------------------------
+  // Commands for runners
+  // -------------------------------------------------------------------------
+
+  const hello = (protocolVersion = OUTBOX_PROTOCOL) =>
+    JSON.stringify({ type: 'hello', protocolVersion, version: '0.0.0', platform: 'linux-x64' })
+  const queuedCommand = () => ({
+    type: 'thread.queued' as const,
+    commandId: randomUUID(),
+    sessionId: ids.session,
+    messageId: `msg-${randomUUID()}`,
+    action: 'cancel' as const,
+    memberId: ids.owner,
+  })
+  /** A runner connecting with this protocol: its socket and what it is sent. */
+  async function connect(protocolVersion = OUTBOX_PROTOCOL) {
+    const { runnerSocket } = await import('../src/hub.js')
+    const handle = runnerSocket({ id: ids.runner, computerId: ids.laptop, ...scope })
+    const { sent, ws } = socket()
+    handle.onMessage(hello(protocolVersion), ws as never)
+    await until(() => sent.some((m) => m.type === 'welcome'), 'the welcome')
+    const say = (message: object) => handle.onMessage(JSON.stringify(message), ws as never)
+    return { handle, sent, say }
+  }
+
+  test('a command not acknowledged is sent again after a reconnect, and not once acknowledged', async () => {
+    const { dispatch } = await import('../src/hub.js')
+    const first = await connect()
+    const command = queuedCommand()
+    assert.equal(await dispatch({ id: ids.laptop, kind: 'member_machine' }, command), 'sent')
+    assert.ok(
+      first.sent.some((m) => m.commandId === command.commandId),
+      'sent at once',
+    )
+    // Its connection dies before it acknowledged it.
+    first.handle.onClose()
+    const second = await connect()
+    await until(
+      () => second.sent.some((m) => m.commandId === command.commandId),
+      'the command sent again',
+    )
+    const replayed = second.sent.find((m) => m.commandId === command.commandId)!
+    assert.ok(
+      second.sent.indexOf(replayed) > second.sent.findIndex((m) => m.type === 'welcome'),
+      'after the welcome',
+    )
+    // Acknowledged now (the runner had seen it, and says so again).
+    second.say({ type: 'command.ack', commandIds: [command.commandId] })
+    await until(
+      async () =>
+        (await prisma.runnerCommand.findUnique({ where: { id: command.commandId } }))?.status ===
+        'acked',
+      'the ack',
+    )
+    second.handle.onClose()
+    const third = await connect()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.equal(third.sent.filter((m) => m.commandId === command.commandId).length, 0)
+    third.handle.onClose()
+  })
+
+  test('a runner too old to acknowledge takes each command once, as before', async () => {
+    const { dispatch } = await import('../src/hub.js')
+    const old = await connect(OUTBOX_PROTOCOL - 1)
+    const command = queuedCommand()
+    await dispatch({ id: ids.laptop, kind: 'member_machine' }, command)
+    assert.equal(old.sent.filter((m) => m.commandId === command.commandId).length, 1)
+    assert.equal(
+      (await prisma.runnerCommand.findUniqueOrThrow({ where: { id: command.commandId } })).status,
+      'acked',
+    )
+    old.handle.onClose()
+    const again = await connect(OUTBOX_PROTOCOL - 1)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.equal(again.sent.filter((m) => m.commandId === command.commandId).length, 0)
+    again.handle.onClose()
+  })
+
+  test('a cloud computer that takes over 10 minutes to start still gets its commands', async () => {
+    const { dispatch, runnerSocket, resendCommands } = await import('../src/hub.js')
+    const command = { ...queuedCommand() }
+    assert.equal(await dispatch({ id: ids.cloud, kind: 'cloud' }, command), 'queued')
+    // Fifteen minutes later, across an API restart: the row is all there is.
+    await prisma.runnerCommand.updateMany({
+      where: { id: command.commandId },
+      data: { createdAt: new Date(Date.now() - 15 * 60_000) },
+    })
+    await resendCommands()
+    const runner = await db.runner.create({
+      data: { computerId: ids.cloud, tokenHash: `cloud-${suffix}` },
+    } as never)
+    const handle = runnerSocket({ id: runner.id, computerId: ids.cloud, ...scope })
+    const { sent, ws } = socket()
+    handle.onMessage(hello(), ws as never)
+    await until(() => sent.some((m) => m.commandId === command.commandId), 'the command')
+    handle.onClose()
+  })
+
+  test('a command not through in 24 hours opens a ticket in its thread', async () => {
+    const { dispatch } = await import('../src/hub.js')
+    const { giveUp } = await import('../src/runner-commands.js')
+    const command = queuedCommand()
+    await dispatch({ id: ids.cloud, kind: 'cloud' }, command)
+    await prisma.runnerCommand.updateMany({
+      where: { id: command.commandId },
+      data: { createdAt: new Date(Date.now() - 25 * 60 * 60_000) },
+    })
+    await giveUp()
+    assert.equal(
+      (await prisma.runnerCommand.findUniqueOrThrow({ where: { id: command.commandId } })).status,
+      'failed',
+    )
+    const ticket = await db.ticket.findFirstOrThrow({
+      where: { sessionId: ids.session, payload: { path: ['undelivered'], equals: true } },
+    })
+    assert.match(ticket.title, /Not delivered: a change to a queued message/)
+  })
+
+  // -------------------------------------------------------------------------
+  // Webhooks
+  // -------------------------------------------------------------------------
+
+  test('a GitHub delivery kept before a restart is processed by the tick, once', async () => {
+    const { githubWebhook } = await import('../src/routes/github-webhook.js')
+    const { processDueInbound } = await import('../src/inbound.js')
+    const installation = 9_000_000 + Math.floor(Math.random() * 1_000_000)
+    const github = await db.connection.create({
+      data: {
+        kind: 'github',
+        label: 'acme',
+        externalAccount: 'acme',
+        externalUrl: `https://github.com/settings/installations/${installation}`,
+        createdByMemberId: ids.owner,
+        appId: (
+          await db.app.create({ data: { key: 'github', createdByMemberId: ids.owner } as never })
+        ).id,
+      } as never,
+    })
+    // Kept by the route, then the API stopped before processing it.
+    const delivery = `delivery-${suffix}`
+    await prisma.inboundEvent.create({
+      data: {
+        source: 'github',
+        externalId: delivery,
+        type: 'installation',
+        payload: { action: 'suspend', installation: { id: installation } },
+      },
+    })
+    await processDueInbound()
+    assert.equal(
+      (await db.connection.findFirstOrThrow({ where: { id: github.id } })).status,
+      'needs_reauth',
+    )
+    const kept = await prisma.inboundEvent.findFirstOrThrow({ where: { externalId: delivery } })
+    assert.deepEqual([kept.status, kept.attempts], ['done', 1])
+
+    // GitHub sends it again (asked for again): recognised, not processed twice.
+    await db.connection.updateMany({ where: { id: github.id }, data: { status: 'active' } })
+    const body = JSON.stringify({ action: 'suspend', installation: { id: installation } })
+    const post = (id: string) =>
+      githubWebhook.request('/', {
+        method: 'POST',
+        body,
+        headers: {
+          'x-github-event': 'installation',
+          'x-github-delivery': id,
+          'x-hub-signature-256': `sha256=${createHmac('sha256', WEBHOOK_SECRET).update(body).digest('hex')}`,
+        },
+      })
+    assert.equal((await post(delivery)).status, 200)
+    await processDueInbound()
+    assert.equal(
+      (await db.connection.findFirstOrThrow({ where: { id: github.id } })).status,
+      'active',
+    )
+    // A new delivery through the route: kept, answered, processed.
+    const fresh = `fresh-${suffix}`
+    assert.equal((await post(fresh)).status, 202)
+    await until(
+      async () =>
+        (await prisma.inboundEvent.findFirst({ where: { externalId: fresh } }))?.status === 'done',
+      'the delivery to be processed',
+    )
+    assert.equal(
+      (await db.connection.findFirstOrThrow({ where: { id: github.id } })).status,
+      'needs_reauth',
+    )
+  })
+
+  test('concurrent tries of one event start one thread; a try a crash cut off is taken over', async () => {
+    const { deliver } = await import('../src/triggers.js')
+    const app = await db.app.create({
+      data: { key: 'webhook', createdByMemberId: ids.owner } as never,
+    })
+    const connection = await db.connection.create({
+      data: {
+        appId: app.id,
+        kind: 'webhook',
+        label: 'Sentry',
+        createdByMemberId: ids.owner,
+      } as never,
+    })
+    const row = await db.trigger.create({
+      data: {
+        connectionId: connection.id,
+        teammateId: ids.sam,
+        label: 'Errors',
+        event: 'received',
+        createdByMemberId: ids.owner,
+        pathToken: `token-${suffix}`,
+      } as never,
+    })
+    const trigger = await prisma.trigger.findUniqueOrThrow({
+      where: { id: row.id },
+      include: { teammate: true, connection: true },
+    })
+    const event = (eventId: string) => ({
+      eventId,
+      eventType: 'received',
+      title: 'Errors: TypeError',
+      text: 'TypeError in checkout',
+    })
+    const results = await Promise.all([1, 2, 3].map(() => deliver(trigger, event('evt-1'))))
+    assert.equal(results.filter((r) => 'ok' in r).length, 1, JSON.stringify(results))
+    assert.equal(results.filter((r) => 'duplicate' in r).length, 2)
+    assert.equal(await db.session.count({ where: { triggerId: trigger.id } }), 1)
+    // Again later (the sender's retry): where it went.
+    const again = await deliver(trigger, event('evt-1'))
+    assert.ok('duplicate' in again && again.threadId)
+
+    // A try that crashed between its claim and its thread: taken over once stale.
+    await db.triggerDelivery.create({
+      data: { triggerId: trigger.id, eventId: 'evt-2', status: 'starting' } as never,
+    })
+    assert.ok('duplicate' in (await deliver(trigger, event('evt-2'))), 'still being started')
+    await db.triggerDelivery.updateMany({
+      where: { triggerId: trigger.id, eventId: 'evt-2' },
+      data: { updatedAt: new Date(Date.now() - 30 * 60_000) },
+    })
+    const taken = await deliver(trigger, event('evt-2'))
+    assert.ok('ok' in taken, JSON.stringify(taken))
+    assert.equal(await db.session.count({ where: { triggerId: trigger.id } }), 2)
+  })
+})

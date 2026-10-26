@@ -580,13 +580,25 @@ test(
 
     // A real event's id with a made-up type: what Stripe has counts. Its type matches the
     // trigger, which tries to start a thread (this workspace has no computer: a ticket, and
-    // Stripe is asked to send it again later).
+    // the event is kept to be tried again later, src/inbound.ts).
     const response = await post(
       `/stripe/${sub!.id}`,
       JSON.stringify({ id: 'evt_1Real', type: 'customer.created', data: { object: {} } }),
     )
-    assert.equal(response.status, 503)
-    const ticket = await db.ticket.findFirstOrThrow({ where: { workspaceId: scope.workspaceId } })
+    assert.equal(response.status, 200)
+    let ticket = null
+    for (let i = 0; i < 100 && !ticket; i++) {
+      ticket = await db.ticket.findFirst({ where: { workspaceId: scope.workspaceId } })
+      if (!ticket) await new Promise((resolve) => setTimeout(resolve, 20))
+    }
+    assert.ok(ticket, 'a ticket says the thread could not start')
+    const { prisma } = await import('../src/db.js')
+    const kept = await prisma.inboundEvent.findFirstOrThrow({
+      where: { source: `stripe:${sub!.id}`, externalId: 'evt_1Real' },
+    })
+    assert.equal(kept.status, 'pending', 'tried again later')
+    assert.ok(kept.nextAt > new Date())
+    await prisma.inboundEvent.deleteMany({ where: { id: kept.id } })
     assert.match(ticket.title, /could not start a thread: the workspace has no computer/)
     // Read again from the account the endpoint belongs to.
     assert.deepEqual(fake.calls.at(-1), {

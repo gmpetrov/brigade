@@ -229,8 +229,17 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   33). Either way the teammate is told the error and to check what is already done before carrying on.
   The runner's state files are replaced whole, and an outbox line cut short is dropped, so a crash cannot keep it from
   starting. Not continued: a harness approval or question pending when the runner died without warning (as before,
-  answering it fails), the later teammates of a message several were asked, a turn whose start never reached the API
-  before the runner died, and commands the API held for a starting computer when the API itself restarted.
+  answering it fails), the later teammates of a message several were asked, and a turn whose start never reached the
+  API before the runner died.
+- **Commands to runners** (`apps/api/src/runner-commands.ts`). Each command with a `commandId` (a message, a
+  person's answer, a retry, a takeover) is a `RunnerCommand` row before it is sent. It is still sent at once; the row
+  is the safety net. Runners from protocol 42 (`OUTBOX_PROTOCOL`) acknowledge each by id (`command.ack`) and ignore an
+  id they have seen (`apps/runner/src/seen-commands.ts`, kept on disk), so the API sends what is not acknowledged again
+  when the runner says hello and, while it stays connected, two minutes after each send. Commands for a cloud computer
+  that is starting wait in the table however long it takes, across API restarts, and a computer that never came up is
+  started again each minute. A command not through in 24 hours fails and opens a ticket in its thread (a thread left
+  starting goes back to idle); an interrupt or a browser window is dropped after 10 minutes instead, being moot. An
+  older runner takes each command once, as before. Rows are deleted 3 days after they settle.
 - **Vault.** AES-256-GCM, with each organization's key derived (HKDF) from `VAULT_KEY`; the workspace id is bound
   in as authenticated data, so a secret cannot be moved to another workspace. Decrypted only inside the API, per call.
 - **Connector calls** (`apps/api/src/connector-calls.ts`). The runner passes granted operations to `HarnessAgent` as
@@ -238,8 +247,15 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   runner's computer, the grant, read vs write, and the teammate's policy for writes (`allow`, `ask`, `deny`; default
   `allow`). `ask` opens an approval ticket and the call waits; the thread shows it as an approval, answered from the
   thread or the Tickets page by the thread's starter or an admin. Every call, refused ones included, is recorded in
-  `ConnectionCall`. A call waiting for approval does not survive an API restart (its ticket is then marked expired
-  when answered). Vendor errors are scrubbed of anything that looks like a key or token before they are logged or
+  `ConnectionCall`. A call waiting for a decision (a write, a cap, a credential, a trigger) is a `HeldCall` row beside
+  its ticket (`apps/api/src/held-calls.ts`): the decision is acted on whenever it comes, after any restart of the API
+  or the runner, once (the row is claimed). Its result goes to the teammate's tool while that still waits on the same
+  connection, else to the thread as a message, through a wake-up, as an email's reply does; a released secret never
+  goes in one (the teammate is told to ask again, which the approval now allows). An identical call (same thread,
+  teammate, tool and arguments) while the ticket is open joins it rather than open a second one, and a call cut off by
+  a connection that dropped tells the teammate it still waits, not to try again. A decided call a restart left is
+  made by the minute's tick; one a restart cut off while it was being made is not made again, and the thread is told
+  to check. Vendor errors are scrubbed of anything that looks like a key or token before they are logged or
   returned, since Stripe echoes a masked key.
 - **Connections** are kept as `removed` when disconnected, so their call log survives; the credential is revoked at
   the provider (Google) and deleted from the vault. Gmail and Google Calendar connect through Google OAuth; Stripe
@@ -308,7 +324,16 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   event by its endpoint's signing secret, or, for an endpoint without one (the server hides it from keys), read
   again from Stripe on the endpoint's account, so only what Stripe has counts (at most 120 reads a minute per
   endpoint). Gmail and
-  Calendar pushes only say something changed: the mailbox's history and the calendar's sync token say what.
+  Calendar pushes only say something changed: the mailbox's history and the calendar's sync token say what; a read
+  sets `Subscription.retryAt` first and clears it once done, so the minute's tick reads again after a failure or a
+  restart that cut a read off. Stripe's events, a custom app's and the GitHub App's are kept as they come
+  (`InboundEvent`, unique by source and the vendor's id, `apps/api/src/inbound.ts`), answered 2xx, then processed
+  from the row, at once and again on the minute's tick (1, 2, 4… minutes, up to a day, then operators are alerted).
+  A custom app's event without an `id` field or `X-Request-Id` counts once per body within five minutes. Each
+  trigger takes an event once (`TriggerDelivery`, unique by trigger and event id, claimed before its thread starts,
+  and taken over when a try failed or a crash left it starting for ten minutes), so retries and concurrent tries
+  start one thread. Every ten minutes the GitHub App's deliveries of the last six hours that failed and were never
+  kept are asked for again through GitHub's API. Resend's mail follows the same pattern in `MailMessage`.
   Pushes need a public HTTPS `API_URL`. Brigade's own writes (a teammate's sent mail, calendar changes, GitHub
   actions by the app) start nothing.
 - **Teammate browser** (`apps/runner/src/browsers.ts`). On the workspace computer each teammate has one Chrome,
