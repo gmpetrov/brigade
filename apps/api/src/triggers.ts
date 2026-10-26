@@ -104,6 +104,9 @@ async function claimDelivery(db: ScopedDb, triggerId: string, eventId: string): 
       !row.threadId ||
       (await db.session.count({ where: { id: row.threadId, status: 'failed' } })) > 0
     const threadId = failed ? randomUUID() : row.threadId!
+    // The run of a thread that could not start goes with it (settleRun), as it would have had
+    // the try not been cut off before saying so: the next try's run is counted alone.
+    if (failed && row.threadId) await settleRun(db, `run-${row.threadId}`, null)
     const { count } = await db.triggerDelivery.updateMany({
       where: { id: row.id, status: row.status, updatedAt: row.updatedAt },
       data: { status: 'starting', threadId },

@@ -883,4 +883,91 @@ describe('work kept in the database', { skip: !database && 'no database answers'
       `run-${threadId}`,
     )
   })
+  test("a playbook's delivery whose thread failed, cut off before its run was let go, counts one run", async () => {
+    const { beginRun } = await import('../src/playbooks.js')
+    const { deliver } = await import('../src/triggers.js')
+    const installation = await db.playbookInstallation.create({
+      data: {
+        playbookKey: 'test/durable-failed',
+        version: '1.0.0',
+        manifest: {
+          id: 'test/durable',
+          version: '1.0.0',
+          name: 'Durable',
+          limits: { runsPerDay: 1 },
+          apps: [],
+          actions: [],
+          settings: [],
+          entries: [],
+          skills: [],
+        },
+        teammateId: ids.sam,
+        ownerMemberId: ids.owner,
+        status: 'active',
+        createdByMemberId: ids.owner,
+      } as never,
+    })
+    const app =
+      (await db.app.findFirst({ where: { key: 'webhook' } })) ??
+      (await db.app.create({ data: { key: 'webhook', createdByMemberId: ids.owner } as never }))
+    const connection = await db.connection.create({
+      data: { appId: app.id, kind: 'webhook', label: 'Run', createdByMemberId: ids.owner } as never,
+    })
+    const row = await db.trigger.create({
+      data: {
+        connectionId: connection.id,
+        teammateId: ids.sam,
+        label: 'Run',
+        event: 'received',
+        createdByMemberId: ids.owner,
+        pathToken: `failed-${suffix}`,
+        playbookInstallationId: installation.id,
+      } as never,
+    })
+    // A try claimed the event and began its run (the day's only one), then the API stopped
+    // before its thread was made.
+    const threadId = randomUUID()
+    await db.triggerDelivery.create({
+      data: {
+        triggerId: row.id,
+        eventId: 'failed-event',
+        threadId,
+        status: 'starting',
+        updatedAt: new Date(Date.now() - 30 * 60_000),
+      } as never,
+    })
+    assert.ok('runId' in (await beginRun(db, installation.id, undefined, `run-${threadId}`)))
+    // Its thread was made, its first prompt failed, and the API stopped after marking it failed,
+    // before its run was let go.
+    await db.session.create({
+      data: {
+        id: threadId,
+        teammateId: ids.sam,
+        startedByMemberId: ids.owner,
+        computerId: ids.cloud,
+        title: 'Failed first prompt',
+        status: 'failed',
+        playbookRunId: `run-${threadId}`,
+        origin: 'trigger',
+        triggerId: row.id,
+      } as never,
+    })
+    const trigger = await prisma.trigger.findUniqueOrThrow({
+      where: { id: row.id },
+      include: { teammate: true, connection: true },
+    })
+    const outcome = await deliver(trigger, {
+      eventId: 'failed-event',
+      eventType: 'received',
+      title: 'Resume',
+      text: 'Resume this work',
+    })
+    // A new thread, and its run the only one of the day.
+    assert.ok('ok' in outcome && outcome.threadId !== threadId, JSON.stringify(outcome))
+    const runs = await db.playbookRun.findMany({ where: { installationId: installation.id } })
+    assert.deepEqual(
+      runs.map((r) => r.id),
+      [`run-${outcome.threadId}`],
+    )
+  })
 })
