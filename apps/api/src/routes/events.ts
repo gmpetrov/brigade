@@ -2,7 +2,7 @@
 // with the endpoint's secret, or the event read again from Stripe, Pub/Sub's
 // Google-signed token, a Calendar channel's token, a custom app's URL and
 // signature) before anything is read.
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
 import { prisma, scoped, type Scope } from '../db.js'
 import { fromPubSub, inboxChanged } from '../subscriptions/gmail.js'
@@ -10,6 +10,7 @@ import { calendarChanged } from '../subscriptions/google-calendar.js'
 import { stripeAccountOf } from '../connectors/stripe.js'
 import { accountKey, readStripeEvent, verifyStripe } from '../subscriptions/stripe.js'
 import { dispatch, findTrigger } from '../triggers.js'
+import { keepInbound, onInbound } from '../inbound.js'
 import { openSecret } from '../vault.js'
 import { received as mailReceived } from '../mail/inbound.js'
 import { statusChanged as mailStatus } from '../mail/outbound.js'
@@ -92,14 +93,14 @@ export const events = new Hono()
       if (!read) return c.json({ error: 'Stripe has no such event' }, 401)
       event = read
     }
-    const { failed } = await dispatch(sub.connection, {
-      id: event.id,
+    // Kept, then processed from its row (src/inbound.ts), again until its threads started.
+    await keepInbound({
+      source: `stripe:${sub.id}`,
+      externalId: event.id,
       type: event.type,
       payload: event,
     })
-    if (failed) noteFailure('trigger-webhook', `stripe ${event.type}: could not start a thread`)
-    // Stripe retries for three days.
-    return failed ? c.json({ error: 'Could not start a thread yet' }, 503) : c.json({ ok: true })
+    return c.json({ ok: true })
   })
 
   /** Gmail, through the Pub/Sub push subscription: a mailbox changed. */
@@ -195,19 +196,49 @@ export const customApps = new Hono().post('/:token', async (c) => {
     // Not JSON: passed on as text.
   }
   const fields = typeof payload === 'object' && payload ? (payload as Record<string, unknown>) : {}
-  // Senders retry; one thread per event id.
+  // Senders retry; one thread per event id. Without one, the same body within the same five
+  // minutes is the same event: a retry starts nothing, a resend later starts a thread again.
   const id =
     (typeof fields.id === 'string' && fields.id) ||
     c.req.header('x-request-id') ||
-    `${Date.now()}-${Math.random().toString(36).slice(2)}`
-  const { failed, started } = await dispatch(
-    trigger.connection,
-    { id, type: 'received', payload },
-    trigger,
-  )
-  if (failed) {
-    noteFailure('trigger-webhook', 'custom app: could not start a thread')
-    return c.json({ error: 'Could not start a thread yet' }, 503, { 'retry-after': '300' })
-  }
-  return c.json({ ok: true, duplicate: started === 0 }, started ? 202 : 200)
+    `body:${createHash('sha256')
+      .update(`${Math.floor(Date.now() / BODY_BUCKET_MS)}:${body}`)
+      .digest('hex')}`
+  // Kept, then processed from its row (src/inbound.ts), again until its thread started.
+  const { duplicate } = await keepInbound({
+    source: `hook:${trigger.id}`,
+    externalId: id,
+    type: 'received',
+    payload,
+  })
+  return c.json({ ok: true, duplicate }, duplicate ? 200 : 202)
+})
+
+/** Custom apps' events without an id: one body counts once within this window. */
+const BODY_BUCKET_MS = 5 * 60_000
+
+/** A Stripe event, from its row: offered to the triggers of its endpoint's connection. */
+onInbound('stripe', async ({ source, externalId, type, payload }) => {
+  const sub = await prisma.subscription.findUnique({
+    where: { id: source.slice('stripe:'.length) },
+    include: { connection: true },
+  })
+  // Its account is gone since: nothing to start.
+  if (!sub) return 'done'
+  const { failed } = await dispatch(sub.connection, { id: externalId, type, payload })
+  if (failed) noteFailure('trigger-webhook', `stripe ${type}: could not start a thread yet`)
+  return failed ? 'retry' : 'done'
+})
+
+/** A custom app's event, from its row: offered to its trigger. */
+onInbound('hook', async ({ source, externalId, type, payload }) => {
+  const trigger = await prisma.trigger.findUnique({
+    where: { id: source.slice('hook:'.length) },
+    include: { teammate: true, connection: true },
+  })
+  if (!trigger || trigger.teammate.archivedAt || trigger.connection.status === 'removed')
+    return 'done'
+  const { failed } = await dispatch(trigger.connection, { id: externalId, type, payload }, trigger)
+  if (failed) noteFailure('trigger-webhook', 'custom app: could not start a thread yet')
+  return failed ? 'retry' : 'done'
 })

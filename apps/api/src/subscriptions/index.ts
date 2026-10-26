@@ -7,8 +7,8 @@ import { env } from '../config.js'
 import type { ConnectorKind } from '../connectors/types.js'
 import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
 import { SubscribeError, type Target } from './common.js'
-import { gmailPush, readInbox, retryAt as gmailRetries, syncGmail } from './gmail.js'
-import { readCalendar, retryAt as calendarRetries, syncCalendar } from './google-calendar.js'
+import { gmailPush, readInbox, syncGmail } from './gmail.js'
+import { readCalendar, syncCalendar } from './google-calendar.js'
 import { syncStripe } from './stripe.js'
 import { inInbox } from '../mail/gmail-inbox.js'
 import { noteFailure } from '../ops/failures.js'
@@ -123,14 +123,11 @@ async function tick() {
         synced.add(sub.connectionId)
         await syncConnection(scope, sub.connectionId)
       }
-      if (kind === 'gmail') {
-        const due = (gmailRetries.get(sub.id) ?? 0) <= Date.now()
-        if (sub.mode === 'poll' ? due : gmailRetries.has(sub.id) && due) await readInbox(sub.id)
-      }
-      if (kind === 'google_calendar') {
-        const due = calendarRetries.get(sub.id)
-        if (due !== undefined && due <= Date.now()) await readCalendar(sub.id)
-      }
+      // A read that failed, or that a restart cut off, is tried again once due (retryAt).
+      const due = sub.retryAt !== null && sub.retryAt.getTime() <= Date.now()
+      if (kind === 'gmail' && (sub.mode === 'poll' ? sub.retryAt === null || due : due))
+        await readInbox(sub.id)
+      if (kind === 'google_calendar' && due) await readCalendar(sub.id)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       console.error(`subscription ${sub.id}:`, message)

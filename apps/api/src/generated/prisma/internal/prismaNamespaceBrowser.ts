@@ -125,7 +125,11 @@ export const ModelName = {
   MailDomain: 'MailDomain',
   Contact: 'Contact',
   ContactHandle: 'ContactHandle',
-  OpsAlert: 'OpsAlert'
+  OpsAlert: 'OpsAlert',
+  HeldCall: 'HeldCall',
+  RunnerCommand: 'RunnerCommand',
+  TriggerDelivery: 'TriggerDelivery',
+  InboundEvent: 'InboundEvent'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -842,6 +846,7 @@ export const SubscriptionScalarFieldEnum = {
   cursor: 'cursor',
   expiresAt: 'expiresAt',
   error: 'error',
+  retryAt: 'retryAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1469,6 +1474,76 @@ export const OpsAlertScalarFieldEnum = {
 } as const
 
 export type OpsAlertScalarFieldEnum = (typeof OpsAlertScalarFieldEnum)[keyof typeof OpsAlertScalarFieldEnum]
+
+
+export const HeldCallScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  ticketId: 'ticketId',
+  kind: 'kind',
+  fingerprint: 'fingerprint',
+  request: 'request',
+  status: 'status',
+  decision: 'decision',
+  result: 'result',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type HeldCallScalarFieldEnum = (typeof HeldCallScalarFieldEnum)[keyof typeof HeldCallScalarFieldEnum]
+
+
+export const RunnerCommandScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  computerId: 'computerId',
+  sessionId: 'sessionId',
+  type: 'type',
+  message: 'message',
+  status: 'status',
+  attempts: 'attempts',
+  sentAt: 'sentAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RunnerCommandScalarFieldEnum = (typeof RunnerCommandScalarFieldEnum)[keyof typeof RunnerCommandScalarFieldEnum]
+
+
+export const TriggerDeliveryScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  triggerId: 'triggerId',
+  eventId: 'eventId',
+  status: 'status',
+  threadId: 'threadId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TriggerDeliveryScalarFieldEnum = (typeof TriggerDeliveryScalarFieldEnum)[keyof typeof TriggerDeliveryScalarFieldEnum]
+
+
+export const InboundEventScalarFieldEnum = {
+  id: 'id',
+  source: 'source',
+  externalId: 'externalId',
+  type: 'type',
+  payload: 'payload',
+  status: 'status',
+  attempts: 'attempts',
+  nextAt: 'nextAt',
+  error: 'error',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type InboundEventScalarFieldEnum = (typeof InboundEventScalarFieldEnum)[keyof typeof InboundEventScalarFieldEnum]
 
 
 export const SortOrder = {

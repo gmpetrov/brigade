@@ -41,30 +41,33 @@ import { reviewOnCreate } from './reviews.js'
 import { endWatch, watchingNote, watchReplies } from './replies.js'
 import { syncConnection } from './subscriptions/index.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
+import {
+  decideHeld,
+  holdCall,
+  onDecided,
+  type Decision,
+  type Live,
+  type Resume,
+} from './held-calls.js'
 import { actingTeammate } from './thread-spec.js'
 import { openSecret, replaceSecret } from './vault.js'
 
-/**
- * always: a credential's ticket, also allowed for good (see credentials.ts). input: what the
- * person changed before approving (an email's draft), for an operation that lets them.
- */
-export type Decision = {
-  approved: boolean
-  memberId: string
-  reason?: string
-  always?: boolean
-  input?: Record<string, unknown>
-}
-const waiting = new Map<string, (decision: Decision) => void>()
+export type { Decision }
 
 type Call = Extract<RunnerToApi, { type: 'connector.call' }>
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
 
+/**
+ * A runner's connector call. One that asks a person is held with its ticket (src/held-calls.ts)
+ * and made once they decide, with `resume`: then nothing is asked again, and a denial stands.
+ */
 export async function handleConnectorCall(
   runner: Runner,
   call: Call,
   reply: (message: ApiToRunner) => void,
+  options: { alive?: Live['alive']; resume?: Resume } = {},
 ) {
+  const { resume } = options
   const scope: Scope = { organizationId: runner.organizationId, workspaceId: runner.workspaceId }
   const db = scoped(scope)
   const result = (r: {
@@ -302,7 +305,7 @@ export async function handleConnectorCall(
             )
           : false)
     let overCap: string | undefined
-    if (verdict?.level === 'auto' && !cap) {
+    if (verdict?.level === 'auto' && !cap && !resume) {
       // On its own: it first takes its share of its action's caps, atomically; past one, it asks.
       const spec = playbook?.actions.find((a) => a.key === playbookActionKey)
       const taken = spec
@@ -322,7 +325,9 @@ export async function handleConnectorCall(
         checkedSha = verdict.checkedSha
       }
     }
-    if (cap || asks) {
+    if (resume) {
+      decision = resume.decision
+    } else if (cap || asks) {
       const action = `${call.operation.replace(/_/g, ' ')} (${target})`
       const where = connection.externalAccount ?? connection.label
       const reason = cap
@@ -330,9 +335,22 @@ export async function handleConnectorCall(
         : verdict?.level === 'ask'
           ? verdict.reason
           : overCap
-      const ticket = await db.ticket.create({
-        data: {
-          sessionId: session.id,
+      // Held with its ticket: made once a person decides, whenever that is (src/held-calls.ts).
+      // An identical call meanwhile joins this ticket.
+      await holdCall(db, {
+        kind: 'connector',
+        sessionId: session.id,
+        teammateId: teammate.id,
+        callId: call.callId,
+        same: { connectionId: connection.id, operation: call.operation, input: input.data },
+        request: () => ({
+          sessionId: call.sessionId,
+          ...(call.teammateId ? { teammateId: call.teammateId } : {}),
+          connectionId: call.connectionId,
+          operation: call.operation,
+          input: call.input,
+        }),
+        ticket: {
           type: cap ? 'cap' : 'approval',
           title: cap
             ? `${teammate.name} reached its write cap on ${where}: ${action}`
@@ -355,25 +373,27 @@ export async function handleConnectorCall(
                 }
               : {}),
           },
-        } as never,
+        },
+        pending: { target, ...(reason ? { reason } : {}) },
+        live: { reply, alive: options.alive ?? (() => true) },
+        ...(cap
+          ? {
+              opened: (ticketId: string) =>
+                audit({
+                  ...scope,
+                  actor: { type: 'system', id: 'brigade' },
+                  action: 'cap.reached',
+                  target: { type: 'thread', id: session.id },
+                  data: { ...cap, connectionId: connection.id, ticketId },
+                }),
+            }
+          : {}),
       })
-      if (cap)
-        await audit({
-          ...scope,
-          actor: { type: 'system', id: 'brigade' },
-          action: 'cap.reached',
-          target: { type: 'thread', id: session.id },
-          data: { ...cap, connectionId: connection.id, ticketId: ticket.id },
-        })
-      reply({
-        type: 'connector.pending',
-        callId: call.callId,
-        ticketId: ticket.id,
-        target,
-        ...(reason ? { reason } : {}),
-      })
-      const decided = await awaitDecision(ticket.id)
-      decision = { ...decided, ticketId: ticket.id }
+      return
+    }
+    if (decision) {
+      const decided = decision
+      const ticket = { id: decision.ticketId }
       // The person changed the draft before approving: what goes is theirs, checked again.
       if (decided.approved && decided.input && operation.editable) {
         const edited = operation.input.safeParse({ ...(input.data as object), ...decided.input })
@@ -679,16 +699,15 @@ export async function authorisedFetch(
   return authorised
 }
 
-/** Whether a connector call is waiting on this ticket in this process. */
-export const isWaiting = (ticketId: string) => waiting.has(ticketId)
-
-/** Wait in this process for a person to decide an approval ticket (see decideTicket). */
-export const awaitDecision = (ticketId: string) =>
-  new Promise<Decision>((resolve) => waiting.set(ticketId, resolve))
+/** Made once decided, after any restart: the call as the runner sent it (src/held-calls.ts). */
+onDecided('connector', (runner, request, reply, resume) =>
+  handleConnectorCall(runner, { ...request, type: 'connector.call' } as Call, reply, { resume }),
+)
 
 /**
- * A person approves or denies a connector write. Returns false when the call
- * is no longer waiting (for instance after an API restart).
+ * A person approves or denies a held call (a connector write, a credential, a trigger): taken
+ * once, and the call is made right after, whether or not the teammate's tool still waits for it.
+ * Returns false when no call waits on the ticket (one opened before held calls).
  */
 export async function decideTicket(
   scope: Scope & { memberId: string },
@@ -705,12 +724,17 @@ export async function decideTicket(
     where: { id: ticketId, type: { in: ['approval', 'cap'] }, status: 'open' },
   })
   if (!ticket) return false
-  const resolve = waiting.get(ticketId)
-  waiting.delete(ticketId)
+  const held = await decideHeld(db, ticketId, {
+    approved: decision.approved,
+    memberId: scope.memberId,
+    ...(decision.reason ? { reason: decision.reason } : {}),
+    ...(decision.always && decision.approved ? { always: true } : {}),
+    ...(decision.input && decision.approved ? { input: decision.input } : {}),
+  })
   await db.ticket.updateMany({
     where: { id: ticketId, status: 'open' },
     data: {
-      status: resolve ? (decision.approved ? 'approved' : 'denied') : 'resolved',
+      status: held ? (decision.approved ? 'approved' : 'denied') : 'resolved',
       resolvedByMemberId: scope.memberId,
       resolvedAt: new Date(),
     },
@@ -719,7 +743,7 @@ export async function decideTicket(
     ...scope,
     actor: { type: 'member', id: scope.memberId },
     action: `${ticket.type === 'cap' ? 'cap' : 'approval'}.${
-      resolve
+      held
         ? decision.approved
           ? ticket.type === 'cap'
             ? 'allowed'
@@ -737,15 +761,14 @@ export async function decideTicket(
         }
       : {}),
   })
-  resolve?.({
-    approved: decision.approved,
-    memberId: scope.memberId,
-    ...(decision.reason ? { reason: decision.reason } : {}),
-    ...(decision.always && decision.approved ? { always: true } : {}),
-    ...(decision.input && decision.approved ? { input: decision.input } : {}),
-  })
   // A person's decision on a playbook's approval measures its action's trust: enough approvals
   // propose it act on its own (one decided in bulk is marked first, and does not count).
-  if (resolve) await afterPlaybookDecision(db, scope, ticket)
-  return Boolean(resolve)
+  if (held) await afterPlaybookDecision(db, scope, ticket)
+  // Made after the person's answer: an email may take seconds to go. The minute's tick makes it
+  // if this process stops first.
+  if (held)
+    void held
+      .run()
+      .catch((error: unknown) => console.error(`held call on ${ticketId} failed`, error))
+  return Boolean(held)
 }

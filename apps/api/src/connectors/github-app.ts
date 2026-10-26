@@ -66,6 +66,38 @@ async function asApp<T>(path: string, init: RequestInit = {}) {
   return (await response.json()) as T
 }
 
+/** One attempt at delivering the app's webhook, as GitHub lists them. */
+export type HookDelivery = { id: number; guid: string; delivered_at: string; status_code: number }
+
+/** The app webhook's delivery attempts since `since`, newest first (a few pages at most). */
+export async function hookDeliveries(since: Date, pages = 10) {
+  const all: HookDelivery[] = []
+  let cursor: string | undefined
+  for (let page = 0; page < pages; page++) {
+    const response = await fetch(
+      `${GITHUB_API}/app/hook/deliveries?per_page=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+      { headers: { ...githubHeaders, authorization: `Bearer ${appJwt()}` } },
+    )
+    if (!response.ok) throw new Error(`GitHub refused the app's deliveries (${response.status})`)
+    const batch = (await response.json()) as HookDelivery[]
+    all.push(...batch)
+    cursor = response.headers.get('link')?.match(/[?&]cursor=([^&>]+)[^>]*>;\s*rel="next"/)?.[1]
+    if (!cursor || batch.some((d) => Date.parse(d.delivered_at) < since.getTime())) break
+    cursor = decodeURIComponent(cursor)
+  }
+  return all.filter((d) => Date.parse(d.delivered_at) >= since.getTime())
+}
+
+/** Ask GitHub to send one delivery again. */
+export async function redeliverHook(deliveryId: number) {
+  const response = await fetch(`${GITHUB_API}/app/hook/deliveries/${deliveryId}/attempts`, {
+    method: 'POST',
+    headers: { ...githubHeaders, authorization: `Bearer ${appJwt()}` },
+  })
+  if (!response.ok && response.status !== 202)
+    throw new Error(`GitHub refused to deliver it again (${response.status})`)
+}
+
 // Installation tokens last an hour. Kept in this process only, never in the vault or the database.
 const tokens = new Map<number, { token: string; expiresAt: number }>()
 

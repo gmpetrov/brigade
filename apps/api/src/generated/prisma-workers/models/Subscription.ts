@@ -39,6 +39,7 @@ export type SubscriptionMinAggregateOutputType = {
   cursor: string | null
   expiresAt: Date | null
   error: string | null
+  retryAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -56,6 +57,7 @@ export type SubscriptionMaxAggregateOutputType = {
   cursor: string | null
   expiresAt: Date | null
   error: string | null
+  retryAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -74,6 +76,7 @@ export type SubscriptionCountAggregateOutputType = {
   cursor: number
   expiresAt: number
   error: number
+  retryAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -93,6 +96,7 @@ export type SubscriptionMinAggregateInputType = {
   cursor?: true
   expiresAt?: true
   error?: true
+  retryAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -110,6 +114,7 @@ export type SubscriptionMaxAggregateInputType = {
   cursor?: true
   expiresAt?: true
   error?: true
+  retryAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -128,6 +133,7 @@ export type SubscriptionCountAggregateInputType = {
   cursor?: true
   expiresAt?: true
   error?: true
+  retryAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -219,6 +225,7 @@ export type SubscriptionGroupByOutputType = {
   cursor: string | null
   expiresAt: Date | null
   error: string | null
+  retryAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: SubscriptionCountAggregateOutputType | null
@@ -258,6 +265,7 @@ export type SubscriptionWhereInput = {
   cursor?: Prisma.StringNullableFilter<"Subscription"> | string | null
   expiresAt?: Prisma.DateTimeNullableFilter<"Subscription"> | Date | string | null
   error?: Prisma.StringNullableFilter<"Subscription"> | string | null
+  retryAt?: Prisma.DateTimeNullableFilter<"Subscription"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -278,6 +286,7 @@ export type SubscriptionOrderByWithRelationInput = {
   cursor?: Prisma.SortOrderInput | Prisma.SortOrder
   expiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   error?: Prisma.SortOrderInput | Prisma.SortOrder
+  retryAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
@@ -302,6 +311,7 @@ export type SubscriptionWhereUniqueInput = Prisma.AtLeast<{
   cursor?: Prisma.StringNullableFilter<"Subscription"> | string | null
   expiresAt?: Prisma.DateTimeNullableFilter<"Subscription"> | Date | string | null
   error?: Prisma.StringNullableFilter<"Subscription"> | string | null
+  retryAt?: Prisma.DateTimeNullableFilter<"Subscription"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -322,6 +332,7 @@ export type SubscriptionOrderByWithAggregationInput = {
   cursor?: Prisma.SortOrderInput | Prisma.SortOrder
   expiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   error?: Prisma.SortOrderInput | Prisma.SortOrder
+  retryAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.SubscriptionCountOrderByAggregateInput
@@ -346,6 +357,7 @@ export type SubscriptionScalarWhereWithAggregatesInput = {
   cursor?: Prisma.StringNullableWithAggregatesFilter<"Subscription"> | string | null
   expiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Subscription"> | Date | string | null
   error?: Prisma.StringNullableWithAggregatesFilter<"Subscription"> | string | null
+  retryAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Subscription"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Subscription"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Subscription"> | Date | string
 }
@@ -362,6 +374,7 @@ export type SubscriptionCreateInput = {
   cursor?: string | null
   expiresAt?: Date | string | null
   error?: string | null
+  retryAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSubscriptionsInput
@@ -382,6 +395,7 @@ export type SubscriptionUncheckedCreateInput = {
   cursor?: string | null
   expiresAt?: Date | string | null
   error?: string | null
+  retryAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -398,6 +412,7 @@ export type SubscriptionUpdateInput = {
   cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSubscriptionsNestedInput
@@ -418,6 +433,7 @@ export type SubscriptionUncheckedUpdateInput = {
   cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -436,6 +452,7 @@ export type SubscriptionCreateManyInput = {
   cursor?: string | null
   expiresAt?: Date | string | null
   error?: string | null
+  retryAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -452,6 +469,7 @@ export type SubscriptionUpdateManyMutationInput = {
   cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -470,6 +488,7 @@ export type SubscriptionUncheckedUpdateManyInput = {
   cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -503,6 +522,7 @@ export type SubscriptionCountOrderByAggregateInput = {
   cursor?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   error?: Prisma.SortOrder
+  retryAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -520,6 +540,7 @@ export type SubscriptionMaxOrderByAggregateInput = {
   cursor?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   error?: Prisma.SortOrder
+  retryAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -537,6 +558,7 @@ export type SubscriptionMinOrderByAggregateInput = {
   cursor?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   error?: Prisma.SortOrder
+  retryAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -650,6 +672,7 @@ export type SubscriptionCreateWithoutWorkspaceInput = {
   cursor?: string | null
   expiresAt?: Date | string | null
   error?: string | null
+  retryAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   connection: Prisma.ConnectionCreateNestedOneWithoutSubscriptionsInput
@@ -668,6 +691,7 @@ export type SubscriptionUncheckedCreateWithoutWorkspaceInput = {
   cursor?: string | null
   expiresAt?: Date | string | null
   error?: string | null
+  retryAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -715,6 +739,7 @@ export type SubscriptionScalarWhereInput = {
   cursor?: Prisma.StringNullableFilter<"Subscription"> | string | null
   expiresAt?: Prisma.DateTimeNullableFilter<"Subscription"> | Date | string | null
   error?: Prisma.StringNullableFilter<"Subscription"> | string | null
+  retryAt?: Prisma.DateTimeNullableFilter<"Subscription"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Subscription"> | Date | string
 }
@@ -731,6 +756,7 @@ export type SubscriptionCreateWithoutConnectionInput = {
   cursor?: string | null
   expiresAt?: Date | string | null
   error?: string | null
+  retryAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSubscriptionsInput
@@ -749,6 +775,7 @@ export type SubscriptionUncheckedCreateWithoutConnectionInput = {
   cursor?: string | null
   expiresAt?: Date | string | null
   error?: string | null
+  retryAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -792,6 +819,7 @@ export type SubscriptionCreateManyWorkspaceInput = {
   cursor?: string | null
   expiresAt?: Date | string | null
   error?: string | null
+  retryAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -808,6 +836,7 @@ export type SubscriptionUpdateWithoutWorkspaceInput = {
   cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutSubscriptionsNestedInput
@@ -826,6 +855,7 @@ export type SubscriptionUncheckedUpdateWithoutWorkspaceInput = {
   cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -843,6 +873,7 @@ export type SubscriptionUncheckedUpdateManyWithoutWorkspaceInput = {
   cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -860,6 +891,7 @@ export type SubscriptionCreateManyConnectionInput = {
   cursor?: string | null
   expiresAt?: Date | string | null
   error?: string | null
+  retryAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -876,6 +908,7 @@ export type SubscriptionUpdateWithoutConnectionInput = {
   cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSubscriptionsNestedInput
@@ -894,6 +927,7 @@ export type SubscriptionUncheckedUpdateWithoutConnectionInput = {
   cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -911,6 +945,7 @@ export type SubscriptionUncheckedUpdateManyWithoutConnectionInput = {
   cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -931,6 +966,7 @@ export type SubscriptionSelect<ExtArgs extends runtime.Types.Extensions.Internal
   cursor?: boolean
   expiresAt?: boolean
   error?: boolean
+  retryAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -951,6 +987,7 @@ export type SubscriptionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   cursor?: boolean
   expiresAt?: boolean
   error?: boolean
+  retryAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -971,6 +1008,7 @@ export type SubscriptionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   cursor?: boolean
   expiresAt?: boolean
   error?: boolean
+  retryAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -991,11 +1029,12 @@ export type SubscriptionSelectScalar = {
   cursor?: boolean
   expiresAt?: boolean
   error?: boolean
+  retryAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SubscriptionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "connectionId" | "resource" | "mode" | "externalId" | "externalResourceId" | "secretId" | "events" | "cursor" | "expiresAt" | "error" | "createdAt" | "updatedAt", ExtArgs["result"]["subscription"]>
+export type SubscriptionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "connectionId" | "resource" | "mode" | "externalId" | "externalResourceId" | "secretId" | "events" | "cursor" | "expiresAt" | "error" | "retryAt" | "createdAt" | "updatedAt", ExtArgs["result"]["subscription"]>
 export type SubscriptionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
@@ -1053,6 +1092,11 @@ export type $SubscriptionPayload<ExtArgs extends runtime.Types.Extensions.Intern
      * The last failure to subscribe or read, shown on the connection.
      */
     error: string | null
+    /**
+     * When its reader tries again: set before each read and cleared once it finished, so a read a
+     * restart cut off, or one that failed, is tried again by the minute's tick.
+     */
+    retryAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["subscription"]>
@@ -1493,6 +1537,7 @@ export interface SubscriptionFieldRefs {
   readonly cursor: Prisma.FieldRef<"Subscription", 'String'>
   readonly expiresAt: Prisma.FieldRef<"Subscription", 'DateTime'>
   readonly error: Prisma.FieldRef<"Subscription", 'String'>
+  readonly retryAt: Prisma.FieldRef<"Subscription", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Subscription", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Subscription", 'DateTime'>
 }

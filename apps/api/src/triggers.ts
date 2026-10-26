@@ -17,7 +17,7 @@ import type {
   TriggerDefinition,
   VendorEvent,
 } from './connectors/types.js'
-import { prisma, scoped, type Scope } from './db.js'
+import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { loadThread } from './thread-spec.js'
 import { promptWithAttachments, startThread } from './work.js'
 
@@ -44,12 +44,109 @@ export const RULE_THREADS_PER_DAY = 50
 const CONVERSATION_LOOP_LIMIT = 8
 const CONVERSATION_LOOP_MS = 60 * 60_000
 
+/** A claim this old, still starting, was cut off (the API restarted): another try takes it over. */
+const CLAIM_STALE_MS = 10 * 60_000
+/** Deliveries are remembered this long: a vendor's retry or a mailbox read again comes within it. */
+const DELIVERIES_KEPT_MS = 30 * 24 * 60 * 60_000
+
+type Claim = { id: string } | { duplicate: true; threadId?: string }
+
+/**
+ * Claim one event for a trigger before its thread starts: one row per trigger and event id
+ * (TriggerDelivery), so two tries at once start one thread. A try that failed, or one a restart
+ * cut off, is taken over; one that went says where it went.
+ */
+async function claimDelivery(db: ScopedDb, triggerId: string, eventId: string): Promise<Claim> {
+  try {
+    const row = await db.triggerDelivery.create({
+      data: { triggerId, eventId: eventId.slice(0, 500), status: 'starting' } as never,
+      select: { id: true },
+    })
+    // Delivered before deliveries had their own row: its audit entry says so.
+    const seen = await db.auditEntry.findFirst({
+      where: {
+        action: 'trigger.received',
+        targetId: triggerId,
+        data: { path: ['eventId'], equals: eventId },
+      },
+    })
+    if (!seen) return row
+    const { threadId } = (seen.data ?? {}) as { threadId?: string }
+    await db.triggerDelivery.updateMany({
+      where: { id: row.id },
+      data: { status: 'done', ...(threadId ? { threadId } : {}) },
+    })
+    return went(db, threadId)
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'P2002') throw error
+  }
+  const row = await db.triggerDelivery.findFirst({
+    where: { triggerId, eventId: eventId.slice(0, 500) },
+  })
+  if (!row) return { duplicate: true }
+  const stale =
+    row.status === 'failed' ||
+    (row.status === 'starting' && row.updatedAt.getTime() < Date.now() - CLAIM_STALE_MS)
+  if (stale) {
+    const { count } = await db.triggerDelivery.updateMany({
+      where: { id: row.id, status: row.status, updatedAt: row.updatedAt },
+      data: { status: 'starting' },
+    })
+    if (count === 1) return { id: row.id }
+  }
+  // Being started by another try, or delivered: never a second thread.
+  return went(db, row.status === 'loop' ? undefined : (row.threadId ?? undefined))
+}
+
+/** Seen before: the thread it went to, unless that thread is gone since (deleted). */
+async function went(db: ScopedDb, threadId?: string): Promise<Claim> {
+  const there = threadId && (await db.session.count({ where: { id: threadId } }))
+  return { duplicate: true, ...(there ? { threadId } : {}) }
+}
+
+/** Deliveries remembered long enough: deleted (src/jobs.ts). */
+export const sweepDeliveries = (now = Date.now()) =>
+  prisma.triggerDelivery.deleteMany({
+    where: { createdAt: { lt: new Date(now - DELIVERIES_KEPT_MS) } },
+  })
+
 /**
  * Start a thread for one event, once per event id, or continue the thread of
  * the event's conversation (a reply in the same Gmail thread). When it cannot
- * start, a ticket tells the member who set the trigger up; the caller retries later.
+ * start, a ticket tells the member who set the trigger up; the caller retries later,
+ * and the retry, unlike a second delivery, may start it.
  */
 export async function deliver(
+  trigger: Trigger,
+  event: Parameters<typeof deliverOnce>[1],
+): Promise<Delivery> {
+  if (!event.eventId) return deliverOnce(trigger, event)
+  const db = scoped({ organizationId: trigger.organizationId, workspaceId: trigger.workspaceId })
+  const claim = await claimDelivery(db, trigger.id, event.eventId)
+  if (!('id' in claim)) return claim
+  const settle = (data: { status: string; threadId?: string }) =>
+    db.triggerDelivery.updateMany({ where: { id: claim.id }, data })
+  try {
+    const delivery = await deliverOnce(trigger, event)
+    await settle(
+      'error' in delivery
+        ? { status: 'failed' }
+        : 'ok' in delivery
+          ? { status: 'done', threadId: delivery.threadId }
+          : 'capped' in delivery
+            ? { status: 'capped' }
+            : 'skipped' in delivery
+              ? { status: delivery.skipped.includes('loop') ? 'loop' : 'skipped' }
+              : { status: 'done', ...(delivery.threadId ? { threadId: delivery.threadId } : {}) },
+    )
+    return delivery
+  } catch (error) {
+    await settle({ status: 'failed' }).catch(() => undefined)
+    throw error
+  }
+}
+
+async function deliverOnce(
   trigger: Trigger,
   event: {
     eventId: string | null
@@ -68,22 +165,6 @@ export async function deliver(
 ): Promise<Delivery> {
   const scope: Scope = { organizationId: trigger.organizationId, workspaceId: trigger.workspaceId }
   const db = scoped(scope)
-  if (event.eventId) {
-    const seen = await db.auditEntry.findFirst({
-      where: {
-        action: 'trigger.received',
-        targetId: trigger.id,
-        data: { path: ['eventId'], equals: event.eventId },
-      },
-    })
-    if (seen) {
-      const { threadId, outcome } = (seen.data ?? {}) as { threadId?: string; outcome?: string }
-      // Unless that thread is gone since (deleted): then it went nowhere that still is.
-      const went =
-        threadId && outcome !== 'loop' && (await db.session.count({ where: { id: threadId } }))
-      return { duplicate: true, ...(went ? { threadId } : {}) }
-    }
-  }
 
   const failed = async (message: string): Promise<Delivery> => {
     // Never silent: a ticket for the member who set the trigger up.

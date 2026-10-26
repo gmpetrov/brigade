@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto'
 import WebSocket from 'ws'
 import { HOME, VERSION, type RunnerConfig } from './config.js'
 import type { Outbox } from './outbox.js'
+import type { SeenCommands } from './seen-commands.js'
 import { installedBundle } from './updater.js'
 
 /** When this process started: the API tells previews it lost from those it runs (hello). */
@@ -69,7 +70,18 @@ type PendingCall = {
   reject: (error: Error) => void
   onPending: (ticketId: string, reason?: string, always?: boolean) => void
   onDecision: (decision: { ticketId: string; approved: boolean; memberId: string }) => void
+  /** The ticket it waits on for a person's decision, once the API said so. */
+  ticketId?: string
 }
+
+/**
+ * What the teammate's tool says of a call that waited on a person when the connection dropped:
+ * the API keeps it with its ticket, makes it once someone decides, and tells the thread.
+ */
+export const STILL_WAITING =
+  'This is still waiting for a person to approve it (its ticket is open). Do not make the call again: ' +
+  'once they decide, Brigade makes it and its result comes to this thread as a message. End your turn, ' +
+  'or go on with work that does not depend on it.'
 
 export class Connection {
   private ws: WebSocket | undefined
@@ -92,6 +104,8 @@ export class Connection {
      * this runner's protocol. Returns true when the runner updates itself.
      */
     private readonly onBundle: (bundle: string | undefined, required: boolean) => boolean,
+    /** Commands taken already (OUTBOX_PROTOCOL): acknowledged again and ignored. */
+    private readonly seen?: SeenCommands,
   ) {}
 
   start() {
@@ -141,7 +155,9 @@ export class Connection {
       } else if (message.type === 'ack') {
         this.outbox.ack(message.sessionId, message.seq)
       } else if (message.type === 'connector.pending') {
-        this.calls.get(message.callId)?.onPending(message.ticketId, message.reason, message.always)
+        const call = this.calls.get(message.callId)
+        if (call) call.ticketId = message.ticketId
+        call?.onPending(message.ticketId, message.reason, message.always)
       } else if (message.type === 'connector.result') {
         const call = this.calls.get(message.callId)
         if (!call) return
@@ -157,6 +173,14 @@ export class Connection {
           `This runner is too old for the API (needs protocol ${message.minProtocolVersion}). Update it and start again.`,
         )
         process.exit(1)
+      } else if ('commandId' in message && this.seen) {
+        // Sent again by the API until acknowledged: one taken already is not taken twice.
+        const { commandId } = message
+        if (!this.seen.has(commandId)) {
+          this.onCommand(message)
+          this.seen.add(commandId)
+        }
+        this.send({ type: 'command.ack', commandIds: [commandId] })
       } else {
         this.onCommand(message)
       }
@@ -164,9 +188,16 @@ export class Connection {
     ws.on('close', (code, reason) => {
       clearInterval(heartbeat)
       this.ready = false
-      // Calls in flight cannot be answered on a new connection.
+      // Calls in flight cannot be answered on a new connection. One waiting on a person is kept
+      // by the API, which makes it once they decide: the teammate must not make it again.
       for (const call of this.calls.values())
-        call.reject(new Error('Lost the connection to Brigade during this call; try again'))
+        call.reject(
+          new Error(
+            call.ticketId
+              ? STILL_WAITING
+              : 'Lost the connection to Brigade during this call; try again',
+          ),
+        )
       this.calls.clear()
       if (this.closed) return
       if (code === 4401) {

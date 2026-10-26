@@ -7,6 +7,7 @@ import {
   BrowserToApi,
   HEARTBEAT_PROTOCOL,
   MIN_PROTOCOL_VERSION,
+  OUTBOX_PROTOCOL,
   RESUME_PROTOCOL,
   RunnerToApi,
   type AgentEvent,
@@ -20,6 +21,17 @@ import { onScopedWrite, prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
 import { ensureSetup, giveHomesBackOnceRestored, stopWithoutPlan, touch, wake } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
+import { dropDeadWaiters } from './held-calls.js'
+import {
+  ackCommands,
+  computersWaiting,
+  giveUp,
+  isDurable,
+  keepCommand,
+  noteSent,
+  pendingCommands,
+  RESEND_MS,
+} from './runner-commands.js'
 import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryTidy, handleMemoryUpdate } from './library-calls.js'
 import { handleScheduleCall } from './schedules.js'
@@ -315,7 +327,11 @@ export const codeFiles = (
     20_000,
   )
 
-/** Commands for cloud computers that are starting, or runners restarting, sent when their runner connects. */
+/**
+ * Commands without a commandId (a sign-in, a terminal) for cloud computers that are starting, or
+ * runners restarting, sent when their runner connects. They are a person's, live: an API restart
+ * ends them anyway. Every command with a commandId is a row instead (src/runner-commands.ts).
+ */
 const queued = new Map<string, { message: ApiToRunner; at: number }[]>()
 const QUEUE_TTL_MS = 10 * 60_000
 
@@ -323,21 +339,74 @@ const QUEUE_TTL_MS = 10 * 60_000
  * Send now, or for a cloud computer that is stopped or starting, start it and
  * send once its runner connects; the same, without starting it, while its runner
  * restarts into an update. A member's machine that is offline returns 'offline'.
+ * A command with a commandId is kept until its runner acknowledges it, and sent again
+ * when it reconnects (src/runner-commands.ts): queued, it survives an API restart.
  */
 export async function dispatch(
-  computer: { id: string; kind: string },
+  computer: { id: string; kind: string; organizationId?: string; workspaceId?: string },
   message: ApiToRunner,
 ): Promise<'sent' | 'queued' | 'offline'> {
-  if (sendToRunner(computer.id, message)) return 'sent'
   const updating = isRestarting(computer.id)
-  if (computer.kind !== 'cloud' && !updating) return 'offline'
-  const list = queued.get(computer.id) ?? []
-  list.push({ message, at: Date.now() })
-  queued.set(computer.id, list)
+  const conn = runners.get(computer.id)
+  if (!conn && computer.kind !== 'cloud' && !updating) return 'offline'
+  if (isDurable(message)) {
+    await keepCommand(computer, message)
+    if (conn && !updating) {
+      await sendKept(computer.id, conn, message)
+      return 'sent'
+    }
+  } else if (sendToRunner(computer.id, message)) {
+    return 'sent'
+  } else {
+    const list = queued.get(computer.id) ?? []
+    list.push({ message, at: Date.now() })
+    queued.set(computer.id, list)
+  }
   // Not waited for: it asks the provider first, at times for seconds, and the answer
   // here is the same.
   if (!updating) wake(computer.id)
   return 'queued'
+}
+
+/** Send a kept command on this connection, unless an older runner took it already. */
+async function sendKept(
+  computerId: string,
+  conn: RunnerConn,
+  message: ApiToRunner & { commandId: string },
+) {
+  if (!(await noteSent(message.commandId, conn.protocolVersion))) return
+  if (runners.get(computerId) !== conn) return
+  touch(computerId)
+  send(conn.ws, message)
+}
+
+/**
+ * Each minute: commands a connected runner has not acknowledged a while after they were sent
+ * (the connection died before anyone noticed) go again; a cloud computer with commands waiting
+ * that is not up is started again (a start the API's restart cut off); commands not through in a
+ * day are given up, with a ticket. Started by the entry (src/jobs.ts).
+ */
+export async function resendCommands(now = Date.now()) {
+  for (const waiting of await computersWaiting()) {
+    const computerId = waiting.computerId
+    const conn = runners.get(computerId)
+    if (isRestarting(computerId)) continue
+    if (conn) {
+      for (const command of await pendingCommands(computerId, now)) {
+        const due =
+          !command.sentAt ||
+          (conn.protocolVersion >= OUTBOX_PROTOCOL && now - command.sentAt.getTime() > RESEND_MS)
+        if (due) await sendKept(computerId, conn, command.message)
+      }
+    } else if (now - (waiting._min.createdAt?.getTime() ?? now) > 60_000) {
+      const computer = await prisma.computer.findUnique({
+        where: { id: computerId },
+        select: { kind: true, status: true },
+      })
+      if (computer?.kind === 'cloud' && computer.status !== 'destroyed') wake(computerId)
+    }
+  }
+  await giveUp(now)
 }
 
 /**
@@ -394,7 +463,12 @@ export const offerRunnerUpdates = () =>
     }, console.error)
   }, 60_000)
 
-function flushQueue(computerId: string) {
+/** A runner said hello: what waited for it goes, the kept commands first, in order. */
+async function flushQueue(computerId: string, conn: RunnerConn) {
+  for (const command of await pendingCommands(computerId)) {
+    if (runners.get(computerId) !== conn) return
+    await sendKept(computerId, conn, command.message)
+  }
   const list = queued.get(computerId) ?? []
   queued.delete(computerId)
   for (const { message, at } of list)
@@ -565,6 +639,8 @@ export function runnerSocket(runner: {
         runners.delete(runner.computerId)
         // Restarting into an update: the next runner takes over in a moment (restarting).
         if (isRestarting(runner.computerId)) return
+        // Calls held for a person stop waiting on this connection: their result goes to the thread.
+        dropDeadWaiters()
         // Its threads' events wait on it now, as its computer shows: it says again once back.
         const waited = [...eventsWaiting].filter(([, w]) => w.computerId === runner.computerId)
         for (const [id] of waited) eventsWaiting.delete(id)
@@ -659,7 +735,17 @@ export function runnerSocket(runner: {
       if (computer.kind === 'member_machine' && computer.memberId && message.machineLogins) {
         await syncMachineLogins(computer, computer.memberId, message.machineLogins)
       }
-      // A runner that reconnects has lost any sign-in it was running.
+      // A runner that reconnects has lost any sign-in it was running. Those this process never
+      // knew (it restarted meanwhile) end too: an account is never left signing in.
+      const known = new Set(loginsOnComputer(runner.computerId).map((l) => l.accountId))
+      await prisma.account.updateMany({
+        where: {
+          computerId: runner.computerId,
+          status: 'signing_in',
+          ...(known.size ? { id: { notIn: [...known] } } : {}),
+        },
+        data: { status: 'needs_sign_in' },
+      })
       for (const login of loginsOnComputer(runner.computerId)) {
         endLogin(login.loginId)
         await prisma.account.updateMany({
@@ -709,7 +795,7 @@ export function runnerSocket(runner: {
           `runner ${runner.id}: bundle ${message.bundle.slice(0, 12)} → ${bundle.slice(0, 12)}`,
         )
       touch(runner.computerId)
-      flushQueue(runner.computerId)
+      await flushQueue(runner.computerId, conn)
       // Running now, as written above: a status a dashboard kept (stopped, error) is over.
       broadcast(runner.workspaceId, computerUpdated(runner.computerId, computer.status))
       // Threads that moved here while it was offline get their message now.
@@ -732,6 +818,8 @@ export function runnerSocket(runner: {
     }
 
     if (message.type === 'events.waiting') return noteEventsWaiting(message.threads)
+
+    if (message.type === 'command.ack') return ackCommands(runner.computerId, message.commandIds)
 
     if (message.type === 'disk')
       return noteDisk(runner, message).catch((error) =>
@@ -796,15 +884,21 @@ export function runnerSocket(runner: {
       return
     }
 
+    // A call held for a person hears its result here while this is still the computer's connection.
+    const current = conn
+    const alive = () =>
+      runners.get(runner.computerId) === current && !isRestarting(runner.computerId)
+
     if (message.type === 'credential.request') {
       // May wait for a person, like a connector call.
-      void handleCredentialRequest(runner, message, (reply) => send(ws, reply)).catch((error) =>
-        send(ws, {
-          type: 'connector.result',
-          callId: message.callId,
-          ok: false,
-          error: String(error),
-        }),
+      void handleCredentialRequest(runner, message, (reply) => send(ws, reply), { alive }).catch(
+        (error) =>
+          send(ws, {
+            type: 'connector.result',
+            callId: message.callId,
+            ok: false,
+            error: String(error),
+          }),
       )
       return
     }
@@ -822,13 +916,14 @@ export function runnerSocket(runner: {
     }
 
     if (message.type === 'schedule.call') {
-      void handleScheduleCall(runner, message, (reply) => send(ws, reply)).catch((error) =>
-        send(ws, {
-          type: 'connector.result',
-          callId: message.callId,
-          ok: false,
-          error: error instanceof Error ? error.message : String(error),
-        }),
+      void handleScheduleCall(runner, message, (reply) => send(ws, reply), { alive }).catch(
+        (error) =>
+          send(ws, {
+            type: 'connector.result',
+            callId: message.callId,
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          }),
       )
       return
     }
@@ -885,13 +980,14 @@ export function runnerSocket(runner: {
 
     if (message.type === 'connector.call') {
       // Long-running (it may wait for a person): do not block the runner's other messages.
-      void handleConnectorCall(runner, message, (reply) => send(ws, reply)).catch((error) =>
-        send(ws, {
-          type: 'connector.result',
-          callId: message.callId,
-          ok: false,
-          error: String(error),
-        }),
+      void handleConnectorCall(runner, message, (reply) => send(ws, reply), { alive }).catch(
+        (error) =>
+          send(ws, {
+            type: 'connector.result',
+            callId: message.callId,
+            ok: false,
+            error: String(error),
+          }),
       )
       return
     }

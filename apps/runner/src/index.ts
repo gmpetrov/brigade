@@ -50,6 +50,7 @@ import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys, usePersonPath, type Transcript } from './harness/index.js'
 import { Outbox } from './outbox.js'
+import { SeenCommands } from './seen-commands.js'
 import { imageStore } from './reply-images.js'
 import { MemoryGuard } from './memory-guard.js'
 import { runnerCgroups } from './preview-cgroup.js'
@@ -742,6 +743,7 @@ async function start() {
     (message) => void onCommand(message),
     hello,
     (bundle, required) => updater.offer(bundle, required),
+    new SeenCommands(join(paths.state, 'commands-seen.json')),
   )
   connection.start()
 

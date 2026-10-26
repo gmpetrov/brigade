@@ -78,8 +78,15 @@ export * from './usage.js'
  *     files' hashes (thread.code).
  * 41: the code panel lists the files changed since the last commit, reads a file as in it and
  *     puts files back as they are in it (thread.code's changes, original and revert).
+ * 42: commands with a commandId are acknowledged (command.ack), and one seen before is ignored: the
+ *     API sends again what is not acknowledged.
  */
-export const PROTOCOL_VERSION = 41
+export const PROTOCOL_VERSION = 42
+/**
+ * Runners from this version on acknowledge commands by id and ignore one they saw already: the API
+ * keeps each until acknowledged and sends it again on reconnect (apps/api/src/runner-commands.ts).
+ */
+export const OUTBOX_PROTOCOL = 42
 /** Runners from this version on write files people edit and find a preview element's source. */
 export const CODE_EDIT_PROTOCOL = 39
 /** Runners from this version on list, find and search a working folder for the code panel (thread.code). */
