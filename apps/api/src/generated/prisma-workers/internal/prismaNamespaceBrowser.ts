@@ -1453,6 +1453,7 @@ export const OpsAlertScalarFieldEnum = {
   firstAt: 'firstAt',
   lastAt: 'lastAt',
   notifiedAt: 'notifiedAt',
+  notifiedSeverity: 'notifiedSeverity',
   resolvedAt: 'resolvedAt'
 } as const
 

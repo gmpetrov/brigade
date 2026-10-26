@@ -7,6 +7,7 @@ CREATE TABLE "OpsAlert" (
     "firstAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "notifiedAt" TIMESTAMP(3),
+    "notifiedSeverity" TEXT,
     "resolvedAt" TIMESTAMP(3),
 
     CONSTRAINT "OpsAlert_pkey" PRIMARY KEY ("key")

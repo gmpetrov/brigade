@@ -33,30 +33,40 @@ type Row = {
   severity: string
   firstAt: Date
   notifiedAt: Date | null
+  notifiedSeverity: string | null
   resolvedAt: Date | null
 }
 
+type Step = {
+  reopen: boolean
+  firstAt: Date
+  /** How bad it is now: while it lasts, as bad as it got. */
+  severity: Severity
+  notify: 'firing' | 'reminder' | null
+}
+
 /**
- * What raising an alert does to its row: open it again (new), keep it (still), and whether
- * operators are told now. A raise that turns a warning critical is told at once.
+ * What raising an alert does to its row: open it again (new), keep it (still), how bad it
+ * is, and whether operators are told now. While it lasts it stays as bad as it got: a count
+ * that wavers around a threshold would otherwise make it critical again each time it
+ * crosses. Critical when operators were last told less is told at once, and on each run
+ * until it is sent, whatever the count does meanwhile.
  */
-export function onRaise(
-  row: Row | null,
-  severity: Severity,
-  now: Date,
-): { reopen: boolean; firstAt: Date; notify: 'firing' | 'reminder' | null } {
-  if (!row) return { reopen: true, firstAt: now, notify: 'firing' }
+export function onRaise(row: Row | null, severity: Severity, now: Date): Step {
+  if (!row) return { reopen: true, firstAt: now, severity, notify: 'firing' }
   if (row.resolvedAt) {
     const flapped = now.getTime() - row.resolvedAt.getTime() < FLAP_MS
     return flapped
-      ? { reopen: true, firstAt: row.firstAt, notify: 'reminder' }
-      : { reopen: true, firstAt: now, notify: 'firing' }
+      ? { reopen: true, firstAt: row.firstAt, severity, notify: 'reminder' }
+      : { reopen: true, firstAt: now, severity, notify: 'firing' }
   }
-  const worse = severity === 'critical' && row.severity !== 'critical'
+  const worst = row.severity === 'critical' ? 'critical' : severity
+  const worse = worst === 'critical' && !!row.notifiedAt && row.notifiedSeverity !== 'critical'
   const due = !row.notifiedAt || now.getTime() - row.notifiedAt.getTime() >= REMIND_MS
   return {
     reopen: false,
     firstAt: row.firstAt,
+    severity: worst,
     notify: worse ? 'firing' : due ? (row.notifiedAt ? 'reminder' : 'firing') : null,
   }
 }
@@ -85,30 +95,25 @@ export async function raise(alert: Alert, now = new Date()) {
     (await tell({
       kind: step.notify,
       key: alert.key,
-      severity: alert.severity,
+      severity: step.severity,
       title: alert.title,
       detail,
       firstAt: step.firstAt,
       at: now,
     }))
-  // While it lasts, it stays as bad as it got: a count that wavers around a threshold
-  // would otherwise tell it worse again each time it crosses. Only once told: a turn for
-  // the worse that was not sent keeps the row as it was, so the next run tells it.
-  const escalationLost = !step.reopen && step.notify === 'firing' && !notified && row
-  const kept = escalationLost
-    ? (row.severity as Severity)
-    : !step.reopen && row?.severity === 'critical'
-      ? 'critical'
-      : alert.severity
   const data = {
-    severity: kept,
+    severity: step.severity,
     title: alert.title,
     detail,
     lastAt: now,
     firstAt: step.firstAt,
     ...(step.reopen ? { resolvedAt: null } : {}),
     // Not sent: tried again on the next run.
-    ...(notified ? { notifiedAt: now } : step.reopen && step.notify ? { notifiedAt: null } : {}),
+    ...(notified
+      ? { notifiedAt: now, notifiedSeverity: step.severity }
+      : step.reopen && step.notify
+        ? { notifiedAt: null, notifiedSeverity: null }
+        : {}),
   }
   await prisma.opsAlert.upsert({
     where: { key: alert.key },

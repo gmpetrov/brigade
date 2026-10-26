@@ -80,12 +80,18 @@ describe('when operators are told', () => {
     severity: 'warning',
     firstAt: t0,
     notifiedAt: t0,
+    notifiedSeverity: 'warning',
     resolvedAt: null,
     ...o,
   })
 
   test('a new problem is told at once', () => {
-    assert.deepEqual(onRaise(null, 'warning', t0), { reopen: true, firstAt: t0, notify: 'firing' })
+    assert.deepEqual(onRaise(null, 'warning', t0), {
+      reopen: true,
+      firstAt: t0,
+      severity: 'warning',
+      notify: 'firing',
+    })
   })
 
   test('one that lasts is told again only every few hours', () => {
@@ -99,7 +105,21 @@ describe('when operators are told', () => {
 
   test('a warning turning critical is told at once; critical staying critical is not', () => {
     assert.equal(onRaise(row(), 'critical', at(MIN)).notify, 'firing')
-    assert.equal(onRaise(row({ severity: 'critical' }), 'critical', at(MIN)).notify, null)
+    const told = row({ severity: 'critical', notifiedSeverity: 'critical' })
+    assert.equal(onRaise(told, 'critical', at(MIN)).notify, null)
+  })
+
+  test('critical stays critical while it lasts, and is told until it is', () => {
+    // Critical, told only as a warning (its escalation was not sent); the count fell since.
+    const untold = row({ severity: 'critical' })
+    assert.deepEqual(onRaise(untold, 'warning', at(MIN)), {
+      reopen: false,
+      firstAt: t0,
+      severity: 'critical',
+      notify: 'firing',
+    })
+    const told = row({ severity: 'critical', notifiedSeverity: 'critical' })
+    assert.equal(onRaise(told, 'warning', at(MIN)).severity, 'critical')
   })
 
   test('back soon after it ended, it is the same problem; back later, a new one', () => {
@@ -107,12 +127,14 @@ describe('when operators are told', () => {
     assert.deepEqual(onRaise(ended, 'warning', at(5 * MIN)), {
       reopen: true,
       firstAt: t0,
+      severity: 'warning',
       notify: 'reminder',
     })
     const later = at(MIN + FLAP_MS)
     assert.deepEqual(onRaise(ended, 'warning', later), {
       reopen: true,
       firstAt: later,
+      severity: 'warning',
       notify: 'firing',
     })
   })
@@ -342,13 +364,18 @@ describe('alerts in the database', { skip }, () => {
     await raise({ key, severity: 'warning', title: 'D' }, at(0))
     answer = () => new Response('down', { status: 503 })
     await raise({ key, severity: 'critical', title: 'D' }, at(MIN))
+    // Critical meanwhile, for GET /health/ops, though operators were not told yet.
+    const between = await prisma.opsAlert.findUniqueOrThrow({ where: { key } })
+    assert.equal(between.severity, 'critical')
     answer = () => new Response('ok')
-    await raise({ key, severity: 'critical', title: 'D' }, at(2 * MIN))
-    await raise({ key, severity: 'critical', title: 'D' }, at(3 * MIN))
+    // The count fell back under critical: the escalation is still owed, and sent.
+    await raise({ key, severity: 'warning', title: 'D' }, at(2 * MIN))
+    await raise({ key, severity: 'warning', title: 'D' }, at(3 * MIN))
     assert.equal(posted.length, 3)
     assert.equal(JSON.parse(posted[2]!.body).severity, 'critical')
     const row = await prisma.opsAlert.findUniqueOrThrow({ where: { key } })
     assert.equal(row.severity, 'critical')
+    assert.equal(row.notifiedSeverity, 'critical')
   })
 
   test('an end that could not be told stays open and is told on the next run', async () => {

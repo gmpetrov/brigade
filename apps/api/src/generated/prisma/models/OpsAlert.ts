@@ -33,6 +33,7 @@ export type OpsAlertMinAggregateOutputType = {
   firstAt: Date | null
   lastAt: Date | null
   notifiedAt: Date | null
+  notifiedSeverity: string | null
   resolvedAt: Date | null
 }
 
@@ -44,6 +45,7 @@ export type OpsAlertMaxAggregateOutputType = {
   firstAt: Date | null
   lastAt: Date | null
   notifiedAt: Date | null
+  notifiedSeverity: string | null
   resolvedAt: Date | null
 }
 
@@ -55,6 +57,7 @@ export type OpsAlertCountAggregateOutputType = {
   firstAt: number
   lastAt: number
   notifiedAt: number
+  notifiedSeverity: number
   resolvedAt: number
   _all: number
 }
@@ -68,6 +71,7 @@ export type OpsAlertMinAggregateInputType = {
   firstAt?: true
   lastAt?: true
   notifiedAt?: true
+  notifiedSeverity?: true
   resolvedAt?: true
 }
 
@@ -79,6 +83,7 @@ export type OpsAlertMaxAggregateInputType = {
   firstAt?: true
   lastAt?: true
   notifiedAt?: true
+  notifiedSeverity?: true
   resolvedAt?: true
 }
 
@@ -90,6 +95,7 @@ export type OpsAlertCountAggregateInputType = {
   firstAt?: true
   lastAt?: true
   notifiedAt?: true
+  notifiedSeverity?: true
   resolvedAt?: true
   _all?: true
 }
@@ -174,6 +180,7 @@ export type OpsAlertGroupByOutputType = {
   firstAt: Date
   lastAt: Date
   notifiedAt: Date | null
+  notifiedSeverity: string | null
   resolvedAt: Date | null
   _count: OpsAlertCountAggregateOutputType | null
   _min: OpsAlertMinAggregateOutputType | null
@@ -206,6 +213,7 @@ export type OpsAlertWhereInput = {
   firstAt?: Prisma.DateTimeFilter<"OpsAlert"> | Date | string
   lastAt?: Prisma.DateTimeFilter<"OpsAlert"> | Date | string
   notifiedAt?: Prisma.DateTimeNullableFilter<"OpsAlert"> | Date | string | null
+  notifiedSeverity?: Prisma.StringNullableFilter<"OpsAlert"> | string | null
   resolvedAt?: Prisma.DateTimeNullableFilter<"OpsAlert"> | Date | string | null
 }
 
@@ -217,6 +225,7 @@ export type OpsAlertOrderByWithRelationInput = {
   firstAt?: Prisma.SortOrder
   lastAt?: Prisma.SortOrder
   notifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  notifiedSeverity?: Prisma.SortOrderInput | Prisma.SortOrder
   resolvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
 }
 
@@ -231,6 +240,7 @@ export type OpsAlertWhereUniqueInput = Prisma.AtLeast<{
   firstAt?: Prisma.DateTimeFilter<"OpsAlert"> | Date | string
   lastAt?: Prisma.DateTimeFilter<"OpsAlert"> | Date | string
   notifiedAt?: Prisma.DateTimeNullableFilter<"OpsAlert"> | Date | string | null
+  notifiedSeverity?: Prisma.StringNullableFilter<"OpsAlert"> | string | null
   resolvedAt?: Prisma.DateTimeNullableFilter<"OpsAlert"> | Date | string | null
 }, "key">
 
@@ -242,6 +252,7 @@ export type OpsAlertOrderByWithAggregationInput = {
   firstAt?: Prisma.SortOrder
   lastAt?: Prisma.SortOrder
   notifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  notifiedSeverity?: Prisma.SortOrderInput | Prisma.SortOrder
   resolvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.OpsAlertCountOrderByAggregateInput
   _max?: Prisma.OpsAlertMaxOrderByAggregateInput
@@ -259,6 +270,7 @@ export type OpsAlertScalarWhereWithAggregatesInput = {
   firstAt?: Prisma.DateTimeWithAggregatesFilter<"OpsAlert"> | Date | string
   lastAt?: Prisma.DateTimeWithAggregatesFilter<"OpsAlert"> | Date | string
   notifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"OpsAlert"> | Date | string | null
+  notifiedSeverity?: Prisma.StringNullableWithAggregatesFilter<"OpsAlert"> | string | null
   resolvedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"OpsAlert"> | Date | string | null
 }
 
@@ -270,6 +282,7 @@ export type OpsAlertCreateInput = {
   firstAt?: Date | string
   lastAt?: Date | string
   notifiedAt?: Date | string | null
+  notifiedSeverity?: string | null
   resolvedAt?: Date | string | null
 }
 
@@ -281,6 +294,7 @@ export type OpsAlertUncheckedCreateInput = {
   firstAt?: Date | string
   lastAt?: Date | string
   notifiedAt?: Date | string | null
+  notifiedSeverity?: string | null
   resolvedAt?: Date | string | null
 }
 
@@ -292,6 +306,7 @@ export type OpsAlertUpdateInput = {
   firstAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifiedSeverity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -303,6 +318,7 @@ export type OpsAlertUncheckedUpdateInput = {
   firstAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifiedSeverity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -314,6 +330,7 @@ export type OpsAlertCreateManyInput = {
   firstAt?: Date | string
   lastAt?: Date | string
   notifiedAt?: Date | string | null
+  notifiedSeverity?: string | null
   resolvedAt?: Date | string | null
 }
 
@@ -325,6 +342,7 @@ export type OpsAlertUpdateManyMutationInput = {
   firstAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifiedSeverity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -336,6 +354,7 @@ export type OpsAlertUncheckedUpdateManyInput = {
   firstAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifiedSeverity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -347,6 +366,7 @@ export type OpsAlertCountOrderByAggregateInput = {
   firstAt?: Prisma.SortOrder
   lastAt?: Prisma.SortOrder
   notifiedAt?: Prisma.SortOrder
+  notifiedSeverity?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrder
 }
 
@@ -358,6 +378,7 @@ export type OpsAlertMaxOrderByAggregateInput = {
   firstAt?: Prisma.SortOrder
   lastAt?: Prisma.SortOrder
   notifiedAt?: Prisma.SortOrder
+  notifiedSeverity?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrder
 }
 
@@ -369,6 +390,7 @@ export type OpsAlertMinOrderByAggregateInput = {
   firstAt?: Prisma.SortOrder
   lastAt?: Prisma.SortOrder
   notifiedAt?: Prisma.SortOrder
+  notifiedSeverity?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrder
 }
 
@@ -382,6 +404,7 @@ export type OpsAlertSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   firstAt?: boolean
   lastAt?: boolean
   notifiedAt?: boolean
+  notifiedSeverity?: boolean
   resolvedAt?: boolean
 }, ExtArgs["result"]["opsAlert"]>
 
@@ -393,6 +416,7 @@ export type OpsAlertSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   firstAt?: boolean
   lastAt?: boolean
   notifiedAt?: boolean
+  notifiedSeverity?: boolean
   resolvedAt?: boolean
 }, ExtArgs["result"]["opsAlert"]>
 
@@ -404,6 +428,7 @@ export type OpsAlertSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   firstAt?: boolean
   lastAt?: boolean
   notifiedAt?: boolean
+  notifiedSeverity?: boolean
   resolvedAt?: boolean
 }, ExtArgs["result"]["opsAlert"]>
 
@@ -415,10 +440,11 @@ export type OpsAlertSelectScalar = {
   firstAt?: boolean
   lastAt?: boolean
   notifiedAt?: boolean
+  notifiedSeverity?: boolean
   resolvedAt?: boolean
 }
 
-export type OpsAlertOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"key" | "severity" | "title" | "detail" | "firstAt" | "lastAt" | "notifiedAt" | "resolvedAt", ExtArgs["result"]["opsAlert"]>
+export type OpsAlertOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"key" | "severity" | "title" | "detail" | "firstAt" | "lastAt" | "notifiedAt" | "notifiedSeverity" | "resolvedAt", ExtArgs["result"]["opsAlert"]>
 
 export type $OpsAlertPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "OpsAlert"
@@ -437,9 +463,10 @@ export type $OpsAlertPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     firstAt: Date
     lastAt: Date
     /**
-     * When operators were last told about it.
+     * When operators were last told about it, and how bad it was then.
      */
     notifiedAt: Date | null
+    notifiedSeverity: string | null
     /**
      * Null while it lasts.
      */
@@ -874,6 +901,7 @@ export interface OpsAlertFieldRefs {
   readonly firstAt: Prisma.FieldRef<"OpsAlert", 'DateTime'>
   readonly lastAt: Prisma.FieldRef<"OpsAlert", 'DateTime'>
   readonly notifiedAt: Prisma.FieldRef<"OpsAlert", 'DateTime'>
+  readonly notifiedSeverity: Prisma.FieldRef<"OpsAlert", 'String'>
   readonly resolvedAt: Prisma.FieldRef<"OpsAlert", 'DateTime'>
 }
     
