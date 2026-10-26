@@ -1,8 +1,9 @@
 // The one bucket (Cloudflare R2, through its S3 API). Every key starts with
 // the organization and workspace (spec hard constraint 5); callers pass a
 // scope and a document id, never a path from request input.
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
@@ -97,6 +98,13 @@ export function threadFileKey(scope: Scope, sessionId: string, name: string) {
   return `${threadFilesPrefix(scope, sessionId)}${name}`
 }
 
+/** The bucket key of an upload's bytes, held until it is used (uploads.ts). */
+export function uploadKey(scope: Scope, uploadId: string) {
+  for (const part of [scope.organizationId, scope.workspaceId, uploadId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/uploads/${uploadId}`
+}
+
 const REPO_PART = /^[a-z0-9_.-]{1,100}$/
 
 /**
@@ -145,6 +153,65 @@ export async function presignPut(key: string, size: number, contentType: string)
   })
   // The browser sets content-length itself; it only sends the type.
   return { url: signed.url, headers: { 'content-type': contentType } }
+}
+
+/**
+ * Where a client PUTs one object: R2's signed URL, or without R2 (development only: production
+ * refuses to start without it) a signed path of the API's stand-in, PUT /api/bucket (routes/bucket.ts),
+ * which the client resolves against the API's address. Either takes exactly `size` bytes.
+ */
+export async function uploadTarget(key: string, size: number, contentType: string) {
+  if (r2) return presignPut(key, size, contentType)
+  const expires = String(Math.floor(Date.now() / 1000) + UPLOAD_URL_SECONDS)
+  const query = new URLSearchParams({ key, size: String(size), type: contentType, expires })
+  query.set('sig', localSignature(query))
+  return { url: `/api/bucket?${query}`, headers: { 'content-type': contentType } }
+}
+
+const localSignature = (query: URLSearchParams) =>
+  createHmac('sha256', `bucket-upload:${env.BETTER_AUTH_SECRET}`)
+    .update(['key', 'size', 'type', 'expires'].map((k) => query.get(k) ?? '').join('\n'))
+    .digest('hex')
+
+/** What a signed path of the stand-in allows: the key and size, or null when it is not one, or expired. */
+export function localUploadAllowed(query: URLSearchParams) {
+  if (r2) return null
+  const sig = Buffer.from(query.get('sig') ?? '', 'hex')
+  const expected = Buffer.from(localSignature(query), 'hex')
+  if (sig.length !== expected.length || !timingSafeEqual(sig, expected)) return null
+  if (Number(query.get('expires')) * 1000 < Date.now()) return null
+  return {
+    key: query.get('key')!,
+    size: Number(query.get('size')),
+    contentType: query.get('type')!,
+  }
+}
+
+/**
+ * Write a stream to the stand-in's folder, as it arrives: exactly `size` bytes, or nothing
+ * (the object keeps what it held). Development only, without R2.
+ */
+export async function putLocalStream(key: string, body: ReadableStream<Uint8Array>, size: number) {
+  if (r2) throw new Error('The stand-in is for development without R2')
+  const file = join(env.BUCKET_DIR, key)
+  await mkdir(dirname(file), { recursive: true })
+  const partial = `${file}.${process.pid}-${Date.now()}.part`
+  let read = 0
+  const count = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, out) {
+      read += chunk.byteLength
+      if (read > size) throw new Error('More bytes than signed for')
+      out.enqueue(chunk)
+    },
+  })
+  try {
+    await pipeline(Readable.fromWeb(body.pipeThrough(count) as never), createWriteStream(partial))
+    if (read !== size) throw new Error(`${read} bytes came, not ${size}`)
+    await rename(partial, file)
+  } catch (error) {
+    await rm(partial, { force: true })
+    throw error
+  }
 }
 
 /** How long a signed download URL works. */
@@ -230,6 +297,49 @@ export async function putObjectStream(
     duplex: 'half',
   } as RequestInit)
   if (!response.ok) throw new Error(`bucket put failed: ${response.status}`)
+}
+
+/**
+ * Copy an object to another key inside the bucket (S3 CopyObject): the API never holds its
+ * bytes. With a type, the copy is stored with it. False when the source is not there.
+ */
+export async function copyObject(from: string, to: string, contentType?: string) {
+  if (!r2) {
+    const target = join(env.BUCKET_DIR, to)
+    await mkdir(dirname(target), { recursive: true })
+    return copyFile(join(env.BUCKET_DIR, from), target).then(
+      () => true,
+      (error: NodeJS.ErrnoException) => {
+        if (error.code === 'ENOENT') return false
+        throw error
+      },
+    )
+  }
+  const bucket = new URL(r2.base).pathname
+  const response = await r2.client.fetch(url(to), {
+    method: 'PUT',
+    headers: {
+      'x-amz-copy-source': `${bucket}/${from.split('/').map(encodeURIComponent).join('/')}`,
+      ...(contentType
+        ? { 'x-amz-metadata-directive': 'REPLACE', 'content-type': contentType }
+        : {}),
+    },
+  })
+  if (response.status === 404) return false
+  // S3 may answer 200 with an error in the body when a copy fails part way.
+  const body = await response.text()
+  if (!response.ok || body.includes('<Error>'))
+    throw new Error(`bucket copy failed: ${response.status} ${body.slice(0, 200)}`)
+  return true
+}
+
+/** The object's first bytes (up to `length`), or null when it is gone. */
+export async function readHead(key: string, length: number): Promise<Uint8Array | null> {
+  const part = await streamRange(key, `bytes=0-${length - 1}`)
+  if (!part) return null
+  // Past its end: an empty object.
+  if (part.status === 416) return new Uint8Array(0)
+  return new Uint8Array(await new Response(part.body).arrayBuffer())
 }
 
 /** The object's bytes, or null when it is gone. */

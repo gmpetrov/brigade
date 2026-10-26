@@ -14,8 +14,7 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model Attachment
- * A file's bytes (in the bucket, keyed by id) and where they came from. One
- * file can be in several threads, e.g. an email two triggers matched.
+ * 
  */
 export type AttachmentModel = runtime.Types.Result.DefaultSelection<Prisma.$AttachmentPayload>
 

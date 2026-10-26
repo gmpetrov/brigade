@@ -26,6 +26,7 @@ import {
 } from './library.js'
 import { proposeSkill } from './skills.js'
 import { actingTeammate } from './thread-spec.js'
+import { discardUpload, readyUpload, uploadBytesKey } from './uploads.js'
 
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
 
@@ -146,16 +147,44 @@ export async function handleLibraryCall(
         ? `${teammate.name} has no access to that folder of the library.`
         : `${teammate.name} may read ${op.path.includes('/') ? 'that folder of ' : ''}the library but not save to it. An admin can allow it in the library or on the teammate's page.`,
     )
-  const bytes = Buffer.from(op.content, 'base64')
-  if (bytes.byteLength > LIBRARY_SAVE_MAX)
-    return fail('Files saved from a thread can be up to 10 MB')
-  const row = await saveLibraryFile(
-    db,
-    scope,
-    { type: 'teammate', id: teammate.id },
-    { path: op.path, bytes, contentType: op.contentType ?? null },
-    { sessionId: session.id },
-  )
+  const actor = { type: 'teammate' as const, id: teammate.id }
+  let row
+  if (op.upload) {
+    // Uploaded straight to the bucket by the runner, and checked (routes/runner-uploads.ts).
+    const owner = { computerId: runner.computerId, sessionId: session.id }
+    try {
+      const upload = await readyUpload(db, owner, op.upload.id, 'library')
+      if (upload.size > LIBRARY_SAVE_MAX)
+        return fail('Files saved from a thread can be up to 10 MB')
+      row = await saveLibraryFile(
+        db,
+        scope,
+        actor,
+        {
+          path: op.path,
+          contentType: op.contentType ?? upload.contentType,
+          upload: { key: uploadBytesKey(scope, upload), ...upload },
+        },
+        { sessionId: session.id },
+      )
+      await discardUpload(scope, upload.id)
+    } catch (error) {
+      if (error instanceof HTTPException) return fail(error.message)
+      throw error
+    }
+  } else {
+    // A runner before DIRECT_UPLOAD_PROTOCOL: the bytes in the message. Remove with it.
+    const bytes = Buffer.from(op.content ?? '', 'base64')
+    if (bytes.byteLength > LIBRARY_SAVE_MAX)
+      return fail('Files saved from a thread can be up to 10 MB')
+    row = await saveLibraryFile(
+      db,
+      scope,
+      actor,
+      { path: op.path, bytes, contentType: op.contentType ?? null },
+      { sessionId: session.id },
+    )
+  }
   // The mention opens this file from the teammate's reply, where a bare name may not.
   return done({
     path: row.path,

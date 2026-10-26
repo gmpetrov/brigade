@@ -23,7 +23,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
-import { documentKey, getObject, putObject } from './bucket.js'
+import { copyObject, documentKey, getObject, putObject } from './bucket.js'
 import { notifyCollab } from './collab.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { notifyLibraryChanged } from './hub.js'
@@ -195,7 +195,11 @@ export async function saveLibraryFile(
   db: ScopedDb,
   scope: Scope,
   actor: Actor,
-  input: { path: string; bytes: Uint8Array; contentType?: string | null },
+  input: { path: string; contentType?: string | null } & (
+    | { bytes: Uint8Array }
+    /** An upload, checked (uploads.ts): its bytes are copied inside the bucket, never read here. */
+    | { upload: { key: string; size: number; sha256: string; text: string } }
+  ),
   /** Recorded with the change, e.g. the thread a teammate saved it from (`sessionId`). */
   context: Record<string, string> = {},
   options: {
@@ -205,10 +209,11 @@ export async function saveLibraryFile(
     restoredFromId?: string
   } = {},
 ) {
-  if (input.bytes.byteLength > LIBRARY_FILE_MAX)
+  const size = 'bytes' in input ? input.bytes.byteLength : input.upload.size
+  if (size > LIBRARY_FILE_MAX)
     throw new HTTPException(413, { message: 'Files in the library can be up to 25 MB' })
   const contentType = contentTypeFor(input.path, input.contentType)
-  const hash = sha256(input.bytes)
+  const hash = 'bytes' in input ? sha256(input.bytes) : input.upload.sha256
   const existing = await db.document.findFirst({
     where: { kind: 'library', path: input.path, deletedAt: null },
   })
@@ -220,11 +225,17 @@ export async function saveLibraryFile(
     !options.restoredFromId
   )
     return existing
-  const text = await extractText(input.bytes, contentType)
+  const text = 'bytes' in input ? await extractText(input.bytes, contentType) : input.upload.text
   const sessionId = context.sessionId ?? null
+  // Its bytes where they belong: written, or copied from the upload inside the bucket.
+  const keep = async (key: string) => {
+    if ('bytes' in input) return putObject(key, input.bytes, contentType)
+    if (!(await copyObject(input.upload.key, key, contentType)))
+      throw new HTTPException(409, { message: 'The upload is gone; upload it again' })
+  }
   const fields = {
     contentType,
-    size: input.bytes.byteLength,
+    size,
     sha256: hash,
     text,
     indexed: text.trim().length > 0,
@@ -236,7 +247,7 @@ export async function saveLibraryFile(
   if (existing) {
     // A file from before versions keeps what it was as its first.
     await ensureFirstVersion(db, scope, existing)
-    await putObject(documentKey(scope, existing.id), input.bytes, contentType)
+    await keep(documentKey(scope, existing.id))
     row = await db.document.update({ where: { id: existing.id }, data: fields })
   } else {
     row = await db.document.create({
@@ -248,15 +259,22 @@ export async function saveLibraryFile(
         createdById: actor.id,
       } as never,
     })
-    await putObject(documentKey(scope, row.id), input.bytes, contentType).catch(async (error) => {
+    await keep(documentKey(scope, row.id)).catch(async (error) => {
       await db.document.delete({ where: { id: row!.id } })
       throw error
     })
   }
-  await recordVersion(db, scope, row, input.bytes, actor, {
-    sessionId,
-    ...(options.restoredFromId ? { restoredFromId: options.restoredFromId } : {}),
-  }).catch((error) => console.warn(`library: no version kept of ${row.id}: ${String(error)}`))
+  await recordVersion(
+    db,
+    scope,
+    row,
+    'bytes' in input ? input.bytes : { key: documentKey(scope, row.id) },
+    actor,
+    {
+      sessionId,
+      ...(options.restoredFromId ? { restoredFromId: options.restoredFromId } : {}),
+    },
+  ).catch((error) => console.warn(`library: no version kept of ${row.id}: ${String(error)}`))
   await audit({
     ...scope,
     actor,

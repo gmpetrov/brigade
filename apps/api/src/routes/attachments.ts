@@ -47,7 +47,7 @@ export const attachments = new Hono<AppEnv>()
   /** The browser's upload reached the bucket: the file is checked, then ready to send. */
   .post('/:id/complete', async (c) => {
     const { scope, db } = c.var
-    const row = await finishUpload(db, scope, c.req.param('id'), scope.memberId)
+    const row = await finishUpload(db, scope, c.req.param('id'), { memberId: scope.memberId })
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },

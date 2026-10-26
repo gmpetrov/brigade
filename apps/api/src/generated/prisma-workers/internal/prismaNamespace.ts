@@ -448,6 +448,7 @@ export const ModelName = {
   DocumentAsset: 'DocumentAsset',
   BucketCleanup: 'BucketCleanup',
   AuditEntry: 'AuditEntry',
+  Upload: 'Upload',
   Attachment: 'Attachment',
   ThreadAttachment: 'ThreadAttachment',
   DesignSystem: 'DesignSystem',
@@ -487,7 +488,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "opsAlert"
+    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "opsAlert"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -4265,6 +4266,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Upload: {
+      payload: Prisma.$UploadPayload<ExtArgs>
+      fields: Prisma.UploadFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UploadFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UploadFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload>
+        }
+        findFirst: {
+          args: Prisma.UploadFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UploadFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload>
+        }
+        findMany: {
+          args: Prisma.UploadFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload>[]
+        }
+        create: {
+          args: Prisma.UploadCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload>
+        }
+        createMany: {
+          args: Prisma.UploadCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UploadCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload>[]
+        }
+        delete: {
+          args: Prisma.UploadDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload>
+        }
+        update: {
+          args: Prisma.UploadUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload>
+        }
+        deleteMany: {
+          args: Prisma.UploadDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UploadUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UploadUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload>[]
+        }
+        upsert: {
+          args: Prisma.UploadUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UploadPayload>
+        }
+        aggregate: {
+          args: Prisma.UploadAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUpload>
+        }
+        groupBy: {
+          args: Prisma.UploadGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UploadGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UploadCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UploadCountAggregateOutputType> | number
+        }
+      }
+    }
     Attachment: {
       payload: Prisma.$AttachmentPayload<ExtArgs>
       fields: Prisma.AttachmentFieldRefs
@@ -6922,6 +6997,7 @@ export const DocumentAssetScalarFieldEnum = {
   name: 'name',
   contentType: 'contentType',
   size: 'size',
+  sha256: 'sha256',
   status: 'status',
   uploadedByMemberId: 'uploadedByMemberId',
   createdAt: 'createdAt',
@@ -6956,6 +7032,27 @@ export const AuditEntryScalarFieldEnum = {
 } as const
 
 export type AuditEntryScalarFieldEnum = (typeof AuditEntryScalarFieldEnum)[keyof typeof AuditEntryScalarFieldEnum]
+
+
+export const UploadScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  purpose: 'purpose',
+  name: 'name',
+  contentType: 'contentType',
+  size: 'size',
+  sha256: 'sha256',
+  status: 'status',
+  memberId: 'memberId',
+  computerId: 'computerId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  text: 'text',
+  createdAt: 'createdAt'
+} as const
+
+export type UploadScalarFieldEnum = (typeof UploadScalarFieldEnum)[keyof typeof UploadScalarFieldEnum]
 
 
 export const AttachmentScalarFieldEnum = {
@@ -8299,6 +8396,7 @@ export type GlobalOmitConfig = {
   documentAsset?: Prisma.DocumentAssetOmit
   bucketCleanup?: Prisma.BucketCleanupOmit
   auditEntry?: Prisma.AuditEntryOmit
+  upload?: Prisma.UploadOmit
   attachment?: Prisma.AttachmentOmit
   threadAttachment?: Prisma.ThreadAttachmentOmit
   designSystem?: Prisma.DesignSystemOmit
