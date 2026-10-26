@@ -1231,7 +1231,9 @@ export const threads = new Hono<AppEnv>()
   .post('/:id/tickets', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
-    requireMayPrompt(scope, thread)
+    // Control is answerTicket's to check: the member in control answers once done on the
+    // computer, and control goes back with the answer.
+    requireMayPrompt(scope, { ...thread, controlledByMemberId: null })
     const input = await parseBody(c.req.raw, AnswerTicket)
     const ticket = await db.ticket.findFirst({
       where: {
