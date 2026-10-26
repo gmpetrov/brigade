@@ -856,6 +856,15 @@
   }
 }
 
+/* Narrower, a panel is a sheet over the page: the page behind holds still, so a swipe
+ * in the sheet scrolls only the sheet, never the page once the sheet reaches its end. */
+@media (width < 80rem) {
+  html:has([data-desktop-panel]) {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
 /* Narrower, the thread's details still sit beside the expanded thread, not over it. */
 @media (64rem <= width < 80rem) {
   [data-slot='sidebar-inset']:has([data-details-panel]) [data-thread-panel][data-expanded] {
