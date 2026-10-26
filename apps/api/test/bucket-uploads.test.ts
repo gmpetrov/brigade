@@ -175,3 +175,37 @@ test('an Office file that inflates far past its size is read a little at a time,
   // Far less than the 128 MiB it inflates to (the old way held it all, and more).
   if (global.gc) assert.ok(grew < 48 * 1024 * 1024, `grew by ${Math.round(grew / 1024 / 1024)} MB`)
 })
+
+test("an Office file's media and other parts are passed over, none of their bytes held", async () => {
+  const { Unzip } = await import('fflate')
+  const media = new Uint8Array(24 * 1024 * 1024).fill(0x61)
+  for (const level of [0, 6] as const) {
+    const doc = zipSync(
+      {
+        'word/media/photo.png': media,
+        'word/document.xml': strToU8('<w:p><w:r><w:t>hello</w:t></w:r></w:p>'),
+      },
+      { level },
+    )
+    await putObject('org/ws/uploads/skip', doc, 'application/octet-stream')
+    // What Unzip keeps for entries not started yet (its own `k`), at its largest.
+    const push = Unzip.prototype.push
+    let held = 0
+    Unzip.prototype.push = function (chunk, final) {
+      const out = push.call(this, chunk, final)
+      const waiting = (this as unknown as { k: Uint8Array[][] }).k
+      held = Math.max(
+        held,
+        waiting.flat().reduce((n, c) => n + c.byteLength, 0),
+      )
+      return out
+    }
+    try {
+      const read = await inspectObject('org/ws/uploads/skip', { name: 'media.docx', text: true })
+      assert.equal(read?.text, 'hello')
+      assert.equal(held, 0)
+    } finally {
+      Unzip.prototype.push = push
+    }
+  }
+})

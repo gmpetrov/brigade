@@ -4,7 +4,7 @@
 // XML parts as they unzip. A PDF's text needs the whole file, so a PDF uploaded straight
 // to the bucket is kept and found by its name, not its text.
 import { createHash } from 'node:crypto'
-import { Unzip, UnzipInflate } from 'fflate'
+import { Unzip, UnzipInflate, type AsyncFlateStreamHandler, type UnzipDecoder } from 'fflate'
 import { openObject } from './bucket.js'
 import { contentTypeFor, isText } from './library.js'
 import { DOCX, PPTX, XLSX } from './previews.js'
@@ -138,8 +138,43 @@ function officeReader(contentType: string) {
   // Enough read (the text kept for search, or INFLATE_MAX): nothing more is inflated.
   let done = false
   let inflated = 0
+  const wanted = (name: string) => parts.test(name) && !failed && !done
+  // Every entry is started, so Unzip holds none of its bytes waiting for a start; one not read
+  // for its text is passed over, its bytes dropped as they come, never inflated.
+  class Inflate implements UnzipDecoder {
+    static compression = 8
+    ondata: AsyncFlateStreamHandler = () => undefined
+    private inner: UnzipInflate | null
+    constructor(name: string) {
+      this.inner = wanted(name) ? new UnzipInflate() : null
+      if (this.inner) this.inner.ondata = (error, data, final) => this.ondata(error, data, final)
+    }
+    push(chunk: Uint8Array, final: boolean) {
+      this.inner?.push(chunk, final)
+    }
+  }
+  class Stored implements UnzipDecoder {
+    static compression = 0
+    ondata: AsyncFlateStreamHandler = () => undefined
+    private keep: boolean
+    constructor(name: string) {
+      this.keep = wanted(name)
+    }
+    push(chunk: Uint8Array, final: boolean) {
+      if (this.keep) this.ondata(null, chunk as Uint8Array<ArrayBuffer>, final)
+    }
+  }
   const unzip = new Unzip((entry) => {
-    if (!parts.test(entry.name) || failed || done) return
+    // Another compression would be held whole until started: its text is not read, nor what follows.
+    if (entry.compression !== 0 && entry.compression !== 8) {
+      done = true
+      return
+    }
+    if (!wanted(entry.name)) {
+      entry.ondata = () => undefined
+      entry.start()
+      return
+    }
     const decoder = new TextDecoder()
     let pending = ''
     let skipping = false
@@ -178,7 +213,8 @@ function officeReader(contentType: string) {
     }
     entry.start()
   })
-  unzip.register(UnzipInflate)
+  unzip.register(Inflate)
+  unzip.register(Stored)
   return {
     push(chunk: Uint8Array) {
       for (let at = 0; at < chunk.byteLength && !failed && !done; at += INFLATE_SLICE)
