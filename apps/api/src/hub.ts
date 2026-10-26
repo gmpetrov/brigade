@@ -492,7 +492,7 @@ onScopedWrite((model, scope) => {
   if (model === 'Ticket') notifyList(scope.workspaceId, 'tickets.updated')
   else if (model === 'PullRequest' || model === 'PullRequestReview')
     notifyList(scope.workspaceId, 'pulls.updated')
-  else if (model === 'MailMessage' || model === 'MailAddress')
+  else if (model === 'MailMessage' || model === 'MailAddress' || model === 'MailDomain')
     notifyList(scope.workspaceId, 'mail.updated')
   else if (model === 'Teammate') notifyList(scope.workspaceId, 'teammates.updated')
   else if (model === 'Connection' || model === 'Grant')
