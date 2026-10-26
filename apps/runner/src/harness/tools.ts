@@ -25,6 +25,8 @@ import {
   REPORT_FILES_MAX,
   REPORT_MAX,
   SKILL_ENTRY,
+  SKILL_FILE_MAX,
+  SKILL_TOTAL_MAX,
   SkillContent,
   TeamProposal,
   TRASH_DAYS,
@@ -37,11 +39,10 @@ import {
   WAKEUPS_PER_THREAD,
   type ConnectorGrant,
   type DesignPersonEdit,
-  type TeammateDesignSystem,
   type ScheduleOperation,
-  type SkillProposal,
   type TaskOperation,
 } from '@brigade/contracts'
+import type { LibraryOperation } from '../uploads.js'
 import { errorMessage } from './events.js'
 import { WIDGET_GUIDE } from './widget-guide.js'
 
@@ -701,14 +702,8 @@ export function credentialTools(credentials: Credentials): Record<string, Tool> 
 }
 
 export type LibraryCaller = (call: {
-  operation:
-    | { name: 'search'; query: string; limit: number }
-    | { name: 'save'; path: string; content: string }
-    | { name: 'move'; path: string; to: string }
-    | { name: 'delete'; path: string }
-    | { name: 'design_system'; designSystem: TeammateDesignSystem }
-    | { name: 'design_edits'; path: string }
-    | { name: 'skill_proposal'; proposal: SkillProposal }
+  /** A save's bytes and a proposal's files are uploaded to the bucket before the hub hears of them. */
+  operation: LibraryOperation
   toolCallId: string
   toolName: string
   input: unknown
@@ -767,7 +762,7 @@ export function libraryTools(options: {
       try {
         await options.call({
           ...call,
-          operation: { name: 'save', path: `${path}/${file}`, content: bytes.toString('base64') },
+          operation: { name: 'save', path: `${path}/${file}`, bytes },
         })
       } catch (error) {
         throw new Error(
@@ -852,19 +847,26 @@ export function libraryTools(options: {
       const entry = text(await options.readFile(`${folder}/${SKILL_ENTRY}`))
       if (entry === null) throw new Error(`${SKILL_ENTRY} is not text`)
       const parsed = parseSkillMarkdown(entry)
-      const files: { path: string; content: string }[] = []
+      const files: { path: string; content: string; bytes: Buffer }[] = []
       const skipped: string[] = []
       for (const path of paths) {
         if (path === SKILL_ENTRY) continue
-        const content = text(await options.readFile(`${folder}/${path}`))
+        const bytes = await options.readFile(`${folder}/${path}`)
+        const content = text(bytes)
         if (content === null) skipped.push(path)
-        else files.push({ path, content })
+        else if (bytes.length > SKILL_FILE_MAX)
+          throw new Error(
+            `${path} is too large: a skill's file can be up to ${SKILL_FILE_MAX / 1024 / 1024} MB`,
+          )
+        else files.push({ path, content, bytes })
       }
+      if (files.reduce((sum, f) => sum + f.bytes.length, 0) > SKILL_TOTAL_MAX)
+        throw new Error(`The skill is too large: up to ${SKILL_TOTAL_MAX / 1024 / 1024} MB in all`)
       const skill = SkillContent.safeParse({
         name: parsed.name ?? '',
         description: parsed.description ?? '',
         instructions: parsed.instructions,
-        files,
+        files: files.map(({ path, content }) => ({ path, content })),
       })
       if (!skill.success)
         throw new Error(
@@ -873,11 +875,13 @@ export function libraryTools(options: {
       const result = (await options.call({
         operation: {
           name: 'skill_proposal',
+          // Its files go to the bucket first; the proposal names them by their SHA-256.
           proposal: {
-            skill: skill.data,
+            skill: { ...skill.data, files: [] },
             reason: input.reason?.trim().slice(0, 1000) ?? '',
             teammateOnly: input.onlyMe === true,
           },
+          files: files.map(({ path, bytes }) => ({ path, bytes })),
         },
         toolCallId,
         toolName: PROPOSE_SKILL_TOOL,
@@ -916,7 +920,7 @@ export function libraryTools(options: {
       execute: async (input, { toolCallId }) => {
         const bytes = await options.readFile(input.file)
         return options.call({
-          operation: { name: 'save', path: input.path, content: bytes.toString('base64') },
+          operation: { name: 'save', path: input.path, bytes },
           toolCallId,
           toolName: 'save_to_library',
           input,

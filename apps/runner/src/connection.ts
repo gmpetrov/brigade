@@ -92,6 +92,14 @@ export class Connection {
      * this runner's protocol. Returns true when the runner updates itself.
      */
     private readonly onBundle: (bundle: string | undefined, required: boolean) => boolean,
+    /**
+     * The events to send now, of those given: the others hold files, sent with `send`
+     * once those are in the bucket (event-files.ts). All of them when not given.
+     */
+    private readonly keepFiles?: (
+      events: SequencedEvent[],
+      send: (events: SequencedEvent[]) => void,
+    ) => SequencedEvent[],
   ) {}
 
   start() {
@@ -199,6 +207,13 @@ export class Connection {
 
   private sendEvents(events: SequencedEvent[], now = Date.now()) {
     for (const e of events) this.sentAt.set(e.sessionId, now)
+    const ready = this.keepFiles
+      ? this.keepFiles(events, (kept) => this.ready && this.sendBatches(kept))
+      : events
+    this.sendBatches(ready)
+  }
+
+  private sendBatches(events: SequencedEvent[]) {
     for (const batch of eventBatches(events)) this.send({ type: 'events', events: batch })
   }
 

@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto'
 import { isAbsolute, join } from 'node:path'
 import { IMAGE_VIEW_MAX, STORED_FILE } from '@brigade/contracts'
 import { readStart, real } from './files.js'
+import { answer, apiPost, putBytes, upload, type Api } from './uploads.js'
 
 /** A link target in Markdown, `](path)` or `](<path with spaces>)`, with an optional title. */
 const TARGET = /\]\(\s*(?:<([^>\n]+)>|([^)\s]+))(?:\s+(?:"[^"\n]*"|'[^'\n]*'))?\s*\)/g
@@ -65,7 +66,10 @@ export function imagesIn(text: string) {
   return [...paths]
 }
 
-/** Put an image in the thread's bucket folder under `name` (`<sha256>.<ext>`). */
+/**
+ * Put an image or a PDF in the thread's bucket folder under `name` (`<sha256>.<ext>`).
+ * A refusal is an UploadError with the API's status: 410 when the thread was deleted.
+ */
 export type StoreImage = (
   sessionId: string,
   name: string,
@@ -74,32 +78,33 @@ export type StoreImage = (
 ) => Promise<void>
 
 /**
- * StoreImage through the API's /runner/files: a signed URL to PUT the image to R2,
- * or the API itself without R2 (development).
+ * StoreImage through the API's /runner/files: a signed URL to PUT the file to R2, or
+ * the API itself without R2 (development); then the API checks it in the bucket (its
+ * size, and that its SHA-256 is its name's). One that does not match is sent again, once.
  */
-export function imageStore(api: { apiUrl: string; token: string }): StoreImage {
+export function imageStore(api: Api): StoreImage {
   return async (sessionId, name, bytes, type) => {
-    const file = new URL(
-      `/runner/files/${encodeURIComponent(sessionId)}/${encodeURIComponent(name)}`,
-      api.apiUrl,
-    )
-    const auth = { authorization: `Bearer ${api.token}` }
-    const ticket = await fetch(`${file}/upload`, {
-      method: 'POST',
-      headers: { ...auth, 'content-type': 'application/json' },
-      body: JSON.stringify({ size: bytes.length }),
+    const path = `/runner/files/${encodeURIComponent(sessionId)}/${encodeURIComponent(name)}`
+    const body = { size: bytes.length }
+    await upload(api, bytes, {
+      start: async () => {
+        const { url, headers } = await answer<{
+          url: string | null
+          headers?: Record<string, string>
+        }>(await apiPost(api, `${path}/upload`, body), 'the file')
+        return url ? { url, headers: headers ?? { 'content-type': type } } : null
+      },
+      put: async (ticket) => {
+        if (ticket) return putBytes(api, ticket, bytes)
+        const response = await fetch(new URL(path, api.apiUrl), {
+          method: 'PUT',
+          headers: { authorization: `Bearer ${api.token}`, 'content-type': type },
+          body: new Uint8Array(bytes),
+        })
+        await answer(response, 'the file')
+      },
+      complete: async () => answer(await apiPost(api, `${path}/complete`, body), 'the file'),
     })
-    if (!ticket.ok) throw new Error(`the API refused the image (${ticket.status})`)
-    const { url, headers } = (await ticket.json()) as {
-      url: string | null
-      headers?: Record<string, string>
-    }
-    const body = new Uint8Array(bytes)
-    const upload = url
-      ? await fetch(url, { method: 'PUT', headers: headers ?? { 'content-type': type }, body })
-      : await fetch(file, { method: 'PUT', headers: { ...auth, 'content-type': type }, body })
-    if (!upload.ok)
-      throw new Error(`the ${url ? 'bucket' : 'API'} refused the image (${upload.status})`)
   }
 }
 
