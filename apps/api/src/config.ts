@@ -136,6 +136,31 @@ const Env = z.object({
   RESEND_WEBHOOK_SECRET: z.string().optional(),
   /** The domain agents' addresses are on. */
   MAIL_DOMAIN: z.string().default('mails.brigade.lol'),
+  /**
+   * Alerts to Brigade's operators (src/ops/, docs/monitoring.md): addresses, comma-separated,
+   * mailed through Resend (RESEND_API_KEY) from alerts@MAIL_DOMAIN.
+   */
+  OPS_ALERT_EMAILS: z
+    .string()
+    .optional()
+    .transform((v) =>
+      (v ?? '')
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean),
+    ),
+  /** A URL alerts are posted to as JSON: Slack's or Discord's incoming webhook, a Brigade custom app's. */
+  OPS_ALERT_WEBHOOK_URL: z.url().optional(),
+  /** Signs those posts (x-brigade-signature), for a receiver that checks them. */
+  OPS_ALERT_WEBHOOK_SECRET: z.string().optional(),
+  /** Bearer token for GET /health/ops, the alerts open now, for an uptime monitor outside. */
+  OPS_TOKEN: z.string().min(24).optional(),
+  /**
+   * Cloudflare's analytics, for the Workers' failed invocations (exceptions, exceeded
+   * limits): an API token with Account Analytics: Read, and the account's id.
+   */
+  CLOUDFLARE_API_TOKEN: z.string().optional(),
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
 })
 
 // An empty value (KEY= in .env, as .env.example has them) means unset.

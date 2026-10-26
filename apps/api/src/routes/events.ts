@@ -14,6 +14,7 @@ import { openSecret } from '../vault.js'
 import { received as mailReceived } from '../mail/inbound.js'
 import { statusChanged as mailStatus } from '../mail/outbound.js'
 import { verifyWebhook } from '../mail/resend.js'
+import { noteFailure } from '../ops/failures.js'
 
 const MAX_BODY = 1024 * 1024
 type SigningSecret = { secret: string }
@@ -96,6 +97,7 @@ export const events = new Hono()
       type: event.type,
       payload: event,
     })
+    if (failed) noteFailure('trigger-webhook', `stripe ${event.type}: could not start a thread`)
     // Stripe retries for three days.
     return failed ? c.json({ error: 'Could not start a thread yet' }, 503) : c.json({ ok: true })
   })
@@ -121,7 +123,10 @@ export const events = new Hono()
       timestamp: c.req.header('svix-timestamp'),
       signature: c.req.header('svix-signature'),
     })
-    if (!signed) return c.json({ error: 'Bad signature' }, 401)
+    if (!signed) {
+      noteFailure('resend-webhook', 'bad signature: is RESEND_WEBHOOK_SECRET the webhook’s?')
+      return c.json({ error: 'Bad signature' }, 401)
+    }
     let event: { type?: string; data?: Record<string, unknown> }
     try {
       event = JSON.parse(body)
@@ -134,6 +139,7 @@ export const events = new Hono()
       else if (event.type?.startsWith('email.')) await mailStatus(event.type, event.data as never)
     } catch (error) {
       console.error('resend webhook failed:', error)
+      noteFailure('resend-webhook', error)
       // Resend tries again.
       return c.json({ error: 'Not kept yet' }, 503)
     }
@@ -199,7 +205,9 @@ export const customApps = new Hono().post('/:token', async (c) => {
     { id, type: 'received', payload },
     trigger,
   )
-  if (failed)
+  if (failed) {
+    noteFailure('trigger-webhook', 'custom app: could not start a thread')
     return c.json({ error: 'Could not start a thread yet' }, 503, { 'retry-after': '300' })
+  }
   return c.json({ ok: true, duplicate: started === 0 }, started ? 202 : 200)
 })

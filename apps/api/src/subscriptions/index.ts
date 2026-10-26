@@ -11,6 +11,7 @@ import { gmailPush, readInbox, retryAt as gmailRetries, syncGmail } from './gmai
 import { readCalendar, retryAt as calendarRetries, syncCalendar } from './google-calendar.js'
 import { syncStripe } from './stripe.js'
 import { inInbox } from '../mail/gmail-inbox.js'
+import { noteFailure } from '../ops/failures.js'
 
 export { SubscribeError }
 
@@ -147,6 +148,7 @@ export function watchSubscriptions() {
       await tick()
     } catch (error) {
       console.error('subscriptions tick:', error)
+      noteFailure('job:subscriptions', error)
     } finally {
       ticking = false
     }

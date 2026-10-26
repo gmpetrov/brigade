@@ -32,6 +32,7 @@ import { settleOnMerge } from './tasks.js'
 import { noteInThread, pullNote } from './thread-notes.js'
 import { loadThread } from './thread-spec.js'
 import { promptThread, startThread } from './work.js'
+import { noteFailure } from './ops/failures.js'
 
 /** The author's turns at resolving a merge's conflicts or failed checks before it stops and asks a person. */
 const MAX_ROUNDS = 3
@@ -1257,7 +1258,10 @@ export function watchMerges() {
           r.id,
         ).catch((error) => console.warn(`merge check for ${r.id} failed: ${String(error)}`))
     })()
-      .catch(console.error)
+      .catch((error) => {
+        console.error(error)
+        noteFailure('job:merges', error)
+      })
       .finally(() => (watching = false))
   }, 60_000)
 }

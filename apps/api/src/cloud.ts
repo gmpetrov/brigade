@@ -24,6 +24,7 @@ import { restored } from './cloud-restore.js'
 import { throughGateway } from './preview-gateway.js'
 import { issueLinkCode } from './link-codes.js'
 import { runnerBundle } from './routes/runner-install.js'
+import { noteFailure } from './ops/failures.js'
 
 const provider = providerFromEnv(process.env)
 
@@ -580,9 +581,15 @@ export const watchIdle = () => {
     setInterval(
       () =>
         void enforcePlans()
-          .catch(console.error)
+          .catch((error) => {
+            console.error(error)
+            noteFailure('job:cloud-plans', error)
+          })
           .then(() => stopIdle())
-          .catch(console.error),
+          .catch((error) => {
+            console.error(error)
+            noteFailure('job:cloud-idle', error)
+          }),
       60_000,
     )
 }

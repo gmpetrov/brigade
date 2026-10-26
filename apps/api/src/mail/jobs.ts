@@ -7,6 +7,7 @@ import { processMail } from './inbound.js'
 import { fillMessageIds } from './outbound.js'
 import { checkDomains } from './domains.js'
 import { resendConfigured } from './resend.js'
+import { noteFailure } from '../ops/failures.js'
 
 const RETRY_AFTER_MS = 60_000
 let ticking = false
@@ -59,11 +60,19 @@ export async function sweepMail(now = new Date()) {
 
 export function watchMail() {
   setTimeout(
-    () => void tick().catch((error) => console.warn(`mail tick failed: ${String(error)}`)),
+    () =>
+      void tick().catch((error) => {
+        console.warn(`mail tick failed: ${String(error)}`)
+        noteFailure('job:mail', error)
+      }),
     15_000,
   )
   setInterval(
-    () => void tick().catch((error) => console.warn(`mail tick failed: ${String(error)}`)),
+    () =>
+      void tick().catch((error) => {
+        console.warn(`mail tick failed: ${String(error)}`)
+        noteFailure('job:mail', error)
+      }),
     60_000,
   )
   setInterval(

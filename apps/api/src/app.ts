@@ -52,6 +52,9 @@ import { workspaces } from './routes/workspaces.js'
 import { mcpClientDocument } from './connectors/mcp.js'
 import { resolveScope, signInFirst } from './scope.js'
 import { serverTiming } from './timing.js'
+import { noteFailure } from './ops/failures.js'
+import { openAlerts } from './ops/alerts.js'
+import { safeEqual } from './ops/send.js'
 
 export const app = new Hono()
 
@@ -83,6 +86,21 @@ app.get('/health/db', async (c) => {
     () => '',
   )
   return c.json({ queryMs, colo: /^colo=(\w+)$/m.exec(trace)?.[1] ?? null })
+})
+
+/**
+ * What is wrong with Brigade now (src/ops/), for an uptime monitor outside Cloudflare: 200
+ * when nothing critical is open, else 503. Needs OPS_TOKEN as a bearer token.
+ */
+app.get('/health/ops', async (c) => {
+  const token = c.req.header('authorization')?.replace(/^Bearer /, '') ?? ''
+  if (!env.OPS_TOKEN || !safeEqual(token, env.OPS_TOKEN)) return c.json({ error: 'Not found' }, 404)
+  const alerts = await openAlerts()
+  const { lastChecksAt } = await import('./ops/checks.js')
+  return c.json(
+    { checksAt: lastChecksAt ? new Date(lastChecksAt).toISOString() : null, alerts },
+    alerts.some((a) => a.severity === 'critical') ? 503 : 200,
+  )
 })
 
 app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
@@ -193,6 +211,10 @@ app.get(
 
 app.onError((error, c) => {
   if (error instanceof HTTPException) return c.json({ error: error.message }, error.status)
-  console.error(error)
+  console.error(`${c.req.method} ${c.req.path} failed:`, error)
+  noteFailure(
+    'api',
+    `${c.req.method} ${c.req.routePath}: ${error instanceof Error ? error.message : String(error)}`,
+  )
   return c.json({ error: 'Internal error' }, 500)
 })

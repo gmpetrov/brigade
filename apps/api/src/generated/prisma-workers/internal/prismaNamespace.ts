@@ -469,7 +469,8 @@ export const ModelName = {
   MailMessage: 'MailMessage',
   MailDomain: 'MailDomain',
   Contact: 'Contact',
-  ContactHandle: 'ContactHandle'
+  ContactHandle: 'ContactHandle',
+  OpsAlert: 'OpsAlert'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -485,7 +486,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle"
+    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "opsAlert"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -5891,6 +5892,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    OpsAlert: {
+      payload: Prisma.$OpsAlertPayload<ExtArgs>
+      fields: Prisma.OpsAlertFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.OpsAlertFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.OpsAlertFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload>
+        }
+        findFirst: {
+          args: Prisma.OpsAlertFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.OpsAlertFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload>
+        }
+        findMany: {
+          args: Prisma.OpsAlertFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload>[]
+        }
+        create: {
+          args: Prisma.OpsAlertCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload>
+        }
+        createMany: {
+          args: Prisma.OpsAlertCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.OpsAlertCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload>[]
+        }
+        delete: {
+          args: Prisma.OpsAlertDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload>
+        }
+        update: {
+          args: Prisma.OpsAlertUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload>
+        }
+        deleteMany: {
+          args: Prisma.OpsAlertDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.OpsAlertUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.OpsAlertUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload>[]
+        }
+        upsert: {
+          args: Prisma.OpsAlertUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OpsAlertPayload>
+        }
+        aggregate: {
+          args: Prisma.OpsAlertAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateOpsAlert>
+        }
+        groupBy: {
+          args: Prisma.OpsAlertGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.OpsAlertGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.OpsAlertCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.OpsAlertCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -7232,6 +7307,21 @@ export const ContactHandleScalarFieldEnum = {
 export type ContactHandleScalarFieldEnum = (typeof ContactHandleScalarFieldEnum)[keyof typeof ContactHandleScalarFieldEnum]
 
 
+export const OpsAlertScalarFieldEnum = {
+  key: 'key',
+  severity: 'severity',
+  title: 'title',
+  detail: 'detail',
+  firstAt: 'firstAt',
+  lastAt: 'lastAt',
+  notifiedAt: 'notifiedAt',
+  notifiedSeverity: 'notifiedSeverity',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type OpsAlertScalarFieldEnum = (typeof OpsAlertScalarFieldEnum)[keyof typeof OpsAlertScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -8146,6 +8236,7 @@ export type GlobalOmitConfig = {
   mailDomain?: Prisma.MailDomainOmit
   contact?: Prisma.ContactOmit
   contactHandle?: Prisma.ContactHandleOmit
+  opsAlert?: Prisma.OpsAlertOmit
 }
 
 /* Types for Logging */

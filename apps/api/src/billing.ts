@@ -12,6 +12,7 @@ import { HTTPException } from 'hono/http-exception'
 import Stripe from 'stripe'
 import { env } from './config.js'
 import { prisma, type Prisma } from './db.js'
+import { noteFailure } from './ops/failures.js'
 
 export const billingEnabled = () => !!env.STRIPE_SECRET_KEY
 
@@ -206,6 +207,7 @@ export async function stripeWebhook(request: Request) {
       env.STRIPE_WEBHOOK_SECRET,
     )
   } catch {
+    noteFailure('stripe-signature', 'a request to the billing webhook failed its signature check')
     return Response.json({ error: 'Not a Stripe event' }, { status: 400 })
   }
   const target = eventTarget(event.type, event.data.object)
@@ -214,6 +216,10 @@ export async function stripeWebhook(request: Request) {
     await reconcile(target)
   } catch (error) {
     console.error(`billing: ${event.type} ${event.id} not reconciled`, error)
+    noteFailure(
+      'stripe-webhook',
+      `${event.type} ${event.id}: ${error instanceof Error ? error.message : String(error)}`,
+    )
     return Response.json({ error: 'Not reconciled: send it again' }, { status: 503 })
   }
   return Response.json({ received: true })

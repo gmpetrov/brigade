@@ -475,3 +475,9 @@ export type Contact = Prisma.ContactModel
  * One way to reach a contact: an email address today, a chat account later.
  */
 export type ContactHandle = Prisma.ContactHandleModel
+/**
+ * Model OpsAlert
+ * A problem with Brigade itself that its operators are alerted to (src/ops/): one row per
+ * problem, by key, kept once resolved so it is not alerted again right away.
+ */
+export type OpsAlert = Prisma.OpsAlertModel
