@@ -1,8 +1,9 @@
-// A shared Gmail account's mail, kept for the Inbox (src/inbox.ts) as its inbox reader reads it
+// A Gmail account's mail, kept for the Inbox (src/inbox.ts) as its inbox reader reads it
 // (src/subscriptions/gmail.ts), with where it went: the thread waiting on its conversation, the
 // rule that took it, or nowhere. The same table as Brigade's own addresses' mail, so the Inbox
-// lists every source with one query. Only accounts put in the Inbox are kept, and never a
-// member's own (reach mine).
+// lists every source with one query. All of it for a shared account put in the Inbox; for any
+// other account, a member's own included, only what went to a thread (a rule's, a playbook's,
+// one waiting on its conversation): the rest of the mailbox, personal mail, is never kept.
 import { mailbox } from '@brigade/contracts'
 import type { ReceivedEmail } from '../connectors/gmail.js'
 import { scoped, type Scope } from '../db.js'
@@ -34,7 +35,10 @@ export async function keepGmail(
   email: ReceivedEmail,
   outcome: { route: 'awaited' | 'rule' | 'cap' | 'box'; sessionId?: string; triggerId?: string },
 ) {
-  if (!inInbox(connection) || email.labels?.some((l) => NOISE.has(l))) return
+  const taken = outcome.route !== 'box'
+  if (connection.kind !== 'gmail' || !(inInbox(connection) || taken)) return
+  // Promotions and the like, unless a thread took it.
+  if (!taken && email.labels?.some((l) => NOISE.has(l))) return
   const scope: Scope = {
     organizationId: connection.organizationId,
     workspaceId: connection.workspaceId,

@@ -669,7 +669,10 @@ function Account({
                 </DropdownMenuRadioGroup>
               </>
             )}
-            {/* A shared mailbox's mail in the Inbox, for everyone: its owner's or an admin's choice. */}
+            {/*
+              All of a shared mailbox's mail in the Inbox, for everyone: its owner's or an admin's
+              choice. Without it the Inbox shows only the mail its rules and playbooks take.
+            */}
             {c.kind === 'gmail' && (
               <>
                 <DropdownMenuSeparator />
@@ -679,11 +682,11 @@ function Account({
                   onCheckedChange={(inbox) => void update({ inbox: inbox === true })}
                   title={
                     c.reach === 'workspace'
-                      ? 'Everyone in the workspace sees its mail in the Inbox'
-                      : 'Share it with every thread first'
+                      ? 'Everyone in the workspace sees all its mail in the Inbox. Without it, only the mail its rules and playbooks take.'
+                      : 'The Inbox shows you the mail its rules and playbooks take. Share it with every thread to show all its mail.'
                   }
                 >
-                  Show in the Inbox
+                  Show all its mail in the Inbox
                 </DropdownMenuCheckboxItem>
               </>
             )}
