@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { api, isAdmin, useApi, type Connection, type ConnectionsResponse } from '@/lib/api'
-import { openSignIn } from '@/lib/sign-in-window'
+import { onSignIn, openSignIn } from '@/lib/sign-in-window'
 
 type AppAsk = Extract<Ask, { type: 'access' }> & {
   app: NonNullable<Extract<Ask, { type: 'access' }>['app']>
@@ -194,13 +194,28 @@ export function AppAccessAsk({
   const [picked, setPicked] = useState<string>()
   const chosen = options.find((c) => c.id === (picked ?? preferred?.id))
   const [waiting, setWaiting] = useState(false)
-  /** The expired account being signed in to again, and the accounts there were before. */
-  const [reconnecting, setReconnecting] = useState<{ id: string; before: string[] }>()
-  // The same account back, else one the person signed in to instead (another mailbox).
-  const reconnected = reconnecting
-    ? (givable.find((c) => c.id === reconnecting.id) ??
-      givable.find((c) => !reconnecting.before.includes(c.id)))
-    : undefined
+  // Signing in to an account again (its sign-in expired, or it lacks the permission asked for).
+  const [reconnecting, setReconnecting] = useState(false)
+  // The account the sign-in tab came back with: the same one, or another the person signed in to
+  // instead (another mailbox). Only the tab says so: the account changes with its settings too.
+  const [signedIn, setSignedIn] = useState<string>()
+  const reconnected = reconnecting ? givable.find((c) => c.id === signedIn) : undefined
+  // A permission the account lacks: its owner signs in to it again and allows it there. An
+  // active account too, which the access alone would not fix.
+  const permission = ask.app.permission?.trim() || undefined
+  // A server added by its URL signs in again on its own OAuth; one signed in to with a key cannot.
+  const customOAuth = kind === 'mcp' && server?.mcp?.auth === 'oauth'
+  const signInAgain =
+    !!chosen &&
+    (customOAuth
+      ? !!permission && chosen.createdByMemberId === me.memberId
+      : !!SIGN_IN[kind] &&
+        (chosen.status === 'needs_reauth' ||
+          (!!permission && !repository && chosen.createdByMemberId === me.memberId)))
+  const chosenOwner =
+    chosen && chosen.createdByMemberId !== me.memberId
+      ? (data.data?.members[chosen.createdByMemberId] ?? 'the member who connected it')
+      : undefined
   const [error, setError] = useState<string>()
   const access = ask.app.scope === 'read' ? 'read' : 'read and write'
   const give = (connectionId: string | undefined) =>
@@ -208,6 +223,18 @@ export function AppAccessAsk({
 
   // Signing in in its own window, or changing the repositories on GitHub: once the account shows
   // up (reaching the repository), the access goes with the answer.
+  useEffect(() => {
+    if (!waiting) return
+    return onSignIn(({ connected, error }) => {
+      if (error) {
+        setWaiting(false)
+        setError('The sign-in did not go through. Try again.')
+      } else if (connected) {
+        setSignedIn(connected)
+        void data.reload()
+      }
+    })
+  }, [waiting])
   useEffect(() => {
     if (!waiting) return
     if (reconnecting ? reconnected : givable.length > 0) {
@@ -225,25 +252,33 @@ export function AppAccessAsk({
     return () => clearInterval(timer)
   }, [waiting, givable.length, reconnected?.id])
 
-  /** Sign in at the provider: a new account, or the expired one given (the API renews it). */
-  async function connect(region?: string, expiredId?: string) {
+  /** Sign in at the provider: a new account, or the one given again (the API renews it). */
+  async function connect(region?: string, again?: Connection) {
     setError(undefined)
-    const route = SIGN_IN[kind]
+    const route = again && customOAuth ? 'mcp/server' : SIGN_IN[kind]
     if (!route) return
     try {
       const inWindow = await openSignIn(async (returnTo) => {
+        if (route === 'mcp/server') {
+          // The App's own OAuth client: the same account comes back renewed.
+          const { url } = await api<{ url: string }>('/connections/mcp/server', {
+            body: { appId: again!.appId, ...(returnTo ? { returnTo } : {}) },
+          })
+          return url
+        }
         const { url } = await api<{ url: string }>(`/connections/${route}`, {
           body: {
             ...(route === 'github' ? {} : { kind }),
             ...(region ? { region } : {}),
             ...(returnTo ? { returnTo } : {}),
-            ...(route === 'mcp' && expiredId ? { reconnect: expiredId } : {}),
+            ...(route === 'mcp' && again ? { reconnect: again.id } : {}),
           },
         })
         return url
       })
       if (!inWindow) return
-      setReconnecting(expiredId ? { id: expiredId, before: givable.map((c) => c.id) } : undefined)
+      setReconnecting(!!again)
+      setSignedIn(undefined)
       setWaiting(true)
     } catch (e) {
       setError((e as Error).message)
@@ -280,11 +315,12 @@ export function AppAccessAsk({
                 </SelectContent>
               </Select>
             )}
-            {chosen?.status === 'needs_reauth' ? (
-              // Its sign-in expired: signing in again renews it, and the access goes with it.
+            {signInAgain ? (
+              // Its sign-in expired, or it lacks the permission: signing in again renews it, and
+              // the access goes with it.
               <RegionMenu
                 regions={data.data.catalog[kind]?.regions}
-                onPick={(region) => void connect(region, chosen.id)}
+                onPick={(region) => void connect(region, chosen)}
               >
                 <Button
                   size="sm"
@@ -292,7 +328,7 @@ export function AppAccessAsk({
                   onClick={
                     data.data.catalog[kind]?.regions
                       ? undefined
-                      : () => void connect(undefined, chosen.id)
+                      : () => void connect(undefined, chosen)
                   }
                 >
                   {options.length > 1
@@ -300,6 +336,17 @@ export function AppAccessAsk({
                     : `Reconnect ${chosen.externalAccount ?? chosen.label}`}
                 </Button>
               </RegionMenu>
+            ) : permission && chosenOwner ? (
+              <span className="text-sm text-muted-foreground">
+                Only {chosenOwner} can reconnect {chosen?.externalAccount ?? name} to allow it.
+              </span>
+            ) : permission && kind === 'mcp' ? (
+              // Signed in with a key: the access alone would not allow it.
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/app/connections" target="_blank" rel="noreferrer">
+                  Connect {name} again in Apps
+                </Link>
+              </Button>
             ) : (
               <Button size="sm" onClick={() => give(chosen?.id)}>
                 Give {askerName} {access} access
@@ -387,6 +434,12 @@ export function AppAccessAsk({
           </>
         )}
       </div>
+      {permission && (
+        <p className="text-sm text-muted-foreground">
+          On {name}&apos;s page, also allow{' '}
+          <span className="font-medium text-foreground">{permission}</span>.
+        </p>
+      )}
       {waiting && repository && (
         <p className="text-sm text-muted-foreground">
           Pick <code>{repository}</code> on GitHub, in the tab that opened. {askerName} gets{' '}

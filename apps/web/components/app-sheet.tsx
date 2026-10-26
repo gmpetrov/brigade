@@ -49,7 +49,7 @@ import {
   type Trigger,
   type TriggerCatalog,
 } from '@/lib/api'
-import { openSignIn } from '@/lib/sign-in-window'
+import { onSignIn, openSignIn } from '@/lib/sign-in-window'
 import { cn } from '@/lib/utils'
 
 type Kind = Connection['kind']
@@ -154,22 +154,28 @@ export function AppSheet({
         })
         return url
       })
-      if (inWindow) setWaiting({ before, since: Date.now(), reconnecting })
+      if (inWindow) setWaiting({ before, since: Date.now() })
     })
   // While the sign-in tab is open: look for the new account every few seconds, for a while.
-  const [waiting, setWaiting] = useState<{ before: number; since: number; reconnecting?: string }>()
-  const reconnected =
-    !!waiting?.reconnecting &&
-    accounts.find((a) => a.id === waiting.reconnecting)?.status === 'active'
+  const [waiting, setWaiting] = useState<{ before: number; since: number }>()
+  // The sign-in tab says when it is done: an account signed in to again shows no new row, and
+  // may well have been active already.
   useEffect(() => {
     if (!waiting) return
-    if (accounts.length > waiting.before || reconnected) return setWaiting(undefined)
+    return onSignIn(() => {
+      setWaiting(undefined)
+      void reload()
+    })
+  }, [waiting, reload])
+  useEffect(() => {
+    if (!waiting) return
+    if (accounts.length > waiting.before) return setWaiting(undefined)
     const timer = setInterval(() => {
       if (Date.now() - waiting.since > 10 * 60_000) setWaiting(undefined)
       else void reload()
     }, 2000)
     return () => clearInterval(timer)
-  }, [waiting, accounts.length, reconnected, reload])
+  }, [waiting, accounts.length, reload])
 
   const connectCustomApp = (form: FormData) =>
     run(async () => {
@@ -635,6 +641,10 @@ function Account({
             )}
             {!custom && (
               <DropdownMenuItem onSelect={() => setOpen('log')}>Call log</DropdownMenuItem>
+            )}
+            {/* Signing in again while it works: to allow a permission left out at its consent. */}
+            {mine && !custom && c.kind !== 'github' && c.status === 'active' && !regions && (
+              <DropdownMenuItem onSelect={() => onReconnect()}>Reconnect</DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={() => setOpen('triggers')}>
               {panels.triggers}

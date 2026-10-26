@@ -287,6 +287,11 @@ export const openTicketTool = tool({
                   description:
                     'The account you mean, as its row shows it (e.g. the Gmail address), when you know which: the ticket picks it first',
                 },
+                permission: {
+                  type: 'string',
+                  description:
+                    'A permission an account you already have lacks, which the person allows on the provider\'s consent page as they sign in to it again, e.g. "Account API Tokens: Write" on Cloudflare\'s. The ticket offers to reconnect the account: never write steps for that',
+                },
                 teammate: {
                   type: 'string',
                   description:
