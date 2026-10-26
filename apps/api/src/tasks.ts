@@ -547,7 +547,7 @@ async function startTask(
       computer: computer ?? (await computerFor(db, by.memberId, teammate.harness)),
       memberId: by.memberId,
       title: task.title,
-      // A teammate's task is not the member's word: its brief says who wrote it.
+      // A teammate started it, not the member: its brief says who, and from where.
       text: by.from
         ? taskBrief({ ...task, from: by.from.name, threadTitle: by.from.threadTitle })
         : brief(task),

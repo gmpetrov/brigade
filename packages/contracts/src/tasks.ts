@@ -139,19 +139,19 @@ export function fromTaskComment(text: string) {
   return m ? { from: m[1]!, threadTitle: m[2]!, text: text.slice(m[0].length) } : null
 }
 
-/** A task's brief, as its thread's first message when a teammate started it (create_task). */
+/** A task's brief, as its thread's first message when a teammate started it (create_task, or assign_task on one in Backlog). */
 export const taskBrief = (b: {
   from: string
   threadTitle: string
   title: string
   description: string
 }) =>
-  `**${b.from}** created this task from the thread “${b.threadTitle}”:\n\n` +
+  `**${b.from}** started this task from the thread “${b.threadTitle}”:\n\n` +
   [`**${b.title}**`, b.description].filter(Boolean).join('\n\n')
 
-const BRIEF_HEAD = /^\*\*(.+?)\*\* created this task from the thread “(.*)”:\n\n/
+const BRIEF_HEAD = /^\*\*(.+?)\*\* started this task from the thread “(.*)”:\n\n/
 
-/** A teammate's task brief read back (taskBrief): who created it, from where, and the brief. */
+/** A teammate's task brief read back (taskBrief): who started it, from where, and the brief. */
 export function fromTaskBrief(text: string) {
   const m = BRIEF_HEAD.exec(text)
   return m ? { from: m[1]!, threadTitle: m[2]!, text: text.slice(m[0].length) } : null

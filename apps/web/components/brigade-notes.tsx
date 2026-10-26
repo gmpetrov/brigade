@@ -69,7 +69,7 @@ export function brigadeNote(text: string, fromBrigade: boolean): BrigadeNote | n
   if (brief)
     return {
       icon: ListTodo,
-      label: `${brief.from} created this task from “${brief.threadTitle}”`,
+      label: `${brief.from} started this task from “${brief.threadTitle}”`,
       body: brief.text,
     }
   const event = triggerEvent(text)
