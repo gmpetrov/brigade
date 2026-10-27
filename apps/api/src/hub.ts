@@ -26,6 +26,7 @@ import { handleConnectorCall } from './connector-calls.js'
 import { dropDeadWaiters } from './held-calls.js'
 import {
   ackCommands,
+  asOfNow,
   commandMessage,
   computersWaiting,
   giveUp,
@@ -34,6 +35,7 @@ import {
   noteSent,
   pendingCommands,
   RESEND_MS,
+  type DurableCommand,
 } from './runner-commands.js'
 import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryTidy, handleMemoryUpdate } from './library-calls.js'
@@ -390,11 +392,10 @@ export async function dispatch(
 }
 
 /** Send a kept command on this connection, unless an older runner took it already. */
-async function sendKept(
-  computerId: string,
-  conn: RunnerConn,
-  message: ApiToRunner & { commandId: string },
-) {
+async function sendKept(computerId: string, conn: RunnerConn, kept: DurableCommand) {
+  // Not where its thread is now, or built before it last arrived here: not sent, or brought up to date.
+  const message = await asOfNow(computerId, kept)
+  if (!message) return
   // Kept with its specs' large parts by hash: whole for a runner that cannot fetch them. One that
   // cannot be made whole (a part gone) stays pending, not sent: a ticket says so after a day.
   let whole: ApiToRunner = message
@@ -1144,8 +1145,12 @@ export function runnerSocket(runner: {
     const session = await prisma.session.findFirst({
       where: { id: sessionId, computerId: runner.computerId },
     })
-    if (!session)
-      return console.warn(`runner ${runner.id} sent events for a thread it does not run`)
+    if (!session) {
+      console.warn(`runner ${runner.id} sent events for a thread it does not run`)
+      // Acknowledged all the same, never stored: or it sends them again every half minute.
+      const last = Math.max(...events.map((e) => e.seq))
+      return send(ws, { type: 'ack', sessionId, seq: last })
+    }
     await insertEvents(session, await withTeammateIds(session, events))
     await advance(session, ws)
   }

@@ -82,6 +82,22 @@ export const noAccount = (harness: string) =>
     message: `No ${harness === 'codex' ? 'Codex' : 'Claude'} account of yours on this computer is ready. Add or sign in to one under Accounts.`,
   })
 
+/** The thread's latest arrival on its computer, as a spec says it (ThreadSpec.moved). */
+export function movedOf(thread: {
+  movedAt: Date | null
+  movedFrom: string | null
+  movedSeq: number | null
+  computer: { kind: string; name: string }
+}) {
+  if (!thread.movedAt) return undefined
+  return {
+    at: thread.movedAt.toISOString(),
+    from: thread.movedFrom ?? 'another computer',
+    to: thread.computer.kind === 'cloud' ? 'the cloud computer' : thread.computer.name,
+    seq: thread.movedSeq ?? 0,
+  }
+}
+
 /**
  * The thread's spec, with the account it should run on next: its current
  * account if still usable, else the starter's next one. Never another member's.
@@ -285,16 +301,7 @@ export async function specFor(
     project,
     projects,
     // Taken in once by the computer it moved to; older runners ignore it.
-    ...(thread.movedAt
-      ? {
-          moved: {
-            at: thread.movedAt.toISOString(),
-            from: thread.movedFrom ?? 'another computer',
-            to: thread.computer.kind === 'cloud' ? 'the cloud computer' : thread.computer.name,
-            seq: thread.movedSeq ?? 0,
-          },
-        }
-      : {}),
+    ...(thread.movedAt ? { moved: movedOf(thread) } : {}),
     // A GitHub grant also reaches its repositories through git, via the API's proxy.
     ...(github
       ? {

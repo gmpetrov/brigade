@@ -71,7 +71,11 @@ export class Outbox {
 
   ack(sessionId: string, seq: number) {
     const stream = this.streams.get(sessionId)
-    if (!stream || seq <= stream.acked) return
+    if (!stream || seq < stream.acked) return
+    // The API holds the thread's events up to `seq`: this runner numbers its own after them.
+    // One it numbered below (it took the thread in without its arrival) the API dropped.
+    stream.lastSeq = Math.max(stream.lastSeq, seq)
+    if (seq === stream.acked && !stream.pending.some((e) => e.seq <= seq)) return
     stream.acked = seq
     stream.pending = stream.pending.filter((e) => e.seq > seq)
     for (const buffered of stream.bufferedAt.keys())
