@@ -10,6 +10,7 @@ import { parseEnv } from 'node:util'
 // say at each step:
 // - the old VM's reference is kept on the replacement, never on the computer, whose runner's
 //   token goes; every thread of the computer moves to the new VM, a busy one with a nudge;
+// - an account whose login was never backed up needs signing in again, one backed up stays ready;
 // - its new runner's hello is told what to put back, and backups are refused until it has;
 // - its report ends the replacement, with what did not come back.
 const envFile = new URL('../.env', import.meta.url)
@@ -37,7 +38,7 @@ const until = async (check: () => Promise<boolean>, what: string) => {
 describe('replacing a cloud computer', { skip: !database && 'no database answers' }, () => {
   const suffix = randomUUID().slice(0, 8)
   const ids = {} as Record<
-    'org' | 'workspace' | 'owner' | 'cloud' | 'kai' | 'idle' | 'busy',
+    'org' | 'workspace' | 'owner' | 'cloud' | 'kai' | 'idle' | 'busy' | 'kept' | 'lost',
     string
   >
   let scope: { organizationId: string; workspaceId: string }
@@ -101,6 +102,29 @@ describe('replacing a cloud computer', { skip: !database && 'no database answers
     await db.teammateBackup.create({
       data: { teammateId: ids.kai, kind: 'tasks', computerId: ids.cloud, size: 10n },
     } as never)
+    const account = (label: string) =>
+      db.account.create({
+        data: {
+          memberId: ids.owner,
+          computerId: ids.cloud,
+          provider: 'claude_code',
+          source: 'brigade',
+          label,
+          status: 'ready',
+        },
+      } as never)
+    ids.kept = (await account('kept')).id
+    ids.lost = (await account('lost')).id
+    await db.accountLoginBackup.create({
+      data: {
+        accountId: ids.kept,
+        ciphertext: Buffer.from('x'),
+        iv: Buffer.from('x'),
+        authTag: Buffer.from('x'),
+        keyVersion: 1,
+        sha256: '0'.repeat(64),
+      },
+    } as never)
   })
 
   after(async () => {
@@ -132,6 +156,10 @@ describe('replacing a cloud computer', { skip: !database && 'no database answers
     assert.equal(computer.providerRef, null, 'never destroyed: the computer forgets it')
     assert.equal(await prisma.runner.count({ where: { computerId: ids.cloud } }), 0)
     assert.equal(await restoring(ids.cloud), true)
+    const status = async (id: string) =>
+      (await prisma.account.findUniqueOrThrow({ where: { id } })).status
+    assert.equal(await status(ids.kept), 'ready', 'its login comes back from its backup')
+    assert.equal(await status(ids.lost), 'needs_sign_in', 'its login stayed on the old VM')
 
     const idle = await prisma.session.findUniqueOrThrow({ where: { id: ids.idle } })
     const busy = await prisma.session.findUniqueOrThrow({ where: { id: ids.busy } })

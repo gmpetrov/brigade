@@ -5,6 +5,7 @@
 //   backing_up  the old VM's runner, if it answers, backs up what lives only on its disk
 //               (computer.backup), then the old VM is stopped. It is never destroyed: Brigade
 //               keeps its reference on the row, and its data can still be read at the provider.
+//               Its accounts whose login was never backed up need signing in again.
 //   creating    a new VM, its runner installed (cloud.ts's provision, as for a new computer).
 //               Every thread of the computer "moves" to it (Session.moved): its next turn takes in
 //               its folder from its latest backup, and the conversation from its events.
@@ -195,6 +196,17 @@ async function backUpAndSwitch(row: Replacement) {
     })
     // The old runner's token goes: nothing there connects as this computer any more.
     await tx.runner.deleteMany({ where: { computerId: computer.id } })
+    // A login never backed up stays on the old VM: its account is signed in again on the new
+    // one, rather than shown ready while every turn there fails with "Not logged in".
+    await tx.account.updateMany({
+      where: {
+        computerId: computer.id,
+        source: 'brigade',
+        status: { not: 'needs_sign_in' },
+        loginBackup: { is: null },
+      },
+      data: { status: 'needs_sign_in' },
+    })
     await moveThreads(tx, computer.id, row.memberId)
   })
   broadcastComputer(computer.workspaceId, computer.id, 'creating')
