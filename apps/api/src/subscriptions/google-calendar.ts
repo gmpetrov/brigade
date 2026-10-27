@@ -4,7 +4,8 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { env } from '../config.js'
 import { authorisedFetch } from '../connector-calls.js'
-import { isOwnChange, type Event } from '../connectors/google-calendar.js'
+import { changeKeys, type Event } from '../connectors/google-calendar.js'
+import { hubs } from '../hub.js'
 import { json, type ConnectorContext } from '../connectors/types.js'
 import { prisma, scoped, type Scope } from '../db.js'
 import { dispatch } from '../triggers.js'
@@ -176,8 +177,14 @@ export const readCalendar = (subscriptionId: string) =>
         if (response.status === 410)
           return save({ cursor: await freshSyncToken(fetch, sub.resource), error: null })
         const page = await json<Page>(response)
+        // Changes Brigade's own calls made, as the workspace's hub kept them: they trigger nothing.
+        const own = new Set(
+          page.items?.length
+            ? await hubs.get(sub.workspaceId).ownCalendarChanges(page.items.flatMap(changeKeys))
+            : [],
+        )
         for (const event of page.items ?? []) {
-          if (isOwnChange(event)) continue
+          if (changeKeys(event).some((key) => own.has(key))) continue
           for (const change of changesOf(event)) {
             const { failed } = await dispatch(sub.connection, { ...change, payload: event })
             // The token moves only per page: the whole page is offered again, deduped.

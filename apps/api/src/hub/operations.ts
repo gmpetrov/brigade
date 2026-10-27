@@ -14,6 +14,8 @@ const replace = () => import('../cloud-replace.js')
 const held = () => import('../held-calls.js')
 const logins = () => import('../logins.js')
 const move = () => import('../move.js')
+const mail = () => import('../mail/inbound.js')
+const dryRuns = () => import('../playbook-dry-runs.js')
 
 type Actor = { type: 'member' | 'system'; id: string }
 
@@ -107,6 +109,18 @@ export const operations = {
 
   // Calls held for a person (src/held-calls.ts).
   runHeld: async (_hub: WorkspaceHub, id: string) => (await held()).runHeld(id),
+
+  // Mail a thread's email_wait awaits (src/mail/inbound.ts).
+  takeAwaitedMail: async (_hub: WorkspaceHub, sessionId: string, messageId: string) =>
+    (await mail()).takeAwaitedMail(sessionId, messageId),
+
+  // Calendar changes teammates' calls made (src/connectors/google-calendar.ts).
+  ownCalendarChanges: async (_hub: WorkspaceHub, keys: string[]) =>
+    (await import('../connectors/google-calendar.js')).ownChanges(keys),
+
+  // Dry runs of playbooks, moved on as their threads' turns end (src/playbook-dry-runs.ts).
+  advanceDryRun: async (_hub: WorkspaceHub, scope: Scope, dryRunId: string) =>
+    (await dryRuns()).advanceDryRun(scope, dryRunId),
 
   // Threads moving between computers (src/move.ts).
   advanceMove: async (

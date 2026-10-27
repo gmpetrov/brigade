@@ -1,6 +1,7 @@
 // The runner's one outbound WebSocket to the API. Nothing connects in.
 import {
   ApiToRunner,
+  KEEPALIVE,
   PROTOCOL_VERSION,
   type RunnerToApi,
   type SequencedEvent,
@@ -8,7 +9,7 @@ import {
 } from '@brigade/contracts'
 import { randomUUID } from 'node:crypto'
 import WebSocket from 'ws'
-import { HOME, VERSION, type RunnerConfig } from './config.js'
+import { HOME, saveConfig, VERSION, type RunnerConfig } from './config.js'
 import type { Outbox } from './outbox.js'
 import type { SeenCommands } from './seen-commands.js'
 import { installedBundle } from './updater.js'
@@ -46,8 +47,9 @@ export function eventBatches(events: SequencedEvent[]) {
 /**
  * A ping this often keeps the socket from looking idle (Cloudflare closes
  * WebSockets that carry nothing), and one unanswered by the next tells a dead
- * connection from a quiet one. The API cannot see pings: a heartbeat message
- * tells it the same, the other way (HEARTBEAT_PROTOCOL).
+ * connection from a quiet one. The API cannot see pings: a keepalive message
+ * tells it the same, the other way (KEEPALIVE_PROTOCOL), which a workspace's hub
+ * object answers without waking.
  */
 const HEARTBEAT_MS = 30_000
 /** An upgrade that has not answered in this long is given up and retried. */
@@ -128,6 +130,8 @@ export class Connection {
   start() {
     const url = new URL('/runner/ws', this.config.apiUrl)
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    // Its workspace's hub takes the connection (docs/workspace-hubs-plan.md).
+    if (this.config.workspaceId) url.searchParams.set('workspace', this.config.workspaceId)
     const ws = new WebSocket(url, {
       headers: { authorization: `Bearer ${this.config.token}` },
       handshakeTimeout: HANDSHAKE_MS,
@@ -143,7 +147,8 @@ export class Connection {
         if (!answered) return ws.terminate()
         answered = false
         ws.ping()
-        this.send({ type: 'heartbeat' })
+        // Exactly as KEEPALIVE: a hub object answers it without waking.
+        if (ws.readyState === WebSocket.OPEN) ws.send(KEEPALIVE)
         this.checkWaiting()
       }, HEARTBEAT_MS)
       const extra = await this.hello().catch(() => ({}))
@@ -161,8 +166,16 @@ export class Connection {
       const parsed = ApiToRunner.safeParse(JSON.parse(String(raw)))
       if (!parsed.success) return console.warn('bad message from api', parsed.error.issues[0])
       const message = parsed.data
+      // The answer to a keepalive: nothing to do.
+      if (message.type === 'keepalive') return
       if (message.type === 'welcome') {
         console.log(`connected to ${this.config.apiUrl} (workspace "${this.config.workspaceName}")`)
+        if (message.workspaceId && message.workspaceId !== this.config.workspaceId) {
+          this.config.workspaceId = message.workspaceId
+          void saveConfig(this.config).catch((error: unknown) =>
+            console.warn(`could not keep the workspace id: ${String(error)}`),
+          )
+        }
         this.ready = true
         // What it was told before, it forgot with the old connection.
         this.reported = new Map()

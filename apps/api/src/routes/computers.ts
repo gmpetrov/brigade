@@ -163,7 +163,9 @@ export const runnerLink = new Hono().post('/link', async (c) => {
   const grant = await redeemLinkCode(input.code)
   if (!grant) throw new HTTPException(404, { message: 'This link code is invalid or has expired' })
 
-  const token = randomBytes(32).toString('base64url')
+  // Its workspace first: the API's front routes the runner's socket to that workspace's hub by it
+  // (src/front.ts), before anything is looked up. The whole token is the secret, hashed.
+  const token = `${grant.workspaceId}.${randomBytes(32).toString('base64url')}`
   const { computer, workspace } = await prisma.$transaction(async (tx) => {
     const workspace = await tx.workspace.findFirstOrThrow({
       where: { id: grant.workspaceId, organizationId: grant.organizationId },
@@ -242,7 +244,12 @@ export const runnerLink = new Hono().post('/link', async (c) => {
     data: { name: input.name, platform: input.platform },
   })
   return c.json(
-    { token, computerId: computer.id, workspaceName: workspace.name } satisfies RunnerLinkResult,
+    {
+      token,
+      computerId: computer.id,
+      workspaceName: workspace.name,
+      workspaceId: workspace.id,
+    } satisfies RunnerLinkResult,
     201,
   )
 })

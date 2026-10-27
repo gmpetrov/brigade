@@ -16,6 +16,8 @@ import {
 } from '@brigade/contracts'
 import { audit } from '../audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
+import { hubs } from '../hub.js'
+import { currentHub } from '../hub/context.js'
 import { serially } from '../subscriptions/common.js'
 import { dispatch } from '../triggers.js'
 import { firedInARow, fireNow } from '../wakeups.js'
@@ -42,22 +44,34 @@ const LOOP_MS = 60 * 60_000
 const MAX_ATTEMPTS = 8
 const TEXT_MAX = 100_000
 
-/** The awaited mail a thread's email_wait takes as it arrives, instead of a wake-up. */
-const waiting = new Map<string, (messageId: string) => void>()
+/**
+ * The awaited mail a thread's email_wait takes as it arrives, instead of a wake-up: in its
+ * workspace's hub, where the teammate's call waits (takeAwaitedMail).
+ */
+const waiting = () =>
+  currentHub().local('awaited-mail', () => new Map<string, (messageId: string) => void>())
 
-/** Called by email_wait: the next mail awaited by this thread, or null after `ms`. */
+/** In the hub: a mail awaited by the thread came; true when its email_wait took it. */
+export function takeAwaitedMail(sessionId: string, messageId: string) {
+  const take = waiting().get(sessionId)
+  take?.(messageId)
+  return Boolean(take)
+}
+
+/** In the hub, called by email_wait: the next mail awaited by this thread, or null after `ms`. */
 export function awaitMail(sessionId: string, ms: number) {
+  const waiting_ = waiting()
   return new Promise<string | null>((resolve) => {
     const timer = setTimeout(() => {
-      if (waiting.get(sessionId) === done) waiting.delete(sessionId)
+      if (waiting_.get(sessionId) === done) waiting_.delete(sessionId)
       resolve(null)
     }, ms)
     const done = (id: string) => {
       clearTimeout(timer)
-      waiting.delete(sessionId)
+      waiting_.delete(sessionId)
       resolve(id)
     }
-    waiting.set(sessionId, done)
+    waiting_.set(sessionId, done)
   })
 }
 
@@ -598,11 +612,8 @@ async function handTo(
   if (!session) return false
   const sourceId = `email:${row.id}`
   if (await db.wakeup.count({ where: { sessionId, sourceId } })) return true
-  const take = waiting.get(sessionId)
-  if (take && kind === 'awaited') {
-    take(row.id)
+  if (kind === 'awaited' && (await hubs.get(scope.workspaceId).takeAwaitedMail(sessionId, row.id)))
     return true
-  }
   const queued = await db.wakeup.count({ where: { sessionId, kind: 'reply', status: 'pending' } })
   if ((await firedInARow(db, sessionId)) + queued >= WAKEUPS_IN_A_ROW) {
     await audit({

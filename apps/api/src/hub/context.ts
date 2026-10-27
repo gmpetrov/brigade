@@ -25,3 +25,16 @@ export function currentHub(workspaceId?: string): WorkspaceHub {
     throw new Error(`The hub of ${hub.workspaceId} was reached for ${workspaceId}`)
   return hub
 }
+
+/**
+ * Module state kept apart for each hub when running in one, else once for the process: Durable
+ * Objects of different workspaces may share an isolate, and a promise or a socket of one must
+ * never be awaited or used by another.
+ */
+export function perHub<T>(key: string, make: () => T): () => T {
+  let shared: T | undefined
+  return () => {
+    const hub = running.getStore()
+    return hub ? hub.local(key, make) : (shared ??= make())
+  }
+}

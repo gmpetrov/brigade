@@ -351,9 +351,11 @@ export const RunnerLink = z.object({
   machineId: z.string().max(128).optional(),
 })
 export const RunnerLinkResult = z.object({
+  /** `<workspaceId>.<secret>`: the API's front routes the runner's socket to its workspace's hub. */
   token: z.string(),
   computerId: z.string(),
   workspaceName: z.string(),
+  workspaceId: z.string().optional(),
 })
 export type RunnerLinkResult = z.infer<typeof RunnerLinkResult>
 

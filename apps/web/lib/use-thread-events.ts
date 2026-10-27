@@ -2,7 +2,7 @@
 import { ApiToBrowser, SequencedEvent } from '@brigade/contracts'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, preload, preloaded } from './api'
-import { WS_URL } from './config'
+import { keepAlive, liveSocket } from './live-socket'
 
 /**
  * An event this dashboard does not know (a newer runner or API) becomes an
@@ -126,8 +126,11 @@ export function useThreadEvents(
         if (!stopped) subscribe()
       })
 
+    let alive: (() => void) | undefined
     const connect = () => {
-      socket = new WebSocket(`${WS_URL}/api/ws`)
+      alive?.()
+      socket = liveSocket()
+      alive = keepAlive(socket)
       socket.onopen = () => {
         delay = 500
         setConnected(true)
@@ -180,6 +183,7 @@ export function useThreadEvents(
     return () => {
       stopped = true
       clearTimeout(retry)
+      alive?.()
       socket?.close()
     }
   }, [sessionId, add])

@@ -81,6 +81,8 @@ export type RunnerConfig = {
   token: string
   computerId: string
   workspaceName: string
+  /** Its workspace, as the API's welcome says: its connection names it to reach the workspace's hub. */
+  workspaceId?: string
 }
 
 const CONFIG = join(HOME, 'runner.json')

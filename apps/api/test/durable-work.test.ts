@@ -551,6 +551,99 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     assert.match(ticket.title, /Not delivered: a change to a queued message/)
   })
 
+  /** A thread on the cloud computer, stopped: what is sent to it waits. */
+  async function cloudThread() {
+    const session = await db.session.create({
+      data: {
+        teammateId: ids.sam,
+        startedByMemberId: ids.owner,
+        computerId: ids.cloud,
+        title: 'Alerts',
+        status: 'idle',
+      } as never,
+    })
+    const { ThreadSpec } = await import('@brigade/contracts')
+    const spec = ThreadSpec.parse({
+      sessionId: session.id,
+      teammate: { id: ids.sam, name: 'Sam', instructions: '', harness: 'claude_code', model: null },
+      permissionMode: 'allow-all',
+      account: { id: 'a', provider: 'claude_code', source: 'brigade' },
+      fallbacks: [],
+    })
+    /** A message nobody typed: an event's, a wake-up's. */
+    const automatic = (text: string) => ({
+      type: 'thread.prompt' as const,
+      commandId: randomUUID(),
+      thread: spec,
+      text,
+      memberId: null,
+      then: [],
+      attachments: [],
+    })
+    return { sessionId: session.id, automatic }
+  }
+
+  test('an automatic message for a computer that is down joins the one of its thread waiting', async () => {
+    const { dispatch } = await hubOf()
+    const { isKept } = await import('../src/runner-commands.js')
+    const thread = await cloudThread()
+    const first = thread.automatic('The first alert')
+    const second = thread.automatic('The second alert')
+    const cloud = { id: ids.cloud, kind: 'cloud', ...scope }
+    assert.equal(await dispatch(cloud, first), 'queued')
+    assert.equal(await dispatch(cloud, second), 'queued')
+    const rows = await prisma.runnerCommand.findMany({ where: { sessionId: thread.sessionId } })
+    assert.equal(rows.length, 1, 'one turn, not one each')
+    const kept = rows[0]!.message as { text: string; joined?: string[] }
+    assert.equal(kept.text, 'The first alert\n\nThe second alert')
+    assert.deepEqual(kept.joined, [second.commandId])
+    // Tried again after a restart, it is not joined twice.
+    assert.equal(await isKept(second.commandId, thread.sessionId), true)
+    // Sent once claimed: what joins after that is a turn of its own.
+    await prisma.runnerCommand.updateMany({
+      where: { id: first.commandId },
+      data: { sentAt: new Date() },
+    })
+    const third = thread.automatic('The third alert')
+    assert.equal(await dispatch(cloud, third), 'queued')
+    assert.equal(await prisma.runnerCommand.count({ where: { sessionId: thread.sessionId } }), 2)
+    await prisma.session.deleteMany({ where: { id: thread.sessionId } })
+  })
+
+  test('commands past the caps on a computer that stays down are refused, and counted', async () => {
+    const { dispatch } = await hubOf()
+    const { failuresOf } = await import('../src/ops/failures.js')
+    const { PENDING_PER_THREAD, AUTOMATIC_PER_COMPUTER } = await import('../src/runner-commands.js')
+    const cloud = { id: ids.cloud, kind: 'cloud', ...scope }
+    await prisma.runnerCommand.deleteMany({ where: { computerId: ids.cloud } })
+    // A person's commands to one thread: past PENDING_PER_THREAD, refused.
+    for (let i = 0; i < PENDING_PER_THREAD; i++)
+      assert.equal(await dispatch(cloud, queuedCommand()), 'queued')
+    const refusedBefore = failuresOf('runner-outbox', 60_000).length
+    await assert.rejects(dispatch(cloud, queuedCommand()), (error: unknown) => {
+      assert.equal((error as { status?: number }).status, 503)
+      assert.match((error as Error).message, /commands already wait for this thread/)
+      return true
+    })
+    assert.equal(failuresOf('runner-outbox', 60_000).length, refusedBefore + 1)
+    await prisma.runnerCommand.deleteMany({ where: { computerId: ids.cloud } })
+
+    // Messages from events, each to a thread of its own: past AUTOMATIC_PER_COMPUTER, refused.
+    const threads = []
+    for (let i = 0; i < AUTOMATIC_PER_COMPUTER; i++) {
+      const thread = await cloudThread()
+      threads.push(thread.sessionId)
+      assert.equal(await dispatch(cloud, thread.automatic(`Alert ${i}`)), 'queued')
+    }
+    const one = await cloudThread()
+    threads.push(one.sessionId)
+    await assert.rejects(dispatch(cloud, one.automatic('One too many')), /from events/)
+    // A person's message still goes.
+    assert.equal(await dispatch(cloud, queuedCommand()), 'queued')
+    await prisma.runnerCommand.deleteMany({ where: { computerId: ids.cloud } })
+    await prisma.session.deleteMany({ where: { id: { in: threads } } })
+  })
+
   // -------------------------------------------------------------------------
   // Webhooks
   // -------------------------------------------------------------------------

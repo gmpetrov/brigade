@@ -635,7 +635,9 @@ describe('receiving', { skip }, () => {
       purpose: 'Linear',
       waitMinutes: 10,
     })
-    const waited = inbound.awaitMail(session.id, 5_000)
+    const { inWorkspaceHub } = await import('./in-hub.js')
+    // As a teammate's email_wait waits: in the workspace's hub.
+    const waited = inWorkspaceHub(a.workspaceId, () => inbound.awaitMail(session.id, 5_000))
     const [row] = await arrive(mail({ to: [to(alias.local)], subject: 'Code 1234' }))
     assert.equal(await waited, row!.id)
     assert.equal(await prisma.wakeup.count({ where: { sessionId: session.id } }), 0)
@@ -1124,7 +1126,11 @@ describe('races and boundaries', { skip }, () => {
       callId: randomUUID(),
       fetch: globalThis.fetch,
     }
-    const waiting = email.operations.email_wait!.run(ctx as never, { seconds: 5 } as never)
+    const { inWorkspaceHub } = await import('./in-hub.js')
+    // As the teammate's call runs it: in the workspace's hub.
+    const waiting = inWorkspaceHub(a.workspaceId, () =>
+      email.operations.email_wait!.run(ctx as never, { seconds: 5 } as never),
+    )
     await new Promise((r) => setTimeout(r, 100))
     const delivering = arrive(
       mail({ to: [`${alias.local}@mails.brigade.test`], subject: 'wait-race' }),

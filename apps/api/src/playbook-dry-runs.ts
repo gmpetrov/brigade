@@ -20,6 +20,8 @@ import { audit } from './audit.js'
 import { authorisedFetch } from './connector-calls.js'
 import { triggersOf } from './connectors/index.js'
 import type { ConnectorKind } from './connectors/types.js'
+import { hubs } from './hub.js'
+import { currentHub } from './hub/context.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hasParts, requireInstallation } from './playbooks.js'
 import { eventMessage } from './triggers.js'
@@ -186,16 +188,21 @@ export async function startDryRun(
   return dryRunView(db, dryRun.id)
 }
 
-const advancing = new Map<string, Promise<void>>()
+/** Dry runs being moved on, by id: the running hub's, as their threads' turns end there. */
+const advancing = () => currentHub().local('dry-runs', () => new Map<string, Promise<void>>())
 
-/** Start what waits while fewer than AT_ONCE run; once none is left, the report. One at a time per dry run. */
+/**
+ * In the workspace's hub: start what waits while fewer than AT_ONCE run; once none is left, the
+ * report. One at a time per dry run.
+ */
 export function advanceDryRun(scope: Scope, dryRunId: string): Promise<void> {
-  const next = (advancing.get(dryRunId) ?? Promise.resolve())
+  const advancing_ = advancing()
+  const next = (advancing_.get(dryRunId) ?? Promise.resolve())
     .then(() => advance(scope, dryRunId))
     .catch((error: unknown) => console.error(`dry run ${dryRunId}: could not go on`, error))
-  advancing.set(dryRunId, next)
+  advancing_.set(dryRunId, next)
   void next.finally(() => {
-    if (advancing.get(dryRunId) === next) advancing.delete(dryRunId)
+    if (advancing_.get(dryRunId) === next) advancing_.delete(dryRunId)
   })
   return next
 }
@@ -346,7 +353,7 @@ export async function settleOverdueDryRuns() {
         endedAt: new Date(),
       },
     })
-    if (run.dryRunId) await advanceDryRun(scope, run.dryRunId)
+    if (run.dryRunId) await hubs.get(scope.workspaceId).advanceDryRun(scope, run.dryRunId)
   }
 }
 
