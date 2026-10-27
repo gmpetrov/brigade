@@ -782,20 +782,11 @@ async function start() {
       connection.close()
     },
   })
-  // A command's specs are filled in (their parts fetched) before it is handled, one command after
-  // the other: one that needs nothing fetched still waits for the one before, so the order holds.
-  let filling: Promise<unknown> = Promise.resolve()
-  const receive = (message: ApiToRunner) => {
-    const filled = filling.then(() => specParts.fill(message))
-    filling = filled.catch(() => undefined)
-    return filled.then(onCommand, (error: unknown) =>
-      console.error(`${message.type} not handled: ${String(error)}`),
-    )
-  }
   connection = new Connection(
     config,
     outbox,
-    receive,
+    // Its specs filled in first, in the order commands came.
+    specParts.inOrder(onCommand),
     hello,
     (bundle, required) => updater.offer(bundle, required),
     // Images and PDFs in events go to the bucket first: the socket carries their names only.

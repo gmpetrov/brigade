@@ -83,6 +83,12 @@ export const STILL_WAITING =
   'once they decide, Brigade makes it and its result comes to this thread as a message. End your turn, ' +
   'or go on with work that does not depend on it.'
 
+/**
+ * A command that could not be taken yet (its spec's parts did not come, say): it is not
+ * acknowledged, so the API sends it again a little later, and opens a ticket after a day.
+ */
+export class NotTaken extends Error {}
+
 export class Connection {
   private ws: WebSocket | undefined
   private calls = new Map<string, PendingCall>()
@@ -161,7 +167,7 @@ export class Connection {
         // What it was told before, it forgot with the old connection.
         this.reported = new Map()
         this.flush()
-        this.onCommand(message)
+        this.handle(message)
         this.onBundle(message.bundle, false)
       } else if (message.type === 'ack') {
         this.outbox.ack(message.sessionId, message.seq)
@@ -199,15 +205,19 @@ export class Connection {
         } catch (error) {
           taken = Promise.reject(error)
         }
-        void Promise.resolve(taken)
-          .catch((error: unknown) => console.warn(`command ${commandId} failed: ${String(error)}`))
-          .finally(() => {
-            this.taking.delete(commandId)
-            seen.add(commandId)
-            this.send({ type: 'command.ack', commandIds: [commandId] })
-          })
+        void Promise.resolve(taken).then(
+          () => this.took(commandId, seen),
+          (error: unknown) => {
+            if (error instanceof NotTaken) {
+              this.taking.delete(commandId)
+              return console.warn(`command ${commandId} not taken, for now: ${error.message}`)
+            }
+            console.warn(`command ${commandId} failed: ${String(error)}`)
+            this.took(commandId, seen)
+          },
+        )
       } else {
-        this.onCommand(message)
+        this.handle(message)
       }
     })
     ws.on('close', (code, reason) => {
@@ -246,6 +256,27 @@ export class Connection {
       this.backoff = Math.min(this.backoff * 2, 10_000)
     })
     ws.on('error', (error) => console.warn(`connection error: ${error.message}`))
+  }
+
+  /** A command taken (or failed in the taking): not taken again, and acknowledged. */
+  private took(commandId: string, seen: SeenCommands) {
+    this.taking.delete(commandId)
+    seen.add(commandId)
+    this.send({ type: 'command.ack', commandIds: [commandId] })
+  }
+
+  /** A message without an id to acknowledge: what goes wrong with it is said in the log. */
+  private handle(message: ApiToRunner) {
+    let handled: unknown
+    try {
+      // Now, in the order messages came.
+      handled = this.onCommand(message)
+    } catch (error) {
+      handled = Promise.reject(error)
+    }
+    void Promise.resolve(handled).catch((error: unknown) =>
+      console.warn(`${message.type} failed: ${String(error)}`),
+    )
   }
 
   /** Replay everything the API has not acknowledged. */

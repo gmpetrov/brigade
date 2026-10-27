@@ -355,8 +355,10 @@ export async function dispatch(
   const conn = runners.get(computer.id)
   if (!conn && computer.kind !== 'cloud' && !updating) return 'offline'
   // Its specs' large parts by hash (src/spec-parts.ts): a kept command stays small, and goes so
-  // to a runner that fetches them (sendKept sends an older one the whole).
-  if (isDurable(message) || takesParts(conn?.protocolVersion)) {
+  // to a runner that fetches them (sendKept sends an older one the whole). One not kept is packed
+  // only for the runner connected now, and sent whole should another have connected meanwhile.
+  const whole = message
+  if (isDurable(message) || (conn && takesParts(conn.protocolVersion))) {
     const workspaceId =
       computer.workspaceId ??
       (
@@ -374,11 +376,11 @@ export async function dispatch(
       await sendKept(computer.id, conn, message)
       return 'sent'
     }
-  } else if (sendToRunner(computer.id, message)) {
+  } else if (sendToRunner(computer.id, runners.get(computer.id) === conn ? message : whole)) {
     return 'sent'
   } else {
     const list = queued.get(computer.id) ?? []
-    list.push({ message, at: Date.now() })
+    list.push({ message: whole, at: Date.now() })
     queued.set(computer.id, list)
   }
   // Not waited for: it asks the provider first, at times for seconds, and the answer
@@ -393,11 +395,18 @@ async function sendKept(
   conn: RunnerConn,
   message: ApiToRunner & { commandId: string },
 ) {
+  // Kept with its specs' large parts by hash: whole for a runner that cannot fetch them. One that
+  // cannot be made whole (a part gone) stays pending, not sent: a ticket says so after a day.
+  let whole: ApiToRunner = message
+  if (!takesParts(conn.protocolVersion))
+    try {
+      whole = await unpackCommand(conn.workspaceId, message)
+    } catch (error) {
+      console.error(`command ${message.commandId} not sent: ${String(error)}`)
+      noteFailure('spec-parts', `command ${message.commandId} not sent: ${String(error)}`)
+      return
+    }
   if (!(await noteSent(message.commandId, conn.protocolVersion))) return
-  // Kept with its specs' large parts by hash: whole for a runner that cannot fetch them.
-  const whole = takesParts(conn.protocolVersion)
-    ? message
-    : await unpackCommand(conn.workspaceId, message)
   if (runners.get(computerId) !== conn) return
   touch(computerId)
   send(conn.ws, whole)
@@ -497,12 +506,9 @@ async function flushQueue(computerId: string, conn: RunnerConn) {
   }
   const list = queued.get(computerId) ?? []
   queued.delete(computerId)
+  // Queued whole (dispatch packs only for the runner connected then).
   for (const { message, at } of list)
-    if (Date.now() - at < QUEUE_TTL_MS)
-      sendToRunner(
-        computerId,
-        takesParts(conn.protocolVersion) ? message : await unpackCommand(conn.workspaceId, message),
-      )
+    if (Date.now() - at < QUEUE_TTL_MS) sendToRunner(computerId, message)
 }
 
 const libraryTimers = new Map<string, NodeJS.Timeout>()
@@ -830,7 +836,11 @@ export function runnerSocket(runner: {
       send(
         ws,
         takesParts(message.protocolVersion)
-          ? await packCommand(runner.workspaceId, welcome)
+          ? await packCommand(runner.workspaceId, welcome).catch((error: unknown) => {
+              // Whole, then: larger, but the runner still gets its welcome.
+              console.error(`welcome of ${runner.computerId} not packed: ${String(error)}`)
+              return welcome
+            })
           : welcome,
       )
       if (message.bundle && bundle && message.bundle !== bundle)

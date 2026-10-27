@@ -24,6 +24,8 @@ const TOUCH_EVERY_MS = 6 * 3600_000
 
 /** Parts this process kept lately, by workspace and hash: when it last set their usedAt. */
 const kept = new Map<string, number>()
+/** Parts being kept now, by workspace and hash: specs naming the same one write it once. */
+const keeping = new Map<string, Promise<void>>()
 
 /** What a spec's part is once named by its hash. */
 const EMPTY: { [K in SpecPart]: ThreadSpec[K] } = {
@@ -39,22 +41,29 @@ const sha256 = (text: string) => createHash('sha256').update(text).digest('hex')
 export const takesParts = (protocol: number | undefined) =>
   (protocol ?? SPEC_PARTS_PROTOCOL) >= SPEC_PARTS_PROTOCOL
 
-async function keep(workspaceId: string, hash: string, content: string) {
+function keep(workspaceId: string, hash: string, content: string) {
   const key = `${workspaceId}:${hash}`
   const now = Date.now()
-  if (now - (kept.get(key) ?? 0) < TOUCH_EVERY_MS) return
-  await prisma.specPart
+  if (now - (kept.get(key) ?? 0) < TOUCH_EVERY_MS) return Promise.resolve()
+  const pending = keeping.get(key)
+  if (pending) return pending
+  const write = prisma.specPart
     .upsert({
       where: { workspaceId_sha256: { workspaceId, sha256: hash } },
       create: { workspaceId, sha256: hash, content },
       update: { usedAt: new Date(now) },
     })
     .catch((error: unknown) => {
-      // Kept at the same moment by another spec: it is there.
+      // Kept at the same moment by another process: it is there.
       if ((error as { code?: string }).code !== 'P2002') throw error
     })
-  if (kept.size > 10_000) kept.clear()
-  kept.set(key, now)
+    .then(() => {
+      if (kept.size > 10_000) kept.clear()
+      kept.set(key, now)
+    })
+    .finally(() => keeping.delete(key))
+  keeping.set(key, write)
+  return write
 }
 
 /** The spec with its large parts kept and named by hash. */
@@ -86,7 +95,8 @@ export async function unpackSpec(workspaceId: string, spec: ThreadSpec): Promise
   const contents = new Map(rows.map((r) => [r.sha256, r.content]))
   for (const [name, hash] of Object.entries(parts)) {
     const content = contents.get(hash)
-    if (content === undefined) throw new Error(`the ${name} of thread ${spec.sessionId} is gone`)
+    if (content === undefined)
+      throw new Error(`the ${name} part of thread ${spec.sessionId} is gone`)
     ;(whole as Record<string, unknown>)[name] = JSON.parse(content)
   }
   return whole

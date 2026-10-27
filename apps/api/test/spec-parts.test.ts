@@ -13,7 +13,9 @@ import { SPEC_PARTS_PROTOCOL, ThreadSpec } from '@brigade/contracts'
 // - a kept command unpacks for a runner before SPEC_PARTS_PROTOCOL, the following teammates too;
 // - a runner reads its own workspace's parts, by hash, as hashed; not another's;
 // - a prompt dispatched is kept small, and a runner gets it by hash from SPEC_PARTS_PROTOCOL on,
-//   whole before.
+//   whole before; one that cannot be made whole stays pending, never marked sent; one not kept,
+//   queued while the computer was off, goes whole;
+// - specs naming the same part at once write it once.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -133,6 +135,42 @@ describe('spec parts', { skip: !database && 'no database answers' }, () => {
     await prisma.user.deleteMany({ where: { id: `owner-${suffix}` } })
   })
 
+  /** A runner connecting with this protocol: its socket and what it is sent. */
+  const connect = async (protocolVersion: number) => {
+    const { runnerSocket } = await import('../src/hub.js')
+    const handle = runnerSocket({
+      id: ids.runner,
+      computerId: ids.laptop,
+      organizationId: ids.org,
+      workspaceId: ids.workspace,
+    })
+    const sent: { type: string; commandId?: string; thread?: ThreadSpec }[] = []
+    const ws = { send: (raw: string) => sent.push(JSON.parse(raw)), close: () => {} }
+    handle.onMessage(
+      JSON.stringify({ type: 'hello', protocolVersion, version: '0', platform: 'linux-x64' }),
+      ws as never,
+    )
+    for (let i = 0; i < 200 && !sent.some((m) => m.type === 'welcome'); i++)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    return { handle, sent }
+  }
+  const prompt = () => ({
+    type: 'thread.prompt' as const,
+    commandId: randomUUID(),
+    thread: specOf(ids.session),
+    then: [],
+    text: 'hi',
+    memberId: null,
+    attachments: [],
+  })
+  /** Read once the computer is made (before). */
+  const computer = () => ({
+    id: ids.laptop,
+    kind: 'cloud',
+    organizationId: ids.org,
+    workspaceId: ids.workspace,
+  })
+
   test('a spec names its large parts, kept once, and unpacks as it was', async () => {
     const { packSpec, unpackSpec } = await import('../src/spec-parts.js')
     const whole = specOf('s1')
@@ -183,43 +221,10 @@ describe('spec parts', { skip: !database && 'no database answers' }, () => {
   })
 
   test('a prompt is kept small, and sent by hash or whole by the runner it goes to', async () => {
-    const { dispatch, runnerSocket } = await import('../src/hub.js')
-    const connect = async (protocolVersion: number) => {
-      const handle = runnerSocket({
-        id: ids.runner,
-        computerId: ids.laptop,
-        organizationId: ids.org,
-        workspaceId: ids.workspace,
-      })
-      const sent: { type: string; commandId?: string; thread?: ThreadSpec }[] = []
-      const ws = { send: (raw: string) => sent.push(JSON.parse(raw)), close: () => {} }
-      handle.onMessage(
-        JSON.stringify({ type: 'hello', protocolVersion, version: '0', platform: 'linux-x64' }),
-        ws as never,
-      )
-      for (let i = 0; i < 200 && !sent.some((m) => m.type === 'welcome'); i++)
-        await new Promise((resolve) => setTimeout(resolve, 20))
-      return { handle, sent }
-    }
-    const prompt = () => ({
-      type: 'thread.prompt' as const,
-      commandId: randomUUID(),
-      thread: specOf(ids.session),
-      then: [],
-      text: 'hi',
-      memberId: null,
-      attachments: [],
-    })
-    const computer = {
-      id: ids.laptop,
-      kind: 'cloud',
-      organizationId: ids.org,
-      workspaceId: ids.workspace,
-    }
-
+    const { dispatch } = await import('../src/hub.js')
     const current = await connect(SPEC_PARTS_PROTOCOL)
     const recent = prompt()
-    assert.equal(await dispatch(computer, recent), 'sent')
+    assert.equal(await dispatch(computer(), recent), 'sent')
     const row = await prisma.runnerCommand.findUniqueOrThrow({ where: { id: recent.commandId } })
     assert.ok(JSON.stringify(row.message).length < 4096, 'kept small')
     const got = current.sent.find((m) => m.commandId === recent.commandId)!
@@ -229,10 +234,55 @@ describe('spec parts', { skip: !database && 'no database answers' }, () => {
 
     const old = await connect(SPEC_PARTS_PROTOCOL - 1)
     const before = prompt()
-    assert.equal(await dispatch(computer, before), 'sent')
+    assert.equal(await dispatch(computer(), before), 'sent')
     const whole = old.sent.find((m) => m.commandId === before.commandId)!
     assert.equal(whole.thread?.parts, undefined)
     assert.equal(whole.thread?.connectors.length, 1, 'whole for a runner before it')
     old.handle.onClose()
+  })
+
+  test('a command that cannot be made whole for an older runner stays pending, unsent', async () => {
+    const { dispatch } = await import('../src/hub.js')
+    const command = prompt()
+    // Kept while nothing is connected, then its part is gone (swept, say).
+    assert.equal(await dispatch(computer(), command), 'queued')
+    await prisma.specPart.deleteMany({ where: { workspaceId: ids.workspace } })
+    const old = await connect(SPEC_PARTS_PROTOCOL - 1)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.equal(old.sent.filter((m) => m.commandId === command.commandId).length, 0)
+    const row = await prisma.runnerCommand.findUniqueOrThrow({ where: { id: command.commandId } })
+    assert.equal(row.status, 'pending')
+    assert.equal(row.sentAt, null, 'never marked sent')
+    old.handle.onClose()
+    await prisma.runnerCommand.deleteMany({ where: { id: command.commandId } })
+  })
+
+  test('a command not kept, queued while offline, goes whole', async () => {
+    const { dispatch } = await import('../src/hub.js')
+    const terminal = {
+      type: 'terminal.open' as const,
+      terminalId: randomUUID(),
+      thread: specOf(ids.session),
+      memberId: ids.owner,
+      cols: 80,
+      rows: 24,
+    }
+    assert.equal(await dispatch(computer(), terminal), 'queued')
+    const old = await connect(SPEC_PARTS_PROTOCOL - 1)
+    for (let i = 0; i < 100 && !old.sent.some((m) => m.type === 'terminal.open'); i++)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    const got = old.sent.find((m) => m.type === 'terminal.open')!
+    assert.equal(got.thread?.parts, undefined)
+    assert.equal(got.thread?.connectors.length, 1)
+    old.handle.onClose()
+  })
+
+  test('specs naming the same part at once keep it once', async () => {
+    const { packSpec } = await import('../src/spec-parts.js')
+    const before = await prisma.specPart.count({ where: { workspaceId: ids.other } })
+    const specs = Array.from({ length: 5 }, (_, i) => specOf(`s-${i}`))
+    const packed = await Promise.all(specs.map((spec) => packSpec(ids.other, spec)))
+    assert.equal(new Set(packed.map((p) => p.parts?.connectors)).size, 1)
+    assert.equal(await prisma.specPart.count({ where: { workspaceId: ids.other } }), before + 1)
   })
 })
