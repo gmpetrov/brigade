@@ -27,6 +27,8 @@ await writeFile(
     '#!/bin/sh',
     `echo "$*" >> ${JSON.stringify(calls)}`,
     `has() { grep -qx "$2" "${home}/docker-$1" 2>/dev/null; }`,
+    `touch "${home}/docker-entered"`,
+    `while [ -e "${home}/docker-hold" ]; do sleep 0.05; done`,
     `[ -e "${home}/docker-down" ] && { echo 'Cannot connect to the Docker daemon' >&2; exit 1; }`,
     'case "$1" in',
     `  ps) cat "${home}/docker-running" 2>/dev/null || echo c1 ;;`,
@@ -166,4 +168,54 @@ test('containers Docker did not resume stay noted, and are resumed once it answe
   await retry()
   assert.deepEqual(JSON.parse(await readFile(journal, 'utf8')), [])
   assert.match(await readFile(calls, 'utf8'), /unpause c9/)
+})
+
+test('containers a wake is resuming stay noted while Docker answers, whatever else is saved', async () => {
+  const stateDir = join(home, 'state-wake')
+  await mkdir(stateDir, { recursive: true })
+  const journal = join(stateDir, 'paused-containers.json')
+  const previews = new Previews({
+    emit: () => undefined,
+    expose: null,
+    viewUrl: null,
+    recipes: async () => ({ recipe: null }),
+    seat: () => {
+      throw new Error('unused')
+    },
+    stateFile: join(stateDir, 'previews.json'),
+  })
+  type Inside = {
+    previews: Map<string, unknown>
+    savePaused(): void
+    unpauseContainers(preview: unknown): Promise<void>
+  }
+  const inside = previews as unknown as Inside
+  const preview = {
+    seat: { sessionId: 's4' },
+    pausedContainers: ['c4'],
+    lines: [],
+    partial: '',
+    written: 0,
+    hidden: [],
+    info: {},
+  }
+  inside.previews.set('s4', preview)
+  inside.savePaused()
+  const noted = async () => JSON.parse(await readFile(journal, 'utf8')) as unknown
+  assert.deepEqual(await noted(), [['', 's4', ['c4']]])
+
+  // Docker is slow to answer, and down: another preview saves meanwhile.
+  await writeFile(state('hold'), '')
+  await writeFile(state('down'), '')
+  await rm(state('entered'), { force: true })
+  const waking = inside.unpauseContainers(preview)
+  await until(async () => (await readFile(state('entered')).catch(() => null)) !== null)
+  inside.savePaused()
+  assert.deepEqual(await noted(), [['', 's4', ['c4']]])
+
+  await rm(state('hold'))
+  await waking
+  assert.deepEqual(await noted(), [['', 's4', ['c4']]])
+  await rm(state('down'))
+  inside.previews.delete('s4')
 })

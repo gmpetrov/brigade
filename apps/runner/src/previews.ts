@@ -378,6 +378,8 @@ export class Previews {
    */
   private unresumed: Paused[] = []
   private resuming?: Promise<void>
+  /** Those of unresumed Docker is being asked to resume right now. */
+  private readonly trying = new Set<Paused>()
 
   /** Previews running or starting, frozen ones aside: nobody is using those. */
   get count() {
@@ -1337,7 +1339,11 @@ export class Previews {
     delete preview.pausedContainers
     if (!ids?.length) return
     const entry: Paused = [preview.seat.runAs ?? '', preview.seat.sessionId, ids]
-    const left = await resume(entry)
+    // Noted while Docker answers, so another save meanwhile keeps it should the runner stop.
+    this.unresumed.push(entry)
+    this.trying.add(entry)
+    const left = await resume(entry).finally(() => this.trying.delete(entry))
+    this.unresumed = this.unresumed.filter((e) => e !== entry)
     if (left.length) {
       this.unresumed.push([entry[0], entry[1], left])
       this.append(
@@ -1352,8 +1358,9 @@ export class Previews {
   private resumeLeft() {
     if (this.resuming || this.unresumed.length === 0) return this.resuming
     this.resuming = (async () => {
-      // Each stays noted until tried, should the runner stop meanwhile.
-      for (const entry of [...this.unresumed]) {
+      // Each stays noted until tried, should the runner stop meanwhile; one a wake is resuming
+      // is its own.
+      for (const entry of this.unresumed.filter((e) => !this.trying.has(e))) {
         const left = await resume(entry)
         this.unresumed = this.unresumed.filter((e) => e !== entry)
         if (left.length) this.unresumed.push([entry[0], entry[1], left])
