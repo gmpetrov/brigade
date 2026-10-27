@@ -95,8 +95,8 @@ importers:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
       stripe:
-        specifier: 22.6.2
-        version: 22.6.2(@types/node@24.19.2)
+        specifier: 23.0.1
+        version: 23.0.1(@types/node@24.19.2)
       unpdf:
         specifier: 1.9.0
         version: 1.9.0(@napi-rs/canvas@1.0.11)
@@ -5371,11 +5371,11 @@ packages:
     resolution: {integrity: sha512-BrpvfNAE3dcvq7ll3xVumzjKjZQ5tI1sEUIKr3Uoks0XUl45St3FlatVqef9prk4jRDzhW6WZg+3bk93y6pLjA==}
     engines: {node: '>=6'}
 
-  stripe@22.6.2:
-    resolution: {integrity: sha512-PwRE2scocvXqDKPiskMa5vRJEAEkq46W69XyUYmAwrNSLr675lQnfqLwnsndAWizwgihOWw/irLmoFRo3ez7ew==}
-    engines: {node: '>=18'}
+  stripe@23.0.1:
+    resolution: {integrity: sha512-VFLs9IAzSZ8GIm6/vqhjqOL0fbYrSNYCpgZ3LS3YkSi/i5RnyMpu/Hf9YxPTOCYwc3mZKU3IJvuvKffQH2NLMg==}
+    engines: {node: '>=20'}
     peerDependencies:
-      '@types/node': '>=18'
+      '@types/node': '>=20'
     peerDependenciesMeta:
       '@types/node':
         optional: true
@@ -11210,7 +11210,7 @@ snapshots:
 
   strip-final-newline@2.0.0: {}
 
-  stripe@22.6.2(@types/node@24.19.2):
+  stripe@23.0.1(@types/node@24.19.2):
     optionalDependencies:
       '@types/node': 24.19.2
 
