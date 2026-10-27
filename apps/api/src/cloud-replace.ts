@@ -268,7 +268,7 @@ export async function restoreFor(computerId: string) {
       where: { id: row.id },
       data: { phase: 'restoring', error: null },
     })
-  const [teammates, accounts] = await Promise.all([
+  const [teammates, accounts, folders] = await Promise.all([
     prisma.teammateBackup.findMany({
       where: { workspaceId: row.workspaceId },
       distinct: ['teammateId'],
@@ -278,11 +278,16 @@ export async function restoreFor(computerId: string) {
       where: { account: { computerId } },
       select: { accountId: true },
     }),
+    prisma.folderBackup.findMany({
+      where: { session: { computerId } },
+      select: { sessionId: true, teammateId: true },
+    }),
   ])
   return {
     id: row.id,
     teammateIds: teammates.map((t) => t.teammateId),
     accountIds: accounts.map((a) => a.accountId),
+    folders,
   }
 }
 

@@ -66,7 +66,7 @@ export class ComputerBackups {
   constructor(
     private readonly options: {
       store: BackupStore
-      folders: Pick<Folders, 'backUp'>
+      folders: Pick<Folders, 'backUp' | 'ready'>
       stateFile: string
       tempDir: string
     },
@@ -208,6 +208,17 @@ export class ComputerBackups {
       try {
         if (await this.options.store.getTeammate(teammateId, 'tasks', file)) {
           const tasks = await readTasksFile(file)
+          // Its jobs may run in its thread folders: those come back first, not at their next turn.
+          if (!noTasks(tasks))
+            for (const folder of restore.folders.filter((f) => f.teammateId === teammateId))
+              await this.options.folders
+                .ready(folder)
+                .catch((error: unknown) =>
+                  note(
+                    `The folder of thread ${folder.sessionId} did not come back before its crontab ` +
+                      `and user services started: ${String(error)}`,
+                  ),
+                )
           for (const text of await writeTasks(runAs, tasks)) note(text)
           this.state.tasks[runAs] = sha256(JSON.stringify(tasks))
         }

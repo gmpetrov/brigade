@@ -89,6 +89,15 @@ describe('replacing a cloud computer', { skip: !database && 'no database answers
     await db.sessionEvent.create({
       data: { sessionId: ids.busy, seq: 7, type: 'message.done', data: {}, at: new Date() },
     } as never)
+    await db.folderBackup.create({
+      data: {
+        sessionId: ids.idle,
+        teammateId: ids.kai,
+        computerId: ids.cloud,
+        size: 10n,
+        background: [],
+      },
+    } as never)
     await db.teammateBackup.create({
       data: { teammateId: ids.kai, kind: 'tasks', computerId: ids.cloud, size: 10n },
     } as never)
@@ -140,6 +149,7 @@ describe('replacing a cloud computer', { skip: !database && 'no database answers
     const restore = await restoreFor(ids.cloud)
     assert.equal(restore?.id, row.id)
     assert.deepEqual(restore?.teammateIds, [ids.kai])
+    assert.deepEqual(restore?.folders, [{ sessionId: ids.idle, teammateId: ids.kai }])
     assert.equal(
       (await prisma.computerReplacement.findUniqueOrThrow({ where: { id: row.id } })).phase,
       'restoring',

@@ -928,7 +928,13 @@ export class Folders {
     for (const candidate of await this.candidates()) {
       const { name, workDir } = candidate
       const since = this.state.backedUpAt[workDir] ?? 0
-      if (candidate.active <= since && !this.options.inUse(name.sessionId)) continue
+      // Used since, or written since by something else (a cron job, a service, a person).
+      if (
+        candidate.active <= since &&
+        !this.options.inUse(name.sessionId) &&
+        !(await changedSince(workDir, since, candidate.runAs))
+      )
+        continue
       if (Date.now() < (this.state.backupRetryAt[workDir] ?? 0)) continue
       if (this.unpacking.has(workDir)) continue
       // Nearly full, a copy of a folder may be what fills it: the archives (check) come first.
@@ -1072,6 +1078,30 @@ async function short() {
 async function swapSize() {
   const [home, swap] = await Promise.all([stat('/home'), stat(SWAP_FILE)]).catch(() => [])
   return home && swap && home.dev === swap.dev ? swap.blocks * 512 : 0
+}
+
+/**
+ * Whether anything in a folder (a file, or a folder whose entries changed) was written after
+ * `since` (ms), node_modules aside. Stops at the first one. A folder never backed up has changed.
+ */
+export async function changedSince(workDir: string, since: number, runAs?: string) {
+  if (since <= 0) return true
+  const found = await run(
+    'find',
+    [
+      workDir,
+      '-name',
+      'node_modules',
+      '-prune',
+      '-o',
+      '-newermt',
+      `@${Math.floor(since / 1000)}`,
+      '-print',
+      '-quit',
+    ],
+    { runAs },
+  ).catch(() => Buffer.from('?'))
+  return found.length > 0
 }
 
 const exists = (dir: string, runAs?: string) =>

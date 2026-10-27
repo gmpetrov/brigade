@@ -696,6 +696,14 @@ export const ApiToRunner = z.discriminatedUnion('type', [
         teammateIds: z.array(z.string()).max(500),
         /** The accounts of this computer whose logins to put back. */
         accountIds: z.array(z.string()).max(500),
+        /**
+         * The thread folders backed up on this computer: those of a teammate with a crontab or
+         * user services come back before those start, as they may run in them.
+         */
+        folders: z
+          .array(z.object({ sessionId: z.string(), teammateId: z.string() }))
+          .max(10_000)
+          .default([]),
       })
       .optional(),
   }),

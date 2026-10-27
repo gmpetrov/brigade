@@ -108,20 +108,27 @@ async function unfinished(computer: { id: string; kind?: string }) {
 /** Whether this process is making the computer now. */
 export const isProvisioning = (computerId: string) => provisioning.has(computerId)
 
+/** A replaced VM in one of these runs nothing: it no longer starts (error), or it is off. */
+const INACTIVE = new Set(['stopped', 'destroyed', 'error'])
+
 /**
  * Stop a VM a replacement left behind (cloud-replace.ts): kept with the provider, never destroyed.
- * Throws only when it still runs and would not stop.
+ * Resolves only once the provider confirms it runs nothing; throws otherwise (the provider did
+ * not answer, it still runs), and the replacement tries again: two machines on one login sign
+ * each other out.
  */
 export async function stopOldVm(ref: ComputerRef) {
   if (!provider) return
-  const status = await provider.status(ref).catch(() => null)
-  if (status === 'stopped' || status === 'destroyed') return
-  try {
-    await provider.stop(ref)
-  } catch (error) {
-    if ((await provider.status(ref).catch(() => null)) === 'running') throw error
-    console.warn(`a replaced VM did not stop: ${await providerReason(error)}`)
-  }
+  if (INACTIVE.has(await provider.status(ref))) return
+  const stop = await provider.stop(ref).then(
+    () => null,
+    (error: unknown) => error,
+  )
+  const status = await provider.status(ref)
+  if (INACTIVE.has(status)) return
+  throw stop instanceof Error
+    ? new Error(`the old VM did not stop (${status}): ${await providerReason(stop)}`)
+    : new Error(`the old VM did not stop yet (${status})`)
 }
 
 export function startProvision(computer: {

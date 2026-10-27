@@ -14,6 +14,7 @@ import {
   rm,
   stat,
   symlink,
+  utimes,
   writeFile,
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -23,7 +24,7 @@ import { test } from 'node:test'
 const home = await mkdtemp(join(tmpdir(), 'brigade-backups-'))
 process.env.BRIGADE_HOME = home
 const { seal, unseal } = await import('../src/sealed.js')
-const { Folders, pack } = await import('../src/folders.js')
+const { Folders, pack, changedSince } = await import('../src/folders.js')
 const { threadFolder, backgroundTasks } = await import('../src/threads.js')
 const { readLogin, writeLogin } = await import('../src/account-backups.js')
 
@@ -211,4 +212,32 @@ test("what a turn runs in the background, from Claude Code's task messages", () 
     backgroundTasks({ at: '', type: 'raw', source: 'harness', value: { type: 'x' } } as never),
     undefined,
   )
+})
+
+/** GNU find, as on the cloud computer: -newermt @seconds. */
+const gnuFind = (() => {
+  try {
+    return /GNU/.test(execFileSync('find', ['--version'], { stdio: 'pipe' }).toString())
+  } catch {
+    return false
+  }
+})()
+
+test('a quiet folder written by something else since its backup has changed', async (t) => {
+  const workDir = join(home, 'quiet')
+  await mkdir(join(workDir, 'data', 'deep'), { recursive: true })
+  await mkdir(join(workDir, 'node_modules'), { recursive: true })
+  await writeFile(join(workDir, 'data', 'deep', 'out.log'), 'first\n')
+  assert.equal(await changedSince(workDir, 0), true, 'never backed up')
+  if (!gnuFind) return t.skip("GNU find's -newermt @seconds only")
+  const old = new Date(Date.now() - 3600_000)
+  for (const path of ['', 'data', 'data/deep', 'data/deep/out.log', 'node_modules'])
+    await utimes(join(workDir, path), old, old)
+  const backedUp = Date.now() - 60_000
+  assert.equal(await changedSince(workDir, backedUp), false)
+  await writeFile(join(workDir, 'node_modules', 'x.js'), '')
+  assert.equal(await changedSince(workDir, backedUp), false, 'dependencies are not work')
+  // A cron job appends to a file deep in it: the folder's own times do not move.
+  await writeFile(join(workDir, 'data', 'deep', 'out.log'), 'second\n')
+  assert.equal(await changedSince(workDir, backedUp), true)
 })
