@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index e8da8699576b55f0cc271d7839d01d51cc5d649a..a186c6c50d6bf9c4b660f8de8ae90b9ddea85353 100644
+index e3a9230..8dcfb46 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1126,6 +1126,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
@@ -254,3 +254,21 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..a186c6c50d6bf9c4b660f8de8ae90b9d
  	emittedTerminalFinish = true;
  	emit({
  		type: "finish",
+diff --git a/dist/index.js b/dist/index.js
+index 1463dac..c6d7cca 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1059,9 +1059,13 @@ function createClaudeCode(settings = {}) {
+ 					token: coords.token
+ 				});
+ 				const attachChannel = new SandboxChannel({
++					// Brigade: attaching to a bridge handed over by an update retries for as long as a start
++					// does, as before 1.0.168, rather than give up at once and start a second one.
+ 					connect: createBridgeWebSocketConnect({
+ 						endpoint: attachEndpoint,
+ 						webSocketConstructor: WebSocket,
++						openRetryTimeoutMs: timeoutMs,
++						startAbortSignal: startOpts.abortSignal,
+ 						onHello
+ 					}),
+ 					outboundSchema: outboundMessageSchema,

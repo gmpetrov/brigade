@@ -1448,6 +1448,7 @@ export class HarnessThread {
       sandboxSession: sandbox,
       ...(resume ? { resumeFrom: resume as never } : {}),
     })
+    sandbox.dropAdopted()
     this.frozen = frozenMidRun(resume)
     this.live = {
       agent,

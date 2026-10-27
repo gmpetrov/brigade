@@ -91,3 +91,26 @@ test("a harness's bridge goes on writing once the runner that started it is gone
     [],
   )
 })
+
+test('a bridge handed over is stopped once the harness started one of its own instead', async () => {
+  const { createLocalSandboxSession } = await import('../src/harness/local-sandbox.js')
+  const old = spawn('sleep', ['30'], { detached: true, stdio: 'ignore' })
+  const gone = new Promise((done) => old.once('exit', done))
+  const s = createLocalSandboxSession({
+    id: 'adopt',
+    workingDirectory: home,
+    port: 1,
+    env: { PATH: process.env.PATH! },
+    adopt: [old.pid!],
+  })
+  test.after(() => s.destroy?.())
+  // Attached: the harness started nothing, the handed-over bridge is the one.
+  assert.equal(s.dropAdopted(), false)
+  assert.deepEqual(s.groups(), [old.pid])
+  // Attaching failed and a new bridge runs: the old one goes now, not with the sandbox.
+  const fresh = await s.restricted().spawn({ command: 'exec sleep 30' })
+  assert.equal(s.dropAdopted(), true)
+  await gone
+  assert.deepEqual(s.groups(), [fresh.pid])
+  assert.equal(s.dropAdopted(), false)
+})
