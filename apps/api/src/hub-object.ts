@@ -32,6 +32,7 @@ type RunnerConn = import('./hub/host.js').RunnerConn
 type BrowserConn = import('./hub/host.js').BrowserConn
 type RunnerState = import('./hub/host.js').RunnerState
 type BrowserState = import('./hub/host.js').BrowserState
+type ThreadWaiting = import('./hub/host.js').ThreadWaiting
 type Outcome = import('./hub.js').Outcome
 type OperationName = import('./hub/operations.js').OperationName
 type Failure = import('./ops/failures.js').Failure
@@ -85,7 +86,18 @@ class ObjectHost implements Host {
   run!: <T>(fn: () => T) => T
   private readonly memory = new Map<string, ReturnType<typeof setTimeout>>()
 
-  constructor(private readonly ctx: DurableObjectState) {}
+  constructor(
+    private readonly ctx: DurableObjectState,
+    private readonly report: (waiting: ThreadWaiting[]) => Promise<unknown>,
+  ) {}
+
+  reportWaiting(waiting: ThreadWaiting[]) {
+    this.ctx.waitUntil(
+      this.report(waiting).catch((error: unknown) =>
+        console.error(`hub ${this.hub.workspaceId}: threads waiting not reported`, error),
+      ),
+    )
+  }
 
   private timers() {
     return this.ctx.storage.kv.get<Record<string, number>>('timers') ?? {}
@@ -204,7 +216,10 @@ export class WorkspaceHubObject extends DurableObject<Env> {
       this.env.DB_HYPERDRIVE?.connectionString ?? process.env.DATABASE_URL!,
       POOL,
     )
-    const host = new ObjectHost(this.ctx)
+    const host = new ObjectHost(this.ctx, async (waiting) => {
+      const { apiObject } = await import('./api-object.js')
+      return apiObject(this.env.API).noteThreadsWaiting(workspaceId, waiting)
+    })
     const hub = new hubs.WorkspaceHub(workspaceId, host)
     // Its failures are counted where the checks run: the Api object.
     const sink = (failure: Failure) =>

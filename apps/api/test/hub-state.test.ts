@@ -29,6 +29,8 @@ const ALLOWED: Record<string, string> = {
   'src/subscriptions/common.ts:running':
     "subscriptions' readers, one at a time: jobs and webhooks, never a hub",
   'src/ops/failures.ts:failures': 'failures counted for the checks of the process that runs them',
+  'src/ops/checks.ts:reported':
+    "what hub objects last said of their threads' events: the checks' own memory, renewed each tick",
   'src/ops/checks.ts:offlineSince': "the checks' own memory, in the process that runs them",
   'src/ops/watchdog.ts:downs': "the cron's own memory",
   'src/account-health.ts:failures':

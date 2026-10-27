@@ -619,6 +619,7 @@ export class WorkspaceHub {
 
   private saveEventsWaiting() {
     this.host.save('events-waiting', this.eventsWaiting.size ? [...this.eventsWaiting] : undefined)
+    this.host.reportWaiting?.(this.threadsWaiting())
   }
 
   /** Tell dashboards whether these threads' events wait now. */
@@ -774,6 +775,8 @@ export class WorkspaceHub {
         this.send(conn, { type: 'update.available', bundle })
       }
     if (!this.host.hibernates) for (const conn of this.browsers) this.send(conn, { type: 'ping' })
+    // Again while runners are connected: the checks forget a report that is not renewed.
+    if (this.eventsWaiting.size) this.host.reportWaiting?.(this.threadsWaiting())
   }
 
   /** Every socket closes: the workspace's hub moved, and they connect again to where it is now. */

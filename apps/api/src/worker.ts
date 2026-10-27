@@ -18,6 +18,7 @@ import { runIn } from './hub/place.js'
 import { STATELESS_HEADER } from './hub/route.js'
 import type { OperationName } from './hub/operations.js'
 import type { JobMessage } from './jobs.js'
+import type { ThreadWaiting } from './hub/host.js'
 import type { Failure } from './ops/failures.js'
 import { noteStart, restartProblem, unexpectedRestarts, type Start } from './ops/restarts.js'
 import { API_RESTARTING, diagnose, watchdog, type Pulse } from './ops/watchdog.js'
@@ -113,6 +114,12 @@ export class Api extends DurableObject<Env> {
   async noteFailures(failures: Failure[]) {
     const { keepFailure } = await import('./ops/failures.js')
     for (const failure of failures) keepFailure(failure)
+  }
+
+  /** A hub object's threads whose events wait, for the checks (src/ops/checks.ts). */
+  async noteThreadsWaiting(workspaceId: string, waiting: ThreadWaiting[]) {
+    const { noteReportedWaiting } = await import('./ops/checks.js')
+    noteReportedWaiting(workspaceId, waiting)
   }
 
   /**
