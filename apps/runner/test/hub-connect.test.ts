@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
+import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -54,22 +55,32 @@ test('the workspace the welcome names is kept, and named on the next connection'
     () => false,
   )
   connection.start()
-  await until(() => taken.some((m) => m.type === 'welcome'), 'the welcome')
-  assert.equal(urls[0], '/runner/ws', 'not known yet')
-  await until(() => (config as { workspaceId?: string }).workspaceId === 'ws-1', 'kept')
-  const saved = JSON.parse(await readFile(join(home, 'runner.json'), 'utf8')) as {
-    workspaceId?: string
-    token?: string
-  }
-  assert.equal(saved.workspaceId, 'ws-1')
-  assert.equal(saved.token, 'test')
-  assert.ok(!taken.some((m) => m.type === 'keepalive'), 'the keepalive answer is not a command')
+  try {
+    await until(() => taken.some((m) => m.type === 'welcome'), 'the welcome')
+    assert.equal(urls[0], '/runner/ws', 'not known yet')
+    await until(() => (config as { workspaceId?: string }).workspaceId === 'ws-1', 'kept')
+    // Written apart from the welcome: once it is there.
+    const saved = () => {
+      try {
+        return JSON.parse(readFileSync(join(home, 'runner.json'), 'utf8')) as {
+          workspaceId?: string
+          token?: string
+        }
+      } catch {
+        return {}
+      }
+    }
+    await until(() => saved().workspaceId === 'ws-1', 'runner.json written')
+    assert.equal(saved().token, 'test')
+    assert.ok(!taken.some((m) => m.type === 'keepalive'), 'the keepalive answer is not a command')
 
-  // The connection drops: the next one names the workspace.
-  sockets[0]!.terminate()
-  await until(() => urls.length === 2, 'a new connection')
-  assert.equal(urls[1], '/runner/ws?workspace=ws-1')
-  connection.close()
-  for (const ws of sockets) ws.terminate()
-  server.close()
+    // The connection drops: the next one names the workspace.
+    sockets[0]!.terminate()
+    await until(() => urls.length === 2, 'a new connection')
+    assert.equal(urls[1], '/runner/ws?workspace=ws-1')
+  } finally {
+    connection.close()
+    for (const ws of sockets) ws.terminate()
+    server.close()
+  }
 })

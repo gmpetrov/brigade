@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { after, before, describe, test } from 'node:test'
 import pg from 'pg'
 
@@ -188,5 +190,34 @@ describe('due work, by workspace', { skip }, () => {
     )
     const theirs = await prisma.wakeup.findUniqueOrThrow({ where: { id: elsewhere.id } })
     assert.equal(theirs.status, 'pending', "another workspace's waits for its own run")
+  })
+
+  test('a fresh consumer has every inbound handler, as the Api object does', async () => {
+    // A queue consumer's isolate loads jobs.ts alone, never the routes that register handlers.
+    const event = await prisma.inboundEvent.create({
+      data: {
+        source: `hook:no-such-trigger-${suffix}`,
+        externalId: `fresh-${suffix}`,
+        type: 'test',
+        payload: {},
+      },
+    })
+    try {
+      const script = `const { runJob } = await import(${JSON.stringify(
+        new URL('../src/jobs.ts', import.meta.url).href,
+      )}); await runJob({ job: 'inbound-event', key: ${JSON.stringify(event.id)} }); process.exit(0)`
+      execFileSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', script], {
+        cwd: fileURLToPath(new URL('..', import.meta.url)),
+        env: process.env,
+        stdio: 'pipe',
+        timeout: 60_000,
+      })
+      const after = await prisma.inboundEvent.findUniqueOrThrow({ where: { id: event.id } })
+      // Its trigger is gone: the custom apps' handler counts it done, rather than none found.
+      assert.equal(after.error, null)
+      assert.equal(after.status, 'done')
+    } finally {
+      await prisma.inboundEvent.deleteMany({ where: { id: event.id } })
+    }
   })
 })

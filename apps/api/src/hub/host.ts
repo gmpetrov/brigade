@@ -30,6 +30,11 @@ export type RunnerState = RunnerInfo & {
   offered?: string
   /** When its process started (its hello, its clock): previews reported before then are gone. */
   startedAt?: string
+  /**
+   * When it was last heard, as kept with the socket (Date.now()): a hub that wakes knows how
+   * long it has been silent. Kept again once it is HEARD_KEEP_MS old, not at each message.
+   */
+  heardKept?: number
 }
 
 /** A runner's connection, in the hub's memory. */
@@ -43,6 +48,23 @@ export type RunnerConn = RunnerState & {
   retries: Map<string, ReturnType<typeof setTimeout>>
   /** Said once per connection: a runner that uploads files itself sent one inline. */
   warnedInline: boolean
+}
+
+/**
+ * A runner's connection made again from what its socket kept, when a hub that hibernated wakes.
+ * Heard when it last was, as kept: the wake (an alarm, a call) is not the runner's word. A
+ * message that woke the hub counts on its own (onRunnerMessage), as the keepalives the runtime
+ * answered do (HubHost.heardAt).
+ */
+export function wokenRunner(state: RunnerState, socket: Socket): RunnerConn {
+  return {
+    ...state,
+    socket,
+    heardAt: state.heardKept ?? state.connectedAt,
+    queue: Promise.resolve(),
+    retries: new Map(),
+    warnedInline: false,
+  }
 }
 
 /** What a dashboard's connection is: kept with the socket, as a runner's. */

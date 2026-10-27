@@ -50,6 +50,9 @@ import {
 } from './thread-events.js'
 import type { WorkspaceHub } from './workspace-hub.js'
 
+/** How stale the heard time kept with a runner's socket may be: well under SILENT_MS. */
+export const HEARD_KEEP_MS = 15_000
+
 /** The runner a connection is, as the modules it calls name it. */
 const runnerOf = (conn: RunnerConn) => ({
   id: conn.runnerId,
@@ -61,6 +64,10 @@ const runnerOf = (conn: RunnerConn) => ({
 /** A runner's message: heard now, taken once those before it are. */
 export function onRunnerMessage(hub: WorkspaceHub, conn: RunnerConn, raw: string) {
   conn.heardAt = Date.now()
+  if (conn.heardAt - (conn.heardKept ?? 0) >= HEARD_KEEP_MS) {
+    conn.heardKept = conn.heardAt
+    hub.host.persist(conn)
+  }
   conn.queue = conn.queue
     .then(() => handle(hub, conn, raw))
     .catch((error) => console.error('runner message failed', error))

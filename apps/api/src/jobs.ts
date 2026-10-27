@@ -109,6 +109,9 @@ export async function runJob(message: JobMessage, now = new Date()) {
     return
   }
   const job: Job = JOBS[message.job]
+  // Every module that registers a handler as it loads (inbound events, ticket decisions, scoped
+  // writes' hooks), as in the Api object: a fresh queue consumer has loaded none of them.
+  await import('./app.js')
   try {
     await job.run(message.key, now)
   } catch (error) {

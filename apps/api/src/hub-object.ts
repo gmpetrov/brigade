@@ -12,6 +12,7 @@
 // after a wake.
 import { KEEPALIVE } from '@brigade/contracts'
 import { DurableObject } from 'cloudflare:workers'
+import { wokenRunner } from './hub/host.js'
 import { HUB_HEADER, MISDIRECTED, WORKSPACE_HEADER, workspaceOfSocket } from './hub/route.js'
 import type { Api } from './worker.js'
 
@@ -195,6 +196,9 @@ export class WorkspaceHubObject extends DurableObject<Env> {
         import('./hub/place.js'),
         import('./ops/failures.js'),
         import('./hub/workspace-hub.js'),
+        // Every module that registers a handler as it loads (inbound events, ticket decisions,
+        // scoped writes' hooks), as in the Api object: its runner messages may need any of them.
+        import('./app.js'),
       ])
     const client = newPrismaClient(
       this.env.DB_HYPERDRIVE?.connectionString ?? process.env.DATABASE_URL!,
@@ -233,15 +237,7 @@ export class WorkspaceHubObject extends DurableObject<Env> {
     if (known) return known
     let conn: RunnerConn | BrowserConn
     if (state.kind === 'runner') {
-      const runner: RunnerConn = {
-        ...state,
-        socket: socketOf(ws),
-        // Heard now: the wake is its message, or the runtime heard it (heardAt).
-        heardAt: Date.now(),
-        queue: Promise.resolve(),
-        retries: new Map(),
-        warnedInline: false,
-      }
+      const runner = wokenRunner(state, socketOf(ws))
       if (runner.protocolVersion === undefined) hub.arriving.add(runner)
       else {
         const other = hub.runners.get(runner.computerId)
