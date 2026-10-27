@@ -9,10 +9,21 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
+  // Api runs the API, and the hubs of workspaces whose hubMode is 'api'; WorkspaceHubObject is one
+  // workspace's hub of its own, by its id (src/hub-object.ts, docs/workspace-hubs-plan.md).
   "durable_objects": {
-    "bindings": [{ "name": "API", "class_name": "Api" }],
+    "bindings": [
+      { "name": "API", "class_name": "Api" },
+      { "name": "HUBS", "class_name": "WorkspaceHubObject" },
+    ],
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Api"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Api"] },
+    { "tag": "v2", "new_sqlite_classes": ["WorkspaceHubObject"] },
+  ],
+  // Hub objects connect again each time they wake: through Hyperdrive, with its cache off, once a
+  // config exists (`wrangler hyperdrive create brigade-hubs --connection-string=... --caching-disabled`):
+  // "hyperdrive": [{ "binding": "HUB_DB", "id": "<its id>" }],
   // The same source as on Node, with these modules swapped for their Workers versions
   // (import paths, matched exactly). Prisma's Workers client comes from `prisma generate`;
   // jsdom (for @blocknote/server-util, in src/collab.ts) does not run on Workers.

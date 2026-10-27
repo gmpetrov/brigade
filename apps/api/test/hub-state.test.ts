@@ -32,6 +32,8 @@ const ALLOWED: Record<string, string> = {
   'src/ops/failures.ts:failures': 'failures counted for the checks of the process that runs them',
   'src/ops/checks.ts:offlineSince': "the checks' own memory, in the process that runs them",
   'src/ops/watchdog.ts:downs': "the cron's own memory",
+  'src/front.ts:routes': "where each workspace's sockets went lately: the front Worker's own cache",
+  'src/platform/workers.ts:modes': "each workspace's hub mode as last read: data, by workspace",
 }
 
 const root = new URL('../', import.meta.url).pathname

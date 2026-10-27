@@ -10,8 +10,13 @@
     { "pattern": "api.brigade.lol", "custom_domain": true },
     { "pattern": "designs.brigade.lol", "custom_domain": true },
   ],
+  // brigade-api's objects: the Api object, and each workspace's hub object, to which runners' and
+  // dashboards' sockets go (src/front.ts). brigade-api deploys first: scripts/deploy/workers.sh.
   "durable_objects": {
-    "bindings": [{ "name": "API", "class_name": "Api", "script_name": "brigade-api" }],
+    "bindings": [
+      { "name": "API", "class_name": "Api", "script_name": "brigade-api" },
+      { "name": "HUBS", "class_name": "WorkspaceHubObject", "script_name": "brigade-api" },
+    ],
   },
   // For the preflights it answers (src/front.ts): the same as brigade-api's WEB_URL, a
   // secret there. Change both together.

@@ -719,10 +719,13 @@ export class WorkspaceHub {
       if (key.startsWith(prefix)) return handler(this, key.slice(prefix.length))
   }
 
-  /** The next tick, while there is something to watch. */
+  /**
+   * The next tick, while there is something to watch. A hub that hibernates wakes for it only as
+   * often as a runner may stay silent: a dashboard needs no ping from it.
+   */
   private scheduleTick() {
     if (this.runners.size || this.arriving.size || (!this.host.hibernates && this.browsers.size))
-      this.host.schedule('tick', TICK_MS)
+      this.host.schedule('tick', this.host.hibernates ? SILENT_MS : TICK_MS)
   }
 
   /**
@@ -760,6 +763,12 @@ export class WorkspaceHub {
         this.send(conn, { type: 'update.available', bundle })
       }
     if (!this.host.hibernates) for (const conn of this.browsers) this.send(conn, { type: 'ping' })
+  }
+
+  /** Every socket closes: the workspace's hub moved, and they connect again to where it is now. */
+  closeAll(code: number, reason: string) {
+    for (const conn of [...this.runners.values(), ...this.arriving, ...this.browsers])
+      conn.socket.close(code, reason)
   }
 
   /** What this hub holds now, for the minute's log (docs/workspace-hubs-plan.md, Phase 0). */

@@ -1,21 +1,29 @@
 // The API on Cloudflare Workers. One Durable Object, `Api`, runs the whole API,
-// as the one Node process does on a server (src/index.ts): the WebSocket hub
-// keeps every runner's and dashboard's socket in its memory, so every request
-// goes to that one object. In production a small Worker forwards requests to it
-// (src/front.ts); this one's fetch does the same under `wrangler dev`. This one
-// also wakes it each minute so its jobs (schedules, inboxes, idle computers) run
-// while nobody is connected.
+// as the one Node process does on a server (src/index.ts), with the WebSocket hubs
+// of the workspaces whose hub is still its own; a workspace whose hubMode is
+// 'object' has its hub, and its sockets, in a Durable Object of its own,
+// WorkspaceHubObject (src/hub-object.ts, docs/workspace-hubs-plan.md). In
+// production a small Worker routes requests and sockets (src/front.ts); this one's
+// fetch sends everything to the Api object under `wrangler dev`. This one also
+// wakes it each minute so its jobs (schedules, inboxes, idle computers) run while
+// nobody is connected.
 //
 // The API itself loads only in the object, on first use: this Worker's own isolates
 // then start without evaluating the whole app (281 ms at deploy, with Prisma).
 import './worker-env.js'
 import { DurableObject } from 'cloudflare:workers'
 import { apiObject, NAME } from './api-object.js'
+import { runIn } from './hub/place.js'
+import type { OperationName } from './hub/operations.js'
+import type { Failure } from './ops/failures.js'
 import { noteStart, restartProblem, unexpectedRestarts, type Start } from './ops/restarts.js'
 import { API_RESTARTING, diagnose, watchdog, type Pulse } from './ops/watchdog.js'
 
+export { WorkspaceHubObject } from './hub-object.js'
+
 type Env = {
   API: DurableObjectNamespace<Api>
+  HUBS?: DurableObjectNamespace<import('./hub-object.js').WorkspaceHubObject>
   /** Which version of this Worker runs: a restart with the same one is no deploy's. */
   CF_VERSION_METADATA?: WorkerVersionMetadata
   // Secrets of this Worker (src/config.ts): where the watchdog's alert goes.
@@ -34,8 +42,10 @@ export class Api extends DurableObject<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
-    // An object left behind under an earlier name runs no jobs, should anything wake it.
-    if ((ctx.id.name ?? NAME) === NAME) void import('./jobs.js').then((jobs) => jobs.startJobs())
+    // An object left behind under an earlier name runs no jobs, should anything wake it. Its jobs
+    // run as the Api object's code: the hubs they reach that are its own run here.
+    if ((ctx.id.name ?? NAME) === NAME)
+      void import('./jobs.js').then((jobs) => runIn({ kind: 'api' }, () => jobs.startJobs()))
     startedAt.at = Date.now()
     this.noteStart()
   }
@@ -67,7 +77,30 @@ export class Api extends DurableObject<Env> {
 
   override async fetch(request: Request) {
     const { app } = await import('./app.js')
-    return app.fetch(request)
+    return runIn({ kind: 'api' }, () => app.fetch(request))
+  }
+
+  /**
+   * An operation of a workspace's hub that is this object's (hubs.get, src/hub.ts), asked by code
+   * in another object. One that came here while the workspace's hub has its own object is passed
+   * on there, once.
+   */
+  async hubCall(workspaceId: string, name: OperationName, args: unknown[], forwarded: boolean) {
+    return runIn({ kind: 'api' }, async () => {
+      const [{ outcomeHere }, { hubIsElsewhere, hubStub }] = await Promise.all([
+        import('./hub.js'),
+        import('./platform/node.js'),
+      ])
+      if (!forwarded && (await hubIsElsewhere(workspaceId)))
+        return hubStub(workspaceId).call(workspaceId, name, args, true)
+      return outcomeHere(workspaceId, name, args)
+    })
+  }
+
+  /** Failures of the workspaces' hub objects, counted here, where the checks run. */
+  async noteFailures(failures: Failure[]) {
+    const { keepFailure } = await import('./ops/failures.js')
+    for (const failure of failures) keepFailure(failure)
   }
 
   /** Keeps the object up (src/jobs.ts runs in it), and says whether its jobs run. */

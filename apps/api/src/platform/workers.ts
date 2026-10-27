@@ -2,7 +2,8 @@
 // wrangler.jsonc puts this module in place of ./node.ts.
 import { env } from 'cloudflare:workers'
 import { defineWebSocketHelper, WSContext } from 'hono/ws'
-import type { RunnerBundleFile, Upstream, UpstreamEvents } from './types.js'
+import { currentPlace } from '../hub/place.js'
+import type { HubCall, HubStub, RunnerBundleFile, Upstream, UpstreamEvents } from './types.js'
 
 type Bindings = {
   ASSETS: { fetch(input: string): Promise<Response> }
@@ -108,4 +109,112 @@ export async function runnerBundleFile(): Promise<RunnerBundleFile | null> {
   if (!response.ok || !response.body) return null
   const length = response.headers.get('content-length')
   return { sha256, size: length ? Number(length) : null, body: response.body }
+}
+
+// ---------------------------------------------------------------------------
+// Workspaces' hubs (docs/workspace-hubs-plan.md): in the Api object, or in a Durable Object of
+// their own (src/hub-object.ts), as each workspace's hubMode says.
+// ---------------------------------------------------------------------------
+
+type HubBindings = {
+  /** The workspaces' hub objects; unset, every hub is the Api object's. */
+  HUBS?: DurableObjectNamespace<import('../hub-object.js').WorkspaceHubObject>
+  API?: DurableObjectNamespace<import('../worker.js').Api>
+}
+const hubBindings = env as unknown as HubBindings
+
+type HubMode = 'api' | 'object'
+
+/** How long a workspace's hub mode is taken as read: a call that reaches the wrong place is passed on. */
+const MODE_TTL_MS = 10_000
+/** Each workspace's hub mode, as last read: data, the same for every object of the isolate. */
+const modes = new Map<string, { mode: HubMode; at: number }>()
+
+/** Where the workspace's hub runs, as its row says (cached for MODE_TTL_MS). */
+export async function hubModeOf(workspaceId: string): Promise<HubMode> {
+  const cached = modes.get(workspaceId)
+  if (cached && Date.now() - cached.at < MODE_TTL_MS) return cached.mode
+  const { prisma } = await import('../db.js')
+  const row = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { hubMode: true },
+  })
+  const mode = row?.hubMode ?? 'api'
+  noteHubMode(workspaceId, mode)
+  return mode
+}
+
+/** A mode just read or changed. */
+export function noteHubMode(workspaceId: string, mode: HubMode) {
+  if (modes.size > 10_000) modes.clear()
+  modes.set(workspaceId, { mode, at: Date.now() })
+}
+
+/**
+ * The workspace's hub object, created near the database: an object stays where it was first asked
+ * for, and each of its queries crosses to Neon in Frankfurt (src/api-object.ts).
+ */
+export function hubStub(workspaceId: string): HubStub {
+  const namespace = hubBindings.HUBS
+  if (!namespace) throw new Error('This Worker has no hub objects (HUBS)')
+  return namespace.get(namespace.idFromName(workspaceId), {
+    locationHint: 'weur',
+  }) as unknown as HubStub
+}
+
+const objectCall =
+  (workspaceId: string): HubCall =>
+  (name, args) =>
+    hubStub(workspaceId).call(workspaceId, name, args, false)
+
+const apiCall =
+  (workspaceId: string): HubCall =>
+  async (name, args) => {
+    const { apiObject } = await import('../api-object.js')
+    return apiObject(hubBindings.API!).hubCall(workspaceId, name, args, false) as Promise<
+      import('../hub.js').Outcome
+    >
+  }
+
+/**
+ * The operation call of a workspace's hub when it runs in another object than the code: its own
+ * object, or the Api object. Null when it is here: in this hub object, or in the Api object for a
+ * workspace whose hub is still there.
+ */
+export function hubElsewhere(workspaceId: string): HubCall | null | Promise<HubCall | null> {
+  if (!hubBindings.HUBS) return null
+  const place = currentPlace()
+  if (place?.kind === 'hub' && place.workspaceId === workspaceId) return null
+  const decide = (mode: HubMode): HubCall | null =>
+    mode === 'object'
+      ? objectCall(workspaceId)
+      : place?.kind === 'api'
+        ? null
+        : apiCall(workspaceId)
+  const cached = modes.get(workspaceId)
+  if (cached && Date.now() - cached.at < MODE_TTL_MS) return decide(cached.mode)
+  return hubModeOf(workspaceId).then(decide)
+}
+
+/** Whether the workspace's hub, and its sockets, are not this process's (an Api object's) to hold. */
+export async function hubIsElsewhere(workspaceId: string) {
+  return Boolean(hubBindings.HUBS) && (await hubModeOf(workspaceId)) === 'object'
+}
+
+/**
+ * Move a workspace's hub (POST /ops/hubs): to its own object, made here next to the database, or
+ * back to the Api object. The sockets on the side it leaves close, and connect again where it is.
+ */
+export async function moveHub(workspaceId: string, mode: HubMode) {
+  if (!hubBindings.HUBS) throw new Error('This Worker has no hub objects (HUBS)')
+  const { prisma } = await import('../db.js')
+  await prisma.workspace.update({ where: { id: workspaceId }, data: { hubMode: mode } })
+  noteHubMode(workspaceId, mode)
+  if (mode === 'object') {
+    await hubStub(workspaceId).call(workspaceId, 'sizes', [], true)
+    const { localHubs } = await import('../hub/memory-host.js')
+    localHubs()
+      .find((hub) => hub.workspaceId === workspaceId)
+      ?.closeAll(1012, 'its hub moved')
+  } else await hubStub(workspaceId).closeAll(1012, 'its hub moved')
 }

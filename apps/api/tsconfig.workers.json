@@ -1,0 +1,11 @@
+{
+  // The Workers' own files (src/worker.ts, src/front.ts, src/hub-object.ts…), checked with
+  // Cloudflare's types: scripts/typecheck-workers.mjs reports their errors only, as the modules
+  // they load are checked with Node's (tsconfig.json), and the two sets of types disagree there.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types", "node"]
+  },
+  "files": ["src/worker.ts", "src/front.ts", "src/hub-object.ts", "src/platform/workers.ts"]
+}

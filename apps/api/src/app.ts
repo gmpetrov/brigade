@@ -1,5 +1,6 @@
 import { PROTOCOL_VERSION, type HealthResponse } from '@brigade/contracts'
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
+import { z } from 'zod'
 import { HTTPException } from 'hono/http-exception'
 import { auth } from './auth.js'
 import { checkoutReturn, stripeWebhook } from './billing.js'
@@ -8,7 +9,8 @@ import { env } from './config.js'
 import { prisma } from './db.js'
 import { designFiles, sandboxHostOnlyDesigns } from './designs.js'
 import { desktopProxy } from './desktop-proxy.js'
-import { upgradeWebSocket } from './platform/node.js'
+import { hubIsElsewhere, moveHub, upgradeWebSocket } from './platform/node.js'
+import { HUB_HEADER, MISDIRECTED, WORKSPACE_HEADER } from './hub/route.js'
 import { authenticateRunner, browserSocket, runnerSocket } from './hub.js'
 import { accounts } from './routes/accounts.js'
 import { documentAssets } from './routes/assets.js'
@@ -108,6 +110,26 @@ app.get('/health/ops', async (c) => {
   )
 })
 
+/**
+ * Where a workspace's hub runs on Cloudflare (docs/workspace-hubs-plan.md): POST {workspaceId,
+ * mode: 'object' | 'api'}. Its sockets on the side it leaves close and connect again where it is.
+ * Needs OPS_TOKEN as a bearer token.
+ */
+app.post('/ops/hubs', async (c) => {
+  const token = c.req.header('authorization')?.replace(/^Bearer /, '') ?? ''
+  if (!env.OPS_TOKEN || !safeEqual(token, env.OPS_TOKEN)) return c.json({ error: 'Not found' }, 404)
+  const input = z
+    .object({ workspaceId: z.string().min(1), mode: z.enum(['api', 'object']) })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!input.success)
+    return c.json({ error: 'Expected { workspaceId, mode: "api" | "object" }' }, 400)
+  const workspace = await prisma.workspace.findUnique({ where: { id: input.data.workspaceId } })
+  if (!workspace) return c.json({ error: 'No such workspace' }, 404)
+  await moveHub(input.data.workspaceId, input.data.mode)
+  console.log(`hub of ${input.data.workspaceId} moved to ${input.data.mode}`)
+  return c.json({ workspaceId: input.data.workspaceId, mode: input.data.mode })
+})
+
 app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
 // Billing (src/billing.ts): Stripe's webhook, verified by its signature, and the way back
 // from Checkout, which reads only Stripe. Neither needs a session: before the routers below,
@@ -183,19 +205,41 @@ app.route('/collab', collab)
 app.route('/events', events)
 app.route('/hooks', customApps)
 
+/** The workspace a dashboard's socket is for: the session's, or the one it names, if a member's. */
+async function socketScope(c: Context) {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  if (!session) return null
+  const named = c.req.query('workspace')
+  const workspace = named
+    ? await prisma.workspace.findUnique({ where: { id: named }, select: { organizationId: true } })
+    : null
+  return resolveScope({
+    userId: session.user.id,
+    activeOrganizationId: workspace?.organizationId ?? session.session.activeOrganizationId ?? null,
+    activeWorkspaceId: workspace
+      ? named!
+      : ((session.session as { activeWorkspaceId?: string | null }).activeWorkspaceId ?? null),
+  })
+}
+
+/**
+ * A socket of a workspace whose hub has a Durable Object of its own (docs/workspace-hubs-plan.md)
+ * is not this process's: the API's front sends it there (src/front.ts). Never on Node.
+ */
+async function hubElsewhere(c: Context, workspaceId: string | undefined) {
+  if (!workspaceId || !(await hubIsElsewhere(workspaceId))) return null
+  return c.body('This workspace’s hub has its own object', MISDIRECTED, {
+    [HUB_HEADER]: 'object',
+    [WORKSPACE_HEADER]: workspaceId,
+  })
+}
+
 /** The dashboard's live socket. Scoped by the session cookie. */
 app.get(
   '/api/ws',
+  async (c, next) => (await hubElsewhere(c, (await socketScope(c))?.workspaceId)) ?? next(),
   upgradeWebSocket(async (c) => {
-    const session = await auth.api.getSession({ headers: c.req.raw.headers })
-    const scope = session
-      ? await resolveScope({
-          userId: session.user.id,
-          activeOrganizationId: session.session.activeOrganizationId ?? null,
-          activeWorkspaceId:
-            (session.session as { activeWorkspaceId?: string | null }).activeWorkspaceId ?? null,
-        })
-      : null
+    const scope = await socketScope(c)
     if (!scope) return { onOpen: (_e, ws) => ws.close(4401, 'unauthorized') }
     const socket = browserSocket(scope)
     return {
@@ -209,6 +253,11 @@ app.get(
 /** The one outbound socket from each runner. Scoped by the runner token. */
 app.get(
   '/runner/ws',
+  async (c, next) =>
+    (await hubElsewhere(
+      c,
+      (await authenticateRunner(c.req.header('authorization')))?.workspaceId,
+    )) ?? next(),
   upgradeWebSocket(async (c) => {
     const runner = await authenticateRunner(c.req.header('authorization'))
     if (!runner) return { onOpen: (_e, ws) => ws.close(4401, 'unknown runner token') }

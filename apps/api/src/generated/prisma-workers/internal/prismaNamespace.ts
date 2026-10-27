@@ -6975,6 +6975,7 @@ export const WorkspaceScalarFieldEnum = {
   name: 'name',
   logo: 'logo',
   stripeCustomerId: 'stripeCustomerId',
+  hubMode: 'hubMode',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -8453,6 +8454,20 @@ export type EnumNotifyPresetFieldRefInput<$PrismaModel> = FieldRefInputType<$Pri
  * Reference to a field of type 'NotifyPreset[]'
  */
 export type ListEnumNotifyPresetFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'NotifyPreset[]'>
+    
+
+
+/**
+ * Reference to a field of type 'HubMode'
+ */
+export type EnumHubModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'HubMode'>
+    
+
+
+/**
+ * Reference to a field of type 'HubMode[]'
+ */
+export type ListEnumHubModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'HubMode[]'>
     
 
 

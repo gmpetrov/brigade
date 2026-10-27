@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises'
 import { Readable } from 'node:stream'
 import WebSocket from 'ws'
 import { env } from '../config.js'
-import type { RunnerBundleFile, Upstream, UpstreamEvents } from './types.js'
+import type { HubCall, HubStub, RunnerBundleFile, Upstream, UpstreamEvents } from './types.js'
 
 export { upgradeWebSocket } from '@hono/node-server'
 
@@ -59,4 +59,35 @@ export async function runnerBundleFile(): Promise<RunnerBundleFile | null> {
     size: statSync(env.RUNNER_BUNDLE_PATH).size,
     body: Readable.toWeb(createReadStream(env.RUNNER_BUNDLE_PATH)) as ReadableStream,
   }
+}
+
+/**
+ * The operation call of a workspace's hub when it runs elsewhere (src/hub.ts): never on Node,
+ * where every hub is this process's.
+ */
+export function hubElsewhere(_workspaceId: string): HubCall | null | Promise<HubCall | null> {
+  return null
+}
+
+/** Whether the workspace's hub is not this process's: never on Node. */
+export async function hubIsElsewhere(_workspaceId: string) {
+  return false
+}
+
+/** Where a workspace's hub runs on Cloudflare: here, the process's, always. */
+export async function hubModeOf(_workspaceId: string): Promise<'api' | 'object'> {
+  return 'api'
+}
+
+/** A workspace's hub mode, as just read: nothing to keep on Node. */
+export function noteHubMode(_workspaceId: string, _mode: 'api' | 'object') {}
+
+/** A workspace's hub object: none on Node. */
+export function hubStub(_workspaceId: string): HubStub {
+  throw new Error('Hubs are Durable Objects only on Cloudflare')
+}
+
+/** Move a workspace's hub to an object of its own: only on Cloudflare. */
+export async function moveHub(_workspaceId: string, _mode: 'api' | 'object'): Promise<void> {
+  throw new Error('Hubs are Durable Objects only on Cloudflare')
 }
