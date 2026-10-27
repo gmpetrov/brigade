@@ -475,6 +475,7 @@ export const ModelName = {
   OpsAlert: 'OpsAlert',
   HeldCall: 'HeldCall',
   RunnerCommand: 'RunnerCommand',
+  SpecPart: 'SpecPart',
   TriggerDelivery: 'TriggerDelivery',
   InboundEvent: 'InboundEvent',
   FolderBackup: 'FolderBackup',
@@ -496,7 +497,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement"
+    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -6272,6 +6273,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    SpecPart: {
+      payload: Prisma.$SpecPartPayload<ExtArgs>
+      fields: Prisma.SpecPartFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SpecPartFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SpecPartFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload>
+        }
+        findFirst: {
+          args: Prisma.SpecPartFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SpecPartFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload>
+        }
+        findMany: {
+          args: Prisma.SpecPartFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload>[]
+        }
+        create: {
+          args: Prisma.SpecPartCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload>
+        }
+        createMany: {
+          args: Prisma.SpecPartCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SpecPartCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload>[]
+        }
+        delete: {
+          args: Prisma.SpecPartDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload>
+        }
+        update: {
+          args: Prisma.SpecPartUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload>
+        }
+        deleteMany: {
+          args: Prisma.SpecPartDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SpecPartUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SpecPartUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload>[]
+        }
+        upsert: {
+          args: Prisma.SpecPartUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpecPartPayload>
+        }
+        aggregate: {
+          args: Prisma.SpecPartAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSpecPart>
+        }
+        groupBy: {
+          args: Prisma.SpecPartGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SpecPartGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SpecPartCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SpecPartCountAggregateOutputType> | number
+        }
+      }
+    }
     TriggerDelivery: {
       payload: Prisma.$TriggerDeliveryPayload<ExtArgs>
       fields: Prisma.TriggerDeliveryFieldRefs
@@ -8144,6 +8219,17 @@ export const RunnerCommandScalarFieldEnum = {
 export type RunnerCommandScalarFieldEnum = (typeof RunnerCommandScalarFieldEnum)[keyof typeof RunnerCommandScalarFieldEnum]
 
 
+export const SpecPartScalarFieldEnum = {
+  workspaceId: 'workspaceId',
+  sha256: 'sha256',
+  content: 'content',
+  createdAt: 'createdAt',
+  usedAt: 'usedAt'
+} as const
+
+export type SpecPartScalarFieldEnum = (typeof SpecPartScalarFieldEnum)[keyof typeof SpecPartScalarFieldEnum]
+
+
 export const TriggerDeliveryScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -9200,6 +9286,7 @@ export type GlobalOmitConfig = {
   opsAlert?: Prisma.OpsAlertOmit
   heldCall?: Prisma.HeldCallOmit
   runnerCommand?: Prisma.RunnerCommandOmit
+  specPart?: Prisma.SpecPartOmit
   triggerDelivery?: Prisma.TriggerDeliveryOmit
   inboundEvent?: Prisma.InboundEventOmit
   folderBackup?: Prisma.FolderBackupOmit

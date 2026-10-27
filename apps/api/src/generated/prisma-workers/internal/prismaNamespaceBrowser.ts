@@ -129,6 +129,7 @@ export const ModelName = {
   OpsAlert: 'OpsAlert',
   HeldCall: 'HeldCall',
   RunnerCommand: 'RunnerCommand',
+  SpecPart: 'SpecPart',
   TriggerDelivery: 'TriggerDelivery',
   InboundEvent: 'InboundEvent',
   FolderBackup: 'FolderBackup',
@@ -1540,6 +1541,17 @@ export const RunnerCommandScalarFieldEnum = {
 } as const
 
 export type RunnerCommandScalarFieldEnum = (typeof RunnerCommandScalarFieldEnum)[keyof typeof RunnerCommandScalarFieldEnum]
+
+
+export const SpecPartScalarFieldEnum = {
+  workspaceId: 'workspaceId',
+  sha256: 'sha256',
+  content: 'content',
+  createdAt: 'createdAt',
+  usedAt: 'usedAt'
+} as const
+
+export type SpecPartScalarFieldEnum = (typeof SpecPartScalarFieldEnum)[keyof typeof SpecPartScalarFieldEnum]
 
 
 export const TriggerDeliveryScalarFieldEnum = {

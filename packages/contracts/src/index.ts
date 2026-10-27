@@ -87,13 +87,20 @@ export * from './usage.js'
  * 44: a cloud computer backs up what lives only on its disk (thread folders, teammates' crontabs, user
  *     services and browser profiles, account logins) to Brigade, now and then and when asked
  *     (computer.backup), and a computer that replaces another restores it first (welcome's restore).
+ * 45: a thread's spec names its large parts (connectors, skills, project, design systems) by their
+ *     SHA-256 (ThreadSpec.parts): the runner fetches each once (GET /runner/spec-parts/<sha256>).
  */
-export const PROTOCOL_VERSION = 44
+export const PROTOCOL_VERSION = 45
 /**
  * Runners from this version on back up a cloud computer to Brigade (computer.backup) and restore a
  * replaced one (welcome's restore, computer.restored).
  */
 export const BACKUP_PROTOCOL = 44
+/**
+ * Runners from this version on take a thread's spec with its large parts named by SHA-256
+ * (ThreadSpec.parts) and fetch them; older ones are sent the spec whole.
+ */
+export const SPEC_PARTS_PROTOCOL = 45
 /**
  * Runners from this version on never send a file's bytes to the API: they PUT them to signed
  * bucket URLs and send references. The API still takes the bytes of older runners (base64 in

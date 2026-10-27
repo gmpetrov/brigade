@@ -38,6 +38,7 @@ import {
 import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryTidy, handleMemoryUpdate } from './library-calls.js'
 import { handleScheduleCall } from './schedules.js'
+import { packCommand, takesParts, unpackCommand } from './spec-parts.js'
 import { handleTaskCall } from './tasks.js'
 import {
   handlePreviewCall,
@@ -353,6 +354,19 @@ export async function dispatch(
   const updating = isRestarting(computer.id)
   const conn = runners.get(computer.id)
   if (!conn && computer.kind !== 'cloud' && !updating) return 'offline'
+  // Its specs' large parts by hash (src/spec-parts.ts): a kept command stays small, and goes so
+  // to a runner that fetches them (sendKept sends an older one the whole).
+  if (isDurable(message) || takesParts(conn?.protocolVersion)) {
+    const workspaceId =
+      computer.workspaceId ??
+      (
+        await prisma.computer.findUniqueOrThrow({
+          where: { id: computer.id },
+          select: { workspaceId: true },
+        })
+      ).workspaceId
+    message = await packCommand(workspaceId, message)
+  }
   if (isDurable(message)) {
     // Kept already (a stable id tried again after a restart): it goes, or went, from its row.
     if (!(await keepCommand(computer, message))) return 'queued'
@@ -380,9 +394,13 @@ async function sendKept(
   message: ApiToRunner & { commandId: string },
 ) {
   if (!(await noteSent(message.commandId, conn.protocolVersion))) return
+  // Kept with its specs' large parts by hash: whole for a runner that cannot fetch them.
+  const whole = takesParts(conn.protocolVersion)
+    ? message
+    : await unpackCommand(conn.workspaceId, message)
   if (runners.get(computerId) !== conn) return
   touch(computerId)
-  send(conn.ws, message)
+  send(conn.ws, whole)
 }
 
 /**
@@ -480,7 +498,11 @@ async function flushQueue(computerId: string, conn: RunnerConn) {
   const list = queued.get(computerId) ?? []
   queued.delete(computerId)
   for (const { message, at } of list)
-    if (Date.now() - at < QUEUE_TTL_MS) sendToRunner(computerId, message)
+    if (Date.now() - at < QUEUE_TTL_MS)
+      sendToRunner(
+        computerId,
+        takesParts(conn.protocolVersion) ? message : await unpackCommand(conn.workspaceId, message),
+      )
 }
 
 const libraryTimers = new Map<string, NodeJS.Timeout>()
@@ -783,7 +805,7 @@ export function runnerSocket(runner: {
           ? await restoreFor(runner.computerId)
           : undefined
       // A runner installed from another bundle updates itself once it is idle.
-      send(ws, {
+      const welcome: ApiToRunner = {
         type: 'welcome',
         runnerId: runner.id,
         computerId: runner.computerId,
@@ -803,7 +825,14 @@ export function runnerSocket(runner: {
             }
           : {}),
         ...(restore ? { restore } : {}),
-      })
+      }
+      // Its specs' large parts by hash, for a runner that fetches them.
+      send(
+        ws,
+        takesParts(message.protocolVersion)
+          ? await packCommand(runner.workspaceId, welcome)
+          : welcome,
+      )
       if (message.bundle && bundle && message.bundle !== bundle)
         console.log(
           `runner ${runner.id}: bundle ${message.bundle.slice(0, 12)} → ${bundle.slice(0, 12)}`,

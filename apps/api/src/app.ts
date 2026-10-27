@@ -35,6 +35,7 @@ import { pulls } from './routes/pulls.js'
 import { repositories } from './routes/repositories.js'
 import { runnerAttachments } from './routes/runner-attachments.js'
 import { runnerSkillFiles } from './routes/runner-skill-files.js'
+import { runnerSpecParts } from './routes/runner-spec-parts.js'
 import { runnerBackups } from './routes/runner-backups.js'
 import { runnerFiles } from './routes/runner-files.js'
 import { runnerUploads } from './routes/runner-uploads.js'
@@ -166,6 +167,7 @@ app.route('/runner/files', runnerFiles)
 app.route('/runner/uploads', runnerUploads)
 app.route('/runner/attachments', runnerAttachments)
 app.route('/runner/skill-files', runnerSkillFiles)
+app.route('/runner/spec-parts', runnerSpecParts)
 // Git for teammates, proxied to GitHub. Authenticated by a thread's git token, not a session.
 app.route('/git', gitProxy)
 // GitHub App events: pushes refresh computers' caches. Verified by the app's webhook secret.

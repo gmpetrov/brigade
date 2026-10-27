@@ -243,6 +243,7 @@ model Workspace {
   replyWatches          ReplyWatch[]
   heldCalls             HeldCall[]
   runnerCommands        RunnerCommand[]
+  specParts             SpecPart[]
   triggerDeliveries     TriggerDelivery[]
   projects              Project[]
   projectRepositories   ProjectRepository[]
@@ -2638,6 +2639,23 @@ model RunnerCommand {
   sentAt         DateTime?
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
+}
+
+/// A large part of a thread's spec (its connectors, skills, project, design systems), by the
+/// SHA-256 of its JSON (src/spec-parts.ts): commands name it rather than carry it, and the runner
+/// fetches it once. The same catalog in many commands is one row.
+model SpecPart {
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sha256      String
+  /// The JSON, as hashed.
+  content     String
+  createdAt   DateTime  @default(now())
+  /// Last named by a spec: parts no spec named for a while are deleted.
+  usedAt      DateTime  @default(now())
+
+  @@id([workspaceId, sha256])
+  @@index([usedAt])
 }
 
 /// One event a trigger took (src/triggers.ts): one row per trigger and event id, claimed before

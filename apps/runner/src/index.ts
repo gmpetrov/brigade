@@ -33,6 +33,7 @@ import {
 } from './config.js'
 import { Accounts, machineLogins } from './accounts.js'
 import { Attachments } from './attachments.js'
+import { SpecParts } from './spec-parts.js'
 import { Connection } from './connection.js'
 import { describeProject } from './describe.js'
 import { codeFiles } from './code-files.js'
@@ -170,6 +171,8 @@ async function start() {
   void library.cleanTemp()
   const attachments = new Attachments(config)
   void attachments.cleanCache()
+  const specParts = new SpecParts(config)
+  void specParts.cleanCache()
   // Git backups GitHub would not take, kept in the API's bucket.
   const bundles = bundleStore(config)
   // Thread folders archived to free disk, in the API's bucket until their thread comes back.
@@ -779,10 +782,20 @@ async function start() {
       connection.close()
     },
   })
+  // A command's specs are filled in (their parts fetched) before it is handled, one command after
+  // the other: one that needs nothing fetched still waits for the one before, so the order holds.
+  let filling: Promise<unknown> = Promise.resolve()
+  const receive = (message: ApiToRunner) => {
+    const filled = filling.then(() => specParts.fill(message))
+    filling = filled.catch(() => undefined)
+    return filled.then(onCommand, (error: unknown) =>
+      console.error(`${message.type} not handled: ${String(error)}`),
+    )
+  }
   connection = new Connection(
     config,
     outbox,
-    (message) => onCommand(message),
+    receive,
     hello,
     (bundle, required) => updater.offer(bundle, required),
     // Images and PDFs in events go to the bucket first: the socket carries their names only.

@@ -509,6 +509,13 @@ export type HeldCall = Prisma.HeldCallModel
  */
 export type RunnerCommand = Prisma.RunnerCommandModel
 /**
+ * Model SpecPart
+ * A large part of a thread's spec (its connectors, skills, project, design systems), by the
+ * SHA-256 of its JSON (src/spec-parts.ts): commands name it rather than carry it, and the runner
+ * fetches it once. The same catalog in many commands is one row.
+ */
+export type SpecPart = Prisma.SpecPartModel
+/**
  * Model TriggerDelivery
  * One event a trigger took (src/triggers.ts): one row per trigger and event id, claimed before
  * its thread starts, so a vendor's retry, a second reader or a retry after a crash starts no
