@@ -11,6 +11,7 @@ import { workspaceLogoKey } from '../bucket.js'
 import { ensureChief } from '../chief.js'
 import { createWorkspaceComputer } from '../cloud.js'
 import { prisma } from '../db.js'
+import { placeNewHub } from '../platform/node.js'
 import { LOGO_HEADERS, readLogo } from '../logos.js'
 import {
   parseBody,
@@ -149,6 +150,9 @@ export const workspaces = new Hono<AppEnv>()
       throw new HTTPException(403, { message: 'Only an owner or admin can create a workspace' })
     }
     const workspace = await prisma.workspace.create({ data: { organizationId, name } })
+    // Its hub in an object of its own from the start (docs/workspace-hubs-plan.md), before
+    // anything below asks it for something.
+    await placeNewHub(workspace.id)
     await prisma.authSession.update({
       where: { id: c.var.authSessionId },
       data: { activeWorkspaceId: workspace.id },

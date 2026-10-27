@@ -103,8 +103,10 @@ Then, each step on its own, watching the alerts and the logs:
    sockets then connect without the Api object, even while it is down, which is the isolation
    this plan is for.
    Done on 2026-10-27: every workspace's hub has its own object, and `HUB_ROUTING` is `"hubs"`.
-   A workspace made since starts in the Api object (`hubMode` defaults to `api`): its sockets
-   reach it through a 421 from its hub object, until it is moved too.
+   A workspace made since gets its object as it is created, from the Api object, next to the
+   database (`placeNewHub`): before, its first socket made it from the front, wherever that
+   socket came in, and an object never moves. Should that fail, it stays in the Api object until
+   it is moved.
 2. **Jobs on the queue.** Set `JOBS_ON_QUEUE` to `"1"` in `wrangler.jsonc`, and deploy. Watch the
    queue in the dashboard, and the `jobs:dead` and `jobs:late` alerts. Back with `"0"`.
 3. **Stateless reads.** Once Hyperdrive is bound, set `STATELESS_ROUTES` to

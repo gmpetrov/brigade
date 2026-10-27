@@ -221,6 +221,34 @@ export async function moveHub(workspaceId: string, mode: HubMode) {
   }
 }
 
+/**
+ * A new workspace's hub, in an object of its own from the start, made here next to the database
+ * (an object never moves: one a socket asked for first would be where that socket came in). Its
+ * object holds it before the database says so, and lets go of it if that fails: a workspace whose
+ * row says `object` always has an object that holds it. Should either fail, the workspace keeps
+ * its hub in the Api object, where it works as before, until it is moved (POST /ops/hubs).
+ */
+export async function placeNewHub(workspaceId: string) {
+  if (!hubBindings.HUBS) return
+  try {
+    await hubStub(workspaceId).moved(workspaceId, 'object')
+  } catch (error) {
+    console.error(`hub of ${workspaceId}: no object of its own yet`, error)
+    return
+  }
+  const { prisma } = await import('../db.js')
+  try {
+    await prisma.workspace.update({ where: { id: workspaceId }, data: { hubMode: 'object' } })
+  } catch (error) {
+    console.error(`hub of ${workspaceId}: stays in the Api object`, error)
+    await hubStub(workspaceId)
+      .moved(workspaceId, 'api')
+      .catch(() => undefined)
+    return
+  }
+  noteHubMode(workspaceId, 'object')
+}
+
 // ---------------------------------------------------------------------------
 // Jobs on Queues (docs/workspace-hubs-plan.md, Phase 3)
 // ---------------------------------------------------------------------------

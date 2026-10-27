@@ -87,6 +87,9 @@ export function hubStub(_workspaceId: string): HubStub {
   throw new Error('Hubs are Durable Objects only on Cloudflare')
 }
 
+/** A new workspace's hub, in an object of its own: on Node, every hub is this process's. */
+export async function placeNewHub(_workspaceId: string): Promise<void> {}
+
 /** Move a workspace's hub to an object of its own: only on Cloudflare. */
 export async function moveHub(_workspaceId: string, _mode: 'api' | 'object'): Promise<void> {
   throw new Error('Hubs are Durable Objects only on Cloudflare')
