@@ -81,6 +81,31 @@ function useTurnstile(slot: React.RefObject<HTMLDivElement | null>) {
   }
 }
 
+/**
+ * Whether the address signs in with a password (the API's src/password-sign-in.ts): only
+ * accounts given one by hand, such as a test account, and the dev accounts locally.
+ */
+function usePasswordAccount(email: string) {
+  const [account, setAccount] = useState<string>()
+  useEffect(() => {
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return
+    let gone = false
+    const wait = setTimeout(() => {
+      void authClient
+        .$fetch<{ password: boolean }>('/password-sign-in', { method: 'GET', query: { email } })
+        .then(({ data }) => {
+          if (!gone && data?.password) setAccount(email)
+        })
+        .catch(() => undefined)
+    }, 300)
+    return () => {
+      gone = true
+      clearTimeout(wait)
+    }
+  }, [email])
+  return account === email
+}
+
 /** The API's errors on a code (better-auth's emailOTP), said plainly. */
 function codeError(error: { code?: string; status?: number }) {
   if (error.code === 'INVALID_OTP') return 'That code is not right. Check it, or send a new one.'
@@ -92,13 +117,16 @@ function codeError(error: { code?: string; status?: number }) {
 /**
  * Signs in, or up, with a code mailed to the address (the API's emailOTP): an account is
  * only made by someone who reads its mail. With `withName`, a new account takes the name.
+ * With `withPassword`, an account that has a password signs in with it instead.
  */
 export function EmailSignIn({
   withName,
+  withPassword,
   submitLabel,
   onSignedIn,
 }: {
   withName?: boolean
+  withPassword?: boolean
   submitLabel: string
   onSignedIn: () => void
 }) {
@@ -110,6 +138,8 @@ export function EmailSignIn({
   const [busy, setBusy] = useState(false)
   const slot = useRef<HTMLDivElement>(null)
   const turnstile = useTurnstile(slot)
+  const [password, setPassword] = useState('')
+  const passwordAccount = usePasswordAccount(withPassword ? email : '')
 
   async function sendCode() {
     setError(undefined)
@@ -143,6 +173,25 @@ export function EmailSignIn({
         ...(withName && name.trim() ? { name: name.trim() } : {}),
       })
       if (error) return setError(codeError(error) ?? error.message ?? 'Could not sign in')
+      onSignedIn()
+    } catch {
+      setError('Could not reach Brigade. Check your connection and try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function signInWithPassword() {
+    setError(undefined)
+    setBusy(true)
+    try {
+      const { error } = await authClient.signIn.email({ email, password })
+      if (error)
+        return setError(
+          error.status === 429
+            ? 'Too many tries. Wait a minute, then try again.'
+            : (error.message ?? 'Could not sign in'),
+        )
       onSignedIn()
     } catch {
       setError('Could not reach Brigade. Check your connection and try again.')
@@ -201,7 +250,10 @@ export function EmailSignIn({
           </div>
         </form>
       ) : (
-        <form action={sendCode} className="flex flex-col gap-5">
+        <form
+          action={passwordAccount ? signInWithPassword : sendCode}
+          className="flex flex-col gap-5"
+        >
           {withName && (
             <div className="flex flex-col gap-2">
               <Label htmlFor="name">Name</Label>
@@ -227,14 +279,28 @@ export function EmailSignIn({
               required
             />
           </div>
+          {passwordAccount && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
+            </div>
+          )}
           {error && <p className="text-sm text-destructive-text">{error}</p>}
           <Button
             type="submit"
             size="lg"
             className="w-full"
-            disabled={busy || (turnstile.needed && !turnstile.token)}
+            disabled={busy || (!passwordAccount && turnstile.needed && !turnstile.token)}
           >
-            Email me a code
+            {passwordAccount ? submitLabel : 'Email me a code'}
           </Button>
         </form>
       )}

@@ -5,7 +5,7 @@ import { after, test } from 'node:test'
 import pg from 'pg'
 
 // Signing in with a code mailed to the address (src/sign-in-code.ts, src/auth.ts), on the real
-// auth against the local database of apps/api/.env: passwords off, a code that signs up a new
+// auth against the local database of apps/api/.env: no sign-up with a password, a code that signs up a new
 // address as verified, and the rate limit per visitor. Without Resend, the code is logged,
 // which is where the test reads it. Without a database to reach, skipped.
 const fromEnvFile = () => {
@@ -111,6 +111,59 @@ test('no account is made with a password', { skip }, async () => {
   )
   assert.notEqual(response.status, 200)
   assert.equal(await prisma.user.count({ where: { email } }), 0)
+})
+
+test('only an account given a password signs in with one', { skip }, async () => {
+  const ip = visitor()
+  const tester = address('tester')
+  const ctx = await auth.$context
+  const user = await ctx.internalAdapter.createUser({
+    email: tester,
+    name: 'Tester',
+    emailVerified: true,
+  })
+  await ctx.internalAdapter.linkAccount({
+    userId: user.id,
+    providerId: 'credential',
+    accountId: user.id,
+    password: await ctx.password.hash('correct-horse-battery'),
+  })
+  const member = address('member')
+  const otp = await codeFor(member, ip)
+  assert.equal((await call('/sign-in/email-otp', { email: member, otp }, ip)).status, 200)
+
+  const asks = async (email: string) => {
+    const response = await auth.handler(
+      new Request(
+        `${env.API_URL}/api/auth/password-sign-in?${new URLSearchParams({ email: email.toUpperCase() })}`,
+        { headers: { origin: env.WEB_URL[0]! } },
+      ),
+    )
+    assert.equal(response.status, 200)
+    return ((await response.json()) as { password: boolean }).password
+  }
+  assert.equal(await asks(tester), true)
+  assert.equal(await asks(member), false)
+  assert.equal(await asks(address('nobody')), false)
+
+  const signedIn = await call(
+    '/sign-in/email',
+    { email: tester, password: 'correct-horse-battery' },
+    visitor(),
+  )
+  assert.equal(signedIn.status, 200, await signedIn.clone().text())
+  const wrong = await call(
+    '/sign-in/email',
+    { email: tester, password: 'wrong-horse-battery' },
+    visitor(),
+  )
+  assert.notEqual(wrong.status, 200)
+  const noPassword = await call(
+    '/sign-in/email',
+    { email: member, password: 'correct-horse-battery' },
+    visitor(),
+  )
+  assert.notEqual(noPassword.status, 200)
 })
 
 test('a code signs up a new address, verified, with its name', { skip }, async () => {
