@@ -342,7 +342,10 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   that left the preview's group (`setsid`) keeps running. A runner that died
   with previews stopped leaves them stopped: the next one resumes them as it
   stops them (`SIGCONT` after `SIGTERM`), and resumes the containers it noted
-  as paused.
+  as paused. Containers are paused one by one (one that stopped meanwhile does
+  not hide the others), and those Docker does not resume (Docker Desktop not
+  answering) stay noted in `paused-containers.json` and are tried again each
+  minute until resumed or gone.
 - **Each teammate has its own Docker.** Projects run their database, cache and
   mail with `docker compose`; giving teammates the root daemon's socket would
   make them root. The root setup installs what rootless Docker needs (`uidmap`,
