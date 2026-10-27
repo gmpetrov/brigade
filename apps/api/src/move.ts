@@ -315,7 +315,9 @@ async function deliver(db: ScopedDb, scope: Scope, sessionId: string, move: Move
         }
       : // Nobody wrote anything: the teammate is told the thread so far and carries on.
         { text: '', memberId: null, handoff: true },
-    { moving: true },
+    // One prompt per arrival: an API that went down before the move was saved as done gives
+    // the same one again, not one more each time the runner connects.
+    { moving: true, commandId: `move:${sessionId}:${move.since}` },
   ).catch((error: unknown) => {
     // No account there any more, say: the thread stays there, without the message.
     console.warn(`thread ${sessionId}: the moved message did not go: ${String(error)}`)

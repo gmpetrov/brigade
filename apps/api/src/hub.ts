@@ -26,6 +26,7 @@ import { handleConnectorCall } from './connector-calls.js'
 import { dropDeadWaiters } from './held-calls.js'
 import {
   ackCommands,
+  commandMessage,
   computersWaiting,
   giveUp,
   isDurable,
@@ -400,7 +401,9 @@ export async function resendCommands(now = Date.now()) {
         const due =
           !command.sentAt ||
           (conn.protocolVersion >= OUTBOX_PROTOCOL && now - command.sentAt.getTime() > RESEND_MS)
-        if (due) await sendKept(computerId, conn, command.message)
+        if (!due) continue
+        const message = await commandMessage(command.id)
+        if (message) await sendKept(computerId, conn, message)
       }
     } else if (now - (waiting._min.createdAt?.getTime() ?? now) > 60_000) {
       const computer = await prisma.computer.findUnique({
@@ -471,7 +474,8 @@ export const offerRunnerUpdates = () =>
 async function flushQueue(computerId: string, conn: RunnerConn) {
   for (const command of await pendingCommands(computerId)) {
     if (runners.get(computerId) !== conn) return
-    await sendKept(computerId, conn, command.message)
+    const message = await commandMessage(command.id)
+    if (message) await sendKept(computerId, conn, message)
   }
   const list = queued.get(computerId) ?? []
   queued.delete(computerId)

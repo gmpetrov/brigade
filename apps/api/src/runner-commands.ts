@@ -90,12 +90,18 @@ export async function ackCommands(computerId: string, ids: string[]) {
   })
 }
 
-/** What a computer's runner has not acknowledged, oldest first; the moot ones are dropped. */
+/**
+ * What a computer's runner has not acknowledged, oldest first; the moot ones are dropped. Without
+ * their messages (commandMessage loads each as it goes): a thread.prompt carries its thread's
+ * whole spec, near a megabyte with many connectors, and the dozens a stopped computer gathers,
+ * read at once, took the API past its memory as the runner connected, which dropped every socket.
+ */
 export async function pendingCommands(computerId: string, now = Date.now()) {
   const rows = await prisma.runnerCommand.findMany({
     where: { computerId, status: 'pending' },
     orderBy: { createdAt: 'asc' },
     take: 500,
+    select: { id: true, type: true, sentAt: true, createdAt: true },
   })
   const moot = rows.filter((r) => {
     const after = MOOT_AFTER_MS[r.type as DurableCommand['type']]
@@ -106,9 +112,16 @@ export async function pendingCommands(computerId: string, now = Date.now()) {
       where: { id: { in: moot.map((r) => r.id) }, status: 'pending' },
       data: { status: 'expired' },
     })
-  return rows
-    .filter((r) => !moot.includes(r))
-    .map((r) => ({ id: r.id, sentAt: r.sentAt, message: r.message as unknown as DurableCommand }))
+  return rows.filter((r) => !moot.includes(r)).map((r) => ({ id: r.id, sentAt: r.sentAt }))
+}
+
+/** A pending command's message, to send it; none once it is no longer pending. */
+export async function commandMessage(id: string) {
+  const row = await prisma.runnerCommand.findFirst({
+    where: { id, status: 'pending' },
+    select: { message: true },
+  })
+  return row ? (row.message as unknown as DurableCommand) : null
 }
 
 /** Computers with commands waiting, and since when: the minute's tick looks at each. */
@@ -154,7 +167,8 @@ export async function giveUp(now = Date.now()) {
   const old = await prisma.runnerCommand.findMany({
     where: { status: 'pending', createdAt: { lt: new Date(now - GIVE_UP_MS) } },
     orderBy: { createdAt: 'asc' },
-    take: 200,
+    // Each with its message, up to a megabyte: a few at a time (pendingCommands).
+    take: 20,
   })
   if (!old.length) return 0
   await prisma.runnerCommand.updateMany({
