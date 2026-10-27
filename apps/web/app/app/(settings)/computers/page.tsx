@@ -6,6 +6,14 @@ import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -26,6 +34,13 @@ const STATUS: Record<Computer['status'], string> = {
   stopped: 'Asleep · wakes on the next message',
   error: 'Error',
   destroyed: 'Removed',
+}
+
+/** Where a replacement of the cloud computer is, while it is under way. */
+const REPLACING: Record<string, string> = {
+  backing_up: 'Replacing · backing up the old computer',
+  creating: 'Replacing · setting up the new computer',
+  restoring: 'Replacing · putting files, sign-ins and tasks back',
 }
 
 /** "Online", and whether its runner is up to date ("Update waiting": it updates once idle). */
@@ -55,6 +70,7 @@ export default function Computers() {
   const [link, setLink] = useState<LinkCode>()
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  const [replacing, setReplacing] = useState(false)
 
   // On a Mac, the app links this computer; elsewhere, the command in a terminal.
   const [mac, setMac] = useState(false)
@@ -106,6 +122,15 @@ export default function Computers() {
       danger: true,
       onSelect: () => void act(() => api(`/computers/${cloud.id}/stop`, { method: 'POST' })),
     })
+  const replacement = cloud?.replacement
+  const underWay = !!replacement && replacement.phase in REPLACING
+  // When its VM no longer starts, say: a new one, with what the old one had.
+  if (cloud && cloud.status !== 'creating' && !underWay && !planNeeded && isAdmin(me))
+    menuItems.push({
+      label: 'Replace cloud computer',
+      danger: true,
+      onSelect: () => setReplacing(true),
+    })
 
   /** "Online" in green, anything else in grey. */
   const status = (online: boolean, label: string, who: string) => (
@@ -138,17 +163,40 @@ export default function Computers() {
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="font-semibold">Cloud computer</span>
             {cloud ? (
-              status(
-                !!cloudOnline,
-                cloudOnline
-                  ? online(cloud)
-                  : cloud.status === 'running'
-                    ? 'Not connected'
-                    : planNeeded && cloud.status === 'stopped'
-                      ? 'Asleep · its Brigade Cloud plan ended'
-                      : STATUS[cloud.status],
-                'shared',
-              )
+              <>
+                {status(
+                  !!cloudOnline && !underWay,
+                  underWay
+                    ? REPLACING[replacement.phase]!
+                    : cloudOnline
+                      ? online(cloud)
+                      : cloud.status === 'running'
+                        ? 'Not connected'
+                        : planNeeded && cloud.status === 'stopped'
+                          ? 'Asleep · its Brigade Cloud plan ended'
+                          : STATUS[cloud.status],
+                  'shared',
+                )}
+                {underWay && replacement.error && (
+                  <span className="text-sm text-muted-foreground">
+                    Held up, trying again: {replacement.error}
+                  </span>
+                )}
+                {replacement?.phase === 'done' && replacement.problems.length > 0 && (
+                  <details className="text-sm text-muted-foreground">
+                    <summary className="cursor-pointer">
+                      Replaced {timeAgo(replacement.finishedAt ?? replacement.createdAt)}:{' '}
+                      {replacement.problems.length} thing
+                      {replacement.problems.length === 1 ? '' : 's'} did not come back
+                    </summary>
+                    <ul className="mt-1 list-disc pl-5">
+                      {replacement.problems.map((problem, i) => (
+                        <li key={i}>{problem.text}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </>
             ) : (
               <span className="text-sm text-muted-foreground">
                 {!computers.data?.cloudAvailable
@@ -187,7 +235,7 @@ export default function Computers() {
                   <EllipsisVertical aria-hidden />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuContent align="end" className="w-56">
                 {menuItems.map((item) => (
                   <DropdownMenuItem
                     key={item.label}
@@ -276,6 +324,41 @@ export default function Computers() {
             ))}
         </div>
       </Card>
+
+      {cloud && (
+        <Dialog open={replacing} onOpenChange={setReplacing}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Replace cloud computer?</DialogTitle>
+              <DialogDescription>
+                Brigade sets up a new cloud computer and puts back what the old one had: each
+                thread&apos;s files, Claude and Codex sign-ins, teammates&apos; scheduled tasks and
+                browser sign-ins. If the old one still answers, it is backed up first; otherwise its
+                latest backup is used, from a few minutes before. Commands running in the background
+                stop, and teammates are told which. The old computer is stopped and kept, never
+                deleted.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReplacing(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={busy}
+                onClick={() =>
+                  void act(async () => {
+                    await api(`/computers/${cloud.id}/replace`, { method: 'POST' })
+                    setReplacing(false)
+                  })
+                }
+              >
+                Replace
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

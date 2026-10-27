@@ -10,6 +10,7 @@ import {
   MIN_PROTOCOL_VERSION,
   OUTBOX_PROTOCOL,
   RESUME_PROTOCOL,
+  BACKUP_PROTOCOL,
   RunnerToApi,
   type AgentEvent,
   type SequencedEvent,
@@ -54,6 +55,7 @@ import { noteChildEvents } from './children.js'
 import { bringBackFromLater } from './later.js'
 import { noteDryRunEvents } from './playbook-dry-runs.js'
 import { movesOn, onReleased } from './move.js'
+import { onBackupResult, onRestored, restoreFor } from './cloud-replace.js'
 import { noteDisk } from './disk-tickets.js'
 import { noteTokenUsage, noteUsageRun } from './usage.js'
 import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery.js'
@@ -771,6 +773,11 @@ export function runnerSocket(runner: {
       const runningThreads = inProgress.filter((s) => s.status === 'running').map((s) => s.id)
       const queuedMessages = await queuedMessagesOn(runner.computerId)
       const resumes = message.protocolVersion >= RESUME_PROTOCOL
+      // The new VM of a replacement puts back what the old one had, before anything runs.
+      const restore =
+        computer.kind === 'cloud' && message.protocolVersion >= BACKUP_PROTOCOL
+          ? await restoreFor(runner.computerId)
+          : undefined
       // A runner installed from another bundle updates itself once it is idle.
       send(ws, {
         type: 'welcome',
@@ -791,6 +798,7 @@ export function runnerSocket(runner: {
               requeue: await messagesToRequeue(runner, queuedMessages),
             }
           : {}),
+        ...(restore ? { restore } : {}),
       })
       if (message.bundle && bundle && message.bundle !== bundle)
         console.log(
@@ -822,6 +830,13 @@ export function runnerSocket(runner: {
     if (message.type === 'events.waiting') return noteEventsWaiting(message.threads)
 
     if (message.type === 'command.ack') return ackCommands(runner.computerId, message.commandIds)
+
+    if (message.type === 'computer.backup.result') return onBackupResult(runner.computerId, message)
+
+    if (message.type === 'computer.restored')
+      return onRestored(runner, message).catch((error) =>
+        console.error(`restore report from ${runner.computerId} failed`, error),
+      )
 
     if (message.type === 'disk')
       return noteDisk(runner, message).catch((error) =>

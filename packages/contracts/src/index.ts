@@ -84,8 +84,16 @@ export * from './usage.js'
  *     connector-call files and git backups by signed URL too (DIRECT_UPLOAD_PROTOCOL).
  * 43: commands with a commandId are acknowledged (command.ack), and one seen before is ignored: the
  *     API sends again what is not acknowledged.
+ * 44: a cloud computer backs up what lives only on its disk (thread folders, teammates' crontabs, user
+ *     services and browser profiles, account logins) to Brigade, now and then and when asked
+ *     (computer.backup), and a computer that replaces another restores it first (welcome's restore).
  */
-export const PROTOCOL_VERSION = 43
+export const PROTOCOL_VERSION = 44
+/**
+ * Runners from this version on back up a cloud computer to Brigade (computer.backup) and restore a
+ * replaced one (welcome's restore, computer.restored).
+ */
+export const BACKUP_PROTOCOL = 44
 /**
  * Runners from this version on never send a file's bytes to the API: they PUT them to signed
  * bucket URLs and send references. The API still takes the bytes of older runners (base64 in

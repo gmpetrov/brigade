@@ -38,12 +38,15 @@ import { describeProject } from './describe.js'
 import { codeFiles } from './code-files.js'
 import { findSource, readThreadFile, writeThreadFile } from './files.js'
 import { Folders, ThreadGone, type FolderName } from './folders.js'
+import { BackupStore } from './backup-store.js'
+import { ComputerBackups } from './computer-backups.js'
 import { Library } from './library.js'
 import {
   BROWSER_START_PAGE,
   browserCandidates,
   ensureBrowser,
   focusThreadTab,
+  startBrowsersAfter,
   stopIdleBrowsers,
 } from './browsers.js'
 import { desktopClipboard } from './desktop.js'
@@ -195,6 +198,7 @@ async function start() {
       body: Readable.toWeb(createReadStream(file)) as ReadableStream,
       duplex: 'half',
     }) as RequestInit
+  const backupStore = CLOUD ? new BackupStore(config, join(paths.state, 'backups-temp')) : undefined
   const folders = new Folders({
     archives: {
       put: async (f, file, size) => {
@@ -249,6 +253,18 @@ async function start() {
     },
     inUse: (sessionId): boolean => threads.inUse(sessionId) || previews.has(sessionId),
     quiet: (name) => previews.archive(name.sessionId),
+    // While on disk, a cloud computer's thread folders are backed up too, for a computer that
+    // replaces this one (computer-backups.ts), with what their turns run in the background.
+    ...(backupStore
+      ? {
+          backups: {
+            put: (name: FolderName, file: string, done: Parameters<BackupStore['putFolder']>[2]) =>
+              backupStore.putFolder(name, file, done),
+            get: (name: FolderName, file: string) => backupStore.getFolder(name, file),
+          },
+          background: (name: FolderName) => threads.background(name.sessionId, name.teammateId),
+        }
+      : {}),
     stateFile: join(paths.state, 'folders.json'),
     tempDir: join(paths.state, 'folder-archives'),
     reserveFile: join(paths.state, 'disk-reserve'),
@@ -304,10 +320,29 @@ async function start() {
     stateFile: join(paths.state, 'previews.json'),
     busy: (sessionId) => threads.inUse(sessionId),
   })
+  // What a cloud computer keeps only on its disk, backed up to Brigade, and put back on one
+  // that replaces it before anything runs there.
+  const backups = backupStore
+    ? new ComputerBackups({
+        store: backupStore,
+        folders,
+        stateFile: join(paths.state, 'backups.json'),
+        tempDir: join(paths.state, 'backups-temp'),
+      })
+    : undefined
+  if (backups) startBrowsersAfter(() => backups.ready())
   const threads = new Threads({
     concurrency: Number(values.concurrency),
     previews,
     folders,
+    ...(backups
+      ? {
+          restored: {
+            ready: () => backups.ready(),
+            takeNote: (teammateId: string) => backups.takeNote(teammateId),
+          },
+        }
+      : {}),
     // The images a reply shows, straight to the API's bucket through a signed URL.
     storeImage: imageStore(config),
     emit: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
@@ -433,6 +468,17 @@ async function start() {
     if ('thread' in message) arrive(message.thread)
     switch (message.type) {
       case 'welcome': {
+        // A computer that replaces another: what it had comes back before any turn starts here.
+        if (message.restore) {
+          const restore = message.restore
+          if (!backups) connection.send({ type: 'computer.restored', id: restore.id, problems: [] })
+          else
+            void backups.restore(restore).then(
+              (problems) =>
+                connection.send({ type: 'computer.restored', id: restore.id, problems }),
+              (error: unknown) => console.error('restoring the replaced computer failed', error),
+            )
+        }
         // Turns and messages a restart cut off go on, in order; what the API could not say how to continue is closed.
         const last = (sessionId: string) => outbox.lastUnacknowledged(sessionId)
         const unacknowledged = (sessionId: string) => outbox.unacknowledgedFor(sessionId)
@@ -539,6 +585,20 @@ async function start() {
         return accounts.cancel(message.loginId)
       case 'account.remove':
         return accounts.remove(message.account)
+      case 'computer.backup': {
+        const reply = (ok: boolean, error?: string) =>
+          connection.send({
+            type: 'computer.backup.result',
+            requestId: message.requestId,
+            ok,
+            ...(error ? { error: error.slice(0, 4000) } : {}),
+          })
+        if (!backups) return reply(false, 'Not a cloud computer')
+        return backups.backUp({ closeBrowsers: true }).then(
+          (failed) => reply(failed.length === 0, failed.join('\n') || undefined),
+          (error: unknown) => reply(false, String(error)),
+        )
+      }
       case 'desktop.clipboard':
         if (!CLOUD)
           return connection.send({
@@ -739,6 +799,8 @@ async function start() {
   setInterval(sweepRepos, 6 * 60 * 60_000).unref()
   // On a cloud computer, archive the folders of the threads quiet longest when the disk fills up.
   folders.start()
+  // And back up what lives only on this cloud computer's disk, now and then.
+  backups?.start()
 
   const shutdown = async () => {
     console.log('stopping: saving thread state')

@@ -192,6 +192,46 @@ export const ThreadSpec = z.object({
 })
 export type ThreadSpec = z.infer<typeof ThreadSpec>
 
+/** Work a teammate had running in the background in a thread (a shell, a Monitor, an agent). */
+export const BackgroundWork = z.object({
+  kind: z.enum(['agent', 'command']),
+  description: z.string().max(500),
+})
+export type BackgroundWork = z.infer<typeof BackgroundWork>
+
+/**
+ * A thread folder's backup is in the bucket (POST /runner/folders/<thread>/<teammate>/backup/done):
+ * its size, what ran in the background then, and the thread's arrival the folder holds (the
+ * ThreadSpec.moved it took in; none if it never moved), so a folder not yet taken in never
+ * replaces the backup it should come from.
+ */
+export const FolderBackupDone = z.object({
+  size: z.number().int().positive(),
+  background: z.array(BackgroundWork).max(50).default([]),
+  arrived: z.string().max(40).optional(),
+})
+export type FolderBackupDone = z.infer<typeof FolderBackupDone>
+
+/** A teammate's backups (POST /runner/teammates/<teammate>/backups/<kind>): its crontab and user services, its browser. */
+export const TEAMMATE_BACKUP_KINDS = ['tasks', 'browser'] as const
+export type TeammateBackupKind = (typeof TEAMMATE_BACKUP_KINDS)[number]
+
+/** The files of an account's login, as backed up in the vault (POST /runner/accounts/<id>/login). */
+export const ACCOUNT_LOGIN_FILES = ['.oauth-token', '.credentials.json', 'auth.json'] as const
+export const AccountLogin = z.object({
+  files: z
+    .array(
+      z.object({
+        name: z.enum(ACCOUNT_LOGIN_FILES),
+        /** base64 */
+        content: z.string().max(100_000),
+      }),
+    )
+    .max(ACCOUNT_LOGIN_FILES.length),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+})
+export type AccountLogin = z.infer<typeof AccountLogin>
+
 // Runner -> API
 export const RunnerToApi = z.discriminatedUnion('type', [
   z.object({
@@ -339,6 +379,24 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     requestId: z.string(),
     ok: z.boolean(),
     error: z.string().optional(),
+  }),
+  /** A computer.backup is done (BACKUP_PROTOCOL): `error` says what could not be backed up. */
+  z.object({
+    type: z.literal('computer.backup.result'),
+    requestId: z.string(),
+    ok: z.boolean(),
+    error: z.string().max(4000).optional(),
+  }),
+  /**
+   * The welcome's restore is done (BACKUP_PROTOCOL): what could not come back, by teammate
+   * (each is told at its next turn too).
+   */
+  z.object({
+    type: z.literal('computer.restored'),
+    id: z.string(),
+    problems: z
+      .array(z.object({ teammateId: z.string().optional(), text: z.string().max(1000) }))
+      .max(200),
   }),
   /** The desktop's clipboard text after a desktop.clipboard command, or why it failed. */
   z.object({
@@ -625,6 +683,29 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     resume: z.array(ThreadSpec).optional(),
     /** Protocol 16: of the queued messages, those to queue again when lost, in order. The others are cancelled. */
     requeue: z.array(ThreadPrompt).optional(),
+    /**
+     * BACKUP_PROTOCOL: this computer replaces another. Before any turn or browser starts, the
+     * runner puts back what Brigade backed up there: account logins, then each teammate's crontab,
+     * user services and browser profile. Answered with computer.restored; sent again on each
+     * hello until then, and done once per id.
+     */
+    restore: z
+      .object({
+        id: z.string(),
+        /** The teammates whose backups to put back. */
+        teammateIds: z.array(z.string()).max(500),
+        /** The accounts of this computer whose logins to put back. */
+        accountIds: z.array(z.string()).max(500),
+        /**
+         * The thread folders backed up on this computer: those of a teammate with a crontab or
+         * user services come back before those start, as they may run in them.
+         */
+        folders: z
+          .array(z.object({ sessionId: z.string(), teammateId: z.string() }))
+          .max(10_000)
+          .default([]),
+      })
+      .optional(),
   }),
   /** The library or memory changed: fetch the manifest again. */
   z.object({ type: z.literal('library.changed') }),
@@ -650,6 +731,13 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     sessionId: z.string(),
     teammateIds: z.array(z.string()).min(1).max(20),
   }),
+  /**
+   * Back up everything that lives only on this cloud computer's disk now (BACKUP_PROTOCOL): thread
+   * folders changed since their last backup, teammates' crontabs, user services and browser
+   * profiles (browsers closed first), account logins. Before an idle stop and a replacement;
+   * answered with computer.backup.result.
+   */
+  z.object({ type: z.literal('computer.backup'), requestId: z.string() }),
   /**
    * The thread was deleted (DELETE_PROTOCOL): its preview stops, and on a cloud
    * computer the folders and containers its teammates had there go.

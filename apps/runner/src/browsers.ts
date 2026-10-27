@@ -72,7 +72,14 @@ function listeningIn(table: string, port: number) {
  * Start the teammate's browser if it is not running, optionally opening a
  * window at `url`. Returns its debugging port.
  */
+/** What a browser waits for before it starts (a computer putting the old one's profiles back). */
+let beforeStart: () => Promise<void> = () => Promise.resolve()
+export const startBrowsersAfter = (wait: () => Promise<void>) => {
+  beforeStart = wait
+}
+
 export async function ensureBrowser(teammate: { id: string; name: string }, url?: string) {
+  await beforeStart()
   const user = teammateUser(teammate.id)
   const port = await portOf(user)
   touchBrowser(teammate.id)

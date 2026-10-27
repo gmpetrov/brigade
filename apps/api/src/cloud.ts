@@ -21,6 +21,7 @@ import {
   setupScript,
 } from './cloud-bootstrap.js'
 import { restored } from './cloud-restore.js'
+import { backupComputer } from './cloud-replace.js'
 import { forgetThread, throughGateway } from './preview-gateway.js'
 import { issueLinkCode } from './link-codes.js'
 import { runnerBundle } from './routes/runner-install.js'
@@ -104,7 +105,37 @@ async function unfinished(computer: { id: string; kind?: string }) {
   return !runner
 }
 
-function startProvision(computer: { id: string; organizationId: string; workspaceId: string }) {
+/** Whether this process is making the computer now. */
+export const isProvisioning = (computerId: string) => provisioning.has(computerId)
+
+/** A replaced VM in one of these runs nothing: it no longer starts (error), or it is off. */
+const INACTIVE = new Set(['stopped', 'destroyed', 'error'])
+
+/**
+ * Stop a VM a replacement left behind (cloud-replace.ts): kept with the provider, never destroyed.
+ * Resolves only once the provider confirms it runs nothing; throws otherwise (the provider did
+ * not answer, it still runs), and the replacement tries again: two machines on one login sign
+ * each other out.
+ */
+export async function stopOldVm(ref: ComputerRef) {
+  if (!provider) return
+  if (INACTIVE.has(await provider.status(ref))) return
+  const stop = await provider.stop(ref).then(
+    () => null,
+    (error: unknown) => error,
+  )
+  const status = await provider.status(ref)
+  if (INACTIVE.has(status)) return
+  throw stop instanceof Error
+    ? new Error(`the old VM did not stop (${status}): ${await providerReason(stop)}`)
+    : new Error(`the old VM did not stop yet (${status})`)
+}
+
+export function startProvision(computer: {
+  id: string
+  organizationId: string
+  workspaceId: string
+}) {
   if (provisioning.has(computer.id)) return
   provisioning.add(computer.id)
   void provision(computer)
@@ -577,17 +608,41 @@ async function stopIdle() {
         console.error('runner reinstall failed', error),
       )
       const since = lastActive.get(computer.id) ?? computer.updatedAt.getTime()
-      if (Date.now() - since >= idleMs) {
-        console.log(`stopping idle computer ${computer.id}`)
-        keptAlive.delete(computer.id)
-        await stopComputer(computer, { type: 'system', id: 'brigade' }).catch((error) =>
-          console.error('idle stop failed', error),
-        )
-        continue
+      if (Date.now() - since >= idleMs && !stoppingIdle.has(computer.id)) {
+        stoppingIdle.add(computer.id)
+        void backUpThenStop(computer, idleMs).finally(() => stoppingIdle.delete(computer.id))
       }
     }
     await keepAlive(computer)
   }
+}
+
+/** Idle computers backing up before their stop, by id. */
+const stoppingIdle = new Set<string>()
+
+/**
+ * An idle computer backs up what lives only on its disk (cloud-replace.ts), then stops, unless
+ * it was used meanwhile. A backup that fails does not keep it running: what it backed up before
+ * stays, and it says why in the log.
+ */
+async function backUpThenStop(
+  computer: { id: string; organizationId: string; workspaceId: string; providerRef: unknown },
+  idleMs: number,
+) {
+  const result = await backupComputer(computer.id)
+  if (!result.ok && result.error !== 'its runner cannot back up')
+    console.warn(`idle computer ${computer.id} not backed up before its stop: ${result.error}`)
+  const busy = await prisma.session.count({
+    where: { computerId: computer.id, status: 'running' },
+  })
+  const since = lastActive.get(computer.id) ?? 0
+  const current = await prisma.computer.findUnique({ where: { id: computer.id } })
+  if (busy > 0 || Date.now() - since < idleMs || current?.status !== 'running') return
+  console.log(`stopping idle computer ${computer.id}`)
+  keptAlive.delete(computer.id)
+  await stopComputer(current, { type: 'system', id: 'brigade' }).catch((error) =>
+    console.error('idle stop failed', error),
+  )
 }
 
 /** Stop idle cloud computers every minute. Started by the entry (src/jobs.ts). */

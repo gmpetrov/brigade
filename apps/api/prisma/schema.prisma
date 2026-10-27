@@ -292,14 +292,14 @@ enum ComputerStatus {
 
 /// The workspace cloud VM, or a member's own machine.
 model Computer {
-  id             String         @id @default(cuid())
+  id             String                @id @default(cuid())
   organizationId String
   workspaceId    String
-  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace      Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   kind           ComputerKind
   /// Set for a member's own machine: only that member runs threads on it.
   memberId       String?
-  member         Member?        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member         Member?               @relation(fields: [memberId], references: [id], onDelete: Cascade)
   name           String
   /// Opaque provider reference for a cloud computer. Only the providers package reads it.
   providerRef    Json?
@@ -307,13 +307,14 @@ model Computer {
   /// A member's machine: its OS machine ID and runner home, hashed by the runner. Linking
   /// again from the same place keeps this computer.
   machineId      String?
-  status         ComputerStatus @default(pending)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  status         ComputerStatus        @default(pending)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
   runner         Runner?
   sessions       Session[]
   accounts       Account[]
   commands       RunnerCommand[]
+  replacements   ComputerReplacement[]
 
   @@index([workspaceId])
   @@index([workspaceId, memberId, machineId])
@@ -389,6 +390,7 @@ model Teammate {
   wakeups               Wakeup[]
   replyWatches          ReplyWatch[]
   playbookInstallations PlaybookInstallation[]
+  backups               TeammateBackup[]
 
   @@index([workspaceId])
 }
@@ -623,6 +625,7 @@ model Session {
   following            ThreadFollow[]     @relation("ThreadFollower")
   /// Threads that follow it.
   followers            ThreadFollow[]     @relation("ThreadFollowed")
+  folderBackups        FolderBackup[]
 
   @@index([workspaceId, createdAt])
   @@index([projectId, createdAt])
@@ -902,29 +905,30 @@ enum AccountSource {
 
 /// One harness login of one member on one computer. Never the credential.
 model Account {
-  id             String        @id @default(cuid())
+  id             String              @id @default(cuid())
   organizationId String
   workspaceId    String
-  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace      Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   memberId       String
-  member         Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member         Member              @relation(fields: [memberId], references: [id], onDelete: Cascade)
   computerId     String
-  computer       Computer      @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  computer       Computer            @relation(fields: [computerId], references: [id], onDelete: Cascade)
   provider       Harness
-  source         AccountSource @default(machine)
+  source         AccountSource       @default(machine)
   label          String
   /// Reported by the harness after sign-in. Never the credential.
   email          String?
   plan           String?
-  status         AccountStatus @default(unverified)
+  status         AccountStatus       @default(unverified)
   /// Out of usage until this time; another account of the member is used meanwhile.
   exhaustedUntil DateTime?
-  isDefault      Boolean       @default(false)
+  isDefault      Boolean             @default(false)
   lastUsage      Json?
   lastUsageAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
   sessions       Session[]
+  loginBackup    AccountLoginBackup?
 
   @@index([memberId, provider])
 }
@@ -2546,18 +2550,18 @@ model ContactHandle {
 /// problem, by key, kept once resolved so it is not alerted again right away.
 model OpsAlert {
   /// What it is about, e.g. api-errors or computer:<id>.
-  key        String    @id
+  key              String    @id
   /// critical or warning.
-  severity   String
-  title      String
-  detail     String    @default("")
-  firstAt    DateTime  @default(now())
-  lastAt     DateTime  @default(now())
+  severity         String
+  title            String
+  detail           String    @default("")
+  firstAt          DateTime  @default(now())
+  lastAt           DateTime  @default(now())
   /// When operators were last told about it, and how bad it was then.
   notifiedAt       DateTime?
   notifiedSeverity String?
   /// Null while it lasts.
-  resolvedAt DateTime?
+  resolvedAt       DateTime?
 }
 
 enum HeldCallStatus {
@@ -2683,4 +2687,89 @@ model InboundEvent {
   updatedAt  DateTime           @updatedAt
 
   @@unique([source, externalId])
+}
+
+/// A thread folder's backup on its cloud computer (the runner's folders.ts): one per thread and
+/// teammate, replaced by each newer one, so a lost disk costs minutes of work. Its bytes are in
+/// the bucket under the thread's files folder (encrypted by the runner with the workspace's backup
+/// key), deleted with the thread, late uploads too (BucketCleanup).
+model FolderBackup {
+  id             String   @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  sessionId      String
+  session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  teammateId     String
+  /// The computer that made it.
+  computerId     String
+  size           BigInt
+  /// What the teammate ran in the background then: a list of BackgroundWork.
+  background     Json
+  takenAt        DateTime @default(now())
+
+  @@unique([sessionId, teammateId])
+  @@index([workspaceId])
+}
+
+/// A teammate's backup from its cloud computer: kind `tasks` (its crontab and systemd user
+/// services) or `browser` (the parts of its Chrome profile that keep its sign-ins). Its bytes are
+/// in the bucket, encrypted by the runner with the workspace's backup key.
+model TeammateBackup {
+  id             String   @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  teammateId     String
+  teammate       Teammate @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  kind           String
+  computerId     String
+  size           BigInt
+  takenAt        DateTime @default(now())
+
+  @@unique([teammateId, kind])
+  @@index([workspaceId])
+}
+
+/// An account's login files on its cloud computer (a Claude token, Codex's auth.json), encrypted
+/// with the vault's key, kept as they change so a computer that replaces this one is signed in.
+model AccountLoginBackup {
+  accountId      String   @id
+  account        Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  organizationId String
+  workspaceId    String
+  ciphertext     Bytes
+  iv             Bytes
+  authTag        Bytes
+  keyVersion     Int
+  /// SHA-256 of the files as the runner read them: an unchanged login is not written again.
+  sha256         String
+  updatedAt      DateTime @updatedAt
+
+  @@index([workspaceId])
+}
+
+/// A cloud computer moved onto a new VM (src/cloud-replace.ts), step by step so an API restart
+/// picks it up where it was: backing_up (the old one backs up, then stops), creating (a new VM,
+/// its runner installed), restoring (the new runner puts the backups back), done or failed.
+/// The old VM stays with the provider, never destroyed by Brigade: its data may still be read.
+model ComputerReplacement {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  computerId     String
+  computer       Computer  @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  /// The member who asked for it.
+  memberId       String
+  phase          String    @default("backing_up")
+  /// The VM it replaced, as the provider knows it.
+  oldProviderRef Json?
+  /// How the old computer's last backup went, if it could make one.
+  backup         String?
+  /// What did not come back on the new computer: a list of { teammateId?, text }.
+  problems       Json?
+  error          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  finishedAt     DateTime?
+
+  @@index([computerId, phase])
 }

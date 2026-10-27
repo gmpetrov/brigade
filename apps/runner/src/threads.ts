@@ -23,6 +23,7 @@ import {
   turnAnswer,
   visibleChars,
   type AgentEvent,
+  type BackgroundWork,
   type ApiToRunner,
   type RunnerToApi,
   type ThreadAttachmentRef,
@@ -144,6 +145,8 @@ type Seat = {
   waiting: boolean
   /** Memory lines learned since the session started that it was told (memoryNews). */
   told: Set<string>
+  /** What the running turn runs in the background now: shells, Monitors, agents. */
+  background: BackgroundWork[]
 }
 
 /** The bridge's word on whether the turn only waits on background work, from a harness event. */
@@ -151,6 +154,32 @@ function backgroundWait(event: AgentEvent): boolean | undefined {
   if (event.type !== 'raw' || event.source !== 'harness') return
   const value = event.value as { type?: unknown; subtype?: unknown; waiting?: unknown } | null
   if (value?.type === 'system' && value.subtype === 'brigade_waiting') return value.waiting === true
+}
+
+/** Claude Code's task types that are agents at work, and those that are commands (a shell, a Monitor). */
+const AGENT_TASKS = new Set(['local_agent', 'remote_agent', 'local_workflow'])
+const COMMAND_TASKS = new Set(['local_bash', 'monitor_mcp'])
+
+/** What runs in the background after one of Claude Code's task messages, from a harness event. */
+export function backgroundTasks(event: AgentEvent): BackgroundWork[] | undefined {
+  if (event.type !== 'raw' || event.source !== 'harness') return
+  const value = event.value as {
+    type?: unknown
+    subtype?: unknown
+    tasks?: { task_type?: unknown; description?: unknown; ambient?: unknown }[]
+  } | null
+  if (value?.type !== 'system' || value.subtype !== 'background_tasks_changed') return
+  if (!Array.isArray(value.tasks)) return
+  return value.tasks.flatMap((task) => {
+    const type = String(task.task_type)
+    if (task.ambient || !(AGENT_TASKS.has(type) || COMMAND_TASKS.has(type))) return []
+    return [
+      {
+        kind: AGENT_TASKS.has(type) ? ('agent' as const) : ('command' as const),
+        description: String(task.description ?? '').slice(0, 500),
+      },
+    ]
+  })
 }
 
 /** A turn's answer as the thread shows it (turnAnswer), joined. */
@@ -285,6 +314,14 @@ export class Threads {
       storeImage: StoreImage
       /** Thread folders archived to free disk, or moved here: put back before a turn. */
       folders: Pick<Folders, 'ready' | 'takeNote' | 'touch' | 'arrive' | 'release'>
+      /**
+       * On a computer that replaces another: resolves once what the old one had is put back
+       * (computer-backups.ts), before any turn; and what a teammate is told of what did not come back.
+       */
+      restored?: {
+        ready: () => Promise<void>
+        takeNote: (teammateId: string) => Promise<string | undefined>
+      }
       callLibrary: (
         sessionId: string,
         teammateId: string,
@@ -615,6 +652,11 @@ export class Threads {
    * control, or a harness session not yet parked (one waiting for an approval,
    * say). Its checkouts stay.
    */
+  /** What a teammate's turn in the thread runs in the background now. */
+  background(sessionId: string, teammateId: string): BackgroundWork[] {
+    return this.threads.get(sessionId)?.harnesses.get(teammateId)?.background ?? []
+  }
+
   inUse(sessionId: string) {
     const thread = this.threads.get(sessionId)
     if (!thread) return false
@@ -798,6 +840,7 @@ export class Threads {
         seat.waiting = false
         const name = { sessionId: spec.sessionId, teammateId: me }
         try {
+          await this.options.restored?.ready()
           if (spec.moved) await this.options.folders.arrive(name, spec.moved)
           await this.options.folders.ready(name)
           // A frozen preview, and the containers it paused: the turn may use them.
@@ -818,8 +861,11 @@ export class Threads {
                 kind: 'prompt' as const,
                 text: await (async () => {
                   const note = await this.options.folders.takeNote(name, spec.git)
+                  const lost = await this.options.restored?.takeNote(me)
                   const told = await this.catchUp(spec, upTo)
-                  return [note, this.memoryNews(spec, seat), told].filter(Boolean).join('\n\n')
+                  return [note, lost, this.memoryNews(spec, seat), told]
+                    .filter(Boolean)
+                    .join('\n\n')
                 })(),
               }
             : input.kind === 'lost'
@@ -1535,12 +1581,17 @@ export class Threads {
                 console.warn(`could not read the images of a reply: ${String(error)}`),
             )
           }
+          const background = backgroundTasks(event)
+          if (background) seat!.background = background
           const waiting = backgroundWait(event)
           if (waiting !== undefined) {
             seat!.waiting = waiting
             if (waiting) this.steerQueued(thread, teammateId)
           }
-          if (event.type === 'turn.completed') seat!.waiting = false
+          if (event.type === 'turn.completed') {
+            seat!.waiting = false
+            seat!.background = []
+          }
           // Answered and handing on (handOn): the teammates it names start now, rather than wait
           // on a guess at the member's next message their answers are about to replace.
           if (
@@ -1600,6 +1651,7 @@ export class Threads {
         turn: [],
         waiting: false,
         told: new Set(),
+        background: [],
       }
       thread.harnesses.set(teammateId, seat)
     }

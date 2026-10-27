@@ -476,7 +476,11 @@ export const ModelName = {
   HeldCall: 'HeldCall',
   RunnerCommand: 'RunnerCommand',
   TriggerDelivery: 'TriggerDelivery',
-  InboundEvent: 'InboundEvent'
+  InboundEvent: 'InboundEvent',
+  FolderBackup: 'FolderBackup',
+  TeammateBackup: 'TeammateBackup',
+  AccountLoginBackup: 'AccountLoginBackup',
+  ComputerReplacement: 'ComputerReplacement'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -492,7 +496,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "triggerDelivery" | "inboundEvent"
+    modelProps: "user" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -6416,6 +6420,302 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    FolderBackup: {
+      payload: Prisma.$FolderBackupPayload<ExtArgs>
+      fields: Prisma.FolderBackupFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.FolderBackupFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.FolderBackupFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload>
+        }
+        findFirst: {
+          args: Prisma.FolderBackupFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.FolderBackupFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload>
+        }
+        findMany: {
+          args: Prisma.FolderBackupFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload>[]
+        }
+        create: {
+          args: Prisma.FolderBackupCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload>
+        }
+        createMany: {
+          args: Prisma.FolderBackupCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.FolderBackupCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload>[]
+        }
+        delete: {
+          args: Prisma.FolderBackupDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload>
+        }
+        update: {
+          args: Prisma.FolderBackupUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload>
+        }
+        deleteMany: {
+          args: Prisma.FolderBackupDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.FolderBackupUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.FolderBackupUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload>[]
+        }
+        upsert: {
+          args: Prisma.FolderBackupUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FolderBackupPayload>
+        }
+        aggregate: {
+          args: Prisma.FolderBackupAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateFolderBackup>
+        }
+        groupBy: {
+          args: Prisma.FolderBackupGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.FolderBackupGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.FolderBackupCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.FolderBackupCountAggregateOutputType> | number
+        }
+      }
+    }
+    TeammateBackup: {
+      payload: Prisma.$TeammateBackupPayload<ExtArgs>
+      fields: Prisma.TeammateBackupFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TeammateBackupFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TeammateBackupFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload>
+        }
+        findFirst: {
+          args: Prisma.TeammateBackupFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TeammateBackupFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload>
+        }
+        findMany: {
+          args: Prisma.TeammateBackupFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload>[]
+        }
+        create: {
+          args: Prisma.TeammateBackupCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload>
+        }
+        createMany: {
+          args: Prisma.TeammateBackupCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TeammateBackupCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload>[]
+        }
+        delete: {
+          args: Prisma.TeammateBackupDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload>
+        }
+        update: {
+          args: Prisma.TeammateBackupUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload>
+        }
+        deleteMany: {
+          args: Prisma.TeammateBackupDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TeammateBackupUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TeammateBackupUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload>[]
+        }
+        upsert: {
+          args: Prisma.TeammateBackupUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TeammateBackupPayload>
+        }
+        aggregate: {
+          args: Prisma.TeammateBackupAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTeammateBackup>
+        }
+        groupBy: {
+          args: Prisma.TeammateBackupGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TeammateBackupGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TeammateBackupCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TeammateBackupCountAggregateOutputType> | number
+        }
+      }
+    }
+    AccountLoginBackup: {
+      payload: Prisma.$AccountLoginBackupPayload<ExtArgs>
+      fields: Prisma.AccountLoginBackupFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AccountLoginBackupFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AccountLoginBackupFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload>
+        }
+        findFirst: {
+          args: Prisma.AccountLoginBackupFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AccountLoginBackupFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload>
+        }
+        findMany: {
+          args: Prisma.AccountLoginBackupFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload>[]
+        }
+        create: {
+          args: Prisma.AccountLoginBackupCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload>
+        }
+        createMany: {
+          args: Prisma.AccountLoginBackupCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AccountLoginBackupCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload>[]
+        }
+        delete: {
+          args: Prisma.AccountLoginBackupDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload>
+        }
+        update: {
+          args: Prisma.AccountLoginBackupUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload>
+        }
+        deleteMany: {
+          args: Prisma.AccountLoginBackupDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AccountLoginBackupUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AccountLoginBackupUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload>[]
+        }
+        upsert: {
+          args: Prisma.AccountLoginBackupUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountLoginBackupPayload>
+        }
+        aggregate: {
+          args: Prisma.AccountLoginBackupAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAccountLoginBackup>
+        }
+        groupBy: {
+          args: Prisma.AccountLoginBackupGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AccountLoginBackupGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AccountLoginBackupCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AccountLoginBackupCountAggregateOutputType> | number
+        }
+      }
+    }
+    ComputerReplacement: {
+      payload: Prisma.$ComputerReplacementPayload<ExtArgs>
+      fields: Prisma.ComputerReplacementFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ComputerReplacementFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ComputerReplacementFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload>
+        }
+        findFirst: {
+          args: Prisma.ComputerReplacementFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ComputerReplacementFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload>
+        }
+        findMany: {
+          args: Prisma.ComputerReplacementFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload>[]
+        }
+        create: {
+          args: Prisma.ComputerReplacementCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload>
+        }
+        createMany: {
+          args: Prisma.ComputerReplacementCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ComputerReplacementCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload>[]
+        }
+        delete: {
+          args: Prisma.ComputerReplacementDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload>
+        }
+        update: {
+          args: Prisma.ComputerReplacementUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload>
+        }
+        deleteMany: {
+          args: Prisma.ComputerReplacementDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ComputerReplacementUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ComputerReplacementUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload>[]
+        }
+        upsert: {
+          args: Prisma.ComputerReplacementUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComputerReplacementPayload>
+        }
+        aggregate: {
+          args: Prisma.ComputerReplacementAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateComputerReplacement>
+        }
+        groupBy: {
+          args: Prisma.ComputerReplacementGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComputerReplacementGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ComputerReplacementCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComputerReplacementCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -7876,6 +8176,69 @@ export const InboundEventScalarFieldEnum = {
 export type InboundEventScalarFieldEnum = (typeof InboundEventScalarFieldEnum)[keyof typeof InboundEventScalarFieldEnum]
 
 
+export const FolderBackupScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  computerId: 'computerId',
+  size: 'size',
+  background: 'background',
+  takenAt: 'takenAt'
+} as const
+
+export type FolderBackupScalarFieldEnum = (typeof FolderBackupScalarFieldEnum)[keyof typeof FolderBackupScalarFieldEnum]
+
+
+export const TeammateBackupScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  teammateId: 'teammateId',
+  kind: 'kind',
+  computerId: 'computerId',
+  size: 'size',
+  takenAt: 'takenAt'
+} as const
+
+export type TeammateBackupScalarFieldEnum = (typeof TeammateBackupScalarFieldEnum)[keyof typeof TeammateBackupScalarFieldEnum]
+
+
+export const AccountLoginBackupScalarFieldEnum = {
+  accountId: 'accountId',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  ciphertext: 'ciphertext',
+  iv: 'iv',
+  authTag: 'authTag',
+  keyVersion: 'keyVersion',
+  sha256: 'sha256',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AccountLoginBackupScalarFieldEnum = (typeof AccountLoginBackupScalarFieldEnum)[keyof typeof AccountLoginBackupScalarFieldEnum]
+
+
+export const ComputerReplacementScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  computerId: 'computerId',
+  memberId: 'memberId',
+  phase: 'phase',
+  oldProviderRef: 'oldProviderRef',
+  backup: 'backup',
+  problems: 'problems',
+  error: 'error',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  finishedAt: 'finishedAt'
+} as const
+
+export type ComputerReplacementScalarFieldEnum = (typeof ComputerReplacementScalarFieldEnum)[keyof typeof ComputerReplacementScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -8839,6 +9202,10 @@ export type GlobalOmitConfig = {
   runnerCommand?: Prisma.RunnerCommandOmit
   triggerDelivery?: Prisma.TriggerDeliveryOmit
   inboundEvent?: Prisma.InboundEventOmit
+  folderBackup?: Prisma.FolderBackupOmit
+  teammateBackup?: Prisma.TeammateBackupOmit
+  accountLoginBackup?: Prisma.AccountLoginBackupOmit
+  computerReplacement?: Prisma.ComputerReplacementOmit
 }
 
 /* Types for Logging */

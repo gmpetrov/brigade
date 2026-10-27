@@ -40,6 +40,7 @@ import { runnerFiles } from './routes/runner-files.js'
 import { runnerUploads } from './routes/runner-uploads.js'
 import { uploads } from './routes/uploads.js'
 import { runnerFolders } from './routes/runner-folders.js'
+import { runnerComputer } from './routes/runner-computer.js'
 import { runnerLibrary } from './routes/runner-library.js'
 import { schedules } from './routes/schedules.js'
 import { playbooks } from './routes/playbooks.js'
@@ -160,6 +161,7 @@ app.route('/runner', runnerInstall)
 app.route('/runner/library', runnerLibrary)
 app.route('/runner/backups', runnerBackups)
 app.route('/runner/folders', runnerFolders)
+app.route('/runner/computer', runnerComputer)
 app.route('/runner/files', runnerFiles)
 app.route('/runner/uploads', runnerUploads)
 app.route('/runner/attachments', runnerAttachments)

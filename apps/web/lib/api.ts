@@ -345,6 +345,22 @@ export type Computer = {
   runner: { version: string | null; platform: string | null; lastSeenAt: string | null } | null
   /** Whether its connected runner runs the bundle the API serves, or updates to it once idle. */
   runnerUpdate: 'current' | 'waiting' | null
+  /** A cloud computer's latest move onto a new VM, under way or done. */
+  replacement?: ComputerReplacement | null
+}
+
+/** A cloud computer moved onto a new VM (the API's cloud-replace.ts). */
+export type ComputerReplacement = {
+  id: string
+  phase: 'backing_up' | 'creating' | 'restoring' | 'done' | 'failed'
+  createdAt: string
+  finishedAt: string | null
+  /** How the old computer's last backup went. */
+  backup: string | null
+  /** What did not come back on the new one. */
+  problems: { text: string }[]
+  /** Why it is held up, while it is tried again. */
+  error: string | null
 }
 
 export type ThreadSummary = {

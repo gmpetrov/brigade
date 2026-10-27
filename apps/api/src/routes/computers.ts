@@ -11,6 +11,7 @@ import {
   ensureRunning,
   stopComputer,
 } from '../cloud.js'
+import { lastReplacement, replaceComputer } from '../cloud-replace.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
 import { connectedBundle, hashToken, isOnline, isRestarting } from '../hub.js'
@@ -48,13 +49,17 @@ export const computers = new Hono<AppEnv>()
       // With billing on, the cloud computer comes with the workspace's Cloud plan.
       billing: billingEnabled(),
       cloudEntitled: await cloudEntitled(c.var.scope.workspaceId),
-      computers: rows.map(({ providerRef: _ref, ...row }) => ({
-        ...row,
-        online: isOnline(row.id),
-        // Its runner restarts into an update: online all along, but not working for a minute.
-        restarting: isRestarting(row.id),
-        runnerUpdate: runnerUpdate(served, connectedBundle(row.id)),
-      })),
+      computers: await Promise.all(
+        rows.map(async ({ providerRef: _ref, ...row }) => ({
+          ...row,
+          online: isOnline(row.id),
+          // Its runner restarts into an update: online all along, but not working for a minute.
+          restarting: isRestarting(row.id),
+          runnerUpdate: runnerUpdate(served, connectedBundle(row.id)),
+          // Its latest move onto a new VM (cloud-replace.ts), under way or done.
+          replacement: row.kind === 'cloud' ? await lastReplacement(row.id) : null,
+        })),
+      ),
     })
   })
 
@@ -115,6 +120,23 @@ export const computers = new Hono<AppEnv>()
     if (!computer) throw new HTTPException(404, { message: 'Computer not found' })
     await stopComputer(computer, { type: 'member', id: c.var.scope.memberId })
     return c.json({ ok: true })
+  })
+
+  /**
+   * The cloud computer on a new VM: what lives only on the old one's disk comes from its backups,
+   * and the old VM is kept, stopped, with the provider (cloud-replace.ts).
+   */
+  .post('/:id/replace', async (c) => {
+    requireRole(c.var.scope, 'owner', 'admin')
+    if (!cloudAvailable())
+      throw new HTTPException(409, { message: 'No cloud computer provider is configured' })
+    const { scope } = c.var
+    const row = await replaceComputer(
+      { organizationId: scope.organizationId, workspaceId: scope.workspaceId },
+      c.req.param('id'),
+      scope.memberId,
+    )
+    return c.json({ id: row.id }, 202)
   })
 
   /** Takeover: the computer's live desktop. Resumes a stopped computer first. */

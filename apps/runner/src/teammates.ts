@@ -27,6 +27,18 @@ async function helper(...args: string[]) {
   await run('sudo', ['-n', HELPER, ...args], { cwd: '/' })
 }
 
+/**
+ * The teammate's systemd user manager, lingering, for user services put back on a computer
+ * that replaced another (teammate-backups.ts). Resolves to its uid.
+ */
+export async function userServices(user: string) {
+  const { stdout } = await run('sudo', ['-n', HELPER, 'user-services', user], {
+    cwd: '/',
+    timeout: 60_000,
+  })
+  return stdout.trim()
+}
+
 const users = new Map<string, Promise<void>>()
 
 /** Once per user: a thread's turn and its title run may both ask at the same time. */

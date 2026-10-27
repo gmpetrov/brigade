@@ -10,20 +10,31 @@
 //   GET    the same, to put the folder back: redirects to a signed URL with R2
 //   DELETE the same, once it is back on disk
 //   GET    /runner/folders/<thread>/<teammate>/conversation  what was said up to its move to this computer
+// And a backup of the folder while it is on disk (BACKUP_PROTOCOL), encrypted by the runner, kept
+// as one per thread and teammate (FolderBackup) for a computer that replaces this one:
+//   POST   /runner/folders/<thread>/<teammate>/backup/upload  { size }  → where to PUT it
+//   POST   /runner/folders/<thread>/<teammate>/backup/done    FolderBackupDone → checked, kept
+//   GET    /runner/folders/<thread>/<teammate>/backup/info    { takenAt, size, background }, or 404
+//   GET    /runner/folders/<thread>/<teammate>/backup         the bytes: redirects to a signed URL with R2
 import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
+import { BackgroundWork, FolderBackupDone } from '@brigade/contracts'
 import { audit } from '../audit.js'
 import {
   deleteObject,
   directUploads,
   folderArchiveKey,
+  folderBackupKey,
   getObject,
   objectSize,
   presignGet,
   presignPut,
   putObject,
   readHead,
+  SEALED_MAGIC,
+  streamObject,
+  uploadTarget,
 } from '../bucket.js'
 import { prisma, scoped } from '../db.js'
 import { authenticateRunner } from '../hub.js'
@@ -70,6 +81,20 @@ async function archiveOf(c: Context<{ Variables: { runner: Runner } }>) {
 }
 
 const PATH = '/:sessionId/:teammateId'
+const SEALED = 'application/octet-stream'
+
+/**
+ * The thread's arrival on its computer (ThreadSpec.moved) as the runner took it in: a folder
+ * that has not taken the latest one in (a computer that replaced another, say, before the
+ * thread's first turn there) would replace the backup it is to come from.
+ */
+async function takenIn(runner: Runner, sessionId: string, arrived: string | undefined) {
+  const session = await scoped(runner).session.findFirst({
+    where: { id: sessionId },
+    select: { movedAt: true },
+  })
+  return !session?.movedAt || session.movedAt.toISOString() === arrived
+}
 
 export const runnerFolders = new Hono<{ Variables: { runner: Runner } }>()
   .use(async (c, next) => {
@@ -199,4 +224,80 @@ export const runnerFolders = new Hono<{ Variables: { runner: Runner } }>()
     const { key } = await archiveOf(c)
     await deleteObject(key)
     return c.json({ ok: true })
+  })
+
+  /** Where to upload a backup of the folder of this size. */
+  .post(`${PATH}/backup/upload`, async (c) => {
+    const { folder } = await archiveOf(c)
+    const { size } = await parseBody(c.req.raw, Size)
+    return c.json(await uploadTarget(folderBackupKey(c.var.runner, folder), size, SEALED))
+  })
+
+  /**
+   * The backup is in the bucket, whole: kept as the folder's, in place of the one before. An
+   * archive of the folder is older by then (the folder is on disk): it goes.
+   */
+  .post(`${PATH}/backup/done`, async (c) => {
+    const { folder, key: archive } = await archiveOf(c)
+    const { runner } = c.var
+    const done = await parseBody(c.req.raw, FolderBackupDone)
+    if (done.size > ARCHIVE_MAX) throw new HTTPException(413, { message: 'Too large' })
+    if (!(await takenIn(runner, folder.sessionId, done.arrived)))
+      throw new HTTPException(409, {
+        message: 'The thread moved here since: take it in before backing its folder up',
+      })
+    const key = folderBackupKey(runner, folder)
+    const stored = await objectSize(key)
+    if (stored !== done.size)
+      throw new HTTPException(409, {
+        message: `The bucket has ${stored ?? 'no'} bytes for this backup, not ${done.size}`,
+      })
+    const head = await readHead(key, SEALED_MAGIC.length)
+    if (!head || SEALED_MAGIC.some((byte, i) => head[i] !== byte)) {
+      await deleteObject(key)
+      throw new HTTPException(409, { message: 'The bucket holds no backup here; upload it again' })
+    }
+    const data = {
+      computerId: runner.computerId,
+      size: BigInt(done.size),
+      background: done.background,
+      takenAt: new Date(),
+    }
+    await scoped(runner).folderBackup.upsert({
+      where: { sessionId_teammateId: folder },
+      create: { ...folder, ...data } as never,
+      update: data,
+    })
+    await deleteObject(archive).catch((error) =>
+      console.warn(`an old archive of ${folder.sessionId} stays: ${String(error)}`),
+    )
+    return c.json({ ok: true })
+  })
+
+  /** The folder's latest backup: when, how large, and what ran in the background then. */
+  .get(`${PATH}/backup/info`, async (c) => {
+    const { folder } = await archiveOf(c)
+    const row = await scoped(c.var.runner).folderBackup.findFirst({
+      where: { sessionId: folder.sessionId, teammateId: folder.teammateId },
+    })
+    if (!row) throw new HTTPException(404, { message: 'No backup' })
+    return c.json({
+      takenAt: row.takenAt.toISOString(),
+      size: Number(row.size),
+      background: z.array(BackgroundWork).catch([]).parse(row.background),
+    })
+  })
+
+  /** The backup's bytes, from the bucket's short-lived URL with R2, never through the API's memory. */
+  .get(`${PATH}/backup`, async (c) => {
+    const { folder } = await archiveOf(c)
+    const key = folderBackupKey(c.var.runner, folder)
+    if (directUploads) {
+      if ((await objectSize(key)) === null) throw new HTTPException(404, { message: 'No backup' })
+      const { url } = await presignGet(key, { contentType: SEALED, disposition: 'attachment' })
+      return c.redirect(url, 302)
+    }
+    const body = await streamObject(key)
+    if (!body) throw new HTTPException(404, { message: 'No backup' })
+    return c.body(body, 200, { 'content-type': SEALED })
   })

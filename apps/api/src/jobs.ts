@@ -4,6 +4,7 @@
 import { sweepAssets } from './assets.js'
 import { sweepUploads } from './attachments.js'
 import { watchIdle } from './cloud.js'
+import { driveReplacements } from './cloud-replace.js'
 import { offerRunnerUpdates, pingBrowsers, resendCommands, watchRunners } from './hub.js'
 import { settleHeldCalls } from './held-calls.js'
 import { processDueInbound, sweepInbound } from './inbound.js'
@@ -52,6 +53,8 @@ export function startJobs() {
     durable('held-calls', () => settleHeldCalls()),
     durable('runner-commands', () => resendCommands()),
     durable('inbound', () => processDueInbound()),
+    // Cloud computers being moved onto a new VM go on where an API restart left them.
+    durable('cloud-replace', () => driveReplacements()),
   ]
   setTimeout(() => minute.forEach((run) => run()), 20_000)
   setInterval(() => minute.forEach((run) => run()), 60_000)
