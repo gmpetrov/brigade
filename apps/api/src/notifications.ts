@@ -27,7 +27,7 @@ import {
 } from '@brigade/contracts'
 import { env } from './config.js'
 import { prisma } from './db.js'
-import { isLooking } from './hub.js'
+import { hubs } from './hub.js'
 import { laterKey, latersIn } from './later.js'
 import { waitingNow } from './pull-requests.js'
 import { REVIEW_THREAD } from './review-state.js'
@@ -431,19 +431,10 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
   return { items, counted }
 }
 
-let sweeping = false
-
-export function watchNotifications() {
-  setInterval(() => {
-    if (sweeping || !vapid()) return
-    sweeping = true
-    void sweep()
-      .catch((error) => console.warn(`notification sweep failed: ${String(error)}`))
-      .finally(() => (sweeping = false))
-  }, SWEEP_MS)
-}
-
-/** One pass over every member with a device that receives pushes (in one organization: tests). */
+/**
+ * One pass over every member with a device that receives pushes (in one organization: tests),
+ * every SWEEP_MS (src/jobs.ts).
+ */
 export async function sweep(now = new Date(), organizationId?: string) {
   const keys = vapid()
   if (!keys) return
@@ -468,8 +459,9 @@ export async function sweep(now = new Date(), organizationId?: string) {
         badges.set(m.id, badges.get(m.id)! + found.counted.get(m.id)!.size)
       }
     }
+    const ids = workspaces.map((w) => w.id)
     for (const m of orgMembers)
-      await settle(keys, m, organizationId, items.get(m.id)!, badges.get(m.id)!, now).catch(
+      await settle(keys, m, organizationId, ids, items.get(m.id)!, badges.get(m.id)!, now).catch(
         (error) => console.warn(`notifications for ${m.id} failed: ${String(error)}`),
       )
   }
@@ -480,6 +472,8 @@ async function settle(
   keys: Vapid,
   member: { id: string; userId: string },
   organizationId: string,
+  /** The organization's workspaces: a dashboard of any of them in view counts. */
+  workspaceIds: string[],
   items: Item[],
   badge: number,
   now: Date,
@@ -555,7 +549,10 @@ async function settle(
   if (!due.length && !remind.length) return
 
   // In front of them: what is due counts as seen, never sent. Reminders wait.
-  if (isLooking(member.id, LOOKING_MS)) {
+  const looking = await Promise.all(
+    workspaceIds.map((id) => hubs.get(id).isLooking(member.id, LOOKING_MS)),
+  )
+  if (looking.some(Boolean)) {
     if (due.length)
       await prisma.pushNotice.updateMany({
         where: { memberId: member.id, key: { in: due.map((i) => i.key) }, sentAt: null },

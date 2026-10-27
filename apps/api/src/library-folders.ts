@@ -15,7 +15,7 @@ import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { notifyCollab } from './collab.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
-import { notifyLibraryChanged } from './hub.js'
+import { hubs } from './hub.js'
 import { trashLibraryFile } from './library-history.js'
 
 /** Every folder with a row: made by someone, or holding access rules. */
@@ -152,7 +152,7 @@ export async function moveFolder(
     target: { type: 'library_folder', id: folders.find((f) => f.path === from)?.id ?? from },
     data: { from, to, files: files.length },
   })
-  notifyLibraryChanged(scope.workspaceId)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
 }
 
 /** Put every file in a folder in the trash, and remove the folder and its rules. */
@@ -174,7 +174,7 @@ export async function trashFolder(db: ScopedDb, scope: Scope, actor: Actor, path
     target: { type: 'library_folder', id: path },
     data: { path, files: files.length },
   })
-  notifyLibraryChanged(scope.workspaceId)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
   for (const file of files) notifyCollab(file.id, 'delete')
 }
 
@@ -225,5 +225,5 @@ export async function setFolderAccess(
     data: { path: input.path, restricted: input.restricted, grants },
   })
   // The computers' mirrors follow.
-  notifyLibraryChanged(scope.workspaceId)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
 }

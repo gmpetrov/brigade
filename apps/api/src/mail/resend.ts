@@ -3,6 +3,7 @@
 // queue that keeps Brigade well under the account's 10 requests a second, and waits out a 429.
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { env } from '../config.js'
+import { perHub } from '../hub/context.js'
 
 const API = 'https://api.resend.com'
 /** Brigade's share of the account's limit: the other products keep the rest. */
@@ -20,13 +21,21 @@ export class ResendError extends Error {
 
 export const resendConfigured = () => Boolean(env.RESEND_API_KEY)
 
-let queue: Promise<unknown> = Promise.resolve()
-const sent: number[] = []
+/**
+ * The calls of this process, or of the hub running (hubs that are objects of their own may share
+ * one isolate, and must not chain on each other's promises): each keeps under the limit alone.
+ */
+const limiter = perHub('resend-limiter', () => ({
+  queue: Promise.resolve() as Promise<unknown>,
+  sent: [] as number[],
+}))
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** A turn in the queue: at most PER_SECOND calls start in any second. */
 function slot() {
-  const turn = queue.then(async () => {
+  const state = limiter()
+  const { sent } = state
+  const turn = state.queue.then(async () => {
     for (;;) {
       const now = Date.now()
       while (sent.length && now - sent[0]! >= 1000) sent.shift()
@@ -37,7 +46,7 @@ function slot() {
       await sleep(1000 - (now - sent[0]!) + 5)
     }
   })
-  queue = turn.catch(() => undefined)
+  state.queue = turn.catch(() => undefined)
   return turn
 }
 

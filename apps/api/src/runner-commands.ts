@@ -7,6 +7,7 @@
 // noticed loses nothing. Nothing is dropped silently either: a command not through in 24 hours
 // opens a ticket. A runner too old to acknowledge takes each command once, as before.
 import { OUTBOX_PROTOCOL, type ApiToRunner } from '@brigade/contracts'
+import { HTTPException } from 'hono/http-exception'
 import { prisma, scoped } from './db.js'
 import { noteFailure } from './ops/failures.js'
 import { movedOf } from './thread-spec.js'
@@ -35,11 +36,32 @@ const KEEP_MS = 3 * 24 * 60 * 60_000
 const sessionOf = (message: DurableCommand) =>
   'thread' in message ? message.thread.sessionId : 'sessionId' in message ? message.sessionId : null
 
-/** Keep a command before it is sent. False when one with its id is kept already. */
+/**
+ * At most this many commands wait for one computer, and for one of its threads: a computer that
+ * stays down no longer gathers commands without end, each sent when it comes back (the
+ * 2026-10-27 incident, docs/workspace-hubs-plan.md). Past either, a command is refused: a person
+ * is told to try again once it runs, a trigger's event is offered again later by its source.
+ */
+export const PENDING_PER_COMPUTER = 200
+export const PENDING_PER_THREAD = 20
+/** Messages nobody typed (an event, a wake-up, a report): fewer of them wait for one computer. */
+export const AUTOMATIC_PER_COMPUTER = 25
+
+/** A message nobody typed: a trigger's event, a wake-up, a child's report. */
+const automatic = (message: DurableCommand) =>
+  message.type === 'thread.prompt' && message.memberId === null
+
+export type Kept = 'kept' | 'exists'
+
+/**
+ * Keep a command before it is sent: 'exists' when one with its id is kept already. Each is a turn
+ * of its own, an event's too: folded into the one waiting, an event could be lost across a
+ * restart, or come after a person's message that answered it. Throws a 503 past the caps.
+ */
 export async function keepCommand(
   computer: { id: string; organizationId?: string; workspaceId?: string },
   message: DurableCommand,
-) {
+): Promise<Kept> {
   const owner =
     computer.organizationId && computer.workspaceId
       ? { organizationId: computer.organizationId, workspaceId: computer.workspaceId }
@@ -47,39 +69,85 @@ export async function keepCommand(
           where: { id: computer.id },
           select: { organizationId: true, workspaceId: true },
         })
+  const sessionId = sessionOf(message)
+  if (await prisma.runnerCommand.count({ where: { id: message.commandId } })) return 'exists'
+  await checkCaps(computer.id, sessionId, message)
   try {
     await prisma.runnerCommand.create({
       data: {
         id: message.commandId,
         ...owner,
         computerId: computer.id,
-        sessionId: sessionOf(message),
+        sessionId,
         type: message.type,
         message: message as never,
       },
     })
-    return true
+    return 'kept'
   } catch (error) {
-    if ((error as { code?: string }).code === 'P2002') return false
+    if ((error as { code?: string }).code === 'P2002') return 'exists'
     throw error
   }
+}
+
+/** Refuse a command past the caps on what waits for its computer and its thread. */
+async function checkCaps(computerId: string, sessionId: string | null, message: DurableCommand) {
+  const [forComputer, forThread, automaticOnes] = await Promise.all([
+    prisma.runnerCommand.count({ where: { computerId, status: 'pending' } }),
+    sessionId
+      ? prisma.runnerCommand.count({ where: { computerId, sessionId, status: 'pending' } })
+      : 0,
+    automatic(message)
+      ? prisma.$queryRaw<[{ count: bigint }]>`
+          SELECT count(*) FROM "RunnerCommand"
+          WHERE "computerId" = ${computerId} AND status = 'pending' AND type = 'thread.prompt'
+            AND message->>'memberId' IS NULL`.then(([row]) => Number(row.count))
+      : 0,
+  ])
+  const full =
+    forComputer >= PENDING_PER_COMPUTER
+      ? `${forComputer} commands already wait for its computer`
+      : forThread >= PENDING_PER_THREAD
+        ? `${forThread} commands already wait for this thread`
+        : automaticOnes >= AUTOMATIC_PER_COMPUTER
+          ? `${automaticOnes} messages from events, wake-ups and reports already wait for its computer`
+          : null
+  if (!full) return
+  noteFailure('runner-outbox', `${message.type} for ${computerId} refused: ${full}`)
+  throw new HTTPException(503, {
+    message: `Not sent: ${full}. Try again once the computer runs.`,
+  })
+}
+
+/** A command with this id is kept. */
+export async function isKept(id: string) {
+  return (await prisma.runnerCommand.count({ where: { id } })) > 0
 }
 
 /**
  * The command is on its way to a runner of this protocol: from OUTBOX_PROTOCOL on it stays
  * pending until acknowledged; an older runner never acknowledges, so it is done once sent.
- * False when it was already taken (sent to an older runner), so it is not sent twice.
+ * Its message as claimed; null when it was already taken (sent to an older runner), so it is not sent twice.
  */
 export async function noteSent(id: string, protocol: number) {
-  const { count } = await prisma.runnerCommand.updateMany({
+  const [claimed] = await prisma.runnerCommand.updateManyAndReturn({
     where: { id, status: 'pending' },
     data: {
       ...(protocol >= OUTBOX_PROTOCOL ? {} : { status: 'acked' }),
       sentAt: new Date(),
       attempts: { increment: 1 },
     },
+    select: { message: true },
   })
-  return count === 1
+  return claimed ? (claimed.message as unknown as DurableCommand) : null
+}
+
+/** A claimed command that did not go after all (its spec could not be made whole): pending again. */
+export async function unclaim(id: string) {
+  await prisma.runnerCommand.updateMany({
+    where: { id },
+    data: { status: 'pending', sentAt: null },
+  })
 }
 
 /**
@@ -163,13 +231,43 @@ export async function commandMessage(id: string) {
 }
 
 /** Computers with commands waiting, since when and how many: the minute's tick looks at each. */
-export async function computersWaiting() {
+export async function computersWaiting(workspaceId?: string) {
   return prisma.runnerCommand.groupBy({
-    by: ['computerId'],
-    where: { status: 'pending' },
+    by: ['workspaceId', 'computerId'],
+    where: { status: 'pending', ...(workspaceId ? { workspaceId } : {}) },
     _min: { createdAt: true, sentAt: true },
     _count: { _all: true },
   })
+}
+
+/**
+ * Each minute: each workspace's hub sends again what its connected runners have not acknowledged
+ * and starts cloud computers that wait for commands (WorkspaceHub.resendCommands); then commands
+ * not through in a day are given up, with a ticket. Started by the entry (src/jobs.ts).
+ */
+export async function resendCommands(now = Date.now(), workspaceId?: string) {
+  const { hubs } = await import('./hub.js')
+  const byWorkspace = Map.groupBy(await computersWaiting(workspaceId), (w) => w.workspaceId)
+  for (const [workspaceId, waiting] of byWorkspace)
+    await hubs
+      .get(workspaceId)
+      .resendCommands(
+        waiting.map((w) => ({
+          computerId: w.computerId,
+          since: w._min.createdAt?.getTime() ?? now,
+        })),
+      )
+      .catch((error) => {
+        console.warn(`resending commands in ${workspaceId} failed: ${String(error)}`)
+        noteFailure('job:runner-commands', error)
+      })
+  // Of every workspace: its own job when each workspace's run apart (src/jobs.ts).
+  if (!workspaceId) await giveUp(now)
+}
+
+/** Workspaces with commands waiting for a computer (src/jobs.ts). */
+export async function dueCommands() {
+  return [...new Set((await computersWaiting()).map((w) => w.workspaceId))]
 }
 
 /** What a thread's people read of a command that did not get through. */

@@ -3,18 +3,19 @@
 // teammate is told at the start of its next turn.
 import { NOTE_PROTOCOL } from '@brigade/contracts'
 import { prisma, type ScopedDb } from './db.js'
-import { runnerProtocol, sendToRunner } from './hub.js'
+import { hubs } from './hub.js'
 
 /** Best effort: a computer that is offline, or whose runner is too old, is not told. */
 export async function noteInThread(db: ScopedDb, sessionId: string, text: string) {
   const session = await db.session.findFirst({
     where: { id: sessionId },
-    select: { computerId: true },
+    select: { computerId: true, workspaceId: true },
   })
   if (!session) return
-  const protocol = runnerProtocol(session.computerId)
+  const hub = hubs.get(session.workspaceId)
+  const protocol = await hub.runnerProtocol(session.computerId)
   if (protocol === undefined || protocol < NOTE_PROTOCOL) return
-  sendToRunner(session.computerId, { type: 'thread.note', sessionId, text })
+  await hub.sendToRunner(session.computerId, { type: 'thread.note', sessionId, text })
 }
 
 /** "#158 was merged by Ada.": by whom when a member did it in Brigade. */

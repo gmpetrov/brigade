@@ -12,6 +12,7 @@
     "src/worker-env.ts",
     "src/front.ts",
     "src/api-object.ts",
+    "src/hub-object.ts",
     "src/platform/workers.ts",
     "src/platform/jsdom.workers.ts",
     "src/generated/prisma-workers"

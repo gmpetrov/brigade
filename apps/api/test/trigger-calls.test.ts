@@ -72,21 +72,39 @@ describe("a teammate's triggers", { skip: !database && 'no database answers' }, 
     return session.id
   }
 
-  /** Riley calls a trigger tool; every message the API sends back, as they come. */
+  /**
+   * Riley calls a trigger tool on its runner's connection; every message the API sends back, as
+   * they come. Resolves with its result: at once, or once a person decides.
+   */
   async function call(sessionId: string, operation: object, replies: Reply[] = []) {
     const { handleScheduleCall } = await import('../src/schedules.js')
-    await handleScheduleCall(
-      { computerId: ids.computer, ...scope },
-      {
-        type: 'schedule.call',
-        callId: randomUUID(),
-        sessionId,
-        teammateId: ids.riley,
-        operation: operation as ScheduleOperation,
-      },
-      (message) => replies.push(message as Reply),
+    const { fakeRunner } = await import('./in-hub.js')
+    const runner = await fakeRunner(scope, ids.computer)
+    const callId = randomUUID()
+    const heard = () => runner.sent.filter((m) => m.callId === callId) as unknown as Reply[]
+    await runner.run(() =>
+      handleScheduleCall(
+        { computerId: ids.computer, ...scope },
+        {
+          type: 'schedule.call',
+          callId,
+          sessionId,
+          teammateId: ids.riley,
+          operation: operation as ScheduleOperation,
+        },
+        runner.reply as never,
+        { live: runner.live },
+      ),
     )
-    return replies.at(-1)!
+    for (let i = 0; ; i++) {
+      replies.splice(0, replies.length, ...heard())
+      const result = replies.find((r) => r.type === 'connector.result')
+      if (result || i >= 500) {
+        runner.close()
+        return result ?? replies.at(-1)!
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    }
   }
 
   /** The call's ticket, once it waits on it. */

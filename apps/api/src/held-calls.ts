@@ -6,9 +6,14 @@
 // this connection, else to its thread as a message (a wake-up, as an email's reply does). An
 // identical call meanwhile (same thread, teammate, tool and arguments) joins the open ticket
 // rather than open a second one, so approving never makes it twice.
+//
+// The tools waiting on a call are the hub's of the call's workspace (src/hub/): its runners'
+// sockets are there. They are kept with the hub, so a hub that hibernates while a person decides
+// still answers the tool on its connection; a decided call is made in that hub (runHeld).
 import { createHash } from 'node:crypto'
 import type { ApiToRunner } from '@brigade/contracts'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { currentHub, runningHub } from './hub/context.js'
 import { noteFailure } from './ops/failures.js'
 import { fireNow } from './wakeups.js'
 
@@ -36,13 +41,21 @@ export type Resume = {
 type Result = Extract<ApiToRunner, { type: 'connector.result' }>
 type Reply = (message: ApiToRunner) => void
 
-/** Where a runner's call waits: its connection, while it is the computer's current one. */
-export type Live = { reply: Reply; alive: () => boolean }
-const always: Live['alive'] = () => true
+/**
+ * A workspace's hub (src/hub.ts), loaded when first needed: the modules that make held calls
+ * register here as they load (onDecided), and the hub loads them.
+ */
+const hub = async (workspaceId: string) => (await import('./hub.js')).hubs.get(workspaceId)
 
-/** A tool waiting in this process for a held call's result, by its ticket. */
-type Waiter = { callId: string; live: Live; settle: () => void }
-const waiters = new Map<string, Waiter[]>()
+/** Where a runner's call waits: its connection, while it is the computer's current one. */
+export type Live = { computerId: string; connectionId: string }
+
+/** A tool waiting for a held call's result, by its ticket: on a connection of the running hub. */
+type Waiter = { callId: string; live: Live }
+const waiters = () => currentHub().durable<Waiter[]>('held-waiters')
+
+/** Whether the tool can still hear: its connection is still its computer's. */
+const alive = (w: Waiter) => currentHub().isCurrent(w.live.computerId, w.live.connectionId)
 
 /** A decided call left this long is made by the minute's tick (the API restarted meanwhile). */
 const DECIDED_GRACE_MS = 60_000
@@ -75,8 +88,8 @@ const isUnique = (error: unknown) => (error as { code?: string })?.code === 'P20
 
 /**
  * Hold a call for a person's decision: join the open ticket of an identical call in the thread,
- * or open one with the call kept beside it. Tells the runner the call waits (connector.pending),
- * then resolves once its result went to this tool, or once nothing waits for it here any more.
+ * or open one with the call kept beside it. Tells the runner the call waits (connector.pending);
+ * its result goes to the tool on `live` once decided, while that connection is still there.
  */
 export async function holdCall(
   db: ScopedDb,
@@ -93,6 +106,9 @@ export async function holdCall(
     discard?: (request: object) => Promise<unknown>
     ticket: { type: 'approval' | 'cap'; title: string; payload: object }
     pending: { target: string; reason?: string; always?: boolean }
+    /** Says the call waits, on the connection it came from. */
+    reply: Reply
+    /** That connection: the result goes there once decided. */
     live?: Live
     /** Once the ticket is open, before the runner hears (a cap's audit). */
     opened?: (ticketId: string) => Promise<unknown>
@@ -148,8 +164,11 @@ export async function holdCall(
     }
     await hold.opened?.(ticketId)
   }
-  const live = hold.live ?? { reply: () => undefined, alive: always }
-  live.reply({
+  if (hold.live) {
+    const list = waiters().get(ticketId!) ?? []
+    waiters().set(ticketId!, [...list, { callId: hold.callId, live: hold.live }])
+  }
+  hold.reply({
     type: 'connector.pending',
     callId: hold.callId,
     ticketId: ticketId!,
@@ -157,18 +176,13 @@ export async function holdCall(
     ...(hold.pending.reason ? { reason: hold.pending.reason } : {}),
     ...(hold.pending.always ? { always: true } : {}),
   })
-  await new Promise<void>((settle) => {
-    const list = waiters.get(ticketId!) ?? []
-    list.push({ callId: hold.callId, live, settle })
-    waiters.set(ticketId!, list)
-  })
   return { ticketId: ticketId!, joined: Boolean(joined) }
 }
 
 /**
  * Take a person's decision on a held call's ticket, once. False when no call waits on it (a
- * ticket from before held calls, or decided already). The call is made right after, and the
- * returned promise ends once its result went where it goes.
+ * ticket from before held calls, or decided already). The call is made right after, in its
+ * workspace's hub, and the returned promise ends once its result went where it goes.
  */
 export async function decideHeld(db: ScopedDb, ticketId: string, decision: Decision) {
   const held = await db.heldCall.findFirst({ where: { ticketId, status: 'waiting' } })
@@ -178,7 +192,7 @@ export async function decideHeld(db: ScopedDb, ticketId: string, decision: Decis
     data: { status: 'decided', decision: decision as never },
   })
   if (!count) return null
-  return { run: () => runHeld(held.id) }
+  return { run: async () => (await hub(held.workspaceId)).runHeld(held.id) }
 }
 
 type Executor = (
@@ -194,28 +208,29 @@ export function onDecided(kind: HeldKind, executor: Executor) {
   executors.set(kind, executor)
 }
 
-/** The waiters of a ticket that can still hear, and settle the others. */
+/** The waiters of a ticket that can still hear; the others are forgotten. */
 function liveWaiters(ticketId: string) {
-  const list = waiters.get(ticketId) ?? []
-  const live = list.filter((w) => w.live.alive())
-  for (const w of list) if (!live.includes(w)) w.settle()
-  if (live.length) waiters.set(ticketId, live)
-  else waiters.delete(ticketId)
+  const list = waiters().get(ticketId) ?? []
+  const live = list.filter(alive)
+  if (live.length === list.length) return live
+  if (live.length) waiters().set(ticketId, live)
+  else waiters().delete(ticketId)
   return live
 }
 
-/** Tools whose connection closed stop waiting here (src/hub.ts, when a runner leaves). */
+/** Tools whose connection closed stop waiting (src/hub/, when a runner leaves). */
 export function dropDeadWaiters() {
-  for (const ticketId of [...waiters.keys()]) liveWaiters(ticketId)
+  for (const [ticketId] of waiters().entries()) liveWaiters(ticketId)
 }
 
-/** As an API restart leaves them: no tool waits in this process. For tests. */
+/** As a restart of its hub leaves them without their sockets: no tool waits. For tests. */
 export function forgetWaiters() {
-  for (const list of waiters.values()) for (const w of list) w.settle()
-  waiters.clear()
+  const hub = runningHub()
+  if (!hub) return
+  for (const [ticketId] of waiters().entries()) waiters().delete(ticketId)
 }
 
-/** Make a decided call, once: claimed, made, and its result delivered. */
+/** In the hub: make a decided call, once: claimed, made, and its result delivered. */
 export async function runHeld(id: string) {
   const { count } = await prisma.heldCall.updateMany({
     where: { id, status: 'decided' },
@@ -248,20 +263,21 @@ export async function runHeld(id: string) {
   } catch (error) {
     result = failed(error instanceof Error ? error.message : String(error))
   }
-  result ??= failed('The call gave no result')
+  const final = result ?? failed('The call gave no result')
   // The tools still waiting on their connection hear it; else the thread does, as a message.
-  const heard = liveWaiters(held.ticketId)
-  for (const w of heard) w.live.reply({ ...result, callId: w.callId })
-  for (const w of heard) w.settle()
-  waiters.delete(held.ticketId)
-  if (!heard.length) await tellThread(db, held, decision, result)
+  const hub = currentHub(held.workspaceId)
+  const heard = liveWaiters(held.ticketId).filter((w) =>
+    hub.replyOn(w.live.computerId, w.live.connectionId, { ...final, callId: w.callId }),
+  )
+  waiters().delete(held.ticketId)
+  if (!heard.length) await tellThread(db, held, decision, final)
   await db.heldCall.updateMany({
     where: { id: held.id },
     data: {
       status: 'done',
       result: {
-        ok: result.ok,
-        ...(result.error ? { error: result.error.slice(0, 1000) } : {}),
+        ok: final.ok,
+        ...(final.error ? { error: final.error.slice(0, 1000) } : {}),
         heard: heard.length ? 'live' : 'thread',
       },
     },
@@ -335,61 +351,75 @@ async function tellThread(
   if (wakeup) await fireNow(wakeup.id)
 }
 
-let ticking = false
+/** Workspaces with held calls to settle now (src/jobs.ts). */
+export async function dueHeldCalls(now = Date.now()) {
+  const rows = await prisma.heldCall.findMany({
+    where: {
+      OR: [
+        { status: 'decided', updatedAt: { lt: new Date(now - DECIDED_GRACE_MS) } },
+        { status: 'running', updatedAt: { lt: new Date(now - RUNNING_STALE_MS) } },
+      ],
+    },
+    distinct: ['workspaceId'],
+    select: { workspaceId: true },
+  })
+  return rows.map((r) => r.workspaceId)
+}
 
 /**
- * Each minute: calls decided while the API restarted are made; calls a restart cut off while they
- * were being made are not made again, and their thread is told so; finished ones go after a week.
+ * Each minute, for one workspace or all: calls decided while the API restarted are made, in
+ * their workspace's hub; calls a restart cut off while they were being made are not made again,
+ * and their thread is told so; finished ones go after a week. Each step claims its row, so two
+ * runs at once do each once.
  */
-export async function settleHeldCalls(now = Date.now()) {
-  if (ticking) return
-  ticking = true
-  try {
-    const decided = await prisma.heldCall.findMany({
-      where: { status: 'decided', updatedAt: { lt: new Date(now - DECIDED_GRACE_MS) } },
-      select: { id: true },
-      take: 50,
+export async function settleHeldCalls(now = Date.now(), workspaceId?: string) {
+  const scope = workspaceId ? { workspaceId } : {}
+  const decided = await prisma.heldCall.findMany({
+    where: { ...scope, status: 'decided', updatedAt: { lt: new Date(now - DECIDED_GRACE_MS) } },
+    select: { id: true, workspaceId: true },
+    take: 50,
+  })
+  for (const { id, workspaceId: owner } of decided)
+    await (await hub(owner)).runHeld(id).catch((error) => {
+      console.error(`held call ${id} failed`, error)
+      noteFailure('held-calls', error)
     })
-    for (const { id } of decided)
-      await runHeld(id).catch((error) => {
-        console.error(`held call ${id} failed`, error)
-        noteFailure('held-calls', error)
-      })
-    const cut = await prisma.heldCall.findMany({
-      where: { status: 'running', updatedAt: { lt: new Date(now - RUNNING_STALE_MS) } },
-      take: 50,
+  const cut = await prisma.heldCall.findMany({
+    where: { ...scope, status: 'running', updatedAt: { lt: new Date(now - RUNNING_STALE_MS) } },
+    take: 50,
+  })
+  for (const held of cut) {
+    // Claimed by touching it, still running: a restart before the thread is told leaves it to
+    // the next tick. The thread hears once (its wake-up's source is the ticket), then it is done.
+    const { count } = await prisma.heldCall.updateMany({
+      where: { id: held.id, status: 'running', updatedAt: held.updatedAt },
+      data: { updatedAt: new Date() },
     })
-    for (const held of cut) {
-      // Claimed by touching it, still running: a restart before the thread is told leaves it to
-      // the next tick. The thread hears once (its wake-up's source is the ticket), then it is done.
-      const { count } = await prisma.heldCall.updateMany({
-        where: { id: held.id, status: 'running', updatedAt: held.updatedAt },
-        data: { updatedAt: new Date() },
-      })
-      if (!count) continue
-      const db = scoped({ organizationId: held.organizationId, workspaceId: held.workspaceId })
-      try {
-        await tellThread(
-          db,
-          held,
-          { ...(held.decision as Decision) },
-          failed(
-            'Brigade restarted while making it, so it may or may not have gone through. Check before you make it again.',
-          ),
-        )
-      } catch (error) {
-        console.error(`held call ${held.id}: thread not told`, error)
-        continue
-      }
-      await prisma.heldCall.updateMany({
-        where: { id: held.id, status: 'running' },
-        data: { status: 'done', result: { ok: false, error: 'cut off by a restart' } },
-      })
+    if (!count) continue
+    const db = scoped({ organizationId: held.organizationId, workspaceId: held.workspaceId })
+    try {
+      await tellThread(
+        db,
+        held,
+        { ...(held.decision as Decision) },
+        failed(
+          'Brigade restarted while making it, so it may or may not have gone through. Check before you make it again.',
+        ),
+      )
+    } catch (error) {
+      console.error(`held call ${held.id}: thread not told`, error)
+      continue
     }
-    await prisma.heldCall.deleteMany({
-      where: { status: { in: ['done', 'expired'] }, updatedAt: { lt: new Date(now - KEEP_MS) } },
+    await prisma.heldCall.updateMany({
+      where: { id: held.id, status: 'running' },
+      data: { status: 'done', result: { ok: false, error: 'cut off by a restart' } },
     })
-  } finally {
-    ticking = false
   }
+  await prisma.heldCall.deleteMany({
+    where: {
+      ...scope,
+      status: { in: ['done', 'expired'] },
+      updatedAt: { lt: new Date(now - KEEP_MS) },
+    },
+  })
 }

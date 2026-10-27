@@ -7,7 +7,7 @@
     "build": "prisma generate && node scripts/playbooks.mjs && tsc -p tsconfig.json",
     "dev": "node scripts/playbooks.mjs && tsx watch --env-file-if-exists=.env src/index.ts",
     "start": "node --env-file-if-exists=.env dist/index.js",
-    "typecheck": "prisma generate && node scripts/playbooks.mjs && tsc -p tsconfig.json --noEmit",
+    "typecheck": "prisma generate && node scripts/playbooks.mjs && tsc -p tsconfig.json --noEmit && node scripts/typecheck-workers.mjs",
     "clean": "rm -rf dist .turbo",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",

@@ -9,10 +9,24 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
+  // Its own isolates (the cron, the jobs' consumer, the reads the front sends here) run next to
+  // the database, as the Api object does: each request makes about ten queries.
+  "placement": { "region": "aws:eu-central-1" },
+  // Api runs the API, and the hubs of workspaces whose hubMode is 'api'; WorkspaceHubObject is one
+  // workspace's hub of its own, by its id (src/hub-object.ts, docs/workspace-hubs-plan.md).
   "durable_objects": {
-    "bindings": [{ "name": "API", "class_name": "Api" }],
+    "bindings": [
+      { "name": "API", "class_name": "Api" },
+      { "name": "HUBS", "class_name": "WorkspaceHubObject" },
+    ],
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Api"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Api"] },
+    { "tag": "v2", "new_sqlite_classes": ["WorkspaceHubObject"] },
+  ],
+  // Hub objects connect again each time they wake: through Hyperdrive, with its cache off, once a
+  // config exists (`wrangler hyperdrive create brigade-hubs --connection-string=... --caching-disabled`):
+  // "hyperdrive": [{ "binding": "DB_HYPERDRIVE", "id": "<its id>" }],
   // The same source as on Node, with these modules swapped for their Workers versions
   // (import paths, matched exactly). Prisma's Workers client comes from `prisma generate`;
   // jsdom (for @blocknote/server-util, in src/collab.ts) does not run on Workers.
@@ -25,10 +39,38 @@
   // The runner bundle, served by GET /runner/bundle.tgz; nothing is served from here directly.
   "assets": { "directory": "dist-worker/assets", "binding": "ASSETS", "run_worker_first": true },
   "triggers": { "crons": ["* * * * *"] },
+  // Background jobs (src/jobs.ts), one message per workspace and job, put on brigade-jobs by the
+  // cron each minute; one that fails every try waits in brigade-jobs-dlq, and operators hear of it.
+  // Used once JOBS_ON_QUEUE is "1" (vars below); until then the Api object runs them on timers.
+  // The queues were made once, with `wrangler queues create brigade-jobs` and
+  // `wrangler queues create brigade-jobs-dlq`.
+  "queues": {
+    "producers": [
+      { "binding": "JOBS", "queue": "brigade-jobs" },
+      { "binding": "JOBS_DEAD", "queue": "brigade-jobs-dlq" },
+    ],
+    "consumers": [
+      {
+        "queue": "brigade-jobs",
+        "max_batch_size": 5,
+        "max_batch_timeout": 1,
+        "max_retries": 5,
+        "max_concurrency": 10,
+        "dead_letter_queue": "brigade-jobs-dlq",
+      },
+    ],
+  },
   "limits": { "cpu_ms": 60000 },
   // PREVIEW_GATEWAY_URL: the previews' own site (apps/preview-gateway). Its secret is
   // PREVIEW_GATEWAY_SECRET here, the same as SECRET there: change both together.
-  "vars": { "NODE_ENV": "production", "PREVIEW_GATEWAY_URL": "https://brigade.surf" },
+  "vars": {
+    "NODE_ENV": "production",
+    "PREVIEW_GATEWAY_URL": "https://brigade.surf",
+    // "1": the jobs go through their queue (above); "0": the Api object's timers run them.
+    "JOBS_ON_QUEUE": "0",
+  },
+  // Which version runs: the Api object tells its restarts from a deploy's (src/ops/restarts.ts).
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "observability": { "enabled": true },
   "upload_source_maps": true,
 }

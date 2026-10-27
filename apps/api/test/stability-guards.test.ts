@@ -438,7 +438,13 @@ describe('against the database', { skip: !database && 'no database answers' }, (
   })
 
   test('a thread whose events wait 10 minutes, as its runner says, alerts', async () => {
-    const { dropRunner, runnerSocket, threadsWaiting } = await import('../src/hub.js')
+    const { hubs, runnerSocket } = await import('../src/hub.js')
+    const hub = hubs.get(scope.workspaceId)
+    let waitingNow: { sessionId: string; computerId: string; since: string }[] = []
+    const threadsWaiting = () => waitingNow
+    const look = async () => {
+      waitingNow = await hub.threadsWaiting()
+    }
     const session = await thread()
     const handle = runnerSocket({ id: ids.runner, computerId: ids.laptop, ...scope })
     const sent: { type: string }[] = []
@@ -455,24 +461,31 @@ describe('against the database', { skip: !database && 'no database answers' }, (
         await new Promise((resolve) => setTimeout(resolve, 20))
       const since = new Date(Date.now() - 15 * MIN).toISOString()
       say({ type: 'events.waiting', threads: [{ sessionId: session.id, since }] })
-      for (let i = 0; i < 200 && !threadsWaiting().some((w) => w.sessionId === session.id); i++)
+      for (let i = 0; i < 200 && !threadsWaiting().some((w) => w.sessionId === session.id); i++) {
         await new Promise((resolve) => setTimeout(resolve, 20))
+        await look()
+      }
       const waiting = threadsWaiting().filter((w) => w.computerId === ids.laptop)
       assert.deepEqual(waiting, [{ sessionId: session.id, computerId: ids.laptop, since }])
       const [alert] = eventsWaitingProblems(waiting, new Map(), Date.now())
       assert.equal(alert?.key, `events-waiting:${ids.laptop}`)
       // Through: the runner lists it no more.
       say({ type: 'events.waiting', threads: [] })
-      for (let i = 0; i < 200 && threadsWaiting().some((w) => w.sessionId === session.id); i++)
+      for (let i = 0; i < 200 && threadsWaiting().some((w) => w.sessionId === session.id); i++) {
         await new Promise((resolve) => setTimeout(resolve, 20))
+        await look()
+      }
       assert.equal(threadsWaiting().filter((w) => w.computerId === ids.laptop).length, 0)
 
       // Its computer stopped, or its runner went silent: forgotten with it, not alerting for as
       // long as the computer stays off.
       say({ type: 'events.waiting', threads: [{ sessionId: session.id, since }] })
-      for (let i = 0; i < 200 && !threadsWaiting().some((w) => w.sessionId === session.id); i++)
+      for (let i = 0; i < 200 && !threadsWaiting().some((w) => w.sessionId === session.id); i++) {
         await new Promise((resolve) => setTimeout(resolve, 20))
-      dropRunner(ids.laptop)
+        await look()
+      }
+      await hub.dropRunner(ids.laptop)
+      await look()
       assert.equal(threadsWaiting().filter((w) => w.computerId === ids.laptop).length, 0)
     } finally {
       handle.onClose()

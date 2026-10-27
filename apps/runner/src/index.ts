@@ -134,6 +134,7 @@ async function link(code: string | undefined) {
     token: result.token,
     computerId: result.computerId,
     workspaceName: result.workspaceName,
+    ...(result.workspaceId ? { workspaceId: result.workspaceId } : {}),
   })
   console.log(
     `Linked "${values.name}" to workspace "${result.workspaceName}". Start it with: brigade-runner start`,

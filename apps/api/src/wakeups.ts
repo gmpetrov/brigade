@@ -13,14 +13,13 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
-import { broadcastThreadStatus } from './hub.js'
+import { hubs, threadUpdated } from './hub.js'
 import { localTime, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread } from './thread-spec.js'
-import { settleOverdueChildren } from './children.js'
-import { settleOverdueDryRuns } from './playbook-dry-runs.js'
+import { dueChildren, settleOverdueChildren } from './children.js'
+import { dueDryRuns, settleOverdueDryRuns } from './playbook-dry-runs.js'
 import { promptThread } from './work.js'
-import { noteFailure } from './ops/failures.js'
 
 type WakeupOperation = Extract<
   ScheduleOperation,
@@ -36,7 +35,7 @@ export const isWakeupOperation = (op: ScheduleOperation): op is WakeupOperation 
 type Session = { id: string; origin: string; startedByMemberId: string; status: string }
 
 const changed = (scope: Scope, session: { id: string; status: string }) =>
-  broadcastThreadStatus(scope.workspaceId, session.id, session.status)
+  void hubs.get(scope.workspaceId).broadcast(threadUpdated(session.id, session.status))
 
 /**
  * Wake-ups fired in the thread since a person last wrote in it. A wake-up's own
@@ -247,43 +246,40 @@ export async function fireNow(id: string) {
     )
 }
 
-let ticking = false
-
-/** Fire every wake-up that is due. */
-export async function fireDueWakeups() {
-  if (ticking) return
-  ticking = true
-  try {
-    const due = await prisma.wakeup.findMany({
-      where: { status: 'pending', wakeAt: { lte: new Date() } },
-      orderBy: { wakeAt: 'asc' },
-      take: 100,
-    })
-    for (const wakeup of due)
-      await fire(wakeup).catch((error: unknown) =>
-        console.error(`wake-up ${wakeup.id}: could not fire`, error),
-      )
-    // Children whose parent's wait ran out: it hears what is done.
-    await settleOverdueChildren()
-    // Dry runs' events that took too long: left out, so the report comes.
-    await settleOverdueDryRuns()
-  } finally {
-    ticking = false
-  }
+/** Workspaces with a wake-up, a child's report or a dry run due now (src/jobs.ts). */
+export async function dueWakeups(now = new Date()) {
+  const [wakeups, children, dryRuns] = await Promise.all([
+    prisma.wakeup.findMany({
+      where: { status: 'pending', wakeAt: { lte: now } },
+      distinct: ['workspaceId'],
+      select: { workspaceId: true },
+    }),
+    dueChildren(now),
+    dueDryRuns(now.getTime()),
+  ])
+  return [...wakeups.map((w) => w.workspaceId), ...children, ...dryRuns]
 }
 
-/** Tick at the start of every minute, as schedules do. */
-export function watchWakeups() {
-  const later = () =>
-    setTimeout(
-      () =>
-        void fireDueWakeups()
-          .catch((error) => {
-            console.error('wake-up tick failed', error)
-            noteFailure('job:wakeups', error)
-          })
-          .finally(later),
-      60_000 - (Date.now() % 60_000) + 500,
+/**
+ * Fire every wake-up that is due, of one workspace or all; and what else is due to tell a
+ * thread. Each minute, at its start, as schedules (src/jobs.ts).
+ */
+export async function fireDueWakeups(workspaceId?: string) {
+  const due = await prisma.wakeup.findMany({
+    where: {
+      status: 'pending',
+      wakeAt: { lte: new Date() },
+      ...(workspaceId ? { workspaceId } : {}),
+    },
+    orderBy: { wakeAt: 'asc' },
+    take: 100,
+  })
+  for (const wakeup of due)
+    await fire(wakeup).catch((error: unknown) =>
+      console.error(`wake-up ${wakeup.id}: could not fire`, error),
     )
-  later()
+  // Children whose parent's wait ran out: it hears what is done.
+  await settleOverdueChildren(workspaceId)
+  // Dry runs' events that took too long: left out, so the report comes.
+  await settleOverdueDryRuns(workspaceId)
 }

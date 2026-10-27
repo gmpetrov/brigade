@@ -135,6 +135,12 @@ describe('spec parts', { skip: !database && 'no database answers' }, () => {
     await prisma.user.deleteMany({ where: { id: `owner-${suffix}` } })
   })
 
+  /** Sending through the workspace's hub. */
+  const dispatcher = async () => {
+    const { hubs } = await import('../src/hub.js')
+    const hub = hubs.get(ids.workspace)
+    return hub.dispatch.bind(hub)
+  }
   /** A runner connecting with this protocol: its socket and what it is sent. */
   const connect = async (protocolVersion: number) => {
     const { runnerSocket } = await import('../src/hub.js')
@@ -221,7 +227,7 @@ describe('spec parts', { skip: !database && 'no database answers' }, () => {
   })
 
   test('a prompt is kept small, and sent by hash or whole by the runner it goes to', async () => {
-    const { dispatch } = await import('../src/hub.js')
+    const dispatch = await dispatcher()
     const current = await connect(SPEC_PARTS_PROTOCOL)
     const recent = prompt()
     assert.equal(await dispatch(computer(), recent), 'sent')
@@ -242,7 +248,7 @@ describe('spec parts', { skip: !database && 'no database answers' }, () => {
   })
 
   test('a command that cannot be made whole for an older runner stays pending, unsent', async () => {
-    const { dispatch } = await import('../src/hub.js')
+    const dispatch = await dispatcher()
     const command = prompt()
     // Kept while nothing is connected, then its part is gone (swept, say).
     assert.equal(await dispatch(computer(), command), 'queued')
@@ -258,7 +264,7 @@ describe('spec parts', { skip: !database && 'no database answers' }, () => {
   })
 
   test('a command not kept, queued while offline, goes whole', async () => {
-    const { dispatch } = await import('../src/hub.js')
+    const dispatch = await dispatcher()
     const terminal = {
       type: 'terminal.open' as const,
       terminalId: randomUUID(),

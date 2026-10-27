@@ -69,6 +69,11 @@ told stays open until it is, and a turn for the worse that was not sent is tried
 | `runner-silent`               | Cloud computers' runners that stop their heartbeats without closing their connection                                                           | 3 / 10 in 15 min                       |
 | `account-signed-out`          | An account marked `needs_sign_in` after 2 turns in a row failed for want of a login ("Not logged in · Please run /login")                      | 1 / 5 in 1 h                           |
 | `runner-restart`              | Cloud computers' runners not back 2 minutes after an update's restart                                                                          | 1 / 5 in 1 h                           |
+| `runner-reconnects`           | A computer's runner connecting 10 times within a minute: a reconnect storm                                                                     | 1 / 5 in 15 min                        |
+| `runner-outbox`               | Commands refused: too many wait for a computer that stays down (`src/runner-commands.ts`)                                                      | 1 / 20 in 30 min                       |
+| `api-reset`                   | The Api object restarted with the same version of the Worker, as it says itself once up                                                        | 1 / 3 in 30 min                        |
+| `jobs:dead`                   | Job messages that failed every try, waiting in `brigade-jobs-dlq` (once jobs are on the queue)                                                 | 1 / 20 waiting                         |
+| `jobs:late`                   | The jobs' queue holding a message for 10 minutes: its consumer fails or is slow                                                                | warning                                |
 | `job:<name>`                  | A background job throwing (schedules, wake-ups, mail, merges, cloud plans…)                                                                    | 3 / 10 in 15 min                       |
 | `job:<name>-sweep`            | An hourly sweep throwing                                                                                                                       | 2 / 3 in 3 h                           |
 | `computer:<id>`               | A cloud computer in `error`, stuck `creating`/`starting` for 20 min without its runner, or `running` with no runner for 10 min                 | critical, critical, warning            |
@@ -77,12 +82,19 @@ told stays open until it is, and a turn for the worse that was not sent is tried
 | `disk:<computerId>`           | A `disk_full` ticket open on a cloud computer                                                                                                  | warning                                |
 | `worker:<script>`             | A `brigade-*` Worker's or Durable Object's failed invocations (exceptions, exceeded limits), as Cloudflare counts them                         | 5 / 50 in 10 min (checked every 5 min) |
 | `api-down`                    | The watchdog: the Api object does not answer, or its checks fail                                                                               | critical                               |
+| `api-restarting`              | The watchdog: the Api object restarted 3 times in 15 minutes without a new version (`src/ops/restarts.ts`)                                     | critical                               |
 
 A failure-count problem ends once none came for a while (15 minutes to 3 hours, by kind).
 Computers of a workspace without a plan are meant to be off and are not checked.
 
 The counts are in the Api object's memory (`src/ops/failures.ts`). A restart forgets them:
-it only delays an alert, and resolves nothing until the quiet time has passed since.
+it only delays an alert, and resolves nothing until the quiet time has passed since. What
+fails in a workspace's hub object, the cron or the jobs' consumer is counted there too, sent
+by RPC.
+
+Each minute, the API logs what the hubs it holds hold (`hubs: hubs 3, runners 2, browsers 5,
+queued 0, …`), so a growth shows before it costs a restart. A workspace's hub object logs
+`hub <id>: woke with N sockets` each time it wakes.
 
 Turns failing in one workspace only are that workspace's trouble (its member's account, say),
 not Brigade's: those are not alerted on.
@@ -96,6 +108,11 @@ when the checks that need the database last succeeded: a database out of reach s
 and they could not alert on it themselves. When the object does not answer, or those checks
 have not succeeded for 10 minutes, the cron sends `api-down` itself, at most once an hour, and `resolved` once it is
 back. It reads the same secrets as the API.
+
+The object keeps each of its starts in its own storage, with the Worker's version
+(`CF_VERSION_METADATA`): a start with the same version as the one before is a restart no
+deploy explains, as on 2026-10-27, when it went past its memory again and again. The ping says
+how many there were in 15 minutes, and the cron sends `api-restarting` from 3.
 
 A whole Worker that does not deploy or load (its cron with it) is not seen from inside
 Cloudflare: for that, an uptime monitor outside (Better Stack, UptimeRobot…) on

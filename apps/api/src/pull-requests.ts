@@ -32,7 +32,6 @@ import { settleOnMerge } from './tasks.js'
 import { noteInThread, pullNote } from './thread-notes.js'
 import { loadThread } from './thread-spec.js'
 import { promptThread, startThread } from './work.js'
-import { noteFailure } from './ops/failures.js'
 
 /** The author's turns at resolving a merge's conflicts or failed checks before it stops and asks a person. */
 const MAX_ROUNDS = 3
@@ -1240,28 +1239,28 @@ export async function setPullState(
   })
 }
 
-let watching = false
+/** Workspaces with a pull request a person asked to merge, still open (src/jobs.ts). */
+export async function dueMerges() {
+  const rows = await prisma.pullRequest.findMany({
+    where: { state: 'open', mergeStatus: 'merging' },
+    distinct: ['workspaceId'],
+    select: { workspaceId: true },
+  })
+  return rows.map((r) => r.workspaceId)
+}
 
-/** Every minute: merge pull requests a person asked to merge, once GitHub allows it. */
-export function watchMerges() {
-  setInterval(() => {
-    if (watching) return
-    watching = true
-    void (async () => {
-      const rows = await prisma.pullRequest.findMany({
-        where: { state: 'open', mergeStatus: 'merging' },
-        select: { id: true, organizationId: true, workspaceId: true },
-      })
-      for (const r of rows)
-        await advanceMerge(
-          { organizationId: r.organizationId, workspaceId: r.workspaceId },
-          r.id,
-        ).catch((error) => console.warn(`merge check for ${r.id} failed: ${String(error)}`))
-    })()
-      .catch((error) => {
-        console.error(error)
-        noteFailure('job:merges', error)
-      })
-      .finally(() => (watching = false))
-  }, 60_000)
+/**
+ * Every minute, for one workspace or all: merge pull requests a person asked to merge, once
+ * GitHub allows it (src/jobs.ts).
+ */
+export async function advanceMerges(workspaceId?: string) {
+  const rows = await prisma.pullRequest.findMany({
+    where: { state: 'open', mergeStatus: 'merging', ...(workspaceId ? { workspaceId } : {}) },
+    select: { id: true, organizationId: true, workspaceId: true },
+  })
+  for (const r of rows)
+    await advanceMerge(
+      { organizationId: r.organizationId, workspaceId: r.workspaceId },
+      r.id,
+    ).catch((error) => console.warn(`merge check for ${r.id} failed: ${String(error)}`))
 }

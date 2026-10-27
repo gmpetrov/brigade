@@ -5,7 +5,9 @@ import { mock, test } from 'node:test'
 process.env.DATABASE_URL ??= 'postgresql://test@localhost/test'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
-const { browserSocket, isLooking } = await import('../src/hub.js')
+const { browserSocket, hubs } = await import('../src/hub.js')
+const isLooking = (memberId: string, withinMs: number) =>
+  hubs.get('ws').isLooking(memberId, withinMs)
 
 const scope = (memberId: string) => ({
   organizationId: 'org',
@@ -18,11 +20,11 @@ const ws = { send() {}, close() {} } as never
 const say = (socket: ReturnType<typeof browserSocket>, visible: boolean) =>
   socket.onMessage(JSON.stringify({ type: 'presence', visible }), ws)
 
-test('a socket that never says it is in view does not count as looking', () => {
+test('a socket that never says it is in view does not count as looking', async () => {
   // A thread's events or a terminal: their sockets send no presence.
   const socket = browserSocket(scope('silent'))
   socket.onOpen(ws)
-  assert.equal(isLooking('silent', 120_000), false)
+  assert.equal(await isLooking('silent', 120_000), false)
   socket.onClose()
 })
 
@@ -32,11 +34,11 @@ test('in view while it says so, then for a while after it leaves', async () => {
     const socket = browserSocket(scope('ada'))
     socket.onOpen(ws)
     await say(socket, true)
-    assert.equal(isLooking('ada', 120_000), true)
+    assert.equal(await isLooking('ada', 120_000), true)
     await say(socket, false)
-    assert.equal(isLooking('ada', 120_000), true, 'just left: still counts')
+    assert.equal(await isLooking('ada', 120_000), true, 'just left: still counts')
     mock.timers.tick(121_000)
-    assert.equal(isLooking('ada', 120_000), false)
+    assert.equal(await isLooking('ada', 120_000), false)
     socket.onClose()
   } finally {
     mock.timers.reset()
@@ -51,9 +53,9 @@ test('a phone that suspends the app without a word stops counting once its prese
     await say(socket, true)
     // The app went to the background; its socket stays open and says nothing more.
     mock.timers.tick(60_000)
-    assert.equal(isLooking('bob', 0), true)
+    assert.equal(await isLooking('bob', 0), true)
     mock.timers.tick(20_000)
-    assert.equal(isLooking('bob', 0), false)
+    assert.equal(await isLooking('bob', 0), false)
     socket.onClose()
   } finally {
     mock.timers.reset()

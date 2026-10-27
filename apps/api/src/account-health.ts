@@ -7,7 +7,7 @@
 // those switch accounts (account.switched, exhaustedUntil) and never count here.
 import type { SequencedEvent } from '@brigade/contracts'
 import { prisma, scoped, type Prisma } from './db.js'
-import { sendToMember } from './hub.js'
+import { hubs } from './hub.js'
 import { noteFailure } from './ops/failures.js'
 
 /** Turns failing for want of a login, in a row, before the account needs signing in again. */
@@ -164,7 +164,7 @@ export async function noteOneAccount(
     workspaceId: session.workspaceId,
   })
   // Their accounts page, if open, shows it needs signing in.
-  sendToMember(before.memberId, {
+  await hubs.get(session.workspaceId).sendToMember(before.memberId, {
     type: 'account.login',
     accountId,
     state: 'failed',

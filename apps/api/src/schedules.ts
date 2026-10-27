@@ -22,13 +22,12 @@ import { beginRun, reportRun, settleRun } from './playbooks.js'
 import { handleReviewCall, isReviewOperation } from './reviews.js'
 import { handleTriggerCall } from './trigger-calls.js'
 import { onDecided, type Live, type Resume } from './held-calls.js'
-import { broadcastSchedule, isOnline } from './hub.js'
+import { hubs, scheduleUpdated } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate, loadThread } from './thread-spec.js'
 import { projectWhere, usableProject } from './projects.js'
 import { handleWakeup, isWakeupOperation } from './wakeups.js'
 import { startThread } from './work.js'
-import { noteFailure } from './ops/failures.js'
 
 /** A thread still `starting` after this is taken as lost (e.g. its queued prompt went with a restart). */
 const STARTING_STALE_MS = 15 * 60_000
@@ -138,7 +137,7 @@ async function changed(scope: Scope, actor: Actor, action: string, id: string, d
     target: { type: 'schedule', id },
     ...(data ? { data: data as never } : {}),
   })
-  broadcastSchedule(scope.workspaceId, id)
+  void hubs.get(scope.workspaceId).broadcast(scheduleUpdated(id))
 }
 
 /** A new schedule, active at once, owned by the member whose accounts it runs on. */
@@ -333,7 +332,7 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
           payload: { scheduleId: schedule.id, memberId: schedule.ownerMemberId },
         } as never,
       })
-    broadcastSchedule(scope.workspaceId, schedule.id)
+    void hubs.get(scope.workspaceId).broadcast(scheduleUpdated(schedule.id))
     return { error: message }
   }
 
@@ -343,7 +342,9 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
     : null
   // The parent's computer, or the workspace computer, or else the owner's own machine.
   const computer =
-    (parent && (parent.computer.kind === 'cloud' || isOnline(parent.computer.id))
+    (parent &&
+    (parent.computer.kind === 'cloud' ||
+      (await hubs.get(parent.computer.workspaceId).isOnline(parent.computer.id)))
       ? parent.computer
       : null) ??
     (await db.computer.findFirst({ where: { kind: 'cloud', status: { not: 'destroyed' } } })) ??
@@ -360,7 +361,7 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
   if (run && 'skipped' in run) return { skipped: run.skipped }
   if (run && 'limit' in run) {
     await db.schedule.updateMany({ where: { id: schedule.id }, data: { lastError: run.limit } })
-    broadcastSchedule(scope.workspaceId, schedule.id)
+    void hubs.get(scope.workspaceId).broadcast(scheduleUpdated(schedule.id))
     return { error: run.limit }
   }
   const runId = run?.runId
@@ -392,7 +393,7 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
     if (outcome === 'offline') return failed('the computer is offline')
     if (schedule.lastError)
       await db.schedule.updateMany({ where: { id: schedule.id }, data: { lastError: null } })
-    broadcastSchedule(scope.workspaceId, schedule.id)
+    void hubs.get(scope.workspaceId).broadcast(scheduleUpdated(schedule.id))
     return { threadId: thread.id }
   } catch (error) {
     if (runId) await settleRun(db, runId, null)
@@ -401,62 +402,49 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
   }
 }
 
-let ticking = false
-
-/**
- * Fire every schedule that is due. Moving nextRunAt is the claim: only the tick
- * that moves it off the due value fires, so a firing never starts twice. The
- * next firing is counted from now, so missed ones (downtime) collapse into one.
- */
-async function tick() {
-  if (ticking) return
-  ticking = true
-  try {
-    const now = new Date()
-    const due = await prisma.schedule.findMany({
-      where: { pausedAt: null, nextRunAt: { lte: now } },
-      orderBy: { nextRunAt: 'asc' },
-      take: 100,
-      include: { teammate: true },
-    })
-    for (const schedule of due) {
-      let next: Date | null = null
-      try {
-        next = upcoming(schedule.cron, schedule.timezone)
-      } catch (error) {
-        console.error(`schedule ${schedule.id}: bad cron, it stops`, error)
-      }
-      const { count } = await prisma.schedule.updateMany({
-        where: { id: schedule.id, nextRunAt: schedule.nextRunAt },
-        data: { nextRunAt: next },
-      })
-      if (!count) continue
-      const result = await fire(schedule, schedule.nextRunAt!).catch((error: unknown) => {
-        console.error(`schedule ${schedule.id}: could not fire`, error)
-        return null
-      })
-      if (result && 'skipped' in result)
-        console.log(`schedule ${schedule.id}: skipped, ${result.skipped}`)
-    }
-  } finally {
-    ticking = false
-  }
+/** Workspaces with a schedule due now (src/jobs.ts). */
+export async function dueSchedules(now = new Date()) {
+  const rows = await prisma.schedule.findMany({
+    where: { pausedAt: null, nextRunAt: { lte: now } },
+    distinct: ['workspaceId'],
+    select: { workspaceId: true },
+  })
+  return rows.map((r) => r.workspaceId)
 }
 
-/** Tick at the start of every minute, so a 07:00 run starts at 07:00. */
-export function watchSchedules() {
-  const later = () =>
-    setTimeout(
-      () =>
-        void tick()
-          .catch((error) => {
-            console.error('schedule tick failed', error)
-            noteFailure('job:schedules', error)
-          })
-          .finally(later),
-      60_000 - (Date.now() % 60_000) + 250,
-    )
-  later()
+/**
+ * Fire every schedule that is due, of one workspace or all. Moving nextRunAt is the claim: only
+ * the run that moves it off the due value fires, so a firing never starts twice, even with two
+ * runs at once. The next firing is counted from now, so missed ones (downtime) collapse into one.
+ * Each minute, at its start, so a 07:00 run starts at 07:00 (src/jobs.ts).
+ */
+export async function fireDueSchedules(workspaceId?: string) {
+  const now = new Date()
+  const due = await prisma.schedule.findMany({
+    where: { pausedAt: null, nextRunAt: { lte: now }, ...(workspaceId ? { workspaceId } : {}) },
+    orderBy: { nextRunAt: 'asc' },
+    take: 100,
+    include: { teammate: true },
+  })
+  for (const schedule of due) {
+    let next: Date | null = null
+    try {
+      next = upcoming(schedule.cron, schedule.timezone)
+    } catch (error) {
+      console.error(`schedule ${schedule.id}: bad cron, it stops`, error)
+    }
+    const { count } = await prisma.schedule.updateMany({
+      where: { id: schedule.id, nextRunAt: schedule.nextRunAt },
+      data: { nextRunAt: next },
+    })
+    if (!count) continue
+    const result = await fire(schedule, schedule.nextRunAt!).catch((error: unknown) => {
+      console.error(`schedule ${schedule.id}: could not fire`, error)
+      return null
+    })
+    if (result && 'skipped' in result)
+      console.log(`schedule ${schedule.id}: skipped, ${result.skipped}`)
+  }
 }
 
 /** A member's timezone, as far as Brigade knows: their latest schedule's, else UTC. */
@@ -493,7 +481,7 @@ export async function handleScheduleCall(
   runner: Runner,
   call: Extract<RunnerToApi, { type: 'schedule.call' }>,
   reply: (message: ApiToRunner) => void,
-  options: { alive?: Live['alive']; resume?: Resume } = {},
+  options: { live?: Live; resume?: Resume } = {},
 ) {
   const scope: Scope = { organizationId: runner.organizationId, workspaceId: runner.workspaceId }
   const db = scoped(scope)
@@ -543,7 +531,8 @@ export async function handleScheduleCall(
     const answer = await handleTriggerCall(db, scope, session, teammate, op, {
       callId: call.callId,
       request: { sessionId: call.sessionId, teammateId: call.teammateId, operation: op },
-      live: { reply, alive: options.alive ?? (() => true) },
+      reply,
+      ...(options.live ? { live: options.live } : {}),
       ...(options.resume ? { resume: options.resume } : {}),
     })
     // Held for an admin's decision: the result comes once they decide (src/held-calls.ts).

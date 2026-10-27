@@ -219,6 +219,23 @@ export type EnumNotifyPresetWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumNotifyPresetFilter<$PrismaModel>
 }
 
+export type EnumHubModeFilter<$PrismaModel = never> = {
+  equals?: $Enums.HubMode | Prisma.EnumHubModeFieldRefInput<$PrismaModel>
+  in?: $Enums.HubMode[] | Prisma.ListEnumHubModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.HubMode[] | Prisma.ListEnumHubModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumHubModeFilter<$PrismaModel> | $Enums.HubMode
+}
+
+export type EnumHubModeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.HubMode | Prisma.EnumHubModeFieldRefInput<$PrismaModel>
+  in?: $Enums.HubMode[] | Prisma.ListEnumHubModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.HubMode[] | Prisma.ListEnumHubModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumHubModeWithAggregatesFilter<$PrismaModel> | $Enums.HubMode
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumHubModeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumHubModeFilter<$PrismaModel>
+}
+
 export type EnumComputerKindFilter<$PrismaModel = never> = {
   equals?: $Enums.ComputerKind | Prisma.EnumComputerKindFieldRefInput<$PrismaModel>
   in?: $Enums.ComputerKind[] | Prisma.ListEnumComputerKindFieldRefInput<$PrismaModel>
@@ -1278,6 +1295,23 @@ export type NestedEnumNotifyPresetWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumNotifyPresetFilter<$PrismaModel>
   _max?: Prisma.NestedEnumNotifyPresetFilter<$PrismaModel>
+}
+
+export type NestedEnumHubModeFilter<$PrismaModel = never> = {
+  equals?: $Enums.HubMode | Prisma.EnumHubModeFieldRefInput<$PrismaModel>
+  in?: $Enums.HubMode[] | Prisma.ListEnumHubModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.HubMode[] | Prisma.ListEnumHubModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumHubModeFilter<$PrismaModel> | $Enums.HubMode
+}
+
+export type NestedEnumHubModeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.HubMode | Prisma.EnumHubModeFieldRefInput<$PrismaModel>
+  in?: $Enums.HubMode[] | Prisma.ListEnumHubModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.HubMode[] | Prisma.ListEnumHubModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumHubModeWithAggregatesFilter<$PrismaModel> | $Enums.HubMode
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumHubModeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumHubModeFilter<$PrismaModel>
 }
 
 export type NestedEnumComputerKindFilter<$PrismaModel = never> = {

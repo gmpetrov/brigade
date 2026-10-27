@@ -60,31 +60,18 @@ import {
   livePreview,
   previewLogs,
   previewOffline,
+  previewOfflineIn,
   previewStates,
   startPreview,
   touchPreview,
 } from '../app-previews.js'
-import { ensureRunning, hostedPort } from '../cloud.js'
+import { desktopClipboard, hostedPort } from '../cloud.js'
 import { applyPick, checkPick } from '../designs.js'
 import { watchDesktop } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, mayAnswer, resolveTicket } from '../decide.js'
 import { prisma, type ScopedDb } from '../db.js'
-import {
-  broadcastSchedule,
-  broadcastTask,
-  broadcastThreadStatus,
-  desktopClipboard,
-  dispatch,
-  eventsWaitingSince,
-  isOnline,
-  isRestarting,
-  codeFiles,
-  findSource,
-  readThreadFile,
-  runnerProtocol,
-  sendToRunner,
-  writeThreadFile,
-} from '../hub.js'
+import { hubs, scheduleUpdated, taskUpdated, threadUpdated } from '../hub.js'
+import { codeFiles, findSource, readThreadFile, writeThreadFile } from '../runner-requests.js'
 import { contentTypeFor, isText } from '../library.js'
 import { projectWhere, usableProject } from '../projects.js'
 import { localPreviewUrl } from '../preview-gateway.js'
@@ -147,8 +134,11 @@ async function attachedTitle(db: ScopedDb, attachmentIds: string[]) {
 const openCapTicket = (db: ScopedDb, sessionId: string) =>
   db.ticket.findFirst({ where: { sessionId, type: 'cap', status: 'open' } })
 
-async function deliver(computer: { id: string; kind: string }, message: ApiToRunner) {
-  if ((await dispatch(computer, message)) === 'offline') {
+async function deliver(
+  computer: { id: string; kind: string; workspaceId: string },
+  message: ApiToRunner,
+) {
+  if ((await hubs.get(computer.workspaceId).dispatch(computer, message)) === 'offline') {
     throw new HTTPException(409, {
       message: 'That computer is offline. Start its runner and try again.',
     })
@@ -167,8 +157,11 @@ function mayPrompt(
 const isAdmin = (scope: WorkspaceScope) => scope.role === 'owner' || scope.role === 'admin'
 
 /** Editing code needs the computer on, with a runner that writes files (CODE_EDIT_PROTOCOL). */
-function requireCodeEdit(computerId: string, needs = CODE_EDIT_PROTOCOL) {
-  const protocol = runnerProtocol(computerId)
+async function requireCodeEdit(
+  computer: { id: string; workspaceId: string },
+  needs = CODE_EDIT_PROTOCOL,
+) {
+  const protocol = await hubs.get(computer.workspaceId).runnerProtocol(computer.id)
   if (protocol === undefined) throw new HTTPException(409, { message: 'The computer is offline' })
   if (protocol < needs)
     throw new HTTPException(409, {
@@ -177,14 +170,14 @@ function requireCodeEdit(computerId: string, needs = CODE_EDIT_PROTOCOL) {
 }
 
 /** The teammate of the thread whose working folder the code panel shows: one of its own. */
-function codeTeammate(
+async function codeTeammate(
   thread: LoadedThread,
   teammateId: string | undefined,
   needs = CODE_TREE_PROTOCOL,
 ) {
   if (!teammateId || !thread.teammates.some((t) => t.teammateId === teammateId))
     throw new HTTPException(400, { message: 'That teammate is not in this thread' })
-  requireCodeEdit(thread.computerId, needs)
+  await requireCodeEdit(thread.computer, needs)
   return teammateId
 }
 
@@ -355,6 +348,12 @@ export const threads = new Hono<AppEnv>()
       c.var.db,
       rows.map((r) => r.id),
     )
+    // How its computers are connected, and whose events wait on them: from the hub.
+    const hub = hubs.get(c.var.scope.workspaceId)
+    const [presence, waitingSince] = await Promise.all([
+      hub.presence([...new Set(rows.map((r) => r.computerId))]),
+      hub.eventsWaitingSince(rows.map((r) => r.id)),
+    ])
     // When this member last looked at each: a teammate's turn after it is unread for them.
     const reads = rows.length
       ? await c.var.db.threadRead.findMany({
@@ -381,9 +380,10 @@ export const threads = new Hono<AppEnv>()
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
           pinPosition: pins.find((p) => p.sessionId === row.id)?.position ?? null,
           laterAt: laters.get(row.id)?.toISOString() ?? null,
-          eventsWaitingSince: eventsWaitingSince(row.id),
+          eventsWaitingSince: waitingSince[row.id] ?? null,
           previewRunning:
-            !!previews.get(row.id) && !previewOffline({ id: row.computerId, ...row.computer }),
+            !!previews.get(row.id) &&
+            !previewOfflineIn(presence, { id: row.computerId, ...row.computer }),
         }
       }),
     )
@@ -491,17 +491,20 @@ export const threads = new Hono<AppEnv>()
     if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
     // This member's pin and later, for the thread's menu in its details.
     const mine = { memberId_sessionId: { memberId: c.var.scope.memberId, sessionId: thread.id } }
-    const [pin, later] = await Promise.all([
+    const hub = hubs.get(c.var.scope.workspaceId)
+    const [pin, later, presence, waitingSince] = await Promise.all([
       c.var.db.threadPin.findUnique({ where: mine, select: { pinnedAt: true } }),
       c.var.db.threadLater.findUnique({ where: mine, select: { laterAt: true } }),
+      hub.presence([thread.computer.id]),
+      hub.eventsWaitingSince([thread.id]),
     ])
     return c.json({
       ...thread,
       // Whether it is there, for everyone in the thread: /computers lists only the member's own.
       computer: {
         ...thread.computer,
-        online: isOnline(thread.computer.id),
-        restarting: isRestarting(thread.computer.id),
+        online: presence[thread.computer.id]?.online ?? false,
+        restarting: presence[thread.computer.id]?.restarting ?? false,
       },
       pinnedAt: pin?.pinnedAt.toISOString() ?? null,
       laterAt: later?.laterAt.toISOString() ?? null,
@@ -522,7 +525,7 @@ export const threads = new Hono<AppEnv>()
         }
       }),
       mayPrompt: thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt,
-      eventsWaitingSince: eventsWaitingSince(thread.id),
+      eventsWaitingSince: waitingSince[thread.id] ?? null,
       mailAliases: thread.mailAliases.map((a) => ({ ...a, address: addressOf(a.local) })),
     })
   })
@@ -635,7 +638,7 @@ export const threads = new Hono<AppEnv>()
     const library = candidates.map((p) => found.find((d) => d.path === p)).find(Boolean)
     if (library) return fromLibrary(library)
 
-    const result = await readThreadFile(thread.computerId, {
+    const result = await readThreadFile(thread.computer, {
       sessionId: thread.id,
       teammateIds: teammatesFirst(thread, c.req.query('teammateId')),
       path,
@@ -690,8 +693,8 @@ export const threads = new Hono<AppEnv>()
     const input = await parseBody(c.req.raw, SaveThreadFile)
     if (!thread.teammates.some((t) => t.teammateId === input.teammateId))
       throw new HTTPException(400, { message: 'That teammate is not in this thread' })
-    requireCodeEdit(thread.computerId)
-    const result = await writeThreadFile(thread.computerId, {
+    await requireCodeEdit(thread.computer)
+    const result = await writeThreadFile(thread.computer, {
       sessionId: thread.id,
       teammateId: input.teammateId,
       path: input.path,
@@ -717,9 +720,9 @@ export const threads = new Hono<AppEnv>()
    */
   .get('/:id/code', async (c) => {
     const thread = await loadThread(c.var.db, c.req.param('id'))
-    const teammateId = codeTeammate(thread, c.req.query('teammateId'))
+    const teammateId = await codeTeammate(thread, c.req.query('teammateId'))
     const result = codeAnswer(
-      await codeFiles(thread.computerId, {
+      await codeFiles(thread.computer, {
         sessionId: thread.id,
         teammateId,
         op: 'list',
@@ -735,11 +738,11 @@ export const threads = new Hono<AppEnv>()
   /** Files of a teammate's working folder by name (find), or lines holding a text (grep). */
   .get('/:id/code/:op{find|grep}', async (c) => {
     const thread = await loadThread(c.var.db, c.req.param('id'))
-    const teammateId = codeTeammate(thread, c.req.query('teammateId'))
+    const teammateId = await codeTeammate(thread, c.req.query('teammateId'))
     const query = (c.req.query('q') ?? '').trim().slice(0, 200)
     const op = c.req.param('op') as 'find' | 'grep'
     const result = codeAnswer(
-      await codeFiles(thread.computerId, { sessionId: thread.id, teammateId, op, query }),
+      await codeFiles(thread.computer, { sessionId: thread.id, teammateId, op, query }),
     )
     return c.json(op === 'find' ? { files: result.files ?? [] } : { matches: result.matches ?? [] })
   })
@@ -748,9 +751,9 @@ export const threads = new Hono<AppEnv>()
   .post('/:id/code/hashes', async (c) => {
     const thread = await loadThread(c.var.db, c.req.param('id'))
     const input = await parseBody(c.req.raw, CodeHashes)
-    const teammateId = codeTeammate(thread, input.teammateId)
+    const teammateId = await codeTeammate(thread, input.teammateId)
     const result = codeAnswer(
-      await codeFiles(thread.computerId, {
+      await codeFiles(thread.computer, {
         sessionId: thread.id,
         teammateId,
         op: 'hashes',
@@ -768,9 +771,9 @@ export const threads = new Hono<AppEnv>()
    */
   .get('/:id/code/changes', async (c) => {
     const thread = await loadThread(c.var.db, c.req.param('id'))
-    const teammateId = codeTeammate(thread, c.req.query('teammateId'), CODE_CHANGES_PROTOCOL)
+    const teammateId = await codeTeammate(thread, c.req.query('teammateId'), CODE_CHANGES_PROTOCOL)
     const result = codeAnswer(
-      await codeFiles(thread.computerId, { sessionId: thread.id, teammateId, op: 'changes' }),
+      await codeFiles(thread.computer, { sessionId: thread.id, teammateId, op: 'changes' }),
     )
     return c.json({
       changes: result.changes ?? [],
@@ -783,11 +786,11 @@ export const threads = new Hono<AppEnv>()
   /** A file as Changes compares it to, for the editor to show what changed; null: in none. */
   .get('/:id/code/original', async (c) => {
     const thread = await loadThread(c.var.db, c.req.param('id'))
-    const teammateId = codeTeammate(thread, c.req.query('teammateId'), CODE_CHANGES_PROTOCOL)
+    const teammateId = await codeTeammate(thread, c.req.query('teammateId'), CODE_CHANGES_PROTOCOL)
     const path = (c.req.query('path') ?? '').trim()
     if (!path || path.length > 1000) throw new HTTPException(400, { message: 'Which file?' })
     const result = codeAnswer(
-      await codeFiles(thread.computerId, {
+      await codeFiles(thread.computer, {
         sessionId: thread.id,
         teammateId,
         op: 'original',
@@ -807,10 +810,10 @@ export const threads = new Hono<AppEnv>()
     const thread = await loadThread(db, c.req.param('id'))
     requireMayPrompt(scope, thread)
     const input = await parseBody(c.req.raw, RevertCode)
-    const teammateId = codeTeammate(thread, input.teammateId, CODE_CHANGES_PROTOCOL)
+    const teammateId = await codeTeammate(thread, input.teammateId, CODE_CHANGES_PROTOCOL)
     const paths = [...new Set(input.paths)]
     const { base } = codeAnswer(
-      await codeFiles(thread.computerId, { sessionId: thread.id, teammateId, op: 'revert', paths }),
+      await codeFiles(thread.computer, { sessionId: thread.id, teammateId, op: 'revert', paths }),
     )
     const user = await prisma.user.findFirst({
       where: { id: scope.userId },
@@ -842,8 +845,8 @@ export const threads = new Hono<AppEnv>()
     const input = await parseBody(c.req.raw, FindSource)
     if (!thread.teammates.some((t) => t.teammateId === input.teammateId))
       throw new HTTPException(400, { message: 'That teammate is not in this thread' })
-    requireCodeEdit(thread.computerId)
-    const result = await findSource(thread.computerId, {
+    await requireCodeEdit(thread.computer)
+    const result = await findSource(thread.computer, {
       sessionId: thread.id,
       teammateId: input.teammateId,
       cwd: input.cwd,
@@ -863,7 +866,7 @@ export const threads = new Hono<AppEnv>()
     const path = (c.req.query('path') ?? '').trim().replace(/^\.\//, '')
     if (!path || path.length > 1000 || !VIEWABLE_FILE.test(path))
       throw new HTTPException(400, { message: 'Which image or PDF?' })
-    const result = await readThreadFile(thread.computerId, {
+    const result = await readThreadFile(thread.computer, {
       sessionId: thread.id,
       teammateIds: teammatesFirst(thread, c.req.query('teammateId')),
       path,
@@ -1135,7 +1138,7 @@ export const threads = new Hono<AppEnv>()
       if (data?.text === undefined)
         throw new HTTPException(409, { message: 'This message was already read.' })
     }
-    const protocol = runnerProtocol(thread.computer.id)
+    const protocol = await hubs.get(thread.workspaceId).runnerProtocol(thread.computer.id)
     if (protocol !== undefined && protocol < 11)
       throw new HTTPException(409, {
         message: "This computer's runner is too old to change queued messages. Update it.",
@@ -1298,7 +1301,7 @@ export const threads = new Hono<AppEnv>()
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     requireMayPrompt(scope, thread)
-    const protocol = runnerProtocol(thread.computer.id)
+    const protocol = await hubs.get(thread.workspaceId).runnerProtocol(thread.computer.id)
     if (protocol !== undefined && protocol < RETRY_PROTOCOL)
       throw new HTTPException(409, {
         message: "This computer's Brigade is too old to try a turn again. Send a message instead.",
@@ -1354,7 +1357,7 @@ export const threads = new Hono<AppEnv>()
     }
     if (thread.computer.status !== 'running') {
       if (thread.controlledByMemberId === scope.memberId) {
-        await ensureRunning(thread.computer.id)
+        await hubs.get(thread.workspaceId).ensureRunning(thread.computer.id)
         // 503: the dashboard asks again until the computer is up.
         throw new HTTPException(503, { message: 'Starting the cloud computer…' })
       }
@@ -1370,8 +1373,9 @@ export const threads = new Hono<AppEnv>()
       (await db.session.count({
         where: { computerId: thread.computer.id, controlledByMemberId: { not: null } },
       }))
-    if ((runnerProtocol(thread.computer.id) ?? 0) >= FOCUS_PROTOCOL && !(await inUse()))
-      sendToRunner(
+    const hub = hubs.get(thread.workspaceId)
+    if (((await hub.runnerProtocol(thread.computer.id)) ?? 0) >= FOCUS_PROTOCOL && !(await inUse()))
+      await hub.sendToRunner(
         thread.computer.id,
         { type: 'browser.focus', teammateId: currentTeammate(thread).id, sessionId: thread.id },
         { touch: false },
@@ -1401,16 +1405,16 @@ export const threads = new Hono<AppEnv>()
     const { touch } = await parseBody(c.req.raw, z.object({ touch: z.boolean().optional() }))
     const preview = await livePreview(db, thread)
     if (touch) {
-      touchPreview(thread.computer.id, thread.id)
+      await touchPreview(thread.computer, thread.id)
       return c.body(null, 204)
     }
     // Its events may be stale (the runner restarted): ask the runner, which also touches it.
-    const live = await previewLogs(thread.computer.id, thread.id)
+    const live = await previewLogs(thread.computer, thread.id)
     if (!live.ok)
       throw new HTTPException(409, {
         message: 'The preview is no longer running. Start it again from the preview panel.',
       })
-    touchPreview(thread.computer.id, thread.id)
+    await touchPreview(thread.computer, thread.id)
     // The runner's proxy in front of the app; the app itself from runners before it.
     const port = preview.publicPort ?? preview.port
     if (thread.computer.kind !== 'cloud')
@@ -1456,8 +1460,8 @@ export const threads = new Hono<AppEnv>()
   .get('/:id/preview/state', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
-    const latest = await latestPreview(db, thread.id, thread.computer.id)
-    const offline = previewOffline(thread.computer)
+    const latest = await latestPreview(db, thread.id, thread.computer)
+    const offline = await previewOffline(thread.computer)
     // Its events say it runs, but its computer is gone: it stopped with it.
     const preview =
       latest && offline && (latest.status === 'starting' || latest.status === 'running')
@@ -1481,7 +1485,11 @@ export const threads = new Hono<AppEnv>()
     const { action } = await parseBody(c.req.raw, z.object({ action: PreviewAction }))
     await livePreview(db, thread)
     if (
-      !sendToRunner(thread.computer.id, { type: 'preview.control', sessionId: thread.id, action })
+      !(await hubs.get(thread.workspaceId).sendToRunner(thread.computer.id, {
+        type: 'preview.control',
+        sessionId: thread.id,
+        action,
+      }))
     )
       throw new HTTPException(409, { message: 'The computer is offline' })
     await audit({
@@ -1498,7 +1506,7 @@ export const threads = new Hono<AppEnv>()
     const { db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     await livePreview(db, thread)
-    const result = await previewLogs(thread.computer.id, thread.id)
+    const result = await previewLogs(thread.computer, thread.id)
     if (!result.ok) throw new HTTPException(409, { message: result.error ?? 'No output' })
     return c.json({ text: result.text ?? '' })
   })
@@ -1515,7 +1523,7 @@ export const threads = new Hono<AppEnv>()
     }
     const { text } = await parseBody(c.req.raw, DesktopClipboard)
     try {
-      return c.json({ text: await desktopClipboard(thread.computer.id, text) })
+      return c.json({ text: await desktopClipboard(thread.computer, text) })
     } catch (error) {
       throw new HTTPException(503, { message: (error as Error).message })
     }
@@ -1603,7 +1611,7 @@ export const threads = new Hono<AppEnv>()
         where: { id: { in: reporting.map((s) => s.id) } },
         data: { projectId: next },
       })
-      for (const s of reporting) broadcastSchedule(scope.workspaceId, s.id)
+      for (const s of reporting) void hubs.get(scope.workspaceId).broadcast(scheduleUpdated(s.id))
     }
     await audit({
       ...scope,
@@ -1612,7 +1620,7 @@ export const threads = new Hono<AppEnv>()
       target: { type: 'thread', id: thread.id },
       data: { from: thread.projectId, to: next },
     })
-    broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
+    void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, thread.status))
     return c.json({ ok: true })
   })
 
@@ -1637,7 +1645,7 @@ export const threads = new Hono<AppEnv>()
       target: { type: 'thread', id: thread.id },
       data: { from: thread.title, to: title },
     })
-    broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
+    void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, thread.status))
     return c.json({ ok: true })
   })
 
@@ -1744,8 +1752,8 @@ export const threads = new Hono<AppEnv>()
       { type: 'member', id: scope.memberId },
       thread.id,
     )
-    broadcastThreadStatus(scope.workspaceId, thread.id, 'deleted')
-    if (taskId) broadcastTask(scope.workspaceId, taskId)
+    void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, 'deleted'))
+    if (taskId) void hubs.get(scope.workspaceId).broadcast(taskUpdated(taskId))
     return c.json({ ok: true })
   })
 
@@ -1773,6 +1781,6 @@ export const threads = new Hono<AppEnv>()
       target: { type: 'thread', id: thread.id },
       data: input,
     })
-    broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
+    void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, thread.status))
     return c.json({ ok: true })
   })

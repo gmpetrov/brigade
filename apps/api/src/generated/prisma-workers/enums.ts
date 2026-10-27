@@ -9,6 +9,14 @@
 * 🟢 You can import this file directly.
 */
 
+export const HubMode = {
+  api: 'api',
+  object: 'object'
+} as const
+
+export type HubMode = (typeof HubMode)[keyof typeof HubMode]
+
+
 export const ComputerKind = {
   cloud: 'cloud',
   member_machine: 'member_machine'

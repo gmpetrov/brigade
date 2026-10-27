@@ -4,17 +4,11 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { billingEnabled, cloudEntitled, requireCloudPlan } from '../billing.js'
-import {
-  cloudAvailable,
-  createWorkspaceComputer,
-  desktopUrl,
-  ensureRunning,
-  stopComputer,
-} from '../cloud.js'
+import { cloudAvailable, createWorkspaceComputer, desktopUrl } from '../cloud.js'
 import { lastReplacement, replaceComputer } from '../cloud-replace.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
-import { connectedBundle, hashToken, isOnline, isRestarting } from '../hub.js'
+import { hashToken, hubs } from '../hub.js'
 import { issueLinkCode, redeemLinkCode } from '../link-codes.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import { runnerBundle } from './runner-install.js'
@@ -44,6 +38,7 @@ export const computers = new Hono<AppEnv>()
       orderBy: { createdAt: 'asc' },
     })
     const served = await runnerBundle()
+    const presence = await hubs.get(c.var.scope.workspaceId).presence(rows.map((r) => r.id))
     return c.json({
       cloudAvailable: cloudAvailable(),
       // With billing on, the cloud computer comes with the workspace's Cloud plan.
@@ -52,10 +47,10 @@ export const computers = new Hono<AppEnv>()
       computers: await Promise.all(
         rows.map(async ({ providerRef: _ref, ...row }) => ({
           ...row,
-          online: isOnline(row.id),
+          online: presence[row.id]?.online ?? false,
           // Its runner restarts into an update: online all along, but not working for a minute.
-          restarting: isRestarting(row.id),
-          runnerUpdate: runnerUpdate(served, connectedBundle(row.id)),
+          restarting: presence[row.id]?.restarting ?? false,
+          runnerUpdate: runnerUpdate(served, presence[row.id]?.bundle),
           // Its latest move onto a new VM (cloud-replace.ts), under way or done.
           replacement: row.kind === 'cloud' ? await lastReplacement(row.id) : null,
         })),
@@ -108,7 +103,7 @@ export const computers = new Hono<AppEnv>()
       where: { id: c.req.param('id'), kind: 'cloud' },
     })
     if (!computer) throw new HTTPException(404, { message: 'Computer not found' })
-    await ensureRunning(computer.id)
+    await hubs.get(computer.workspaceId).ensureRunning(computer.id)
     return c.json({ ok: true })
   })
 
@@ -118,7 +113,9 @@ export const computers = new Hono<AppEnv>()
       where: { id: c.req.param('id'), kind: 'cloud' },
     })
     if (!computer) throw new HTTPException(404, { message: 'Computer not found' })
-    await stopComputer(computer, { type: 'member', id: c.var.scope.memberId })
+    await hubs
+      .get(computer.workspaceId)
+      .stopComputer(computer, { type: 'member', id: c.var.scope.memberId })
     return c.json({ ok: true })
   })
 
@@ -145,7 +142,7 @@ export const computers = new Hono<AppEnv>()
       where: { id: c.req.param('id'), kind: 'cloud' },
     })
     if (!computer) throw new HTTPException(404, { message: 'Computer not found' })
-    await ensureRunning(computer.id)
+    await hubs.get(computer.workspaceId).ensureRunning(computer.id)
     const url = await desktopUrl(computer)
     if (!url)
       throw new HTTPException(409, {
@@ -166,7 +163,9 @@ export const runnerLink = new Hono().post('/link', async (c) => {
   const grant = await redeemLinkCode(input.code)
   if (!grant) throw new HTTPException(404, { message: 'This link code is invalid or has expired' })
 
-  const token = randomBytes(32).toString('base64url')
+  // Its workspace first: the API's front routes the runner's socket to that workspace's hub by it
+  // (src/front.ts), before anything is looked up. The whole token is the secret, hashed.
+  const token = `${grant.workspaceId}.${randomBytes(32).toString('base64url')}`
   const { computer, workspace } = await prisma.$transaction(async (tx) => {
     const workspace = await tx.workspace.findFirstOrThrow({
       where: { id: grant.workspaceId, organizationId: grant.organizationId },
@@ -245,7 +244,12 @@ export const runnerLink = new Hono().post('/link', async (c) => {
     data: { name: input.name, platform: input.platform },
   })
   return c.json(
-    { token, computerId: computer.id, workspaceName: workspace.name } satisfies RunnerLinkResult,
+    {
+      token,
+      computerId: computer.id,
+      workspaceName: workspace.name,
+      workspaceId: workspace.id,
+    } satisfies RunnerLinkResult,
     201,
   )
 })

@@ -183,9 +183,12 @@ describe('replacing a cloud computer', { skip: !database && 'no database answers
       'restoring',
     )
 
-    await onRestored(
-      { ...scope, computerId: ids.cloud },
-      { id: row.id, problems: [{ teammateId: ids.kai, text: 'its browser did not come back' }] },
+    const { inWorkspaceHub } = await import('./in-hub.js')
+    await inWorkspaceHub(scope.workspaceId, () =>
+      onRestored(
+        { ...scope, computerId: ids.cloud },
+        { id: row.id, problems: [{ teammateId: ids.kai, text: 'its browser did not come back' }] },
+      ),
     )
     assert.equal(await restoring(ids.cloud), false)
     assert.equal(await restoreFor(ids.cloud), undefined)

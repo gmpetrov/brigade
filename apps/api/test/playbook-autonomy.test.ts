@@ -652,37 +652,41 @@ describe('through the database', { skip: !database && 'no database answers' }, (
    */
   async function write(operation: string, input: unknown, decide?: { approved: boolean }) {
     const { handleConnectorCall, decideTicket } = await import('../src/connector-calls.js')
-    const heard: {
-      type: string
-      ticketId?: string
-      reason?: string
-      ok?: boolean
-      error?: string
-    }[] = []
-    let pending: (ticketId: string) => void = () => {}
-    const asked = new Promise<string>((resolve) => (pending = resolve))
-    const done = handleConnectorCall(
-      { computerId: ids.computer, ...scope },
-      {
-        type: 'connector.call',
-        callId: randomUUID(),
-        sessionId: ids.session,
-        connectionId: ids.gmail,
-        operation,
-        input,
-      },
-      (message) => {
-        heard.push(message as never)
-        if (message.type === 'connector.pending') pending(message.ticketId)
-      },
+    const { fakeRunner } = await import('./in-hub.js')
+    const runner = await fakeRunner(scope, ids.computer)
+    const callId = randomUUID()
+    const heard = () =>
+      runner.sent.filter((m) => m.callId === callId) as {
+        type: string
+        ticketId?: string
+        reason?: string
+        ok?: boolean
+        error?: string
+      }[]
+    await runner.run(() =>
+      handleConnectorCall(
+        { computerId: ids.computer, ...scope },
+        {
+          type: 'connector.call',
+          callId,
+          sessionId: ids.session,
+          connectionId: ids.gmail,
+          operation,
+          input,
+        },
+        runner.reply as never,
+        { live: runner.live },
+      ),
     )
-    const first = await Promise.race([asked, done.then(() => null)])
+    const first = heard().find((m) => m.type === 'connector.pending')?.ticketId
     if (first) {
       assert.ok(decide, `${operation} asked a person`)
       await decideTicket({ ...scope, memberId: ids.owner }, first, decide)
-      await done
+      for (let i = 0; i < 200 && !heard().some((m) => m.type === 'connector.result'); i++)
+        await new Promise((resolve) => setTimeout(resolve, 20))
     }
-    return heard
+    runner.close()
+    return heard()
   }
   const mail = { to: ['jane@customer.test'], subject: 'Re: login', body: 'Here is how.' }
   /** What a call on its own of action `key` reserves of its caps. */

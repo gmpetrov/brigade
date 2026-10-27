@@ -14,7 +14,7 @@ import {
 } from './bucket.js'
 import { forgetPreviewAddress } from './cloud.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
-import { broadcastSchedule, runnerProtocol, sendToRunner } from './hub.js'
+import { hubs, scheduleUpdated } from './hub.js'
 
 /** While a teammate works in it, the thread's computer is still writing to it. */
 const BUSY = new Set(['starting', 'running'])
@@ -128,7 +128,7 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
       target: { type: 'schedule', id: schedule.id },
       data: { title: schedule.title, with: { type: 'thread', id: sessionId } },
     })
-    broadcastSchedule(scope.workspaceId, schedule.id)
+    void hubs.get(scope.workspaceId).broadcast(scheduleUpdated(schedule.id))
   }
   // Its runs are among the children, so they go here with their files.
   for (const child of children) await deleteThread(db, scope, actor, child.id)
@@ -164,8 +164,13 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
   forgetPreviewAddress(sessionId)
   // Its folders on its computer go too, or nothing ever removes them there. A computer
   // offline now is told when it tries to archive one (runner-folders.ts, 410).
-  if (thread.computerId && (runnerProtocol(thread.computerId) ?? 0) >= DELETE_PROTOCOL)
-    sendToRunner(thread.computerId, { type: 'thread.deleted', sessionId }, { touch: false })
+  const hub = hubs.get(scope.workspaceId)
+  if (thread.computerId && ((await hub.runnerProtocol(thread.computerId)) ?? 0) >= DELETE_PROTOCOL)
+    await hub.sendToRunner(
+      thread.computerId,
+      { type: 'thread.deleted', sessionId },
+      { touch: false },
+    )
   return { taskId: thread.taskId }
 }
 

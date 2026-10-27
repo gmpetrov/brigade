@@ -14,6 +14,7 @@ import {
   type ThreadSpec,
 } from '@brigade/contracts'
 import { prisma } from './db.js'
+import { perHub } from './hub/context.js'
 
 /** A part this small goes inline: a fetch would cost more than it saves. */
 const INLINE_BYTES = 2048
@@ -25,7 +26,7 @@ const TOUCH_EVERY_MS = 6 * 3600_000
 /** Parts this process kept lately, by workspace and hash: when it last set their usedAt. */
 const kept = new Map<string, number>()
 /** Parts being kept now, by workspace and hash: specs naming the same one write it once. */
-const keeping = new Map<string, Promise<void>>()
+const keeping = perHub('spec-parts-keeping', () => new Map<string, Promise<void>>())
 
 /** What a spec's part is once named by its hash. */
 const EMPTY: { [K in SpecPart]: ThreadSpec[K] } = {
@@ -45,7 +46,8 @@ function keep(workspaceId: string, hash: string, content: string) {
   const key = `${workspaceId}:${hash}`
   const now = Date.now()
   if (now - (kept.get(key) ?? 0) < TOUCH_EVERY_MS) return Promise.resolve()
-  const pending = keeping.get(key)
+  const writes = keeping()
+  const pending = writes.get(key)
   if (pending) return pending
   const write = prisma.specPart
     .upsert({
@@ -61,8 +63,8 @@ function keep(workspaceId: string, hash: string, content: string) {
       if (kept.size > 10_000) kept.clear()
       kept.set(key, now)
     })
-    .finally(() => keeping.delete(key))
-  keeping.set(key, write)
+    .finally(() => writes.delete(key))
+  writes.set(key, write)
   return write
 }
 

@@ -351,9 +351,11 @@ export const RunnerLink = z.object({
   machineId: z.string().max(128).optional(),
 })
 export const RunnerLinkResult = z.object({
+  /** `<workspaceId>.<secret>`: the API's front routes the runner's socket to its workspace's hub. */
   token: z.string(),
   computerId: z.string(),
   workspaceName: z.string(),
+  workspaceId: z.string().optional(),
 })
 export type RunnerLinkResult = z.infer<typeof RunnerLinkResult>
 
@@ -386,6 +388,12 @@ export const BrowserToApi = z.discriminatedUnion('type', [
   z.object({ type: z.literal('terminal.close'), terminalId: z.string() }),
   /** The dashboard is in view or not: notifications wait while a member is looking. */
   z.object({ type: z.literal('presence'), visible: z.boolean() }),
+  /**
+   * Still here, every 30 s, sent exactly as KEEPALIVE: a workspace's hub object answers it with
+   * the same without waking, and the socket never looks idle (Cloudflare closes one silent for a
+   * minute).
+   */
+  z.object({ type: z.literal('keepalive') }),
 ])
 export type BrowserToApi = z.infer<typeof BrowserToApi>
 
@@ -466,5 +474,7 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
   z.object({ type: z.literal('error'), message: z.string() }),
   /** Keeps the socket from looking idle: Cloudflare closes one silent for a minute. */
   z.object({ type: z.literal('ping') }),
+  /** The answer to the dashboard's keepalive. */
+  z.object({ type: z.literal('keepalive') }),
 ])
 export type ApiToBrowser = z.infer<typeof ApiToBrowser>

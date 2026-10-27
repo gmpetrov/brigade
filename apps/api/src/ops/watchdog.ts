@@ -10,6 +10,8 @@ export type Pulse = {
   checksAt: number
   /** Why they failed since, if they did: the database out of reach, say. */
   error?: string | null
+  /** Its restarts no deploy explains, lately (src/ops/restarts.ts). */
+  restarts?: number
 }
 
 /** Checks that have not run for this long have stopped (they run each minute). */
@@ -29,24 +31,30 @@ export function diagnose(pulse: Pulse | Error, now: number): string | null {
 /** Told about at most this often while it lasts, as the keys below make it to receivers. */
 const EVERY_MS = 60 * 60_000
 
+/** What the watchdog tells: the object down, or restarting without a deploy. */
+export const API_DOWN = { key: 'api-down', title: 'Brigade API down' }
+export const API_RESTARTING = { key: 'api-restarting', title: 'Brigade API restarting' }
+
 /** In this isolate's memory only: a new isolate may tell once more, within EVERY_MS's keys. */
-let down: { since: number; toldAt: number } | null = null
+const downs = new Map<string, { since: number; toldAt: number }>()
 
 /**
  * Tell operators the API is down, at most once an hour, and that it is back. The notice's
  * time is rounded to the hour, so receivers that keep one per id (Resend's idempotency keys,
  * Brigade's custom apps) keep one an hour even when each cron run is a new isolate.
  */
-export async function watchdog(to: Destinations, problem: string | null, now = Date.now()) {
-  const base = {
-    key: 'api-down',
-    severity: 'critical' as const,
-    title: 'Brigade API down',
-  }
+export async function watchdog(
+  to: Destinations,
+  problem: string | null,
+  now = Date.now(),
+  what = API_DOWN,
+) {
+  const base = { ...what, severity: 'critical' as const }
+  const down = downs.get(what.key)
   if (!problem) {
     if (!down) return
     const since = down.since
-    down = null
+    downs.delete(what.key)
     await sendNotice(to, {
       ...base,
       kind: 'resolved',
@@ -56,8 +64,9 @@ export async function watchdog(to: Destinations, problem: string | null, now = D
     })
     return
   }
-  down ??= { since: now, toldAt: 0 }
-  if (now - down.toldAt < EVERY_MS) return
+  const state = down ?? { since: now, toldAt: 0 }
+  downs.set(what.key, state)
+  if (now - state.toldAt < EVERY_MS) return
   const notice: Notice = {
     ...base,
     kind: 'firing',
@@ -66,5 +75,5 @@ export async function watchdog(to: Destinations, problem: string | null, now = D
     at: new Date(Math.floor(now / EVERY_MS) * EVERY_MS),
   }
   await sendNotice(to, notice)
-  down.toldAt = now
+  state.toldAt = now
 }

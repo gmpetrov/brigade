@@ -1,7 +1,7 @@
 'use client'
 import { ApiToBrowser, type BrowserToApi } from '@brigade/contracts'
 import { useEffect, useRef } from 'react'
-import { WS_URL } from './config'
+import { keepAlive, liveSocket } from './live-socket'
 
 type Listener = (message: ApiToBrowser) => void
 
@@ -19,15 +19,20 @@ function open() {
   let retry: ReturnType<typeof setTimeout> | undefined
   let stopped = false
   let dropped = false
+  let alive: (() => void) | undefined
+  const visible = () => document.visibilityState === 'visible' && document.hasFocus()
   // Whether the member is looking at this dashboard: notifications wait meanwhile. Each
-  // message holds for a little over a minute, so it is repeated while in view.
+  // message holds for a little over a minute, so it is repeated while in view; a dashboard out of
+  // view says so once, and then only that it is still there (keepAlive), which lets the
+  // workspace's hub sleep.
   const presence = () => {
     if (socket?.readyState !== WebSocket.OPEN) return
-    const visible = document.visibilityState === 'visible' && document.hasFocus()
-    socket.send(JSON.stringify({ type: 'presence', visible } satisfies BrowserToApi))
+    socket.send(JSON.stringify({ type: 'presence', visible: visible() } satisfies BrowserToApi))
   }
   const connect = () => {
-    socket = new WebSocket(`${WS_URL}/api/ws`)
+    alive?.()
+    socket = liveSocket()
+    alive = keepAlive(socket)
     socket.onopen = () => {
       presence()
       if (!dropped) return
@@ -44,7 +49,9 @@ function open() {
     }
   }
   connect()
-  const repeat = setInterval(presence, 30_000)
+  const repeat = setInterval(() => {
+    if (visible()) presence()
+  }, 30_000)
   document.addEventListener('visibilitychange', presence)
   window.addEventListener('focus', presence)
   window.addEventListener('blur', presence)
@@ -55,6 +62,7 @@ function open() {
     window.removeEventListener('blur', presence)
     stopped = true
     clearTimeout(retry)
+    alive?.()
     socket?.close()
   }
 }

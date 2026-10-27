@@ -49,7 +49,13 @@ export async function handleTriggerCall(
    * The runner's call, which waits for a person with its ticket (src/held-calls.ts); or, carried
    * out once they decided, their decision (resume).
    */
-  call: { callId: string; request: object; live: Live; resume?: Resume },
+  call: {
+    callId: string
+    request: object
+    reply: (message: ApiToRunner) => void
+    live?: Live
+    resume?: Resume
+  },
 ): Promise<Output | { held: true }> {
   if (op.name === 'list_triggers') {
     const [connections, mine] = await Promise.all([
@@ -187,7 +193,8 @@ export async function handleTriggerCall(
           `instructions, on the accounts of the member who started this thread. Only an owner or admin can allow it.` +
           (op.reason ? ` ${op.reason}` : ''),
       },
-      live: call.live,
+      reply: call.reply,
+      ...(call.live ? { live: call.live } : {}),
     })
     return { held: true }
   }

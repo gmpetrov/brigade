@@ -170,45 +170,53 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     body: 'It is on its way.',
   }
 
-  /** Sam sends the mail, as its runner asks; what the runner hears, and when its call ends. */
-  function send(alive: () => boolean = () => true) {
-    const heard: Sent[] = []
-    const done = import('../src/connector-calls.js').then(({ handleConnectorCall }) =>
-      handleConnectorCall(
-        { computerId: ids.laptop, ...scope },
-        {
-          type: 'connector.call',
-          callId: randomUUID(),
-          sessionId: ids.session,
-          teammateId: ids.sam,
-          connectionId: ids.gmail,
-          operation: 'gmail_send',
-          input: mail,
-        },
-        (message) => heard.push(message as Sent),
-        { alive },
-      ),
-    )
-    return { heard, done }
+  /**
+   * Sam sends the mail, as its runner asks on its connection (a new one, unless given): what that
+   * connection hears of this call.
+   */
+  async function send(on?: Awaited<ReturnType<typeof connect>>) {
+    const conn = on ?? (await connect())
+    const callId = randomUUID()
+    void conn.say({
+      type: 'connector.call',
+      callId,
+      sessionId: ids.session,
+      teammateId: ids.sam,
+      connectionId: ids.gmail,
+      operation: 'gmail_send',
+      input: mail,
+    })
+    return {
+      conn,
+      get heard() {
+        return conn.sent.filter((m) => m.callId === callId)
+      },
+    }
   }
-  const pendingOf = async (heard: Sent[]) => {
-    await until(() => heard.some((m) => m.type === 'connector.pending'), 'the call to wait')
-    return heard.find((m) => m.type === 'connector.pending')!.ticketId as string
+  const pendingOf = async (call: { heard: Sent[] }) => {
+    await until(() => call.heard.some((m) => m.type === 'connector.pending'), 'the call to wait')
+    return call.heard.find((m) => m.type === 'connector.pending')!.ticketId as string
+  }
+  /** As a restart of the workspace's hub leaves it: no tool waits on a connection any more. */
+  const forgetWaiters = async () => {
+    const { forgetWaiters } = await import('../src/held-calls.js')
+    const { localHub } = await import('../src/hub/memory-host.js')
+    const { inHub } = await import('../src/hub/context.js')
+    const hub = localHub(scope.workspaceId)
+    inHub(hub, forgetWaiters)
   }
 
   test('a decision after an API restart: the write is made once, and the thread hears it', async () => {
     const { decideTicket } = await import('../src/connector-calls.js')
-    const { forgetWaiters } = await import('../src/held-calls.js')
     const before = sends.length
-    const call = send()
-    const ticketId = await pendingOf(call.heard)
+    const call = await send()
+    const ticketId = await pendingOf(call)
     const held = await db.heldCall.findFirstOrThrow({ where: { ticketId } })
     assert.equal(held.status, 'waiting')
     assert.equal(held.kind, 'connector')
 
-    // The API restarts: nothing waits for the decision in this process any more.
-    forgetWaiters()
-    await call.done
+    // The API restarts: nothing waits for the decision in its hub any more.
+    await forgetWaiters()
     assert.equal(
       await decideTicket({ ...scope, memberId: ids.owner }, ticketId, { approved: true }),
       true,
@@ -248,12 +256,11 @@ describe('work kept in the database', { skip: !database && 'no database answers'
 
   test('a decision the restart caught before the call was made: the tick makes it, once', async () => {
     const { decideTicket } = await import('../src/connector-calls.js')
-    const { forgetWaiters, settleHeldCalls } = await import('../src/held-calls.js')
+    const { settleHeldCalls } = await import('../src/held-calls.js')
     const before = sends.length
-    const call = send()
-    const ticketId = await pendingOf(call.heard)
-    forgetWaiters()
-    await call.done
+    const call = await send()
+    const ticketId = await pendingOf(call)
+    await forgetWaiters()
     // Decided, and the API stopped before it made the call (as decideTicket leaves it then).
     await db.heldCall.updateMany({
       where: { ticketId },
@@ -273,12 +280,11 @@ describe('work kept in the database', { skip: !database && 'no database answers'
   })
 
   test('one cut off while it was made is not made again: the thread is told to check', async () => {
-    const { forgetWaiters, settleHeldCalls } = await import('../src/held-calls.js')
+    const { settleHeldCalls } = await import('../src/held-calls.js')
     const before = sends.length
-    const call = send()
-    const ticketId = await pendingOf(call.heard)
-    forgetWaiters()
-    await call.done
+    const call = await send()
+    const ticketId = await pendingOf(call)
+    await forgetWaiters()
     await db.heldCall.updateMany({
       where: { ticketId },
       data: {
@@ -297,22 +303,24 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     const { decideTicket } = await import('../src/connector-calls.js')
     const before = sends.length
     const tickets = await db.ticket.count({ where: { sessionId: ids.session } })
-    // The first call's connection drops (alive no more); the teammate calls again, as told.
-    let first = true
-    const one = send(() => first)
-    const ticketId = await pendingOf(one.heard)
-    first = false
-    const two = send()
-    assert.equal(await pendingOf(two.heard), ticketId, 'the same ticket')
+    // The first call's connection drops (another takes over); the teammate calls again, as told.
+    const one = await send()
+    const ticketId = await pendingOf(one)
+    const again = await connect()
+    const two = await send(again)
+    assert.equal(await pendingOf(two), ticketId, 'the same ticket')
     // And a third at the same moment as a fourth: still one ticket.
-    const three = send()
-    const four = send()
-    assert.equal(await pendingOf(three.heard), ticketId)
-    assert.equal(await pendingOf(four.heard), ticketId)
+    const three = await send(again)
+    const four = await send(again)
+    assert.equal(await pendingOf(three), ticketId)
+    assert.equal(await pendingOf(four), ticketId)
     assert.equal(await db.ticket.count({ where: { sessionId: ids.session } }), tickets + 1)
 
     await decideTicket({ ...scope, memberId: ids.owner }, ticketId, { approved: true })
-    await Promise.all([one.done, two.done, three.done, four.done])
+    await until(
+      () => [two, three, four].every((c) => c.heard.some((m) => m.type === 'connector.result')),
+      'the result',
+    )
     assert.equal(sends.length - before, 1, 'one mail')
     for (const call of [two, three, four]) {
       const result = call.heard.find((m) => m.type === 'connector.result')
@@ -330,12 +338,10 @@ describe('work kept in the database', { skip: !database && 'no database answers'
 
   test('a denial after a restart: nothing is sent, and the thread hears why', async () => {
     const { decideTicket } = await import('../src/connector-calls.js')
-    const { forgetWaiters } = await import('../src/held-calls.js')
     const before = sends.length
-    const call = send()
-    const ticketId = await pendingOf(call.heard)
-    forgetWaiters()
-    await call.done
+    const call = await send()
+    const ticketId = await pendingOf(call)
+    await forgetWaiters()
     await decideTicket({ ...scope, memberId: ids.owner }, ticketId, {
       approved: false,
       reason: 'Not this customer',
@@ -364,6 +370,12 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     action: 'cancel' as const,
     memberId: ids.owner,
   })
+  /** The workspace's hub, its operations bound. */
+  const hubOf = async () => {
+    const { hubs } = await import('../src/hub.js')
+    const hub = hubs.get(scope.workspaceId)
+    return { dispatch: hub.dispatch.bind(hub) }
+  }
   /** A runner connecting with this protocol: its socket and what it is sent. */
   async function connect(protocolVersion = OUTBOX_PROTOCOL) {
     const { runnerSocket } = await import('../src/hub.js')
@@ -376,7 +388,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
   }
 
   test('a command not acknowledged is sent again after a reconnect, and not once acknowledged', async () => {
-    const { dispatch } = await import('../src/hub.js')
+    const { dispatch } = await hubOf()
     const first = await connect()
     const command = queuedCommand()
     assert.equal(await dispatch({ id: ids.laptop, kind: 'member_machine' }, command), 'sent')
@@ -412,7 +424,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
   })
 
   test('a runner too old to acknowledge takes each command once, as before', async () => {
-    const { dispatch } = await import('../src/hub.js')
+    const { dispatch } = await hubOf()
     const old = await connect(OUTBOX_PROTOCOL - 1)
     const command = queuedCommand()
     await dispatch({ id: ids.laptop, kind: 'member_machine' }, command)
@@ -429,7 +441,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
   })
 
   test("a kept command goes with its thread's latest arrival, and not once the thread left", async () => {
-    const { dispatch } = await import('../src/hub.js')
+    const { dispatch } = await hubOf()
     const { ThreadSpec } = await import('@brigade/contracts')
     const thread = ThreadSpec.parse({
       sessionId: ids.session,
@@ -498,7 +510,9 @@ describe('work kept in the database', { skip: !database && 'no database answers'
   })
 
   test('a cloud computer that takes over 10 minutes to start still gets its commands', async () => {
-    const { dispatch, runnerSocket, resendCommands } = await import('../src/hub.js')
+    const { dispatch } = await hubOf()
+    const { runnerSocket } = await import('../src/hub.js')
+    const { resendCommands } = await import('../src/runner-commands.js')
     const command = { ...queuedCommand() }
     assert.equal(await dispatch({ id: ids.cloud, kind: 'cloud' }, command), 'queued')
     // Fifteen minutes later, across an API restart: the row is all there is.
@@ -518,7 +532,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
   })
 
   test('a command not through in 24 hours opens a ticket in its thread', async () => {
-    const { dispatch } = await import('../src/hub.js')
+    const { dispatch } = await hubOf()
     const { giveUp } = await import('../src/runner-commands.js')
     const command = queuedCommand()
     await dispatch({ id: ids.cloud, kind: 'cloud' }, command)
@@ -535,6 +549,72 @@ describe('work kept in the database', { skip: !database && 'no database answers'
       where: { sessionId: ids.session, payload: { path: ['undelivered'], equals: true } },
     })
     assert.match(ticket.title, /Not delivered: a change to a queued message/)
+  })
+
+  /** A thread on the cloud computer, stopped: what is sent to it waits. */
+  async function cloudThread() {
+    const session = await db.session.create({
+      data: {
+        teammateId: ids.sam,
+        startedByMemberId: ids.owner,
+        computerId: ids.cloud,
+        title: 'Alerts',
+        status: 'idle',
+      } as never,
+    })
+    const { ThreadSpec } = await import('@brigade/contracts')
+    const spec = ThreadSpec.parse({
+      sessionId: session.id,
+      teammate: { id: ids.sam, name: 'Sam', instructions: '', harness: 'claude_code', model: null },
+      permissionMode: 'allow-all',
+      account: { id: 'a', provider: 'claude_code', source: 'brigade' },
+      fallbacks: [],
+    })
+    /** A message nobody typed: an event's, a wake-up's. */
+    const automatic = (text: string) => ({
+      type: 'thread.prompt' as const,
+      commandId: randomUUID(),
+      thread: spec,
+      text,
+      memberId: null,
+      then: [],
+      attachments: [],
+    })
+    return { sessionId: session.id, automatic }
+  }
+
+  test('commands past the caps on a computer that stays down are refused, and counted', async () => {
+    const { dispatch } = await hubOf()
+    const { failuresOf } = await import('../src/ops/failures.js')
+    const { PENDING_PER_THREAD, AUTOMATIC_PER_COMPUTER } = await import('../src/runner-commands.js')
+    const cloud = { id: ids.cloud, kind: 'cloud', ...scope }
+    await prisma.runnerCommand.deleteMany({ where: { computerId: ids.cloud } })
+    // A person's commands to one thread: past PENDING_PER_THREAD, refused.
+    for (let i = 0; i < PENDING_PER_THREAD; i++)
+      assert.equal(await dispatch(cloud, queuedCommand()), 'queued')
+    const refusedBefore = failuresOf('runner-outbox', 60_000).length
+    await assert.rejects(dispatch(cloud, queuedCommand()), (error: unknown) => {
+      assert.equal((error as { status?: number }).status, 503)
+      assert.match((error as Error).message, /commands already wait for this thread/)
+      return true
+    })
+    assert.equal(failuresOf('runner-outbox', 60_000).length, refusedBefore + 1)
+    await prisma.runnerCommand.deleteMany({ where: { computerId: ids.cloud } })
+
+    // Messages from events, each to a thread of its own: past AUTOMATIC_PER_COMPUTER, refused.
+    const threads = []
+    for (let i = 0; i < AUTOMATIC_PER_COMPUTER; i++) {
+      const thread = await cloudThread()
+      threads.push(thread.sessionId)
+      assert.equal(await dispatch(cloud, thread.automatic(`Alert ${i}`)), 'queued')
+    }
+    const one = await cloudThread()
+    threads.push(one.sessionId)
+    await assert.rejects(dispatch(cloud, one.automatic('One too many')), /from events/)
+    // A person's message still goes.
+    assert.equal(await dispatch(cloud, queuedCommand()), 'queued')
+    await prisma.runnerCommand.deleteMany({ where: { computerId: ids.cloud } })
+    await prisma.session.deleteMany({ where: { id: { in: threads } } })
   })
 
   // -------------------------------------------------------------------------

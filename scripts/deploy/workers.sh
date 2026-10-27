@@ -79,7 +79,9 @@ build:api-front)
   # Nothing: wrangler bundles it when deploying.
   ;;
 deploy:api-front)
-  # The small Worker in front of the API's Durable Object (src/front.ts).
+  # The small Worker in front of the API's Durable Objects (src/front.ts). After the API's deploy:
+  # it binds to the objects brigade-api defines, a new one included (WorkspaceHubObject).
+  wait_for_api
   pnpm --filter @brigade/api exec wrangler deploy -c wrangler.front.jsonc
   ;;
 build:web)

@@ -280,7 +280,9 @@ async function takeOver(other: DomainRow) {
     })
   // Written outside its scoped client: its dashboards are told here (loaded late, as the hub
   // loads much of the API).
-  void import('../hub.js').then(({ notifyList }) => notifyList(other.workspaceId, 'mail.updated'))
+  void import('../hub.js').then(({ hubs }) =>
+    hubs.get(other.workspaceId).notifyList('mail.updated'),
+  )
   await audit({
     ...scope,
     actor: { type: 'system', id: 'brigade' },

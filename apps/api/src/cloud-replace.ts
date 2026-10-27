@@ -22,7 +22,8 @@ import { audit } from './audit.js'
 import { requireCloudPlan } from './billing.js'
 import { isProvisioning, startProvision, stopOldVm } from './cloud.js'
 import { Prisma, prisma, type Scope } from './db.js'
-import { broadcastComputer, dropRunner, isOnline, runnerProtocol, sendToRunner } from './hub.js'
+import { hubs } from './hub.js'
+import { currentHub } from './hub/context.js'
 import { noteFailure } from './ops/failures.js'
 
 /** Longest the old computer may take to back itself up before it is replaced anyway. */
@@ -33,49 +34,37 @@ const OPEN_PHASES = ['backing_up', 'creating', 'restoring']
 
 type Replacement = Prisma.ComputerReplacementGetPayload<object>
 
-const pendingBackups = new Map<
-  string,
-  { computerId: string; resolve: (result: { ok: boolean; error?: string }) => void }
->()
-
 /**
- * Ask a cloud computer's runner to back up everything now; resolves once it says it is done,
- * when it goes offline, or after `timeoutMs` (ok: false then). Not for runners before
+ * In the hub: ask a cloud computer's runner to back up everything now; resolves once it says it
+ * is done, when it goes offline, or after `timeoutMs` (ok: false then). Not for runners before
  * BACKUP_PROTOCOL: they have nothing to back up with.
  */
-export function backupComputer(
+export async function backupComputer(
   computerId: string,
   timeoutMs = BACKUP_TIMEOUT_MS,
 ): Promise<{ ok: boolean; error?: string }> {
-  if ((runnerProtocol(computerId) ?? 0) < BACKUP_PROTOCOL)
-    return Promise.resolve({ ok: false, error: 'its runner cannot back up' })
-  const requestId = randomUUID()
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => finish({ ok: false, error: 'it took too long' }), timeoutMs)
-    const offline = setInterval(() => {
-      if (!isOnline(computerId)) finish({ ok: false, error: 'its runner went offline' })
-    }, 5_000)
-    const finish = (result: { ok: boolean; error?: string }) => {
-      clearTimeout(timer)
-      clearInterval(offline)
-      pendingBackups.delete(requestId)
-      resolve(result)
+  const hub = currentHub()
+  if ((hub.runnerProtocol(computerId) ?? 0) < BACKUP_PROTOCOL)
+    return { ok: false, error: 'its runner cannot back up' }
+  // Backing up is no use of the computer: it does not postpone its idle stop.
+  const answer = await hub.askRunner(
+    computerId,
+    { type: 'computer.backup', requestId: randomUUID() },
+    timeoutMs,
+    { touch: false, offline: 'its runner is offline' },
+  )
+  if ('error' in answer && !('type' in answer))
+    return {
+      ok: false,
+      error:
+        answer.error === 'The computer did not answer'
+          ? 'it took too long'
+          : answer.error === 'The computer went offline'
+            ? 'its runner went offline'
+            : answer.error,
     }
-    pendingBackups.set(requestId, { computerId, resolve: finish })
-    // Backing up is no use of the computer: it does not postpone its idle stop.
-    if (!sendToRunner(computerId, { type: 'computer.backup', requestId }, { touch: false }))
-      finish({ ok: false, error: 'its runner is offline' })
-  })
-}
-
-/** A runner answered computer.backup. */
-export function onBackupResult(
-  computerId: string,
-  result: { requestId: string; ok: boolean; error?: string | undefined },
-) {
-  const pending = pendingBackups.get(result.requestId)
-  if (pending?.computerId !== computerId) return
-  pending.resolve({ ok: result.ok, ...(result.error ? { error: result.error } : {}) })
+  if (answer.type !== 'computer.backup.result') return { ok: false, error: 'unexpected answer' }
+  return { ok: answer.ok, ...(answer.error ? { error: answer.error } : {}) }
 }
 
 /** The computer's replacement under way, if any. */
@@ -112,13 +101,15 @@ export async function lastReplacement(computerId: string) {
 /** A member asks for the workspace's cloud computer on a new VM. */
 export async function replaceComputer(scope: Scope, computerId: string, memberId: string) {
   await requireCloudPlan(scope.workspaceId)
+  const hub = hubs.get(scope.workspaceId)
+  const making = await hub.isProvisioning(computerId)
   const row = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`cloud:${scope.workspaceId}`}))`
     const computer = await tx.computer.findFirst({
       where: { id: computerId, ...scope, kind: 'cloud', status: { not: 'destroyed' } },
     })
     if (!computer) throw new HTTPException(404, { message: 'Computer not found' })
-    if (!computer.providerRef || isProvisioning(computer.id))
+    if (!computer.providerRef || making)
       throw new HTTPException(409, { message: 'This cloud computer is still being made' })
     const open = await tx.computerReplacement.findFirst({
       where: { computerId, phase: { in: OPEN_PHASES } },
@@ -135,16 +126,26 @@ export async function replaceComputer(scope: Scope, computerId: string, memberId
     target: { type: 'computer', id: computerId },
     data: { replacementId: row.id },
   })
-  broadcastComputer(scope.workspaceId, computerId)
-  void drive(row.id)
+  void hub.broadcastComputer(computerId)
+  void hub.driveReplacement(row.id)
   return row
 }
 
-/** Replacements this process is moving on, by id: one at a time each. */
-const driving = new Set<string>()
+/** What the running hub keeps of its replacements. */
+const state = () =>
+  currentHub().local('cloud-replace', () => ({
+    /** Replacements it is moving on, by id: one at a time each. */
+    driving: new Set<string>(),
+    /** When each computer's making was last started again (keepCreating), by id. */
+    remade: new Map<string, number>(),
+  }))
 
-/** Move a replacement on as far as it goes now. A failure is kept on its row; the minute job tries again. */
-async function drive(id: string) {
+/**
+ * In the hub: move a replacement on as far as it goes now. A failure is kept on its row; the
+ * minute job tries again.
+ */
+export async function drive(id: string) {
+  const { driving } = state()
   if (driving.has(id)) return
   driving.add(id)
   try {
@@ -168,7 +169,7 @@ async function backUpAndSwitch(row: Replacement) {
   const computer = await prisma.computer.findUniqueOrThrow({ where: { id: row.computerId } })
   if (!row.backup) {
     let note: string
-    if (isOnline(computer.id)) {
+    if (currentHub().isOnline(computer.id)) {
       const result = await backupComputer(computer.id)
       note = result.ok ? 'backed up' : `not backed up: ${result.error ?? 'unknown error'}`
     } else note = 'not backed up: it was offline, its latest backups are used'
@@ -180,7 +181,7 @@ async function backUpAndSwitch(row: Replacement) {
   // refreshing one login sign each other out. One that does not run (it no longer starts, say)
   // stays as it is; one still running that will not stop holds the replacement back, tried again.
   if (ref) await stopOldVm(ref as never)
-  dropRunner(computer.id)
+  currentHub().dropRunner(computer.id)
   await prisma.$transaction(async (tx) => {
     // Kept on the row, never destroyed: provision() destroys only the computer's own reference.
     await tx.computerReplacement.update({
@@ -209,7 +210,7 @@ async function backUpAndSwitch(row: Replacement) {
     })
     await moveThreads(tx, computer.id, row.memberId)
   })
-  broadcastComputer(computer.workspaceId, computer.id, 'creating')
+  currentHub().broadcastComputer(computer.id, 'creating')
   await audit({
     organizationId: computer.organizationId,
     workspaceId: computer.workspaceId,
@@ -248,8 +249,6 @@ async function moveThreads(tx: Prisma.TransactionClient, computerId: string, mem
     WHERE s."computerId" = ${computerId}`
 }
 
-/** When each computer's making was last started again here (keepCreating), by id. */
-const remade = new Map<string, number>()
 /** A making that failed is started again after this. */
 const REMAKE_EVERY_MS = 10 * 60_000
 
@@ -263,6 +262,7 @@ async function keepCreating(row: Replacement) {
   const runner = await prisma.runner.findUnique({ where: { computerId: computer.id } })
   // Installed: its runner's hello moves the replacement on (restoreFor).
   if (runner) return
+  const { remade } = state()
   if (Date.now() - (remade.get(computer.id) ?? 0) < REMAKE_EVERY_MS) return
   remade.set(computer.id, Date.now())
   startProvision(computer)
@@ -328,14 +328,27 @@ export async function onRestored(
     target: { type: 'computer', id: runner.computerId },
     data: { replacementId: row.id, problems: message.problems.length },
   })
-  broadcastComputer(runner.workspaceId, runner.computerId)
+  currentHub(runner.workspaceId).broadcastComputer(runner.computerId)
 }
 
-/** Each minute: replacements an API restart or a passing failure left under way go on. */
-export async function driveReplacements() {
+/**
+ * Each minute: replacements an API restart or a passing failure left under way go on, each in
+ * its workspace's hub.
+ */
+export async function driveReplacements(workspaceId?: string) {
   const open = await prisma.computerReplacement.findMany({
-    where: { phase: { in: ['backing_up', 'creating'] } },
-    select: { id: true },
+    where: { phase: { in: ['backing_up', 'creating'] }, ...(workspaceId ? { workspaceId } : {}) },
+    select: { id: true, workspaceId: true },
   })
-  for (const { id } of open) await drive(id)
+  for (const { id, workspaceId: owner } of open) await hubs.get(owner).driveReplacement(id)
+}
+
+/** Workspaces with a replacement under way (src/jobs.ts). */
+export async function dueReplacements() {
+  const rows = await prisma.computerReplacement.findMany({
+    where: { phase: { in: ['backing_up', 'creating'] } },
+    distinct: ['workspaceId'],
+    select: { workspaceId: true },
+  })
+  return rows.map((r) => r.workspaceId)
 }

@@ -13,7 +13,7 @@ import { env } from '../config.js'
 import { githubConfigured, hookDeliveries, redeliverHook } from '../connectors/github-app.js'
 import { prisma, scoped } from '../db.js'
 import { forgetInstallation, gitUrl, prefetchToken } from '../git.js'
-import { runnerProtocol, sendToRunner } from '../hub.js'
+import { hubs } from '../hub.js'
 import { keepInbound, onInbound } from '../inbound.js'
 import { noteFailure } from '../ops/failures.js'
 import { pullRequestEvent, type GhPull } from '../pull-requests.js'
@@ -57,10 +57,12 @@ async function pushed(installationId: number, repository: string) {
       where: { workspaceId: connection.workspaceId, status: { not: 'destroyed' } },
       select: { id: true },
     })
+    const hub = hubs.get(connection.workspaceId)
+    const presence = await hub.presence(computers.map((c) => c.id))
     for (const computer of computers) {
       // Online only: a push never wakes a stopped computer.
-      if ((runnerProtocol(computer.id) ?? 0) < REPOS_CHANGED_PROTOCOL) continue
-      sendToRunner(
+      if ((presence[computer.id]?.protocolVersion ?? 0) < REPOS_CHANGED_PROTOCOL) continue
+      await hub.sendToRunner(
         computer.id,
         {
           type: 'repos.changed',

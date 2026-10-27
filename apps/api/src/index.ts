@@ -17,4 +17,4 @@ serve(
   },
 )
 
-startJobs()
+void startJobs()

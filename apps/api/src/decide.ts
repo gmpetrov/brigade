@@ -21,7 +21,7 @@ import { mcpAppKey } from './mcp-servers.js'
 import type { ConnectorKind } from './connectors/types.js'
 import { mayManage, type CredentialAction } from './credentials.js'
 import { scoped, type ScopedDb } from './db.js'
-import { broadcastThreadStatus, dispatch } from './hub.js'
+import { hubs, threadUpdated } from './hub.js'
 import { accountReaching } from './repository-grant.js'
 import type { WorkspaceScope } from './scope.js'
 import { decidePromotion } from './playbook-autonomy.js'
@@ -74,7 +74,7 @@ export async function answerQuestion(
     }
   }
   const thread = await loadThread(db, ticket.sessionId)
-  const sent = await dispatch(thread.computer, {
+  const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
     type: 'thread.answer',
     commandId: randomUUID(),
     // The answer goes to the harness of the teammate that asked.
@@ -225,7 +225,7 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
   for (const grant of grants) holders.push(await accessHolder(db, asker, grant.app.teammate))
   for (const [i, account] of accounts.entries())
     await grantAccount(db, scope, holders[i]!.id, account, grants[i]!.app.scope)
-  const sent = await dispatch(thread.computer, {
+  const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
     type: 'thread.ticket',
     commandId: randomUUID(),
     thread: await specFor(db, thread, { teammate: asker }),
@@ -532,7 +532,7 @@ export async function resolveTicket(
       // Never started: done. Started before: it waits for its next message.
       const status = thread.lastSeq > 0 ? 'idle' : 'done'
       await db.session.updateMany({ where: { id: thread.id }, data: { status } })
-      broadcastThreadStatus(scope.workspaceId, thread.id, status)
+      void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, status))
     }
     return { ok: true, live: true }
   }
@@ -578,7 +578,7 @@ export async function resolveTicket(
     if (!ticket.sessionId || !payload.approvalId)
       throw new HTTPException(409, { message: 'This approval has no thread' })
     const thread = await loadThread(db, ticket.sessionId)
-    const sent = await dispatch(thread.computer, {
+    const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
       type: 'thread.approval',
       commandId: randomUUID(),
       thread: await specFor(db, thread, { teammate: teammateIn(thread, payload.teammateId) }),

@@ -15,7 +15,7 @@ import { projectLogoKey } from './bucket.js'
 import { projectWorkingSeconds } from './caps.js'
 import { prisma, type ScopedDb } from './db.js'
 import { workspaceRepositories } from './git.js'
-import { broadcastProjects } from './hub.js'
+import { hubs, projectsUpdated } from './hub.js'
 import { createFolder } from './library-folders.js'
 import { readMemory } from './library.js'
 import { readLogo, removeLogo, storeLogo } from './logos.js'
@@ -221,7 +221,7 @@ export async function createProject(
     target: { type: 'project', id: project.id },
     data: { name: project.name, folder, repositories },
   })
-  broadcastProjects(scope.workspaceId)
+  void hubs.get(scope.workspaceId).broadcast(projectsUpdated)
   return summary(project)
 }
 
@@ -285,7 +285,7 @@ export async function updateProject(
     target: { type: 'project', id },
     data: { fields: Object.keys(input) },
   })
-  broadcastProjects(scope.workspaceId)
+  void hubs.get(scope.workspaceId).broadcast(projectsUpdated)
   return summary(updated)
 }
 
@@ -334,7 +334,7 @@ export async function setProjectRepositories(
     target: { type: 'project', id },
     data: { repositories: [...next] },
   })
-  broadcastProjects(scope.workspaceId)
+  void hubs.get(scope.workspaceId).broadcast(projectsUpdated)
   return { repositories: [...next].sort() }
 }
 
@@ -356,7 +356,7 @@ export async function setArchived(
     action: archived ? 'project.archived' : 'project.unarchived',
     target: { type: 'project', id },
   })
-  broadcastProjects(scope.workspaceId)
+  void hubs.get(scope.workspaceId).broadcast(projectsUpdated)
 }
 
 /**
@@ -375,7 +375,7 @@ export async function deleteProject(db: ScopedDb, scope: WorkspaceScope, id: str
     target: { type: 'project', id },
     data: { name: project.name },
   })
-  broadcastProjects(scope.workspaceId)
+  void hubs.get(scope.workspaceId).broadcast(projectsUpdated)
 }
 
 /** Briefs beyond this are cut in the catalog; the thread's own project gets its whole brief. */

@@ -198,6 +198,12 @@ model Invitation {
 // Workspaces, computers and teammates
 // ---------------------------------------------------------------------------
 
+/// Where a workspace's hub runs on Cloudflare (Workspace.hubMode).
+enum HubMode {
+  api
+  object
+}
+
 model Workspace {
   id                    String                 @id @default(cuid())
   organizationId        String
@@ -209,6 +215,9 @@ model Workspace {
   /// Its own Stripe customer (src/billing.ts), made on its first Checkout: its plan's
   /// invoices and card, apart from any other workspace's.
   stripeCustomerId      String?
+  /// Where its hub runs on Cloudflare (docs/workspace-hubs-plan.md): in the Api object with
+  /// every other workspace's, or in a Durable Object of its own. Changed with POST /ops/hubs.
+  hubMode               HubMode                @default(api)
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   computers             Computer[]

@@ -1,6 +1,9 @@
 // Failures as they happen, counted in memory for the checks (src/ops/checks.ts): requests that
 // failed, webhooks Brigade could not take, jobs that threw, teammates' turns that failed. Three
-// hours of them at most; a restart of the API forgets them, which only delays an alert.
+// hours of them at most; a restart of the API forgets them, which only delays an alert. Those of
+// a workspace's hub object go to the Api object, where the checks run (withFailureSink).
+import { AsyncLocalStorage } from 'node:async_hooks'
+
 const KEEP_MS = 3 * 60 * 60_000
 const MAX = 2000
 
@@ -16,6 +19,13 @@ export type Failure = {
 
 const failures: Failure[] = []
 
+/** Where failures go from code that does not run the checks itself: a hub object's. */
+const sinks = new AsyncLocalStorage<(failure: Failure) => void>()
+
+/** Run `fn` with its failures sent to `sink` rather than counted here. */
+export const withFailureSink = <T>(sink: (failure: Failure) => void, fn: () => T): T =>
+  sinks.run(sink, fn)
+
 export function noteFailure(
   kind: string,
   error: unknown,
@@ -26,13 +36,20 @@ export function noteFailure(
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 300)
-  failures.push({
+  keepFailure({
     kind,
     at,
     message,
     ...(extra.workspaceId ? { workspaceId: extra.workspaceId } : {}),
   })
-  while (failures.length > MAX || (failures.length && at - failures[0]!.at > KEEP_MS))
+}
+
+/** Count a failure here, or send it where the checks run. */
+export function keepFailure(failure: Failure) {
+  const sink = sinks.getStore()
+  if (sink) return sink(failure)
+  failures.push(failure)
+  while (failures.length > MAX || (failures.length && failure.at - failures[0]!.at > KEEP_MS))
     failures.shift()
 }
 

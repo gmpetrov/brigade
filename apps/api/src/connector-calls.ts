@@ -65,7 +65,7 @@ export async function handleConnectorCall(
   runner: Runner,
   call: Call,
   reply: (message: ApiToRunner) => void,
-  options: { alive?: Live['alive']; resume?: Resume } = {},
+  options: { live?: Live; resume?: Resume } = {},
 ) {
   const { resume } = options
   const scope: Scope = { organizationId: runner.organizationId, workspaceId: runner.workspaceId }
@@ -375,7 +375,8 @@ export async function handleConnectorCall(
           },
         },
         pending: { target, ...(reason ? { reason } : {}) },
-        live: { reply, alive: options.alive ?? (() => true) },
+        reply,
+        ...(options.live ? { live: options.live } : {}),
         ...(cap
           ? {
               opened: (ticketId: string) =>

@@ -6,7 +6,8 @@
 import { billingEnabled, cloudEntitled, stripeClient } from '../billing.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
-import { isOnline, threadsWaiting } from '../hub.js'
+import { hubs } from '../hub.js'
+import { localHubs } from '../hub/memory-host.js'
 import { computersWaiting } from '../runner-commands.js'
 import { raise, resolve, settle, type Alert } from './alerts.js'
 import { failuresOf, summary, type Failure } from './failures.js'
@@ -90,6 +91,33 @@ export const RULES: Rule[] = [
     critical: 10,
     quietMs: 30 * MINUTE,
     hint: 'Runners that stop sending heartbeats without closing their connection: computers crashing, or the network.',
+  },
+  {
+    kind: 'runner-reconnects',
+    title: 'Runners reconnecting again and again',
+    windowMs: 15 * MINUTE,
+    warning: 1,
+    critical: 5,
+    quietMs: 30 * MINUTE,
+    hint: 'A computer opening its connection many times a minute: the API, or its hub, dropping it each time it connects (docs/workspace-hubs-plan.md).',
+  },
+  {
+    kind: 'runner-outbox',
+    title: 'Commands refused: too many waiting for a computer',
+    windowMs: 30 * MINUTE,
+    warning: 1,
+    critical: 20,
+    quietMs: 60 * MINUTE,
+    hint: 'A computer that stays down while messages keep coming for it (src/runner-commands.ts): find out why it does not start.',
+  },
+  {
+    kind: 'api-reset',
+    title: 'API restarting without a deploy',
+    windowMs: 30 * MINUTE,
+    warning: 1,
+    critical: 3,
+    quietMs: 60 * MINUTE,
+    hint: 'The Api object restarted with the same version of the Worker: past its memory, most likely. Every socket dropped with it.',
   },
   {
     kind: 'account-signed-out',
@@ -252,7 +280,7 @@ async function checkComputers(now: number) {
   const seen = new Set<string>()
   for (const computer of computers) {
     seen.add(computer.id)
-    const online = isOnline(computer.id)
+    const online = await hubs.get(computer.workspaceId).isOnline(computer.id)
     if (online || computer.status !== 'running') offlineSince.delete(computer.id)
     else if (!offlineSince.has(computer.id)) offlineSince.set(computer.id, now)
     const problem = computerProblem(
@@ -318,7 +346,19 @@ export function eventsWaitingProblems(
 }
 
 async function checkEventsWaiting(now: number) {
-  const waiting = threadsWaiting()
+  // Each hub's: those in this process, and those that are objects of their own (a call each,
+  // which wakes it once a minute at most).
+  const objects = await prisma.workspace.findMany({
+    where: { hubMode: 'object' },
+    select: { id: true },
+  })
+  const workspaceIds = new Set([
+    ...localHubs().map((h) => h.workspaceId),
+    ...objects.map((w) => w.id),
+  ])
+  const waiting = (
+    await Promise.all([...workspaceIds].map((id) => hubs.get(id).threadsWaiting()))
+  ).flat()
   const ids = [...new Set(waiting.map((w) => w.computerId))]
   const computers = ids.length
     ? await prisma.computer.findMany({
@@ -384,7 +424,9 @@ async function checkBacklogs(now: number) {
       { count: w._count._all, oldest: w._min.createdAt },
       now,
     )
-    if (!problem || !backlogMatters(computer, isOnline(computer.id))) continue
+    if (!problem) continue
+    if (!backlogMatters(computer, await hubs.get(computer.workspaceId).isOnline(computer.id)))
+      continue
     // A cloud computer without a plan is meant to be off (checkComputers).
     if (
       computer.kind !== 'cloud' ||
@@ -514,6 +556,7 @@ let countingSince = 0
 export async function runChecks(now = Date.now()) {
   if (running) return
   running = true
+  countingSince ||= now
   try {
     // The first four need only the database; the others, Cloudflare's and Stripe's APIs too.
     const steps: [string, () => Promise<unknown>][] = [
@@ -521,6 +564,7 @@ export async function runChecks(now = Date.now()) {
       ['computers', () => checkComputers(now)],
       ['events waiting', () => checkEventsWaiting(now)],
       ['command backlogs', () => checkBacklogs(now)],
+      ['jobs queue', () => checkJobQueues(now)],
     ]
     let failed: string | null = null
     if (runs % 5 === 0) steps.push(['workers', () => checkWorkers(now)])
@@ -536,6 +580,43 @@ export async function runChecks(now = Date.now()) {
   } finally {
     running = false
   }
+}
+
+/** Messages dead-lettered this many: warning; this many: critical. */
+export const DEAD_JOBS = { warning: 1, critical: 20 }
+/** The jobs' queue holding a message this long: its consumer is not keeping up, or down. */
+export const JOBS_LATE_MS = 10 * MINUTE
+
+/** The jobs' queue and its dead letters, as Cloudflare counts them (none on Node). */
+export function jobQueueProblems(
+  queues: { jobs: QueueHealth; dead: QueueHealth } | null,
+  now: number,
+): Alert[] {
+  if (!queues) return []
+  const alerts: Alert[] = []
+  const { dead, jobs } = queues
+  if (dead.backlog >= DEAD_JOBS.warning)
+    alerts.push({
+      key: 'jobs:dead',
+      severity: dead.backlog >= DEAD_JOBS.critical ? 'critical' : 'warning',
+      title: 'Background jobs dead-lettered',
+      detail: `${dead.backlog} job message(s) failed every try and wait in brigade-jobs-dlq. Read them in the dashboard (Queues), fix the cause, then send them to brigade-jobs again or delete them.`,
+    })
+  if (jobs.oldestAt && now - jobs.oldestAt.getTime() > JOBS_LATE_MS)
+    alerts.push({
+      key: 'jobs:late',
+      severity: 'warning',
+      title: 'Background jobs not keeping up',
+      detail: `${jobs.backlog} job message(s) wait in brigade-jobs, the oldest for ${Math.round((now - jobs.oldestAt.getTime()) / MINUTE)} min: its consumer is failing or slow.`,
+    })
+  return alerts
+}
+
+export type QueueHealth = { backlog: number; oldestAt: Date | null }
+
+async function checkJobQueues(now: number) {
+  const { jobQueues } = await import('../platform/node.js')
+  await settle('jobs:', jobQueueProblems(await jobQueues(), now), new Date(now))
 }
 
 /** Every minute, from the API's jobs (src/jobs.ts). */

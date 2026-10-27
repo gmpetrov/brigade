@@ -22,3 +22,23 @@ export type RunnerBundleFile = {
   size: number | null
   body: ReadableStream
 }
+
+/**
+ * An operation of a workspace's hub that runs in another Durable Object (src/hub.ts): its
+ * outcome, an error included, as it crossed.
+ */
+export type HubCall = (
+  name: import('../hub/operations.js').OperationName,
+  args: unknown[],
+) => Promise<import('../hub.js').Outcome>
+
+/** A workspace's hub object, as other objects call it (src/hub-object.ts). */
+export type HubStub = {
+  call(
+    workspaceId: string,
+    name: import('../hub/operations.js').OperationName,
+    args: unknown[],
+    forwarded: boolean,
+  ): Promise<import('../hub.js').Outcome>
+  moved(workspaceId: string, mode: 'api' | 'object'): Promise<void>
+}

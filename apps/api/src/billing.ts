@@ -275,7 +275,8 @@ export async function applyPlan(workspaceId: string) {
   const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } })
   if (!workspace) return
   // Not imported above: src/cloud.ts imports this module.
-  const { createWorkspaceComputer, shutDown } = await import('./cloud.js')
+  const { createWorkspaceComputer } = await import('./cloud.js')
+  const { hubs } = await import('./hub.js')
   if (await cloudEntitled(workspace.id)) {
     await createWorkspaceComputer(workspace)
     return
@@ -289,12 +290,15 @@ export async function applyPlan(workspaceId: string) {
   })
   const failed: unknown[] = []
   for (const computer of computers)
-    await shutDown(computer).catch((error) =>
-      // One that was up is the event's to retry; a broken one, the minute check's.
-      ['running', 'starting'].includes(computer.status)
-        ? failed.push(error)
-        : console.error(`shutting ${computer.id} down failed`, error),
-    )
+    await hubs
+      .get(computer.workspaceId)
+      .shutDown(computer)
+      .catch((error) =>
+        // One that was up is the event's to retry; a broken one, the minute check's.
+        ['running', 'starting'].includes(computer.status)
+          ? failed.push(error)
+          : console.error(`shutting ${computer.id} down failed`, error),
+      )
   if (failed.length)
     throw new AggregateError(failed, `stopping ${workspaceId}'s cloud computer failed`)
 }

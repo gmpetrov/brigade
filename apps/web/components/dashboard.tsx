@@ -103,6 +103,7 @@ import {
   type Teammate,
   type Ticket,
 } from '@/lib/api'
+import { setLiveWorkspace } from '@/lib/live-socket'
 import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
 import { API_URL } from '@/lib/config'
 import { authClient } from '@/lib/auth-client'
@@ -238,6 +239,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // with it, so as not to wait for it (a trip each to the API): the lists below, and the
   // thread panel's (sent ahead). Without a workspace they fail, unseen: onboarding comes next.
   const me = useApi<Me>('/me')
+  // Its live sockets go to the hub of the workspace it shows, once known.
+  setLiveWorkspace(me.data?.activeWorkspaceId)
   useEffect(() => preloadThreadPanel(pathname), []) // eslint-disable-line react-hooks/exhaustive-deps
   const teammates = useApi<Teammate[]>('/teammates', ['teammates.updated'])
   const projects = useApi<ProjectSummary[]>('/projects', ['projects.updated'])

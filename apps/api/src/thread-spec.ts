@@ -1,7 +1,7 @@
 import { Effort, folderExceptions, MCP_PROTOCOL, type ThreadSpec } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { usableIn } from './apps.js'
-import { runnerProtocol } from './hub.js'
+import { hubs } from './hub.js'
 import { customMcp } from './mcp-servers.js'
 import { isMcp, mcpOperationSpecs } from './mcp-tools.js'
 import { threadAttachments } from './attachments.js'
@@ -202,7 +202,7 @@ export async function specFor(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
   )
   // An MCP connector's tools come from its server; a runner too old to know its kind gets none.
-  const protocol = runnerProtocol(thread.computerId)
+  const protocol = await hubs.get(thread.workspaceId).runnerProtocol(thread.computerId)
   const scope = { organizationId: thread.organizationId, workspaceId: thread.workspaceId }
   const specs = await Promise.all(
     grants

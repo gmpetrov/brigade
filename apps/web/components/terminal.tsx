@@ -4,7 +4,7 @@ import { DEMO } from '@/lib/demo/flag'
 import '@xterm/xterm/css/xterm.css'
 import { ApiToBrowser } from '@brigade/contracts'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { WS_URL } from '@/lib/config'
+import { keepAlive, liveSocket } from '@/lib/live-socket'
 
 const COLS = 110
 const ROWS = 28
@@ -29,6 +29,7 @@ function LiveTerminal({
   useEffect(() => {
     let disposed = false
     let socket: WebSocket | undefined
+    let alive: (() => void) | undefined
     let term: import('@xterm/xterm').Terminal | undefined
     const terminalId = crypto.randomUUID()
 
@@ -42,7 +43,8 @@ function LiveTerminal({
         cursorBlink: true,
       })
       term.open(host.current)
-      socket = new WebSocket(`${WS_URL}/api/ws`)
+      socket = liveSocket()
+      alive = keepAlive(socket)
       socket.onopen = () =>
         socket!.send(
           JSON.stringify({ type: 'terminal.open', terminalId, sessionId, cols: COLS, rows: ROWS }),
@@ -71,6 +73,7 @@ function LiveTerminal({
       disposed = true
       if (socket?.readyState === WebSocket.OPEN)
         socket.send(JSON.stringify({ type: 'terminal.close', terminalId }))
+      alive?.()
       socket?.close()
       term?.dispose()
     }

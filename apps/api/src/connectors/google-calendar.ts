@@ -1,5 +1,6 @@
 // Google Calendar connector (Calendar API v3), on the account's OAuth credential in the vault.
 import { z } from 'zod'
+import { perHub } from '../hub/context.js'
 import {
   ConnectorError,
   json,
@@ -63,16 +64,25 @@ const path = (calendar: string, suffix = '') =>
   `${API}/calendars/${encodeURIComponent(calendar)}/events${suffix}`
 
 /**
- * Event revisions Brigade's own calls made, so a teammate creating or changing
- * an event does not trigger itself. In this process only, the last thousand.
+ * Event revisions Brigade's own calls made, so a teammate creating or changing an event does not
+ * trigger itself: kept by the workspace's hub, where teammates' calls run, the last thousand. A
+ * restart of the hub forgets them.
  */
-const own = new Set<string>()
+const own = perHub('calendar-own', () => new Set<string>())
 const remember = (key: string) => {
-  own.add(key)
-  if (own.size > 1000) own.delete(own.values().next().value!)
+  const keys = own()
+  keys.add(key)
+  if (keys.size > 1000) keys.delete(keys.values().next().value!)
 }
-export const isOwnChange = (e: Event) =>
-  own.has(`${e.id}:${e.updated}`) || (e.status === 'cancelled' && own.has(`${e.id}:deleted`))
+
+/** What names an event's revision among Brigade's own changes (ownChanges). */
+export const changeKeys = (e: Event) => [
+  `${e.id}:${e.updated}`,
+  ...(e.status === 'cancelled' ? [`${e.id}:deleted`] : []),
+]
+
+/** In the hub: those of these keys that are Brigade's own changes. */
+export const ownChanges = (keys: string[]) => keys.filter((key) => own().has(key))
 
 async function send(ctx: ConnectorContext, url: string, method: string, body?: unknown) {
   const response = await ctx.fetch(url, {

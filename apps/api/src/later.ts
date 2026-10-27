@@ -4,7 +4,7 @@
 // an archive, anything new there brings it back: a message in it (a member's, a wake-up's,
 // a child's report), or a ticket or pull request opened in it or one of its children.
 import { onScopedWrite, prisma, scoped, type Scope, type ScopedDb } from './db.js'
-import { broadcastThreadStatus, notifyList } from './hub.js'
+import { hubs, threadUpdated } from './hub.js'
 
 /** The threads this member put away for later: id, and since when. */
 export async function latersOf(db: ScopedDb, memberId: string) {
@@ -73,9 +73,9 @@ export async function bringBackFromLater(scope: Scope, sessionId: string) {
  * read the list, tickets and pull requests again.
  */
 function changed(scope: Scope, thread: { id: string; status: string }) {
-  broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
-  notifyList(scope.workspaceId, 'tickets.updated')
-  notifyList(scope.workspaceId, 'pulls.updated')
+  void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, thread.status))
+  void hubs.get(scope.workspaceId).notifyList('tickets.updated')
+  void hubs.get(scope.workspaceId).notifyList('pulls.updated')
 }
 
 onScopedWrite((model, scope, operation, result) => {
