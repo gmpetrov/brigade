@@ -32,7 +32,7 @@ import {
   writeTasks,
   writeTasksFile,
 } from './teammate-backups.js'
-import { teammateUser } from './teammates.js'
+import { ensureUser, teammateUser } from './teammates.js'
 
 /** How often what changed is backed up while the computer runs. */
 const EVERY_MS = 10 * 60_000
@@ -209,6 +209,8 @@ export class ComputerBackups {
         if (await this.options.store.getTeammate(teammateId, 'tasks', file)) {
           const tasks = await readTasksFile(file)
           // Its jobs may run in its thread folders: those come back first, not at their next turn.
+          // On a new VM its user is not there yet: made first, as its folders are unpacked as it.
+          if (!noTasks(tasks)) await ensureUser(runAs)
           if (!noTasks(tasks))
             for (const folder of restore.folders.filter((f) => f.teammateId === teammateId))
               await this.options.folders

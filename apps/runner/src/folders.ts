@@ -31,7 +31,7 @@ import { prune, removeFor, removeMemberProject, stopQuiet } from './containers.j
 import { CACHES_EVERY_MS, CRITICAL, freeCaches, installing, Reserve, STILL_FULL } from './disk.js'
 import { COPIED } from './repo-settings.js'
 import { owners, repairCaches, run } from './repos.js'
-import { pruneSystemDocker, teammateHome } from './teammates.js'
+import { ensureUser, pruneSystemDocker, teammateHome } from './teammates.js'
 import { threadFolder } from './threads.js'
 
 /** Remove dependency and build folders of quiet threads once the disk is this full (space or inodes)… */
@@ -401,6 +401,8 @@ export class Folders {
         if (!found)
           found = Boolean((backup = (await this.options.backups?.get(name, file)) ?? null))
         if (found) {
+          // A computer that replaced another has no teammate user before its first turn.
+          if (runAs) await ensureUser(runAs)
           // What was here is from before the thread left: its containers too.
           if (runAs) await removeFor(runAs, name.sessionId)
           await run('rm', ['-rf', '--', workDir], { runAs })
@@ -991,6 +993,8 @@ export class Folders {
   private async unpack(file: string, workDir: string, runAs?: string) {
     this.unpacking.add(workDir)
     try {
+      // A computer that replaced another has no teammate user before its first turn.
+      if (runAs) await ensureUser(runAs)
       await unpack(file, workDir, runAs)
     } finally {
       this.unpacking.delete(workDir)
