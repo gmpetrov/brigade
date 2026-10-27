@@ -105,9 +105,10 @@ const Env = z.object({
    */
   CROSS_SITE_COOKIES: z.stringbool().default(false),
   /**
-   * Sign-in with a password. Off by default: members sign in with Google or a code mailed
-   * to them (src/sign-in-code.ts), which proves they own the address. On locally and in
-   * previews (.env.example), where the dev accounts have a password (prisma/seed.ts).
+   * Sign-up with a password. Off by default: members sign up with Google or a code mailed
+   * to them (src/sign-in-code.ts), which proves they own the address; only accounts given a
+   * password by hand (src/password-sign-in.ts) sign in with one. On locally and in previews
+   * (.env.example), where the dev accounts have a password (prisma/seed.ts).
    */
   PASSWORD_SIGN_IN: z.stringbool().default(false),
   /**

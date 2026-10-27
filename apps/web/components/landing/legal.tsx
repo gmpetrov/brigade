@@ -4,7 +4,7 @@ import { Footer } from '@/components/landing/closing'
 import { Header } from '@/components/landing/hero'
 import { c } from '@/components/landing/parts'
 
-export const LEGAL_UPDATED = 'October 20, 2026'
+export const LEGAL_UPDATED = 'October 28, 2026'
 
 export function legalMetadata(path: string, title: string, description: string): Metadata {
   const url = `https://www.brigade.lol${path}`

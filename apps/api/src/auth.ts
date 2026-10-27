@@ -8,6 +8,7 @@ import { guardOrganizationDeletion } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { desktopSignIn } from './desktop-sign-in.js'
+import { passwordSignIn } from './password-sign-in.js'
 import { CODE_MINUTES, sendSignInCode } from './sign-in-code.js'
 
 /** Audit actors are members. Fall back to the user when no membership exists yet. */
@@ -39,9 +40,10 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: env.WEB_URL,
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
-  // Off in production (config.ts): an address is only ever proven by its mail, with a code
-  // (emailOTP below) or by Google.
-  emailAndPassword: { enabled: env.PASSWORD_SIGN_IN },
+  // No sign-up with a password in production (config.ts): an address is only ever proven by
+  // its mail, with a code (emailOTP below) or by Google. Signing in with one stays open to the
+  // accounts given a password by hand (src/password-sign-in.ts).
+  emailAndPassword: { enabled: true, disableSignUp: !env.PASSWORD_SIGN_IN },
   // Counted in the database, so a restart doesn't reset the counts, per visitor as
   // Cloudflare saw them (X-Forwarded-For is whatever the client sent).
   rateLimit: {
@@ -81,6 +83,7 @@ export const auth = betterAuth({
   },
   plugins: [
     desktopSignIn(),
+    passwordSignIn(),
     emailOTP({
       otpLength: 6,
       expiresIn: CODE_MINUTES * 60,
