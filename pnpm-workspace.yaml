@@ -12,8 +12,8 @@ onlyBuiltDependencies:
   - workerd
 
 patchedDependencies:
-  '@ai-sdk/harness-claude-code@1.0.157': patches/@ai-sdk__harness-claude-code@1.0.157.patch
-  '@ai-sdk/harness-codex@1.0.155': patches/@ai-sdk__harness-codex@1.0.155.patch
+  '@ai-sdk/harness-claude-code@1.0.169': patches/@ai-sdk__harness-claude-code@1.0.169.patch
+  '@ai-sdk/harness-codex@1.0.167': patches/@ai-sdk__harness-codex@1.0.167.patch
   '@opennextjs/cloudflare@1.20.7': patches/@opennextjs__cloudflare@1.20.7.patch
   pg-cloudflare@1.4.1: patches/pg-cloudflare@1.4.1.patch
 

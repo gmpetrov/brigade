@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index 1e3acb5..8d9ba8d 100644
+index 461403b..42208d1 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -875,6 +875,7 @@ function createAppServerEventHandler({ stepTracker, emitStreamEvent, emitWarning
@@ -50,7 +50,7 @@ index 1e3acb5..8d9ba8d 100644
  		const normalized = normalizeItem({
  			item,
  			textByItem,
-@@ -1649,24 +1683,39 @@ function createDynamicTools(tools) {
+@@ -1668,24 +1702,39 @@ function createDynamicTools(tools) {
  	const validOriginalNames = new Set(tools.map((tool) => tool.name).filter(isValidDynamicToolName));
  	const usedAliases = /* @__PURE__ */ new Set();
  	const originalNameByAlias = /* @__PURE__ */ new Map();
