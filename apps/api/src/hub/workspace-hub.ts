@@ -234,6 +234,10 @@ export class WorkspaceHub {
     if (!conn) return
     this.runners.delete(computerId)
     conn.socket.close(1001, 'computer stopped')
+    // Its close comes after it is forgotten, so onRunnerClose does not do this: kept, its
+    // threads would alert as waiting for as long as the computer stays off.
+    const waited = this.forgetEventsWaiting(computerId)
+    if (waited.length) void this.broadcastEventsWaiting(waited).catch(console.error)
     this.broadcastComputer(computerId)
   }
 
@@ -358,8 +362,7 @@ export class WorkspaceHub {
     if (isDurable(message) || (conn && takesParts(conn.protocolVersion ?? 0)))
       message = await packCommand(this.workspaceId, message)
     if (isDurable(message)) {
-      // Kept already (a stable id tried again after a restart), or joined to a message of its
-      // thread waiting unsent: it goes, or went, from that row.
+      // Kept already (a stable id tried again after a restart): it goes, or went, from that row.
       if ((await keepCommand({ ...computer, workspaceId: this.workspaceId }, message)) !== 'kept')
         return 'queued'
       const now = this.runners.get(computer.id)
@@ -402,7 +405,7 @@ export class WorkspaceHub {
     const protocol = conn.protocolVersion ?? 0
     // Not where its thread is now: not sent.
     if (!(await asOfNow(computerId, kept))) return
-    // Claimed, as it is now: with the messages that joined it meanwhile (runner-commands.ts).
+    // Claimed, as it is now (runner-commands.ts).
     const claimed = await noteSent(kept.commandId, protocol)
     if (!claimed) return
     // Built before its thread last arrived here: brought up to date.
@@ -599,6 +602,11 @@ export class WorkspaceHub {
     for (const id of gone) this.eventsWaiting.delete(id)
     if (gone.length) this.saveEventsWaiting()
     return gone
+  }
+
+  /** Every thread whose events wait, with its computer and since when: the ops checks look. */
+  threadsWaiting() {
+    return [...this.eventsWaiting].map(([sessionId, w]) => ({ sessionId, ...w }))
   }
 
   waitingOn(computerId: string) {

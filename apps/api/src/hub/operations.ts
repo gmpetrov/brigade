@@ -29,6 +29,7 @@ export const operations = {
   // Its dashboards.
   isLooking: (hub: WorkspaceHub, memberId: string, withinMs: number) =>
     hub.isLooking(memberId, withinMs),
+  threadsWaiting: (hub: WorkspaceHub) => hub.threadsWaiting(),
   eventsWaitingSince: (hub: WorkspaceHub, sessionIds: string[]) =>
     Object.fromEntries(sessionIds.map((id) => [id, hub.eventsWaitingSince(id)])),
 

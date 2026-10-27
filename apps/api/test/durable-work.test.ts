@@ -583,33 +583,6 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     return { sessionId: session.id, automatic }
   }
 
-  test('an automatic message for a computer that is down joins the one of its thread waiting', async () => {
-    const { dispatch } = await hubOf()
-    const { isKept } = await import('../src/runner-commands.js')
-    const thread = await cloudThread()
-    const first = thread.automatic('The first alert')
-    const second = thread.automatic('The second alert')
-    const cloud = { id: ids.cloud, kind: 'cloud', ...scope }
-    assert.equal(await dispatch(cloud, first), 'queued')
-    assert.equal(await dispatch(cloud, second), 'queued')
-    const rows = await prisma.runnerCommand.findMany({ where: { sessionId: thread.sessionId } })
-    assert.equal(rows.length, 1, 'one turn, not one each')
-    const kept = rows[0]!.message as { text: string; joined?: string[] }
-    assert.equal(kept.text, 'The first alert\n\nThe second alert')
-    assert.deepEqual(kept.joined, [second.commandId])
-    // Tried again after a restart, it is not joined twice.
-    assert.equal(await isKept(second.commandId, thread.sessionId), true)
-    // Sent once claimed: what joins after that is a turn of its own.
-    await prisma.runnerCommand.updateMany({
-      where: { id: first.commandId },
-      data: { sentAt: new Date() },
-    })
-    const third = thread.automatic('The third alert')
-    assert.equal(await dispatch(cloud, third), 'queued')
-    assert.equal(await prisma.runnerCommand.count({ where: { sessionId: thread.sessionId } }), 2)
-    await prisma.session.deleteMany({ where: { id: thread.sessionId } })
-  })
-
   test('commands past the caps on a computer that stays down are refused, and counted', async () => {
     const { dispatch } = await hubOf()
     const { failuresOf } = await import('../src/ops/failures.js')

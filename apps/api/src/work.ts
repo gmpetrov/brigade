@@ -101,7 +101,7 @@ export async function promptThread(
     })
   // A prompt with a stable id tried again (after a restart): it went already, or a cap holds it.
   if (options.commandId) {
-    if (await isKept(options.commandId, thread.id)) return 'queued'
+    if (await isKept(options.commandId)) return 'queued'
     if (
       !options.skipCaps &&
       (await db.ticket.count({

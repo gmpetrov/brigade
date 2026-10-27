@@ -38,6 +38,11 @@ export const anyDestination = (to: Destinations) =>
 
 const LABEL = { firing: '🔴', reminder: '🟠 Still', resolved: '✅ Resolved:' } as const
 
+/** An alert email's subject, by which it is known again should it come back in (src/triggers.ts). */
+export const alertSubject = (notice: Notice) =>
+  `[Brigade ${notice.severity}] ${notice.kind === 'resolved' ? 'Resolved: ' : ''}${notice.title}`
+export const ALERT_SUBJECT = /\[Brigade (critical|warning)\] /
+
 export function noticeText(notice: Notice) {
   const head = `${LABEL[notice.kind]} ${notice.title}`
   const since =
@@ -99,7 +104,7 @@ export async function sendNotice(to: Destinations, notice: Notice) {
           to: to.emails,
           // A machine's mail: a mailbox rule set to skip automatic mail starts no thread for it.
           headers: { 'Auto-Submitted': 'auto-generated' },
-          subject: `[Brigade ${notice.severity}] ${notice.kind === 'resolved' ? 'Resolved: ' : ''}${notice.title}`,
+          subject: alertSubject(notice),
           text,
         }),
         signal: AbortSignal.timeout(10_000),

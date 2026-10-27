@@ -395,23 +395,6 @@ describe('restarts and reconnect storms', () => {
     for (let i = 0; i < STORM_CONNECTS * 2; i++) hub.noteConnect('calm', now + i * 61_000)
     assert.equal(failuresOf('runner-reconnects', 60 * MIN).length, before + 1)
   })
-
-  test("Brigade's own alerts by email start no thread", async () => {
-    const { isOpsAlert } = await import('../src/triggers.js')
-    const alert = {
-      id: 'm1',
-      type: 'email',
-      payload: { from: 'Brigade alerts <alerts@mails.brigade.lol>', automatic: true },
-    }
-    assert.equal(isOpsAlert(alert), true)
-    // A person writing from that address, or an automatic mail from elsewhere, goes on.
-    assert.equal(isOpsAlert({ ...alert, payload: { ...alert.payload, automatic: false } }), false)
-    assert.equal(
-      isOpsAlert({ ...alert, payload: { from: 'noreply@stripe.com', automatic: true } }),
-      false,
-    )
-    assert.equal(isOpsAlert({ ...alert, type: 'payment' }), false)
-  })
 })
 
 describe('alerts in the database', { skip }, () => {

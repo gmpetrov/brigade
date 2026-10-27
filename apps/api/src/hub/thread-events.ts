@@ -3,6 +3,7 @@
 // hub with the hub per workspace (docs/workspace-hubs-plan.md): nothing here holds state of its
 // own but noteEvents' failures, which are the running hub's.
 import type { AgentEvent, RunnerToApi, SequencedEvent } from '@brigade/contracts'
+import { noteAccountState } from '../account-health.js'
 import { prisma, scoped, type Prisma } from '../db.js'
 import type { Session } from '../generated/prisma/client.js'
 import type { SessionStatus } from '../generated/prisma/enums.js'
@@ -227,85 +228,6 @@ export async function syncMachineLogins(
       })
     }
   }
-}
-
-/**
- * Keep each account's usage snapshot, and notice when its login stopped
- * working. In a thread with several teammates, each turn says its account.
- */
-async function noteAccountState(
-  session: { id: string; organizationId: string; workspaceId: string; accountId: string | null },
-  events: SequencedEvent[],
-) {
-  const byAccount = new Map<string, SequencedEvent[]>()
-  let accountId = session.accountId
-  for (const e of events) {
-    if (e.event.type === 'turn.started') accountId = e.event.accountId
-    // Limits read after a turn (Codex's) say whose they are.
-    const owner = (e.event.type === 'usage.updated' && e.event.accountId) || accountId
-    if (owner) byAccount.set(owner, [...(byAccount.get(owner) ?? []), e])
-    // What follows a switch is the new account's.
-    if (e.event.type === 'account.switched' && e.event.toAccountId) accountId = e.event.toAccountId
-  }
-  for (const [id, list] of byAccount) await noteOneAccount(session, id, list)
-}
-
-async function noteOneAccount(
-  session: { id: string; organizationId: string; workspaceId: string },
-  accountId: string,
-  events: SequencedEvent[],
-) {
-  const usage = events.findLast((e) => e.event.type === 'usage.updated' && e.event.limits?.length)
-  const authFailed = events.some(
-    (e) =>
-      e.event.type === 'error' &&
-      /log ?in|logged out|authenticat|credential|401|oauth/i.test(e.event.message),
-  )
-  // Only an actual reply proves the login works; a turn can complete after an error.
-  const worked = events.some((e) => e.event.type === 'message.done')
-  if (!usage && !authFailed && !worked) return
-  const before = await prisma.account.findFirst({
-    where: { id: accountId, workspaceId: session.workspaceId },
-  })
-  if (!before) return
-  if (
-    authFailed &&
-    before.status !== 'needs_sign_in' &&
-    // Noted again (noteEvents): its ticket may be there already.
-    !(await prisma.ticket.count({
-      where: {
-        type: 'sign_in',
-        status: 'open',
-        payload: { path: ['accountId'], equals: accountId },
-      },
-    }))
-  ) {
-    // An expired login is a ticket for the member who owns the account.
-    await scoped(session).ticket.create({
-      data: {
-        organizationId: session.organizationId,
-        workspaceId: session.workspaceId,
-        sessionId: session.id,
-        type: 'sign_in',
-        title: `Sign in again: ${before.label}`,
-        payload: { accountId, memberId: before.memberId },
-      },
-    })
-  }
-  await prisma.account.update({
-    where: { id: accountId },
-    data: {
-      ...(usage && usage.event.type === 'usage.updated'
-        ? { lastUsage: usage.event.limits as Prisma.InputJsonValue, lastUsageAt: new Date() }
-        : {}),
-      // A reply also proves usage is back, sooner than the reset said (a plan upgraded).
-      ...(authFailed
-        ? { status: 'needs_sign_in' }
-        : worked
-          ? { status: 'ready', exhaustedUntil: null }
-          : {}),
-    },
-  })
 }
 
 /**

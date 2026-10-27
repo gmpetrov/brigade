@@ -1,11 +1,14 @@
 // The checks behind operators' alerts (docs/monitoring.md), run each minute in the API's jobs
 // (src/jobs.ts): failures counted as they happen (src/ops/failures.ts), cloud computers as the
-// database and the hub see them, Stripe's webhook endpoint, and the Workers' failed
-// invocations as Cloudflare counts them.
+// database and the hub see them, threads whose events runners say wait, commands piling up for
+// a computer, Stripe's webhook endpoint, and the Workers' failed invocations as Cloudflare
+// counts them.
 import { billingEnabled, cloudEntitled, stripeClient } from '../billing.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
 import { hubs } from '../hub.js'
+import { localHubs } from '../hub/memory-host.js'
+import { computersWaiting } from '../runner-commands.js'
 import { raise, resolve, settle, type Alert } from './alerts.js'
 import { failuresOf, summary, type Failure } from './failures.js'
 
@@ -115,6 +118,15 @@ export const RULES: Rule[] = [
     critical: 3,
     quietMs: 60 * MINUTE,
     hint: 'The Api object restarted with the same version of the Worker: past its memory, most likely. Every socket dropped with it.',
+  },
+  {
+    kind: 'account-signed-out',
+    title: "Teammates' accounts signed out (their turns fail: not logged in)",
+    windowMs: 60 * MINUTE,
+    warning: 1,
+    critical: 5,
+    quietMs: 2 * 60 * MINUTE,
+    hint: 'Each has needs_sign_in now, and its member a sign_in ticket. Several at once, in several workspaces, points at a harness update or the provider rather than one expired login.',
   },
   {
     kind: 'runner-restart',
@@ -303,6 +315,129 @@ async function checkComputers(now: number) {
   )
 }
 
+/** A thread whose events the runner keeps sending, unacknowledged, this long: the API drops them. */
+export const EVENTS_WAITING_MS = 10 * MINUTE
+/** This long: critical. */
+export const EVENTS_WAITING_CRITICAL_MS = 30 * MINUTE
+
+/** What the runners say of their threads' events, as alerts by computer. */
+export function eventsWaitingProblems(
+  waiting: { sessionId: string; computerId: string; since: string }[],
+  names: Map<string, string>,
+  now: number,
+): Alert[] {
+  const late = waiting.filter((w) => now - Date.parse(w.since) >= EVENTS_WAITING_MS)
+  return [...Map.groupBy(late, (w) => w.computerId)].map(([computerId, threads]) => {
+    const oldest = Math.max(...threads.map((w) => now - Date.parse(w.since)))
+    return {
+      key: `events-waiting:${computerId}`,
+      severity: oldest >= EVENTS_WAITING_CRITICAL_MS ? 'critical' : 'warning',
+      title: `Threads' events not acknowledged: ${names.get(computerId) ?? computerId}`,
+      detail: [
+        `${threads.length} thread(s) whose runner has sent the same events for ${Math.round(oldest / MINUTE)} min at most, and the API never acknowledged them: their pages stop, their turns' tickets and states are not noted.`,
+        threads
+          .slice(0, 10)
+          .map((w) => `${w.sessionId} since ${w.since.slice(0, 16)}Z`)
+          .join('\n'),
+        'The API logs say why ("thread …: event … refused", "tickets and accounts of events … failed").',
+      ].join('\n\n'),
+    }
+  })
+}
+
+async function checkEventsWaiting(now: number) {
+  // Each hub's: those in this process, and those that are objects of their own (a call each,
+  // which wakes it once a minute at most).
+  const objects = await prisma.workspace.findMany({
+    where: { hubMode: 'object' },
+    select: { id: true },
+  })
+  const workspaceIds = new Set([
+    ...localHubs().map((h) => h.workspaceId),
+    ...objects.map((w) => w.id),
+  ])
+  const waiting = (
+    await Promise.all([...workspaceIds].map((id) => hubs.get(id).threadsWaiting()))
+  ).flat()
+  const ids = [...new Set(waiting.map((w) => w.computerId))]
+  const computers = ids.length
+    ? await prisma.computer.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true, workspace: { select: { name: true } } },
+      })
+    : []
+  const names = new Map(computers.map((c) => [c.id, `${c.name} (${c.workspace.name}, ${c.id})`]))
+  await settle('events-waiting:', eventsWaitingProblems(waiting, names, now), new Date(now))
+}
+
+/** Commands waiting for a computer's runner: this many is a backlog… */
+export const BACKLOG_COUNT = 20
+/** …or the oldest this old. */
+export const BACKLOG_AGE_MS = 30 * MINUTE
+
+type Waiting = { count: number; oldest: Date }
+type Computer = CloudComputer & { kind: string }
+
+/** A computer's commands piling up while its runner does not take them, if they do. */
+export function backlogProblem(computer: Computer, waiting: Waiting, now: number): Alert | null {
+  const age = now - waiting.oldest.getTime()
+  if (waiting.count < BACKLOG_COUNT && age < BACKLOG_AGE_MS) return null
+  const critical = waiting.count >= 5 * BACKLOG_COUNT || age >= 6 * BACKLOG_AGE_MS
+  return {
+    key: `backlog:${computer.id}`,
+    severity: critical ? 'critical' : 'warning',
+    title: `Commands piling up for ${computer.name} (${computer.workspace.name}, ${computer.id})`,
+    detail: `${waiting.count} command(s) not acknowledged by its runner, the oldest for ${Math.round(age / MINUTE)} min. It is ${computer.kind === 'cloud' ? computer.status : 'a member’s machine'}. They go once its runner connects; past 24 hours each fails, with a ticket in its thread.`,
+  }
+}
+
+/** Indexed (RunnerCommand_pending_computer): one row per computer with commands waiting. */
+/**
+ * Whether a computer's backlog is one: a member's machine that is offline (a laptop asleep)
+ * keeps what was sent to it until it wakes, which is how it works.
+ */
+export const backlogMatters = (computer: { kind: string }, online: boolean) =>
+  computer.kind === 'cloud' || online
+
+async function checkBacklogs(now: number) {
+  const waiting = await computersWaiting()
+  const computers = waiting.length
+    ? await prisma.computer.findMany({
+        where: { id: { in: waiting.map((w) => w.computerId) }, status: { not: 'destroyed' } },
+        select: {
+          id: true,
+          name: true,
+          kind: true,
+          status: true,
+          updatedAt: true,
+          workspaceId: true,
+          workspace: { select: { name: true } },
+        },
+      })
+    : []
+  const found: Alert[] = []
+  for (const w of waiting) {
+    const computer = computers.find((c) => c.id === w.computerId)
+    if (!computer || !w._min.createdAt) continue
+    const problem = backlogProblem(
+      computer,
+      { count: w._count._all, oldest: w._min.createdAt },
+      now,
+    )
+    if (!problem) continue
+    if (!backlogMatters(computer, await hubs.get(computer.workspaceId).isOnline(computer.id)))
+      continue
+    // A cloud computer without a plan is meant to be off (checkComputers).
+    if (
+      computer.kind !== 'cloud' ||
+      !billingEnabled() ||
+      (await cloudEntitled(computer.workspaceId))
+    )
+      found.push(problem)
+  }
+  await settle('backlog:', found, new Date(now))
+}
+
 /** Brigade's endpoint at Stripe: there, and not disabled by Stripe after days of failures. */
 async function checkStripeEndpoint(now: number) {
   if (!stripeClient || !env.STRIPE_WEBHOOK_SECRET) return
@@ -423,10 +558,12 @@ export async function runChecks(now = Date.now()) {
   running = true
   countingSince ||= now
   try {
-    // The first two need only the database; the others, Cloudflare's and Stripe's APIs too.
+    // The first four need only the database; the others, Cloudflare's and Stripe's APIs too.
     const steps: [string, () => Promise<unknown>][] = [
       ['failures', () => checkFailures(now)],
       ['computers', () => checkComputers(now)],
+      ['events waiting', () => checkEventsWaiting(now)],
+      ['command backlogs', () => checkBacklogs(now)],
       ['jobs queue', () => checkJobQueues(now)],
     ]
     let failed: string | null = null
@@ -436,7 +573,7 @@ export async function runChecks(now = Date.now()) {
     for (const [i, [name, step]] of steps.entries())
       await step().catch((error: unknown) => {
         console.error(`ops: ${name} check failed: ${String(error)}`)
-        if (i < 2) failed ??= `${name} check: ${String(error).slice(0, 300)}`
+        if (i < 4) failed ??= `${name} check: ${String(error).slice(0, 300)}`
       })
     lastCheckError = failed
     if (!failed) lastChecksAt = Date.now()

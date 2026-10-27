@@ -31,6 +31,8 @@ const ALLOWED: Record<string, string> = {
   'src/ops/failures.ts:failures': 'failures counted for the checks of the process that runs them',
   'src/ops/checks.ts:offlineSince': "the checks' own memory, in the process that runs them",
   'src/ops/watchdog.ts:downs': "the cron's own memory",
+  'src/account-health.ts:failures':
+    "by account, each a workspace's whose events go through its one hub: a count that a restart or a hibernation resets, then counts again",
   'src/front.ts:routes': "where each workspace's sockets went lately: the front Worker's own cache",
   'src/jobs.ts:running': "jobs running on the process's own timers: one run of each at a time",
   'src/platform/workers.ts:modes': "each workspace's hub mode as last read: data, by workspace",

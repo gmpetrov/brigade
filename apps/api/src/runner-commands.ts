@@ -51,27 +51,12 @@ export const AUTOMATIC_PER_COMPUTER = 25
 const automatic = (message: DurableCommand) =>
   message.type === 'thread.prompt' && message.memberId === null
 
-/**
- * A message nobody typed that may go with the one before it: the same thread, the same teammate
- * answering, nothing else asked of it. While its computer is down, a thread's events wait as one
- * message rather than one turn each.
- */
-const joinable = (
-  message: DurableCommand,
-): message is Extract<DurableCommand, { type: 'thread.prompt' }> =>
-  automatic(message) &&
-  message.type === 'thread.prompt' &&
-  !message.then.length &&
-  !message.handoff &&
-  !message.steer &&
-  !message.replyTo &&
-  !message.nameThread
-
-export type Kept = 'kept' | 'exists' | 'joined'
+export type Kept = 'kept' | 'exists'
 
 /**
- * Keep a command before it is sent: 'exists' when one with its id is kept already, 'joined' when
- * it went into a message of its thread waiting unsent (joinable). Throws a 503 past the caps.
+ * Keep a command before it is sent: 'exists' when one with its id is kept already. Each is a turn
+ * of its own, an event's too: folded into the one waiting, an event could be lost across a
+ * restart, or come after a person's message that answered it. Throws a 503 past the caps.
  */
 export async function keepCommand(
   computer: { id: string; organizationId?: string; workspaceId?: string },
@@ -86,8 +71,6 @@ export async function keepCommand(
         })
   const sessionId = sessionOf(message)
   if (await prisma.runnerCommand.count({ where: { id: message.commandId } })) return 'exists'
-  if (sessionId && joinable(message) && (await joinWaiting(computer.id, sessionId, message)))
-    return 'joined'
   await checkCaps(computer.id, sessionId, message)
   try {
     await prisma.runnerCommand.create({
@@ -136,60 +119,15 @@ async function checkCaps(computerId: string, sessionId: string | null, message: 
   })
 }
 
-/**
- * Put an automatic message into the one of its thread that waits unsent, rather than keep a second
- * turn: its text after that one's, its files with them. Only while that one was never sent: the
- * update names its updatedAt, and sending claims it by setting sentAt (noteSent), so the two never
- * cross. Its id is kept on the message (joined), so a try after a restart is not joined twice.
- */
-async function joinWaiting(
-  computerId: string,
-  sessionId: string,
-  message: Extract<DurableCommand, { type: 'thread.prompt' }>,
-) {
-  const waiting = await prisma.runnerCommand.findFirst({
-    where: { computerId, sessionId, status: 'pending', sentAt: null, type: 'thread.prompt' },
-    orderBy: { createdAt: 'desc' },
-    select: { id: true, message: true, updatedAt: true },
-  })
-  const before = waiting?.message as (DurableCommand & { joined?: string[] }) | undefined
-  if (!waiting || !before || !joinable(before)) return false
-  if (before.thread.teammate.id !== message.thread.teammate.id) return false
-  const joined: DurableCommand & { joined: string[] } = {
-    ...before,
-    text: `${before.text}\n\n${message.text}`,
-    attachments: [...before.attachments, ...message.attachments],
-    // The latest spec: it lists every file of the thread, these included.
-    thread: message.thread,
-    joined: [...(before.joined ?? []), message.commandId],
-  }
-  const { count } = await prisma.runnerCommand.updateMany({
-    where: { id: waiting.id, status: 'pending', sentAt: null, updatedAt: waiting.updatedAt },
-    data: { message: joined as never },
-  })
-  if (count)
-    console.log(`command ${message.commandId} joined ${waiting.id}, waiting for its computer`)
-  return count === 1
-}
-
-/** A command with this id is kept, alone or joined to another of its thread (joinWaiting). */
-export async function isKept(id: string, sessionId: string | null) {
-  const found = await prisma.runnerCommand.count({
-    where: {
-      OR: [
-        { id },
-        ...(sessionId ? [{ sessionId, message: { path: ['joined'], array_contains: [id] } }] : []),
-      ],
-    },
-  })
-  return found > 0
+/** A command with this id is kept. */
+export async function isKept(id: string) {
+  return (await prisma.runnerCommand.count({ where: { id } })) > 0
 }
 
 /**
  * The command is on its way to a runner of this protocol: from OUTBOX_PROTOCOL on it stays
  * pending until acknowledged; an older runner never acknowledges, so it is done once sent.
- * Its message as claimed, with what joined it until then (joinWaiting); null when it was already
- * taken (sent to an older runner), so it is not sent twice.
+ * Its message as claimed; null when it was already taken (sent to an older runner), so it is not sent twice.
  */
 export async function noteSent(id: string, protocol: number) {
   const [claimed] = await prisma.runnerCommand.updateManyAndReturn({
@@ -292,12 +230,13 @@ export async function commandMessage(id: string) {
   return row ? (row.message as unknown as DurableCommand) : null
 }
 
-/** Computers with commands waiting, and since when: the minute's tick looks at each. */
+/** Computers with commands waiting, since when and how many: the minute's tick looks at each. */
 export async function computersWaiting(workspaceId?: string) {
   return prisma.runnerCommand.groupBy({
     by: ['workspaceId', 'computerId'],
     where: { status: 'pending', ...(workspaceId ? { workspaceId } : {}) },
     _min: { createdAt: true, sentAt: true },
+    _count: { _all: true },
   })
 }
 
