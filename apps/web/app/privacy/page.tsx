@@ -87,6 +87,10 @@ export default function Privacy() {
         </a>
         , including the Limited Use requirements.
       </p>
+      <p>
+        Brigade does not use Google Workspace data obtained through Google APIs to develop, improve
+        or train generalized AI or machine learning models.
+      </p>
 
       <h2>Who we share it with</h2>
       <p>
