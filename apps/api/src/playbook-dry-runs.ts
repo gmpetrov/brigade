@@ -332,9 +332,10 @@ export async function noteDryRunEvents(
 }
 
 /** Runs of a dry run still going past RUN_MS_MAX: cut short, so the report comes. Each minute (src/wakeups.ts). */
-export async function settleOverdueDryRuns() {
+export async function settleOverdueDryRuns(workspaceId?: string) {
   const overdue = await prisma.playbookRun.findMany({
     where: {
+      ...(workspaceId ? { workspaceId } : {}),
       dryRun: true,
       status: { in: ['running', 'waiting_person'] },
       startedAt: { lte: new Date(Date.now() - RUN_MS_MAX) },
@@ -594,4 +595,18 @@ export async function latestDryRun(db: ScopedDb, installationId: string) {
   if (!latest)
     throw new HTTPException(404, { message: 'It has had no dry run yet: start_dry_run starts one' })
   return dryRunView(db, latest.id)
+}
+
+/** Workspaces with a dry run's event past its time (src/jobs.ts). */
+export async function dueDryRuns(now = Date.now()) {
+  const rows = await prisma.playbookRun.findMany({
+    where: {
+      dryRun: true,
+      status: { in: ['running', 'waiting_person'] },
+      startedAt: { lte: new Date(now - RUN_MS_MAX) },
+    },
+    distinct: ['workspaceId'],
+    select: { workspaceId: true },
+  })
+  return rows.map((r) => r.workspaceId)
 }

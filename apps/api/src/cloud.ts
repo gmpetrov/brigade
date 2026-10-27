@@ -360,10 +360,14 @@ export async function shutDown(computer: {
  * its workspace has no plan is shut down, until the provider does it. Whatever failed before
  * (a stop, a VM left by a cut-short making) is tried again here.
  */
-export async function enforcePlans() {
+export async function enforcePlans(workspaceId?: string) {
   if (!provider || !billingEnabled()) return
   const computers = await prisma.computer.findMany({
-    where: { kind: 'cloud', status: { notIn: ['stopped', 'destroyed'] } },
+    where: {
+      kind: 'cloud',
+      status: { notIn: ['stopped', 'destroyed'] },
+      ...(workspaceId ? { workspaceId } : {}),
+    },
   })
   for (const computer of computers) {
     if (!refOf(computer) || (await cloudEntitled(computer.workspaceId))) continue
@@ -615,8 +619,10 @@ async function keepAlive(computer: { id: string; providerRef: unknown }) {
  * the others alive, and reinstall old runners on them while they are idle. Each is checked in
  * its workspace's hub (checkIdle), which knows when it was last in use.
  */
-async function stopIdle() {
-  const running = await prisma.computer.findMany({ where: { kind: 'cloud', status: 'running' } })
+async function stopIdle(workspaceId?: string) {
+  const running = await prisma.computer.findMany({
+    where: { kind: 'cloud', status: 'running', ...(workspaceId ? { workspaceId } : {}) },
+  })
   for (const computer of running) {
     // Without a plan: enforcePlans, just before, shut it down or will try again.
     if (!(await cloudEntitled(computer.workspaceId))) continue
@@ -697,21 +703,26 @@ async function backUpThenStop(
   )
 }
 
-/** Stop idle cloud computers every minute. Started by the entry (src/jobs.ts). */
-export const watchIdle = () => {
-  if (provider)
-    setInterval(
-      () =>
-        void enforcePlans()
-          .catch((error) => {
-            console.error(error)
-            noteFailure('job:cloud-plans', error)
-          })
-          .then(() => stopIdle())
-          .catch((error) => {
-            console.error(error)
-            noteFailure('job:cloud-idle', error)
-          }),
-      60_000,
-    )
+/** Workspaces with a cloud computer that is not stopped: its minute (cloudMinute) is due. */
+export async function dueCloud() {
+  if (!provider) return []
+  const rows = await prisma.computer.findMany({
+    where: { kind: 'cloud', status: { notIn: ['stopped', 'destroyed'] } },
+    distinct: ['workspaceId'],
+    select: { workspaceId: true },
+  })
+  return rows.map((r) => r.workspaceId)
+}
+
+/**
+ * Each minute, for one workspace or all: computers without a plan shut down, idle ones stopped,
+ * the others kept alive (src/jobs.ts).
+ */
+export async function cloudMinute(workspaceId?: string) {
+  if (!provider) return
+  await enforcePlans(workspaceId).catch((error) => {
+    console.error(error)
+    noteFailure('job:cloud-plans', error)
+  })
+  await stopIdle(workspaceId)
 }

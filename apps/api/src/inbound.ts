@@ -5,6 +5,7 @@
 // follows the same pattern with its own table (src/mail/inbound.ts).
 import { prisma } from './db.js'
 import { noteFailure } from './ops/failures.js'
+import { enqueue } from './platform/node.js'
 
 /** What processing an event came to: done, or to be tried again later. */
 export type Processed = 'done' | 'retry'
@@ -34,7 +35,7 @@ const KEEP_MS = 3 * 24 * 60 * 60_000
 
 /**
  * Keep an event; a second time (the vendor's retry), it is recognised and not kept again.
- * Processing starts at once, in the background.
+ * Processing starts at once, apart from the request (a job, src/jobs.ts).
  */
 export async function keepInbound(event: {
   source: string
@@ -51,8 +52,9 @@ export async function keepInbound(event: {
       },
       select: { id: true },
     })
-    void processInbound(row.id).catch((error) =>
-      console.error(`inbound ${event.source} ${event.externalId} failed`, error),
+    // Processed apart from the request (src/jobs.ts): on the jobs' queue, or in the background.
+    await enqueue({ job: 'inbound-event', key: row.id }).catch((error) =>
+      console.error(`inbound ${event.source} ${event.externalId}: left to the tick`, error),
     )
     return { id: row.id, duplicate: false }
   } catch (error) {

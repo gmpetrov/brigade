@@ -19,10 +19,10 @@ type Env = {
   API: DurableObjectNamespace<Api>
   /**
    * Hyperdrive in front of the database, caching off (its cache serves reads older than the
-   * latest writes): a hub object that wakes connects again, which Hyperdrive makes quick. Unset,
-   * it connects to DATABASE_URL directly.
+   * latest writes), for what connects again often: a hub object that wakes, the cron, the jobs'
+   * consumer. Hyperdrive makes that quick. Unset, they connect to DATABASE_URL directly.
    */
-  HUB_DB?: Hyperdrive
+  DB_HYPERDRIVE?: Hyperdrive
 }
 
 type Hub = import('./hub/workspace-hub.js').WorkspaceHub
@@ -196,7 +196,7 @@ export class WorkspaceHubObject extends DurableObject<Env> {
         import('./hub/workspace-hub.js'),
       ])
     const client = newPrismaClient(
-      this.env.HUB_DB?.connectionString ?? process.env.DATABASE_URL!,
+      this.env.DB_HYPERDRIVE?.connectionString ?? process.env.DATABASE_URL!,
       POOL,
     )
     const host = new ObjectHost(this.ctx)

@@ -218,3 +218,46 @@ export async function moveHub(workspaceId: string, mode: HubMode) {
       ?.closeAll(1012, 'its hub moved')
   } else await hubStub(workspaceId).closeAll(1012, 'its hub moved')
 }
+
+// ---------------------------------------------------------------------------
+// Jobs on Queues (docs/workspace-hubs-plan.md, Phase 3)
+// ---------------------------------------------------------------------------
+
+type JobBindings = {
+  JOBS?: Queue<import('../jobs.js').JobMessage>
+  /** '1': the jobs go through JOBS (wrangler.jsonc). */
+  JOBS_ON_QUEUE?: string
+  /** The dead letters of JOBS: a producer only to read its backlog. */
+  JOBS_DEAD?: Queue<import('../jobs.js').JobMessage>
+}
+const jobBindings = env as unknown as JobBindings
+
+/** Whether jobs go through the JOBS queue: the Api object then runs no timers of its own. */
+export const jobsOnQueue = () => Boolean(jobBindings.JOBS) && jobBindings.JOBS_ON_QUEUE === '1'
+
+/**
+ * Run a job's message soon (src/jobs.ts): on the JOBS queue, whose consumer runs it apart from
+ * everything else; without it, here, in the background, as on Node.
+ */
+export async function enqueue(message: import('../jobs.js').JobMessage, delaySeconds = 0) {
+  if (jobsOnQueue()) {
+    await jobBindings.JOBS!.send(message, delaySeconds ? { delaySeconds } : {})
+    return
+  }
+  const run = () =>
+    void import('../jobs.js').then(({ runJob }) => runJob(message)).catch(() => undefined)
+  if (delaySeconds) setTimeout(run, delaySeconds * 1000)
+  else run()
+}
+
+/** The jobs' queue and its dead letters, as Cloudflare counts them; null without the queue. */
+export async function jobQueues() {
+  const { JOBS, JOBS_DEAD } = jobBindings
+  if (!jobsOnQueue() || !JOBS || !JOBS_DEAD) return null
+  const health = async (queue: Queue<unknown>) => {
+    const m = await queue.metrics()
+    return { backlog: m.backlogCount, oldestAt: m.oldestMessageTimestamp ?? null }
+  }
+  const [jobs, dead] = await Promise.all([health(JOBS), health(JOBS_DEAD)])
+  return { jobs, dead }
+}

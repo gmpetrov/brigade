@@ -11,11 +11,8 @@ import { gmailPush, readInbox, syncGmail } from './gmail.js'
 import { readCalendar, syncCalendar } from './google-calendar.js'
 import { syncStripe } from './stripe.js'
 import { inInbox } from '../mail/gmail-inbox.js'
-import { noteFailure } from '../ops/failures.js'
 
 export { SubscribeError }
-
-const TICK_MS = 60_000
 
 /** Why a kind of trigger cannot be set up on this server, if it cannot. */
 export function unavailable(kind: ConnectorKind): string | null {
@@ -84,17 +81,42 @@ async function listened(scope: Scope, connectionId: string) {
   )
 }
 
-async function tick() {
+/** Gmail accounts put in the Inbox with nothing reading them yet. */
+const unreadInbox = {
+  kind: 'gmail',
+  status: 'active',
+  reach: 'workspace',
+  inbox: true,
+  subscriptions: { none: {} },
+} as const
+
+/** Workspaces whose subscriptions are read each minute: every one with an App that has one. */
+export async function dueSubscriptions() {
+  const [subs, unread] = await Promise.all([
+    prisma.subscription.findMany({
+      where: { connection: { status: 'active' } },
+      distinct: ['workspaceId'],
+      select: { workspaceId: true },
+    }),
+    prisma.connection.findMany({
+      where: unreadInbox,
+      distinct: ['workspaceId'],
+      select: { workspaceId: true },
+    }),
+  ])
+  return [...subs, ...unread].map((r) => r.workspaceId)
+}
+
+/**
+ * Each minute, for one workspace or all: subscriptions kept up (renewed, switched between push
+ * and poll), and inboxes and calendars read where they are due (src/jobs.ts).
+ */
+export async function readSubscriptions(workspaceId?: string) {
+  const scope = workspaceId ? { workspaceId } : {}
   // A Gmail account put in the Inbox with nothing reading it yet: subscribed, so its mail
   // reaches the Inbox.
   const unread = await prisma.connection.findMany({
-    where: {
-      kind: 'gmail',
-      status: 'active',
-      reach: 'workspace',
-      inbox: true,
-      subscriptions: { none: {} },
-    },
+    where: { ...scope, ...unreadInbox },
     select: { id: true, organizationId: true, workspaceId: true },
     take: 20,
   })
@@ -104,7 +126,7 @@ async function tick() {
       c.id,
     ).catch((error) => console.warn(`inbox: ${c.id} not subscribed`, error))
   const subs = await prisma.subscription.findMany({
-    where: { connection: { status: 'active' } },
+    where: { ...scope, connection: { status: 'active' } },
     include: { connection: { select: { kind: true } } },
   })
   const soon = Date.now() + 25 * 3600_000
@@ -134,22 +156,4 @@ async function tick() {
       await prisma.subscription.updateMany({ where: { id: sub.id }, data: { error: message } })
     }
   }
-}
-
-let ticking = false
-export function watchSubscriptions() {
-  const run = async () => {
-    if (ticking) return
-    ticking = true
-    try {
-      await tick()
-    } catch (error) {
-      console.error('subscriptions tick:', error)
-      noteFailure('job:subscriptions', error)
-    } finally {
-      ticking = false
-    }
-  }
-  setTimeout(() => void run(), 10_000)
-  setInterval(() => void run(), TICK_MS)
 }

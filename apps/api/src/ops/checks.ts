@@ -421,11 +421,13 @@ let countingSince = 0
 export async function runChecks(now = Date.now()) {
   if (running) return
   running = true
+  countingSince ||= now
   try {
     // The first two need only the database; the others, Cloudflare's and Stripe's APIs too.
     const steps: [string, () => Promise<unknown>][] = [
       ['failures', () => checkFailures(now)],
       ['computers', () => checkComputers(now)],
+      ['jobs queue', () => checkJobQueues(now)],
     ]
     let failed: string | null = null
     if (runs % 5 === 0) steps.push(['workers', () => checkWorkers(now)])
@@ -441,6 +443,43 @@ export async function runChecks(now = Date.now()) {
   } finally {
     running = false
   }
+}
+
+/** Messages dead-lettered this many: warning; this many: critical. */
+export const DEAD_JOBS = { warning: 1, critical: 20 }
+/** The jobs' queue holding a message this long: its consumer is not keeping up, or down. */
+export const JOBS_LATE_MS = 10 * MINUTE
+
+/** The jobs' queue and its dead letters, as Cloudflare counts them (none on Node). */
+export function jobQueueProblems(
+  queues: { jobs: QueueHealth; dead: QueueHealth } | null,
+  now: number,
+): Alert[] {
+  if (!queues) return []
+  const alerts: Alert[] = []
+  const { dead, jobs } = queues
+  if (dead.backlog >= DEAD_JOBS.warning)
+    alerts.push({
+      key: 'jobs:dead',
+      severity: dead.backlog >= DEAD_JOBS.critical ? 'critical' : 'warning',
+      title: 'Background jobs dead-lettered',
+      detail: `${dead.backlog} job message(s) failed every try and wait in brigade-jobs-dlq. Read them in the dashboard (Queues), fix the cause, then send them to brigade-jobs again or delete them.`,
+    })
+  if (jobs.oldestAt && now - jobs.oldestAt.getTime() > JOBS_LATE_MS)
+    alerts.push({
+      key: 'jobs:late',
+      severity: 'warning',
+      title: 'Background jobs not keeping up',
+      detail: `${jobs.backlog} job message(s) wait in brigade-jobs, the oldest for ${Math.round((now - jobs.oldestAt.getTime()) / MINUTE)} min: its consumer is failing or slow.`,
+    })
+  return alerts
+}
+
+export type QueueHealth = { backlog: number; oldestAt: Date | null }
+
+async function checkJobQueues(now: number) {
+  const { jobQueues } = await import('../platform/node.js')
+  await settle('jobs:', jobQueueProblems(await jobQueues(), now), new Date(now))
 }
 
 /** Every minute, from the API's jobs (src/jobs.ts). */

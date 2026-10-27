@@ -293,10 +293,10 @@ export async function commandMessage(id: string) {
 }
 
 /** Computers with commands waiting, and since when: the minute's tick looks at each. */
-export async function computersWaiting() {
+export async function computersWaiting(workspaceId?: string) {
   return prisma.runnerCommand.groupBy({
     by: ['workspaceId', 'computerId'],
-    where: { status: 'pending' },
+    where: { status: 'pending', ...(workspaceId ? { workspaceId } : {}) },
     _min: { createdAt: true, sentAt: true },
   })
 }
@@ -306,9 +306,9 @@ export async function computersWaiting() {
  * and starts cloud computers that wait for commands (WorkspaceHub.resendCommands); then commands
  * not through in a day are given up, with a ticket. Started by the entry (src/jobs.ts).
  */
-export async function resendCommands(now = Date.now()) {
+export async function resendCommands(now = Date.now(), workspaceId?: string) {
   const { hubs } = await import('./hub.js')
-  const byWorkspace = Map.groupBy(await computersWaiting(), (w) => w.workspaceId)
+  const byWorkspace = Map.groupBy(await computersWaiting(workspaceId), (w) => w.workspaceId)
   for (const [workspaceId, waiting] of byWorkspace)
     await hubs
       .get(workspaceId)
@@ -322,7 +322,13 @@ export async function resendCommands(now = Date.now()) {
         console.warn(`resending commands in ${workspaceId} failed: ${String(error)}`)
         noteFailure('job:runner-commands', error)
       })
-  await giveUp(now)
+  // Of every workspace: its own job when each workspace's run apart (src/jobs.ts).
+  if (!workspaceId) await giveUp(now)
+}
+
+/** Workspaces with commands waiting for a computer (src/jobs.ts). */
+export async function dueCommands() {
+  return [...new Set((await computersWaiting()).map((w) => w.workspaceId))]
 }
 
 /** What a thread's people read of a command that did not get through. */

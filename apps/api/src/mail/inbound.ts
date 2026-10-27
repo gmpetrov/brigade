@@ -17,6 +17,7 @@ import {
 import { audit } from '../audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
 import { hubs } from '../hub.js'
+import { enqueue } from '../platform/node.js'
 import { currentHub } from '../hub/context.js'
 import { serially } from '../subscriptions/common.js'
 import { dispatch } from '../triggers.js'
@@ -140,8 +141,10 @@ export async function received(event: ReceivedEvent) {
         } as never,
       })
       kept++
-      void processMail(row.id).catch((error) =>
-        console.error(`mail ${row.id}: could not deliver it yet`, error),
+      // Read and delivered apart from the webhook (src/jobs.ts): on the jobs' queue, or in the
+      // background. The minute's retry takes it, should that fail.
+      await enqueue({ job: 'received-mail', key: row.id }).catch((error) =>
+        console.error(`mail ${row.id}: left to the retry`, error),
       )
     } catch (error) {
       // Resend sent it again: the first delivery has it.

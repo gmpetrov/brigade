@@ -7,38 +7,52 @@ import { processMail } from './inbound.js'
 import { fillMessageIds } from './outbound.js'
 import { checkDomains } from './domains.js'
 import { resendConfigured } from './resend.js'
-import { noteFailure } from '../ops/failures.js'
 
 const RETRY_AFTER_MS = 60_000
-let ticking = false
 
-async function tick() {
-  if (ticking || !resendConfigured()) return
-  ticking = true
-  try {
-    const due = await prisma.mailMessage.findMany({
-      where: {
-        direction: 'in',
-        status: 'pending',
-        updatedAt: { lt: new Date(Date.now() - RETRY_AFTER_MS) },
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 20,
-      select: { id: true, attempts: true, updatedAt: true },
-    })
-    for (const row of due) {
-      // Each try waits longer: 1, 2, 4… minutes.
-      if (Date.now() - row.updatedAt.getTime() < RETRY_AFTER_MS * 2 ** Math.min(row.attempts, 6))
-        continue
-      await processMail(row.id).catch((error) =>
-        console.warn(`mail ${row.id}: still not delivered`, error),
-      )
-    }
-    await fillMessageIds()
-    await checkDomains()
-  } finally {
-    ticking = false
+/** Mail kept by the webhook and not delivered yet, waiting long enough to try again. */
+const retrying = (workspaceId?: string) => ({
+  direction: 'in' as const,
+  status: 'pending' as const,
+  updatedAt: { lt: new Date(Date.now() - RETRY_AFTER_MS) },
+  ...(workspaceId ? { workspaceId } : {}),
+})
+
+/** Workspaces with received mail to try delivering again (src/jobs.ts). */
+export async function dueMail() {
+  if (!resendConfigured()) return []
+  const rows = await prisma.mailMessage.findMany({
+    where: retrying(),
+    distinct: ['workspaceId'],
+    select: { workspaceId: true },
+  })
+  return rows.map((r) => r.workspaceId)
+}
+
+/** Each minute, for one workspace or all: received mail not delivered yet is tried again. */
+export async function retryMail(workspaceId?: string) {
+  if (!resendConfigured()) return
+  const due = await prisma.mailMessage.findMany({
+    where: retrying(workspaceId),
+    orderBy: { createdAt: 'asc' },
+    take: 20,
+    select: { id: true, attempts: true, updatedAt: true },
+  })
+  for (const row of due) {
+    // Each try waits longer: 1, 2, 4… minutes.
+    if (Date.now() - row.updatedAt.getTime() < RETRY_AFTER_MS * 2 ** Math.min(row.attempts, 6))
+      continue
+    await processMail(row.id).catch((error) =>
+      console.warn(`mail ${row.id}: still not delivered`, error),
+    )
   }
+}
+
+/** Each minute: Message-IDs Resend has not reported are asked for; domains' DNS is checked. */
+export async function mailMinute() {
+  if (!resendConfigured()) return
+  await fillMessageIds()
+  await checkDomains()
 }
 
 /**
@@ -56,27 +70,4 @@ export async function sweepMail(now = new Date()) {
         where o."workspaceId" = m."workspaceId" and o.box = m.box
           and o."conversationId" = m."conversationId" and o.id <> m.id
           and (o."sessionId" is not null or o."expiresAt" is null or o."expiresAt" >= ${now})))`
-}
-
-export function watchMail() {
-  setTimeout(
-    () =>
-      void tick().catch((error) => {
-        console.warn(`mail tick failed: ${String(error)}`)
-        noteFailure('job:mail', error)
-      }),
-    15_000,
-  )
-  setInterval(
-    () =>
-      void tick().catch((error) => {
-        console.warn(`mail tick failed: ${String(error)}`)
-        noteFailure('job:mail', error)
-      }),
-    60_000,
-  )
-  setInterval(
-    () => void sweepMail().catch((error) => console.warn(`mail sweep failed: ${String(error)}`)),
-    60 * 60_000,
-  )
 }

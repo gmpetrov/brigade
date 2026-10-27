@@ -295,9 +295,10 @@ export async function wakeFollowers(scope: Scope, sessionId: string) {
  * woken now, once. Each minute, with the overdue children (settleOverdueChildren). Not while
  * the followed thread is in a turn: a report it makes there goes when the turn ends.
  */
-async function wakeWaitingFollowers() {
+async function wakeWaitingFollowers(workspaceId?: string) {
   const waiting = await prisma.threadFollow.findMany({
     where: {
+      ...(workspaceId ? { workspaceId } : {}),
       deliveredAt: null,
       session: {
         report: { not: Prisma.DbNull },
@@ -455,10 +456,14 @@ export async function noteChildEvents(
   }
 }
 
-/** Awaited children whose wait ran out: their parents hear what is done. Each minute (src/wakeups.ts). */
-export async function settleOverdueChildren() {
+/**
+ * Awaited children whose wait ran out: their parents hear what is done. Each minute, for one
+ * workspace or all (src/wakeups.ts).
+ */
+export async function settleOverdueChildren(workspaceId?: string) {
+  const scope = workspaceId ? { workspaceId } : {}
   const overdue = await prisma.session.findMany({
-    where: { awaited: true, reportDeliveredAt: null, awaitUntil: { lte: new Date() } },
+    where: { ...scope, awaited: true, reportDeliveredAt: null, awaitUntil: { lte: new Date() } },
     select: { parentId: true, organizationId: true, workspaceId: true },
     distinct: ['parentId'],
     take: 100,
@@ -474,6 +479,7 @@ export async function settleOverdueChildren() {
   // Conversations with a person gone quiet: their last word goes to the parent.
   const quiet = await prisma.session.findMany({
     where: {
+      ...scope,
       reportDueAt: { lte: new Date() },
       reportDeliveredAt: null,
       status: { notIn: ['starting', 'running', 'waiting'] },
@@ -487,7 +493,33 @@ export async function settleOverdueChildren() {
       c.id,
     ).catch((error: unknown) => console.error(`child ${c.id}: could not report`, error))
   // And followers a report did not reach.
-  await wakeWaitingFollowers()
+  await wakeWaitingFollowers(workspaceId)
+}
+
+/** Workspaces with children or followers due to hear now (src/jobs.ts). */
+export async function dueChildren(now = new Date()) {
+  const busy = ['starting', 'running', 'waiting'] as const
+  const [overdue, quiet, followers] = await Promise.all([
+    prisma.session.findMany({
+      where: { awaited: true, reportDeliveredAt: null, awaitUntil: { lte: now } },
+      distinct: ['workspaceId'],
+      select: { workspaceId: true },
+    }),
+    prisma.session.findMany({
+      where: { reportDueAt: { lte: now }, reportDeliveredAt: null, status: { notIn: [...busy] } },
+      distinct: ['workspaceId'],
+      select: { workspaceId: true },
+    }),
+    prisma.threadFollow.findMany({
+      where: {
+        deliveredAt: null,
+        session: { report: { not: Prisma.DbNull }, status: { notIn: [...busy] } },
+      },
+      distinct: ['workspaceId'],
+      select: { workspaceId: true },
+    }),
+  ])
+  return [...overdue, ...quiet, ...followers].map((r) => r.workspaceId)
 }
 
 /** The children a thread has at work: started, and no report yet. */

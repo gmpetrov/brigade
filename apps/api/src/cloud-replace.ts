@@ -335,10 +335,20 @@ export async function onRestored(
  * Each minute: replacements an API restart or a passing failure left under way go on, each in
  * its workspace's hub.
  */
-export async function driveReplacements() {
+export async function driveReplacements(workspaceId?: string) {
   const open = await prisma.computerReplacement.findMany({
-    where: { phase: { in: ['backing_up', 'creating'] } },
+    where: { phase: { in: ['backing_up', 'creating'] }, ...(workspaceId ? { workspaceId } : {}) },
     select: { id: true, workspaceId: true },
   })
-  for (const { id, workspaceId } of open) await hubs.get(workspaceId).driveReplacement(id)
+  for (const { id, workspaceId: owner } of open) await hubs.get(owner).driveReplacement(id)
+}
+
+/** Workspaces with a replacement under way (src/jobs.ts). */
+export async function dueReplacements() {
+  const rows = await prisma.computerReplacement.findMany({
+    where: { phase: { in: ['backing_up', 'creating'] } },
+    distinct: ['workspaceId'],
+    select: { workspaceId: true },
+  })
+  return rows.map((r) => r.workspaceId)
 }

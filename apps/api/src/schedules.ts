@@ -28,7 +28,6 @@ import { actingTeammate, loadThread } from './thread-spec.js'
 import { projectWhere, usableProject } from './projects.js'
 import { handleWakeup, isWakeupOperation } from './wakeups.js'
 import { startThread } from './work.js'
-import { noteFailure } from './ops/failures.js'
 
 /** A thread still `starting` after this is taken as lost (e.g. its queued prompt went with a restart). */
 const STARTING_STALE_MS = 15 * 60_000
@@ -403,62 +402,49 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
   }
 }
 
-let ticking = false
-
-/**
- * Fire every schedule that is due. Moving nextRunAt is the claim: only the tick
- * that moves it off the due value fires, so a firing never starts twice. The
- * next firing is counted from now, so missed ones (downtime) collapse into one.
- */
-async function tick() {
-  if (ticking) return
-  ticking = true
-  try {
-    const now = new Date()
-    const due = await prisma.schedule.findMany({
-      where: { pausedAt: null, nextRunAt: { lte: now } },
-      orderBy: { nextRunAt: 'asc' },
-      take: 100,
-      include: { teammate: true },
-    })
-    for (const schedule of due) {
-      let next: Date | null = null
-      try {
-        next = upcoming(schedule.cron, schedule.timezone)
-      } catch (error) {
-        console.error(`schedule ${schedule.id}: bad cron, it stops`, error)
-      }
-      const { count } = await prisma.schedule.updateMany({
-        where: { id: schedule.id, nextRunAt: schedule.nextRunAt },
-        data: { nextRunAt: next },
-      })
-      if (!count) continue
-      const result = await fire(schedule, schedule.nextRunAt!).catch((error: unknown) => {
-        console.error(`schedule ${schedule.id}: could not fire`, error)
-        return null
-      })
-      if (result && 'skipped' in result)
-        console.log(`schedule ${schedule.id}: skipped, ${result.skipped}`)
-    }
-  } finally {
-    ticking = false
-  }
+/** Workspaces with a schedule due now (src/jobs.ts). */
+export async function dueSchedules(now = new Date()) {
+  const rows = await prisma.schedule.findMany({
+    where: { pausedAt: null, nextRunAt: { lte: now } },
+    distinct: ['workspaceId'],
+    select: { workspaceId: true },
+  })
+  return rows.map((r) => r.workspaceId)
 }
 
-/** Tick at the start of every minute, so a 07:00 run starts at 07:00. */
-export function watchSchedules() {
-  const later = () =>
-    setTimeout(
-      () =>
-        void tick()
-          .catch((error) => {
-            console.error('schedule tick failed', error)
-            noteFailure('job:schedules', error)
-          })
-          .finally(later),
-      60_000 - (Date.now() % 60_000) + 250,
-    )
-  later()
+/**
+ * Fire every schedule that is due, of one workspace or all. Moving nextRunAt is the claim: only
+ * the run that moves it off the due value fires, so a firing never starts twice, even with two
+ * runs at once. The next firing is counted from now, so missed ones (downtime) collapse into one.
+ * Each minute, at its start, so a 07:00 run starts at 07:00 (src/jobs.ts).
+ */
+export async function fireDueSchedules(workspaceId?: string) {
+  const now = new Date()
+  const due = await prisma.schedule.findMany({
+    where: { pausedAt: null, nextRunAt: { lte: now }, ...(workspaceId ? { workspaceId } : {}) },
+    orderBy: { nextRunAt: 'asc' },
+    take: 100,
+    include: { teammate: true },
+  })
+  for (const schedule of due) {
+    let next: Date | null = null
+    try {
+      next = upcoming(schedule.cron, schedule.timezone)
+    } catch (error) {
+      console.error(`schedule ${schedule.id}: bad cron, it stops`, error)
+    }
+    const { count } = await prisma.schedule.updateMany({
+      where: { id: schedule.id, nextRunAt: schedule.nextRunAt },
+      data: { nextRunAt: next },
+    })
+    if (!count) continue
+    const result = await fire(schedule, schedule.nextRunAt!).catch((error: unknown) => {
+      console.error(`schedule ${schedule.id}: could not fire`, error)
+      return null
+    })
+    if (result && 'skipped' in result)
+      console.log(`schedule ${schedule.id}: skipped, ${result.skipped}`)
+  }
 }
 
 /** A member's timezone, as far as Brigade knows: their latest schedule's, else UTC. */

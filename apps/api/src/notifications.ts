@@ -431,19 +431,10 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
   return { items, counted }
 }
 
-let sweeping = false
-
-export function watchNotifications() {
-  setInterval(() => {
-    if (sweeping || !vapid()) return
-    sweeping = true
-    void sweep()
-      .catch((error) => console.warn(`notification sweep failed: ${String(error)}`))
-      .finally(() => (sweeping = false))
-  }, SWEEP_MS)
-}
-
-/** One pass over every member with a device that receives pushes (in one organization: tests). */
+/**
+ * One pass over every member with a device that receives pushes (in one organization: tests),
+ * every SWEEP_MS (src/jobs.ts).
+ */
 export async function sweep(now = new Date(), organizationId?: string) {
   const keys = vapid()
   if (!keys) return

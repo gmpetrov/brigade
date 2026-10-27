@@ -91,3 +91,25 @@ export function hubStub(_workspaceId: string): HubStub {
 export async function moveHub(_workspaceId: string, _mode: 'api' | 'object'): Promise<void> {
   throw new Error('Hubs are Durable Objects only on Cloudflare')
 }
+
+/**
+ * Run a job's message soon (src/jobs.ts): in this process, in the background, as a queue's
+ * consumer would; after `delaySeconds` if given.
+ */
+export async function enqueue(message: import('../jobs.js').JobMessage, delaySeconds = 0) {
+  const run = () =>
+    void import('../jobs.js').then(({ runJob }) => runJob(message)).catch(() => undefined)
+  if (delaySeconds) setTimeout(run, delaySeconds * 1000).unref?.()
+  else run()
+}
+
+/** Whether jobs go through a queue: never on Node, where timers run them (src/jobs.ts). */
+export const jobsOnQueue = () => false
+
+/** The jobs' queue and its dead letters: none on Node. */
+export async function jobQueues(): Promise<{
+  jobs: import('../ops/checks.js').QueueHealth
+  dead: import('../ops/checks.js').QueueHealth
+} | null> {
+  return null
+}
