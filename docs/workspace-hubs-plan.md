@@ -55,12 +55,16 @@ itself. What is left is turning them on, one at a time, with the checks below.
     connections at most and lets them go after 5 s idle, so that it can hibernate. With
     `DB_HYPERDRIVE` bound, it connects through Hyperdrive.
   - Its failures are counted in the Api object, where the checks run.
-- **Routing.** The front Worker (`src/front.ts`) sends a socket to the hub object of the
-  workspace it names: a runner's `?workspace=` (from its welcome, protocol 46) or its token
-  (`<workspaceId>.<secret>` for links from now on), a dashboard's `?workspace=`. A socket that
-  names none goes to the Api object. The object that does not hold a workspace's sockets answers
-  421 with `x-brigade-hub` and `x-brigade-workspace`, and the front sends the socket there. Each
-  front isolate remembers where a workspace's sockets went for 30 s.
+- **Routing.** A socket names its workspace: a runner's `?workspace=` (from its welcome,
+  protocol 46) or its token (`<workspaceId>.<secret>` for links from now on), a dashboard's
+  `?workspace=`. The front Worker (`src/front.ts`) sends it to the Api object first, which
+  passes on those of workspaces whose hub has its own object; with `HUB_ROUTING` set to
+  `"hubs"` in `wrangler.front.jsonc`, to the workspace's hub object first, so that an Api object
+  down does not keep them from connecting. The object that does not hold a workspace's sockets
+  answers 421 with `x-brigade-hub` and `x-brigade-workspace`, and the front sends the socket
+  there. Each front isolate remembers where a workspace's sockets went for 30 s. A hub object
+  holds its workspace's hub from the moment it moved there, as its own storage says: until then
+  it answers 421 at once, and keeps nothing.
 - **Calls between objects.** In the Api object, `hubs.get()` runs a hub that is its own, and
   calls a hub object by RPC. In a hub object, it runs its own hub, and calls the others' object
   or the Api object. An object that gets a call for a hub it no longer holds passes it on once.
@@ -92,9 +96,12 @@ Then, each step on its own, watching the alerts and the logs:
 
 1. **Hub objects, one workspace at a time.** `POST https://api.brigade.lol/ops/hubs` with
    `Authorization: Bearer <OPS_TOKEN>` and `{"workspaceId": "...", "mode": "object"}`. The
-   workspace's sockets close in the Api object (1012) and connect again to its object. Back
-   with `"mode": "api"`. Start with Brigade's own workspace. Watch for `hub <id>: woke with N
-sockets` in brigade-api's logs: one each time the object wakes.
+   workspace's sockets close in the Api object (1012) and connect again to its object, through
+   the Api object. Back with `"mode": "api"`. Start with Brigade's own workspace. Each time the
+   object wakes, brigade-api's logs say `hub <id>: woke with N sockets`. Once several
+   workspaces have moved, set `HUB_ROUTING` to `"hubs"` in `wrangler.front.jsonc`: their
+   sockets then connect without the Api object, even while it is down, which is the isolation
+   this plan is for.
 2. **Jobs on the queue.** Set `JOBS_ON_QUEUE` to `"1"` in `wrangler.jsonc`, and deploy. Watch the
    queue in the dashboard, and the `jobs:dead` and `jobs:late` alerts. Back with `"0"`.
 3. **Stateless reads.** Once Hyperdrive is bound, set `STATELESS_ROUTES` to
