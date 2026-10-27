@@ -337,6 +337,40 @@ export function InboxView() {
     () => void refresh(),
   )
 
+  // Marked done, the open email gives its place to the next one in the list (the one before
+  // at its end), as in a mail app: the list is worked through without going back to it.
+  const at = items.findIndex((i) => i.id === item)
+  const following = at < 0 ? null : (items[at + 1] ?? items[at - 1] ?? null)
+  function doneWith() {
+    router.replace(href({ item: following?.id ?? null }), { scroll: false })
+    void refresh()
+  }
+
+  // ↑ and ↓ open the email above or below the open one, from anywhere on the page but a field
+  // or an open menu.
+  const step = useRef<(by: number) => void>(() => {})
+  step.current = (by) => {
+    const to = at < 0 ? items[0] : items[at + by]
+    if (to) router.replace(href({ item: to.id }), { scroll: false })
+  }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || e.defaultPrevented) return
+      const target = e.target as HTMLElement | null
+      if (
+        target?.closest(
+          'input, textarea, select, [contenteditable="true"], [role="listbox"], [role="menu"], [role="dialog"]',
+        )
+      )
+        return
+      e.preventDefault()
+      step.current(e.key === 'ArrowDown' ? 1 : -1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const sources = list.data?.sources ?? []
   // The filters set, by their short name and icon (an address's own shows in its menu).
   const chosenSource = sources.find((s) => s.id === source)
@@ -591,7 +625,7 @@ export function InboxView() {
                   <ArrowLeft /> Back
                 </Link>
               </Button>
-              <Reader key={item} id={item} onChanged={refresh} />
+              <Reader key={item} id={item} onChanged={refresh} onDone={doneWith} />
             </>
           ) : (
             <p className="py-24 text-center text-sm text-muted-foreground">
@@ -697,8 +731,14 @@ function NextStep({ item }: { item: InboxItem }) {
 
 function Row({ item, href, selected }: { item: InboxItem; href: string; selected: boolean }) {
   const todo = item.status === 'waiting' || item.next?.kind === 'draft'
+  // Opened from the keyboard or by marking the one before done, it comes into view.
+  const self = useRef<HTMLAnchorElement>(null)
+  useEffect(() => {
+    if (selected) self.current?.scrollIntoView({ block: 'nearest' })
+  }, [selected])
   return (
     <Link
+      ref={self}
       href={href}
       scroll={false}
       aria-current={selected ? 'true' : undefined}
@@ -736,7 +776,16 @@ function Row({ item, href, selected }: { item: InboxItem; href: string; selected
 }
 
 /** One conversation, whole, and what a person can do with it. */
-function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> }) {
+function Reader({
+  id,
+  onChanged,
+  onDone,
+}: {
+  id: string
+  onChanged: () => Promise<void>
+  /** Marked done: the page opens the next email. */
+  onDone: () => void
+}) {
   const router = useRouter()
   const detail = useApi<InboxDetail>(itemPath(id), ['mail.updated', 'tickets.updated'])
   const [handing, setHanding] = useState(false)
@@ -756,6 +805,7 @@ function Reader({ id, onChanged }: { id: string; onChanged: () => Promise<void> 
     setError(undefined)
     try {
       await api(`${itemPath(id)}/done`, { body: { done: !done } })
+      if (!done) return onDone()
       await Promise.all([detail.reload(), onChanged()])
     } catch (e) {
       setError(message(e))
