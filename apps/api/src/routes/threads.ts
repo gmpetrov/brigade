@@ -301,10 +301,16 @@ export const threads = new Hono<AppEnv>()
       const missing = [...new Set([...pins.map((p) => p.sessionId), ...laters.keys()])].filter(
         (id) => !loaded.has(id),
       )
+      // A child thread shows only in its parent, unless this member pinned it.
+      const pinnedIds = new Set(pins.map((p) => p.sessionId))
       if (missing.length)
         rows.push(
           ...(await c.var.db.session.findMany({
-            where: { id: { in: missing }, archivedAt: null, parentId: null },
+            where: {
+              id: { in: missing },
+              archivedAt: null,
+              OR: [{ parentId: null }, { id: { in: [...pinnedIds] } }],
+            },
             include,
           })),
         )
