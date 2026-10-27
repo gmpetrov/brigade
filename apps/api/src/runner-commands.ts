@@ -162,12 +162,13 @@ export async function commandMessage(id: string) {
   return row ? (row.message as unknown as DurableCommand) : null
 }
 
-/** Computers with commands waiting, and since when: the minute's tick looks at each. */
+/** Computers with commands waiting, since when and how many: the minute's tick looks at each. */
 export async function computersWaiting() {
   return prisma.runnerCommand.groupBy({
     by: ['computerId'],
     where: { status: 'pending' },
     _min: { createdAt: true, sentAt: true },
+    _count: { _all: true },
   })
 }
 

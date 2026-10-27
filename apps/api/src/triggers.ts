@@ -18,10 +18,19 @@ import type {
   VendorEvent,
 } from './connectors/types.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { isOwnAlert } from './ops/alerts.js'
 import { loadThread } from './thread-spec.js'
 import { promptWithAttachments, startThread } from './work.js'
 
 const include = { teammate: true, connection: true } as const
+/** The connections whose events are mail. */
+const MAIL_KINDS = new Set<string>(['email', 'gmail'])
+
+/** An event that is Brigade's own alert, mailed back in. Mail only: a custom app's JSON with a from and a subject is not one. */
+export const ownAlertMail = (connection: { kind: string }, event: Pick<VendorEvent, 'payload'>) =>
+  MAIL_KINDS.has(connection.kind) &&
+  isOwnAlert((event.payload ?? {}) as Parameters<typeof isOwnAlert>[0])
+
 type Trigger = NonNullable<Awaited<ReturnType<typeof findTrigger>>>
 type Connection = Trigger['connection']
 
@@ -429,6 +438,13 @@ export async function dispatch(
   capped?: string
 }> {
   if (connection.status === 'removed') return { started: 0, failed: false }
+  // Brigade's own ops alerts, mailed back in: never a thread's. An alert about a computer that is
+  // down would start work for that computer, whose next alert would start more. The mail itself
+  // stays where it came (the Inbox's box, Gmail).
+  if (ownAlertMail(connection, event)) {
+    console.warn(`event ${event.id} on ${connection.id}: Brigade's own alert, no trigger takes it`)
+    return { started: 0, failed: false }
+  }
   const triggers = only
     ? [only]
     : await prisma.trigger.findMany({

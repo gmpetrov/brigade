@@ -57,23 +57,26 @@ told stays open until it is, and a turn for the worse that was not sent is tried
 
 ## What is checked
 
-| Key                 | Problem                                                                                                                        | Warning / critical                     |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
-| `api`               | Requests answered 500 (`app.onError`)                                                                                          | 10 / 50 in 5 min                       |
-| `stripe-webhook`    | Billing events not reconciled (answered 503, Stripe sends them again)                                                          | 1 / 5 in 30 min                        |
-| `stripe-signature`  | Billing webhook requests whose signature fails: `STRIPE_WEBHOOK_SECRET` is wrong?                                              | 3 / 10 in 1 h                          |
-| `stripe-endpoint`   | Brigade's billing endpoint missing at Stripe, or disabled by Stripe                                                            | critical (checked every 30 min)        |
-| `resend-webhook`    | Resend's events failing or badly signed (Brigade's email)                                                                      | 3 / 20 in 30 min                       |
-| `trigger-webhook`   | Triggers' webhooks (Stripe, custom apps) that could not start a thread                                                         | 5 / 30 in 30 min                       |
-| `turn`              | Teammates' turns failing, in at least 2 workspaces                                                                             | 6 / 25 in 15 min                       |
-| `runner-silent`     | Cloud computers' runners that stop their heartbeats without closing their connection                                           | 3 / 10 in 15 min                       |
-| `runner-restart`    | Cloud computers' runners not back 2 minutes after an update's restart                                                          | 1 / 5 in 1 h                           |
-| `job:<name>`        | A background job throwing (schedules, wake-ups, mail, merges, cloud plans…)                                                    | 3 / 10 in 15 min                       |
-| `job:<name>-sweep`  | An hourly sweep throwing                                                                                                       | 2 / 3 in 3 h                           |
-| `computer:<id>`     | A cloud computer in `error`, stuck `creating`/`starting` for 20 min without its runner, or `running` with no runner for 10 min | critical, critical, warning            |
-| `disk:<computerId>` | A `disk_full` ticket open on a cloud computer                                                                                  | warning                                |
-| `worker:<script>`   | A `brigade-*` Worker's or Durable Object's failed invocations (exceptions, exceeded limits), as Cloudflare counts them         | 5 / 50 in 10 min (checked every 5 min) |
-| `api-down`          | The watchdog: the Api object does not answer, or its checks fail                                                               | critical                               |
+| Key                           | Problem                                                                                                                                        | Warning / critical                     |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `api`                         | Requests answered 500 (`app.onError`)                                                                                                          | 10 / 50 in 5 min                       |
+| `stripe-webhook`              | Billing events not reconciled (answered 503, Stripe sends them again)                                                                          | 1 / 5 in 30 min                        |
+| `stripe-signature`            | Billing webhook requests whose signature fails: `STRIPE_WEBHOOK_SECRET` is wrong?                                                              | 3 / 10 in 1 h                          |
+| `stripe-endpoint`             | Brigade's billing endpoint missing at Stripe, or disabled by Stripe                                                                            | critical (checked every 30 min)        |
+| `resend-webhook`              | Resend's events failing or badly signed (Brigade's email)                                                                                      | 3 / 20 in 30 min                       |
+| `trigger-webhook`             | Triggers' webhooks (Stripe, custom apps) that could not start a thread                                                                         | 5 / 30 in 30 min                       |
+| `turn`                        | Teammates' turns failing, in at least 2 workspaces                                                                                             | 6 / 25 in 15 min                       |
+| `runner-silent`               | Cloud computers' runners that stop their heartbeats without closing their connection                                                           | 3 / 10 in 15 min                       |
+| `account-signed-out`          | An account marked `needs_sign_in` after 2 turns in a row failed for want of a login ("Not logged in · Please run /login")                      | 1 / 5 in 1 h                           |
+| `runner-restart`              | Cloud computers' runners not back 2 minutes after an update's restart                                                                          | 1 / 5 in 1 h                           |
+| `job:<name>`                  | A background job throwing (schedules, wake-ups, mail, merges, cloud plans…)                                                                    | 3 / 10 in 15 min                       |
+| `job:<name>-sweep`            | An hourly sweep throwing                                                                                                                       | 2 / 3 in 3 h                           |
+| `computer:<id>`               | A cloud computer in `error`, stuck `creating`/`starting` for 20 min without its runner, or `running` with no runner for 10 min                 | critical, critical, warning            |
+| `events-waiting:<computerId>` | Threads whose runner has sent the same events, unacknowledged, for 10 min (`events.waiting`)                                                   | warning; critical at 30 min            |
+| `backlog:<computerId>`        | Commands (`RunnerCommand`) its runner has not acknowledged: 20 or more, or the oldest 30 min old; never a member's machine while it is offline | warning; critical at 100 or 3 h        |
+| `disk:<computerId>`           | A `disk_full` ticket open on a cloud computer                                                                                                  | warning                                |
+| `worker:<script>`             | A `brigade-*` Worker's or Durable Object's failed invocations (exceptions, exceeded limits), as Cloudflare counts them                         | 5 / 50 in 10 min (checked every 5 min) |
+| `api-down`                    | The watchdog: the Api object does not answer, or its checks fail                                                                               | critical                               |
 
 A failure-count problem ends once none came for a while (15 minutes to 3 hours, by kind).
 Computers of a workspace without a plan are meant to be off and are not checked.

@@ -3,7 +3,9 @@
 // starts, every few hours while it lasts, and when it ends, not on each run of the check.
 import { env } from '../config.js'
 import { prisma } from '../db.js'
+import { addressesIn } from '../mail/text.js'
 import {
+  ALERT_SUBJECT,
   anyDestination,
   sendNotice,
   type Destinations,
@@ -18,13 +20,29 @@ export const REMIND_MS = 6 * 60 * 60_000
 /** A problem back this soon after it ended is the same one: told as still lasting, not new. */
 export const FLAP_MS = 30 * 60_000
 
+/** Where alert emails come from (the Worker's watchdog sends from the same, src/worker.ts). */
+export const alertsAddress = () => `alerts@${env.MAIL_DOMAIN}`.toLowerCase()
+
 export const destinations = (): Destinations => ({
   webhookUrl: env.OPS_ALERT_WEBHOOK_URL,
   webhookSecret: env.OPS_ALERT_WEBHOOK_SECRET,
   emails: env.OPS_ALERT_EMAILS,
   resendKey: env.RESEND_API_KEY,
-  from: `Brigade alerts <alerts@${env.MAIL_DOMAIN}>`,
+  from: `Brigade alerts <${alertsAddress()}>`,
 })
+
+/**
+ * One of these alert emails, come back in: to an inbox an operator's address forwards to, or a
+ * Gmail a trigger watches. From the alerts address, or, relayed by a list that rewrites the
+ * sender, automatic (Auto-Submitted) with an alert's subject. Other automatic mail (receipts,
+ * notifications) is not this: triggers watch it on purpose.
+ */
+export function isOwnAlert(mail: { from?: unknown; subject?: unknown; automatic?: unknown }) {
+  if (typeof mail.from === 'string' && addressesIn(mail.from).includes(alertsAddress())) return true
+  return (
+    mail.automatic === true && typeof mail.subject === 'string' && ALERT_SUBJECT.test(mail.subject)
+  )
+}
 
 export const alertsConfigured = () => anyDestination(destinations())
 
