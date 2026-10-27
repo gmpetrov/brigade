@@ -12,7 +12,7 @@ import {
   type QuestionAnswer,
   type TicketAnswer,
 } from '@brigade/contracts'
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowUpRight, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
@@ -188,8 +188,38 @@ type Waiting = { key: string; title: string; from?: string } & (
   | { ticket?: undefined; pull?: undefined; queue: Queue }
 )
 
-/** Shown in place of the one just answered, until the person moves on. */
-type Sent = { label: string; next: string | undefined }
+/**
+ * Shown in place of the one just answered, until the person moves on: what was done, to
+ * what, and its thread, to follow the teammate picking up.
+ */
+type Sent = { label: string; title: string; thread?: string; next: string | undefined }
+
+/** What was done, then the item's title, a link to its thread when it has one. */
+function SentLine({ sent }: { sent: Sent }) {
+  return (
+    <p className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+      <Check className="size-4 flex-none text-success" aria-hidden />
+      <span className="flex-none font-semibold">{sent.label}</span>
+      <span aria-hidden className="flex-none text-muted-foreground">
+        ·
+      </span>
+      {sent.thread ? (
+        <Link
+          href={`/app/threads/${sent.thread}`}
+          title="Open thread"
+          className="group flex min-w-0 items-center gap-1 text-muted-foreground hover:text-foreground"
+        >
+          <span className="truncate underline decoration-muted-foreground/50 underline-offset-4 group-hover:decoration-foreground">
+            {sent.title}
+          </span>
+          <ArrowUpRight className="size-3.5 flex-none" aria-hidden />
+        </Link>
+      ) : (
+        <span className="min-w-0 truncate text-muted-foreground">{sent.title}</span>
+      )}
+    </p>
+  )
+}
 
 export function NeedsYou({
   tickets,
@@ -269,7 +299,13 @@ export function NeedsYou({
 
   /** The one shown was answered: say so, and remember which comes next. */
   async function done(label: string) {
-    setSent({ label, next: (items[index + 1] ?? items[index - 1])?.key })
+    setSent({
+      label,
+      // A playbook's approvals by its name, not how many were left.
+      title: current?.queue?.name ?? current?.title ?? '',
+      thread: current?.ticket?.session?.id ?? current?.pull?.session?.id,
+      next: (items[index + 1] ?? items[index - 1])?.key,
+    })
     await onChange()
   }
 
@@ -325,13 +361,9 @@ export function NeedsYou({
   // already says nothing else is waiting.
   if (sent && items.length === 0)
     return (
-      <p
-        role="status"
-        className="flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm sm:px-5"
-      >
-        <Check className="size-4 flex-none text-success" aria-hidden />
-        {sent.label}
-      </p>
+      <div role="status" className="flex rounded-2xl border px-4 py-3 sm:px-5">
+        <SentLine sent={sent} />
+      </div>
     )
 
   const others = sent ? items : items.filter((i) => i.key !== current?.key)
@@ -385,12 +417,10 @@ export function NeedsYou({
       {error && <p className="text-sm text-destructive-text">{error}</p>}
 
       {sent ? (
-        <Card className="items-center gap-3 px-5 py-6 text-center">
-          <p className="flex items-center gap-2 font-semibold">
-            <Check className="size-4 text-success" aria-hidden />
-            {sent.label}
-          </p>
+        <Card role="status" className="flex-row items-center gap-3 px-4 py-2.5">
+          <SentLine sent={sent} />
           <Button
+            className="flex-none"
             size="sm"
             onClick={() => go(items.some((i) => i.key === sent.next) ? sent.next : items[0]?.key)}
           >
