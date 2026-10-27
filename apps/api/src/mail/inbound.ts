@@ -24,6 +24,7 @@ import { contactFor, historyOf, senderOf, type Sender } from './identity.js'
 import { bareAddress, localOn } from './names.js'
 import { receivedEmail, type ResendAttachment } from './resend.js'
 import {
+  addressesIn,
   automaticHeaders,
   bounceOf,
   headerOf,
@@ -220,6 +221,10 @@ async function readMail(db: ScopedDb, scope: Scope, row: Row): Promise<Row> {
     const value = headerOf(email.headers, name)
     if (value !== undefined) headers[name] = value.slice(0, 1000)
   }
+  // Who it was written to, as its headers say: Resend's to is where it was delivered, a box's
+  // hidden address when support@ of the product's own domain forwarded it there.
+  const to = addressesIn(headerOf(email.headers, 'to'))
+  const cc = addressesIn(headerOf(email.headers, 'cc'))
   const fromHeader = headerOf(email.headers, 'from') ?? email.from
   const fromName = mailbox(fromHeader).name ?? ''
   const text = (email.text?.trim() ? email.text : htmlToText(email.html)).slice(0, TEXT_MAX)
@@ -246,8 +251,8 @@ async function readMail(db: ScopedDb, scope: Scope, row: Row): Promise<Row> {
     data: {
       fromAddress: bareAddress(email.from),
       fromName: fromName.slice(0, 200),
-      to: email.to ?? row.to,
-      cc: email.cc ?? row.cc,
+      to: to.length ? to : (email.to ?? row.to),
+      cc: cc.length ? cc : (email.cc ?? row.cc),
       replyTo: (email.reply_to ?? []).map(bareAddress),
       subject: (email.subject ?? row.subject).slice(0, 1000),
       text,

@@ -97,6 +97,8 @@ export async function sendNotice(to: Destinations, notice: Notice) {
         body: JSON.stringify({
           from: to.from,
           to: to.emails,
+          // A machine's mail: a mailbox rule set to skip automatic mail starts no thread for it.
+          headers: { 'Auto-Submitted': 'auto-generated' },
           subject: `[Brigade ${notice.severity}] ${notice.kind === 'resolved' ? 'Resolved: ' : ''}${notice.title}`,
           text,
         }),

@@ -443,6 +443,19 @@ describe('receiving', { skip }, () => {
     assert.ok(row!.expiresAt && row!.expiresAt.getTime() > Date.now() + 29 * 86_400_000)
   })
 
+  test('a forwarded mail shows who it was written to, not the box it was forwarded to', async () => {
+    const [row] = await arrive(
+      mail({
+        to: [to(base())],
+        headers: { to: 'Support <support@product.test>', cc: 'ops@product.test, Ann <ann@x.test>' },
+      }),
+    )
+    assert.deepEqual(row!.to, ['support@product.test'])
+    assert.deepEqual(row!.cc, ['ops@product.test', 'ann@x.test'])
+    const [direct] = await arrive(mail({ to: [to(base())] }))
+    assert.deepEqual(direct!.to, [to(base())])
+  })
+
   test('a mail of the box a thread reads is that thread’s, with what waited before it', async () => {
     const db = scoped(a)
     const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })

@@ -81,6 +81,10 @@ export function headerOf(
   return Array.isArray(value) ? value.join(' ') : value
 }
 
+/** The addresses in a To or Cc header ("Name <a@b>, c@d"), bare and lower-cased. */
+export const addressesIn = (value: string | undefined) =>
+  (value ?? '').match(/[^\s<>,;"()]+@[^\s<>,;"()]+/g)?.map((a) => a.toLowerCase()) ?? []
+
 /** The headers Brigade keeps with an email, lower-cased and short. */
 export const KEPT_HEADERS = [
   'auto-submitted',
