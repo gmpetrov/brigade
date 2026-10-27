@@ -7,6 +7,7 @@ import { billingEnabled, cloudEntitled, stripeClient } from '../billing.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
 import { hubs } from '../hub.js'
+import type { ThreadWaiting } from '../hub/host.js'
 import { localHubs } from '../hub/memory-host.js'
 import { computersWaiting } from '../runner-commands.js'
 import { raise, resolve, settle, type Alert } from './alerts.js'
@@ -345,20 +346,41 @@ export function eventsWaitingProblems(
   })
 }
 
+/** A hub object's report not renewed this long is forgotten: it renews it each tick (90 s). */
+export const REPORT_FRESH_MS = 5 * MINUTE
+
+/** What hub objects said of their threads' events, by workspace: the checks' own memory. */
+const reported = new Map<string, { at: number; waiting: ThreadWaiting[] }>()
+
+/** A hub object's threads whose events wait (HubHost.reportWaiting). */
+export function noteReportedWaiting(
+  workspaceId: string,
+  waiting: ThreadWaiting[],
+  now = Date.now(),
+) {
+  if (waiting.length) reported.set(workspaceId, { at: now, waiting })
+  else reported.delete(workspaceId)
+}
+
+/**
+ * Every hub's threads whose events wait: those of this process's hubs, and those hub objects
+ * reported lately. A hub object is never woken to ask: one with no runner connected has none.
+ */
+export function threadsWaitingEverywhere(now = Date.now()): ThreadWaiting[] {
+  const local = localHubs()
+  const here = new Set(local.map((hub) => hub.workspaceId))
+  for (const [workspaceId, report] of reported)
+    if (now - report.at >= REPORT_FRESH_MS) reported.delete(workspaceId)
+  return [
+    ...local.flatMap((hub) => hub.threadsWaiting()),
+    ...[...reported]
+      .filter(([workspaceId]) => !here.has(workspaceId))
+      .flatMap(([, report]) => report.waiting),
+  ]
+}
+
 async function checkEventsWaiting(now: number) {
-  // Each hub's: those in this process, and those that are objects of their own (a call each,
-  // which wakes it once a minute at most).
-  const objects = await prisma.workspace.findMany({
-    where: { hubMode: 'object' },
-    select: { id: true },
-  })
-  const workspaceIds = new Set([
-    ...localHubs().map((h) => h.workspaceId),
-    ...objects.map((w) => w.id),
-  ])
-  const waiting = (
-    await Promise.all([...workspaceIds].map((id) => hubs.get(id).threadsWaiting()))
-  ).flat()
+  const waiting = threadsWaitingEverywhere(now)
   const ids = [...new Set(waiting.map((w) => w.computerId))]
   const computers = ids.length
     ? await prisma.computer.findMany({

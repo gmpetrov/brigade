@@ -107,4 +107,12 @@ export type HubHost = {
   persist(conn: RunnerConn | BrowserConn): void
   /** When the platform last heard from the socket without waking the hub (a keepalive), if ever. */
   heardAt?(socket: Socket): number | undefined
+  /**
+   * A hub elsewhere than where the ops checks run: tells them the threads whose events wait on
+   * its runners, as they change and on each tick, so the checks never wake it to ask.
+   */
+  reportWaiting?(waiting: ThreadWaiting[]): void
 }
+
+/** A thread whose events its runner says have not reached Brigade, since when. */
+export type ThreadWaiting = { sessionId: string; computerId: string; since: string }

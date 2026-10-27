@@ -103,3 +103,31 @@ test('a runner silent across a hibernation is forgotten at the tick that wakes t
     mock.timers.reset()
   }
 })
+
+test("a hub object's threads waiting reach the checks without waking it, and are forgotten unless renewed", async () => {
+  const { noteReportedWaiting, threadsWaitingEverywhere, REPORT_FRESH_MS } =
+    await import('../src/ops/checks.js')
+  class ReportingHost extends SleepyHost {
+    reportWaiting(waiting: { sessionId: string; computerId: string; since: string }[]) {
+      noteReportedWaiting('ws-object', waiting)
+    }
+  }
+  mock.timers.enable({ apis: ['Date'], now: 5_000_000 })
+  try {
+    const hub = new WorkspaceHub('ws-object', new ReportingHost())
+    const since = new Date(Date.now() - 60_000).toISOString()
+    hub.setEventsWaiting('laptop', new Map([['thread-1', since]]), new Set(['thread-1']))
+    assert.deepEqual(threadsWaitingEverywhere(), [
+      { sessionId: 'thread-1', computerId: 'laptop', since },
+    ])
+    // Through: the runner lists it no more, and the hub says so.
+    hub.setEventsWaiting('laptop', new Map(), new Set())
+    assert.deepEqual(threadsWaitingEverywhere(), [])
+    // A report its hub stopped renewing (it went, with its runners) is forgotten.
+    hub.setEventsWaiting('laptop', new Map([['thread-1', since]]), new Set(['thread-1']))
+    mock.timers.tick(REPORT_FRESH_MS)
+    assert.deepEqual(threadsWaitingEverywhere(), [])
+  } finally {
+    mock.timers.reset()
+  }
+})
