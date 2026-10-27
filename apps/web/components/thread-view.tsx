@@ -1527,7 +1527,10 @@ function Fold({
   return (
     <Collapsible className="flex min-w-0 flex-col">
       <CollapsibleTrigger className="group flex max-w-full min-w-0 items-center gap-1.5 self-start text-left text-sm text-muted-foreground hover:text-foreground">
-        <span className="flex-none">{label}</span>
+        {/* Truncates on a narrow screen rather than widening the page; the step after it goes first. */}
+        <span className="min-w-0 truncate" title={label}>
+          {label}
+        </span>
         <ChevronRight
           className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
           aria-hidden
@@ -1561,7 +1564,7 @@ function ActivityGroup({
             <StatusBadge status="failed" label={failed === 1 ? '1 failed' : `${failed} failed`} />
           )}
           {live && (
-            <span className="min-w-0 truncate font-mono text-xs opacity-70 group-data-[state=open]:hidden">
+            <span className="min-w-0 shrink-[100] truncate font-mono text-xs opacity-70 group-data-[state=open]:hidden">
               {stepText(group.at(-1)!)}
             </span>
           )}
