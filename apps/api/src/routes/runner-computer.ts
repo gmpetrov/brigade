@@ -86,7 +86,8 @@ export const runnerComputer = new Hono<{ Variables: { runner: Runner } }>()
       select: { kind: true },
     })
     // A member's machine keeps its own files: it backs nothing up.
-    if (computer?.kind !== 'cloud') throw new HTTPException(404, { message: 'Not a cloud computer' })
+    if (computer?.kind !== 'cloud')
+      throw new HTTPException(404, { message: 'Not a cloud computer' })
     return c.json({ key: backupKey(c.var.runner).toString('base64') })
   })
 

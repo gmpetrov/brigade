@@ -382,6 +382,16 @@ export class Folders {
     if (this.state.arrived[workDir] === moved.at) return
     await this.exclusive(workDir, async () => {
       if (this.state.arrived[workDir] === moved.at) return
+      // Put back from its backup already (ready, for a file a person opened): that is this
+      // arrival's folder, and what was done in it since stays.
+      const before = this.state.fromBackup[workDir]
+      if (before && (await exists(workDir, runAs))) {
+        delete this.state.fromBackup[workDir]
+        this.state.arrived[workDir] = moved.at
+        this.state.moved[workDir] = { how: 'backup', from: moved.from, backup: before }
+        this.save()
+        return
+      }
       const file = await this.tempFile()
       let restored = false
       let backup: FolderBackupInfo | null = null

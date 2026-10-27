@@ -162,7 +162,10 @@ test('a login is written back by renaming over what is there, never through a li
   const login = {
     files: [
       { name: 'auth.json' as const, content: Buffer.from('{"refresh":"r2"}').toString('base64') },
-      { name: '.oauth-token' as const, content: Buffer.from('sk-ant-oat01-x\n').toString('base64') },
+      {
+        name: '.oauth-token' as const,
+        content: Buffer.from('sk-ant-oat01-x\n').toString('base64'),
+      },
     ],
     sha256: '0'.repeat(64),
   }

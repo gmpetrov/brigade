@@ -124,7 +124,11 @@ export async function stopOldVm(ref: ComputerRef) {
   }
 }
 
-export function startProvision(computer: { id: string; organizationId: string; workspaceId: string }) {
+export function startProvision(computer: {
+  id: string
+  organizationId: string
+  workspaceId: string
+}) {
   if (provisioning.has(computer.id)) return
   provisioning.add(computer.id)
   void provision(computer)

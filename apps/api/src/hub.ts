@@ -831,8 +831,7 @@ export function runnerSocket(runner: {
 
     if (message.type === 'command.ack') return ackCommands(runner.computerId, message.commandIds)
 
-    if (message.type === 'computer.backup.result')
-      return onBackupResult(runner.computerId, message)
+    if (message.type === 'computer.backup.result') return onBackupResult(runner.computerId, message)
 
     if (message.type === 'computer.restored')
       return onRestored(runner, message).catch((error) =>

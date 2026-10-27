@@ -169,7 +169,7 @@ export async function browserStamp(runAs: string): Promise<number | null> {
     [
       '-c',
       `cd "$HOME/.browser" 2>/dev/null || exit 0; { ${listProfile()}; } | ` +
-        "xargs -0r find 2>/dev/null -printf '%T@\\n' | sort -n | tail -1",
+        'xargs -0r sh -c \'find "$@" -printf "%T@\\n" 2>/dev/null\' find | sort -n | tail -1',
     ],
     { runAs },
   )

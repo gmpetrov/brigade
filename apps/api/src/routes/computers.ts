@@ -128,6 +128,8 @@ export const computers = new Hono<AppEnv>()
    */
   .post('/:id/replace', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
+    if (!cloudAvailable())
+      throw new HTTPException(409, { message: 'No cloud computer provider is configured' })
     const { scope } = c.var
     const row = await replaceComputer(
       { organizationId: scope.organizationId, workspaceId: scope.workspaceId },
