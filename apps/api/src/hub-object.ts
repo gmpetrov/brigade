@@ -12,7 +12,7 @@
 // after a wake.
 import { KEEPALIVE } from '@brigade/contracts'
 import { DurableObject } from 'cloudflare:workers'
-import { HUB_HEADER, MISDIRECTED, workspaceOfSocket } from './hub/route.js'
+import { HUB_HEADER, MISDIRECTED, WORKSPACE_HEADER, workspaceOfSocket } from './hub/route.js'
 import type { Api } from './worker.js'
 
 type Env = {
@@ -186,7 +186,8 @@ export class WorkspaceHubObject extends DurableObject<Env> {
     if (!workspaceId) throw new Error('A hub object without its workspace')
     if (given && given !== workspaceId)
       throw new Error(`The hub of ${workspaceId} was asked for ${given}`)
-    if (!kept) this.ctx.storage.kv.put('workspace', workspaceId)
+    // Kept once a socket or an operation of the workspace came (accept, call): a name no
+    // workspace has leaves nothing behind.
     const [{ newPrismaClient, withPrismaClient }, { inHub }, { runIn }, failures, hubs] =
       await Promise.all([
         import('./db.js'),
@@ -276,12 +277,28 @@ export class WorkspaceHubObject extends DurableObject<Env> {
     const runnerSocket = url.pathname === '/runner/ws'
     if (!runnerSocket && url.pathname !== '/api/ws')
       return new Response('Not found', { status: 404 })
-    const { prisma } = await import('./db.js')
+    const [{ prisma }, { authenticateRunner }] = await Promise.all([
+      import('./db.js'),
+      import('./hub.js'),
+    ])
+    // A runner's token says whose it is: another workspace's (one it names that is not its own any
+    // more) is passed on by the front to its own, rather than turned away for good.
+    const runner = runnerSocket
+      ? await authenticateRunner(request.headers.get('authorization') ?? undefined)
+      : null
+    if (runnerSocket && !runner) return refuse(4401, 'unknown runner token')
+    if (runner && runner.workspaceId !== ready.workspaceId)
+      return new Response('This runner is another workspace’s', {
+        status: MISDIRECTED,
+        headers: { [WORKSPACE_HEADER]: runner.workspaceId },
+      })
     const workspace = await prisma.workspace.findUnique({
       where: { id: ready.workspaceId },
       select: { organizationId: true, hubMode: true },
     })
     if (!workspace) return refuse(4404, 'unknown workspace')
+    // Its object for good, once a socket of the workspace came to it.
+    this.ctx.storage.kv.put('workspace', ready.workspaceId)
     const { noteHubMode } = await import('./platform/node.js')
     noteHubMode(ready.workspaceId, workspace.hubMode)
     // Its hub is the Api object's still (or again): the front passes the socket on there.
@@ -293,11 +310,7 @@ export class WorkspaceHubObject extends DurableObject<Env> {
     const { connectionId } = await import('./hub/workspace-hub.js')
     const pair = new WebSocketPair()
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket]
-    if (runnerSocket) {
-      const { authenticateRunner } = await import('./hub.js')
-      const runner = await authenticateRunner(request.headers.get('authorization') ?? undefined)
-      if (!runner || runner.workspaceId !== ready.workspaceId)
-        return refuse(4401, 'unknown runner token')
+    if (runner) {
       this.ctx.acceptWebSocket(server, ['runner', `computer:${runner.computerId}`])
       const conn: RunnerConn = {
         kind: 'runner',
@@ -396,6 +409,7 @@ export class WorkspaceHubObject extends DurableObject<Env> {
     forwarded: boolean,
   ): Promise<Outcome> {
     const ready = await this.hub(workspaceId)
+    this.ctx.storage.kv.put('workspace', workspaceId)
     return ready.run(async () => {
       const { hubModeOf } = await import('./platform/node.js')
       if (!forwarded && (await hubModeOf(workspaceId)) !== 'object') {

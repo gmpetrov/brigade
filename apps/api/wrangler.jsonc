@@ -9,6 +9,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
+  // Its own isolates (the cron, the jobs' consumer, the reads the front sends here) run next to
+  // the database, as the Api object does: each request makes about ten queries.
+  "placement": { "region": "aws:eu-central-1" },
   // Api runs the API, and the hubs of workspaces whose hubMode is 'api'; WorkspaceHubObject is one
   // workspace's hub of its own, by its id (src/hub-object.ts, docs/workspace-hubs-plan.md).
   "durable_objects": {

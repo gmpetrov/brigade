@@ -18,9 +18,18 @@
       { "name": "HUBS", "class_name": "WorkspaceHubObject", "script_name": "brigade-api" },
     ],
   },
-  // For the preflights it answers (src/front.ts): the same as brigade-api's WEB_URL, a
-  // secret there. Change both together.
-  "vars": { "WEB_URL": "https://www.brigade.lol" },
+  // brigade-api's own isolates: the reads of STATELESS_ROUTES run there (src/front.ts).
+  "services": [{ "binding": "API_WORKER", "service": "brigade-api" }],
+  "vars": {
+    // For the preflights it answers (src/front.ts): the same as brigade-api's WEB_URL, a
+    // secret there. Change both together.
+    "WEB_URL": "https://www.brigade.lol",
+    // Paths whose reads run in brigade-api's own isolates rather than the Api object (Phase 4 of
+    // docs/workspace-hubs-plan.md), comma-separated; empty: none. Each with a client per request,
+    // through Hyperdrive (DB_HYPERDRIVE in wrangler.jsonc): set it only once Hyperdrive is bound.
+    // First: "/api/threads,/api/inbox,/api/tasks,/api/projects".
+    "STATELESS_ROUTES": "",
+  },
   "workers_dev": false,
   "preview_urls": false,
   "observability": { "enabled": true },

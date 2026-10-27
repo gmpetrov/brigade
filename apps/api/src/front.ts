@@ -1,8 +1,9 @@
 // The API's front door on Cloudflare, the Worker brigade-api-front: it forwards each
 // request to the Api object, which runs the whole API in the Worker brigade-api
-// (src/worker.ts), and each runner's and dashboard's socket to its workspace's hub: the
-// Api object's, or the workspace's own hub object (src/hub-object.ts) once its hubMode
-// is 'object' (docs/workspace-hubs-plan.md). It is a Worker of its own to stay small. A
+// (src/worker.ts), except the reads of STATELESS_ROUTES, which run in brigade-api's own
+// isolates; and each runner's and dashboard's socket to its workspace's hub: the Api
+// object's, or the workspace's own hub object (src/hub-object.ts) once its hubMode is
+// 'object' (docs/workspace-hubs-plan.md). It is a Worker of its own to stay small. A
 // new connection can land on a machine that has not loaded the Worker yet: loading
 // brigade-api's 13 MB there made a connection's first request 0.3 to 0.6 s slower, and
 // each WebSocket has a connection of its own. This one loads at once.
@@ -13,7 +14,14 @@
 import { Hono } from 'hono/tiny'
 import { apiObject } from './api-object.js'
 import { apiCors } from './cors.js'
-import { HUB_HEADER, MISDIRECTED, WORKSPACE_HEADER, workspaceOfSocket } from './hub/route.js'
+import {
+  HUB_HEADER,
+  MISDIRECTED,
+  STATELESS_HEADER,
+  statelessRoute,
+  WORKSPACE_HEADER,
+  workspaceOfSocket,
+} from './hub/route.js'
 import type { WorkspaceHubObject } from './hub-object.js'
 import type { Api } from './worker.js'
 
@@ -23,6 +31,10 @@ type Env = {
   HUBS?: DurableObjectNamespace<WorkspaceHubObject>
   /** The dashboard's origins, comma-separated: brigade-api's WEB_URL (wrangler.front.jsonc). */
   WEB_URL: string
+  /** brigade-api's own isolates, for the routes that run there (STATELESS_ROUTES). */
+  API_WORKER?: Fetcher
+  /** Paths whose reads run in brigade-api's own isolates, not the Api object; empty: none. */
+  STATELESS_ROUTES?: string
 }
 
 const origins = (list: string) =>
@@ -61,7 +73,8 @@ function named(request: Request, workspaceId?: string) {
 async function socket(
   request: Request,
   env: Env & { HUBS: DurableObjectNamespace<WorkspaceHubObject> },
-) {
+  again = false,
+): Promise<Response> {
   const hub = (workspaceId: string) =>
     env.HUBS.get(env.HUBS.idFromName(workspaceId), { locationHint: 'weur' }).fetch(
       named(request, workspaceId),
@@ -78,12 +91,15 @@ async function socket(
     return hub(owner)
   }
   const answer = await hub(workspaceId)
-  if (answer.status === MISDIRECTED && answer.headers.get(HUB_HEADER) === 'api') {
-    remember(workspaceId, 'api')
-    return api()
+  if (answer.status !== MISDIRECTED) {
+    remember(workspaceId, 'object')
+    return answer
   }
-  remember(workspaceId, 'object')
-  return answer
+  // Not this workspace's runner after all: once more, by its own workspace.
+  const owner = answer.headers.get(WORKSPACE_HEADER)
+  if (owner && owner !== workspaceId && !again) return socket(named(request, owner), env, true)
+  remember(workspaceId, 'api')
+  return api()
 }
 
 export default {
@@ -97,6 +113,19 @@ export default {
       (pathname === '/runner/ws' || pathname === '/api/ws')
     )
       return socket(request, { ...env, HUBS: env.HUBS })
+    // Reads that need no socket run in brigade-api's own isolates, next to the database: not
+    // through the one Api object (docs/workspace-hubs-plan.md, Phase 4).
+    if (env.API_WORKER && statelessRoute(request, env.STATELESS_ROUTES)) {
+      const forwarded = new Request(request)
+      forwarded.headers.set(STATELESS_HEADER, '1')
+      return env.API_WORKER.fetch(forwarded)
+    }
+    // Only the front says so.
+    if (request.headers.has(STATELESS_HEADER)) {
+      const plain = new Request(request)
+      plain.headers.delete(STATELESS_HEADER)
+      return apiObject(env.API).fetch(plain)
+    }
     return apiObject(env.API).fetch(request)
   },
 } satisfies ExportedHandler<Env>

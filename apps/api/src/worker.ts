@@ -15,6 +15,7 @@ import './worker-env.js'
 import { DurableObject } from 'cloudflare:workers'
 import { apiObject, NAME } from './api-object.js'
 import { runIn } from './hub/place.js'
+import { STATELESS_HEADER } from './hub/route.js'
 import type { OperationName } from './hub/operations.js'
 import type { JobMessage } from './jobs.js'
 import type { Failure } from './ops/failures.js'
@@ -141,9 +142,9 @@ export class Api extends DurableObject<Env> {
 }
 
 /**
- * Code of this Worker's own isolates (the cron, the queue's consumer), not of an object: a client
- * of its own for each run, as connections cannot outlive it, and its failures counted in the Api
- * object, where the checks run.
+ * Code of this Worker's own isolates (the cron, the queue's consumer, the reads the front sends
+ * here), not of an object: a client of its own for each run, as connections cannot outlive it,
+ * and its failures counted in the Api object, where the checks run.
  */
 async function stateless<T>(env: Env, ctx: ExecutionContext, fn: () => Promise<T>) {
   const [{ newPrismaClient, withPrismaClient }, { withFailureSink }] = await Promise.all([
@@ -177,8 +178,19 @@ async function stateless<T>(env: Env, ctx: ExecutionContext, fn: () => Promise<T
 const SEND_BATCH = 100
 
 export default {
-  fetch(request, env) {
-    return apiObject(env.API).fetch(request)
+  /**
+   * A request the front sends here runs in this isolate, with a client of its own (Phase 4 of
+   * docs/workspace-hubs-plan.md): a read under STATELESS_ROUTES. Everything else goes to the Api
+   * object, as under `wrangler dev` without the front.
+   */
+  async fetch(request, env, ctx) {
+    if (request.headers.get(STATELESS_HEADER) !== '1') return apiObject(env.API).fetch(request)
+    const { app } = await import('./app.js')
+    const response = await stateless(env, ctx, async () => app.fetch(request))
+    // Where it ran, to compare its times with the Api object's (Server-Timing).
+    const answer = new Response(response.body, response)
+    answer.headers.set('x-brigade-ran', 'isolate')
+    return answer
   },
 
   /**
