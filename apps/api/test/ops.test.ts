@@ -355,6 +355,22 @@ describe('restarts and reconnect storms', () => {
     assert.equal(noteStart(starts, { at: now + 25 * 60 * MIN, version: 'v3' }).starts.length, 1)
   })
 
+  test('an object let go for having nothing to do, then started again, is no restart to tell', async () => {
+    const { noteStart, unexpectedRestarts } = await import('../src/ops/restarts.js')
+    const now = t0.getTime()
+    let starts = noteStart([], { at: now - 20 * MIN, version: 'v2' }).starts
+    // The cron's minute wakes it each time, idle since the minute before (jobs on their queue).
+    for (let i = 10; i > 0; i--) {
+      const woke = noteStart(starts, { at: now - i * MIN, version: 'v2', idle: true })
+      assert.equal(woke.unexpected, false)
+      starts = woke.starts
+    }
+    assert.equal(unexpectedRestarts(starts, now), 0)
+    // Reset while busy: counted, among the idle ones.
+    starts = noteStart(starts, { at: now - 1000, version: 'v2', idle: false }).starts
+    assert.equal(unexpectedRestarts(starts, now), 1)
+  })
+
   test('the watchdog tells each problem on its own: down, and restarting', async () => {
     const { API_RESTARTING } = await import('../src/ops/watchdog.js')
     const to = { webhookUrl: 'https://hooks.example.test/x' }
