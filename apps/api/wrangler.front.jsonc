@@ -31,7 +31,7 @@
     "STATELESS_ROUTES": "",
     // "hubs": sockets go to their workspace's hub object first (once most workspaces' hubs
     // have one); "api": to the Api object first, which passes on the others (src/front.ts).
-    "HUB_ROUTING": "api",
+    "HUB_ROUTING": "hubs",
   },
   "workers_dev": false,
   "preview_urls": false,
