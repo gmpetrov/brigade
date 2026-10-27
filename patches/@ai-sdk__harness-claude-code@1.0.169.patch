@@ -254,3 +254,21 @@ index e3a9230..8dcfb46 100644
  	emittedTerminalFinish = true;
  	emit({
  		type: "finish",
+diff --git a/dist/index.js b/dist/index.js
+index 1463dac..c6d7cca 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1059,9 +1059,13 @@ function createClaudeCode(settings = {}) {
+ 					token: coords.token
+ 				});
+ 				const attachChannel = new SandboxChannel({
++					// Brigade: attaching to a bridge handed over by an update retries for as long as a start
++					// does, as before 1.0.168, rather than give up at once and start a second one.
+ 					connect: createBridgeWebSocketConnect({
+ 						endpoint: attachEndpoint,
+ 						webSocketConstructor: WebSocket,
++						openRetryTimeoutMs: timeoutMs,
++						startAbortSignal: startOpts.abortSignal,
+ 						onHello
+ 					}),
+ 					outboundSchema: outboundMessageSchema,
