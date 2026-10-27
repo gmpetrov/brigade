@@ -108,7 +108,8 @@ Then, each step on its own, watching the alerts and the logs:
    socket came in, and an object never moves. Should that fail, it stays in the Api object until
    it is moved.
 2. **Jobs on the queue.** Set `JOBS_ON_QUEUE` to `"1"` in `wrangler.jsonc`, and deploy. Watch the
-   queue in the dashboard, and the `jobs:dead` and `jobs:late` alerts. Back with `"0"`.
+   queue in the dashboard, and the `jobs:dead` and `jobs:late` alerts. Back with `"0"`. Done on
+   2026-10-27.
 3. **Stateless reads.** Once Hyperdrive is bound, set `STATELESS_ROUTES` to
    `/api/threads,/api/inbox,/api/tasks,/api/projects`. Compare the `Server-Timing` of
    responses with `x-brigade-ran: isolate` with the Api object's, from far away (Los Angeles)
