@@ -87,6 +87,7 @@ import {
 } from '../hub.js'
 import { contentTypeFor, isText } from '../library.js'
 import { projectWhere, usableProject } from '../projects.js'
+import { localPreviewUrl } from '../preview-gateway.js'
 import {
   currentTeammate,
   loadThread,
@@ -1390,7 +1391,8 @@ export const threads = new Hono<AppEnv>()
    * Open the thread's live preview: the address of the app its teammate runs.
    * On the workspace computer it is public on the preview gateway, with an
    * access token for a few minutes that only people who may see the thread
-   * get; on a member's own machine it is that machine's localhost. touch: the dashboard still has it open, which
+   * get; on a member's own machine it is the thread's own name under that machine's localhost
+   * (http://<thread>.localhost:<port>, as its runner says). touch: the dashboard still has it open, which
    * keeps it (and the workspace computer) from stopping.
    */
   .post('/:id/preview', async (c) => {
@@ -1412,7 +1414,7 @@ export const threads = new Hono<AppEnv>()
     // The runner's proxy in front of the app; the app itself from runners before it.
     const port = preview.publicPort ?? preview.port
     if (thread.computer.kind !== 'cloud')
-      return c.json({ url: `http://localhost:${port}`, local: true } satisfies PreviewView)
+      return c.json({ url: localPreviewUrl(live.origin, port), local: true } satisfies PreviewView)
     const { url } = await hostedPort(thread.computer, port, thread.id)
     if (!url)
       throw new HTTPException(503, {

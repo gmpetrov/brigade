@@ -46,7 +46,7 @@ test('a running preview’s logs give its address; none without one', async () =
   const logs = await control.logs()
   assert.equal(logs.status, 'running')
   assert.deepEqual(logs.origins, result.origins)
-  assert.match(logs.origins?.[port] ?? '', /^http:\/\/localhost:\d+$/)
+  assert.match(logs.origins?.[port] ?? '', /^http:\/\/s1\.localhost:\d+$/)
   // On a member's machine there is nothing to open first.
   assert.equal(logs.open, undefined)
   await control.stop()

@@ -320,6 +320,32 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
   (above): it stays the same across the thread's runs, so an OAuth callback
   registered once keeps working in that thread, and another thread, or
   another computer, has another.
+- **On a member's Mac, each thread's preview at a name of its own.** It opens at
+  `http://<thread>.localhost:<port>` (the proxy's port), not `localhost`: a
+  browser keeps cookies by name, not port, so on plain `localhost` signing in
+  to one thread's preview signed another's out. Browsers and macOS take
+  `*.localhost` to the loopback without setup (measured on October 27, 2026:
+  macOS 27's resolver, Playwright's WebKit and Chromium; each name keeps its own
+  cookies). Frameworks' dev servers accept the name as they accept `localhost`
+  (Next's dev origins allow `**.localhost`, Vite's hosts `.localhost`). The
+  runner says the address in `preview.logs.result` (`origin`); the API hands
+  out plain `localhost` for runners before it. In a frame of the dashboard
+  (HTTPS), both engines block `http://localhost` and `http://<thread>.localhost`
+  alike, so the pane is no worse off than before: the new tab is the way out.
+- **On a member's Mac, a preview nobody uses stops where it is.** There is no
+  cgroup to freeze it, so after `FREEZE_MS` without use its process group gets
+  `SIGSTOP`, and the running containers of its thread's Compose project are
+  paused in the member's Docker; the next request through the proxy, or a turn
+  in the thread, sends `SIGCONT` and resumes them. A dev server's file watching
+  and its database spend no CPU meanwhile, and macOS compresses or swaps what
+  they hold. It still stops after `TTL_MS` (30 minutes) as before. A process
+  that left the preview's group (`setsid`) keeps running. A runner that died
+  with previews stopped leaves them stopped: the next one resumes them as it
+  stops them (`SIGCONT` after `SIGTERM`), and resumes the containers it noted
+  as paused. Containers are paused one by one (one that stopped meanwhile does
+  not hide the others), and those Docker does not resume (Docker Desktop not
+  answering) stay noted in `paused-containers.json` and are tried again each
+  minute until resumed or gone.
 - **Each teammate has its own Docker.** Projects run their database, cache and
   mail with `docker compose`; giving teammates the root daemon's socket would
   make them root. The root setup installs what rootless Docker needs (`uidmap`,

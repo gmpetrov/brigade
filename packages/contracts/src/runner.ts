@@ -545,6 +545,11 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     ok: z.boolean(),
     error: z.string().optional(),
     text: z.string().optional(),
+    /**
+     * Where a person opens it on a member's machine (http://<thread>.localhost:<port>); unset
+     * from runners before it, whose previews open at localhost.
+     */
+    origin: z.string().max(200).optional(),
   }),
   /** The brief, name and logo project.describe asked for, or why not. */
   z.object({
