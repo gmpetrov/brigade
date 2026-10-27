@@ -6,10 +6,10 @@ settings:
 
 patchedDependencies:
   '@ai-sdk/harness-claude-code@1.0.169':
-    hash: 2286c6dcf27e166cd63873c106eb3f66140c9ac90d9aacac48508a883b5eb8f3
+    hash: 32b47e92ffca08b72d24955e801775ca82b531687e30a525e548c797340ac7e7
     path: patches/@ai-sdk__harness-claude-code@1.0.169.patch
   '@ai-sdk/harness-codex@1.0.167':
-    hash: 8556cbb96a735e07c354b57b5a064a4190a039cca754fad59e9bf4ea49944aed
+    hash: e948dd0c283a8c9bb94896c962f45a536a70fae63485111c891ae030876d6148
     path: patches/@ai-sdk__harness-codex@1.0.167.patch
   '@opennextjs/cloudflare@1.20.7':
     hash: e4679618195e96c4dfba3fcefc01b2938b2a64d31b32083702b17feb7db6c401
@@ -190,10 +190,10 @@ importers:
         version: 1.0.165(ws@8.22.0)(zod@4.6.7)
       '@ai-sdk/harness-claude-code':
         specifier: 1.0.169
-        version: 1.0.169(patch_hash=2286c6dcf27e166cd63873c106eb3f66140c9ac90d9aacac48508a883b5eb8f3)(zod@4.6.7)
+        version: 1.0.169(patch_hash=32b47e92ffca08b72d24955e801775ca82b531687e30a525e548c797340ac7e7)(zod@4.6.7)
       '@ai-sdk/harness-codex':
         specifier: 1.0.167
-        version: 1.0.167(patch_hash=8556cbb96a735e07c354b57b5a064a4190a039cca754fad59e9bf4ea49944aed)(zod@4.6.7)
+        version: 1.0.167(patch_hash=e948dd0c283a8c9bb94896c962f45a536a70fae63485111c891ae030876d6148)(zod@4.6.7)
       '@brigade/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -5765,7 +5765,7 @@ snapshots:
       '@vercel/oidc': 3.2.0
       zod: 4.6.7
 
-  '@ai-sdk/harness-claude-code@1.0.169(patch_hash=2286c6dcf27e166cd63873c106eb3f66140c9ac90d9aacac48508a883b5eb8f3)(zod@4.6.7)':
+  '@ai-sdk/harness-claude-code@1.0.169(patch_hash=32b47e92ffca08b72d24955e801775ca82b531687e30a525e548c797340ac7e7)(zod@4.6.7)':
     dependencies:
       '@ai-sdk/harness': 1.0.165(ws@8.22.0)(zod@4.6.7)
       '@ai-sdk/provider': 4.0.34
@@ -5776,7 +5776,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@ai-sdk/harness-codex@1.0.167(patch_hash=8556cbb96a735e07c354b57b5a064a4190a039cca754fad59e9bf4ea49944aed)(zod@4.6.7)':
+  '@ai-sdk/harness-codex@1.0.167(patch_hash=e948dd0c283a8c9bb94896c962f45a536a70fae63485111c891ae030876d6148)(zod@4.6.7)':
     dependencies:
       '@ai-sdk/harness': 1.0.165(ws@8.22.0)(zod@4.6.7)
       '@ai-sdk/provider': 4.0.34
