@@ -24,7 +24,8 @@ import { mkdir, readdir, readFile, rename, rm, stat, statfs, writeFile } from 'n
 import { basename, dirname, join } from 'node:path'
 import { finished } from 'node:stream/promises'
 import { randomUUID } from 'node:crypto'
-import type { GitAccess } from '@brigade/contracts'
+import type { BackgroundWork, GitAccess } from '@brigade/contracts'
+import type { FolderBackupInfo } from './backup-store.js'
 import { CLOUD, HOME } from './config.js'
 import { prune, removeFor, removeMemberProject, stopQuiet } from './containers.js'
 import { CACHES_EVERY_MS, CRITICAL, freeCaches, installing, Reserve, STILL_FULL } from './disk.js'
@@ -90,7 +91,11 @@ const ARCHIVE_MAX = 4 * 1024 ** 3
 const TOO_LARGE_RETRY_MS = 24 * 60 * 60_000
 /** A folder that could not be archived (the API unreachable, say) is tried again after this. */
 const FAILED_RETRY_MS = 60 * 60_000
+/** A folder whose backup failed is tried again after this. */
+const BACKUP_RETRY_MS = 5 * 60_000
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
+/** git's lock files, left out of a backup: one put back would stop git in that checkout. */
+const GIT_LOCK = /(^|\/)\.git\/(.*\/)?[^/]+\.lock$/
 
 const RESTORED =
   "Note from Brigade: this thread's folder was archived to free disk on this computer and has just been put back. " +
@@ -128,6 +133,26 @@ const MOVED = {
     'so it starts empty here. Check out the repositories you need again (checkout_repository): your branch, ' +
     'or its backup of the work you had not pushed, comes back with them.',
 }
+/** What ran in the background in a thread when its folder was backed up, and stopped since. */
+const stoppedWork = (background: BackgroundWork[]) =>
+  background.length === 0
+    ? ''
+    : '\n\nThis ran in the background then, and stopped with that computer: start again what you still need.\n' +
+      background
+        .map((work) => `- ${work.kind === 'agent' ? 'agent' : 'command'}: ${work.description}`)
+        .join('\n')
+/** What a teammate is told when its folder came back from its latest backup (BACKUP_PROTOCOL). */
+const FROM_BACKUP = (backup: { takenAt: string; background: BackgroundWork[] }, from?: string) =>
+  `Note from Brigade: ${
+    from
+      ? `this thread moved to this computer from ${from}, which could not hand your folder over`
+      : "this thread's folder was missing on this computer (its disk was lost)"
+  }, so your folder came back from its latest backup, taken at ${backup.takenAt}. Your files, ` +
+  'checkouts and uncommitted work are as they were then; what changed after that is lost. Folders git ' +
+  'ignores (dependencies, build output, local databases) and node_modules folders did not come, nor the ' +
+  'containers and Docker volumes the thread had: reinstall, rebuild or start again what you need before ' +
+  'running anything.' +
+  stoppedWork(backup.background)
 const STOPPED =
   'Note from Brigade: the containers this thread started were stopped while it was quiet, to free the computer. ' +
   'Their data is kept: start them again (docker compose up -d, say) if you need them.'
@@ -171,7 +196,15 @@ type State = {
   /** When the thread last moved here, by folder: each arrival is taken in once. */
   arrived: Record<string, string>
   /** Folders of threads that moved here whose teammate has not been told yet: how it came, and from where. */
-  moved: Record<string, { how: keyof typeof MOVED; from: string }>
+  moved: Record<
+    string,
+    { how: keyof typeof MOVED | 'backup'; from: string; backup?: FolderBackupInfo }
+  >
+  /** When each folder's latest backup was started (BACKUP_PROTOCOL), and when to try again one that failed. */
+  backedUpAt: Record<string, number>
+  backupRetryAt: Record<string, number>
+  /** Folders put back from their backup, whose teammate has not been told yet. */
+  fromBackup: Record<string, FolderBackupInfo>
 }
 
 const z = (output: Buffer) => output.toString().split('\0').filter(Boolean)
@@ -188,8 +221,15 @@ export class Folders {
     retryAt: {},
     arrived: {},
     moved: {},
+    backedUpAt: {},
+    backupRetryAt: {},
+    fromBackup: {},
   }
   private loaded: Promise<void>
+  /** Folders being unpacked now: never backed up half-way. */
+  private unpacking = new Set<string>()
+  /** The backup pass under way (backUp). */
+  private backingUp: Promise<string[]> | undefined
   /** Work on a folder (archiving it, putting it back), one at a time per folder. */
   private locks = new Map<string, Promise<unknown>>()
   private checking = false
@@ -221,6 +261,19 @@ export class Folders {
        * once everything that could go went, and how full (0 to 1). A person is asked to act.
        */
       reportDisk?: (disk: { full: boolean; used: number }) => void
+      /**
+       * On a cloud computer, where folders are backed up while on disk (BACKUP_PROTOCOL), for a
+       * computer that replaces this one; and what a thread's teammate runs in the background.
+       */
+      backups?: {
+        put: (
+          name: FolderName,
+          file: string,
+          done: { background: BackgroundWork[]; arrived?: string },
+        ) => Promise<void>
+        get: (name: FolderName, file: string) => Promise<FolderBackupInfo | null>
+      }
+      background?: (name: FolderName) => BackgroundWork[]
     },
   ) {
     if (CLOUD && options.reserveFile) this.reserve = new Reserve(options.reserveFile, '/home')
@@ -239,6 +292,9 @@ export class Folders {
           retryAt: saved.retryAt ?? {},
           arrived: { ...saved.arrived, ...this.state.arrived },
           moved: { ...saved.moved, ...this.state.moved },
+          backedUpAt: saved.backedUpAt ?? {},
+          backupRetryAt: saved.backupRetryAt ?? {},
+          fromBackup: { ...saved.fromBackup, ...this.state.fromBackup },
         }
       },
       () => undefined,
@@ -285,8 +341,19 @@ export class Folders {
       if (await exists(workDir, runAs)) return
       const file = await this.tempFile()
       try {
-        if (!(await this.options.archives.get(name, file))) return
-        await unpack(file, workDir, runAs)
+        if (!(await this.options.archives.get(name, file))) {
+          // No archive: its disk was lost, say. Its latest backup, if it has one.
+          const backup = await this.options.backups?.get(name, file)
+          if (!backup) return
+          await this.unpack(file, workDir, runAs)
+          await this.loaded
+          this.state.fromBackup[workDir] = backup
+          this.state.active[workDir] = Date.now()
+          this.save()
+          console.log(`put back ${workDir} from its backup of ${backup.takenAt}`)
+          return
+        }
+        await this.unpack(file, workDir, runAs)
       } finally {
         await rm(file, { force: true })
       }
@@ -317,12 +384,17 @@ export class Folders {
       if (this.state.arrived[workDir] === moved.at) return
       const file = await this.tempFile()
       let restored = false
+      let backup: FolderBackupInfo | null = null
       try {
-        if (await this.options.archives.get(name, file)) {
+        let found = await this.options.archives.get(name, file)
+        // The computer it left could not hand it over (its VM was lost, say): its latest backup.
+        if (!found)
+          found = Boolean((backup = (await this.options.backups?.get(name, file)) ?? null))
+        if (found) {
           // What was here is from before the thread left: its containers too.
           if (runAs) await removeFor(runAs, name.sessionId)
           await run('rm', ['-rf', '--', workDir], { runAs })
-          await unpack(file, workDir, runAs)
+          await this.unpack(file, workDir, runAs)
           restored = true
         }
       } finally {
@@ -331,8 +403,9 @@ export class Folders {
       const here = restored || (await exists(workDir, runAs))
       this.state.arrived[workDir] = moved.at
       this.state.moved[workDir] = {
-        how: restored ? 'restored' : here ? 'kept' : 'empty',
+        how: backup ? 'backup' : restored ? 'restored' : here ? 'kept' : 'empty',
         from: moved.from,
+        ...(backup ? { backup } : {}),
       }
       this.state.restored = this.state.restored.filter((dir) => dir !== workDir)
       this.state.active[workDir] = Date.now()
@@ -340,7 +413,7 @@ export class Folders {
       console.log(
         `took in ${workDir}, moved from ${moved.from}${restored ? '' : ' without its files'}`,
       )
-      if (restored)
+      if (restored && !backup)
         await this.options.archives
           .delete(name)
           .catch((error) =>
@@ -413,6 +486,9 @@ export class Folders {
     delete this.state.trimmedAt[workDir]
     delete this.state.upgradedAt[workDir]
     delete this.state.moved[workDir]
+    delete this.state.backedUpAt[workDir]
+    delete this.state.backupRetryAt[workDir]
+    delete this.state.fromBackup[workDir]
     for (const list of ['restored', 'stopped', 'trimmed', 'upgraded'] as const)
       this.state[list] = this.state[list].filter((dir) => dir !== workDir)
     this.save()
@@ -429,10 +505,20 @@ export class Folders {
     const { workDir, runAs } = threadFolder(name.teammateId, name.sessionId)
     const moved = this.state.moved[workDir]
     if (moved) {
-      if (moved.how === 'restored' && git) await repairCaches(workDir, git, runAs, true)
+      if ((moved.how === 'restored' || moved.how === 'backup') && git)
+        await repairCaches(workDir, git, runAs, true)
       delete this.state.moved[workDir]
       this.save()
-      return MOVED[moved.how](moved.from)
+      return moved.how === 'backup'
+        ? FROM_BACKUP(moved.backup ?? { takenAt: 'an unknown time', background: [] }, moved.from)
+        : MOVED[moved.how](moved.from)
+    }
+    const backup = this.state.fromBackup[workDir]
+    if (backup) {
+      if (git) await repairCaches(workDir, git, runAs)
+      delete this.state.fromBackup[workDir]
+      this.save()
+      return FROM_BACKUP(backup)
     }
     const restored = this.state.restored.includes(workDir)
     const trimmed = this.state.trimmed.includes(workDir)
@@ -808,6 +894,83 @@ export class Folders {
     })
   }
 
+  /**
+   * Back the thread folders up (BACKUP_PROTOCOL), one at a time: those used since their last
+   * backup, or that a turn uses now. Never one being put back, nor one whose thread has not taken
+   * in its latest arrival (the API refuses those). A pass asked for while one runs waits for it,
+   * then runs: what the caller asks for is a backup from now. Resolves to what failed.
+   */
+  backUp(): Promise<string[]> {
+    const next = (this.backingUp ?? Promise.resolve([]))
+      .catch(() => [])
+      .then(() => this.backUpChanged())
+    this.backingUp = next
+    void next.finally(() => {
+      if (this.backingUp === next) this.backingUp = undefined
+    })
+    return next
+  }
+
+  private async backUpChanged() {
+    const backups = this.options.backups
+    if (!CLOUD || !backups) return []
+    await this.loaded
+    const failed: string[] = []
+    for (const candidate of await this.candidates()) {
+      const { name, workDir, runAs } = candidate
+      const since = this.state.backedUpAt[workDir] ?? 0
+      if (candidate.active <= since && !this.options.inUse(name.sessionId)) continue
+      if (Date.now() < (this.state.backupRetryAt[workDir] ?? 0)) continue
+      if (this.unpacking.has(workDir)) continue
+      // Nearly full, a copy of a folder may be what fills it: the archives (check) come first.
+      if ((await this.fullness()) >= FULL) {
+        failed.push(`${workDir}: the disk is nearly full`)
+        continue
+      }
+      const started = Date.now()
+      const file = await this.tempFile()
+      try {
+        const size = await pack(workDir, file, runAs, { live: true })
+        if (size === null) {
+          this.state.backupRetryAt[workDir] = Date.now() + TOO_LARGE_RETRY_MS
+          failed.push(`${workDir}: larger than ${ARCHIVE_MAX} bytes without dependencies`)
+          continue
+        }
+        // Put back from elsewhere while it was packed: what was packed is not the folder.
+        if (this.unpacking.has(workDir)) continue
+        await backups.put(name, file, {
+          background: this.options.background?.(name) ?? [],
+          ...(this.state.arrived[workDir] ? { arrived: this.state.arrived[workDir] } : {}),
+        })
+        this.state.backedUpAt[workDir] = started
+        delete this.state.backupRetryAt[workDir]
+        this.save()
+      } catch (error) {
+        // Gone meanwhile (archived, deleted), or its thread not taken in here yet: nothing to keep.
+        if (!(await exists(workDir, runAs))) continue
+        const status = (error as { status?: number }).status
+        if (status === 409 || status === 410) continue
+        this.state.backupRetryAt[workDir] = Date.now() + BACKUP_RETRY_MS
+        this.save()
+        failed.push(`${workDir}: ${String(error)}`)
+      } finally {
+        await rm(file, { force: true })
+      }
+    }
+    for (const failure of failed) console.warn(`could not back up ${failure}`)
+    return failed
+  }
+
+  /** Put a folder back from an archive or a backup: never backed up half-way. */
+  private async unpack(file: string, workDir: string, runAs?: string) {
+    this.unpacking.add(workDir)
+    try {
+      await unpack(file, workDir, runAs)
+    } finally {
+      this.unpacking.delete(workDir)
+    }
+  }
+
   private async tempFile() {
     await mkdir(this.options.tempDir, { recursive: true, mode: 0o700 })
     return join(this.options.tempDir, `${randomUUID()}.tar.gz`)
@@ -1026,7 +1189,16 @@ export async function oldPnpmModules(workDir: string, runAs?: string): Promise<s
  * outside repositories, everything but node_modules. Resolves to its size, or
  * null when larger than ARCHIVE_MAX.
  */
-export async function pack(workDir: string, file: string, runAs?: string): Promise<number | null> {
+export async function pack(
+  workDir: string,
+  file: string,
+  runAs?: string,
+  /**
+   * live: a folder that may be in use (a backup): a file that changes or goes while it is read
+   * is no failure, and git's lock files stay out (one put back would stop git there).
+   */
+  options: { live?: boolean } = {},
+): Promise<number | null> {
   const list = (args: string[]) => run(args[0]!, args.slice(1), { runAs }).then(z)
   const relative = (path: string) => relativeTo(workDir, path)
   const kinds = ['(', '-type', 'f', '-o', '-type', 'd', '-o', '-type', 'l', ')']
@@ -1073,6 +1245,7 @@ export async function pack(workDir: string, file: string, runAs?: string): Promi
     if (!inRepo(path)) files.add(relative(path))
   // Something to unpack, even for an empty folder.
   files.add('.')
+  if (options.live) for (const path of files) if (GIT_LOCK.test(path)) files.delete(path)
 
   const out = createWriteStream(file, { mode: 0o600 })
   const written = finished(out)
@@ -1082,7 +1255,11 @@ export async function pack(workDir: string, file: string, runAs?: string): Promi
       '-o',
       'pipefail',
       '-c',
-      'tar -C "$1" --no-recursion --null -T - -czf - | head -c "$2"',
+      options.live
+        ? // GNU tar exits 1 when a file changed or went as it read it: still a backup.
+          '{ tar -C "$1" --no-recursion --null --ignore-failed-read --warning=no-file-changed ' +
+          '--warning=no-file-removed -T - -czf -; s=$?; [ "$s" -eq 1 ] && s=0; exit "$s"; } | head -c "$2"'
+        : 'tar -C "$1" --no-recursion --null -T - -czf - | head -c "$2"',
       'pack',
       workDir,
       String(ARCHIVE_MAX + 1),

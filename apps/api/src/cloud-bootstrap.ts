@@ -104,6 +104,16 @@ case "\${1:-}" in
     [ -S "/run/user/$U/docker.sock" ] || fail "no Docker socket for $2"
     echo "$U"
     ;;
+  user-services) # <user>: its systemd, which outlives any login, for the user services it had
+    # on the computer this one replaced (the runner's teammate-backups.ts); prints its uid
+    user_ok "$2"
+    U=$(id -u "$2") || fail "no such user"
+    loginctl enable-linger "$2"
+    I=0
+    while [ ! -S "/run/user/$U/bus" ] && [ $I -lt 60 ]; do sleep 0.25; I=$((I + 1)); done
+    [ -S "/run/user/$U/bus" ] || fail "no user session for $2"
+    echo "$U"
+    ;;
   clipboard) # get|set: the desktop's clipboard as UTF-8, on stdout or from stdin
     AUTH=$(ps -o args= -C Xorg | sed -n 's/.* -auth \\([^ ]*\\).*/\\1/p' | head -1)
     [ -n "$AUTH" ] || fail "no desktop"
