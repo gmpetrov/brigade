@@ -33,7 +33,7 @@ const EVERY_MS = 60 * 60_000
 
 /** What the watchdog tells: the object down, or restarting without a deploy. */
 export const API_DOWN = { key: 'api-down', title: 'Brigade API down' }
-export const API_RESTARTING = { key: 'api-reset', title: 'Brigade API restarting' }
+export const API_RESTARTING = { key: 'api-restarting', title: 'Brigade API restarting' }
 
 /** In this isolate's memory only: a new isolate may tell once more, within EVERY_MS's keys. */
 const downs = new Map<string, { since: number; toldAt: number }>()

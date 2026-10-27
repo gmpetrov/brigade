@@ -13,7 +13,6 @@
 import { createHash } from 'node:crypto'
 import type { ApiToRunner } from '@brigade/contracts'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
-import { hubs } from './hub.js'
 import { currentHub, runningHub } from './hub/context.js'
 import { noteFailure } from './ops/failures.js'
 import { fireNow } from './wakeups.js'
@@ -41,6 +40,12 @@ export type Resume = {
 
 type Result = Extract<ApiToRunner, { type: 'connector.result' }>
 type Reply = (message: ApiToRunner) => void
+
+/**
+ * A workspace's hub (src/hub.ts), loaded when first needed: the modules that make held calls
+ * register here as they load (onDecided), and the hub loads them.
+ */
+const hub = async (workspaceId: string) => (await import('./hub.js')).hubs.get(workspaceId)
 
 /** Where a runner's call waits: its connection, while it is the computer's current one. */
 export type Live = { computerId: string; connectionId: string }
@@ -187,7 +192,7 @@ export async function decideHeld(db: ScopedDb, ticketId: string, decision: Decis
     data: { status: 'decided', decision: decision as never },
   })
   if (!count) return null
-  return { run: () => hubs.get(held.workspaceId).runHeld(held.id) }
+  return { run: async () => (await hub(held.workspaceId)).runHeld(held.id) }
 }
 
 type Executor = (
@@ -375,13 +380,10 @@ export async function settleHeldCalls(now = Date.now(), workspaceId?: string) {
     take: 50,
   })
   for (const { id, workspaceId: owner } of decided)
-    await hubs
-      .get(owner)
-      .runHeld(id)
-      .catch((error) => {
-        console.error(`held call ${id} failed`, error)
-        noteFailure('held-calls', error)
-      })
+    await (await hub(owner)).runHeld(id).catch((error) => {
+      console.error(`held call ${id} failed`, error)
+      noteFailure('held-calls', error)
+    })
   const cut = await prisma.heldCall.findMany({
     where: { ...scope, status: 'running', updatedAt: { lt: new Date(now - RUNNING_STALE_MS) } },
     take: 50,

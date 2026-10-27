@@ -151,15 +151,15 @@ export function noteHubMode(workspaceId: string, mode: HubMode) {
 }
 
 /**
- * The workspace's hub object, created near the database: an object stays where it was first asked
- * for, and each of its queries crosses to Neon in Frankfurt (src/api-object.ts).
+ * The workspace's hub object. An object stays where it was first asked for, and each of its
+ * queries crosses to Neon in Frankfurt (src/api-object.ts): asked first from here (the Api
+ * object, or this Worker's isolates, placed next to the database), it is made here, without a
+ * hint. A hint of `weur` made the Api object in Amsterdam: 13 ms per query instead of 2 to 3.
  */
 export function hubStub(workspaceId: string): HubStub {
   const namespace = hubBindings.HUBS
   if (!namespace) throw new Error('This Worker has no hub objects (HUBS)')
-  return namespace.get(namespace.idFromName(workspaceId), {
-    locationHint: 'weur',
-  }) as unknown as HubStub
+  return namespace.get(namespace.idFromName(workspaceId)) as unknown as HubStub
 }
 
 const objectCall =
@@ -210,13 +210,15 @@ export async function moveHub(workspaceId: string, mode: HubMode) {
   const { prisma } = await import('../db.js')
   await prisma.workspace.update({ where: { id: workspaceId }, data: { hubMode: mode } })
   noteHubMode(workspaceId, mode)
+  // Made here, next to the database, before any socket asks for it; and told, before its next
+  // read of the mode.
+  await hubStub(workspaceId).moved(workspaceId, mode)
   if (mode === 'object') {
-    await hubStub(workspaceId).call(workspaceId, 'sizes', [], true)
     const { localHubs } = await import('../hub/memory-host.js')
     localHubs()
       .find((hub) => hub.workspaceId === workspaceId)
       ?.closeAll(1012, 'its hub moved')
-  } else await hubStub(workspaceId).closeAll(1012, 'its hub moved')
+  }
 }
 
 // ---------------------------------------------------------------------------

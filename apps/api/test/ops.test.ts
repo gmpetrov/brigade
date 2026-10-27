@@ -366,7 +366,7 @@ describe('restarts and reconnect storms', () => {
     assert.deepEqual(
       posted.map((p) => [JSON.parse(p.body).key, JSON.parse(p.body).kind]),
       [
-        ['api-reset', 'firing'],
+        ['api-restarting', 'firing'],
         ['api-down', 'firing'],
       ],
     )
@@ -375,7 +375,7 @@ describe('restarts and reconnect storms', () => {
     assert.deepEqual(
       posted.slice(2).map((p) => [JSON.parse(p.body).key, JSON.parse(p.body).kind]),
       [
-        ['api-reset', 'resolved'],
+        ['api-restarting', 'resolved'],
         ['api-down', 'resolved'],
       ],
     )

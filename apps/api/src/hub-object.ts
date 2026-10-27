@@ -267,8 +267,16 @@ export class WorkspaceHubObject extends DurableObject<Env> {
     const url = new URL(request.url)
     const workspaceId = workspaceOfSocket(request)
     if (!workspaceId) return new Response('No workspace named', { status: 400 })
+    // Its hub is the Api object's still (or again): the front passes the socket on there, and
+    // this object keeps nothing, nor connects to anything.
+    if (!this.holds()) return elsewhere()
     const ready = await this.hub(workspaceId)
     return ready.run(() => this.accept(ready, request, url))
+  }
+
+  /** Whether the workspace's hub is this object: since moved here (POST /ops/hubs, moved). */
+  private holds() {
+    return this.ctx.storage.kv.get<string>('mode') === 'object'
   }
 
   private async accept(ready: Ready, request: Request, url: URL): Promise<Response> {
@@ -294,19 +302,9 @@ export class WorkspaceHubObject extends DurableObject<Env> {
       })
     const workspace = await prisma.workspace.findUnique({
       where: { id: ready.workspaceId },
-      select: { organizationId: true, hubMode: true },
+      select: { organizationId: true },
     })
     if (!workspace) return refuse(4404, 'unknown workspace')
-    // Its object for good, once a socket of the workspace came to it.
-    this.ctx.storage.kv.put('workspace', ready.workspaceId)
-    const { noteHubMode } = await import('./platform/node.js')
-    noteHubMode(ready.workspaceId, workspace.hubMode)
-    // Its hub is the Api object's still (or again): the front passes the socket on there.
-    if (workspace.hubMode !== 'object')
-      return new Response('This workspace’s hub is in the Api object', {
-        status: MISDIRECTED,
-        headers: { [HUB_HEADER]: 'api' },
-      })
     const { connectionId } = await import('./hub/workspace-hub.js')
     const pair = new WebSocketPair()
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket]
@@ -408,29 +406,44 @@ export class WorkspaceHubObject extends DurableObject<Env> {
     args: unknown[],
     forwarded: boolean,
   ): Promise<Outcome> {
+    if (!forwarded && !this.holds()) {
+      const { apiObject } = await import('./api-object.js')
+      return apiObject(this.env.API).hubCall(workspaceId, name, args, true) as Promise<Outcome>
+    }
     const ready = await this.hub(workspaceId)
-    this.ctx.storage.kv.put('workspace', workspaceId)
     return ready.run(async () => {
-      const { hubModeOf } = await import('./platform/node.js')
-      if (!forwarded && (await hubModeOf(workspaceId)) !== 'object') {
-        const { apiObject } = await import('./api-object.js')
-        return apiObject(this.env.API).hubCall(workspaceId, name, args, true) as Promise<Outcome>
-      }
       const { outcomeHere } = await import('./hub.js')
       return outcomeHere(workspaceId, name, args)
     })
   }
 
-  /** The workspace's hub goes back to the Api object: its sockets close, and connect there again. */
-  async closeAll(code: number, reason: string) {
+  /**
+   * The workspace's hub moved (POST /ops/hubs): taken as such here at once. Back to the Api
+   * object, its sockets close, and connect there again.
+   */
+  async moved(workspaceId: string, mode: 'api' | 'object') {
+    const { noteHubMode } = await import('./platform/node.js')
+    noteHubMode(workspaceId, mode)
+    this.ctx.storage.kv.put('mode', mode)
+    if (mode === 'object') {
+      this.ctx.storage.kv.put('workspace', workspaceId)
+      return
+    }
     for (const ws of this.ctx.getWebSockets())
       try {
-        ws.close(code, reason)
+        ws.close(1012, 'its hub moved')
       } catch {
         // Closed already.
       }
   }
 }
+
+/** The answer for a socket whose workspace's hub is the Api object's: the front sends it there. */
+const elsewhere = () =>
+  new Response('This workspace’s hub is in the Api object', {
+    status: MISDIRECTED,
+    headers: { [HUB_HEADER]: 'api' },
+  })
 
 /** A socket refused once open, with a code the runner or dashboard knows (as src/app.ts does). */
 function refuse(code: number, reason: string) {

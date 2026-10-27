@@ -10,7 +10,6 @@ import { test } from 'node:test'
 const ALLOWED: Record<string, string> = {
   'src/hub.ts:made': "hubs.get's proxies, by workspace: routing, no workspace state",
   'src/hub/memory-host.ts:local': "this process's hubs themselves",
-  'src/hub/workspace-hub.ts:timerHandlers': "modules' timer handlers, registered as they load",
   'src/inbound.ts:handlers': 'webhook handlers, registered as modules load',
   'src/held-calls.ts:executors': 'how each kind of held call is made, registered as modules load',
   'src/db.ts:writeListeners': 'listeners registered as modules load',

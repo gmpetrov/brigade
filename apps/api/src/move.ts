@@ -20,7 +20,6 @@ import { Prisma, prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { wake } from './cloud.js'
 import { hubs } from './hub.js'
 import { currentHub } from './hub/context.js'
-import { onHubTimer } from './hub/workspace-hub.js'
 import { usableAccounts } from './routes/accounts.js'
 import { loadThread, type LoadedThread } from './thread-spec.js'
 import { promptThread } from './work.js'
@@ -165,13 +164,16 @@ const broadcastMove = (sessionId: string, status: string) =>
 /** Steps run one at a time per thread: a turn's end and a runner's answer can come together. */
 const steps = () => currentHub().local('move-steps', () => new Map<string, Promise<void>>())
 
-/** A release whose runner never answered: the thread moves on without what was not handed over. */
-onHubTimer('move:', async (hub, sessionId) => {
+/**
+ * In the hub: a release whose runner never answered (its timer, `move:<sessionId>`): the thread
+ * moves on without what was not handed over.
+ */
+export async function releaseTimedOut(hub: { workspaceId: string }, sessionId: string) {
   await advanceMove({ organizationId: '', workspaceId: hub.workspaceId }, sessionId, {
     ok: false,
     error: 'timed out',
   })
-})
+}
 
 /**
  * In the hub: take the thread's move as far as it can go now. Called when it is asked for, when

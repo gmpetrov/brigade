@@ -715,8 +715,11 @@ export class WorkspaceHub {
       this.scheduleTick()
       return
     }
-    for (const [prefix, handler] of timerHandlers)
-      if (key.startsWith(prefix)) return handler(this, key.slice(prefix.length))
+    // A thread's release that its runner never answered (src/move.ts).
+    if (key.startsWith('move:')) {
+      const { releaseTimedOut } = await import('../move.js')
+      return releaseTimedOut(this, key.slice('move:'.length))
+    }
   }
 
   /**
@@ -803,17 +806,6 @@ export class WorkspaceHub {
     }
     return true
   }
-}
-
-/** What other modules do when a timer of theirs is due, by its key's prefix (onHubTimer). */
-const timerHandlers = new Map<string, (hub: WorkspaceHub, rest: string) => unknown>()
-
-/**
- * A module's timers on a hub: `hub.host.schedule(prefix + rest, ms)` calls `handler` in the hub
- * once due, even after the hub hibernated meanwhile. Registered as the module loads.
- */
-export function onHubTimer(prefix: string, handler: (hub: WorkspaceHub, rest: string) => unknown) {
-  timerHandlers.set(prefix, handler)
 }
 
 /** A map kept with the hub (WorkspaceHub.durable): each change is saved. */

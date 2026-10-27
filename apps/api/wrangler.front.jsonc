@@ -29,6 +29,9 @@
     // through Hyperdrive (DB_HYPERDRIVE in wrangler.jsonc): set it only once Hyperdrive is bound.
     // First: "/api/threads,/api/inbox,/api/tasks,/api/projects".
     "STATELESS_ROUTES": "",
+    // "hubs": sockets go to their workspace's hub object first (once most workspaces' hubs
+    // have one); "api": to the Api object first, which passes on the others (src/front.ts).
+    "HUB_ROUTING": "api",
   },
   "workers_dev": false,
   "preview_urls": false,

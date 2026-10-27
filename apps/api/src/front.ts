@@ -35,6 +35,12 @@ type Env = {
   API_WORKER?: Fetcher
   /** Paths whose reads run in brigade-api's own isolates, not the Api object; empty: none. */
   STATELESS_ROUTES?: string
+  /**
+   * 'hubs': a socket goes to its workspace's hub object first, as it does once most workspaces'
+   * hubs have their own (an Api object down does not keep them from connecting). Else to the
+   * Api object first, which passes on those of workspaces whose hub has its own object.
+   */
+  HUB_ROUTING?: string
 }
 
 const origins = (list: string) =>
@@ -75,6 +81,8 @@ async function socket(
   env: Env & { HUBS: DurableObjectNamespace<WorkspaceHubObject> },
   again = false,
 ): Promise<Response> {
+  // Made when its hub moved (POST /ops/hubs), next to the database: the hint only places one a
+  // socket asks for first.
   const hub = (workspaceId: string) =>
     env.HUBS.get(env.HUBS.idFromName(workspaceId), { locationHint: 'weur' }).fetch(
       named(request, workspaceId),
@@ -82,7 +90,10 @@ async function socket(
   const api = () => apiObject(env.API).fetch(named(request))
   const workspaceId = workspaceOfSocket(request)
   const known = workspaceId ? routes.get(workspaceId) : undefined
-  if (!workspaceId || (known?.to === 'api' && Date.now() - known.at < ROUTE_MS)) {
+  const fresh = known && Date.now() - known.at < ROUTE_MS
+  const hubFirst =
+    env.HUB_ROUTING === 'hubs' ? known?.to !== 'api' || !fresh : known?.to === 'object' && fresh
+  if (!workspaceId || !hubFirst) {
     const answer = await api()
     const elsewhere = answer.status === MISDIRECTED && answer.headers.get(HUB_HEADER) === 'object'
     const owner = answer.headers.get(WORKSPACE_HEADER) ?? workspaceId

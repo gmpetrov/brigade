@@ -19,12 +19,16 @@ copy of the repo; the findings below come from there.
 
 Cloudflare shipped first, more simply than the phases below:
 
-- **One Durable Object for the whole API.** Every request goes to a single `Api` object
-  (`apps/api/src/worker.ts`, in the Worker `brigade-api`), which runs the Hono app as the
-  one Node process does. The hub, the timers (`src/jobs.ts`) and a Prisma client with its
-  pool all live in that object. A Cron Trigger pings it each minute so the jobs keep
-  running. It stays the only one: the API is not split per workspace. So state that has
-  to survive a deploy, which restarts the object, lives in Postgres, not in its memory.
+- **One Durable Object for the API, and one per workspace's hub.** Requests go to a single
+  `Api` object (`apps/api/src/worker.ts`, in the Worker `brigade-api`), which runs the Hono
+  app as the one Node process does, with the timers (`src/jobs.ts`) and a Prisma client with
+  its pool. A Cron Trigger pings it each minute so the jobs keep running. A workspace's hub
+  (its runners' and dashboards' sockets) is the Api object's too, until its `hubMode` is
+  `object`: then it is a Durable Object of its own, `WorkspaceHubObject`, and the front
+  routes the workspace's sockets there. The jobs can go through Cloudflare Queues instead of
+  the Api object's timers, and reads through brigade-api's own isolates: all of it is in
+  [workspace-hubs-plan.md](workspace-hubs-plan.md), with how to turn each on. State that has
+  to survive a deploy, which restarts every object, lives in Postgres, not in memory.
 - **A small Worker in front.** `brigade-api-front` (`src/front.ts`, `wrangler.front.jsonc`)
   has the API's domains and forwards each request to the object, through a binding to
   `brigade-api`'s Durable Object. A new connection can land on a machine that has not
@@ -48,9 +52,14 @@ Cloudflare shipped first, more simply than the phases below:
       place the front Worker there again until the object exists.
   - pg-cloudflare is patched (`patches/`) to send each query in one write. Before, each
     query waited about 70 ms for Nagle's algorithm and delayed ACKs.
-  - Hyperdrive is not used. The object keeps its connections open, so Hyperdrive's fast
-    connection setup would not help, and its cache would serve reads older than the
-    latest writes.
+  - The Api object does not use Hyperdrive. It keeps its connections open, so Hyperdrive's
+    fast connection setup would not help, and its cache would serve reads older than the
+    latest writes. What connects again often (hub objects that wake, the cron, the jobs'
+    consumer, stateless reads) goes through Hyperdrive with its cache off, once bound as
+    `DB_HYPERDRIVE`.
+  - brigade-api is placed in `aws:eu-central-1` again, for its own isolates: the cron, the
+    jobs' consumer and stateless reads. Hub objects are made from there, or from the Api
+    object, next to the database too.
 - **Platform seams.** `src/platform/node.ts` and `src/platform/workers.ts` hold what
   differs. wrangler's `alias` swaps in three Workers versions: that module, Prisma's
   `runtime = "cloudflare"` client, and jsdom, replaced by linkedom

@@ -40,5 +40,5 @@ export type HubStub = {
     args: unknown[],
     forwarded: boolean,
   ): Promise<import('../hub.js').Outcome>
-  closeAll(code: number, reason: string): Promise<void>
+  moved(workspaceId: string, mode: 'api' | 'object'): Promise<void>
 }
