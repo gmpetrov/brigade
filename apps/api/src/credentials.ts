@@ -208,7 +208,7 @@ export async function handleCredentialRequest(
   runner: Runner,
   request: Request,
   reply: (message: ApiToRunner) => void,
-  options: { alive?: Live['alive']; resume?: Resume } = {},
+  options: { live?: Live; resume?: Resume } = {},
 ) {
   const { resume } = options
   const scope: Scope = { organizationId: runner.organizationId, workspaceId: runner.workspaceId }
@@ -300,7 +300,8 @@ export async function handleCredentialRequest(
         reason: ticket.reason,
         ...(ticket.always ? { always: true } : {}),
       },
-      live: { reply, alive: options.alive ?? (() => true) },
+      reply,
+      ...(options.live ? { live: options.live } : {}),
     })
     return null
   }

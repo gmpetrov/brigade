@@ -26,7 +26,7 @@ import { audit, type Actor } from './audit.js'
 import { copyObject, documentKey, getObject, putObject } from './bucket.js'
 import { notifyCollab } from './collab.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
-import { notifyLibraryChanged } from './hub.js'
+import { hubs } from './hub.js'
 import { folderRules, teammateLibraryAccess } from './library-folders.js'
 import { actorNames, ensureFirstVersion, recordVersion } from './library-history.js'
 import {
@@ -282,7 +282,7 @@ export async function saveLibraryFile(
     target: { type: 'document', id: row.id },
     data: { path: row.path, size: row.size, ...context },
   })
-  notifyLibraryChanged(scope.workspaceId)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
   if (existing && !options.fromCollab && isMarkdown(row)) notifyCollab(row.id)
   return row
 }
@@ -321,7 +321,7 @@ export async function moveLibraryFile(
     target: { type: 'document', id },
     data: { from: row.path, to: path },
   })
-  notifyLibraryChanged(scope.workspaceId)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
   return moved
 }
 
@@ -553,7 +553,7 @@ export async function writeMemory(
     target: { type: 'document', id: row.id },
     data: { kind: target.kind, ...memoryLinks(target) },
   })
-  notifyLibraryChanged(scope.workspaceId)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
   if (!options.fromCollab) notifyCollab(row.id)
   return row
 }
@@ -657,7 +657,7 @@ export async function tidyMemory(
   })
   if (done.changed) {
     notifyCollab(done.row.id)
-    notifyLibraryChanged(scope.workspaceId)
+    void hubs.get(scope.workspaceId).notifyLibraryChanged()
   }
   return done.row
 }
@@ -797,7 +797,7 @@ export async function restoreMemoryLine(db: ScopedDb, scope: Scope, actor: Actor
     data: { kind: target.kind, line: line.text },
   })
   notifyCollab(done.row.id)
-  notifyLibraryChanged(scope.workspaceId)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
 }
 
 /** The thread's summary: replaced each time the thread goes quiet. */

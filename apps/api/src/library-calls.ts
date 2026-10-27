@@ -12,7 +12,7 @@ import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { scoped, type Scope } from './db.js'
 import { personEdits, saveTeammateDesignSystem } from './designs.js'
-import { notifyLibraryChanged } from './hub.js'
+import { hubs } from './hub.js'
 import { libraryChangeRefusal } from './library-changes.js'
 import { moveFolder, teammateLibraryAccess, trashFolder } from './library-folders.js'
 import { trashLibraryFile } from './library-history.js'
@@ -255,7 +255,7 @@ export async function handleMemoryUpdate(
       session.id,
     )
   }
-  notifyLibraryChanged(scope.workspaceId)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
 }
 
 /**

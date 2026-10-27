@@ -10,6 +10,7 @@
 // folders from the archives, its conversation from the thread's events, its
 // event numbers after the last one. A computer offline when the thread leaves
 // keeps its folders: the checkouts still come back from their backups on GitHub.
+// Its steps run in the workspace's hub (src/hub/), which holds the computers' sockets.
 import { randomUUID } from 'node:crypto'
 import { MOVE_PROTOCOL, type ReplyTo, type ThreadAttachmentRef } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -17,7 +18,9 @@ import { attachToThread } from './attachments.js'
 import { audit } from './audit.js'
 import { Prisma, prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { wake } from './cloud.js'
-import { broadcastThreadMove, isOnline, runnerProtocol, sendToRunner } from './hub.js'
+import { hubs } from './hub.js'
+import { currentHub } from './hub/context.js'
+import { onHubTimer } from './hub/workspace-hub.js'
 import { usableAccounts } from './routes/accounts.js'
 import { loadThread, type LoadedThread } from './thread-spec.js'
 import { promptThread } from './work.js'
@@ -144,34 +147,62 @@ export async function requestMove(
     target: { type: 'thread', id: thread.id },
     data: { from: thread.computerId, to: computer.id },
   })
-  broadcastThreadMove(scope.workspaceId, thread.id, thread.status)
-  await advanceMove(scope, thread.id)
+  const hub = hubs.get(scope.workspaceId)
+  void hub.broadcast(threadMoved(thread.id, thread.status))
+  await hub.advanceMove(
+    { organizationId: scope.organizationId, workspaceId: scope.workspaceId },
+    thread.id,
+  )
 }
 
+/** Dashboards hear a thread started or finished moving to another computer. */
+const threadMoved = (sessionId: string, status: string) =>
+  ({ type: 'thread.updated', sessionId, status, moved: true }) as const
+
+const broadcastMove = (sessionId: string, status: string) =>
+  currentHub().broadcast(threadMoved(sessionId, status))
+
 /** Steps run one at a time per thread: a turn's end and a runner's answer can come together. */
-const steps = new Map<string, Promise<void>>()
+const steps = () => currentHub().local('move-steps', () => new Map<string, Promise<void>>())
+
+/** A release whose runner never answered: the thread moves on without what was not handed over. */
+onHubTimer('move:', async (hub, sessionId) => {
+  await advanceMove({ organizationId: '', workspaceId: hub.workspaceId }, sessionId, {
+    ok: false,
+    error: 'timed out',
+  })
+})
 
 /**
- * Take the thread's move as far as it can go now. Called when it is asked
- * for, when a turn ends, when the computer it leaves answers or goes offline,
- * and when the one it goes to comes online.
+ * In the hub: take the thread's move as far as it can go now. Called when it is asked for, when
+ * a turn ends, when the computer it leaves answers or goes offline, and when the one it goes to
+ * comes online.
  */
 export function advanceMove(
   scope: Scope,
   sessionId: string,
   released?: { ok: boolean; error?: string },
 ) {
-  const next = (steps.get(sessionId) ?? Promise.resolve())
+  const steps_ = steps()
+  const next = (steps_.get(sessionId) ?? Promise.resolve())
     .then(() => step(scope, sessionId, released))
     .catch((error) => console.error(`thread ${sessionId}: move failed`, error))
-  steps.set(sessionId, next)
+  steps_.set(sessionId, next)
   void next.finally(() => {
-    if (steps.get(sessionId) === next) steps.delete(sessionId)
+    if (steps_.get(sessionId) === next) steps_.delete(sessionId)
   })
   return next
 }
 
-async function step(scope: Scope, sessionId: string, released?: { ok: boolean; error?: string }) {
+async function step(given: Scope, sessionId: string, released?: { ok: boolean; error?: string }) {
+  const hub = currentHub(given.workspaceId)
+  // A timer knows only its hub's workspace: the organization comes with the thread.
+  const owner = await prisma.session.findFirst({
+    where: { id: sessionId, workspaceId: given.workspaceId },
+    select: { organizationId: true, workspaceId: true },
+  })
+  if (!owner) return
+  const scope: Scope = owner
   const db = scoped(scope)
   const session = await db.session.findFirst({
     where: { id: sessionId },
@@ -182,10 +213,10 @@ async function step(scope: Scope, sessionId: string, released?: { ok: boolean; e
   const source = session.computer
 
   if (move.phase === 'waiting') {
-    const online = isOnline(source.id)
+    const online = hub.isOnline(source.id)
     // Its turn goes on there; a computer gone offline mid-turn has nothing to wait for.
     if (online && busy(session.status)) return
-    const protocol = runnerProtocol(source.id) ?? 0
+    const protocol = hub.runnerProtocol(source.id) ?? 0
     if (!online || protocol < MOVE_PROTOCOL) return arrive(db, scope, session, move, false)
     const teammateIds = (
       await db.threadTeammate.findMany({ where: { sessionId }, select: { teammateId: true } })
@@ -197,7 +228,7 @@ async function step(scope: Scope, sessionId: string, released?: { ok: boolean; e
       requestId,
       since: new Date().toISOString(),
     })
-    const sent = sendToRunner(source.id, {
+    const sent = hub.sendToRunner(source.id, {
       type: 'thread.release',
       requestId,
       sessionId,
@@ -205,16 +236,15 @@ async function step(scope: Scope, sessionId: string, released?: { ok: boolean; e
     })
     if (!sent) return arrive(db, scope, session, move, false)
     // A runner that never answers does not hold the thread for good.
-    setTimeout(() => {
-      void advanceMove(scope, sessionId, { ok: false, error: 'timed out' })
-    }, RELEASE_TIMEOUT_MS).unref?.()
+    hub.host.schedule(`move:${sessionId}`, RELEASE_TIMEOUT_MS)
     return
   }
 
   if (move.phase === 'releasing') {
     const timedOut = Date.now() - new Date(move.since).getTime() >= RELEASE_TIMEOUT_MS
     // Still archiving, and still there: its answer moves it on.
-    if (!released && !timedOut && isOnline(source.id)) return
+    if (!released && !timedOut && hub.isOnline(source.id)) return
+    hub.host.cancel(`move:${sessionId}`)
     if (released && !released.ok)
       console.warn(`thread ${sessionId}: ${source.name} could not hand it over: ${released.error}`)
     return arrive(db, scope, session, move, released?.ok ?? false)
@@ -241,7 +271,7 @@ async function arrive(
   const target = await db.computer.findFirst({ where: { id: move.to } })
   if (!target) {
     await save(db, session.id, null)
-    broadcastThreadMove(scope.workspaceId, session.id, 'idle')
+    broadcastMove(session.id, 'idle')
     return
   }
   const arriving: Move = { ...move, phase: 'arriving', since: new Date().toISOString() }
@@ -275,7 +305,7 @@ async function arrive(
     target: { type: 'thread', id: session.id },
     data: { from: session.computerId, to: target.id, handedOver },
   })
-  broadcastThreadMove(scope.workspaceId, session.id, 'idle')
+  broadcastMove(session.id, 'idle')
   await deliver(db, scope, session.id, arriving)
 }
 
@@ -289,14 +319,14 @@ async function arrive(
  */
 async function deliver(db: ScopedDb, scope: Scope, sessionId: string, move: Move) {
   const thread = await loadThread(db, sessionId)
-  const protocol = runnerProtocol(thread.computerId)
+  const protocol = currentHub(scope.workspaceId).runnerProtocol(thread.computerId)
   const waitingFor = protocol === undefined ? 'online' : protocol < MOVE_PROTOCOL ? 'update' : null
   if (waitingFor) {
     // A stopped cloud computer starts; the move goes on when its runner connects (movesOn).
     if (waitingFor === 'online' && thread.computer.kind === 'cloud') wake(thread.computerId)
     if (move.waitingFor !== waitingFor) {
       await save(db, sessionId, { ...move, waitingFor })
-      broadcastThreadMove(scope.workspaceId, sessionId, thread.status)
+      broadcastMove(sessionId, thread.status)
     }
     return
   }
@@ -326,7 +356,7 @@ async function deliver(db: ScopedDb, scope: Scope, sessionId: string, move: Move
   // Gone offline just now: it goes when its runner connects again (movesOn).
   if (outcome === 'offline') return
   await save(db, sessionId, null)
-  broadcastThreadMove(scope.workspaceId, sessionId, outcome === 'paused' ? 'paused' : thread.status)
+  broadcastMove(sessionId, outcome === 'paused' ? 'paused' : thread.status)
 }
 
 const save = (db: ScopedDb, sessionId: string, move: Move | null) =>
@@ -335,7 +365,7 @@ const save = (db: ScopedDb, sessionId: string, move: Move | null) =>
     data: { move: move ? (move as unknown as Prisma.InputJsonValue) : Prisma.DbNull },
   })
 
-/** A runner answered thread.release: the thread moves on, with its folders or without. */
+/** In the hub: a runner answered thread.release: the thread moves on, with its folders or without. */
 export async function onReleased(
   runner: Scope & { computerId: string },
   result: { requestId: string; ok: boolean; error?: string },
@@ -355,8 +385,8 @@ export async function onReleased(
 }
 
 /**
- * Moves that may go on now a computer's runner connected or left, or a
- * thread on it went quiet: those leaving it, and those arriving on it.
+ * In the hub: moves that may go on now a computer's runner connected or left, or a thread on it
+ * went quiet: those leaving it, and those arriving on it.
  */
 export async function movesOn(computerId: string, sessionId?: string) {
   const sessions = await prisma.session.findMany({

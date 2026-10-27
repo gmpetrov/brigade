@@ -19,7 +19,7 @@ import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { messageChild } from './children.js'
 import { prisma, scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
-import { broadcastTask, dispatch, isOnline } from './hub.js'
+import { hubs, taskUpdated } from './hub.js'
 import { projectWhere, usableProject } from './projects.js'
 import { projectRefusal } from './task-project.js'
 import { usableAccounts } from './routes/accounts.js'
@@ -220,7 +220,7 @@ async function changed(
     target: { type: 'task', id: taskId },
     ...(data ? { data } : {}),
   })
-  broadcastTask(scope.workspaceId, taskId)
+  void hubs.get(scope.workspaceId).broadcast(taskUpdated(taskId))
 }
 
 const member = (scope: WorkspaceScope): Actor => ({ type: 'member', id: scope.memberId })
@@ -477,7 +477,7 @@ export async function updateTask(
   if (input.parentId !== undefined && input.parentId !== task.parentId) {
     await settleMission(by.scope, task.parentId)
     await settleMission(by.scope, input.parentId)
-    if (task.parentId) broadcastTask(by.scope.workspaceId, task.parentId)
+    if (task.parentId) void hubs.get(by.scope.workspaceId).broadcast(taskUpdated(task.parentId))
   }
   return getTask(db, id)
 }
@@ -492,16 +492,18 @@ const brief = (task: { title: string; description: string }) =>
  * left for the teammate's harness.
  */
 async function computerFor(db: ScopedDb, memberId: string, harness: 'claude_code' | 'codex') {
+  const machines = await db.computer.findMany({
+    where: { kind: 'member_machine', memberId },
+    orderBy: { updatedAt: 'desc' },
+  })
+  const presence = machines.length
+    ? await hubs.get(machines[0]!.workspaceId).presence(machines.map((c) => c.id))
+    : {}
   const candidates = [
     ...(await db.computer.findMany({
       where: { kind: 'cloud', status: { in: ['running', 'stopped', 'starting'] } },
     })),
-    ...(
-      await db.computer.findMany({
-        where: { kind: 'member_machine', memberId },
-        orderBy: { updatedAt: 'desc' },
-      })
-    ).filter((c) => isOnline(c.id)),
+    ...machines.filter((c) => presence[c.id]?.online),
   ]
   // One with usage left first; else one whose accounts are out of usage, which a
   // new turn tries again (the plan may have been upgraded since).
@@ -684,8 +686,11 @@ export async function assignTask(
 }
 
 /** Stop a thread's running turn. */
-const interrupt = (thread: { id: string; computer: { id: string; kind: string } }) =>
-  dispatch(thread.computer, {
+const interrupt = (thread: {
+  id: string
+  computer: { id: string; kind: string; workspaceId: string }
+}) =>
+  hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
     type: 'thread.interrupt',
     commandId: randomUUID(),
     sessionId: thread.id,
@@ -744,7 +749,7 @@ export async function reopenOnMessage(
     where: { parentId: thread.task.id, archivedAt: { not: null }, completedAt: { not: null } },
     data: { archivedAt: null },
   })
-  broadcastTask(scope.workspaceId, thread.task.id)
+  void hubs.get(scope.workspaceId).broadcast(taskUpdated(thread.task.id))
   await settleMission(scope, thread.task.parentId ?? (await missionOf(db, thread.task.id)))
 }
 
@@ -826,7 +831,7 @@ export async function archiveWithThread(scope: Scope, taskId: string, at: Date) 
     data: { archivedAt: at },
   })
   if (!count) return
-  broadcastTask(scope.workspaceId, taskId)
+  void hubs.get(scope.workspaceId).broadcast(taskUpdated(taskId))
   await settleMission(scope, await missionOf(db, taskId))
 }
 
@@ -838,7 +843,7 @@ export async function unarchiveWithThread(scope: Scope, taskId: string) {
     data: { archivedAt: null },
   })
   if (!count) return
-  broadcastTask(scope.workspaceId, taskId)
+  void hubs.get(scope.workspaceId).broadcast(taskUpdated(taskId))
   await settleMission(scope, await missionOf(db, taskId))
 }
 
@@ -943,7 +948,7 @@ async function archiveDone(scope: Scope, actor: Actor, where: Prisma.TaskWhereIn
     target: { type: 'workspace', id: scope.workspaceId },
     data: { taskIds: ids },
   })
-  broadcastTask(scope.workspaceId, ids[0]!)
+  void hubs.get(scope.workspaceId).broadcast(taskUpdated(ids[0]!))
   return { archived: count }
 }
 

@@ -3,8 +3,7 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import type { ScopedDb } from '../db.js'
-import { dispatch, isOnline, sendToMember, sendToRunner } from '../hub.js'
-import { beginLogin, endLogin, loginForAccount } from '../logins.js'
+import { hubs } from '../hub.js'
 import {
   parseBody,
   requireUser,
@@ -68,28 +67,22 @@ async function loadOwn(db: ScopedDb, scope: WorkspaceScope, id: string) {
   return account
 }
 
+/** Run the vendor's sign-in on the account's computer, in its workspace's hub (src/logins.ts). */
 async function startLogin(
   scope: WorkspaceScope,
   account: AccountRow & { computerId: string },
   computer: { id: string; kind: string },
 ) {
-  const login = beginLogin({
-    accountId: account.id,
-    memberId: scope.memberId,
-    computerId: account.computerId,
-    account: accountRef(account),
-  })
-  const sent = await dispatch(computer, {
-    type: 'account.login.start',
-    loginId: login.loginId,
-    account: accountRef(account),
-  })
-  if (sent === 'offline') {
-    endLogin(login.loginId)
-    throw new HTTPException(409, { message: 'That computer is offline' })
-  }
-  sendToMember(scope.memberId, login.last)
-  return login
+  const started = await hubs.get(scope.workspaceId).startLogin(
+    {
+      accountId: account.id,
+      memberId: scope.memberId,
+      computerId: account.computerId,
+      account: accountRef(account),
+    },
+    computer,
+  )
+  if (started === 'offline') throw new HTTPException(409, { message: 'That computer is offline' })
 }
 
 export const accounts = new Hono<AppEnv>()
@@ -102,7 +95,10 @@ export const accounts = new Hono<AppEnv>()
       include: { computer: { select: { id: true, name: true, kind: true } } },
       orderBy: [{ provider: 'asc' }, { createdAt: 'asc' }],
     })
-    return c.json(rows.map((a) => ({ ...a, login: loginForAccount(a.id)?.last ?? null })))
+    const logins = rows.length
+      ? await hubs.get(c.var.scope.workspaceId).loginStates(rows.map((a) => a.id))
+      : {}
+    return c.json(rows.map((a) => ({ ...a, login: logins[a.id] ?? null })))
   })
 
   /** Add an account by running the vendor's own sign-in on the computer. */
@@ -113,7 +109,10 @@ export const accounts = new Hono<AppEnv>()
     if (!computer || (computer.kind === 'member_machine' && computer.memberId !== scope.memberId)) {
       throw new HTTPException(404, { message: 'Computer not found' })
     }
-    if (computer.kind === 'member_machine' && !isOnline(computer.id)) {
+    if (
+      computer.kind === 'member_machine' &&
+      !(await hubs.get(scope.workspaceId).isOnline(computer.id))
+    ) {
       throw new HTTPException(409, { message: 'That computer is offline' })
     }
     const count = await db.account.count({
@@ -165,18 +164,13 @@ export const accounts = new Hono<AppEnv>()
   .post('/:id/code', async (c) => {
     const { scope, db } = c.var
     const account = await loadOwn(db, scope, c.req.param('id'))
-    const login = loginForAccount(account.id)
-    if (!login || login.memberId !== scope.memberId)
-      throw new HTTPException(409, { message: 'This account is not waiting for a code' })
     const { code, email } = await parseBody(c.req.raw, SubmitLoginCode)
-    if (email) login.email = email
-    if (
-      !sendToRunner(login.computerId, { type: 'account.login.code', loginId: login.loginId, code })
-    ) {
-      throw new HTTPException(409, { message: 'That computer is offline' })
-    }
-    login.last = { type: 'account.login', accountId: account.id, state: 'verifying' }
-    sendToMember(scope.memberId, login.last)
+    const result = await hubs
+      .get(scope.workspaceId)
+      .submitLoginCode(account.id, scope.memberId, code, email)
+    if (result === 'not-waiting')
+      throw new HTTPException(409, { message: 'This account is not waiting for a code' })
+    if (result === 'offline') throw new HTTPException(409, { message: 'That computer is offline' })
     return c.json({ ok: true })
   })
 
@@ -205,14 +199,14 @@ export const accounts = new Hono<AppEnv>()
   .delete('/:id', async (c) => {
     const { scope, db } = c.var
     const account = await loadOwn(db, scope, c.req.param('id'))
-    const login = loginForAccount(account.id)
-    if (login) {
-      sendToRunner(login.computerId, { type: 'account.login.cancel', loginId: login.loginId })
-      endLogin(login.loginId)
-    }
+    const hub = hubs.get(scope.workspaceId)
+    await hub.cancelLogin(account.id)
     if (account.source === 'brigade') {
       if (
-        !sendToRunner(account.computerId, { type: 'account.remove', account: accountRef(account) })
+        !(await hub.sendToRunner(account.computerId, {
+          type: 'account.remove',
+          account: accountRef(account),
+        }))
       ) {
         throw new HTTPException(409, {
           message: 'That computer is offline. Start it to remove the login stored there.',

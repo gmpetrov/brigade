@@ -89,8 +89,21 @@ export * from './usage.js'
  *     (computer.backup), and a computer that replaces another restores it first (welcome's restore).
  * 45: a thread's spec names its large parts (connectors, skills, project, design systems) by their
  *     SHA-256 (ThreadSpec.parts): the runner fetches each once (GET /runner/spec-parts/<sha256>).
+ * 46: the runner says it is still there with keepalive rather than heartbeat, which a workspace's hub
+ *     object answers without waking, and connects to /runner/ws?workspace=<the welcome's workspaceId>
+ *     (docs/workspace-hubs-plan.md).
  */
-export const PROTOCOL_VERSION = 45
+export const PROTOCOL_VERSION = 46
+/**
+ * Runners from this version on send KEEPALIVE instead of heartbeat, and name their workspace when
+ * they connect: their hub object can hibernate between their messages.
+ */
+export const KEEPALIVE_PROTOCOL = 46
+/**
+ * A runner's or a dashboard's keepalive, exactly as sent and answered: a hub object answers it
+ * itself, without waking (the Workers runtime matches the text, not its JSON).
+ */
+export const KEEPALIVE = '{"type":"keepalive"}'
 /**
  * Runners from this version on back up a cloud computer to Brigade (computer.backup) and restore a
  * replaced one (welcome's restore, computer.restored).

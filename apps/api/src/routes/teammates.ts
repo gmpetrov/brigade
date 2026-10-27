@@ -10,12 +10,12 @@ import {
   TeachRecording,
   type TeachState,
 } from '@brigade/contracts'
-import { desktopClipboard, dispatch } from '../hub.js'
+import { hubs } from '../hub.js'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { requireAccountManager } from '../apps.js'
 import { audit } from '../audit.js'
-import { ensureRunning } from '../cloud.js'
+import { desktopClipboard } from '../cloud.js'
 import type { ScopedDb } from '../db.js'
 import { watchDesktop } from '../desktop-proxy.js'
 import { refuseChiefName } from '../chief.js'
@@ -69,7 +69,7 @@ export const teammates = new Hono<AppEnv>()
     const { scope, db } = c.var
     const { teammate, computer } = await teammateComputer(db, c.req.param('id'))
     if (computer.status !== 'running' && recorder(computer.id) === scope.memberId) {
-      await ensureRunning(computer.id)
+      await hubs.get(computer.workspaceId).ensureRunning(computer.id)
       // 503: the dashboard asks again until the computer is up.
       throw new HTTPException(503, { message: 'Starting the cloud computer…' })
     }
@@ -91,7 +91,7 @@ export const teammates = new Hono<AppEnv>()
       throw new HTTPException(409, { message: 'Start recording to use the desktop clipboard' })
     const { text } = await parseBody(c.req.raw, DesktopClipboard)
     try {
-      return c.json({ text: await desktopClipboard(computer.id, text) })
+      return c.json({ text: await desktopClipboard(computer, text) })
     } catch (error) {
       throw new HTTPException(503, { message: (error as Error).message })
     }
@@ -120,7 +120,10 @@ export const teammates = new Hono<AppEnv>()
       throw new HTTPException(409, {
         message: `${await memberName(db, other)} is recording a task on the cloud computer. Try again once they’re done.`,
       })
-    void ensureRunning(computer.id).catch(() => undefined)
+    void hubs
+      .get(computer.workspaceId)
+      .ensureRunning(computer.id)
+      .catch(() => undefined)
     return c.json(await teachState(db, computer.id, scope.memberId, threadId))
   })
   .post('/:id/teach/end', async (c) => {
@@ -148,7 +151,7 @@ export const teammates = new Hono<AppEnv>()
       throw new HTTPException(409, {
         message: 'Teammate browsers live on the cloud computer, and this workspace has none',
       })
-    await dispatch(computer, {
+    await hubs.get(computer.workspaceId).dispatch(computer, {
       type: 'browser.open',
       commandId: randomUUID(),
       teammateId: teammate.id,

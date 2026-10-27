@@ -289,6 +289,12 @@ export const RunnerToApi = z.discriminatedUnion('type', [
   /** Still here, every 30 s: the API forgets a runner it stops hearing from (HEARTBEAT_PROTOCOL). */
   z.object({ type: z.literal('heartbeat') }),
   /**
+   * Still here, every 30 s, instead of heartbeat (KEEPALIVE_PROTOCOL): sent exactly as KEEPALIVE,
+   * a workspace's hub object answers it with the same without waking (setWebSocketAutoResponse),
+   * and knows when it last did.
+   */
+  z.object({ type: z.literal('keepalive') }),
+  /**
    * A cloud computer's disk after the runner freed what it could (DISK_PROTOCOL): still
    * full, and how full (0 to 1). Said when that changes and every 10 minutes.
    */
@@ -685,11 +691,15 @@ export const TURN_WAITING_SOURCE = 'turn.waiting'
 export type TurnWaiting = { teammateId: string; running: number }
 
 export const ApiToRunner = z.discriminatedUnion('type', [
+  /** The answer to a keepalive (RunnerToApi), from a hub object that did not wake for it. */
+  z.object({ type: z.literal('keepalive') }),
   /** bundle: the SHA-256 of the runner bundle the API serves; a runner with another one updates. */
   z.object({
     type: z.literal('welcome'),
     runnerId: z.string(),
     computerId: z.string(),
+    /** Its workspace: the runner names it when it connects (KEEPALIVE_PROTOCOL), to reach its hub. */
+    workspaceId: z.string().optional(),
     bundle: z.string().optional(),
     /** Threads the API has as running here. One with no turn here was lost to a restart. */
     runningThreads: z.array(z.string()).optional(),

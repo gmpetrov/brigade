@@ -22,7 +22,7 @@ import { beginRun, reportRun, settleRun } from './playbooks.js'
 import { handleReviewCall, isReviewOperation } from './reviews.js'
 import { handleTriggerCall } from './trigger-calls.js'
 import { onDecided, type Live, type Resume } from './held-calls.js'
-import { broadcastSchedule, isOnline } from './hub.js'
+import { hubs, scheduleUpdated } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate, loadThread } from './thread-spec.js'
 import { projectWhere, usableProject } from './projects.js'
@@ -138,7 +138,7 @@ async function changed(scope: Scope, actor: Actor, action: string, id: string, d
     target: { type: 'schedule', id },
     ...(data ? { data: data as never } : {}),
   })
-  broadcastSchedule(scope.workspaceId, id)
+  void hubs.get(scope.workspaceId).broadcast(scheduleUpdated(id))
 }
 
 /** A new schedule, active at once, owned by the member whose accounts it runs on. */
@@ -333,7 +333,7 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
           payload: { scheduleId: schedule.id, memberId: schedule.ownerMemberId },
         } as never,
       })
-    broadcastSchedule(scope.workspaceId, schedule.id)
+    void hubs.get(scope.workspaceId).broadcast(scheduleUpdated(schedule.id))
     return { error: message }
   }
 
@@ -343,7 +343,9 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
     : null
   // The parent's computer, or the workspace computer, or else the owner's own machine.
   const computer =
-    (parent && (parent.computer.kind === 'cloud' || isOnline(parent.computer.id))
+    (parent &&
+    (parent.computer.kind === 'cloud' ||
+      (await hubs.get(parent.computer.workspaceId).isOnline(parent.computer.id)))
       ? parent.computer
       : null) ??
     (await db.computer.findFirst({ where: { kind: 'cloud', status: { not: 'destroyed' } } })) ??
@@ -360,7 +362,7 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
   if (run && 'skipped' in run) return { skipped: run.skipped }
   if (run && 'limit' in run) {
     await db.schedule.updateMany({ where: { id: schedule.id }, data: { lastError: run.limit } })
-    broadcastSchedule(scope.workspaceId, schedule.id)
+    void hubs.get(scope.workspaceId).broadcast(scheduleUpdated(schedule.id))
     return { error: run.limit }
   }
   const runId = run?.runId
@@ -392,7 +394,7 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
     if (outcome === 'offline') return failed('the computer is offline')
     if (schedule.lastError)
       await db.schedule.updateMany({ where: { id: schedule.id }, data: { lastError: null } })
-    broadcastSchedule(scope.workspaceId, schedule.id)
+    void hubs.get(scope.workspaceId).broadcast(scheduleUpdated(schedule.id))
     return { threadId: thread.id }
   } catch (error) {
     if (runId) await settleRun(db, runId, null)
@@ -493,7 +495,7 @@ export async function handleScheduleCall(
   runner: Runner,
   call: Extract<RunnerToApi, { type: 'schedule.call' }>,
   reply: (message: ApiToRunner) => void,
-  options: { alive?: Live['alive']; resume?: Resume } = {},
+  options: { live?: Live; resume?: Resume } = {},
 ) {
   const scope: Scope = { organizationId: runner.organizationId, workspaceId: runner.workspaceId }
   const db = scoped(scope)
@@ -543,7 +545,8 @@ export async function handleScheduleCall(
     const answer = await handleTriggerCall(db, scope, session, teammate, op, {
       callId: call.callId,
       request: { sessionId: call.sessionId, teammateId: call.teammateId, operation: op },
-      live: { reply, alive: options.alive ?? (() => true) },
+      reply,
+      ...(options.live ? { live: options.live } : {}),
       ...(options.resume ? { resume: options.resume } : {}),
     })
     // Held for an admin's decision: the result comes once they decide (src/held-calls.ts).

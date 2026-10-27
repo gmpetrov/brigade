@@ -32,7 +32,7 @@ import { HTTPException } from 'hono/http-exception'
 import { attachToThread } from './attachments.js'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
-import { broadcastThreadStatus, dispatch } from './hub.js'
+import { hubs, threadUpdated } from './hub.js'
 import { looksTaken } from './review-state.js'
 import { loadThread } from './thread-spec.js'
 import { fireNow, firedInARow } from './wakeups.js'
@@ -117,7 +117,7 @@ export async function parentChanged(scope: Scope, parentId: string) {
     where: { id: parentId },
     select: { status: true },
   })
-  if (parent) broadcastThreadStatus(scope.workspaceId, parentId, parent.status)
+  if (parent) void hubs.get(scope.workspaceId).broadcast(threadUpdated(parentId, parent.status))
 }
 
 /**
@@ -714,7 +714,7 @@ async function followThread(
       data: { followerId: session.id },
     })
     // Dashboards showing it list its followers.
-    broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
+    void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, thread.status))
   }
   return {
     following: followedBrief(thread, true),
@@ -918,7 +918,7 @@ export async function handleChildCall(
     if (reportOf(child.report)) return { error: 'It already finished: nothing to cancel.' }
     const thread = await loadThread(db, child.id)
     if (thread.status === 'running' || thread.status === 'starting' || thread.status === 'waiting')
-      await dispatch(thread.computer, {
+      await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
         type: 'thread.interrupt',
         commandId: randomUUID(),
         sessionId: thread.id,

@@ -5,7 +5,7 @@
 import { billingEnabled, cloudEntitled, stripeClient } from '../billing.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
-import { isOnline } from '../hub.js'
+import { hubs } from '../hub.js'
 import { raise, resolve, settle, type Alert } from './alerts.js'
 import { failuresOf, summary, type Failure } from './failures.js'
 
@@ -88,6 +88,33 @@ export const RULES: Rule[] = [
     critical: 10,
     quietMs: 30 * MINUTE,
     hint: 'Runners that stop sending heartbeats without closing their connection: computers crashing, or the network.',
+  },
+  {
+    kind: 'runner-reconnects',
+    title: 'Runners reconnecting again and again',
+    windowMs: 15 * MINUTE,
+    warning: 1,
+    critical: 5,
+    quietMs: 30 * MINUTE,
+    hint: 'A computer opening its connection many times a minute: the API, or its hub, dropping it each time it connects (docs/workspace-hubs-plan.md).',
+  },
+  {
+    kind: 'runner-outbox',
+    title: 'Commands refused: too many waiting for a computer',
+    windowMs: 30 * MINUTE,
+    warning: 1,
+    critical: 20,
+    quietMs: 60 * MINUTE,
+    hint: 'A computer that stays down while messages keep coming for it (src/runner-commands.ts): find out why it does not start.',
+  },
+  {
+    kind: 'api-reset',
+    title: 'API restarting without a deploy',
+    windowMs: 30 * MINUTE,
+    warning: 1,
+    critical: 3,
+    quietMs: 60 * MINUTE,
+    hint: 'The Api object restarted with the same version of the Worker: past its memory, most likely. Every socket dropped with it.',
   },
   {
     kind: 'runner-restart',
@@ -241,7 +268,7 @@ async function checkComputers(now: number) {
   const seen = new Set<string>()
   for (const computer of computers) {
     seen.add(computer.id)
-    const online = isOnline(computer.id)
+    const online = await hubs.get(computer.workspaceId).isOnline(computer.id)
     if (online || computer.status !== 'running') offlineSince.delete(computer.id)
     else if (!offlineSince.has(computer.id)) offlineSince.set(computer.id, now)
     const problem = computerProblem(

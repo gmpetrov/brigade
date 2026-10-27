@@ -16,7 +16,7 @@ import {
 } from './bucket.js'
 import { notifyCollab } from './collab.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
-import { notifyLibraryChanged } from './hub.js'
+import { hubs } from './hub.js'
 
 /** Saves by one author from one thread this close together make one version. */
 const FOLD_MS = 10 * 60_000
@@ -234,7 +234,7 @@ export async function trashLibraryFile(
     target: { type: 'document', id },
     data: { path: row.path },
   })
-  notifyLibraryChanged(scope.workspaceId)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
   notifyCollab(id, 'delete')
 }
 
@@ -270,7 +270,7 @@ export async function restoreLibraryFile(db: ScopedDb, scope: Scope, actor: Acto
     target: { type: 'document', id },
     data: { path },
   })
-  notifyLibraryChanged(scope.workspaceId)
+  void hubs.get(scope.workspaceId).notifyLibraryChanged()
   return restored
 }
 

@@ -3,7 +3,7 @@
 // board. Hidden, not cancelled: unarchiving brings it all back, and so does anything new
 // that waits on a person there, so a teammate still at work is never left unheard.
 import { onScopedWrite, scoped, type Scope } from './db.js'
-import { broadcastThreadStatus } from './hub.js'
+import { hubs, threadUpdated } from './hub.js'
 import { archiveWithThread, unarchiveWithThread } from './tasks.js'
 
 /** A thread and its children, archived or back; its task goes and comes back with it. */
@@ -28,7 +28,7 @@ export async function setThreadArchived(scope: Scope, threadId: string, on: bool
     await (at
       ? archiveWithThread(scope, thread.taskId, at)
       : unarchiveWithThread(scope, thread.taskId))
-  broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
+  void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, thread.status))
 }
 
 /** Something new waits on a person in an archived thread, or one of its children: it is back. */

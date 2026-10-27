@@ -24,7 +24,11 @@ Object.assign(BoatApi.prototype, {
     return { exitCode: 0, stdout: '', stderr: '' }
   },
 })
-const { giveHomesBackOnceRestored } = await import('../src/cloud.js')
+const cloud = await import('../src/cloud.js')
+const { inWorkspaceHub } = await import('./in-hub.js')
+/** The check runs in the computer's workspace hub, on its runner's hello. */
+const giveHomesBackOnceRestored = (computer: { id: string; providerRef: unknown }) =>
+  inWorkspaceHub('ws', () => cloud.giveHomesBackOnceRestored(computer))
 
 const restoredAt = (at: string): Sandbox => ({
   state: 'ready',

@@ -17,7 +17,7 @@ import { HTTPException } from 'hono/http-exception'
 import { parse, serializeOuter, type DefaultTreeAdapterTypes } from 'parse5'
 import { publicUrl } from './connectors/mcp.js'
 import type { ScopedDb } from './db.js'
-import { isOnline, runnerProtocol, sendToRunner } from './hub.js'
+import { hubs } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 
 type Node = DefaultTreeAdapterTypes.Node
@@ -625,23 +625,14 @@ export async function readSite(scope: WorkspaceScope, url: string): Promise<Site
 // ---------------------------------------------------------------------------
 
 type DescribeResult = Extract<RunnerToApi, { type: 'project.describe.result' }>
-const describing = new Map<
-  string,
-  { computerId: string; settle: (result: DescribeResult) => void }
->()
-
-/** A runner's answer to project.describe; only the computer asked may answer. */
-export function settleDescribe(computerId: string, result: DescribeResult) {
-  const run = describing.get(result.requestId)
-  if (run?.computerId === computerId) run.settle(result)
-}
 
 /**
  * The account the brief is written with: the member's own, never another's,
  * on a computer online now with a runner that knows project.describe. The
  * default first, Claude before Codex, accounts out of usage never.
  */
-async function briefAccount(db: ScopedDb, memberId: string) {
+async function briefAccount(db: ScopedDb, scope: WorkspaceScope) {
+  const { memberId } = scope
   const now = new Date()
   const rows = await db.account.findMany({
     where: { memberId, status: { in: ['ready', 'unverified'] } },
@@ -653,10 +644,13 @@ async function briefAccount(db: ScopedDb, memberId: string) {
     }
   const fresh = rows.filter((r) => !r.exhaustedUntil || r.exhaustedUntil <= now)
   if (fresh.length === 0) return { reason: 'Your accounts are out of usage for now.' }
-  const online = fresh.filter((r) => isOnline(r.computerId))
+  const presence = await hubs
+    .get(scope.workspaceId)
+    .presence([...new Set(fresh.map((r) => r.computerId))])
+  const online = fresh.filter((r) => presence[r.computerId]?.online)
   if (online.length === 0) return { reason: 'None of the computers with your accounts is online.' }
   const ready = online
-    .filter((r) => (runnerProtocol(r.computerId) ?? 0) >= DESCRIBE_PROTOCOL)
+    .filter((r) => (presence[r.computerId]?.protocolVersion ?? 0) >= DESCRIBE_PROTOCOL)
     .sort(
       (a, b) =>
         Number(b.isDefault) - Number(a.isDefault) ||
@@ -677,38 +671,36 @@ export async function describeSite(
       message: error instanceof Error ? error.message : String(error),
     })
   })
-  const [site, choice] = await Promise.all([
-    readCached(scope, url),
-    briefAccount(db, scope.memberId),
-  ])
+  const [site, choice] = await Promise.all([readCached(scope, url), briefAccount(db, scope)])
   if (!('account' in choice) || !choice.account) return { brief: null, reason: choice.reason! }
   if (!site.text.trim()) return { brief: null, reason: 'The site shows no text to read.' }
   const account = choice.account
-  const result = await new Promise<DescribeResult>((resolve) => {
-    const requestId = randomUUID()
-    const settle = (value: DescribeResult) => {
-      clearTimeout(timer)
-      describing.delete(requestId)
-      resolve(value)
-    }
-    const fail = (error: string) =>
-      settle({ type: 'project.describe.result', requestId, ok: false, error })
-    const timer = setTimeout(() => fail('The computer did not answer in time'), DESCRIBE_MS)
-    describing.set(requestId, { computerId: account.computerId, settle })
-    const sent = sendToRunner(
-      account.computerId,
-      {
-        type: 'project.describe',
-        requestId,
-        account: { id: account.id, provider: account.provider, source: account.source },
-        url: site.url,
-        text: site.text,
-        logos: site.logos.map((l) => l.hint),
-      },
-      { touch: false },
-    )
-    if (!sent) fail('The computer went offline')
-  })
+  const requestId = randomUUID()
+  const answer = await hubs.get(scope.workspaceId).askRunner(
+    account.computerId,
+    {
+      type: 'project.describe',
+      requestId,
+      account: { id: account.id, provider: account.provider, source: account.source },
+      url: site.url,
+      text: site.text,
+      logos: site.logos.map((l) => l.hint),
+    },
+    DESCRIBE_MS,
+    { touch: false, offline: 'The computer went offline' },
+  )
+  const result: DescribeResult =
+    'type' in answer && answer.type === 'project.describe.result'
+      ? answer
+      : {
+          type: 'project.describe.result',
+          requestId,
+          ok: false,
+          error:
+            'error' in answer && answer.error !== 'The computer did not answer'
+              ? answer.error
+              : 'The computer did not answer in time',
+        }
   if (result.ok && result.brief)
     return {
       brief: result.brief,

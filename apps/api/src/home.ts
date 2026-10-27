@@ -13,7 +13,7 @@ import {
   THREAD_NOTE_SOURCE,
 } from '@brigade/contracts'
 import type { ScopedDb } from './db.js'
-import { eventsWaitingSince } from './hub.js'
+import { hubs } from './hub.js'
 import { latestEvents } from './latest-events.js'
 import { playbookLines } from './playbook-metrics.js'
 import { waitingOnPerson } from './pull-requests.js'
@@ -103,6 +103,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
       lastSeq: true,
       updatedAt: true,
       scheduleId: true,
+      workspaceId: true,
       teammate: { select: { id: true, name: true } },
     },
   })
@@ -243,8 +244,11 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
         _max: { at: true },
       })
     : []
+  const waitingSince = running.length
+    ? await hubs.get(running[0]!.workspaceId).eventsWaitingSince(running.map((t) => t.id))
+    : {}
   for (const t of running) {
-    const waiting = eventsWaitingSince(t.id)
+    const waiting = waitingSince[t.id]
     const last = lastEvents.find((e) => e.sessionId === t.id)?._max.at
     const quietSince = waiting ? new Date(waiting) : last
     if (!quietSince || now.getTime() - quietSince.getTime() < STALLED_AFTER) continue

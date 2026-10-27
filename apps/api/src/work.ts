@@ -13,7 +13,8 @@ import { audit } from './audit.js'
 import { capLabel, turnCapReached } from './caps.js'
 import type { RunnerToApi } from '@brigade/contracts'
 import { scoped, type Scope, type ScopedDb } from './db.js'
-import { broadcastThreadStatus, dispatch, runnerProtocol } from './hub.js'
+import { hubs, threadUpdated } from './hub.js'
+import { isKept } from './runner-commands.js'
 import { usableAccounts } from './routes/accounts.js'
 import {
   currentTeammate,
@@ -100,7 +101,7 @@ export async function promptThread(
     })
   // A prompt with a stable id tried again (after a restart): it went already, or a cap holds it.
   if (options.commandId) {
-    if (await db.runnerCommand.count({ where: { id: options.commandId } })) return 'queued'
+    if (await isKept(options.commandId, thread.id)) return 'queued'
     if (
       !options.skipCaps &&
       (await db.ticket.count({
@@ -115,15 +116,16 @@ export async function promptThread(
   }
   const ids = prompt.teammateIds?.length ? prompt.teammateIds : [currentTeammate(thread).id]
   const responders = ids.map((id) => teammateIn(thread, id))
+  const hub = hubs.get(scope.workspaceId)
   if (prompt.attachments?.length) {
-    const protocol = runnerProtocol(thread.computer.id)
+    const protocol = await hub.runnerProtocol(thread.computer.id)
     if (protocol !== undefined && protocol < 7)
       throw new HTTPException(409, {
         message: "This computer's runner is too old for attached files. Update it.",
       })
   }
   if (responders.length > 1 || responders[0]!.id !== thread.teammateId) {
-    const protocol = runnerProtocol(thread.computer.id)
+    const protocol = await hub.runnerProtocol(thread.computer.id)
     if (protocol !== undefined && protocol < 2)
       throw new HTTPException(409, {
         message: "This computer's runner is too old for threads with several teammates. Update it.",
@@ -160,7 +162,7 @@ export async function promptThread(
         target: { type: 'thread', id: thread.id },
         data: { ...reached, ticketId: ticket.id },
       })
-      broadcastThreadStatus(scope.workspaceId, thread.id, 'paused')
+      void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, 'paused'))
       return 'paused'
     }
   }
@@ -176,7 +178,7 @@ export async function promptThread(
     ),
   )
   const [first, ...then] = specs
-  return dispatch(thread.computer, {
+  return hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
     type: 'thread.prompt',
     commandId: options.commandId ?? randomUUID(),
     thread: first!,
@@ -200,7 +202,7 @@ export async function handBack(
   note: string,
 ) {
   await db.session.updateMany({ where: { id: thread.id }, data: { controlledByMemberId: null } })
-  const sent = await dispatch(thread.computer, {
+  const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
     type: 'thread.handback',
     commandId: randomUUID(),
     thread: await specFor(db, thread, { requireUsage: false }),
@@ -239,7 +241,8 @@ export async function titleThread(
     where: { id: session.id, title: message.from },
     data: { title: message.title, updatedAt: session.updatedAt },
   })
-  if (count > 0) broadcastThreadStatus(runner.workspaceId, session.id, session.status)
+  if (count > 0)
+    void hubs.get(runner.workspaceId).broadcast(threadUpdated(session.id, session.status))
 }
 
 /** Teammates answering one another stop after this many turns without a member's message. */

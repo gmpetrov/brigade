@@ -9,7 +9,7 @@ import { AWAITED_REPLY, triggerEventText, WAKEUPS_IN_A_ROW } from '@brigade/cont
 import { audit } from './audit.js'
 import type { ReceivedEmail } from './connectors/gmail.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
-import { broadcastThreadStatus } from './hub.js'
+import { hubs, threadUpdated } from './hub.js'
 import { firedInARow, fireNow } from './wakeups.js'
 
 /** Replies wake the thread for this long after the last email it sent in the conversation. */
@@ -53,7 +53,7 @@ export async function watchReplies(
   const { id } = existing
     ? await db.replyWatch.update({ where: { id: existing.id }, data, select: { id: true } })
     : await db.replyWatch.create({ data: { ...where, ...data } as never, select: { id: true } })
-  broadcastThreadStatus(scope.workspaceId, sent.session.id, sent.session.status)
+  void hubs.get(scope.workspaceId).broadcast(threadUpdated(sent.session.id, sent.session.status))
   return { id, until }
 }
 
@@ -196,6 +196,6 @@ export async function stopWatching(
     target: { type: 'thread', id: session.id },
     data: { replyWatchId: id },
   })
-  broadcastThreadStatus(scope.workspaceId, session.id, session.status)
+  void hubs.get(scope.workspaceId).broadcast(threadUpdated(session.id, session.status))
   return true
 }

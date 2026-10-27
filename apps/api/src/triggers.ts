@@ -17,7 +17,9 @@ import type {
   TriggerDefinition,
   VendorEvent,
 } from './connectors/types.js'
+import { env } from './config.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { bareAddress } from './mail/names.js'
 import { loadThread } from './thread-spec.js'
 import { promptWithAttachments, startThread } from './work.js'
 
@@ -410,6 +412,17 @@ export function eventMessage(
   }
 }
 
+/** An email Brigade sent its operators (src/ops/send.ts): from alerts@ its mail domain, automatic. */
+export function isOpsAlert(event: VendorEvent) {
+  if (event.type !== 'email') return false
+  const p = event.payload as { from?: unknown; automatic?: unknown }
+  return (
+    p.automatic === true &&
+    typeof p.from === 'string' &&
+    bareAddress(p.from) === `alerts@${env.MAIL_DOMAIN}`.toLowerCase()
+  )
+}
+
 /**
  * Start a thread for each of the connection's triggers this event concerns
  * (only the given one, for a custom app's URL). failed: some thread could not
@@ -429,6 +442,9 @@ export async function dispatch(
   capped?: string
 }> {
   if (connection.status === 'removed') return { started: 0, failed: false }
+  // Brigade's own alerts to its operators start no thread, whatever a rule says: during an
+  // outage each one did, for a computer that was down, and they piled up waiting for it.
+  if (isOpsAlert(event)) return { started: 0, failed: false }
   const triggers = only
     ? [only]
     : await prisma.trigger.findMany({

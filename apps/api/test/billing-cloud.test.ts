@@ -97,8 +97,16 @@ Object.assign(BoatApi.prototype, {
 
 const { prisma } = await import('../src/db.js')
 const billing = await import('../src/billing.js')
-const { createWorkspaceComputer, enforcePlans, ensureRunning, stopWithoutPlan } =
-  await import('../src/cloud.js')
+const cloud = await import('../src/cloud.js')
+const { createWorkspaceComputer, enforcePlans } = cloud
+const { inWorkspaceHub } = await import('./in-hub.js')
+// As the computer's workspace hub runs them.
+const ensureRunning = async (computerId: string) => {
+  const { workspaceId } = await prisma.computer.findUniqueOrThrow({ where: { id: computerId } })
+  return inWorkspaceHub(workspaceId, () => cloud.ensureRunning(computerId))
+}
+const stopWithoutPlan = (computer: Parameters<typeof cloud.stopWithoutPlan>[0]) =>
+  inWorkspaceHub(computer.workspaceId, () => cloud.stopWithoutPlan(computer))
 
 // Stripe, faked: its subscriptions as they are now.
 const stripeNow = new Map<string, Record<string, unknown>>()

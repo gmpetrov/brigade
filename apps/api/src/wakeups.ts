@@ -13,7 +13,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
-import { broadcastThreadStatus } from './hub.js'
+import { hubs, threadUpdated } from './hub.js'
 import { localTime, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread } from './thread-spec.js'
@@ -36,7 +36,7 @@ export const isWakeupOperation = (op: ScheduleOperation): op is WakeupOperation 
 type Session = { id: string; origin: string; startedByMemberId: string; status: string }
 
 const changed = (scope: Scope, session: { id: string; status: string }) =>
-  broadcastThreadStatus(scope.workspaceId, session.id, session.status)
+  void hubs.get(scope.workspaceId).broadcast(threadUpdated(session.id, session.status))
 
 /**
  * Wake-ups fired in the thread since a person last wrote in it. A wake-up's own

@@ -469,30 +469,39 @@ describe('the first response', { skip: !database && 'no database answers' }, () 
   /** A write from a run's thread, as its runner sends it; one that asks is approved by the owner. */
   async function write(sessionId: string, operation: string) {
     const { handleConnectorCall, decideTicket } = await import('../src/connector-calls.js')
-    const heard: { type: string; ok?: boolean; output?: unknown }[] = []
-    let pending: (ticketId: string) => void = () => {}
-    const asked = new Promise<string>((resolve) => (pending = resolve))
-    const done = handleConnectorCall(
-      { computerId: ids.computer, ...scope },
-      {
-        type: 'connector.call',
-        callId: randomUUID(),
-        sessionId,
-        connectionId: ids.gmail,
-        operation,
-        input: { to: ['jane@customer.test'], subject: 'Re: login', body: 'Here is how.' },
-      },
-      (message) => {
-        heard.push(message as never)
-        if (message.type === 'connector.pending') pending(message.ticketId)
-      },
+    const { fakeRunner } = await import('./in-hub.js')
+    const runner = await fakeRunner(scope, ids.computer)
+    const callId = randomUUID()
+    const heard = () =>
+      runner.sent.filter((m) => m.callId === callId) as {
+        type: string
+        ticketId?: string
+        ok?: boolean
+        output?: unknown
+      }[]
+    await runner.run(() =>
+      handleConnectorCall(
+        { computerId: ids.computer, ...scope },
+        {
+          type: 'connector.call',
+          callId,
+          sessionId,
+          connectionId: ids.gmail,
+          operation,
+          input: { to: ['jane@customer.test'], subject: 'Re: login', body: 'Here is how.' },
+        },
+        runner.reply as never,
+        { live: runner.live },
+      ),
     )
-    const first = await Promise.race([asked, done.then(() => null)])
+    const first = heard().find((m) => m.type === 'connector.pending')?.ticketId
     if (first) {
       await decideTicket({ ...scope, memberId: ids.owner }, first, { approved: true })
-      await done
+      for (let i = 0; i < 200 && !heard().some((m) => m.type === 'connector.result'); i++)
+        await new Promise((resolve) => setTimeout(resolve, 20))
     }
-    return heard.at(-1)!
+    runner.close()
+    return heard().at(-1)!
   }
   const responded = async (runId: string) =>
     (await db.playbookRun.findFirst({ where: { id: runId } }))?.firstResponseAt ?? null

@@ -27,7 +27,7 @@ import { audit, type Actor } from './audit.js'
 import { parentChanged, settleAwaited } from './children.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { teammateGitHub } from './git.js'
-import { dispatch } from './hub.js'
+import { hubs } from './hub.js'
 import { projectOfRepository } from './projects.js'
 import {
   checksOf,
@@ -715,7 +715,7 @@ async function stopReviewThread(
   const db = scoped(scope)
   const thread = await loadThread(db, threadId)
   if (['starting', 'running', 'waiting'].includes(thread.status))
-    await dispatch(thread.computer, {
+    await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
       type: 'thread.interrupt',
       commandId: randomUUID(),
       sessionId: thread.id,

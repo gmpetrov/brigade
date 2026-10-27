@@ -5,10 +5,10 @@ import { sweepAssets } from './assets.js'
 import { sweepUploads } from './attachments.js'
 import { watchIdle } from './cloud.js'
 import { driveReplacements } from './cloud-replace.js'
-import { offerRunnerUpdates, pingBrowsers, resendCommands, watchRunners } from './hub.js'
+import { watchHubs } from './hub/jobs.js'
 import { settleHeldCalls } from './held-calls.js'
 import { processDueInbound, sweepInbound } from './inbound.js'
-import { sweepCommands } from './runner-commands.js'
+import { resendCommands, sweepCommands } from './runner-commands.js'
 import { sweepSpecParts } from './spec-parts.js'
 import { redeliverFailed } from './routes/github-webhook.js'
 import { sweepDeliveries } from './triggers.js'
@@ -36,9 +36,7 @@ export function startJobs() {
   watchSchedules()
   watchWakeups()
   watchIdle()
-  offerRunnerUpdates()
-  pingBrowsers()
-  watchRunners()
+  watchHubs()
   watchMail()
   watchOps()
 

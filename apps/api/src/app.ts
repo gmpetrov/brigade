@@ -214,7 +214,8 @@ app.get(
     if (!runner) return { onOpen: (_e, ws) => ws.close(4401, 'unknown runner token') }
     const socket = runnerSocket(runner)
     return {
-      onMessage: (e, ws) => socket.onMessage(e.data, ws),
+      onOpen: (_e, ws) => socket.onOpen(ws),
+      onMessage: (e, ws) => void socket.onMessage(e.data, ws),
       onClose: () => socket.onClose(),
     }
   }),
