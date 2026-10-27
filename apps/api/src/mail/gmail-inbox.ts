@@ -9,6 +9,7 @@ import type { ReceivedEmail } from '../connectors/gmail.js'
 import { scoped, type Scope } from '../db.js'
 import { BOX_DAYS } from './inbound.js'
 import { bareAddress } from './names.js'
+import { addressesIn } from './text.js'
 
 /**
  * Whether the Inbox shows this account's mail: Gmail, shared with the workspace, and put in the
@@ -19,9 +20,6 @@ export const inInbox = (connection: { kind: string; reach: string; inbox: boolea
 
 /** Gmail's own tabs of mail nobody answers: kept out of the Inbox. */
 const NOISE = new Set(['CATEGORY_PROMOTIONS', 'CATEGORY_SOCIAL', 'SPAM', 'TRASH'])
-
-const addresses = (value: string | undefined) =>
-  (value ?? '').match(/[^\s<>,;"()]+@[^\s<>,;"()]+/g)?.map((a) => a.toLowerCase()) ?? []
 
 export async function keepGmail(
   connection: {
@@ -64,8 +62,8 @@ export async function keepGmail(
         messageId: email.rfcMessageId ?? null,
         fromAddress: bareAddress(from.address),
         fromName: (from.name ?? '').slice(0, 200),
-        to: addresses(email.to),
-        cc: addresses(email.cc),
+        to: addressesIn(email.to),
+        cc: addressesIn(email.cc),
         subject: (email.subject ?? '').slice(0, 1000),
         text: (email.body ?? '').slice(0, 100_000),
         automatic: email.automatic,

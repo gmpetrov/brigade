@@ -273,6 +273,8 @@ describe('sending', () => {
     await sendNotice(to, notice)
     const mail = posted.find((p) => p.url === 'https://api.resend.com/emails')!
     assert.equal(JSON.parse(mail.body).subject, '[Brigade warning] API requests failing (500)')
+    // Marked as a machine's, so a mailbox rule that skips automatic mail leaves it alone.
+    assert.equal(JSON.parse(mail.body).headers['Auto-Submitted'], 'auto-generated')
   })
 })
 
