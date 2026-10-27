@@ -1,6 +1,5 @@
 -- A cloud computer's backups and its replacement onto a new VM (src/cloud-replace.ts, routes/runner-folders.ts,
 -- routes/runner-backups.ts). Only adds.
-Loaded Prisma config from prisma.config.ts.
 
 -- CreateTable
 CREATE TABLE "FolderBackup" (

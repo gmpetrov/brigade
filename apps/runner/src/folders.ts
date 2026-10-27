@@ -912,12 +912,11 @@ export class Folders {
   }
 
   private async backUpChanged() {
-    const backups = this.options.backups
-    if (!CLOUD || !backups) return []
+    if (!CLOUD || !this.options.backups) return []
     await this.loaded
     const failed: string[] = []
     for (const candidate of await this.candidates()) {
-      const { name, workDir, runAs } = candidate
+      const { name, workDir } = candidate
       const since = this.state.backedUpAt[workDir] ?? 0
       if (candidate.active <= since && !this.options.inUse(name.sessionId)) continue
       if (Date.now() < (this.state.backupRetryAt[workDir] ?? 0)) continue
@@ -927,38 +926,49 @@ export class Folders {
         failed.push(`${workDir}: the disk is nearly full`)
         continue
       }
-      const started = Date.now()
-      const file = await this.tempFile()
-      try {
-        const size = await pack(workDir, file, runAs, { live: true })
-        if (size === null) {
-          this.state.backupRetryAt[workDir] = Date.now() + TOO_LARGE_RETRY_MS
-          failed.push(`${workDir}: larger than ${ARCHIVE_MAX} bytes without dependencies`)
-          continue
-        }
-        // Put back from elsewhere while it was packed: what was packed is not the folder.
-        if (this.unpacking.has(workDir)) continue
-        await backups.put(name, file, {
-          background: this.options.background?.(name) ?? [],
-          ...(this.state.arrived[workDir] ? { arrived: this.state.arrived[workDir] } : {}),
-        })
-        this.state.backedUpAt[workDir] = started
-        delete this.state.backupRetryAt[workDir]
-        this.save()
-      } catch (error) {
-        // Gone meanwhile (archived, deleted), or its thread not taken in here yet: nothing to keep.
-        if (!(await exists(workDir, runAs))) continue
-        const status = (error as { status?: number }).status
-        if (status === 409 || status === 410) continue
-        this.state.backupRetryAt[workDir] = Date.now() + BACKUP_RETRY_MS
-        this.save()
-        failed.push(`${workDir}: ${String(error)}`)
-      } finally {
-        await rm(file, { force: true })
-      }
+      // A quiet folder may be archived meanwhile (check): one at a time. One in use never is, and
+      // its turn would wait on its backup.
+      const failure = await (this.options.inUse(name.sessionId)
+        ? this.backUpOne(candidate)
+        : this.exclusive(workDir, () => this.backUpOne(candidate)))
+      if (failure) failed.push(failure)
     }
     for (const failure of failed) console.warn(`could not back up ${failure}`)
     return failed
+  }
+
+  /** Back one folder up; what failed, if it did. */
+  private async backUpOne({ name, workDir, runAs }: Candidate): Promise<string | undefined> {
+    const backups = this.options.backups!
+    if (this.unpacking.has(workDir) || !(await exists(workDir, runAs))) return
+    const started = Date.now()
+    const file = await this.tempFile()
+    try {
+      const size = await pack(workDir, file, runAs, { live: true })
+      if (size === null) {
+        this.state.backupRetryAt[workDir] = Date.now() + TOO_LARGE_RETRY_MS
+        return `${workDir}: larger than ${ARCHIVE_MAX} bytes without dependencies`
+      }
+      // Put back from elsewhere while it was packed: what was packed is not the folder.
+      if (this.unpacking.has(workDir)) return
+      await backups.put(name, file, {
+        background: this.options.background?.(name) ?? [],
+        ...(this.state.arrived[workDir] ? { arrived: this.state.arrived[workDir] } : {}),
+      })
+      this.state.backedUpAt[workDir] = started
+      delete this.state.backupRetryAt[workDir]
+      this.save()
+    } catch (error) {
+      // Gone meanwhile (archived, deleted), or its thread not taken in here yet: nothing to keep.
+      if (!(await exists(workDir, runAs))) return
+      const status = (error as { status?: number }).status
+      if (status === 409 || status === 410) return
+      this.state.backupRetryAt[workDir] = Date.now() + BACKUP_RETRY_MS
+      this.save()
+      return `${workDir}: ${String(error)}`
+    } finally {
+      await rm(file, { force: true })
+    }
   }
 
   /** Put a folder back from an archive or a backup: never backed up half-way. */

@@ -236,15 +236,24 @@ async function moveThreads(tx: Prisma.TransactionClient, computerId: string, mem
     WHERE s."computerId" = ${computerId}`
 }
 
-/** Being made: started again when nothing makes it (the API restarted meanwhile). */
+/** When each computer's making was last started again here (keepCreating), by id. */
+const remade = new Map<string, number>()
+/** A making that failed is started again after this. */
+const REMAKE_EVERY_MS = 10 * 60_000
+
+/**
+ * Being made: started again when nothing makes it, after an API restart or a failure (each
+ * making starts from a new VM, the one it may have made going first: it holds nothing yet).
+ */
 async function keepCreating(row: Replacement) {
   if (isProvisioning(row.computerId)) return
   const computer = await prisma.computer.findUniqueOrThrow({ where: { id: row.computerId } })
   const runner = await prisma.runner.findUnique({ where: { computerId: computer.id } })
   // Installed: its runner's hello moves the replacement on (restoreFor).
   if (runner) return
-  if (computer.status === 'error' || !computer.providerRef || computer.status === 'creating')
-    startProvision(computer)
+  if (Date.now() - (remade.get(computer.id) ?? 0) < REMAKE_EVERY_MS) return
+  remade.set(computer.id, Date.now())
+  startProvision(computer)
 }
 
 /**
