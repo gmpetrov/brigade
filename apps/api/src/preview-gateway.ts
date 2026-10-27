@@ -131,3 +131,15 @@ export function previewEnded(events: { event: { type: string } }[]) {
     preview.data.reason !== PREVIEW_REPLACED
   )
 }
+
+/**
+ * What a person opens for a preview on a member's machine: the thread's own name under its
+ * localhost, as the runner says (its cookies apart from other threads'), else localhost
+ * itself (runners before it). Nothing but a loopback name on the proxy's port is taken.
+ */
+export function localPreviewUrl(origin: string | undefined, port: number) {
+  const named = origin?.match(/^http:\/\/([a-z0-9-]{1,63})\.localhost:(\d{1,5})$/)
+  return named && Number(named[2]) === port
+    ? `http://${named[1]}.localhost:${port}`
+    : `http://localhost:${port}`
+}

@@ -86,6 +86,8 @@ export class ProcessGroups {
       }
     }
     for (const p of found) signal(p.pid, 'SIGTERM')
+    // A paused preview's (previews.ts) only gets to its SIGTERM handler once resumed.
+    for (const p of found) signal(p.pid, 'SIGCONT')
     const until = Date.now() + GRACE_MS
     while (Date.now() < until && found.some((p) => signal(p.pid, 0)))
       await new Promise((done) => setTimeout(done, 200))

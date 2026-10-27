@@ -14,7 +14,9 @@
 // On a cloud computer it runs in a cgroup of its own (preview-cgroup.ts): frozen
 // after a few minutes without use, its thread's containers paused, until the
 // next request; stopped hours later, or sooner when the computer runs short; and
-// killed alone, with the reason, when it takes too much memory.
+// killed alone, with the reason, when it takes too much memory. On a member's
+// machine its process group stops (SIGSTOP) instead, with its thread's Compose
+// containers, until the next request; it stops after TTL_MS as before.
 //
 // A person starts one too, from the dashboard, without a turn: again as it last
 // started (remembered across restarts of the runner), or from the saved setup
@@ -25,7 +27,10 @@
 // one (repo-settings.ts), so each branch starts as its code needs; else in the
 // recipe saved in Brigade. Saving writes both. On a member's machine, the app
 // listens on the loopback only, and gets the files the repository's
-// .worktreeinclude names from the member's own clone (its .env).
+// .worktreeinclude names from the member's own clone (its .env). People open it
+// at a name of the thread's own, <thread>.localhost (localName): a browser keeps
+// cookies by name, not port, so on plain localhost one thread's preview would
+// sign another's out.
 //
 // Each start reads the repository's preview variables, which people set, from
 // the API: they go into the app's environment over the start's own settings,
@@ -52,7 +57,7 @@ import {
 import { CLOUD, HOME } from './config.js'
 import { harnessEnv } from './harness/env.js'
 import type { CheckResult } from './preview-check.js'
-import { pauseFor, unpause } from './containers.js'
+import { pauseFor, pauseMember, unpause, unpauseMember } from './containers.js'
 import {
   oomReason,
   PressureWatch,
@@ -82,7 +87,9 @@ const TTL_MS = Number(process.env.BRIGADE_PREVIEW_TTL_MS) || 30 * 60_000
 /**
  * In a cgroup of its own (a cloud computer), a preview nobody used for this
  * long is frozen instead, its memory given back, until the next request; it
- * stops after FROZEN_TTL_MS, or sooner when the computer runs short.
+ * stops after FROZEN_TTL_MS, or sooner when the computer runs short. On a
+ * member's machine its processes stop (SIGSTOP) until the next request, and it
+ * stops after TTL_MS: macOS compresses or swaps what they hold.
  */
 const FREEZE_MS = Number(process.env.BRIGADE_PREVIEW_FREEZE_MS) || 5 * 60_000
 const FROZEN_TTL_MS = Number(process.env.BRIGADE_PREVIEW_FROZEN_TTL_MS) || 4 * 60 * 60_000
@@ -457,6 +464,12 @@ export class Previews {
     return this.tail(preview)
   }
 
+  /** Where people open the thread's preview, without a token. */
+  origin(sessionId: string) {
+    const preview = this.previews.get(sessionId)
+    return preview?.origins[preview.input.port]
+  }
+
   /**
    * Open the preview's pages with the computer's Chrome, at the address people
    * open, as the teammate; screenshots go in .preview-checks in its directory.
@@ -504,7 +517,7 @@ export class Previews {
     const port = preview.info.publicPort ?? preview.info.port
     const url = this.options.viewUrl
       ? await this.options.viewUrl(seat.sessionId, port)
-      : `http://localhost:${port}`
+      : preview.origins[preview.input.port]!
     const from = preview.written
     const saved = preview.input.paths?.length ? preview.input.paths : ['/']
     // A recheck after a passed one, with no pages given: the first is enough to see it still renders.
@@ -959,7 +972,7 @@ export class Previews {
       publicPort = await proxy.listen(from, all)
       origin = this.options.expose
         ? (await this.options.expose(seat.sessionId, [publicPort]))[publicPort]!
-        : `http://localhost:${publicPort}`
+        : `http://${localName(seat.sessionId)}:${publicPort}`
     } catch (error) {
       proxy.close()
       throw error
@@ -1245,16 +1258,22 @@ export class Previews {
   /** Nobody used it for a while: its processes stop where they are, and its memory goes to swap. */
   private freeze(preview: Preview) {
     const { cgroup } = preview
-    if (!cgroup || preview.frozen || preview.info.status !== 'running' || preview.stopping) return
+    if (!cgroup && !stoppable(preview)) return
+    if (preview.frozen || preview.info.status !== 'running' || preview.stopping) return
     preview.frozen = true
+    const after = `Paused after ${Math.round(FREEZE_MS / 60_000)} minutes without use`
     return this.pause(preview, async () => {
-      await cgroup.freeze()
-      const freed = await cgroup.reclaim()
-      this.append(
-        preview,
-        `[preview] Paused after ${Math.round(FREEZE_MS / 60_000)} minutes without use ` +
-          `(${Math.round(freed / 1024 ** 2)} MB given back); the next request resumes it\n`,
-      )
+      if (cgroup) {
+        await cgroup.freeze()
+        const freed = await cgroup.reclaim()
+        this.append(
+          preview,
+          `[preview] ${after} (${Math.round(freed / 1024 ** 2)} MB given back); the next request resumes it\n`,
+        )
+      } else {
+        signalGroup(preview, 'SIGSTOP')
+        this.append(preview, `[preview] ${after}; the next request resumes it\n`)
+      }
       await this.pauseContainers(preview)
     })
   }
@@ -1267,7 +1286,8 @@ export class Previews {
     if (!preview.frozen) return preview.pausing
     preview.frozen = false
     const thawed = this.pause(preview, async () => {
-      await preview.cgroup?.thaw()
+      if (preview.cgroup) await preview.cgroup.thaw()
+      else signalGroup(preview, 'SIGCONT')
       this.append(preview, '[preview] Resumed\n')
     })
     void this.pause(preview, () => this.unpauseContainers(preview))
@@ -1286,12 +1306,16 @@ export class Previews {
     return this.thaw(preview)
   }
 
-  /** The thread's containers, on a cloud computer, while nobody works in it. */
+  /**
+   * The thread's containers while nobody works in it: the teammate's on a cloud
+   * computer, its Compose project's in the member's Docker on their machine.
+   */
   private async pauseContainers(preview: Preview) {
     const { runAs, sessionId } = preview.seat
-    if (!runAs || !preview.frozen || preview.pausedContainers || this.options.busy?.(sessionId))
-      return
-    const ids = await pauseFor(runAs, sessionId).catch((error: unknown) => {
+    if (!preview.frozen || preview.pausedContainers || this.options.busy?.(sessionId)) return
+    if (!runAs && CLOUD) return
+    const paused = runAs ? pauseFor(runAs, sessionId) : pauseMember(sessionId)
+    const ids = await paused.catch((error: unknown) => {
       this.append(preview, `[preview] Could not pause the thread's containers: ${String(error)}\n`)
       return []
     })
@@ -1304,18 +1328,21 @@ export class Previews {
   private async unpauseContainers(preview: Preview) {
     const ids = preview.pausedContainers
     delete preview.pausedContainers
-    if (!ids?.length || !preview.seat.runAs) return
-    await unpause(preview.seat.runAs, preview.seat.sessionId, ids).catch((error: unknown) => {
+    if (!ids?.length) return
+    const { runAs, sessionId } = preview.seat
+    const resumed = runAs ? unpause(runAs, sessionId, ids) : unpauseMember(ids)
+    await resumed.catch((error: unknown) => {
       this.append(preview, `[preview] Could not resume the thread's containers: ${String(error)}\n`)
     })
     this.savePaused()
   }
 
+  /** As [user, thread, ids]; the user is '' for the member's own Docker. */
   private savePaused() {
     const paused: [string, string, string[]][] = []
     for (const p of this.previews.values())
-      if (p.seat.runAs && p.pausedContainers?.length)
-        paused.push([p.seat.runAs, p.seat.sessionId, p.pausedContainers])
+      if (p.pausedContainers?.length)
+        paused.push([p.seat.runAs ?? '', p.seat.sessionId, p.pausedContainers])
     try {
       writeFileSync(this.pausedFile, JSON.stringify(paused), { mode: 0o600 })
     } catch (error) {
@@ -1334,8 +1361,10 @@ export class Previews {
     }
     for (const entry of paused) {
       const [user, sessionId, ids] = entry.length === 3 ? entry : [entry[0], '', entry[1]]
-      await unpause(user, sessionId, ids).catch((error: unknown) =>
-        console.warn(`could not resume the containers of ${user}: ${String(error)}`),
+      await (user ? unpause(user, sessionId, ids) : unpauseMember(ids)).catch((error: unknown) =>
+        console.warn(
+          `could not resume the containers of ${user || 'the member'}: ${String(error)}`,
+        ),
       )
     }
     this.savePaused()
@@ -1531,6 +1560,8 @@ export class Previews {
     const frozen = [...this.previews.values()].filter((p) => p.frozen)
     if (!frozen.length) return
     const meminfo = await readFile('/proc/meminfo', 'utf8').catch(() => '')
+    // Not Linux (a member's Mac): nothing to read, and frozen previews stop after TTL_MS anyway.
+    if (!meminfo) return
     const kB = (key: string) => Number(new RegExp(`^${key}:\\s+(\\d+)`, 'm').exec(meminfo)?.[1])
     const swapUsed = kB('SwapTotal') > 0 ? 1 - kB('SwapFree') / kB('SwapTotal') : 0
     if (swapUsed < SWAP_FULL && kB('MemAvailable') / kB('MemTotal') > MEMORY_SHORT) return
@@ -1540,6 +1571,32 @@ export class Previews {
 }
 
 const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`
+
+/**
+ * The name a thread's preview is opened at on a member's machine: its own
+ * under .localhost, which browsers and macOS take to the loopback, so its
+ * cookies are its own.
+ */
+export const localName = (sessionId: string) =>
+  `${
+    sessionId
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .slice(0, 63) || 'preview'
+  }.localhost`
+
+/** Its processes can be stopped and resumed with signals: the runner's own, on a member's machine. */
+const stoppable = (preview: Preview) => !CLOUD && !preview.seat.runAs && Boolean(preview.group)
+
+/** Stop or resume the preview's process group, where stoppable. */
+function signalGroup(preview: Preview, signal: 'SIGSTOP' | 'SIGCONT') {
+  if (!stoppable(preview)) return
+  try {
+    process.kill(-preview.group!, signal)
+  } catch {
+    // already gone
+  }
+}
 
 /** A line of the app's output with its secrets' values hidden. */
 const hide = (preview: Preview, line: string) =>

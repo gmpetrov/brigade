@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { accessToken, forgetThread, previewEnded, throughGateway } from '../src/preview-gateway.js'
+import {
+  accessToken,
+  forgetThread,
+  localPreviewUrl,
+  previewEnded,
+  throughGateway,
+} from '../src/preview-gateway.js'
 
 const gateway = { url: 'https://brigade.surf', secret: 'x'.repeat(32) }
 const ID = 'abcdefghijklmnopqrstuvwxyz'
@@ -107,4 +113,20 @@ test('a preview ends for good when it stops or fails, not when the next one repl
     false,
   )
   assert.equal(previewEnded([{ event: { type: 'message.user' } }]), false)
+})
+
+test("a preview on a member's machine opens at the thread's own name under localhost, as its runner says", () => {
+  assert.equal(
+    localPreviewUrl(`http://${ID}.localhost:30123`, 30123),
+    `http://${ID}.localhost:30123`,
+  )
+  // Runners before it say nothing; anything but a loopback name on the proxy's port is not taken.
+  assert.equal(localPreviewUrl(undefined, 30123), 'http://localhost:30123')
+  assert.equal(localPreviewUrl(`http://${ID}.localhost:30124`, 30123), 'http://localhost:30123')
+  assert.equal(localPreviewUrl('https://evil.example:30123', 30123), 'http://localhost:30123')
+  assert.equal(
+    localPreviewUrl('http://a.localhost.evil.example:30123', 30123),
+    'http://localhost:30123',
+  )
+  assert.equal(localPreviewUrl('http://a.b.localhost:30123', 30123), 'http://localhost:30123')
 })

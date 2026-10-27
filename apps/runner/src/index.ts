@@ -593,6 +593,7 @@ async function start() {
             requestId: message.requestId,
             ok: true,
             text: previews.logs(message.sessionId),
+            origin: previews.origin(message.sessionId),
           })
         } catch (error) {
           return connection.send({

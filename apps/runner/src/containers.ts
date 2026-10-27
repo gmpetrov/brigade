@@ -192,6 +192,10 @@ export async function removeFor(user: string, sessionId: string) {
     console.log(`removed ${mine.length} container(s) of archived thread ${sessionId} for ${user}`)
 }
 
+/** The member's own Docker, as their shell uses it. */
+const memberDocker = (...args: string[]) =>
+  run('docker', args, { timeout: 5 * 60_000 }).then((out) => out.toString().trim())
+
 /**
  * On a member's machine, a quiet thread's containers in the member's own
  * Docker: those of its Compose project (composeProject), removed with their
@@ -199,19 +203,49 @@ export async function removeFor(user: string, sessionId: string) {
  */
 export async function removeMemberProject(sessionId: string) {
   const project = composeProject(sessionId)
-  const dockerCli = (...args: string[]) =>
-    run('docker', args, { timeout: 5 * 60_000 }).then((out) => out.toString().trim())
   const label = `label=com.docker.compose.project=${project}`
   // No Docker here, or it is not running: nothing of the thread's runs either.
-  const ids = await dockerCli('ps', '-aq', '--filter', label).catch(() => null)
+  const ids = await memberDocker('ps', '-aq', '--filter', label).catch(() => null)
   if (ids === null) return
-  if (ids) await dockerCli('rm', '--force', '--volumes', ...ids.split('\n'))
+  if (ids) await memberDocker('rm', '--force', '--volumes', ...ids.split('\n'))
   for (const kind of ['volume', 'network'])
-    for (const id of (await dockerCli(kind, 'ls', '-q', '--filter', label).catch(() => ''))
+    for (const id of (await memberDocker(kind, 'ls', '-q', '--filter', label).catch(() => ''))
       .split('\n')
       .filter(Boolean))
-      await dockerCli(kind, 'rm', id).catch(() => undefined)
+      await memberDocker(kind, 'rm', id).catch(() => undefined)
   if (ids) console.log(`removed the containers of quiet thread ${sessionId} (${project})`)
+}
+
+/**
+ * On a member's machine, pause the running containers of the thread's Compose
+ * project (composeProject) while its preview is frozen: Docker's VM spends no
+ * CPU on them. Never starts Docker to look. Resolves to their ids, for
+ * unpauseMember.
+ */
+export async function pauseMember(sessionId: string): Promise<string[]> {
+  const label = `label=com.docker.compose.project=${composeProject(sessionId)}`
+  // No Docker here, or it is not running: nothing of the thread's runs either. Paused ones
+  // (status=paused) are someone else's to resume.
+  const ids = await memberDocker(
+    'ps',
+    '-q',
+    '--no-trunc',
+    '--filter',
+    label,
+    '--filter',
+    'status=running',
+  ).catch(() => '')
+  const running = ids.split('\n').filter(Boolean)
+  if (running.length > 0) await memberDocker('pause', ...running)
+  return running
+}
+
+/** Run containers pauseMember paused again; those gone or no longer paused are left as they are. */
+export async function unpauseMember(paused: string[]) {
+  if (paused.length === 0) return
+  await memberDocker('unpause', ...paused).catch(async () => {
+    for (const id of paused) await memberDocker('unpause', id).catch(() => undefined)
+  })
 }
 
 /**
