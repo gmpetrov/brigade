@@ -519,3 +519,32 @@ export type TriggerDelivery = Prisma.TriggerDeliveryModel
  * retry of one is processed once (source and external id).
  */
 export type InboundEvent = Prisma.InboundEventModel
+/**
+ * Model FolderBackup
+ * A thread folder's backup on its cloud computer (the runner's folders.ts): one per thread and
+ * teammate, replaced by each newer one, so a lost disk costs minutes of work. Its bytes are in
+ * the bucket under the thread's files folder (encrypted by the runner with the workspace's backup
+ * key), deleted with the thread, late uploads too (BucketCleanup).
+ */
+export type FolderBackup = Prisma.FolderBackupModel
+/**
+ * Model TeammateBackup
+ * A teammate's backup from its cloud computer: kind `tasks` (its crontab and systemd user
+ * services) or `browser` (the parts of its Chrome profile that keep its sign-ins). Its bytes are
+ * in the bucket, encrypted by the runner with the workspace's backup key.
+ */
+export type TeammateBackup = Prisma.TeammateBackupModel
+/**
+ * Model AccountLoginBackup
+ * An account's login files on its cloud computer (a Claude token, Codex's auth.json), encrypted
+ * with the vault's key, kept as they change so a computer that replaces this one is signed in.
+ */
+export type AccountLoginBackup = Prisma.AccountLoginBackupModel
+/**
+ * Model ComputerReplacement
+ * A cloud computer moved onto a new VM (src/cloud-replace.ts), step by step so an API restart
+ * picks it up where it was: backing_up (the old one backs up, then stops), creating (a new VM,
+ * its runner installed), restoring (the new runner puts the backups back), done or failed.
+ * The old VM stays with the provider, never destroyed by Brigade: its data may still be read.
+ */
+export type ComputerReplacement = Prisma.ComputerReplacementModel

@@ -278,6 +278,7 @@ export type AccountWhereInput = {
   member?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
   computer?: Prisma.XOR<Prisma.ComputerScalarRelationFilter, Prisma.ComputerWhereInput>
   sessions?: Prisma.SessionListRelationFilter
+  loginBackup?: Prisma.XOR<Prisma.AccountLoginBackupNullableScalarRelationFilter, Prisma.AccountLoginBackupWhereInput> | null
 }
 
 export type AccountOrderByWithRelationInput = {
@@ -302,6 +303,7 @@ export type AccountOrderByWithRelationInput = {
   member?: Prisma.MemberOrderByWithRelationInput
   computer?: Prisma.ComputerOrderByWithRelationInput
   sessions?: Prisma.SessionOrderByRelationAggregateInput
+  loginBackup?: Prisma.AccountLoginBackupOrderByWithRelationInput
 }
 
 export type AccountWhereUniqueInput = Prisma.AtLeast<{
@@ -329,6 +331,7 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   member?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
   computer?: Prisma.XOR<Prisma.ComputerScalarRelationFilter, Prisma.ComputerWhereInput>
   sessions?: Prisma.SessionListRelationFilter
+  loginBackup?: Prisma.XOR<Prisma.AccountLoginBackupNullableScalarRelationFilter, Prisma.AccountLoginBackupWhereInput> | null
 }, "id">
 
 export type AccountOrderByWithAggregationInput = {
@@ -396,6 +399,7 @@ export type AccountCreateInput = {
   member: Prisma.MemberCreateNestedOneWithoutAccountsInput
   computer: Prisma.ComputerCreateNestedOneWithoutAccountsInput
   sessions?: Prisma.SessionCreateNestedManyWithoutAccountInput
+  loginBackup?: Prisma.AccountLoginBackupCreateNestedOneWithoutAccountInput
 }
 
 export type AccountUncheckedCreateInput = {
@@ -417,6 +421,7 @@ export type AccountUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutAccountInput
+  loginBackup?: Prisma.AccountLoginBackupUncheckedCreateNestedOneWithoutAccountInput
 }
 
 export type AccountUpdateInput = {
@@ -438,6 +443,7 @@ export type AccountUpdateInput = {
   member?: Prisma.MemberUpdateOneRequiredWithoutAccountsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutAccountsNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutAccountNestedInput
+  loginBackup?: Prisma.AccountLoginBackupUpdateOneWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateInput = {
@@ -459,6 +465,7 @@ export type AccountUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutAccountNestedInput
+  loginBackup?: Prisma.AccountLoginBackupUncheckedUpdateOneWithoutAccountNestedInput
 }
 
 export type AccountCreateManyInput = {
@@ -589,6 +596,11 @@ export type AccountMinOrderByAggregateInput = {
   lastUsageAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type AccountScalarRelationFilter = {
+  is?: Prisma.AccountWhereInput
+  isNot?: Prisma.AccountWhereInput
 }
 
 export type AccountCreateNestedManyWithoutMemberInput = {
@@ -741,6 +753,20 @@ export type EnumAccountStatusFieldUpdateOperationsInput = {
   set?: $Enums.AccountStatus
 }
 
+export type AccountCreateNestedOneWithoutLoginBackupInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutLoginBackupInput, Prisma.AccountUncheckedCreateWithoutLoginBackupInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutLoginBackupInput
+  connect?: Prisma.AccountWhereUniqueInput
+}
+
+export type AccountUpdateOneRequiredWithoutLoginBackupNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutLoginBackupInput, Prisma.AccountUncheckedCreateWithoutLoginBackupInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutLoginBackupInput
+  upsert?: Prisma.AccountUpsertWithoutLoginBackupInput
+  connect?: Prisma.AccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutLoginBackupInput, Prisma.AccountUpdateWithoutLoginBackupInput>, Prisma.AccountUncheckedUpdateWithoutLoginBackupInput>
+}
+
 export type AccountCreateWithoutMemberInput = {
   id?: string
   organizationId: string
@@ -759,6 +785,7 @@ export type AccountCreateWithoutMemberInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutAccountsInput
   computer: Prisma.ComputerCreateNestedOneWithoutAccountsInput
   sessions?: Prisma.SessionCreateNestedManyWithoutAccountInput
+  loginBackup?: Prisma.AccountLoginBackupCreateNestedOneWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutMemberInput = {
@@ -779,6 +806,7 @@ export type AccountUncheckedCreateWithoutMemberInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutAccountInput
+  loginBackup?: Prisma.AccountLoginBackupUncheckedCreateNestedOneWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutMemberInput = {
@@ -848,6 +876,7 @@ export type AccountCreateWithoutWorkspaceInput = {
   member: Prisma.MemberCreateNestedOneWithoutAccountsInput
   computer: Prisma.ComputerCreateNestedOneWithoutAccountsInput
   sessions?: Prisma.SessionCreateNestedManyWithoutAccountInput
+  loginBackup?: Prisma.AccountLoginBackupCreateNestedOneWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutWorkspaceInput = {
@@ -868,6 +897,7 @@ export type AccountUncheckedCreateWithoutWorkspaceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutAccountInput
+  loginBackup?: Prisma.AccountLoginBackupUncheckedCreateNestedOneWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutWorkspaceInput = {
@@ -914,6 +944,7 @@ export type AccountCreateWithoutComputerInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutAccountsInput
   member: Prisma.MemberCreateNestedOneWithoutAccountsInput
   sessions?: Prisma.SessionCreateNestedManyWithoutAccountInput
+  loginBackup?: Prisma.AccountLoginBackupCreateNestedOneWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutComputerInput = {
@@ -934,6 +965,7 @@ export type AccountUncheckedCreateWithoutComputerInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutAccountInput
+  loginBackup?: Prisma.AccountLoginBackupUncheckedCreateNestedOneWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutComputerInput = {
@@ -980,6 +1012,7 @@ export type AccountCreateWithoutSessionsInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutAccountsInput
   member: Prisma.MemberCreateNestedOneWithoutAccountsInput
   computer: Prisma.ComputerCreateNestedOneWithoutAccountsInput
+  loginBackup?: Prisma.AccountLoginBackupCreateNestedOneWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutSessionsInput = {
@@ -1000,6 +1033,7 @@ export type AccountUncheckedCreateWithoutSessionsInput = {
   lastUsageAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  loginBackup?: Prisma.AccountLoginBackupUncheckedCreateNestedOneWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutSessionsInput = {
@@ -1036,6 +1070,7 @@ export type AccountUpdateWithoutSessionsInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutAccountsNestedInput
   member?: Prisma.MemberUpdateOneRequiredWithoutAccountsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutAccountsNestedInput
+  loginBackup?: Prisma.AccountLoginBackupUpdateOneWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutSessionsInput = {
@@ -1056,6 +1091,107 @@ export type AccountUncheckedUpdateWithoutSessionsInput = {
   lastUsageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  loginBackup?: Prisma.AccountLoginBackupUncheckedUpdateOneWithoutAccountNestedInput
+}
+
+export type AccountCreateWithoutLoginBackupInput = {
+  id?: string
+  organizationId: string
+  provider: $Enums.Harness
+  source?: $Enums.AccountSource
+  label: string
+  email?: string | null
+  plan?: string | null
+  status?: $Enums.AccountStatus
+  exhaustedUntil?: Date | string | null
+  isDefault?: boolean
+  lastUsage?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  lastUsageAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutAccountsInput
+  member: Prisma.MemberCreateNestedOneWithoutAccountsInput
+  computer: Prisma.ComputerCreateNestedOneWithoutAccountsInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutAccountInput
+}
+
+export type AccountUncheckedCreateWithoutLoginBackupInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  memberId: string
+  computerId: string
+  provider: $Enums.Harness
+  source?: $Enums.AccountSource
+  label: string
+  email?: string | null
+  plan?: string | null
+  status?: $Enums.AccountStatus
+  exhaustedUntil?: Date | string | null
+  isDefault?: boolean
+  lastUsage?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  lastUsageAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type AccountCreateOrConnectWithoutLoginBackupInput = {
+  where: Prisma.AccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.AccountCreateWithoutLoginBackupInput, Prisma.AccountUncheckedCreateWithoutLoginBackupInput>
+}
+
+export type AccountUpsertWithoutLoginBackupInput = {
+  update: Prisma.XOR<Prisma.AccountUpdateWithoutLoginBackupInput, Prisma.AccountUncheckedUpdateWithoutLoginBackupInput>
+  create: Prisma.XOR<Prisma.AccountCreateWithoutLoginBackupInput, Prisma.AccountUncheckedCreateWithoutLoginBackupInput>
+  where?: Prisma.AccountWhereInput
+}
+
+export type AccountUpdateToOneWithWhereWithoutLoginBackupInput = {
+  where?: Prisma.AccountWhereInput
+  data: Prisma.XOR<Prisma.AccountUpdateWithoutLoginBackupInput, Prisma.AccountUncheckedUpdateWithoutLoginBackupInput>
+}
+
+export type AccountUpdateWithoutLoginBackupInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  provider?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
+  source?: Prisma.EnumAccountSourceFieldUpdateOperationsInput | $Enums.AccountSource
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  plan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+  exhaustedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastUsage?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  lastUsageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutAccountsNestedInput
+  member?: Prisma.MemberUpdateOneRequiredWithoutAccountsNestedInput
+  computer?: Prisma.ComputerUpdateOneRequiredWithoutAccountsNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateWithoutLoginBackupInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  computerId?: Prisma.StringFieldUpdateOperationsInput | string
+  provider?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
+  source?: Prisma.EnumAccountSourceFieldUpdateOperationsInput | $Enums.AccountSource
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  plan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+  exhaustedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastUsage?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  lastUsageAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateManyMemberInput = {
@@ -1095,6 +1231,7 @@ export type AccountUpdateWithoutMemberInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutAccountsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutAccountsNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutAccountNestedInput
+  loginBackup?: Prisma.AccountLoginBackupUpdateOneWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutMemberInput = {
@@ -1115,6 +1252,7 @@ export type AccountUncheckedUpdateWithoutMemberInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutAccountNestedInput
+  loginBackup?: Prisma.AccountLoginBackupUncheckedUpdateOneWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateManyWithoutMemberInput = {
@@ -1173,6 +1311,7 @@ export type AccountUpdateWithoutWorkspaceInput = {
   member?: Prisma.MemberUpdateOneRequiredWithoutAccountsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutAccountsNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutAccountNestedInput
+  loginBackup?: Prisma.AccountLoginBackupUpdateOneWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutWorkspaceInput = {
@@ -1193,6 +1332,7 @@ export type AccountUncheckedUpdateWithoutWorkspaceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutAccountNestedInput
+  loginBackup?: Prisma.AccountLoginBackupUncheckedUpdateOneWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -1251,6 +1391,7 @@ export type AccountUpdateWithoutComputerInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutAccountsNestedInput
   member?: Prisma.MemberUpdateOneRequiredWithoutAccountsNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutAccountNestedInput
+  loginBackup?: Prisma.AccountLoginBackupUpdateOneWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutComputerInput = {
@@ -1271,6 +1412,7 @@ export type AccountUncheckedUpdateWithoutComputerInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutAccountNestedInput
+  loginBackup?: Prisma.AccountLoginBackupUncheckedUpdateOneWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateManyWithoutComputerInput = {
@@ -1345,6 +1487,7 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   computer?: boolean | Prisma.ComputerDefaultArgs<ExtArgs>
   sessions?: boolean | Prisma.Account$sessionsArgs<ExtArgs>
+  loginBackup?: boolean | Prisma.Account$loginBackupArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["account"]>
 
@@ -1420,6 +1563,7 @@ export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   computer?: boolean | Prisma.ComputerDefaultArgs<ExtArgs>
   sessions?: boolean | Prisma.Account$sessionsArgs<ExtArgs>
+  loginBackup?: boolean | Prisma.Account$loginBackupArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1440,6 +1584,7 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     member: Prisma.$MemberPayload<ExtArgs>
     computer: Prisma.$ComputerPayload<ExtArgs>
     sessions: Prisma.$SessionPayload<ExtArgs>[]
+    loginBackup: Prisma.$AccountLoginBackupPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1863,6 +2008,7 @@ export interface Prisma__AccountClient<T, Null = never, ExtArgs extends runtime.
   member<T extends Prisma.MemberDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MemberDefaultArgs<ExtArgs>>): Prisma.Prisma__MemberClient<runtime.Types.Result.GetResult<Prisma.$MemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   computer<T extends Prisma.ComputerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ComputerDefaultArgs<ExtArgs>>): Prisma.Prisma__ComputerClient<runtime.Types.Result.GetResult<Prisma.$ComputerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   sessions<T extends Prisma.Account$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  loginBackup<T extends Prisma.Account$loginBackupArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$loginBackupArgs<ExtArgs>>): Prisma.Prisma__AccountLoginBackupClient<runtime.Types.Result.GetResult<Prisma.$AccountLoginBackupPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2331,6 +2477,25 @@ export type Account$sessionsArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.SessionScalarFieldEnum | Prisma.SessionScalarFieldEnum[]
+}
+
+/**
+ * Account.loginBackup
+ */
+export type Account$loginBackupArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AccountLoginBackup
+   */
+  select?: Prisma.AccountLoginBackupSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AccountLoginBackup
+   */
+  omit?: Prisma.AccountLoginBackupOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AccountLoginBackupInclude<ExtArgs> | null
+  where?: Prisma.AccountLoginBackupWhereInput
 }
 
 /**

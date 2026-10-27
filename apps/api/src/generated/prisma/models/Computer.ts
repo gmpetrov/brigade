@@ -240,6 +240,7 @@ export type ComputerWhereInput = {
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
   commands?: Prisma.RunnerCommandListRelationFilter
+  replacements?: Prisma.ComputerReplacementListRelationFilter
 }
 
 export type ComputerOrderByWithRelationInput = {
@@ -261,6 +262,7 @@ export type ComputerOrderByWithRelationInput = {
   sessions?: Prisma.SessionOrderByRelationAggregateInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
   commands?: Prisma.RunnerCommandOrderByRelationAggregateInput
+  replacements?: Prisma.ComputerReplacementOrderByRelationAggregateInput
 }
 
 export type ComputerWhereUniqueInput = Prisma.AtLeast<{
@@ -285,6 +287,7 @@ export type ComputerWhereUniqueInput = Prisma.AtLeast<{
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
   commands?: Prisma.RunnerCommandListRelationFilter
+  replacements?: Prisma.ComputerReplacementListRelationFilter
 }, "id">
 
 export type ComputerOrderByWithAggregationInput = {
@@ -340,6 +343,7 @@ export type ComputerCreateInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutComputerInput
   accounts?: Prisma.AccountCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerUncheckedCreateInput = {
@@ -359,6 +363,7 @@ export type ComputerUncheckedCreateInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutComputerInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementUncheckedCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerUpdateInput = {
@@ -378,6 +383,7 @@ export type ComputerUpdateInput = {
   sessions?: Prisma.SessionUpdateManyWithoutComputerNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerUncheckedUpdateInput = {
@@ -397,6 +403,7 @@ export type ComputerUncheckedUpdateInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutComputerNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUncheckedUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerCreateManyInput = {
@@ -648,6 +655,20 @@ export type ComputerUpdateOneRequiredWithoutCommandsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ComputerUpdateToOneWithWhereWithoutCommandsInput, Prisma.ComputerUpdateWithoutCommandsInput>, Prisma.ComputerUncheckedUpdateWithoutCommandsInput>
 }
 
+export type ComputerCreateNestedOneWithoutReplacementsInput = {
+  create?: Prisma.XOR<Prisma.ComputerCreateWithoutReplacementsInput, Prisma.ComputerUncheckedCreateWithoutReplacementsInput>
+  connectOrCreate?: Prisma.ComputerCreateOrConnectWithoutReplacementsInput
+  connect?: Prisma.ComputerWhereUniqueInput
+}
+
+export type ComputerUpdateOneRequiredWithoutReplacementsNestedInput = {
+  create?: Prisma.XOR<Prisma.ComputerCreateWithoutReplacementsInput, Prisma.ComputerUncheckedCreateWithoutReplacementsInput>
+  connectOrCreate?: Prisma.ComputerCreateOrConnectWithoutReplacementsInput
+  upsert?: Prisma.ComputerUpsertWithoutReplacementsInput
+  connect?: Prisma.ComputerWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ComputerUpdateToOneWithWhereWithoutReplacementsInput, Prisma.ComputerUpdateWithoutReplacementsInput>, Prisma.ComputerUncheckedUpdateWithoutReplacementsInput>
+}
+
 export type ComputerCreateWithoutMemberInput = {
   id?: string
   organizationId: string
@@ -664,6 +685,7 @@ export type ComputerCreateWithoutMemberInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutComputerInput
   accounts?: Prisma.AccountCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerUncheckedCreateWithoutMemberInput = {
@@ -682,6 +704,7 @@ export type ComputerUncheckedCreateWithoutMemberInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutComputerInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementUncheckedCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerCreateOrConnectWithoutMemberInput = {
@@ -744,6 +767,7 @@ export type ComputerCreateWithoutWorkspaceInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutComputerInput
   accounts?: Prisma.AccountCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerUncheckedCreateWithoutWorkspaceInput = {
@@ -762,6 +786,7 @@ export type ComputerUncheckedCreateWithoutWorkspaceInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutComputerInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementUncheckedCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerCreateOrConnectWithoutWorkspaceInput = {
@@ -806,6 +831,7 @@ export type ComputerCreateWithoutRunnerInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutComputerInput
   accounts?: Prisma.AccountCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerUncheckedCreateWithoutRunnerInput = {
@@ -824,6 +850,7 @@ export type ComputerUncheckedCreateWithoutRunnerInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutComputerInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementUncheckedCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerCreateOrConnectWithoutRunnerInput = {
@@ -858,6 +885,7 @@ export type ComputerUpdateWithoutRunnerInput = {
   sessions?: Prisma.SessionUpdateManyWithoutComputerNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerUncheckedUpdateWithoutRunnerInput = {
@@ -876,6 +904,7 @@ export type ComputerUncheckedUpdateWithoutRunnerInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutComputerNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUncheckedUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerCreateWithoutSessionsInput = {
@@ -894,6 +923,7 @@ export type ComputerCreateWithoutSessionsInput = {
   runner?: Prisma.RunnerCreateNestedOneWithoutComputerInput
   accounts?: Prisma.AccountCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerUncheckedCreateWithoutSessionsInput = {
@@ -912,6 +942,7 @@ export type ComputerUncheckedCreateWithoutSessionsInput = {
   runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementUncheckedCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerCreateOrConnectWithoutSessionsInput = {
@@ -946,6 +977,7 @@ export type ComputerUpdateWithoutSessionsInput = {
   runner?: Prisma.RunnerUpdateOneWithoutComputerNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerUncheckedUpdateWithoutSessionsInput = {
@@ -964,6 +996,7 @@ export type ComputerUncheckedUpdateWithoutSessionsInput = {
   runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUncheckedUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerCreateWithoutAccountsInput = {
@@ -982,6 +1015,7 @@ export type ComputerCreateWithoutAccountsInput = {
   runner?: Prisma.RunnerCreateNestedOneWithoutComputerInput
   sessions?: Prisma.SessionCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerUncheckedCreateWithoutAccountsInput = {
@@ -1000,6 +1034,7 @@ export type ComputerUncheckedCreateWithoutAccountsInput = {
   runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutComputerInput
   commands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementUncheckedCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerCreateOrConnectWithoutAccountsInput = {
@@ -1034,6 +1069,7 @@ export type ComputerUpdateWithoutAccountsInput = {
   runner?: Prisma.RunnerUpdateOneWithoutComputerNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerUncheckedUpdateWithoutAccountsInput = {
@@ -1052,6 +1088,7 @@ export type ComputerUncheckedUpdateWithoutAccountsInput = {
   runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUncheckedUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerCreateWithoutCommandsInput = {
@@ -1070,6 +1107,7 @@ export type ComputerCreateWithoutCommandsInput = {
   runner?: Prisma.RunnerCreateNestedOneWithoutComputerInput
   sessions?: Prisma.SessionCreateNestedManyWithoutComputerInput
   accounts?: Prisma.AccountCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerUncheckedCreateWithoutCommandsInput = {
@@ -1088,6 +1126,7 @@ export type ComputerUncheckedCreateWithoutCommandsInput = {
   runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutComputerInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutComputerInput
+  replacements?: Prisma.ComputerReplacementUncheckedCreateNestedManyWithoutComputerInput
 }
 
 export type ComputerCreateOrConnectWithoutCommandsInput = {
@@ -1122,6 +1161,7 @@ export type ComputerUpdateWithoutCommandsInput = {
   runner?: Prisma.RunnerUpdateOneWithoutComputerNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutComputerNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerUncheckedUpdateWithoutCommandsInput = {
@@ -1140,6 +1180,99 @@ export type ComputerUncheckedUpdateWithoutCommandsInput = {
   runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutComputerNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUncheckedUpdateManyWithoutComputerNestedInput
+}
+
+export type ComputerCreateWithoutReplacementsInput = {
+  id?: string
+  organizationId: string
+  kind: $Enums.ComputerKind
+  name: string
+  providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  size?: string | null
+  machineId?: string | null
+  status?: $Enums.ComputerStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutComputersInput
+  member?: Prisma.MemberCreateNestedOneWithoutComputersInput
+  runner?: Prisma.RunnerCreateNestedOneWithoutComputerInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutComputerInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutComputerInput
+  commands?: Prisma.RunnerCommandCreateNestedManyWithoutComputerInput
+}
+
+export type ComputerUncheckedCreateWithoutReplacementsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  kind: $Enums.ComputerKind
+  memberId?: string | null
+  name: string
+  providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  size?: string | null
+  machineId?: string | null
+  status?: $Enums.ComputerStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  runner?: Prisma.RunnerUncheckedCreateNestedOneWithoutComputerInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutComputerInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutComputerInput
+  commands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutComputerInput
+}
+
+export type ComputerCreateOrConnectWithoutReplacementsInput = {
+  where: Prisma.ComputerWhereUniqueInput
+  create: Prisma.XOR<Prisma.ComputerCreateWithoutReplacementsInput, Prisma.ComputerUncheckedCreateWithoutReplacementsInput>
+}
+
+export type ComputerUpsertWithoutReplacementsInput = {
+  update: Prisma.XOR<Prisma.ComputerUpdateWithoutReplacementsInput, Prisma.ComputerUncheckedUpdateWithoutReplacementsInput>
+  create: Prisma.XOR<Prisma.ComputerCreateWithoutReplacementsInput, Prisma.ComputerUncheckedCreateWithoutReplacementsInput>
+  where?: Prisma.ComputerWhereInput
+}
+
+export type ComputerUpdateToOneWithWhereWithoutReplacementsInput = {
+  where?: Prisma.ComputerWhereInput
+  data: Prisma.XOR<Prisma.ComputerUpdateWithoutReplacementsInput, Prisma.ComputerUncheckedUpdateWithoutReplacementsInput>
+}
+
+export type ComputerUpdateWithoutReplacementsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumComputerKindFieldUpdateOperationsInput | $Enums.ComputerKind
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutComputersNestedInput
+  member?: Prisma.MemberUpdateOneWithoutComputersNestedInput
+  runner?: Prisma.RunnerUpdateOneWithoutComputerNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutComputerNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutComputerNestedInput
+  commands?: Prisma.RunnerCommandUpdateManyWithoutComputerNestedInput
+}
+
+export type ComputerUncheckedUpdateWithoutReplacementsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumComputerKindFieldUpdateOperationsInput | $Enums.ComputerKind
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  runner?: Prisma.RunnerUncheckedUpdateOneWithoutComputerNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutComputerNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutComputerNestedInput
+  commands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerCreateManyMemberInput = {
@@ -1172,6 +1305,7 @@ export type ComputerUpdateWithoutMemberInput = {
   sessions?: Prisma.SessionUpdateManyWithoutComputerNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerUncheckedUpdateWithoutMemberInput = {
@@ -1190,6 +1324,7 @@ export type ComputerUncheckedUpdateWithoutMemberInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutComputerNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUncheckedUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerUncheckedUpdateManyWithoutMemberInput = {
@@ -1236,6 +1371,7 @@ export type ComputerUpdateWithoutWorkspaceInput = {
   sessions?: Prisma.SessionUpdateManyWithoutComputerNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerUncheckedUpdateWithoutWorkspaceInput = {
@@ -1254,6 +1390,7 @@ export type ComputerUncheckedUpdateWithoutWorkspaceInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutComputerNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutComputerNestedInput
   commands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutComputerNestedInput
+  replacements?: Prisma.ComputerReplacementUncheckedUpdateManyWithoutComputerNestedInput
 }
 
 export type ComputerUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -1279,12 +1416,14 @@ export type ComputerCountOutputType = {
   sessions: number
   accounts: number
   commands: number
+  replacements: number
 }
 
 export type ComputerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sessions?: boolean | ComputerCountOutputTypeCountSessionsArgs
   accounts?: boolean | ComputerCountOutputTypeCountAccountsArgs
   commands?: boolean | ComputerCountOutputTypeCountCommandsArgs
+  replacements?: boolean | ComputerCountOutputTypeCountReplacementsArgs
 }
 
 /**
@@ -1318,6 +1457,13 @@ export type ComputerCountOutputTypeCountCommandsArgs<ExtArgs extends runtime.Typ
   where?: Prisma.RunnerCommandWhereInput
 }
 
+/**
+ * ComputerCountOutputType without action
+ */
+export type ComputerCountOutputTypeCountReplacementsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ComputerReplacementWhereInput
+}
+
 
 export type ComputerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1338,6 +1484,7 @@ export type ComputerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   sessions?: boolean | Prisma.Computer$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.Computer$accountsArgs<ExtArgs>
   commands?: boolean | Prisma.Computer$commandsArgs<ExtArgs>
+  replacements?: boolean | Prisma.Computer$replacementsArgs<ExtArgs>
   _count?: boolean | Prisma.ComputerCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["computer"]>
 
@@ -1398,6 +1545,7 @@ export type ComputerInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   sessions?: boolean | Prisma.Computer$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.Computer$accountsArgs<ExtArgs>
   commands?: boolean | Prisma.Computer$commandsArgs<ExtArgs>
+  replacements?: boolean | Prisma.Computer$replacementsArgs<ExtArgs>
   _count?: boolean | Prisma.ComputerCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ComputerIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1418,6 +1566,7 @@ export type $ComputerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     sessions: Prisma.$SessionPayload<ExtArgs>[]
     accounts: Prisma.$AccountPayload<ExtArgs>[]
     commands: Prisma.$RunnerCommandPayload<ExtArgs>[]
+    replacements: Prisma.$ComputerReplacementPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1842,6 +1991,7 @@ export interface Prisma__ComputerClient<T, Null = never, ExtArgs extends runtime
   sessions<T extends Prisma.Computer$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Computer$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accounts<T extends Prisma.Computer$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Computer$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   commands<T extends Prisma.Computer$commandsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Computer$commandsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RunnerCommandPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  replacements<T extends Prisma.Computer$replacementsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Computer$replacementsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ComputerReplacementPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2391,6 +2541,30 @@ export type Computer$commandsArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.RunnerCommandScalarFieldEnum | Prisma.RunnerCommandScalarFieldEnum[]
+}
+
+/**
+ * Computer.replacements
+ */
+export type Computer$replacementsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ComputerReplacement
+   */
+  select?: Prisma.ComputerReplacementSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ComputerReplacement
+   */
+  omit?: Prisma.ComputerReplacementOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ComputerReplacementInclude<ExtArgs> | null
+  where?: Prisma.ComputerReplacementWhereInput
+  orderBy?: Prisma.ComputerReplacementOrderByWithRelationInput | Prisma.ComputerReplacementOrderByWithRelationInput[]
+  cursor?: Prisma.ComputerReplacementWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ComputerReplacementScalarFieldEnum | Prisma.ComputerReplacementScalarFieldEnum[]
 }
 
 /**

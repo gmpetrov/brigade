@@ -130,7 +130,11 @@ export const ModelName = {
   HeldCall: 'HeldCall',
   RunnerCommand: 'RunnerCommand',
   TriggerDelivery: 'TriggerDelivery',
-  InboundEvent: 'InboundEvent'
+  InboundEvent: 'InboundEvent',
+  FolderBackup: 'FolderBackup',
+  TeammateBackup: 'TeammateBackup',
+  AccountLoginBackup: 'AccountLoginBackup',
+  ComputerReplacement: 'ComputerReplacement'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -1568,6 +1572,69 @@ export const InboundEventScalarFieldEnum = {
 } as const
 
 export type InboundEventScalarFieldEnum = (typeof InboundEventScalarFieldEnum)[keyof typeof InboundEventScalarFieldEnum]
+
+
+export const FolderBackupScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  computerId: 'computerId',
+  size: 'size',
+  background: 'background',
+  takenAt: 'takenAt'
+} as const
+
+export type FolderBackupScalarFieldEnum = (typeof FolderBackupScalarFieldEnum)[keyof typeof FolderBackupScalarFieldEnum]
+
+
+export const TeammateBackupScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  teammateId: 'teammateId',
+  kind: 'kind',
+  computerId: 'computerId',
+  size: 'size',
+  takenAt: 'takenAt'
+} as const
+
+export type TeammateBackupScalarFieldEnum = (typeof TeammateBackupScalarFieldEnum)[keyof typeof TeammateBackupScalarFieldEnum]
+
+
+export const AccountLoginBackupScalarFieldEnum = {
+  accountId: 'accountId',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  ciphertext: 'ciphertext',
+  iv: 'iv',
+  authTag: 'authTag',
+  keyVersion: 'keyVersion',
+  sha256: 'sha256',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AccountLoginBackupScalarFieldEnum = (typeof AccountLoginBackupScalarFieldEnum)[keyof typeof AccountLoginBackupScalarFieldEnum]
+
+
+export const ComputerReplacementScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  computerId: 'computerId',
+  memberId: 'memberId',
+  phase: 'phase',
+  oldProviderRef: 'oldProviderRef',
+  backup: 'backup',
+  problems: 'problems',
+  error: 'error',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  finishedAt: 'finishedAt'
+} as const
+
+export type ComputerReplacementScalarFieldEnum = (typeof ComputerReplacementScalarFieldEnum)[keyof typeof ComputerReplacementScalarFieldEnum]
 
 
 export const SortOrder = {

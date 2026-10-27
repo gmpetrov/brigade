@@ -156,6 +156,25 @@ export function folderArchiveKey(scope: Scope, folder: { sessionId: string; team
   return `${scope.organizationId}/${scope.workspaceId}/folders/${folder.sessionId}/${folder.teammateId}.tar.gz`
 }
 
+/**
+ * The bucket key of a thread folder's backup (FolderBackup), encrypted by its computer. In the
+ * thread's files folder: deleted with the thread, and a late upload too (BucketCleanup).
+ */
+export function folderBackupKey(scope: Scope, folder: { sessionId: string; teammateId: string }) {
+  if (!SAFE.test(folder.teammateId)) throw new Error('Invalid bucket key part')
+  return `${threadFilesPrefix(scope, folder.sessionId)}backups/${folder.teammateId}.bin`
+}
+
+/** The bucket key of a teammate's backup (TeammateBackup): its tasks, or its browser profile. */
+export function teammateBackupKey(scope: Scope, teammateId: string, kind: 'tasks' | 'browser') {
+  for (const part of [scope.organizationId, scope.workspaceId, teammateId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/teammate-backups/${teammateId}/${kind}.bin`
+}
+
+/** What every encrypted backup starts with (the runner's sealed.ts): "BGE1". */
+export const SEALED_MAGIC = [0x42, 0x47, 0x45, 0x31]
+
 const url = (key: string) => `${r2!.base}/${key.split('/').map(encodeURIComponent).join('/')}`
 
 /** Browsers can upload straight to the bucket: only with R2, not the local stand-in. */

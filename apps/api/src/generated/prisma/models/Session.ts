@@ -513,6 +513,7 @@ export type SessionWhereInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunListRelationFilter
   following?: Prisma.ThreadFollowListRelationFilter
   followers?: Prisma.ThreadFollowListRelationFilter
+  folderBackups?: Prisma.FolderBackupListRelationFilter
 }
 
 export type SessionOrderByWithRelationInput = {
@@ -591,6 +592,7 @@ export type SessionOrderByWithRelationInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunOrderByRelationAggregateInput
   following?: Prisma.ThreadFollowOrderByRelationAggregateInput
   followers?: Prisma.ThreadFollowOrderByRelationAggregateInput
+  folderBackups?: Prisma.FolderBackupOrderByRelationAggregateInput
 }
 
 export type SessionWhereUniqueInput = Prisma.AtLeast<{
@@ -672,6 +674,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   playbookDryRuns?: Prisma.PlaybookDryRunListRelationFilter
   following?: Prisma.ThreadFollowListRelationFilter
   followers?: Prisma.ThreadFollowListRelationFilter
+  folderBackups?: Prisma.FolderBackupListRelationFilter
 }, "id" | "taskId">
 
 export type SessionOrderByWithAggregationInput = {
@@ -829,6 +832,7 @@ export type SessionCreateInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateInput = {
@@ -896,6 +900,7 @@ export type SessionUncheckedCreateInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUpdateInput = {
@@ -963,6 +968,7 @@ export type SessionUpdateInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateInput = {
@@ -1030,6 +1036,7 @@ export type SessionUncheckedUpdateInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateManyInput = {
@@ -2143,6 +2150,20 @@ export type SessionUpdateOneWithoutRunnerCommandsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutRunnerCommandsInput, Prisma.SessionUpdateWithoutRunnerCommandsInput>, Prisma.SessionUncheckedUpdateWithoutRunnerCommandsInput>
 }
 
+export type SessionCreateNestedOneWithoutFolderBackupsInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutFolderBackupsInput, Prisma.SessionUncheckedCreateWithoutFolderBackupsInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutFolderBackupsInput
+  connect?: Prisma.SessionWhereUniqueInput
+}
+
+export type SessionUpdateOneRequiredWithoutFolderBackupsNestedInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutFolderBackupsInput, Prisma.SessionUncheckedCreateWithoutFolderBackupsInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutFolderBackupsInput
+  upsert?: Prisma.SessionUpsertWithoutFolderBackupsInput
+  connect?: Prisma.SessionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutFolderBackupsInput, Prisma.SessionUpdateWithoutFolderBackupsInput>, Prisma.SessionUncheckedUpdateWithoutFolderBackupsInput>
+}
+
 export type SessionCreateWithoutStartedByInput = {
   id?: string
   organizationId: string
@@ -2207,6 +2228,7 @@ export type SessionCreateWithoutStartedByInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutStartedByInput = {
@@ -2273,6 +2295,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutStartedByInput = {
@@ -2409,6 +2432,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutWorkspaceInput = {
@@ -2475,6 +2499,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutWorkspaceInput = {
@@ -2567,6 +2592,7 @@ export type SessionCreateWithoutComputerInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutComputerInput = {
@@ -2633,6 +2659,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutComputerInput = {
@@ -2725,6 +2752,7 @@ export type SessionCreateWithoutTeammateInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTeammateInput = {
@@ -2791,6 +2819,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTeammateInput = {
@@ -2883,6 +2912,7 @@ export type SessionCreateWithoutReadsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutReadsInput = {
@@ -2949,6 +2979,7 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutReadsInput = {
@@ -3031,6 +3062,7 @@ export type SessionUpdateWithoutReadsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutReadsInput = {
@@ -3097,6 +3129,7 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutPinsInput = {
@@ -3163,6 +3196,7 @@ export type SessionCreateWithoutPinsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutPinsInput = {
@@ -3229,6 +3263,7 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutPinsInput = {
@@ -3311,6 +3346,7 @@ export type SessionUpdateWithoutPinsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutPinsInput = {
@@ -3377,6 +3413,7 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutLatersInput = {
@@ -3443,6 +3480,7 @@ export type SessionCreateWithoutLatersInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutLatersInput = {
@@ -3509,6 +3547,7 @@ export type SessionUncheckedCreateWithoutLatersInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutLatersInput = {
@@ -3591,6 +3630,7 @@ export type SessionUpdateWithoutLatersInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutLatersInput = {
@@ -3657,6 +3697,7 @@ export type SessionUncheckedUpdateWithoutLatersInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutChildrenInput = {
@@ -3723,6 +3764,7 @@ export type SessionCreateWithoutChildrenInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutChildrenInput = {
@@ -3789,6 +3831,7 @@ export type SessionUncheckedCreateWithoutChildrenInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutChildrenInput = {
@@ -3860,6 +3903,7 @@ export type SessionCreateWithoutParentInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutParentInput = {
@@ -3926,6 +3970,7 @@ export type SessionUncheckedCreateWithoutParentInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutParentInput = {
@@ -4013,6 +4058,7 @@ export type SessionUpdateWithoutChildrenInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutChildrenInput = {
@@ -4079,6 +4125,7 @@ export type SessionUncheckedUpdateWithoutChildrenInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithWhereUniqueWithoutParentInput = {
@@ -4161,6 +4208,7 @@ export type SessionCreateWithoutTaskInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTaskInput = {
@@ -4227,6 +4275,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTaskInput = {
@@ -4309,6 +4358,7 @@ export type SessionUpdateWithoutTaskInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTaskInput = {
@@ -4375,6 +4425,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutReportingSchedulesInput = {
@@ -4441,6 +4492,7 @@ export type SessionCreateWithoutReportingSchedulesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
@@ -4507,6 +4559,7 @@ export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutReportingSchedulesInput = {
@@ -4578,6 +4631,7 @@ export type SessionCreateWithoutScheduleInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutScheduleInput = {
@@ -4644,6 +4698,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutScheduleInput = {
@@ -4731,6 +4786,7 @@ export type SessionUpdateWithoutReportingSchedulesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
@@ -4797,6 +4853,7 @@ export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithWhereUniqueWithoutScheduleInput = {
@@ -4879,6 +4936,7 @@ export type SessionCreateWithoutWakeupsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutWakeupsInput = {
@@ -4945,6 +5003,7 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutWakeupsInput = {
@@ -5027,6 +5086,7 @@ export type SessionUpdateWithoutWakeupsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutWakeupsInput = {
@@ -5093,6 +5153,7 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutReplyWatchesInput = {
@@ -5159,6 +5220,7 @@ export type SessionCreateWithoutReplyWatchesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutReplyWatchesInput = {
@@ -5225,6 +5287,7 @@ export type SessionUncheckedCreateWithoutReplyWatchesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutReplyWatchesInput = {
@@ -5307,6 +5370,7 @@ export type SessionUpdateWithoutReplyWatchesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutReplyWatchesInput = {
@@ -5373,6 +5437,7 @@ export type SessionUncheckedUpdateWithoutReplyWatchesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutTeammatesInput = {
@@ -5439,6 +5504,7 @@ export type SessionCreateWithoutTeammatesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTeammatesInput = {
@@ -5505,6 +5571,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTeammatesInput = {
@@ -5587,6 +5654,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTeammatesInput = {
@@ -5653,6 +5721,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutEventsInput = {
@@ -5719,6 +5788,7 @@ export type SessionCreateWithoutEventsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutEventsInput = {
@@ -5785,6 +5855,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutEventsInput = {
@@ -5867,6 +5938,7 @@ export type SessionUpdateWithoutEventsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutEventsInput = {
@@ -5933,6 +6005,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutTokenUsageInput = {
@@ -5999,6 +6072,7 @@ export type SessionCreateWithoutTokenUsageInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTokenUsageInput = {
@@ -6065,6 +6139,7 @@ export type SessionUncheckedCreateWithoutTokenUsageInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTokenUsageInput = {
@@ -6147,6 +6222,7 @@ export type SessionUpdateWithoutTokenUsageInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTokenUsageInput = {
@@ -6213,6 +6289,7 @@ export type SessionUncheckedUpdateWithoutTokenUsageInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutAccountInput = {
@@ -6279,6 +6356,7 @@ export type SessionCreateWithoutAccountInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutAccountInput = {
@@ -6345,6 +6423,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutAccountInput = {
@@ -6437,6 +6516,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutPullRequestsInput = {
@@ -6503,6 +6583,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutPullRequestsInput = {
@@ -6574,6 +6655,7 @@ export type SessionCreateWithoutReviewsOfInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutReviewsOfInput = {
@@ -6640,6 +6722,7 @@ export type SessionUncheckedCreateWithoutReviewsOfInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutReviewsOfInput = {
@@ -6722,6 +6805,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutPullRequestsInput = {
@@ -6788,6 +6872,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithoutReviewsOfInput = {
@@ -6865,6 +6950,7 @@ export type SessionUpdateWithoutReviewsOfInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutReviewsOfInput = {
@@ -6931,6 +7017,7 @@ export type SessionUncheckedUpdateWithoutReviewsOfInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutCommentsInput = {
@@ -6997,6 +7084,7 @@ export type SessionCreateWithoutCommentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutCommentsInput = {
@@ -7063,6 +7151,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutCommentsInput = {
@@ -7145,6 +7234,7 @@ export type SessionUpdateWithoutCommentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutCommentsInput = {
@@ -7211,6 +7301,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutConnectionCallsInput = {
@@ -7277,6 +7368,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutConnectionCallsInput = {
@@ -7343,6 +7435,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutConnectionCallsInput = {
@@ -7425,6 +7518,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
@@ -7491,6 +7585,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutTriggerInput = {
@@ -7557,6 +7652,7 @@ export type SessionCreateWithoutTriggerInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTriggerInput = {
@@ -7623,6 +7719,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTriggerInput = {
@@ -7715,6 +7812,7 @@ export type SessionCreateWithoutTicketsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutTicketsInput = {
@@ -7781,6 +7879,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTicketsInput = {
@@ -7863,6 +7962,7 @@ export type SessionUpdateWithoutTicketsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTicketsInput = {
@@ -7929,6 +8029,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutDocumentsInput = {
@@ -7995,6 +8096,7 @@ export type SessionCreateWithoutDocumentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutDocumentsInput = {
@@ -8061,6 +8163,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutDocumentsInput = {
@@ -8143,6 +8246,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutDocumentsInput = {
@@ -8209,6 +8313,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutSentAttachmentsInput = {
@@ -8275,6 +8380,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
@@ -8341,6 +8447,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutSentAttachmentsInput = {
@@ -8423,6 +8530,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
@@ -8489,6 +8597,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutAttachmentsInput = {
@@ -8555,6 +8664,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutAttachmentsInput = {
@@ -8621,6 +8731,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutAttachmentsInput = {
@@ -8703,6 +8814,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutAttachmentsInput = {
@@ -8769,6 +8881,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutProjectInput = {
@@ -8835,6 +8948,7 @@ export type SessionCreateWithoutProjectInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutProjectInput = {
@@ -8901,6 +9015,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutProjectInput = {
@@ -8993,6 +9108,7 @@ export type SessionCreateWithoutRootOfPlaybookRunInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
@@ -9059,6 +9175,7 @@ export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutRootOfPlaybookRunInput = {
@@ -9130,6 +9247,7 @@ export type SessionCreateWithoutPlaybookRunInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutPlaybookRunInput = {
@@ -9196,6 +9314,7 @@ export type SessionUncheckedCreateWithoutPlaybookRunInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutPlaybookRunInput = {
@@ -9283,6 +9402,7 @@ export type SessionUpdateWithoutRootOfPlaybookRunInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
@@ -9349,6 +9469,7 @@ export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithWhereUniqueWithoutPlaybookRunInput = {
@@ -9431,6 +9552,7 @@ export type SessionCreateWithoutPlaybookDryRunsInput = {
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
@@ -9497,6 +9619,7 @@ export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutPlaybookDryRunsInput = {
@@ -9579,6 +9702,7 @@ export type SessionUpdateWithoutPlaybookDryRunsInput = {
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
@@ -9645,6 +9769,7 @@ export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutFollowersInput = {
@@ -9711,6 +9836,7 @@ export type SessionCreateWithoutFollowersInput = {
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutFollowersInput = {
@@ -9777,6 +9903,7 @@ export type SessionUncheckedCreateWithoutFollowersInput = {
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutFollowersInput = {
@@ -9848,6 +9975,7 @@ export type SessionCreateWithoutFollowingInput = {
   mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutFollowingInput = {
@@ -9914,6 +10042,7 @@ export type SessionUncheckedCreateWithoutFollowingInput = {
   mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutFollowingInput = {
@@ -9996,6 +10125,7 @@ export type SessionUpdateWithoutFollowersInput = {
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutFollowersInput = {
@@ -10062,6 +10192,7 @@ export type SessionUncheckedUpdateWithoutFollowersInput = {
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUpsertWithoutFollowingInput = {
@@ -10139,6 +10270,7 @@ export type SessionUpdateWithoutFollowingInput = {
   mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutFollowingInput = {
@@ -10205,6 +10337,7 @@ export type SessionUncheckedUpdateWithoutFollowingInput = {
   mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutMailAliasesInput = {
@@ -10271,6 +10404,7 @@ export type SessionCreateWithoutMailAliasesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutMailAliasesInput = {
@@ -10337,6 +10471,7 @@ export type SessionUncheckedCreateWithoutMailAliasesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutMailAliasesInput = {
@@ -10419,6 +10554,7 @@ export type SessionUpdateWithoutMailAliasesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutMailAliasesInput = {
@@ -10485,6 +10621,7 @@ export type SessionUncheckedUpdateWithoutMailAliasesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutMailMessagesInput = {
@@ -10551,6 +10688,7 @@ export type SessionCreateWithoutMailMessagesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutMailMessagesInput = {
@@ -10617,6 +10755,7 @@ export type SessionUncheckedCreateWithoutMailMessagesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutMailMessagesInput = {
@@ -10699,6 +10838,7 @@ export type SessionUpdateWithoutMailMessagesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutMailMessagesInput = {
@@ -10765,6 +10905,7 @@ export type SessionUncheckedUpdateWithoutMailMessagesInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutHeldCallsInput = {
@@ -10831,6 +10972,7 @@ export type SessionCreateWithoutHeldCallsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutHeldCallsInput = {
@@ -10897,6 +11039,7 @@ export type SessionUncheckedCreateWithoutHeldCallsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutHeldCallsInput = {
@@ -10979,6 +11122,7 @@ export type SessionUpdateWithoutHeldCallsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutHeldCallsInput = {
@@ -11045,6 +11189,7 @@ export type SessionUncheckedUpdateWithoutHeldCallsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutRunnerCommandsInput = {
@@ -11111,6 +11256,7 @@ export type SessionCreateWithoutRunnerCommandsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUncheckedCreateWithoutRunnerCommandsInput = {
@@ -11177,6 +11323,7 @@ export type SessionUncheckedCreateWithoutRunnerCommandsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
   following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
   followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+  folderBackups?: Prisma.FolderBackupUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutRunnerCommandsInput = {
@@ -11259,6 +11406,7 @@ export type SessionUpdateWithoutRunnerCommandsInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutRunnerCommandsInput = {
@@ -11318,6 +11466,291 @@ export type SessionUncheckedUpdateWithoutRunnerCommandsInput = {
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutSessionNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutSessionNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutSessionNestedInput
+  reportingSchedules?: Prisma.ScheduleUncheckedUpdateManyWithoutParentSessionNestedInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
+  mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutSessionNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
+  following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
+}
+
+export type SessionCreateWithoutFolderBackupsInput = {
+  id?: string
+  organizationId: string
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  parentTeammateId?: string | null
+  awaited?: boolean
+  awaitUntil?: Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
+  conversationKey?: string | null
+  archivedAt?: Date | string | null
+  lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
+  effort?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  playbookTeammate?: string | null
+  surfacedAt?: Date | string | null
+  quiet?: boolean
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
+  teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
+  startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
+  computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
+  account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
+  parent?: Prisma.SessionCreateNestedOneWithoutChildrenInput
+  children?: Prisma.SessionCreateNestedManyWithoutParentInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
+  schedule?: Prisma.ScheduleCreateNestedOneWithoutSessionsInput
+  events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  tokenUsage?: Prisma.TokenUsageCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutSessionInput
+  attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
+  sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reviewsOf?: Prisma.PullRequestCreateNestedManyWithoutReviewSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
+  laters?: Prisma.ThreadLaterCreateNestedManyWithoutSessionInput
+  task?: Prisma.TaskCreateNestedOneWithoutSessionInput
+  project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutSessionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutSessionInput
+  heldCalls?: Prisma.HeldCallCreateNestedManyWithoutSessionInput
+  runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutSessionInput
+  reportingSchedules?: Prisma.ScheduleCreateNestedManyWithoutParentSessionInput
+  playbookRun?: Prisma.PlaybookRunCreateNestedOneWithoutThreadsInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunCreateNestedOneWithoutRootSessionInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutSessionInput
+  mailAliases?: Prisma.MailAliasCreateNestedManyWithoutSessionInput
+  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutSessionInput
+  following?: Prisma.ThreadFollowCreateNestedManyWithoutFollowerInput
+  followers?: Prisma.ThreadFollowCreateNestedManyWithoutSessionInput
+}
+
+export type SessionUncheckedCreateWithoutFolderBackupsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  teammateId: string
+  startedByMemberId: string
+  computerId: string
+  accountId?: string | null
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  parentId?: string | null
+  parentTeammateId?: string | null
+  awaited?: boolean
+  awaitUntil?: Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
+  triggerId?: string | null
+  conversationKey?: string | null
+  scheduleId?: string | null
+  archivedAt?: Date | string | null
+  lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
+  effort?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  taskId?: string | null
+  projectId?: string | null
+  playbookRunId?: string | null
+  playbookTeammate?: string | null
+  surfacedAt?: Date | string | null
+  quiet?: boolean
+  children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
+  events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutSessionInput
+  attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
+  sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reviewsOf?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
+  laters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutSessionInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutSessionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutSessionInput
+  heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutSessionInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutSessionInput
+  reportingSchedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutParentSessionInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedCreateNestedOneWithoutRootSessionInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutSessionInput
+  mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutSessionInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutSessionInput
+  following?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutFollowerInput
+  followers?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutSessionInput
+}
+
+export type SessionCreateOrConnectWithoutFolderBackupsInput = {
+  where: Prisma.SessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.SessionCreateWithoutFolderBackupsInput, Prisma.SessionUncheckedCreateWithoutFolderBackupsInput>
+}
+
+export type SessionUpsertWithoutFolderBackupsInput = {
+  update: Prisma.XOR<Prisma.SessionUpdateWithoutFolderBackupsInput, Prisma.SessionUncheckedUpdateWithoutFolderBackupsInput>
+  create: Prisma.XOR<Prisma.SessionCreateWithoutFolderBackupsInput, Prisma.SessionUncheckedCreateWithoutFolderBackupsInput>
+  where?: Prisma.SessionWhereInput
+}
+
+export type SessionUpdateToOneWithWhereWithoutFolderBackupsInput = {
+  where?: Prisma.SessionWhereInput
+  data: Prisma.XOR<Prisma.SessionUpdateWithoutFolderBackupsInput, Prisma.SessionUncheckedUpdateWithoutFolderBackupsInput>
+}
+
+export type SessionUpdateWithoutFolderBackupsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
+  teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
+  startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
+  computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
+  account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
+  parent?: Prisma.SessionUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.SessionUpdateManyWithoutParentNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
+  schedule?: Prisma.ScheduleUpdateOneWithoutSessionsNestedInput
+  events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  tokenUsage?: Prisma.TokenUsageUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutSessionNestedInput
+  attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
+  sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reviewsOf?: Prisma.PullRequestUpdateManyWithoutReviewSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
+  laters?: Prisma.ThreadLaterUpdateManyWithoutSessionNestedInput
+  task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutSessionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutSessionNestedInput
+  heldCalls?: Prisma.HeldCallUpdateManyWithoutSessionNestedInput
+  runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutSessionNestedInput
+  reportingSchedules?: Prisma.ScheduleUpdateManyWithoutParentSessionNestedInput
+  playbookRun?: Prisma.PlaybookRunUpdateOneWithoutThreadsNestedInput
+  rootOfPlaybookRun?: Prisma.PlaybookRunUpdateOneWithoutRootSessionNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutSessionNestedInput
+  mailAliases?: Prisma.MailAliasUpdateManyWithoutSessionNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
+  following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
+  followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+}
+
+export type SessionUncheckedUpdateWithoutFolderBackupsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  startedByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  computerId?: Prisma.StringFieldUpdateOperationsInput | string
+  accountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  quiet?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
+  events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
+  attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reviewsOf?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
+  laters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutSessionNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutSessionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutSessionNestedInput
+  heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutSessionNestedInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutSessionNestedInput
   reportingSchedules?: Prisma.ScheduleUncheckedUpdateManyWithoutParentSessionNestedInput
   rootOfPlaybookRun?: Prisma.PlaybookRunUncheckedUpdateOneWithoutRootSessionNestedInput
   mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutSessionNestedInput
@@ -11431,6 +11864,7 @@ export type SessionUpdateWithoutStartedByInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutStartedByInput = {
@@ -11497,6 +11931,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutStartedByInput = {
@@ -11643,6 +12078,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutWorkspaceInput = {
@@ -11709,6 +12145,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -11855,6 +12292,7 @@ export type SessionUpdateWithoutComputerInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutComputerInput = {
@@ -11921,6 +12359,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutComputerInput = {
@@ -12067,6 +12506,7 @@ export type SessionUpdateWithoutTeammateInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTeammateInput = {
@@ -12133,6 +12573,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutTeammateInput = {
@@ -12279,6 +12720,7 @@ export type SessionUpdateWithoutParentInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutParentInput = {
@@ -12345,6 +12787,7 @@ export type SessionUncheckedUpdateWithoutParentInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutParentInput = {
@@ -12491,6 +12934,7 @@ export type SessionUpdateWithoutScheduleInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutScheduleInput = {
@@ -12557,6 +13001,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutScheduleInput = {
@@ -12703,6 +13148,7 @@ export type SessionUpdateWithoutAccountInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutAccountInput = {
@@ -12769,6 +13215,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutAccountInput = {
@@ -12915,6 +13362,7 @@ export type SessionUpdateWithoutTriggerInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutTriggerInput = {
@@ -12981,6 +13429,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutTriggerInput = {
@@ -13127,6 +13576,7 @@ export type SessionUpdateWithoutProjectInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutProjectInput = {
@@ -13193,6 +13643,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutProjectInput = {
@@ -13339,6 +13790,7 @@ export type SessionUpdateWithoutPlaybookRunInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
@@ -13405,6 +13857,7 @@ export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutSessionNestedInput
   following?: Prisma.ThreadFollowUncheckedUpdateManyWithoutFollowerNestedInput
   followers?: Prisma.ThreadFollowUncheckedUpdateManyWithoutSessionNestedInput
+  folderBackups?: Prisma.FolderBackupUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutPlaybookRunInput = {
@@ -13478,6 +13931,7 @@ export type SessionCountOutputType = {
   playbookDryRuns: number
   following: number
   followers: number
+  folderBackups: number
 }
 
 export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -13506,6 +13960,7 @@ export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   playbookDryRuns?: boolean | SessionCountOutputTypeCountPlaybookDryRunsArgs
   following?: boolean | SessionCountOutputTypeCountFollowingArgs
   followers?: boolean | SessionCountOutputTypeCountFollowersArgs
+  folderBackups?: boolean | SessionCountOutputTypeCountFolderBackupsArgs
 }
 
 /**
@@ -13693,6 +14148,13 @@ export type SessionCountOutputTypeCountFollowersArgs<ExtArgs extends runtime.Typ
   where?: Prisma.ThreadFollowWhereInput
 }
 
+/**
+ * SessionCountOutputType without action
+ */
+export type SessionCountOutputTypeCountFolderBackupsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.FolderBackupWhereInput
+}
+
 
 export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -13770,6 +14232,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   playbookDryRuns?: boolean | Prisma.Session$playbookDryRunsArgs<ExtArgs>
   following?: boolean | Prisma.Session$followingArgs<ExtArgs>
   followers?: boolean | Prisma.Session$followersArgs<ExtArgs>
+  folderBackups?: boolean | Prisma.Session$folderBackupsArgs<ExtArgs>
   _count?: boolean | Prisma.SessionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["session"]>
 
@@ -13957,6 +14420,7 @@ export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   playbookDryRuns?: boolean | Prisma.Session$playbookDryRunsArgs<ExtArgs>
   following?: boolean | Prisma.Session$followingArgs<ExtArgs>
   followers?: boolean | Prisma.Session$followersArgs<ExtArgs>
+  folderBackups?: boolean | Prisma.Session$folderBackupsArgs<ExtArgs>
   _count?: boolean | Prisma.SessionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type SessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -14074,6 +14538,7 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * Threads that follow it.
      */
     followers: Prisma.$ThreadFollowPayload<ExtArgs>[]
+    folderBackups: Prisma.$FolderBackupPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -14620,6 +15085,7 @@ export interface Prisma__SessionClient<T, Null = never, ExtArgs extends runtime.
   playbookDryRuns<T extends Prisma.Session$playbookDryRunsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$playbookDryRunsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaybookDryRunPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   following<T extends Prisma.Session$followingArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$followingArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadFollowPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   followers<T extends Prisma.Session$followersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$followersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadFollowPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  folderBackups<T extends Prisma.Session$folderBackupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$folderBackupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FolderBackupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -15837,6 +16303,30 @@ export type Session$followersArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.ThreadFollowScalarFieldEnum | Prisma.ThreadFollowScalarFieldEnum[]
+}
+
+/**
+ * Session.folderBackups
+ */
+export type Session$folderBackupsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the FolderBackup
+   */
+  select?: Prisma.FolderBackupSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the FolderBackup
+   */
+  omit?: Prisma.FolderBackupOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FolderBackupInclude<ExtArgs> | null
+  where?: Prisma.FolderBackupWhereInput
+  orderBy?: Prisma.FolderBackupOrderByWithRelationInput | Prisma.FolderBackupOrderByWithRelationInput[]
+  cursor?: Prisma.FolderBackupWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.FolderBackupScalarFieldEnum | Prisma.FolderBackupScalarFieldEnum[]
 }
 
 /**
