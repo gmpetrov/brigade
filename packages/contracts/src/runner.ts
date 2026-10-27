@@ -99,6 +99,15 @@ export const GitAccess = z.object({
 })
 export type GitAccess = z.infer<typeof GitAccess>
 
+/**
+ * The parts of a thread's spec that can be large and change seldom, sent by reference from
+ * SPEC_PARTS_PROTOCOL on: a connector's operations carry their input schemas, a skill its
+ * instructions, a project its memory. Commands stay small whatever a workspace has granted.
+ */
+export const SPEC_PARTS = ['connectors', 'skills', 'project', 'designSystems'] as const
+export type SpecPart = (typeof SPEC_PARTS)[number]
+const PartHash = z.string().regex(/^[0-9a-f]{64}$/)
+
 /** What a runner needs to start or continue a thread. Never a secret, except git's proxy token. */
 export const ThreadSpec = z.object({
   sessionId: z.string(),
@@ -189,6 +198,12 @@ export const ThreadSpec = z.object({
       seq: z.number().int().nonnegative(),
     })
     .nullish(),
+  /**
+   * SPEC_PARTS_PROTOCOL: these parts are left empty above and named by the SHA-256 of their JSON
+   * instead; the runner fetches each (GET /runner/spec-parts/<sha256>) and fills it in before
+   * anything reads the spec.
+   */
+  parts: z.partialRecord(z.enum(SPEC_PARTS), PartHash).optional(),
 })
 export type ThreadSpec = z.infer<typeof ThreadSpec>
 

@@ -9,6 +9,7 @@ import { offerRunnerUpdates, pingBrowsers, resendCommands, watchRunners } from '
 import { settleHeldCalls } from './held-calls.js'
 import { processDueInbound, sweepInbound } from './inbound.js'
 import { sweepCommands } from './runner-commands.js'
+import { sweepSpecParts } from './spec-parts.js'
 import { redeliverFailed } from './routes/github-webhook.js'
 import { sweepDeliveries } from './triggers.js'
 import { sweepTrash } from './library-history.js'
@@ -78,6 +79,7 @@ export function startJobs() {
     void sweepDeletedThreadFiles().catch(failed('deleted thread'))
     // Finished rows of the work kept in the database (held calls go in their own tick).
     void sweepCommands().catch(failed('runner command'))
+    void sweepSpecParts().catch(failed('spec part'))
     void sweepInbound().catch(failed('inbound event'))
     void sweepDeliveries().catch(failed('trigger delivery'))
   }

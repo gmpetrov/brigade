@@ -428,6 +428,75 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     again.handle.onClose()
   })
 
+  test("a kept command goes with its thread's latest arrival, and not once the thread left", async () => {
+    const { dispatch } = await import('../src/hub.js')
+    const { ThreadSpec } = await import('@brigade/contracts')
+    const thread = ThreadSpec.parse({
+      sessionId: ids.session,
+      teammate: { id: ids.sam, name: 'Sam', instructions: '', harness: 'claude_code', model: null },
+      permissionMode: 'allow-all',
+      account: { id: 'a', provider: 'claude_code', source: 'brigade' },
+      fallbacks: [],
+    })
+    const command = {
+      type: 'thread.retry' as const,
+      commandId: randomUUID(),
+      thread,
+      memberId: ids.owner,
+    }
+    const first = await connect()
+    await dispatch({ id: ids.laptop, kind: 'member_machine' }, command)
+    first.handle.onClose()
+
+    // Its computer replaced meanwhile: the thread arrived on it again, its events numbered on.
+    const movedAt = new Date()
+    await prisma.session.update({
+      where: { id: ids.session },
+      data: { movedAt, movedFrom: 'the cloud computer this one replaced', movedSeq: 40 },
+    })
+    const second = await connect()
+    await until(() => second.sent.some((m) => m.commandId === command.commandId), 'sent again')
+    const sent = second.sent.find((m) => m.commandId === command.commandId) as {
+      thread: { moved?: { at: string; seq: number } }
+    }
+    assert.equal(sent.thread.moved?.at, movedAt.toISOString())
+    assert.equal(sent.thread.moved?.seq, 40)
+    second.handle.onClose()
+
+    // The thread went to another computer: it is not sent here any more.
+    await prisma.session.update({ where: { id: ids.session }, data: { computerId: ids.cloud } })
+    try {
+      const third = await connect()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      assert.equal(third.sent.filter((m) => m.commandId === command.commandId).length, 0)
+      assert.equal(
+        (await prisma.runnerCommand.findUniqueOrThrow({ where: { id: command.commandId } })).status,
+        'expired',
+      )
+      // Its events from here are acknowledged, never stored: the runner stops sending them.
+      third.say({
+        type: 'events',
+        events: [
+          {
+            sessionId: ids.session,
+            seq: 3,
+            event: { at: new Date().toISOString(), type: 'raw', source: 'runner', value: 'x' },
+          },
+        ],
+      })
+      await until(
+        () => third.sent.some((m) => m.type === 'ack' && m.seq === 3),
+        'the acknowledgement',
+      )
+      third.handle.onClose()
+    } finally {
+      await prisma.session.update({
+        where: { id: ids.session },
+        data: { computerId: ids.laptop, movedAt: null, movedFrom: null, movedSeq: null },
+      })
+    }
+  })
+
   test('a cloud computer that takes over 10 minutes to start still gets its commands', async () => {
     const { dispatch, runnerSocket, resendCommands } = await import('../src/hub.js')
     const command = { ...queuedCommand() }

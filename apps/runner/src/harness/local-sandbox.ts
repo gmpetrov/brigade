@@ -63,8 +63,12 @@ export function createLocalSandboxSession(options: {
   thread?: string
   /** Process groups the runner before this one started and handed over, stopped with this sandbox. */
   adopt?: number[]
-}): HarnessV1NetworkSandboxSession & { groups: () => number[] } {
+}): HarnessV1NetworkSandboxSession & {
+  groups: () => number[]
+  dropAdopted: () => boolean
+} {
   const children = new Set<ChildProcess>()
+  let adopted = options.adopt ?? []
   const at = (path: string) => (isAbsolute(path) ? path : resolve(options.workingDirectory, path))
   const runAs = options.runAs
   const net = runAs && options.thread ? threadNet(options.thread) : Promise.resolve(null)
@@ -254,7 +258,7 @@ export function createLocalSandboxSession(options: {
 
   const stop = async () => {
     for (const child of children) if (child.pid) killGroup(child.pid)
-    for (const pid of options.adopt ?? []) killGroup(pid)
+    for (const pid of adopted) killGroup(pid)
   }
 
   // Its cgroup goes with it: what is left a few seconds after the stop is killed.
@@ -281,7 +285,18 @@ export function createLocalSandboxSession(options: {
     /** Its process groups running now (a harness's bridge), to hand over (hand-over.ts). */
     groups: () => [
       ...[...children].flatMap((c) => (c.pid && c.exitCode === null ? [c.pid] : [])),
-      ...(options.adopt ?? []),
+      ...adopted,
     ],
+    /**
+     * The harness started a bridge of its own, when attaching to the handed-over one failed:
+     * that one is stopped now, rather than go on with its turn beside the new one until this
+     * sandbox stops. Whether it did.
+     */
+    dropAdopted: () => {
+      if (adopted.length === 0 || children.size === 0) return false
+      for (const pid of adopted) killGroup(pid)
+      adopted = []
+      return true
+    },
   }
 }

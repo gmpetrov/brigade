@@ -231,6 +231,7 @@ export type WorkspaceWhereInput = {
   replyWatches?: Prisma.ReplyWatchListRelationFilter
   heldCalls?: Prisma.HeldCallListRelationFilter
   runnerCommands?: Prisma.RunnerCommandListRelationFilter
+  specParts?: Prisma.SpecPartListRelationFilter
   triggerDeliveries?: Prisma.TriggerDeliveryListRelationFilter
   projects?: Prisma.ProjectListRelationFilter
   projectRepositories?: Prisma.ProjectRepositoryListRelationFilter
@@ -302,6 +303,7 @@ export type WorkspaceOrderByWithRelationInput = {
   replyWatches?: Prisma.ReplyWatchOrderByRelationAggregateInput
   heldCalls?: Prisma.HeldCallOrderByRelationAggregateInput
   runnerCommands?: Prisma.RunnerCommandOrderByRelationAggregateInput
+  specParts?: Prisma.SpecPartOrderByRelationAggregateInput
   triggerDeliveries?: Prisma.TriggerDeliveryOrderByRelationAggregateInput
   projects?: Prisma.ProjectOrderByRelationAggregateInput
   projectRepositories?: Prisma.ProjectRepositoryOrderByRelationAggregateInput
@@ -376,6 +378,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   replyWatches?: Prisma.ReplyWatchListRelationFilter
   heldCalls?: Prisma.HeldCallListRelationFilter
   runnerCommands?: Prisma.RunnerCommandListRelationFilter
+  specParts?: Prisma.SpecPartListRelationFilter
   triggerDeliveries?: Prisma.TriggerDeliveryListRelationFilter
   projects?: Prisma.ProjectListRelationFilter
   projectRepositories?: Prisma.ProjectRepositoryListRelationFilter
@@ -472,6 +475,7 @@ export type WorkspaceCreateInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -542,6 +546,7 @@ export type WorkspaceUncheckedCreateInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -612,6 +617,7 @@ export type WorkspaceUpdateInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -682,6 +688,7 @@ export type WorkspaceUncheckedUpdateInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1661,6 +1668,20 @@ export type WorkspaceUpdateOneRequiredWithoutRunnerCommandsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutRunnerCommandsInput, Prisma.WorkspaceUpdateWithoutRunnerCommandsInput>, Prisma.WorkspaceUncheckedUpdateWithoutRunnerCommandsInput>
 }
 
+export type WorkspaceCreateNestedOneWithoutSpecPartsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutSpecPartsInput, Prisma.WorkspaceUncheckedCreateWithoutSpecPartsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutSpecPartsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutSpecPartsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutSpecPartsInput, Prisma.WorkspaceUncheckedCreateWithoutSpecPartsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutSpecPartsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutSpecPartsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutSpecPartsInput, Prisma.WorkspaceUpdateWithoutSpecPartsInput>, Prisma.WorkspaceUncheckedUpdateWithoutSpecPartsInput>
+}
+
 export type WorkspaceCreateNestedOneWithoutTriggerDeliveriesInput = {
   create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutTriggerDeliveriesInput, Prisma.WorkspaceUncheckedCreateWithoutTriggerDeliveriesInput>
   connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutTriggerDeliveriesInput
@@ -1715,6 +1736,7 @@ export type WorkspaceCreateWithoutBillingSubscriptionsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -1784,6 +1806,7 @@ export type WorkspaceUncheckedCreateWithoutBillingSubscriptionsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1869,6 +1892,7 @@ export type WorkspaceUpdateWithoutBillingSubscriptionsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -1938,6 +1962,7 @@ export type WorkspaceUncheckedUpdateWithoutBillingSubscriptionsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2006,6 +2031,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -2075,6 +2101,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2183,6 +2210,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -2252,6 +2280,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2337,6 +2366,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -2406,6 +2436,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2475,6 +2506,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -2544,6 +2576,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2629,6 +2662,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -2698,6 +2732,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2767,6 +2802,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -2836,6 +2872,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2921,6 +2958,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -2990,6 +3028,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3060,6 +3099,7 @@ export type WorkspaceCreateWithoutThreadReadsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -3129,6 +3169,7 @@ export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3214,6 +3255,7 @@ export type WorkspaceUpdateWithoutThreadReadsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -3283,6 +3325,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3352,6 +3395,7 @@ export type WorkspaceCreateWithoutThreadPinsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -3421,6 +3465,7 @@ export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3506,6 +3551,7 @@ export type WorkspaceUpdateWithoutThreadPinsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -3575,6 +3621,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3644,6 +3691,7 @@ export type WorkspaceCreateWithoutSidebarOrdersInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -3713,6 +3761,7 @@ export type WorkspaceUncheckedCreateWithoutSidebarOrdersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3798,6 +3847,7 @@ export type WorkspaceUpdateWithoutSidebarOrdersInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -3867,6 +3917,7 @@ export type WorkspaceUncheckedUpdateWithoutSidebarOrdersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3936,6 +3987,7 @@ export type WorkspaceCreateWithoutThreadLatersInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -4005,6 +4057,7 @@ export type WorkspaceUncheckedCreateWithoutThreadLatersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4090,6 +4143,7 @@ export type WorkspaceUpdateWithoutThreadLatersInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -4159,6 +4213,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadLatersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4228,6 +4283,7 @@ export type WorkspaceCreateWithoutHomeDismissalsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -4297,6 +4353,7 @@ export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4382,6 +4439,7 @@ export type WorkspaceUpdateWithoutHomeDismissalsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -4451,6 +4509,7 @@ export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4519,6 +4578,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -4588,6 +4648,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4673,6 +4734,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -4742,6 +4804,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4811,6 +4874,7 @@ export type WorkspaceCreateWithoutTasksInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -4880,6 +4944,7 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4965,6 +5030,7 @@ export type WorkspaceUpdateWithoutTasksInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -5034,6 +5100,7 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5103,6 +5170,7 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -5172,6 +5240,7 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5257,6 +5326,7 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -5326,6 +5396,7 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5395,6 +5466,7 @@ export type WorkspaceCreateWithoutWakeupsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -5464,6 +5536,7 @@ export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5549,6 +5622,7 @@ export type WorkspaceUpdateWithoutWakeupsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -5618,6 +5692,7 @@ export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5687,6 +5762,7 @@ export type WorkspaceCreateWithoutReplyWatchesInput = {
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -5756,6 +5832,7 @@ export type WorkspaceUncheckedCreateWithoutReplyWatchesInput = {
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5841,6 +5918,7 @@ export type WorkspaceUpdateWithoutReplyWatchesInput = {
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -5910,6 +5988,7 @@ export type WorkspaceUncheckedUpdateWithoutReplyWatchesInput = {
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5979,6 +6058,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -6048,6 +6128,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6133,6 +6214,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -6202,6 +6284,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6271,6 +6354,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -6340,6 +6424,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6425,6 +6510,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -6494,6 +6580,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6563,6 +6650,7 @@ export type WorkspaceCreateWithoutTokenUsageInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -6632,6 +6720,7 @@ export type WorkspaceUncheckedCreateWithoutTokenUsageInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6717,6 +6806,7 @@ export type WorkspaceUpdateWithoutTokenUsageInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -6786,6 +6876,7 @@ export type WorkspaceUncheckedUpdateWithoutTokenUsageInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6855,6 +6946,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -6924,6 +7016,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7009,6 +7102,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -7078,6 +7172,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7147,6 +7242,7 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -7216,6 +7312,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7301,6 +7398,7 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -7370,6 +7468,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7439,6 +7538,7 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -7508,6 +7608,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7593,6 +7694,7 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -7662,6 +7764,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7731,6 +7834,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -7800,6 +7904,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7885,6 +7990,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -7954,6 +8060,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8023,6 +8130,7 @@ export type WorkspaceCreateWithoutAppsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -8092,6 +8200,7 @@ export type WorkspaceUncheckedCreateWithoutAppsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8177,6 +8286,7 @@ export type WorkspaceUpdateWithoutAppsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -8246,6 +8356,7 @@ export type WorkspaceUncheckedUpdateWithoutAppsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8315,6 +8426,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -8384,6 +8496,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8469,6 +8582,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -8538,6 +8652,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8607,6 +8722,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -8676,6 +8792,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8761,6 +8878,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -8830,6 +8948,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8899,6 +9018,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -8968,6 +9088,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9053,6 +9174,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -9122,6 +9244,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9191,6 +9314,7 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -9260,6 +9384,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9345,6 +9470,7 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -9414,6 +9540,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9483,6 +9610,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -9552,6 +9680,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9637,6 +9766,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -9706,6 +9836,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9775,6 +9906,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -9844,6 +9976,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9929,6 +10062,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -9998,6 +10132,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10067,6 +10202,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -10136,6 +10272,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10221,6 +10358,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -10290,6 +10428,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10359,6 +10498,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -10428,6 +10568,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10513,6 +10654,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -10582,6 +10724,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10651,6 +10794,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -10720,6 +10864,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10805,6 +10950,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -10874,6 +11020,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10943,6 +11090,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -11012,6 +11160,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11097,6 +11246,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -11166,6 +11316,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11236,6 +11387,7 @@ export type WorkspaceCreateWithoutDocumentPinsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -11305,6 +11457,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentPinsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11390,6 +11543,7 @@ export type WorkspaceUpdateWithoutDocumentPinsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -11459,6 +11613,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentPinsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11527,6 +11682,7 @@ export type WorkspaceCreateWithoutLibraryFoldersInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -11596,6 +11752,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11681,6 +11838,7 @@ export type WorkspaceUpdateWithoutLibraryFoldersInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -11750,6 +11908,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11819,6 +11978,7 @@ export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -11888,6 +12048,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11973,6 +12134,7 @@ export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -12042,6 +12204,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12112,6 +12275,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -12181,6 +12345,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12266,6 +12431,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -12335,6 +12501,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12403,6 +12570,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -12472,6 +12640,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12557,6 +12726,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -12626,6 +12796,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12695,6 +12866,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -12764,6 +12936,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12849,6 +13022,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -12918,6 +13092,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12988,6 +13163,7 @@ export type WorkspaceCreateWithoutDesignSystemsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -13057,6 +13233,7 @@ export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13142,6 +13319,7 @@ export type WorkspaceUpdateWithoutDesignSystemsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -13211,6 +13389,7 @@ export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13280,6 +13459,7 @@ export type WorkspaceCreateWithoutSkillsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -13349,6 +13529,7 @@ export type WorkspaceUncheckedCreateWithoutSkillsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13434,6 +13615,7 @@ export type WorkspaceUpdateWithoutSkillsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -13503,6 +13685,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13572,6 +13755,7 @@ export type WorkspaceCreateWithoutSkillPacksInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -13641,6 +13825,7 @@ export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13726,6 +13911,7 @@ export type WorkspaceUpdateWithoutSkillPacksInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -13795,6 +13981,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13864,6 +14051,7 @@ export type WorkspaceCreateWithoutPreviewRecipesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -13933,6 +14121,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14018,6 +14207,7 @@ export type WorkspaceUpdateWithoutPreviewRecipesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -14087,6 +14277,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14156,6 +14347,7 @@ export type WorkspaceCreateWithoutPreviewVariablesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -14225,6 +14417,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14310,6 +14503,7 @@ export type WorkspaceUpdateWithoutPreviewVariablesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -14379,6 +14573,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14448,6 +14643,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -14517,6 +14713,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14602,6 +14799,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -14671,6 +14869,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14740,6 +14939,7 @@ export type WorkspaceCreateWithoutProjectRepositoriesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -14809,6 +15009,7 @@ export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14894,6 +15095,7 @@ export type WorkspaceUpdateWithoutProjectRepositoriesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -14963,6 +15165,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15032,6 +15235,7 @@ export type WorkspaceCreateWithoutPushNoticesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -15101,6 +15305,7 @@ export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15186,6 +15391,7 @@ export type WorkspaceUpdateWithoutPushNoticesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -15255,6 +15461,7 @@ export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15324,6 +15531,7 @@ export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -15393,6 +15601,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15478,6 +15687,7 @@ export type WorkspaceUpdateWithoutPlaybookInstallationsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -15547,6 +15757,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15616,6 +15827,7 @@ export type WorkspaceCreateWithoutPlaybookActionsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -15685,6 +15897,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15770,6 +15983,7 @@ export type WorkspaceUpdateWithoutPlaybookActionsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -15839,6 +16053,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15908,6 +16123,7 @@ export type WorkspaceCreateWithoutPlaybookRunsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -15977,6 +16193,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16062,6 +16279,7 @@ export type WorkspaceUpdateWithoutPlaybookRunsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -16131,6 +16349,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16200,6 +16419,7 @@ export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -16269,6 +16489,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16354,6 +16575,7 @@ export type WorkspaceUpdateWithoutPlaybookDryRunsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -16423,6 +16645,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16492,6 +16715,7 @@ export type WorkspaceCreateWithoutThreadFollowsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -16561,6 +16785,7 @@ export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16646,6 +16871,7 @@ export type WorkspaceUpdateWithoutThreadFollowsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -16715,6 +16941,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16784,6 +17011,7 @@ export type WorkspaceCreateWithoutMailProjectsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -16853,6 +17081,7 @@ export type WorkspaceUncheckedCreateWithoutMailProjectsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16938,6 +17167,7 @@ export type WorkspaceUpdateWithoutMailProjectsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -17007,6 +17237,7 @@ export type WorkspaceUncheckedUpdateWithoutMailProjectsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17076,6 +17307,7 @@ export type WorkspaceCreateWithoutMailAliasesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -17145,6 +17377,7 @@ export type WorkspaceUncheckedCreateWithoutMailAliasesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17230,6 +17463,7 @@ export type WorkspaceUpdateWithoutMailAliasesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -17299,6 +17533,7 @@ export type WorkspaceUncheckedUpdateWithoutMailAliasesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17368,6 +17603,7 @@ export type WorkspaceCreateWithoutMailMessagesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -17437,6 +17673,7 @@ export type WorkspaceUncheckedCreateWithoutMailMessagesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17522,6 +17759,7 @@ export type WorkspaceUpdateWithoutMailMessagesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -17591,6 +17829,7 @@ export type WorkspaceUncheckedUpdateWithoutMailMessagesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17660,6 +17899,7 @@ export type WorkspaceCreateWithoutMailDomainsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -17729,6 +17969,7 @@ export type WorkspaceUncheckedCreateWithoutMailDomainsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17814,6 +18055,7 @@ export type WorkspaceUpdateWithoutMailDomainsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -17883,6 +18125,7 @@ export type WorkspaceUncheckedUpdateWithoutMailDomainsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17952,6 +18195,7 @@ export type WorkspaceCreateWithoutContactsInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -18021,6 +18265,7 @@ export type WorkspaceUncheckedCreateWithoutContactsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18106,6 +18351,7 @@ export type WorkspaceUpdateWithoutContactsInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -18175,6 +18421,7 @@ export type WorkspaceUncheckedUpdateWithoutContactsInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18244,6 +18491,7 @@ export type WorkspaceCreateWithoutContactHandlesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -18313,6 +18561,7 @@ export type WorkspaceUncheckedCreateWithoutContactHandlesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18398,6 +18647,7 @@ export type WorkspaceUpdateWithoutContactHandlesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -18467,6 +18717,7 @@ export type WorkspaceUncheckedUpdateWithoutContactHandlesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18535,6 +18786,7 @@ export type WorkspaceCreateWithoutHeldCallsInput = {
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -18604,6 +18856,7 @@ export type WorkspaceUncheckedCreateWithoutHeldCallsInput = {
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18689,6 +18942,7 @@ export type WorkspaceUpdateWithoutHeldCallsInput = {
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -18758,6 +19012,7 @@ export type WorkspaceUncheckedUpdateWithoutHeldCallsInput = {
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18827,6 +19082,7 @@ export type WorkspaceCreateWithoutRunnerCommandsInput = {
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
@@ -18896,6 +19152,7 @@ export type WorkspaceUncheckedCreateWithoutRunnerCommandsInput = {
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18981,6 +19238,7 @@ export type WorkspaceUpdateWithoutRunnerCommandsInput = {
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -19050,6 +19308,303 @@ export type WorkspaceUncheckedUpdateWithoutRunnerCommandsInput = {
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documentPins?: Prisma.DocumentPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailProjects?: Prisma.MailProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailAliases?: Prisma.MailAliasUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailMessages?: Prisma.MailMessageUncheckedUpdateManyWithoutWorkspaceNestedInput
+  mailDomains?: Prisma.MailDomainUncheckedUpdateManyWithoutWorkspaceNestedInput
+  contacts?: Prisma.ContactUncheckedUpdateManyWithoutWorkspaceNestedInput
+  contactHandles?: Prisma.ContactHandleUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutSpecPartsInput = {
+  id?: string
+  name: string
+  logo?: string | null
+  stripeCustomerId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  tokenUsage?: Prisma.TokenUsageCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
+  heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
+  runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  triggerDeliveries?: Prisma.TriggerDeliveryCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
+  documentPins?: Prisma.DocumentPinCreateNestedManyWithoutWorkspaceInput
+  sidebarOrders?: Prisma.SidebarOrderCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
+  billingSubscriptions?: Prisma.BillingSubscriptionCreateNestedManyWithoutWorkspaceInput
+  mailProjects?: Prisma.MailProjectCreateNestedManyWithoutWorkspaceInput
+  mailAliases?: Prisma.MailAliasCreateNestedManyWithoutWorkspaceInput
+  mailMessages?: Prisma.MailMessageCreateNestedManyWithoutWorkspaceInput
+  mailDomains?: Prisma.MailDomainCreateNestedManyWithoutWorkspaceInput
+  contacts?: Prisma.ContactCreateNestedManyWithoutWorkspaceInput
+  contactHandles?: Prisma.ContactHandleCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutSpecPartsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  logo?: string | null
+  stripeCustomerId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  tokenUsage?: Prisma.TokenUsageUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
+  heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillUncheckedCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  documentPins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  sidebarOrders?: Prisma.SidebarOrderUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailProjects?: Prisma.MailProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailAliases?: Prisma.MailAliasUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailMessages?: Prisma.MailMessageUncheckedCreateNestedManyWithoutWorkspaceInput
+  mailDomains?: Prisma.MailDomainUncheckedCreateNestedManyWithoutWorkspaceInput
+  contacts?: Prisma.ContactUncheckedCreateNestedManyWithoutWorkspaceInput
+  contactHandles?: Prisma.ContactHandleUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutSpecPartsInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutSpecPartsInput, Prisma.WorkspaceUncheckedCreateWithoutSpecPartsInput>
+}
+
+export type WorkspaceUpsertWithoutSpecPartsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutSpecPartsInput, Prisma.WorkspaceUncheckedUpdateWithoutSpecPartsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutSpecPartsInput, Prisma.WorkspaceUncheckedCreateWithoutSpecPartsInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutSpecPartsInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutSpecPartsInput, Prisma.WorkspaceUncheckedUpdateWithoutSpecPartsInput>
+}
+
+export type WorkspaceUpdateWithoutSpecPartsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  tokenUsage?: Prisma.TokenUsageUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
+  heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
+  runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
+  documentPins?: Prisma.DocumentPinUpdateManyWithoutWorkspaceNestedInput
+  sidebarOrders?: Prisma.SidebarOrderUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
+  billingSubscriptions?: Prisma.BillingSubscriptionUpdateManyWithoutWorkspaceNestedInput
+  mailProjects?: Prisma.MailProjectUpdateManyWithoutWorkspaceNestedInput
+  mailAliases?: Prisma.MailAliasUpdateManyWithoutWorkspaceNestedInput
+  mailMessages?: Prisma.MailMessageUpdateManyWithoutWorkspaceNestedInput
+  mailDomains?: Prisma.MailDomainUpdateManyWithoutWorkspaceNestedInput
+  contacts?: Prisma.ContactUpdateManyWithoutWorkspaceNestedInput
+  contactHandles?: Prisma.ContactHandleUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutSpecPartsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tokenUsage?: Prisma.TokenUsageUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
+  heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19120,6 +19675,7 @@ export type WorkspaceCreateWithoutTriggerDeliveriesInput = {
   replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -19189,6 +19745,7 @@ export type WorkspaceUncheckedCreateWithoutTriggerDeliveriesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   heldCalls?: Prisma.HeldCallUncheckedCreateNestedManyWithoutWorkspaceInput
   runnerCommands?: Prisma.RunnerCommandUncheckedCreateNestedManyWithoutWorkspaceInput
+  specParts?: Prisma.SpecPartUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19274,6 +19831,7 @@ export type WorkspaceUpdateWithoutTriggerDeliveriesInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -19343,6 +19901,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggerDeliveriesInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19420,6 +19979,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
@@ -19489,6 +20049,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   heldCalls?: Prisma.HeldCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   runnerCommands?: Prisma.RunnerCommandUncheckedUpdateManyWithoutWorkspaceNestedInput
+  specParts?: Prisma.SpecPartUncheckedUpdateManyWithoutWorkspaceNestedInput
   triggerDeliveries?: Prisma.TriggerDeliveryUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19566,6 +20127,7 @@ export type WorkspaceCountOutputType = {
   replyWatches: number
   heldCalls: number
   runnerCommands: number
+  specParts: number
   triggerDeliveries: number
   projects: number
   projectRepositories: number
@@ -19629,6 +20191,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   replyWatches?: boolean | WorkspaceCountOutputTypeCountReplyWatchesArgs
   heldCalls?: boolean | WorkspaceCountOutputTypeCountHeldCallsArgs
   runnerCommands?: boolean | WorkspaceCountOutputTypeCountRunnerCommandsArgs
+  specParts?: boolean | WorkspaceCountOutputTypeCountSpecPartsArgs
   triggerDeliveries?: boolean | WorkspaceCountOutputTypeCountTriggerDeliveriesArgs
   projects?: boolean | WorkspaceCountOutputTypeCountProjectsArgs
   projectRepositories?: boolean | WorkspaceCountOutputTypeCountProjectRepositoriesArgs
@@ -19896,6 +20459,13 @@ export type WorkspaceCountOutputTypeCountRunnerCommandsArgs<ExtArgs extends runt
 /**
  * WorkspaceCountOutputType without action
  */
+export type WorkspaceCountOutputTypeCountSpecPartsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SpecPartWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
 export type WorkspaceCountOutputTypeCountTriggerDeliveriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.TriggerDeliveryWhereInput
 }
@@ -20131,6 +20701,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   replyWatches?: boolean | Prisma.Workspace$replyWatchesArgs<ExtArgs>
   heldCalls?: boolean | Prisma.Workspace$heldCallsArgs<ExtArgs>
   runnerCommands?: boolean | Prisma.Workspace$runnerCommandsArgs<ExtArgs>
+  specParts?: boolean | Prisma.Workspace$specPartsArgs<ExtArgs>
   triggerDeliveries?: boolean | Prisma.Workspace$triggerDeliveriesArgs<ExtArgs>
   projects?: boolean | Prisma.Workspace$projectsArgs<ExtArgs>
   projectRepositories?: boolean | Prisma.Workspace$projectRepositoriesArgs<ExtArgs>
@@ -20229,6 +20800,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   replyWatches?: boolean | Prisma.Workspace$replyWatchesArgs<ExtArgs>
   heldCalls?: boolean | Prisma.Workspace$heldCallsArgs<ExtArgs>
   runnerCommands?: boolean | Prisma.Workspace$runnerCommandsArgs<ExtArgs>
+  specParts?: boolean | Prisma.Workspace$specPartsArgs<ExtArgs>
   triggerDeliveries?: boolean | Prisma.Workspace$triggerDeliveriesArgs<ExtArgs>
   projects?: boolean | Prisma.Workspace$projectsArgs<ExtArgs>
   projectRepositories?: boolean | Prisma.Workspace$projectRepositoriesArgs<ExtArgs>
@@ -20302,6 +20874,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     replyWatches: Prisma.$ReplyWatchPayload<ExtArgs>[]
     heldCalls: Prisma.$HeldCallPayload<ExtArgs>[]
     runnerCommands: Prisma.$RunnerCommandPayload<ExtArgs>[]
+    specParts: Prisma.$SpecPartPayload<ExtArgs>[]
     triggerDeliveries: Prisma.$TriggerDeliveryPayload<ExtArgs>[]
     projects: Prisma.$ProjectPayload<ExtArgs>[]
     projectRepositories: Prisma.$ProjectRepositoryPayload<ExtArgs>[]
@@ -20774,6 +21347,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   replyWatches<T extends Prisma.Workspace$replyWatchesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$replyWatchesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReplyWatchPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   heldCalls<T extends Prisma.Workspace$heldCallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$heldCallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HeldCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   runnerCommands<T extends Prisma.Workspace$runnerCommandsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$runnerCommandsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RunnerCommandPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  specParts<T extends Prisma.Workspace$specPartsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$specPartsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SpecPartPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   triggerDeliveries<T extends Prisma.Workspace$triggerDeliveriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$triggerDeliveriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TriggerDeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   projects<T extends Prisma.Workspace$projectsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$projectsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   projectRepositories<T extends Prisma.Workspace$projectRepositoriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$projectRepositoriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectRepositoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -22004,6 +22578,30 @@ export type Workspace$runnerCommandsArgs<ExtArgs extends runtime.Types.Extension
   take?: number
   skip?: number
   distinct?: Prisma.RunnerCommandScalarFieldEnum | Prisma.RunnerCommandScalarFieldEnum[]
+}
+
+/**
+ * Workspace.specParts
+ */
+export type Workspace$specPartsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SpecPart
+   */
+  select?: Prisma.SpecPartSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SpecPart
+   */
+  omit?: Prisma.SpecPartOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SpecPartInclude<ExtArgs> | null
+  where?: Prisma.SpecPartWhereInput
+  orderBy?: Prisma.SpecPartOrderByWithRelationInput | Prisma.SpecPartOrderByWithRelationInput[]
+  cursor?: Prisma.SpecPartWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SpecPartScalarFieldEnum | Prisma.SpecPartScalarFieldEnum[]
 }
 
 /**

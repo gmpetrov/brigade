@@ -9,6 +9,7 @@
 import { OUTBOX_PROTOCOL, type ApiToRunner } from '@brigade/contracts'
 import { prisma, scoped } from './db.js'
 import { noteFailure } from './ops/failures.js'
+import { movedOf } from './thread-spec.js'
 
 /** A command that names itself, so the runner can acknowledge it and ignore it the second time. */
 export type DurableCommand = Extract<ApiToRunner, { commandId: string }>
@@ -79,6 +80,43 @@ export async function noteSent(id: string, protocol: number) {
     },
   })
   return count === 1
+}
+
+/**
+ * A kept command as it goes now, its specs as of when it was kept. Null when it does not go:
+ * its thread left this computer meanwhile (the command is expired). A thread that arrived again
+ * on it since (its computer replaced, say) has its specs' arrival brought up to date: without
+ * it the runner numbers the thread's events from its own count, and the API drops them.
+ */
+export async function asOfNow(computerId: string, message: DurableCommand) {
+  if (!('thread' in message)) return message
+  const session = await prisma.session.findUnique({
+    where: { id: message.thread.sessionId },
+    select: {
+      computerId: true,
+      movedAt: true,
+      movedFrom: true,
+      movedSeq: true,
+      computer: { select: { kind: true, name: true } },
+    },
+  })
+  if (session?.computerId !== computerId) {
+    await prisma.runnerCommand.updateMany({
+      where: { id: message.commandId, status: 'pending' },
+      data: { status: 'expired' },
+    })
+    console.warn(`command ${message.commandId}: its thread left ${computerId}, not sent there`)
+    return null
+  }
+  const moved = movedOf(session)
+  if (!moved || message.thread.moved?.at === moved.at) return message
+  if (message.type === 'thread.prompt')
+    return {
+      ...message,
+      thread: { ...message.thread, moved },
+      then: message.then.map((spec) => ({ ...spec, moved })),
+    }
+  return { ...message, thread: { ...message.thread, moved } }
 }
 
 /** The runner acknowledged these commands: its own computer's only. */

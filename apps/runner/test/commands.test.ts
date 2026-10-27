@@ -8,11 +8,12 @@ import { WebSocketServer, type WebSocket } from 'ws'
 
 // Commands from the API, acknowledged by id (OUTBOX_PROTOCOL): one sent again is acknowledged and
 // ignored, also by a runner that restarted in between; and a call that waited on a person when
-// the connection dropped tells the teammate it still waits, not to try again.
+// the connection dropped tells the teammate it still waits, not to try again; one not taken (its
+// spec's parts did not come) is not acknowledged, so it comes again and is taken then.
 const home = await mkdtemp(join(tmpdir(), 'brigade-commands-'))
 process.env.BRIGADE_HOME = home
 const { Outbox } = await import('../src/outbox.js')
-const { Connection, STILL_WAITING } = await import('../src/connection.js')
+const { Connection, NotTaken, STILL_WAITING } = await import('../src/connection.js')
 const { SeenCommands } = await import('../src/seen-commands.js')
 
 test.after(() => rm(home, { recursive: true, force: true }))
@@ -165,5 +166,41 @@ test('a command is acknowledged once taken: a restart while it is taken leaves i
     'taken after the restart',
   )
   second.close()
+  server.close()
+})
+
+test('a command not taken is not acknowledged, and is taken when it comes again', async () => {
+  const { server, heard, sockets, url } = await api()
+  const taken: ApiToRunner[] = []
+  let refuse = true
+  const connection = runner(url, join(home, 'seen-4.json'), taken, () =>
+    refuse ? Promise.reject(new NotTaken('its parts did not come')) : undefined,
+  )
+  await until(() => taken.some((m) => m.type === 'welcome'), 'welcome')
+  const prompt = { ...command, commandId: 'cmd-4' }
+  sockets[0]!.send(JSON.stringify(prompt))
+  await until(() => taken.filter((m) => m.type === 'thread.interrupt').length === 1, 'tried')
+  await new Promise((r) => setTimeout(r, 100))
+  assert.equal(heard.filter((m) => m.type === 'command.ack').length, 0, 'not acknowledged')
+
+  // The API sends it again: not ignored as seen, taken now, acknowledged.
+  refuse = false
+  sockets[0]!.send(JSON.stringify(prompt))
+  await until(() => heard.some((m) => m.type === 'command.ack'), 'the ack')
+  assert.equal(taken.filter((m) => m.type === 'thread.interrupt').length, 2)
+
+  // A command that failed otherwise is acknowledged, as before: sending it again changes nothing.
+  const failing = runner(url, join(home, 'seen-5.json'), [], () =>
+    Promise.reject(new Error('the harness broke')),
+  )
+  await until(() => sockets.length === 2, 'the second connection')
+  await new Promise((r) => setTimeout(r, 50))
+  sockets[1]!.send(JSON.stringify({ ...command, commandId: 'cmd-5' }))
+  await until(
+    () => heard.some((m) => m.type === 'command.ack' && m.commandIds.includes('cmd-5')),
+    'the ack of a failed command',
+  )
+  connection.close()
+  failing.close()
   server.close()
 })
