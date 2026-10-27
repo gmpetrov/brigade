@@ -81,8 +81,8 @@ async function socket(
   env: Env & { HUBS: DurableObjectNamespace<WorkspaceHubObject> },
   again = false,
 ): Promise<Response> {
-  // Made when its hub moved (POST /ops/hubs), next to the database: the hint only places one a
-  // socket asks for first.
+  // Made as its workspace was, or when its hub moved (POST /ops/hubs), next to the database: the
+  // hint only places one a socket asks for first.
   const hub = (workspaceId: string) =>
     env.HUBS.get(env.HUBS.idFromName(workspaceId), { locationHint: 'weur' }).fetch(
       named(request, workspaceId),
