@@ -235,17 +235,31 @@ export async function pauseMember(sessionId: string): Promise<string[]> {
     '--filter',
     'status=running',
   ).catch(() => '')
-  const running = ids.split('\n').filter(Boolean)
-  if (running.length > 0) await memberDocker('pause', ...running)
-  return running
+  // One by one: one that stopped since `ps` must not hide those already paused.
+  const paused: string[] = []
+  for (const id of ids.split('\n').filter(Boolean))
+    await memberDocker('pause', id).then(
+      () => paused.push(id),
+      () => undefined,
+    )
+  return paused
 }
 
-/** Run containers pauseMember paused again; those gone or no longer paused are left as they are. */
-export async function unpauseMember(paused: string[]) {
-  if (paused.length === 0) return
-  await memberDocker('unpause', ...paused).catch(async () => {
-    for (const id of paused) await memberDocker('unpause', id).catch(() => undefined)
-  })
+/** Docker's answer for a container that is gone, or no longer paused: nothing left to resume. */
+const RESUMED = /No such (container|object)|is not paused/i
+
+/**
+ * Run containers pauseMember paused again. Resolves to those it could not
+ * resume (Docker not answering, say), to try again later; those gone or no
+ * longer paused count as resumed.
+ */
+export async function unpauseMember(paused: string[]): Promise<string[]> {
+  const left: string[] = []
+  for (const id of paused)
+    await memberDocker('unpause', id).catch((error: unknown) => {
+      if (!RESUMED.test(String(error))) left.push(id)
+    })
+  return left
 }
 
 /**

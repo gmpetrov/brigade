@@ -357,7 +357,8 @@ export class Previews {
     this.pressureTimer = setInterval(() => void this.watchPressure(), 5_000)
     this.pressureTimer.unref()
     this.pausedFile = join(dirname(options.stateFile), 'paused-containers.json')
-    void this.unpauseLeftovers()
+    this.unresumed = readPaused(this.pausedFile)
+    void this.resumeLeft()
     try {
       const saved = JSON.parse(readFileSync(options.stateFile, 'utf8')) as [string, LastStart][]
       this.lastStarts = new Map(saved)
@@ -371,6 +372,12 @@ export class Previews {
   private readonly pressure = new PressureWatch<Preview>()
   /** Containers paused for frozen previews, by user: unpaused at the next start should the runner stop first. */
   private readonly pausedFile: string
+  /**
+   * Containers paused for previews that are not resumed yet: the runner before this one's, and
+   * those Docker did not resume when asked. Tried again each minute, kept in pausedFile meanwhile.
+   */
+  private unresumed: Paused[] = []
+  private resuming?: Promise<void>
 
   /** Previews running or starting, frozen ones aside: nobody is using those. */
   get count() {
@@ -1329,17 +1336,35 @@ export class Previews {
     const ids = preview.pausedContainers
     delete preview.pausedContainers
     if (!ids?.length) return
-    const { runAs, sessionId } = preview.seat
-    const resumed = runAs ? unpause(runAs, sessionId, ids) : unpauseMember(ids)
-    await resumed.catch((error: unknown) => {
-      this.append(preview, `[preview] Could not resume the thread's containers: ${String(error)}\n`)
-    })
+    const entry: Paused = [preview.seat.runAs ?? '', preview.seat.sessionId, ids]
+    const left = await resume(entry)
+    if (left.length) {
+      this.unresumed.push([entry[0], entry[1], left])
+      this.append(
+        preview,
+        `[preview] Could not resume ${left.length} of the thread's containers: trying again each minute\n`,
+      )
+    }
     this.savePaused()
   }
 
-  /** As [user, thread, ids]; the user is '' for the member's own Docker. */
+  /** Try again to resume the containers left paused. */
+  private resumeLeft() {
+    if (this.resuming || this.unresumed.length === 0) return this.resuming
+    this.resuming = (async () => {
+      // Each stays noted until tried, should the runner stop meanwhile.
+      for (const entry of [...this.unresumed]) {
+        const left = await resume(entry)
+        this.unresumed = this.unresumed.filter((e) => e !== entry)
+        if (left.length) this.unresumed.push([entry[0], entry[1], left])
+      }
+      this.savePaused()
+    })().finally(() => (this.resuming = undefined))
+    return this.resuming
+  }
+
   private savePaused() {
-    const paused: [string, string, string[]][] = []
+    const paused: Paused[] = [...this.unresumed]
     for (const p of this.previews.values())
       if (p.pausedContainers?.length)
         paused.push([p.seat.runAs ?? '', p.seat.sessionId, p.pausedContainers])
@@ -1348,26 +1373,6 @@ export class Previews {
     } catch (error) {
       console.warn(`could not save the paused containers: ${String(error)}`)
     }
-  }
-
-  /** Containers paused for previews of a runner that stopped before it could resume them. */
-  private async unpauseLeftovers() {
-    // [user, thread, ids]; [user, ids] from before threads had their own Docker.
-    let paused: ([string, string, string[]] | [string, string[]])[]
-    try {
-      paused = JSON.parse(await readFile(this.pausedFile, 'utf8')) as typeof paused
-    } catch {
-      return
-    }
-    for (const entry of paused) {
-      const [user, sessionId, ids] = entry.length === 3 ? entry : [entry[0], '', entry[1]]
-      await (user ? unpause(user, sessionId, ids) : unpauseMember(ids)).catch((error: unknown) =>
-        console.warn(
-          `could not resume the containers of ${user || 'the member'}: ${String(error)}`,
-        ),
-      )
-    }
-    this.savePaused()
   }
 
   /**
@@ -1552,6 +1557,7 @@ export class Previews {
         void this.stop(sessionId, `Stopped after ${Math.round(ttl / 60_000)} minutes without use`)
       else if (now - preview.lastUsed >= FREEZE_MS) void this.freeze(preview)
     }
+    void this.resumeLeft()
     void this.makeRoom()
   }
 
@@ -1584,6 +1590,31 @@ export const localName = (sessionId: string) =>
       .replace(/[^a-z0-9-]/g, '')
       .slice(0, 63) || 'preview'
   }.localhost`
+
+/** Containers paused for a preview: [user, thread, ids], the user '' for the member's own Docker. */
+type Paused = [string, string, string[]]
+
+/** The containers pausedFile notes; [user, ids] from before threads had their own Docker. */
+function readPaused(file: string): Paused[] {
+  try {
+    const saved = JSON.parse(readFileSync(file, 'utf8')) as (Paused | [string, string[]])[]
+    return saved.map((entry) => (entry.length === 3 ? entry : [entry[0], '', entry[1]]))
+  } catch {
+    return []
+  }
+}
+
+/** Resume paused containers: resolves to those still paused, to try again later. */
+async function resume([user, sessionId, ids]: Paused): Promise<string[]> {
+  if (!user) return unpauseMember(ids)
+  return unpause(user, sessionId, ids).then(
+    () => [],
+    (error: unknown) => {
+      console.warn(`could not resume the containers of ${user}: ${String(error)}`)
+      return ids
+    },
+  )
+}
 
 /** Its processes can be stopped and resumed with signals: the runner's own, on a member's machine. */
 const stoppable = (preview: Preview) => !CLOUD && !preview.seat.runAs && Boolean(preview.group)

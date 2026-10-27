@@ -14,17 +14,33 @@ const home = await mkdtemp(join(tmpdir(), 'brigade-preview-pause-'))
 process.env.BRIGADE_HOME = home
 delete process.env.BRIGADE_CLOUD
 process.env.BRIGADE_PREVIEW_FREEZE_MS = '1'
-// A docker that notes what it is asked, and has one running container in the thread's project.
+// A docker that notes what it is asked, with one running container in the thread's project.
 const bin = join(home, 'bin')
 const calls = join(home, 'docker-calls')
 await mkdir(bin, { recursive: true })
+// What it does is set by files beside it: the running containers it lists, those it fails to
+// pause, those gone, and whether its daemon answers.
+const state = (name: string) => join(home, `docker-${name}`)
 await writeFile(
   join(bin, 'docker'),
-  `#!/bin/sh\necho "$*" >> ${JSON.stringify(calls)}\ncase "$1" in ps) echo c1 ;; esac\n`,
+  [
+    '#!/bin/sh',
+    `echo "$*" >> ${JSON.stringify(calls)}`,
+    `has() { grep -qx "$2" "${home}/docker-$1" 2>/dev/null; }`,
+    `[ -e "${home}/docker-down" ] && { echo 'Cannot connect to the Docker daemon' >&2; exit 1; }`,
+    'case "$1" in',
+    `  ps) cat "${home}/docker-running" 2>/dev/null || echo c1 ;;`,
+    '  pause) has fails "$2" && { echo "$2 is not running" >&2; exit 1; } ;;',
+    '  unpause) has gone "$2" && { echo "No such container: $2" >&2; exit 1; } ;;',
+    'esac',
+    'exit 0',
+    '',
+  ].join('\n'),
 )
 await chmod(join(bin, 'docker'), 0o755)
 process.env.PATH = `${bin}:${process.env.PATH}`
 const { Previews, localName } = await import('../src/previews.js')
+const { pauseMember, unpauseMember } = await import('../src/containers.js')
 
 test.after(() => rm(home, { recursive: true, force: true }))
 
@@ -105,4 +121,49 @@ test('a preview nobody uses stops with its containers, and the next request resu
   await until(async () => (await readFile(calls, 'utf8')).includes('unpause c1'))
 
   await control.stop()
+})
+
+test('a container that stopped since it was listed does not hide those already paused', async () => {
+  await writeFile(state('running'), 'c1\nc2\nc3\n')
+  await writeFile(state('fails'), 'c2\n')
+  try {
+    assert.deepEqual(await pauseMember('s2'), ['c1', 'c3'])
+  } finally {
+    await rm(state('running'))
+    await rm(state('fails'))
+  }
+})
+
+test('containers Docker did not resume stay noted, and are resumed once it answers', async () => {
+  // Gone ones count as resumed; with Docker down, none does.
+  await writeFile(state('gone'), 'c2\n')
+  assert.deepEqual(await unpauseMember(['c1', 'c2']), [])
+  await writeFile(state('down'), '')
+  assert.deepEqual(await unpauseMember(['c1', 'c2']), ['c1', 'c2'])
+  await rm(state('gone'))
+
+  // A runner starting while Docker is down keeps the note of the one before it.
+  const stateDir = join(home, 'state-left')
+  await mkdir(stateDir, { recursive: true })
+  const journal = join(stateDir, 'paused-containers.json')
+  await writeFile(journal, JSON.stringify([['', 's3', ['c9']]]))
+  const previews = new Previews({
+    emit: () => undefined,
+    expose: null,
+    viewUrl: null,
+    recipes: async () => ({ recipe: null }),
+    seat: () => {
+      throw new Error('unused')
+    },
+    stateFile: join(stateDir, 'previews.json'),
+  })
+  const retry = () => (previews as unknown as { resumeLeft(): Promise<void> }).resumeLeft()
+  await retry()
+  assert.deepEqual(JSON.parse(await readFile(journal, 'utf8')), [['', 's3', ['c9']]])
+
+  // Once it answers, the next try resumes it and forgets it.
+  await rm(state('down'))
+  await retry()
+  assert.deepEqual(JSON.parse(await readFile(journal, 'utf8')), [])
+  assert.match(await readFile(calls, 'utf8'), /unpause c9/)
 })
