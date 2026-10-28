@@ -693,6 +693,31 @@ export function SidebarWork({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mayHaveOlder, hidden, loadingOlder, query])
 
+  // The thread open, when the list does not show it (older than its threads, behind a "+N",
+  // filtered out or put away for later): first under Threads while it stays open, so the
+  // member sees where they are. Pinned, it is under Pinned already; a child thread stays out.
+  const openId = expanded && !instead ? threadId : null
+  const inView =
+    !!openId &&
+    (pinned.some((t) => t.id === openId) ||
+      waitingShown.some((t) => t.id === openId) ||
+      ordered.slice(0, visible).some((t) => t.id === openId))
+  const loaded = openId ? all.find((t) => t.id === openId) : undefined
+  // Not among those loaded: as the list has it, from the server, again as the list changes.
+  const [fetched, setFetched] = useState<ThreadSummary>()
+  useEffect(() => {
+    if (!openId || inView || loaded) return
+    let current = true
+    api<ThreadSummary[]>(`/threads?id=${openId}`).then(
+      ([t]) => current && setFetched(t?.id === openId ? withAsks([t], needsYou).all[0] : undefined),
+      () => undefined,
+    )
+    return () => {
+      current = false
+    }
+  }, [openId, inView, loaded, threads, needsYou])
+  const opened = inView ? undefined : (loaded ?? (fetched?.id === openId ? fetched : undefined))
+
   function changed() {
     void reloadThreads()
     if (archived) void loadArchived()
@@ -759,7 +784,7 @@ export function SidebarWork({
   // "+N more", which grows it in both.
   const list = (
     <>
-      {threads && shown.length === 0 && (instead || !pinned.length) && (
+      {threads && shown.length === 0 && !opened && (instead || !pinned.length) && (
         <li className="text-muted-foreground px-2 py-1.5 text-xs">
           {archived
             ? 'No archived threads.'
@@ -770,6 +795,7 @@ export function SidebarWork({
                 : 'No threads yet.'}
         </li>
       )}
+      {opened && row(opened)}
       {waitingShown.map((t) => row(t))}
       {/* No dot: a control, not a thread; its text lines up with the titles. */}
       {waitingShown.length < waitingRows.length && (

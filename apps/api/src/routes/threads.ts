@@ -264,18 +264,23 @@ export const threads = new Hono<AppEnv>()
       // Where it runs: the sidebar marks a member's own machine.
       computer: { select: { kind: true, name: true } },
     }
+    // One thread, as the list has it: the sidebar shows the one open when it is not among
+    // those it loaded. Archived or quiet, it is still the one open; a child thread is not listed.
+    const only = c.req.query('id')
     const rows = await c.var.db.session.findMany({
-      where: {
-        // A teammate's threads: those it started and those it joined.
-        ...(teammateId ? { teammates: { some: { teammateId } } } : {}),
-        ...projectWhere(c.req.query('project')),
-        // Archived ones only when asked for: ?archived=1.
-        archivedAt: c.req.query('archived') === '1' ? { not: null } : null,
-        // Child threads show in their parent, not in lists.
-        parentId: null,
-        // A playbook's runs, once a person took part in them (src/playbooks.ts).
-        OR: [{ playbookRunId: null, quiet: false }, { surfacedAt: { not: null } }],
-      },
+      where: only
+        ? { id: only, parentId: null }
+        : {
+            // A teammate's threads: those it started and those it joined.
+            ...(teammateId ? { teammates: { some: { teammateId } } } : {}),
+            ...projectWhere(c.req.query('project')),
+            // Archived ones only when asked for: ?archived=1.
+            archivedAt: c.req.query('archived') === '1' ? { not: null } : null,
+            // Child threads show in their parent, not in lists.
+            parentId: null,
+            // A playbook's runs, once a person took part in them (src/playbooks.ts).
+            OR: [{ playbookRunId: null, quiet: false }, { surfacedAt: { not: null } }],
+          },
       ...(limit
         ? {
             orderBy:
@@ -296,7 +301,13 @@ export const threads = new Hono<AppEnv>()
     })
     // And those they put away for later, all of them too: the filter's Later lists them.
     const laters = await latersOf(c.var.db, c.var.scope.memberId)
-    if (!limit && !teammateId && !c.req.query('project') && c.req.query('archived') !== '1') {
+    if (
+      !only &&
+      !limit &&
+      !teammateId &&
+      !c.req.query('project') &&
+      c.req.query('archived') !== '1'
+    ) {
       const loaded = new Set(rows.map((r) => r.id))
       const missing = [...new Set([...pins.map((p) => p.sessionId), ...laters.keys()])].filter(
         (id) => !loaded.has(id),
