@@ -47,8 +47,13 @@ const CHROMES = [
 ]
 /** A first visit to a dev server compiles the page: wait that long for it. */
 const LOAD_MS = 90_000
-/** The proxy's page while the app starts or restarts. */
-const WAITING = /reloads by itself/
+/**
+ * What a proxy answers while the app behind it starts or restarts (a dev server
+ * not listening yet, Next starting again after a crash): wait, as the runner does.
+ */
+const WAITING = new Set([502, 503, 504])
+/** At most this for one ask: one that hangs (a compile stuck) is asked again. */
+const ASK_MS = 30_000
 /** No visible text and nothing drawn: a blank page. (Sparse pages with a frame are judged on their body.) */
 const MIN_TEXT = 1
 /** At most this for a call into the page. */
@@ -165,20 +170,27 @@ async function checkPage(
   const deadline = Date.now() + LOAD_MS
   // The proxy's waiting page while the app compiles or restarts: ask for the page
   // without opening it until the app answers. Opened, it reloads itself, and
-  // that interrupts the check's own navigation.
-  for (;;) {
+  // that interrupts the check's own navigation. A preview is said to run as soon
+  // as its proxy answers, often before the app behind it does.
+  for (let last: number | null = null; ;) {
+    const left = deadline - Date.now()
+    if (left <= 0) {
+      problems.push(
+        last
+          ? `the app still answered ${last} after ${LOAD_MS / 1000} seconds`
+          : `the app did not answer within ${LOAD_MS / 1000} seconds`,
+      )
+      break
+    }
     const answer = await page.request
       .get(target.href, {
         headers: { accept: 'text/html' },
-        timeout: Math.max(5_000, deadline - Date.now()),
+        timeout: Math.max(5_000, Math.min(ASK_MS, left)),
       })
       .catch(() => null)
-    const waiting =
-      answer?.status() === 503 && WAITING.test(await within(CALL_MS, answer.text(), ''))
-    if ((waiting || !answer) && Date.now() > deadline)
-      problems.push(`the app did not answer within ${LOAD_MS / 1000} seconds`)
-    if (!waiting || Date.now() > deadline) break
-    await page.waitForTimeout(2_000)
+    if (answer && !WAITING.has(answer.status())) break
+    last = answer?.status() ?? last
+    await page.waitForTimeout(answer ? 2_000 : 500)
   }
   const response = await page
     .goto(target.href, { waitUntil: 'load', timeout: Math.max(5_000, deadline - Date.now()) })
