@@ -123,7 +123,9 @@ export async function noteTurnsEnded(
 /** A thread's status follows from its events, so it survives disconnects and replays. */
 export function statusAfter(current: SessionStatus, event: AgentEvent): SessionStatus {
   switch (event.type) {
+    // A message its teammate reads once a person answers it: nothing runs meanwhile.
     case 'message.user':
+      return event.waiting ? 'waiting' : 'running'
     case 'approval.resolved':
       return 'running'
     case 'approval.requested':

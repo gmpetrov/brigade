@@ -441,6 +441,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
     steered: z.boolean().optional(),
     /** The earlier message it replies to. */
     replyTo: ReplyTo.optional(),
+    /** Its teammate waits on a person (a ticket): no turn starts for it until they answer. */
+    waiting: z.boolean().optional(),
   }),
   /**
    * A message waits for the turn before it to end, or for a person to answer

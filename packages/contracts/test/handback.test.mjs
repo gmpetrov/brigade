@@ -48,3 +48,21 @@ test('handing back answers a ticket of browser actions, and only that', () => {
   assert.equal(handbackAnswer([browser, { id: 'a2', type: 'input', title: 'Code' }], ''), undefined)
   assert.equal(handbackAnswer([], ''), undefined)
 })
+
+test('handing back answers a ticket whose other asks the person answered already', () => {
+  const account = { id: 'a1', type: 'decision', title: 'Which account?', options: [] }
+  const browser = { id: 'a2', type: 'action', title: 'Sign in', browser: true }
+  const chose = { type: 'decision', optionId: 'askli' }
+  assert.deepEqual(handbackAnswer([account, browser], 'Signed in', { a1: chose }), {
+    action: 'answered',
+    replies: { a1: chose, a2: { type: 'action', done: true, note: 'Signed in' } },
+  })
+  // Not answered yet, or answered as another kind of ask: the ticket stays open.
+  assert.equal(handbackAnswer([account, browser], ''), undefined)
+  assert.equal(
+    handbackAnswer([account, browser], '', { a1: { type: 'input', text: 'askli' } }),
+    undefined,
+  )
+  // Every ask answered already: nothing left for the hand back to answer.
+  assert.equal(handbackAnswer([account], '', { a1: chose }), undefined)
+})

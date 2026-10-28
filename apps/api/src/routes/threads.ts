@@ -1576,13 +1576,19 @@ export const threads = new Hono<AppEnv>()
     const thread = await loadThread(db, c.req.param('id'))
     if (thread.controlledByMemberId !== scope.memberId)
       throw new HTTPException(409, { message: 'You do not have control of this thread' })
-    const { note } = await parseBody(c.req.raw, HandBack)
-    // The teammate waits on a ticket to do something in its browser: handing back answers it.
+    const { note, replies } = await parseBody(c.req.raw, HandBack)
+    // The teammate waits on a ticket to do something in its browser: handing back answers it,
+    // with what the person answered of its other asks already.
     const ticket = await db.ticket.findFirst({
       where: { sessionId: thread.id, type: 'request', status: 'open' },
       orderBy: { createdAt: 'desc' },
     })
-    const answer = handbackAnswer((ticket?.payload as { asks?: Ask[] } | null)?.asks ?? [], note)
+    const payload = ticket?.payload as { asks?: Ask[]; requestId?: string } | null
+    const answer = handbackAnswer(
+      payload?.asks ?? [],
+      note,
+      (payload?.requestId && replies?.[payload.requestId]) || {},
+    )
     if (ticket && answer && mayAnswer(scope, thread)) await answerTicket(scope, ticket.id, answer)
     else await handBack(db, scope, thread, note)
     return c.json({ ok: true })

@@ -1,4 +1,4 @@
-import type { Ask, TicketAnswer } from './events.js'
+import type { Ask, AskReply, TicketAnswer } from './events.js'
 
 /**
  * What a teammate is told when a person hands a thread back: their note and
@@ -47,16 +47,29 @@ export function handbackNote(text: string): Handback | null {
 }
 
 /**
- * Handing back with a ticket open whose every ask is something to do in the teammate's
- * browser: the hand back is its answer, done, with the person's note. Else undefined, and
- * the ticket stays open.
+ * Handing back with a ticket open whose every ask left is something to do in the teammate's
+ * browser: the hand back is its answer, done, with the person's note. `given`: the asks the
+ * person answered already (kept in their browser until the whole ticket is sent). Else
+ * undefined, and the ticket stays open.
  */
-export function handbackAnswer(asks: Ask[], note: string): TicketAnswer | undefined {
-  if (asks.length === 0 || !asks.every((a) => a.type === 'action' && a.browser)) return undefined
+export function handbackAnswer(
+  asks: Ask[],
+  note: string,
+  given: Record<string, AskReply> = {},
+): TicketAnswer | undefined {
+  const replied = asks.filter((a) => given[a.id]?.type === a.type)
+  const left = asks.filter((a) => !replied.includes(a))
+  if (left.length === 0 || !left.every((a) => a.type === 'action' && a.browser)) return undefined
   const done = {
     type: 'action' as const,
     done: true,
     ...(note.trim() ? { note: note.trim() } : {}),
   }
-  return { action: 'answered', replies: Object.fromEntries(asks.map((a) => [a.id, done])) }
+  return {
+    action: 'answered',
+    replies: Object.fromEntries([
+      ...replied.map((a) => [a.id, given[a.id]!]),
+      ...left.map((a) => [a.id, done]),
+    ]),
+  }
 }

@@ -140,7 +140,23 @@ test('a hand back answering a ticket starts only the ticket turn, whenever its f
     await sleep(30)
     assert.deepEqual(t.inputs, ['ticket'])
     assert.match(said(t.events).join(), /console\.log/)
+    // Not left waiting: the ticket's turn reads it.
+    assert.ok(t.events.every((e) => e.type !== 'message.user' || !e.waiting))
   }
+})
+
+test('a hand back while its teammate waits on a ticket says so, and starts no turn', async () => {
+  const t = takenOver('handback-waiting')
+  await t.threads.handback(t.spec, 'm1', 'I do not understand', async () => [])
+  await sleep(30)
+  assert.deepEqual(t.inputs, [])
+  const message = t.events.find((e) => e.type === 'message.user')
+  assert.equal(message?.type === 'message.user' && message.waiting, true)
+  assert.match(t.notes().join(), /once the pending request is answered/)
+  // Answered, the ticket's turn reads it.
+  t.answer()
+  await sleep(30)
+  assert.deepEqual(t.inputs, ['ticket'])
 })
 
 test('a hand back with files and no ticket gives its teammate a turn', async () => {

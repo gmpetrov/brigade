@@ -625,7 +625,23 @@ export class Threads {
       if (!note.trim() && files.length === 0) return null
       const text = handbackMessage({ note, files })
       const at = new Date().toISOString()
-      this.options.emit(spec.sessionId, { at, type: 'message.user', text, memberId })
+      // Still waiting on that person, with no turn queued behind this one (the answer to a
+      // ticket answered with the hand back) to read it: nothing runs until they answer.
+      const held = waiting && (thread.waiting.get(spec.teammate.id) ?? 0) <= 1
+      this.options.emit(spec.sessionId, {
+        at,
+        type: 'message.user',
+        text,
+        memberId,
+        ...(held ? { waiting: true } : {}),
+      })
+      if (held)
+        this.options.emit(spec.sessionId, {
+          at,
+          type: 'raw',
+          source: 'runner',
+          value: `${spec.teammate.name} reads this once the pending request is answered.`,
+        })
       thread.handoffs = 0
       const upTo = await this.note(spec, null, 'A member', text)
       return waiting ? null : upTo
