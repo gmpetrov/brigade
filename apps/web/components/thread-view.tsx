@@ -77,7 +77,7 @@ import {
   Reply,
   ShieldAlert,
 } from 'lucide-react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { MediaPreview, MessageAttachments } from '@/components/attachments'
 import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
@@ -141,6 +141,7 @@ import {
 } from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
 import { slotWait } from '@/lib/slot-wait'
+import { pauseLabel, pauses } from '@/lib/thread-times'
 import { cn } from '@/lib/utils'
 
 export type Item =
@@ -1685,6 +1686,19 @@ function WorkingFor({ since }: { since: number }) {
   )
 }
 
+/** When the thread picked up again, centred above the message (lib/thread-times.ts). */
+function PauseTime({ at }: { at: number }) {
+  return (
+    <time
+      dateTime={new Date(at).toISOString()}
+      title={new Date(at).toLocaleString()}
+      className="text-muted-foreground self-center pt-2 text-xs"
+    >
+      {pauseLabel(at)}
+    </time>
+  )
+}
+
 /**
  * Its updates stopped reaching Brigade (its computer keeps sending them): said plainly,
  * for a thread must never look at work for hours while nothing of it comes through.
@@ -2462,6 +2476,8 @@ export function ThreadItems({
     }
   }
   const nodes = layoutThread(items, working)
+  // Messages after a pause: their time above them.
+  const marks = pauses(items)
   // Working, and nothing from the teammate since the last message (or only its turn waiting
   // for a slot, then starting).
   const lastUser = items.findLastIndex((it) => it.kind === 'user' && !it.steeredTo)
@@ -2483,7 +2499,14 @@ export function ThreadItems({
   const show = (list: Node[]): React.ReactNode[] =>
     list.map((node) =>
       node.type === 'item' ? (
-        render(items[node.i]!, node.i)
+        marks.has(items[node.i]!.key) ? (
+          <Fragment key={items[node.i]!.key}>
+            <PauseTime at={marks.get(items[node.i]!.key)!} />
+            {render(items[node.i]!, node.i)}
+          </Fragment>
+        ) : (
+          render(items[node.i]!, node.i)
+        )
       ) : node.type === 'activity' ? (
         <ActivityGroup
           key={items[node.is[0]!]!.key}
