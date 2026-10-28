@@ -12,12 +12,20 @@ import { cn } from '@/lib/utils'
 /** Fewer messages than this read fine by scrolling: no timeline. */
 const MIN_PROMPTS = 3
 /** Room for each mark, until the timeline reaches its tallest. */
-const MARK_PX = 8
+const MARK_PX = 10
+/** A mark's width at rest, as the message being read, and under the pointer. */
+const REST_PX = 6
+const CURRENT_PX = 10
+const PEAK_PX = 26
+/** How far, in marks, the pointer's swell reaches either side. */
+const SPREAD = 1.6
 
 /**
  * The messages people wrote in the thread, oldest first. Those loaded come from its items;
  * a thread not loaded from its start (`whole` false) asks the API once for the others, and
- * only when the timeline shows (`wanted`): each one's start, cut in the database.
+ * only when the timeline shows (`wanted`): each one's start, cut in the database. Until
+ * that answer is in, none: the timeline shows once, with all its marks, rather than
+ * growing as the rest arrives.
  */
 export function useThreadPrompts(
   threadId: string,
@@ -33,9 +41,11 @@ export function useThreadPrompts(
     api<TimelineMessage[]>(`/threads/${threadId}/prompts`)
       .then((prompts) => setFetched({ threadId, prompts }))
       // Without it, the timeline holds what is loaded.
-      .catch(() => (asked.current = undefined))
+      .catch(() => setFetched({ threadId, prompts: [] }))
   }, [threadId, whole, wanted])
+  const ready = whole || fetched?.threadId === threadId
   return useMemo(() => {
+    if (!ready) return []
     const bySeq = new Map<number, TimelineMessage>()
     if (fetched?.threadId === threadId) for (const p of fetched.prompts) bySeq.set(p.seq, p)
     for (const item of items)
@@ -46,7 +56,7 @@ export function useThreadPrompts(
           text: item.handed?.note ?? item.text,
         })
     return [...bySeq.values()].sort((a, b) => a.seq - b.seq)
-  }, [fetched, threadId, items])
+  }, [ready, fetched, threadId, items])
 }
 
 /**
@@ -69,6 +79,9 @@ export function ThreadTimeline({
   const [fits, setFits] = useState(false)
   const [current, setCurrent] = useState<number>()
   const [hovered, setHovered] = useState<number>()
+  // Where the pointer is along the marks, in marks (fractional), while it is over them.
+  const [pointer, setPointer] = useState<number>()
+  const railRef = useRef<HTMLElement>(null)
   const seqs = useMemo(() => new Set(prompts.map((p) => p.seq)), [prompts])
 
   // Its room and its length, as the conversation resizes or grows.
@@ -115,42 +128,78 @@ export function ThreadTimeline({
   if (!fits || prompts.length < MIN_PROMPTS) return null
   const shown = prompts.find((p) => p.seq === hovered)
   const at = shown ? prompts.indexOf(shown) : -1
+  // Under the pointer, marks swell like a dock: the nearest most, its neighbours less.
+  const swell = (i: number) => {
+    const from = pointer ?? (at >= 0 ? at : undefined)
+    if (from === undefined) return 0
+    const d = i - from
+    return Math.exp(-(d * d) / (2 * SPREAD * SPREAD))
+  }
+  const toIndex = (clientY: number) => {
+    const rail = railRef.current?.getBoundingClientRect()
+    if (!rail) return undefined
+    const f = ((clientY - rail.top) / rail.height) * prompts.length - 0.5
+    return Math.min(prompts.length - 1, Math.max(0, f))
+  }
   return (
     <nav
+      ref={railRef}
       aria-label="Your messages in this thread"
-      className="absolute top-1/2 left-2 z-10 flex -translate-y-1/2 flex-col"
+      className="absolute top-1/2 left-3 z-10 flex -translate-y-1/2 animate-in flex-col duration-[220ms] ease-out fade-in motion-reduce:animate-none"
       style={{ height: `min(${prompts.length * MARK_PX}px, 60vh)` }}
-      onMouseLeave={() => setHovered(undefined)}
+      onPointerMove={(e) => {
+        const f = toIndex(e.clientY)
+        if (f === undefined) return
+        setPointer(f)
+        setHovered(prompts[Math.round(f)]?.seq)
+      }}
+      onPointerLeave={() => {
+        setPointer(undefined)
+        setHovered(undefined)
+      }}
     >
-      {prompts.map((p) => (
-        <button
-          key={p.seq}
-          type="button"
-          aria-label={preview(p.text) || 'Message'}
-          aria-current={p.seq === current ? 'location' : undefined}
-          className="group flex min-h-0 w-6 flex-1 items-center outline-none"
-          onMouseEnter={() => setHovered(p.seq)}
-          onFocus={() => setHovered(p.seq)}
-          onBlur={() => setHovered(undefined)}
-          onClick={() => onJump(p.seq)}
-        >
-          <span
-            className={cn(
-              'h-px rounded-full transition-all',
-              p.seq === current
-                ? 'w-3.5 bg-primary'
-                : 'w-2 bg-muted-foreground/40 group-hover:bg-foreground',
-              p.seq === hovered && 'w-3.5 bg-foreground',
-            )}
-          />
-        </button>
-      ))}
+      {prompts.map((p, i) => {
+        const near = swell(i)
+        const isCurrent = p.seq === current
+        const width = Math.max(
+          isCurrent ? CURRENT_PX : REST_PX,
+          REST_PX + (PEAK_PX - REST_PX) * near,
+        )
+        return (
+          <button
+            key={p.seq}
+            type="button"
+            aria-label={preview(p.text) || 'Message'}
+            aria-current={isCurrent ? 'location' : undefined}
+            className="flex min-h-0 w-9 flex-1 items-center outline-none"
+            onFocus={() => setHovered(p.seq)}
+            onBlur={() => setHovered(undefined)}
+            onClick={() => onJump(p.seq)}
+          >
+            <span
+              className={cn(
+                'h-0.5 rounded-full transition-[width,background-color,opacity] duration-150 ease-out motion-reduce:transition-none',
+                p.seq === hovered
+                  ? 'bg-foreground'
+                  : isCurrent
+                    ? 'bg-primary'
+                    : 'bg-muted-foreground',
+              )}
+              style={{
+                width,
+                opacity: p.seq === hovered || isCurrent ? 1 : 0.35 + 0.5 * near,
+              }}
+            />
+          </button>
+        )
+      })}
       {shown && (
+        // Slides from mark to mark as the pointer moves along them.
         <div
-          className="pointer-events-none absolute left-7 w-72 -translate-y-1/2 rounded-lg border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-md"
-          style={{ top: `${((at + 0.5) / prompts.length) * 100}%` }}
+          className="pointer-events-none absolute w-72 -translate-y-1/2 animate-in rounded-xl border bg-popover/95 px-3 py-2 text-[13px] leading-snug text-popover-foreground shadow-lg backdrop-blur-sm transition-[top] duration-150 ease-out fade-in slide-in-from-left-1 motion-reduce:animate-none motion-reduce:transition-none"
+          style={{ top: `${((at + 0.5) / prompts.length) * 100}%`, left: PEAK_PX + 16 }}
         >
-          <p className="line-clamp-3 break-words">{preview(shown.text) || 'Attachment'}</p>
+          <p className="line-clamp-2 break-words">{preview(shown.text) || 'Attachment'}</p>
           <p className="mt-1 text-xs text-muted-foreground">{pauseLabel(Date.parse(shown.at))}</p>
         </div>
       )}
