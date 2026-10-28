@@ -586,12 +586,15 @@ export function ComputerScreen({
   shell,
   onShell,
   onChange,
+  onCollapse,
 }: {
   thread: Thread
   memberId: string
   shell: boolean
   onShell: (open: boolean) => void
   onChange: () => void
+  /** Back to the conversation, once closed beside the screen. */
+  onCollapse?: () => void
 }) {
   const teammate = thread.teammate
   const control = useControl(thread, memberId, onChange)
@@ -663,6 +666,7 @@ export function ComputerScreen({
           control={mine}
           mode="open"
           toolbar={toolbar}
+          onCollapse={onCollapse}
         />
         {control.error && (
           <p className="absolute top-3 left-1/2 -translate-x-1/2 rounded-lg border bg-background px-3 py-1.5 text-sm text-destructive-text shadow-md">
