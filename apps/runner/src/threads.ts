@@ -193,9 +193,11 @@ const answerOf = (turn: Seat['turn']) =>
 
 /**
  * A member's message, from when it comes in until a teammate reads it. queued:
- * waits for the turns before it. held: its teammate waits on a person (an
- * approval, a question, a ticket); it runs once they answer. steering: being
- * given to the running turn. Then it is shown (its turn started), steered or cancelled.
+ * waits for the turns before it. held: its teammate's call waits on a person's
+ * decision (an approval); it runs once they decide. A ticket or question the
+ * teammate asked holds nothing: it reads the message now (harness/aside.ts).
+ * steering: being given to the running turn. Then it is shown (its turn started),
+ * steered or cancelled.
  */
 type Message = {
   id: string
