@@ -184,7 +184,6 @@ export function judge(
 const RETIRED = ['api-reset']
 
 async function checkFailures(now: number) {
-  for (const kind of RETIRED) await resolve(kind, new Date(now))
   const rules: Rule[] = [...RULES]
   // Each job seen failing lately, and each still alerted on.
   const jobs = new Set(failuresOf('job:', 3 * 60 * MINUTE, now).map((f) => f.kind))
@@ -205,6 +204,7 @@ async function checkFailures(now: number) {
     if (verdict === 'resolve') await resolve(rule.kind, new Date(now))
     else if (verdict !== 'keep') await raise(verdict.alert, new Date(now))
   }
+  for (const kind of RETIRED) await resolve(kind, new Date(now))
 }
 
 /** A cloud computer still creating or starting after this long is stuck. */
