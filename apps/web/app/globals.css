@@ -277,6 +277,28 @@
     }
   }
 
+  /* The other way round, for a thread's title in the sidebar while a teammate works in it
+   * (components/thread-row.tsx): the title stays as bright as the others, and a dimmer band
+   * passes over it. Still for those who ask for less motion. */
+  .text-shimmer-dim {
+    background: linear-gradient(
+        90deg,
+        var(--sidebar-foreground) 40%,
+        var(--muted-foreground) 50%,
+        var(--sidebar-foreground) 60%
+      )
+      0 0 / 250% 100%;
+    background-clip: text;
+    color: transparent;
+    animation: text-shimmer 3s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .text-shimmer-dim {
+      animation: none;
+      color: var(--sidebar-foreground);
+    }
+  }
+
   /* The app's loader: the wordmark, its letters coming into focus one by one, left
    * to right, then blurring out (components/app-loader.tsx). The spans must be
    * inline-block for transform to apply. Still and muted for less motion. */

@@ -222,6 +222,26 @@ const LABELS: Record<string, string> = {
  * updates stopped reaching Brigade (stuck). Otherwise grey: filled while a reply is unread,
  * a ring once read.
  */
+/** What a thread's dot says, in words. */
+export function threadStatusLabel({
+  status,
+  unread = false,
+  stuck = false,
+  ask,
+}: {
+  status: string
+  unread?: boolean
+  stuck?: boolean
+  ask?: string
+}) {
+  const group = groupOf(status)
+  return stuck
+    ? 'updates not arriving'
+    : group === 'waiting' && ask
+      ? ask
+      : (LABELS[status] ?? status) + (group === 'rest' ? (unread ? ', unread' : ', read') : '')
+}
+
 export function ThreadStatusIcon({
   status,
   unread = false,
@@ -236,11 +256,7 @@ export function ThreadStatusIcon({
   className?: string
 }) {
   const group = groupOf(status)
-  const label = stuck
-    ? 'updates not arriving'
-    : group === 'waiting' && ask
-      ? ask
-      : (LABELS[status] ?? status) + (group === 'rest' ? (unread ? ', unread' : ', read') : '')
+  const label = threadStatusLabel({ status, unread, stuck, ask })
   return (
     <span
       role="img"
@@ -251,9 +267,9 @@ export function ThreadStatusIcon({
       {stuck ? (
         <span className="bg-destructive size-2 rounded-full" />
       ) : group === 'working' ? (
-        <span className="bg-primary ring-primary/25 size-2 rounded-full ring-[3px]" />
+        <span className="bg-primary size-2 rounded-full" />
       ) : group === 'waiting' ? (
-        <span className="bg-warning ring-warning/25 size-2 rounded-full ring-[3px]" />
+        <span className="bg-warning size-2 rounded-full" />
       ) : status === 'failed' ? (
         <span className="bg-destructive size-2 rounded-full" />
       ) : unread ? (
@@ -729,27 +745,34 @@ export function SidebarWork({
     setOlder((o) => o.filter((t) => t.id !== id))
     if (threadId === id) router.push('/app')
   }
-  function row(t: ThreadSummary, drag?: ComponentProps<'li'>) {
+  /** `dated`: the thread opened from outside the list, which shows its date to say why it is
+   * at the top. Other rows give it in their tooltip only. */
+  function row(t: ThreadSummary, drag?: ComponentProps<'li'>, dated = false) {
     const href = `/app/threads/${t.id}`
+    const status = {
+      status: t.status,
+      unread: t.unread,
+      stuck: !!t.eventsWaitingSince,
+      ask: asks.get(t.id),
+    }
+    // Working also shows on the title, a band passing over it. Stuck: its red dot alone.
+    const working = statusKey(t) === 'working' && !t.eventsWaitingSince
+    const state = !!(statusKey(t) || t.eventsWaitingSince)
     return (
       <ThreadRow
         key={t.id}
         thread={t}
         href={href}
         active={threadId === t.id && (expanded || pathname === href)}
-        dot={
-          (statusKey(t) || t.eventsWaitingSince) && (
-            <ThreadStatusIcon
-              status={t.status}
-              unread={t.unread}
-              stuck={!!t.eventsWaitingSince}
-              ask={asks.get(t.id)}
-            />
-          )
+        dot={state ? <ThreadStatusIcon {...status} /> : undefined}
+        working={working}
+        hint={
+          state ? `${threadStatusLabel(status)} · ${shortAgo(t.updatedAt)}` : shortAgo(t.updatedAt)
         }
-        // The dot says it waits on a person: the row's end stays how old it is.
         trailing={
-          <span className="text-muted-foreground font-normal">{shortAgo(t.updatedAt)}</span>
+          dated && (
+            <span className="text-muted-foreground font-normal">{shortAgo(t.updatedAt)}</span>
+          )
         }
         memberId={memberId}
         admin={admin}
@@ -797,7 +820,7 @@ export function SidebarWork({
                 : 'No threads yet.'}
         </li>
       )}
-      {opened && row(opened)}
+      {opened && row(opened, undefined, true)}
       {waitingShown.map((t) => row(t))}
       {/* No dot: a control, not a thread; its text lines up with the titles. */}
       {waitingShown.length < waitingRows.length && (

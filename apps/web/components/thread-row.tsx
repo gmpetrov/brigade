@@ -1,7 +1,7 @@
 'use client'
-// A thread in the sidebar, with its menu (thread-menu.tsx): ⋮ on hover in place of the time,
-// or a right-click on the row. Its status dot, when it has one, sits before the time and stays
-// on hover, where it says its word. Rename, or a double-click on the title, edits the title in the
+// A thread in the sidebar, with its menu (thread-menu.tsx): ⋮ on hover in place of its status
+// dot, or a right-click on the row. The dot shows only while the thread has a state; how old it
+// is and what the dot means show on hover, in the row's tooltip. Rename, or a double-click on the title, edits the title in the
 // row itself. Under Pinned, a row can be dragged to another place (`drag`). A thread whose
 // preview is up shows its icon, which opens the preview on hover (and in the menu on phones).
 import { EllipsisVertical, Laptop, Eye } from 'lucide-react'
@@ -24,6 +24,8 @@ export function ThreadRow({
   href,
   active,
   dot,
+  working = false,
+  hint,
   trailing,
   memberId,
   admin,
@@ -36,8 +38,12 @@ export function ThreadRow({
   active: boolean
   /** Before the time, only while the thread has something to say: none when it is idle and read. */
   dot?: ReactNode
-  /** At the row's end: its time or what it asks. Hidden while the menu is in reach. */
-  trailing: ReactNode
+  /** A teammate works in it: a band passes over its title, beside its dot. */
+  working?: boolean
+  /** After the title in its tooltip: what the dot means, and how old the thread is. */
+  hint?: string
+  /** Before the dot, when a row needs more than its title (its date). Hidden with the dot. */
+  trailing?: ReactNode
   memberId: string | null
   admin: boolean
   onChanged: () => void
@@ -92,13 +98,15 @@ export function ThreadRow({
         isActive={active}
         className={cn(
           busy && 'opacity-60',
+          // The dot takes ⋮'s place: no room kept for ⋮ beside it.
+          'group-has-data-[sidebar=menu-action]/menu-item:pr-2',
           // On hover the title makes room for the preview's button beside ⋮.
           thread.previewRunning && 'md:group-hover/menu-item:pr-14!',
         )}
       >
         <Link
           href={href}
-          title={title}
+          title={hint ? `${title} · ${hint}` : title}
           onContextMenu={(e) => {
             e.preventDefault()
             setOpen(true)
@@ -110,18 +118,18 @@ export function ThreadRow({
             setRenaming(true)
           }}
         >
-          <span className="flex-1 truncate">
+          <span className={cn('flex-1 truncate', working && 'text-shimmer-dim')}>
             <StreamedTitle threadId={thread.id} text={title} />
           </span>
-          {dot}
           <span
             className={cn(
               'flex shrink-0 items-center gap-1.5 text-xs',
-              // On a phone ⋮ is always there: the time goes beside it.
+              // On a phone ⋮ is always there: the dot goes beside it.
               'max-md:mr-5 md:group-hover/menu-item:opacity-0',
               open && 'opacity-0',
             )}
           >
+            {trailing}
             {/* Its preview is up: people can try what it builds. */}
             {thread.previewRunning && (
               <span title="Preview running" className="flex">
@@ -136,7 +144,8 @@ export function ThreadRow({
                 <span className="sr-only">Runs on {thread.computer.name}</span>
               </span>
             )}
-            {trailing}
+            {/* Kept empty when there is no dot, so every row's end lines up under ⋮. */}
+            {dot ?? <span aria-hidden className="size-4" />}
           </span>
         </Link>
       </SidebarMenuButton>
