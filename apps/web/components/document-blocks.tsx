@@ -21,7 +21,7 @@ import { isLegacyProjectMention, type Mention } from '@brigade/contracts'
 import { MessageSquare } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   MENTION_GROUPS,
   searchMentions,
@@ -196,14 +196,9 @@ export function DocumentBlockNoteView({
         formattingToolbar={!ask}
       >
         {ask && (
-          <FormattingToolbarController
-            formattingToolbar={() => (
-              <FormattingToolbar>
-                <AskButton key="ask" ask={ask} />
-                {getFormattingToolbarItems()}
-              </FormattingToolbar>
-            )}
-          />
+          <AskContext.Provider value={ask}>
+            <FormattingToolbarController formattingToolbar={AskToolbar} />
+          </AskContext.Provider>
         )}
         <SuggestionMenuController
           triggerCharacter="@"
@@ -212,6 +207,23 @@ export function DocumentBlockNoteView({
         />
       </BlockNoteView>
     </div>
+  )
+}
+
+const AskContext = createContext<DocumentAsk | undefined>(undefined)
+
+/**
+ * BlockNote's toolbar with Ask first. One component for good, with Ask from context: a
+ * component made at each render would be a new one each time, and the toolbar would be
+ * mounted again under the pointer (as a collaborator's cursor moves), losing the click.
+ */
+function AskToolbar() {
+  const ask = useContext(AskContext)
+  return (
+    <FormattingToolbar>
+      {ask && <AskButton key="ask" ask={ask} />}
+      {getFormattingToolbarItems()}
+    </FormattingToolbar>
   )
 }
 
