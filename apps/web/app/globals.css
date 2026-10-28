@@ -878,6 +878,16 @@
   font-family: var(--font-sans);
   padding-inline: 3rem 0.5rem;
 }
+/* On a phone, the text takes the width: no room kept for the block handles,
+ * which a tap would otherwise bring up over its first words (they float outside it). */
+@media (width < 48rem) and (pointer: coarse) {
+  .document-editor .bn-editor {
+    padding-inline: 0.5rem;
+  }
+  .bn-side-menu {
+    display: none;
+  }
+}
 /* Headings sized for a card, not a page. Level 1 is the default and carries no data-level. */
 .document-editor [data-content-type='heading']:not([data-level]) {
   --level: 1.6em;
