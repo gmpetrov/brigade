@@ -4,7 +4,13 @@ import { ReviewChoice } from '@brigade/contracts'
 import { z } from 'zod'
 import { env } from '../config.js'
 import { GITHUB_API } from './github-app.js'
-import { json, op, type ConnectorContext, type ConnectorDefinition } from './types.js'
+import {
+  ConnectorError,
+  json,
+  op,
+  type ConnectorContext,
+  type ConnectorDefinition,
+} from './types.js'
 
 type User = { login: string } | null
 type Label = { name: string } | string
@@ -729,6 +735,39 @@ export const github: ConnectorDefinition = {
           }),
         ),
     }),
+    github_mark_ready_for_review: op({
+      description:
+        'Take a draft pull request out of draft, so it can be reviewed and merged; with draft: true, ' +
+        'turn an open pull request back into a draft.',
+      write: true,
+      input: z.object({
+        repository: repo,
+        number,
+        draft: z.boolean().default(false).describe('true: turn it back into a draft'),
+      }),
+      target: (i) =>
+        `${i.repository}#${i.number} (${i.draft ? 'back to draft' : 'ready for review'})`,
+      run: async (ctx, i) => {
+        const found = await get<PullRequest & { node_id: string }>(
+          ctx,
+          `${repoPath(i.repository)}/pulls/${i.number}`,
+        )
+        if (found.merged_at) throw new Error(`#${i.number} is already merged`)
+        if (found.state !== 'open') throw new Error(`#${i.number} is closed`)
+        const changed = Boolean(found.draft) !== i.draft
+        // Only GitHub's GraphQL API moves a pull request in or out of draft.
+        if (changed) {
+          const mutation = i.draft ? 'convertPullRequestToDraft' : 'markPullRequestReadyForReview'
+          const result = await send<{ errors?: { message: string }[] }>(ctx, 'POST', '/graphql', {
+            query: `mutation($id: ID!) { ${mutation}(input: { pullRequestId: $id }) { pullRequest { isDraft } } }`,
+            variables: { id: found.node_id },
+          })
+          if (result.errors?.length)
+            throw new ConnectorError(result.errors.map((e) => e.message).join('; '))
+        }
+        return { ...pull({ ...found, draft: i.draft }), changed }
+      },
+    }),
     github_merge_pull_request: op({
       description:
         'Merge an open pull request, when a person asked you to; never on your own initiative. ' +
@@ -746,7 +785,10 @@ export const github: ConnectorDefinition = {
         const found = await get<PullRequest>(ctx, path)
         if (found.merged_at) throw new Error(`#${i.number} is already merged`)
         if (found.state !== 'open') throw new Error(`#${i.number} is closed`)
-        if (found.draft) throw new Error(`#${i.number} is a draft; mark it ready for review first`)
+        if (found.draft)
+          throw new Error(
+            `#${i.number} is a draft; take it out of draft first (github_mark_ready_for_review)`,
+          )
         // On its own after its checks: only the commit they passed on. GitHub refuses the sha
         // too, should the head move between this read and the merge.
         const checked = ctx.checkedSha
