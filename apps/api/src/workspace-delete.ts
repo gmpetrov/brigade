@@ -9,9 +9,10 @@ import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { guardWorkspaceDeletion } from './billing.js'
 import { deleteObject, listObjects, workspacePrefix } from './bucket.js'
-import { destroyComputerVm, forgetPreviewAddress } from './cloud.js'
+import { cloudAvailable, destroyComputerVm, forgetPreviewAddress } from './cloud.js'
 import { notifyCollab } from './collab.js'
 import { Prisma, prisma, scoped } from './db.js'
+import { BEING_DELETED, lowerFence, raiseFence } from './deletion-fence.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
 import { hubs } from './hub.js'
 import { removeFromResend } from './mail/domains.js'
@@ -24,6 +25,8 @@ const BUSY: SessionStatus[] = ['starting', 'running']
 
 /** A replacement of the cloud computer under way makes a new VM: none may be left behind. */
 const REPLACING = ['backing_up', 'creating', 'restoring']
+
+const VM_NOT_DELETED = 'The cloud computer could not be deleted: try again later'
 
 /** Who deletes it: an owner of its organization. */
 type Deleter = { userId: string; memberId: string }
@@ -81,6 +84,29 @@ export async function deleteWorkspace(
     memberId: by.memberId,
     role: 'owner',
   }
+
+  // From here on no new work starts in it (src/deletion-fence.ts): what runs already is refused
+  // below, and what starts meanwhile is caught by the second check before its rows go.
+  if (!(await raiseFence(workspaceId)))
+    throw new HTTPException(409, { message: `${BEING_DELETED} already` })
+  try {
+    return await deleteFenced(workspace, scope, options)
+  } catch (error) {
+    // Refused or failed: the workspace works again, and its deletion can be tried again.
+    await lowerFence(workspaceId).catch((failure: unknown) =>
+      console.warn(`deleting ${workspaceId}: fence not lowered`, failure),
+    )
+    throw error
+  }
+}
+
+async function deleteFenced(
+  workspace: { id: string; name: string },
+  scope: WorkspaceScope,
+  options: { keepOrganization?: boolean },
+) {
+  const { organizationId, workspaceId } = scope
+  const by = { userId: scope.userId, memberId: scope.memberId }
   const db = scoped(scope)
   const actor = { type: 'member' as const, id: by.memberId }
 
@@ -124,11 +150,19 @@ export async function deleteWorkspace(
       where: { workspaceId, oldProviderRef: { not: Prisma.AnyNull } },
       select: { id: true, oldProviderRef: true },
     })
+    // A VM this API has no provider to reach would be left running, and billed, with nothing
+    // pointing to it any more: refused, its reference kept, until a provider is configured.
+    const vms =
+      computers.filter((c) => c.kind === 'cloud' && c.providerRef).length + replaced.length
+    if (vms && !cloudAvailable()) {
+      console.error(`deleting ${workspaceId}: ${vms} VM(s) but no cloud provider configured`)
+      throw new HTTPException(503, { message: VM_NOT_DELETED })
+    }
     try {
       for (const computer of computers) {
         if (computer.kind !== 'cloud' || !computer.providerRef) continue
         if (!(await destroyComputerVm(computer)))
-          console.warn(`deleting ${workspaceId}: no provider here to destroy ${computer.id}'s VM`)
+          throw new HTTPException(503, { message: VM_NOT_DELETED })
         await hub.dropRunner(computer.id)
         await prisma.computer.update({
           where: { id: computer.id },
@@ -137,13 +171,14 @@ export async function deleteWorkspace(
       }
       for (const old of replaced) {
         if (!(await destroyComputerVm({ providerRef: old.oldProviderRef })))
-          console.warn(`deleting ${workspaceId}: no provider here to destroy a replaced VM`)
+          throw new HTTPException(503, { message: VM_NOT_DELETED })
         await prisma.computerReplacement.update({
           where: { id: old.id },
           data: { oldProviderRef: Prisma.DbNull },
         })
       }
     } catch (error) {
+      if (error instanceof HTTPException) throw error
       console.error(`deleting ${workspaceId}: the cloud computer was not destroyed`, error)
       throw new HTTPException(502, {
         message:
@@ -187,6 +222,8 @@ export async function deleteWorkspace(
     // The rows, in one go with the promise to empty its bucket folder: never one without the
     // other. Sessions on it move to another workspace of the organization, or to none.
     const prefix = workspacePrefix(scope)
+    // Renewed for the last step, however long the ones before took.
+    await raiseFence(workspaceId, true)
     const deletedAt = new Date()
     const organizationGone = await prisma.$transaction(
       async (tx) => {

@@ -46,13 +46,16 @@ async function reachable() {
 }
 const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env DATABASE_URL)'
 
-const { prisma } = await import('../src/db.js')
+const { prisma, Prisma, scoped } = await import('../src/db.js')
 const billing = await import('../src/billing.js')
 const { auth } = await import('../src/auth.js')
 const { getObject, putObject, threadFileKey, workspacePrefix } = await import('../src/bucket.js')
 const { deleteWorkspace, sweepDeletedWorkspaces } = await import('../src/workspace-delete.js')
 const { LATE_UPLOADS_MS } = await import('../src/thread-delete.js')
 const { workspaces } = await import('../src/routes/workspaces.js')
+const { BEING_DELETED, raiseFence } = await import('../src/deletion-fence.js')
+const { promptThread, startThread } = await import('../src/work.js')
+const { cloudAvailable } = await import('../src/cloud.js')
 
 // --- Stripe, faked -------------------------------------------------------------------------
 
@@ -345,6 +348,99 @@ test('a cleanup whose workspace is still there leaves its files alone', { skip }
     null,
   )
 })
+
+test(
+  'no new thread or turn starts while it is being deleted; a refusal lifts the fence',
+  { skip },
+  async () => {
+    const ada = await person('Ada8')
+    const org = await organization([{ userId: ada.userId, role: 'owner' }], ['Fenced'])
+    const scope = { organizationId: org.organizationId, workspaceId: org.workspaces[0]!.id }
+    const memberId = org.members[ada.userId]!
+    const db = scoped(scope)
+    const teammate = await prisma.teammate.create({ data: { ...scope, name: 'Riley' } })
+    const computer = await prisma.computer.create({
+      data: { ...scope, kind: 'member_machine', memberId, name: 'Laptop', status: 'running' },
+    })
+    const start = () =>
+      startThread(db, scope, {
+        teammate: { id: teammate.id, name: teammate.name, harness: 'claude_code' },
+        computer: { id: computer.id },
+        memberId,
+        title: 'Late',
+        text: 'Started during the deletion',
+      })
+    const fenced = (error: { status?: number; message?: string }) =>
+      error.status === 409 && error.message === BEING_DELETED
+
+    // As a deletion under way holds it: no thread starts, no turn goes, no second deletion.
+    assert.ok(await raiseFence(scope.workspaceId))
+    await assert.rejects(start(), fenced)
+    await assert.rejects(promptThread(db, scope, {} as never, { text: 'more', memberId }), fenced)
+    assert.equal(await prisma.session.count({ where: { workspaceId: scope.workspaceId } }), 0)
+    await assert.rejects(
+      deleteWorkspace(scope, { userId: ada.userId, memberId }),
+      (error: { status?: number }) => error.status === 409,
+    )
+
+    // A deletion refused (a turn that started before the fence) lifts the fence it put up.
+    await prisma.workspace.update({ where: { id: scope.workspaceId }, data: { deletingAt: null } })
+    await thread(scope, memberId, 'running')
+    await assert.rejects(
+      deleteWorkspace(scope, { userId: ada.userId, memberId }),
+      (error: { status?: number }) => error.status === 409,
+    )
+    const after = await prisma.workspace.findUniqueOrThrow({ where: { id: scope.workspaceId } })
+    assert.equal(after.deletingAt, null)
+    // Work starts again: past the fence, it stops only for want of an AI account here.
+    await assert.rejects(start(), (error: { message?: string }) => error.message !== BEING_DELETED)
+  },
+)
+
+test(
+  'a VM no provider here can reach is not forgotten: the deletion is refused',
+  { skip },
+  async (t) => {
+    if (cloudAvailable()) return t.skip('a cloud provider is configured here')
+    const ada = await person('Ada9')
+    const org = await organization([{ userId: ada.userId, role: 'owner' }], ['Cloudy'])
+    const scope = { organizationId: org.organizationId, workspaceId: org.workspaces[0]!.id }
+    const memberId = org.members[ada.userId]!
+    const ref = { provider: 'boat', id: `vm-${id}` }
+    const computer = await prisma.computer.create({
+      data: {
+        ...scope,
+        kind: 'cloud',
+        name: 'Cloud computer',
+        status: 'stopped',
+        providerRef: ref,
+      },
+    })
+    const refused = (error: { status?: number; message?: string }) =>
+      error.status === 503 && /could not be deleted/.test(error.message ?? '')
+    await assert.rejects(deleteWorkspace(scope, { userId: ada.userId, memberId }), refused)
+    const kept = await prisma.computer.findUniqueOrThrow({ where: { id: computer.id } })
+    assert.deepEqual(kept.providerRef, ref)
+    assert.notEqual(kept.status, 'destroyed')
+    const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: scope.workspaceId } })
+    assert.equal(workspace.deletingAt, null)
+
+    // A VM a replacement left behind, too.
+    await prisma.computer.update({
+      where: { id: computer.id },
+      data: { providerRef: Prisma.DbNull },
+    })
+    await prisma.computerReplacement.create({
+      data: { ...scope, computerId: computer.id, memberId, phase: 'done', oldProviderRef: ref },
+    })
+    await assert.rejects(deleteWorkspace(scope, { userId: ada.userId, memberId }), refused)
+    const replacement = await prisma.computerReplacement.findFirstOrThrow({
+      where: { computerId: computer.id },
+    })
+    assert.deepEqual(replacement.oldProviderRef, ref)
+    assert.ok(await prisma.workspace.findUnique({ where: { id: scope.workspaceId } }))
+  },
+)
 
 // --- Deleting an account -------------------------------------------------------------------
 

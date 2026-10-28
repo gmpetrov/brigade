@@ -31,6 +31,7 @@ export type WorkspaceMinAggregateOutputType = {
   logo: string | null
   stripeCustomerId: string | null
   hubMode: $Enums.HubMode | null
+  deletingAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -42,6 +43,7 @@ export type WorkspaceMaxAggregateOutputType = {
   logo: string | null
   stripeCustomerId: string | null
   hubMode: $Enums.HubMode | null
+  deletingAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -53,6 +55,7 @@ export type WorkspaceCountAggregateOutputType = {
   logo: number
   stripeCustomerId: number
   hubMode: number
+  deletingAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -66,6 +69,7 @@ export type WorkspaceMinAggregateInputType = {
   logo?: true
   stripeCustomerId?: true
   hubMode?: true
+  deletingAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -77,6 +81,7 @@ export type WorkspaceMaxAggregateInputType = {
   logo?: true
   stripeCustomerId?: true
   hubMode?: true
+  deletingAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -88,6 +93,7 @@ export type WorkspaceCountAggregateInputType = {
   logo?: true
   stripeCustomerId?: true
   hubMode?: true
+  deletingAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -172,6 +178,7 @@ export type WorkspaceGroupByOutputType = {
   logo: string | null
   stripeCustomerId: string | null
   hubMode: $Enums.HubMode
+  deletingAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: WorkspaceCountAggregateOutputType | null
@@ -204,6 +211,7 @@ export type WorkspaceWhereInput = {
   logo?: Prisma.StringNullableFilter<"Workspace"> | string | null
   stripeCustomerId?: Prisma.StringNullableFilter<"Workspace"> | string | null
   hubMode?: Prisma.EnumHubModeFilter<"Workspace"> | $Enums.HubMode
+  deletingAt?: Prisma.DateTimeNullableFilter<"Workspace"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
@@ -277,6 +285,7 @@ export type WorkspaceOrderByWithRelationInput = {
   logo?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
   hubMode?: Prisma.SortOrder
+  deletingAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   organization?: Prisma.OrganizationOrderByWithRelationInput
@@ -353,6 +362,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   logo?: Prisma.StringNullableFilter<"Workspace"> | string | null
   stripeCustomerId?: Prisma.StringNullableFilter<"Workspace"> | string | null
   hubMode?: Prisma.EnumHubModeFilter<"Workspace"> | $Enums.HubMode
+  deletingAt?: Prisma.DateTimeNullableFilter<"Workspace"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
@@ -426,6 +436,7 @@ export type WorkspaceOrderByWithAggregationInput = {
   logo?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
   hubMode?: Prisma.SortOrder
+  deletingAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.WorkspaceCountOrderByAggregateInput
@@ -443,6 +454,7 @@ export type WorkspaceScalarWhereWithAggregatesInput = {
   logo?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null
   stripeCustomerId?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null
   hubMode?: Prisma.EnumHubModeWithAggregatesFilter<"Workspace"> | $Enums.HubMode
+  deletingAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Workspace"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Workspace"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Workspace"> | Date | string
 }
@@ -453,6 +465,7 @@ export type WorkspaceCreateInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -526,6 +539,7 @@ export type WorkspaceUncheckedCreateInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -597,6 +611,7 @@ export type WorkspaceUpdateInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -670,6 +685,7 @@ export type WorkspaceUncheckedUpdateInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -742,6 +758,7 @@ export type WorkspaceCreateManyInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -752,6 +769,7 @@ export type WorkspaceUpdateManyMutationInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -763,6 +781,7 @@ export type WorkspaceUncheckedUpdateManyInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -789,6 +808,7 @@ export type WorkspaceCountOrderByAggregateInput = {
   logo?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   hubMode?: Prisma.SortOrder
+  deletingAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -800,6 +820,7 @@ export type WorkspaceMaxOrderByAggregateInput = {
   logo?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   hubMode?: Prisma.SortOrder
+  deletingAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -811,6 +832,7 @@ export type WorkspaceMinOrderByAggregateInput = {
   logo?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   hubMode?: Prisma.SortOrder
+  deletingAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -1728,6 +1750,7 @@ export type WorkspaceCreateWithoutBillingSubscriptionsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -1800,6 +1823,7 @@ export type WorkspaceUncheckedCreateWithoutBillingSubscriptionsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1886,6 +1910,7 @@ export type WorkspaceUpdateWithoutBillingSubscriptionsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -1958,6 +1983,7 @@ export type WorkspaceUncheckedUpdateWithoutBillingSubscriptionsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2028,6 +2054,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
@@ -2099,6 +2126,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2200,6 +2228,7 @@ export type WorkspaceScalarWhereInput = {
   logo?: Prisma.StringNullableFilter<"Workspace"> | string | null
   stripeCustomerId?: Prisma.StringNullableFilter<"Workspace"> | string | null
   hubMode?: Prisma.EnumHubModeFilter<"Workspace"> | $Enums.HubMode
+  deletingAt?: Prisma.DateTimeNullableFilter<"Workspace"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string
 }
@@ -2210,6 +2239,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -2282,6 +2312,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2368,6 +2399,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -2440,6 +2472,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2510,6 +2543,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -2582,6 +2616,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2668,6 +2703,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -2740,6 +2776,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2810,6 +2847,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -2882,6 +2920,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2968,6 +3007,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -3040,6 +3080,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3110,6 +3151,7 @@ export type WorkspaceCreateWithoutThreadReadsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -3182,6 +3224,7 @@ export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3268,6 +3311,7 @@ export type WorkspaceUpdateWithoutThreadReadsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -3340,6 +3384,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3410,6 +3455,7 @@ export type WorkspaceCreateWithoutThreadPinsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -3482,6 +3528,7 @@ export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3568,6 +3615,7 @@ export type WorkspaceUpdateWithoutThreadPinsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -3640,6 +3688,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3710,6 +3759,7 @@ export type WorkspaceCreateWithoutSidebarOrdersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -3782,6 +3832,7 @@ export type WorkspaceUncheckedCreateWithoutSidebarOrdersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3868,6 +3919,7 @@ export type WorkspaceUpdateWithoutSidebarOrdersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -3940,6 +3992,7 @@ export type WorkspaceUncheckedUpdateWithoutSidebarOrdersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4010,6 +4063,7 @@ export type WorkspaceCreateWithoutThreadLatersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -4082,6 +4136,7 @@ export type WorkspaceUncheckedCreateWithoutThreadLatersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4168,6 +4223,7 @@ export type WorkspaceUpdateWithoutThreadLatersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -4240,6 +4296,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadLatersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4310,6 +4367,7 @@ export type WorkspaceCreateWithoutHomeDismissalsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -4382,6 +4440,7 @@ export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4468,6 +4527,7 @@ export type WorkspaceUpdateWithoutHomeDismissalsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -4540,6 +4600,7 @@ export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4610,6 +4671,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -4682,6 +4744,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4768,6 +4831,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -4840,6 +4904,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4910,6 +4975,7 @@ export type WorkspaceCreateWithoutTasksInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -4982,6 +5048,7 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5068,6 +5135,7 @@ export type WorkspaceUpdateWithoutTasksInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -5140,6 +5208,7 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5210,6 +5279,7 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -5282,6 +5352,7 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5368,6 +5439,7 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -5440,6 +5512,7 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5510,6 +5583,7 @@ export type WorkspaceCreateWithoutWakeupsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -5582,6 +5656,7 @@ export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5668,6 +5743,7 @@ export type WorkspaceUpdateWithoutWakeupsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -5740,6 +5816,7 @@ export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5810,6 +5887,7 @@ export type WorkspaceCreateWithoutReplyWatchesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -5882,6 +5960,7 @@ export type WorkspaceUncheckedCreateWithoutReplyWatchesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5968,6 +6047,7 @@ export type WorkspaceUpdateWithoutReplyWatchesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -6040,6 +6120,7 @@ export type WorkspaceUncheckedUpdateWithoutReplyWatchesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6110,6 +6191,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -6182,6 +6264,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6268,6 +6351,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -6340,6 +6424,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6410,6 +6495,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -6482,6 +6568,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6568,6 +6655,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -6640,6 +6728,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6710,6 +6799,7 @@ export type WorkspaceCreateWithoutTokenUsageInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -6782,6 +6872,7 @@ export type WorkspaceUncheckedCreateWithoutTokenUsageInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6868,6 +6959,7 @@ export type WorkspaceUpdateWithoutTokenUsageInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -6940,6 +7032,7 @@ export type WorkspaceUncheckedUpdateWithoutTokenUsageInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7010,6 +7103,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -7082,6 +7176,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7168,6 +7263,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -7240,6 +7336,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7310,6 +7407,7 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -7382,6 +7480,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7468,6 +7567,7 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -7540,6 +7640,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7610,6 +7711,7 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -7682,6 +7784,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7768,6 +7871,7 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -7840,6 +7944,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7910,6 +8015,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -7982,6 +8088,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8068,6 +8175,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -8140,6 +8248,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8210,6 +8319,7 @@ export type WorkspaceCreateWithoutAppsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -8282,6 +8392,7 @@ export type WorkspaceUncheckedCreateWithoutAppsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8368,6 +8479,7 @@ export type WorkspaceUpdateWithoutAppsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -8440,6 +8552,7 @@ export type WorkspaceUncheckedUpdateWithoutAppsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8510,6 +8623,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -8582,6 +8696,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8668,6 +8783,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -8740,6 +8856,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8810,6 +8927,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -8882,6 +9000,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8968,6 +9087,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -9040,6 +9160,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9110,6 +9231,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -9182,6 +9304,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9268,6 +9391,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -9340,6 +9464,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9410,6 +9535,7 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -9482,6 +9608,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9568,6 +9695,7 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -9640,6 +9768,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9710,6 +9839,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -9782,6 +9912,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9868,6 +9999,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -9940,6 +10072,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10010,6 +10143,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -10082,6 +10216,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10168,6 +10303,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -10240,6 +10376,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10310,6 +10447,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -10382,6 +10520,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10468,6 +10607,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -10540,6 +10680,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10610,6 +10751,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -10682,6 +10824,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10768,6 +10911,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -10840,6 +10984,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10910,6 +11055,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -10982,6 +11128,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11068,6 +11215,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -11140,6 +11288,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11210,6 +11359,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -11282,6 +11432,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11368,6 +11519,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -11440,6 +11592,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11510,6 +11663,7 @@ export type WorkspaceCreateWithoutDocumentPinsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -11582,6 +11736,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentPinsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11668,6 +11823,7 @@ export type WorkspaceUpdateWithoutDocumentPinsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -11740,6 +11896,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentPinsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11810,6 +11967,7 @@ export type WorkspaceCreateWithoutLibraryFoldersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -11882,6 +12040,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11968,6 +12127,7 @@ export type WorkspaceUpdateWithoutLibraryFoldersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -12040,6 +12200,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12110,6 +12271,7 @@ export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -12182,6 +12344,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12268,6 +12431,7 @@ export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -12340,6 +12504,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12410,6 +12575,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -12482,6 +12648,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12568,6 +12735,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -12640,6 +12808,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12710,6 +12879,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -12782,6 +12952,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -12868,6 +13039,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -12940,6 +13112,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13010,6 +13183,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -13082,6 +13256,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13168,6 +13343,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -13240,6 +13416,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13310,6 +13487,7 @@ export type WorkspaceCreateWithoutDesignSystemsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -13382,6 +13560,7 @@ export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13468,6 +13647,7 @@ export type WorkspaceUpdateWithoutDesignSystemsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -13540,6 +13720,7 @@ export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13610,6 +13791,7 @@ export type WorkspaceCreateWithoutSkillsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -13682,6 +13864,7 @@ export type WorkspaceUncheckedCreateWithoutSkillsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -13768,6 +13951,7 @@ export type WorkspaceUpdateWithoutSkillsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -13840,6 +14024,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -13910,6 +14095,7 @@ export type WorkspaceCreateWithoutSkillPacksInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -13982,6 +14168,7 @@ export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14068,6 +14255,7 @@ export type WorkspaceUpdateWithoutSkillPacksInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -14140,6 +14328,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14210,6 +14399,7 @@ export type WorkspaceCreateWithoutPreviewRecipesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -14282,6 +14472,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14368,6 +14559,7 @@ export type WorkspaceUpdateWithoutPreviewRecipesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -14440,6 +14632,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14510,6 +14703,7 @@ export type WorkspaceCreateWithoutPreviewVariablesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -14582,6 +14776,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14668,6 +14863,7 @@ export type WorkspaceUpdateWithoutPreviewVariablesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -14740,6 +14936,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -14810,6 +15007,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -14882,6 +15080,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -14968,6 +15167,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -15040,6 +15240,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15110,6 +15311,7 @@ export type WorkspaceCreateWithoutProjectRepositoriesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -15182,6 +15384,7 @@ export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15268,6 +15471,7 @@ export type WorkspaceUpdateWithoutProjectRepositoriesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -15340,6 +15544,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15410,6 +15615,7 @@ export type WorkspaceCreateWithoutPushNoticesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -15482,6 +15688,7 @@ export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15568,6 +15775,7 @@ export type WorkspaceUpdateWithoutPushNoticesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -15640,6 +15848,7 @@ export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -15710,6 +15919,7 @@ export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -15782,6 +15992,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -15868,6 +16079,7 @@ export type WorkspaceUpdateWithoutPlaybookInstallationsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -15940,6 +16152,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16010,6 +16223,7 @@ export type WorkspaceCreateWithoutPlaybookActionsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -16082,6 +16296,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16168,6 +16383,7 @@ export type WorkspaceUpdateWithoutPlaybookActionsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -16240,6 +16456,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16310,6 +16527,7 @@ export type WorkspaceCreateWithoutPlaybookRunsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -16382,6 +16600,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16468,6 +16687,7 @@ export type WorkspaceUpdateWithoutPlaybookRunsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -16540,6 +16760,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16610,6 +16831,7 @@ export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -16682,6 +16904,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -16768,6 +16991,7 @@ export type WorkspaceUpdateWithoutPlaybookDryRunsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -16840,6 +17064,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -16910,6 +17135,7 @@ export type WorkspaceCreateWithoutThreadFollowsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -16982,6 +17208,7 @@ export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17068,6 +17295,7 @@ export type WorkspaceUpdateWithoutThreadFollowsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -17140,6 +17368,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17210,6 +17439,7 @@ export type WorkspaceCreateWithoutMailProjectsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -17282,6 +17512,7 @@ export type WorkspaceUncheckedCreateWithoutMailProjectsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17368,6 +17599,7 @@ export type WorkspaceUpdateWithoutMailProjectsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -17440,6 +17672,7 @@ export type WorkspaceUncheckedUpdateWithoutMailProjectsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17510,6 +17743,7 @@ export type WorkspaceCreateWithoutMailAliasesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -17582,6 +17816,7 @@ export type WorkspaceUncheckedCreateWithoutMailAliasesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17668,6 +17903,7 @@ export type WorkspaceUpdateWithoutMailAliasesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -17740,6 +17976,7 @@ export type WorkspaceUncheckedUpdateWithoutMailAliasesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -17810,6 +18047,7 @@ export type WorkspaceCreateWithoutMailMessagesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -17882,6 +18120,7 @@ export type WorkspaceUncheckedCreateWithoutMailMessagesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -17968,6 +18207,7 @@ export type WorkspaceUpdateWithoutMailMessagesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -18040,6 +18280,7 @@ export type WorkspaceUncheckedUpdateWithoutMailMessagesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18110,6 +18351,7 @@ export type WorkspaceCreateWithoutMailDomainsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -18182,6 +18424,7 @@ export type WorkspaceUncheckedCreateWithoutMailDomainsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18268,6 +18511,7 @@ export type WorkspaceUpdateWithoutMailDomainsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -18340,6 +18584,7 @@ export type WorkspaceUncheckedUpdateWithoutMailDomainsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18410,6 +18655,7 @@ export type WorkspaceCreateWithoutContactsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -18482,6 +18728,7 @@ export type WorkspaceUncheckedCreateWithoutContactsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18568,6 +18815,7 @@ export type WorkspaceUpdateWithoutContactsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -18640,6 +18888,7 @@ export type WorkspaceUncheckedUpdateWithoutContactsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -18710,6 +18959,7 @@ export type WorkspaceCreateWithoutContactHandlesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -18782,6 +19032,7 @@ export type WorkspaceUncheckedCreateWithoutContactHandlesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -18868,6 +19119,7 @@ export type WorkspaceUpdateWithoutContactHandlesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -18940,6 +19192,7 @@ export type WorkspaceUncheckedUpdateWithoutContactHandlesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19010,6 +19263,7 @@ export type WorkspaceCreateWithoutHeldCallsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -19082,6 +19336,7 @@ export type WorkspaceUncheckedCreateWithoutHeldCallsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19168,6 +19423,7 @@ export type WorkspaceUpdateWithoutHeldCallsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -19240,6 +19496,7 @@ export type WorkspaceUncheckedUpdateWithoutHeldCallsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19310,6 +19567,7 @@ export type WorkspaceCreateWithoutRunnerCommandsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -19382,6 +19640,7 @@ export type WorkspaceUncheckedCreateWithoutRunnerCommandsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19468,6 +19727,7 @@ export type WorkspaceUpdateWithoutRunnerCommandsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -19540,6 +19800,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnerCommandsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19610,6 +19871,7 @@ export type WorkspaceCreateWithoutSpecPartsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -19682,6 +19944,7 @@ export type WorkspaceUncheckedCreateWithoutSpecPartsInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -19768,6 +20031,7 @@ export type WorkspaceUpdateWithoutSpecPartsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -19840,6 +20104,7 @@ export type WorkspaceUncheckedUpdateWithoutSpecPartsInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -19910,6 +20175,7 @@ export type WorkspaceCreateWithoutTriggerDeliveriesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
@@ -19982,6 +20248,7 @@ export type WorkspaceUncheckedCreateWithoutTriggerDeliveriesInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -20068,6 +20335,7 @@ export type WorkspaceUpdateWithoutTriggerDeliveriesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
@@ -20140,6 +20408,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggerDeliveriesInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20210,6 +20479,7 @@ export type WorkspaceCreateManyOrganizationInput = {
   logo?: string | null
   stripeCustomerId?: string | null
   hubMode?: $Enums.HubMode
+  deletingAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -20220,6 +20490,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
@@ -20291,6 +20562,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -20362,6 +20634,7 @@ export type WorkspaceUncheckedUpdateManyWithoutOrganizationInput = {
   logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   hubMode?: Prisma.EnumHubModeFieldUpdateOperationsInput | $Enums.HubMode
+  deletingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -20944,6 +21217,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   logo?: boolean
   stripeCustomerId?: boolean
   hubMode?: boolean
+  deletingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
@@ -21018,6 +21292,7 @@ export type WorkspaceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   logo?: boolean
   stripeCustomerId?: boolean
   hubMode?: boolean
+  deletingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
@@ -21030,6 +21305,7 @@ export type WorkspaceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   logo?: boolean
   stripeCustomerId?: boolean
   hubMode?: boolean
+  deletingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
@@ -21042,11 +21318,12 @@ export type WorkspaceSelectScalar = {
   logo?: boolean
   stripeCustomerId?: boolean
   hubMode?: boolean
+  deletingAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type WorkspaceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "name" | "logo" | "stripeCustomerId" | "hubMode" | "createdAt" | "updatedAt", ExtArgs["result"]["workspace"]>
+export type WorkspaceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "name" | "logo" | "stripeCustomerId" | "hubMode" | "deletingAt" | "createdAt" | "updatedAt", ExtArgs["result"]["workspace"]>
 export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   computers?: boolean | Prisma.Workspace$computersArgs<ExtArgs>
@@ -21204,6 +21481,11 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
      * every other workspace's, or in a Durable Object of its own. Changed with POST /ops/hubs.
      */
     hubMode: $Enums.HubMode
+    /**
+     * Set while it is being deleted (src/deletion-fence.ts): no new thread, turn or cloud computer
+     * starts. Cleared when the deletion is refused or fails; older than its lease, it holds no more.
+     */
+    deletingAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["workspace"]>
@@ -21697,6 +21979,7 @@ export interface WorkspaceFieldRefs {
   readonly logo: Prisma.FieldRef<"Workspace", 'String'>
   readonly stripeCustomerId: Prisma.FieldRef<"Workspace", 'String'>
   readonly hubMode: Prisma.FieldRef<"Workspace", 'HubMode'>
+  readonly deletingAt: Prisma.FieldRef<"Workspace", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Workspace", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Workspace", 'DateTime'>
 }

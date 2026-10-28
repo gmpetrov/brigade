@@ -13,6 +13,7 @@ import { audit } from './audit.js'
 import { capLabel, turnCapReached } from './caps.js'
 import type { RunnerToApi } from '@brigade/contracts'
 import { scoped, type Scope, type ScopedDb } from './db.js'
+import { refuseWhileDeleting } from './deletion-fence.js'
 import { hubs, threadUpdated } from './hub.js'
 import { isKept } from './runner-commands.js'
 import { usableAccounts } from './routes/accounts.js'
@@ -93,6 +94,8 @@ export async function promptThread(
     commandId?: string
   } = {},
 ): Promise<'sent' | 'queued' | 'offline' | 'paused'> {
+  // Every turn starts here: none in a workspace being deleted, whose computer and Apps are going.
+  await refuseWhileDeleting(scope.workspaceId)
   // Moving, the thread is on neither computer for good: what is sent now could be lost on
   // the old one, or reach the new one before its runner can take the thread in.
   if (thread.move && !options.moving)
@@ -405,6 +408,8 @@ export async function startThread(
     id?: string
   },
 ) {
+  // Nor a new thread, before its row is made (members, triggers, schedules, tasks, children).
+  await refuseWhileDeleting(scope.workspaceId)
   // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
   const teammateIds = [
     input.teammate.id,

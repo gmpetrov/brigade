@@ -221,6 +221,9 @@ model Workspace {
   /// Where its hub runs on Cloudflare (docs/workspace-hubs-plan.md): in the Api object with
   /// every other workspace's, or in a Durable Object of its own. Changed with POST /ops/hubs.
   hubMode               HubMode                @default(api)
+  /// Set while it is being deleted (src/deletion-fence.ts): no new thread, turn or cloud computer
+  /// starts. Cleared when the deletion is refused or fails; older than its lease, it holds no more.
+  deletingAt            DateTime?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   computers             Computer[]

@@ -7052,6 +7052,7 @@ export const WorkspaceScalarFieldEnum = {
   logo: 'logo',
   stripeCustomerId: 'stripeCustomerId',
   hubMode: 'hubMode',
+  deletingAt: 'deletingAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

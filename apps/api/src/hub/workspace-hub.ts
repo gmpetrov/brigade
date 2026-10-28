@@ -13,6 +13,7 @@ import {
 } from '@brigade/contracts'
 import { wake } from '../cloud.js'
 import { prisma } from '../db.js'
+import { beingDeleted } from '../deletion-fence.js'
 import { movesOn } from '../move.js'
 import { noteFailure } from '../ops/failures.js'
 import {
@@ -403,6 +404,9 @@ export class WorkspaceHub {
   /** Send a kept command on this connection, unless an older runner took it already. */
   async sendKept(computerId: string, conn: RunnerConn, kept: DurableCommand) {
     const protocol = conn.protocolVersion ?? 0
+    // A turn kept before its workspace's deletion began: held, pending, until the deletion is
+    // done (and the command with it) or has failed.
+    if (kept.type === 'thread.prompt' && (await beingDeleted(this.workspaceId))) return
     // Not where its thread is now: not sent.
     if (!(await asOfNow(computerId, kept))) return
     // Claimed, as it is now (runner-commands.ts).

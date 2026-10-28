@@ -22,6 +22,7 @@ import { audit } from './audit.js'
 import { requireCloudPlan } from './billing.js'
 import { isProvisioning, startProvision, stopOldVm } from './cloud.js'
 import { Prisma, prisma, type Scope } from './db.js'
+import { BEING_DELETED, beingDeleted } from './deletion-fence.js'
 import { hubs } from './hub.js'
 import { currentHub } from './hub/context.js'
 import { noteFailure } from './ops/failures.js'
@@ -105,6 +106,8 @@ export async function replaceComputer(scope: Scope, computerId: string, memberId
   const making = await hub.isProvisioning(computerId)
   const row = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`cloud:${scope.workspaceId}`}))`
+    if (await beingDeleted(scope.workspaceId, tx))
+      throw new HTTPException(409, { message: BEING_DELETED })
     const computer = await tx.computer.findFirst({
       where: { id: computerId, ...scope, kind: 'cloud', status: { not: 'destroyed' } },
     })

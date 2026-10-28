@@ -1,3 +1,6 @@
+-- A workspace being deleted starts no new work (src/deletion-fence.ts).
+ALTER TABLE "Workspace" ADD COLUMN "deletingAt" TIMESTAMP(3);
+
 -- A workspace deleted on its own (src/workspace-delete.ts) closes only itself to Checkout.
 ALTER TABLE "BillingClosing" ADD COLUMN "workspaceId" TEXT;
 
