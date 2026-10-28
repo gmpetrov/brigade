@@ -348,6 +348,7 @@ export function Footer() {
         </span>
         <nav aria-label="Footer">
           <a href={REPO_URL}>GitHub</a>
+          <a href="https://status.brigade.lol">Status</a>
           <Link href={SIGN_IN}>Sign in</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
