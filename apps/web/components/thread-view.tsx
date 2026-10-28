@@ -3071,7 +3071,7 @@ function BrowserAction({
             </Button>
             <Button size="sm" variant="outline" disabled={busy} onClick={() => void open()}>
               <Monitor aria-hidden />
-              Show desktop
+              Show computer
             </Button>
           </>
         ) : (
