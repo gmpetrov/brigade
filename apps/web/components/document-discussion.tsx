@@ -27,19 +27,33 @@ const quote = (passage: string) =>
     .map((line) => `> ${line}`)
     .join('\n')
 
-type Saver = LibraryVersion['by'] | null
+type Actor = LibraryVersion['by']
+/** The teammate that saved the file last, and the one that saved it last from a thread. */
+type Saver = { teammate: Actor | null; thread: Actor | null }
 
-/** Who saved the file's latest version made in a thread (versions come newest first). */
-const savedFromThread = (fileId: string): Promise<Saver> =>
+/** From the file's versions, newest first. */
+const savedBy = (fileId: string): Promise<Saver> =>
   api<LibraryVersion[]>(`/library/${fileId}/versions`).then(
-    (versions) => versions.find((v) => v.by.type === 'teammate' && v.by.sessionId)?.by ?? null,
-    () => null,
+    (versions) => {
+      const byTeammates = versions.filter((v) => v.by.type === 'teammate')
+      return {
+        teammate: byTeammates[0]?.by ?? null,
+        thread: byTeammates.find((v) => v.by.sessionId)?.by ?? null,
+      }
+    },
+    () => ({ teammate: null, thread: null }),
   )
 
-/** That teammate while it is one, else the one picked last, else the first. */
+/**
+ * Who answers: the teammate of the thread Ask opens, else the one that saved the file last
+ * (in a new thread), while each is still one; else the one picked last, else the first.
+ */
 function answerer(teammates: Teammate[], by: Saver | undefined, picked: string | undefined) {
   const t =
-    teammates.find((t) => t.id === by?.id) ?? teammates.find((t) => t.id === picked) ?? teammates[0]
+    teammates.find((t) => t.id === by?.thread?.id) ??
+    teammates.find((t) => t.id === by?.teammate?.id) ??
+    teammates.find((t) => t.id === picked) ??
+    teammates[0]
   return t ? { id: t.id, name: t.name } : null
 }
 
@@ -49,7 +63,7 @@ export function useDocumentDiscussion(
 ): DocumentDiscussion | null {
   const { teammates } = useDashboard()
   const panel = useThreadPanel()
-  // Who saved it last from a thread, for the button's name: kept with the file it is for, so
+  // Who saved it last, for the button's name: kept with the file it is for, so
   // another file's never shows while the new one's loads, nor after its load failed.
   const fileId = file?.id
   const [saved, setSaved] = useState<{ fileId: string; by: Saver }>()
@@ -60,17 +74,14 @@ export function useDocumentDiscussion(
   useEffect(() => {
     if (!fileId) return
     let current = true
-    void savedFromThread(fileId).then((by) => current && setSaved({ fileId, by }))
+    void savedBy(fileId).then((by) => current && setSaved({ fileId, by }))
     return () => {
       current = false
     }
   }, [fileId, changes])
   const last = saved?.fileId === fileId ? saved?.by : undefined
   const { teammateId: picked } = panel
-  const teammate = useMemo(
-    () => answerer(teammates, last ?? undefined, picked),
-    [teammates, last, picked],
-  )
+  const teammate = useMemo(() => answerer(teammates, last, picked), [teammates, last, picked])
 
   const { openThread, draft, chooseTeammate, newThreadPage } = panel
   const ask = useCallback(
@@ -84,8 +95,8 @@ export function useDocumentDiscussion(
         return [...(named ? [] : [mention]), quote(passage)].join('\n') + '\n'
       }
       // The thread that last changed this file, asked now: what the button shows may be late.
-      const by = await savedFromThread(file.id)
-      const threadId = by?.sessionId
+      const by = await savedBy(file.id)
+      const threadId = by.thread?.sessionId
       const thread = threadId ? await api<Thread>(`/threads/${threadId}`).catch(() => null) : null
       if (thread?.mayPrompt && threadId) {
         const added = text(replyDraft(threadId))
@@ -93,7 +104,7 @@ export function useDocumentDiscussion(
         openThread(threadId)
         return
       }
-      const to = answerer(teammates, by ?? undefined, picked)
+      const to = answerer(teammates, by, picked)
       if (to) chooseTeammate(to.id)
       // Added to what the box holds as this runs: the person may have typed meanwhile.
       draft.setText((held) => {
