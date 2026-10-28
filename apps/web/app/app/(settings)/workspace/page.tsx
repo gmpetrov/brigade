@@ -2,9 +2,11 @@
 // Workspace: its name and logo, seen by every member in the sidebar and the
 // workspace menu. Owners and admins change them: a click on the logo changes
 // it, and each change saves on its own. The others see them here.
+// Owners can also delete it, at the foot of the page.
 import { Pencil } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { isAdmin, useDashboard, WorkspaceMark } from '@/components/dashboard'
+import { DeleteWorkspace } from '@/components/danger-zone'
 import { shrinkLogo, uploadLogo } from '@/components/projects'
 import { Card } from '@/components/ui/card'
 import {
@@ -188,6 +190,7 @@ export default function WorkspacePage() {
           {'error' in status ? status.error : 'saving' in status ? 'Saving…' : 'Saved'}
         </p>
       )}
+      <DeleteWorkspace />
     </div>
   )
 }

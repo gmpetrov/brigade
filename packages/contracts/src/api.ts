@@ -24,6 +24,11 @@ export const UpdateWorkspace = z.object({
   logo: Logo.nullable().optional(),
 })
 
+/** An owner deletes the active workspace for good, typing its name to confirm. */
+export const DeleteWorkspace = z.object({ name: z.string().max(200) })
+/** A person deletes their own account for good, typing their email address to confirm. */
+export const DeleteAccount = z.object({ email: z.string().max(320) })
+
 /** Checkout for the Cloud plan, from Settings › Billing or onboarding, where it comes back to. */
 export const BillingCheckout = z.object({
   from: z.enum(['billing', 'onboarding']).default('billing'),

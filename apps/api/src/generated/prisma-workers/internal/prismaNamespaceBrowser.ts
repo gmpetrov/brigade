@@ -101,6 +101,7 @@ export const ModelName = {
   LibraryFolderGrant: 'LibraryFolderGrant',
   DocumentAsset: 'DocumentAsset',
   BucketCleanup: 'BucketCleanup',
+  WorkspaceCleanup: 'WorkspaceCleanup',
   AuditEntry: 'AuditEntry',
   Upload: 'Upload',
   Attachment: 'Attachment',
@@ -260,6 +261,7 @@ export type OrganizationScalarFieldEnum = (typeof OrganizationScalarFieldEnum)[k
 export const BillingClosingScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
   createdAt: 'createdAt'
 } as const
 
@@ -1017,6 +1019,18 @@ export const BucketCleanupScalarFieldEnum = {
 } as const
 
 export type BucketCleanupScalarFieldEnum = (typeof BucketCleanupScalarFieldEnum)[keyof typeof BucketCleanupScalarFieldEnum]
+
+
+export const WorkspaceCleanupScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  prefix: 'prefix',
+  notBefore: 'notBefore',
+  createdAt: 'createdAt'
+} as const
+
+export type WorkspaceCleanupScalarFieldEnum = (typeof WorkspaceCleanupScalarFieldEnum)[keyof typeof WorkspaceCleanupScalarFieldEnum]
 
 
 export const AuditEntryScalarFieldEnum = {

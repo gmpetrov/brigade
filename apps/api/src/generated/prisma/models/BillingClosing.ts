@@ -29,18 +29,21 @@ export type AggregateBillingClosing = {
 export type BillingClosingMinAggregateOutputType = {
   id: string | null
   organizationId: string | null
+  workspaceId: string | null
   createdAt: Date | null
 }
 
 export type BillingClosingMaxAggregateOutputType = {
   id: string | null
   organizationId: string | null
+  workspaceId: string | null
   createdAt: Date | null
 }
 
 export type BillingClosingCountAggregateOutputType = {
   id: number
   organizationId: number
+  workspaceId: number
   createdAt: number
   _all: number
 }
@@ -49,18 +52,21 @@ export type BillingClosingCountAggregateOutputType = {
 export type BillingClosingMinAggregateInputType = {
   id?: true
   organizationId?: true
+  workspaceId?: true
   createdAt?: true
 }
 
 export type BillingClosingMaxAggregateInputType = {
   id?: true
   organizationId?: true
+  workspaceId?: true
   createdAt?: true
 }
 
 export type BillingClosingCountAggregateInputType = {
   id?: true
   organizationId?: true
+  workspaceId?: true
   createdAt?: true
   _all?: true
 }
@@ -140,6 +146,7 @@ export type BillingClosingGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 export type BillingClosingGroupByOutputType = {
   id: string
   organizationId: string
+  workspaceId: string | null
   createdAt: Date
   _count: BillingClosingCountAggregateOutputType | null
   _min: BillingClosingMinAggregateOutputType | null
@@ -167,6 +174,7 @@ export type BillingClosingWhereInput = {
   NOT?: Prisma.BillingClosingWhereInput | Prisma.BillingClosingWhereInput[]
   id?: Prisma.StringFilter<"BillingClosing"> | string
   organizationId?: Prisma.StringFilter<"BillingClosing"> | string
+  workspaceId?: Prisma.StringNullableFilter<"BillingClosing"> | string | null
   createdAt?: Prisma.DateTimeFilter<"BillingClosing"> | Date | string
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
 }
@@ -174,6 +182,7 @@ export type BillingClosingWhereInput = {
 export type BillingClosingOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
+  workspaceId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   organization?: Prisma.OrganizationOrderByWithRelationInput
 }
@@ -184,6 +193,7 @@ export type BillingClosingWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.BillingClosingWhereInput[]
   NOT?: Prisma.BillingClosingWhereInput | Prisma.BillingClosingWhereInput[]
   organizationId?: Prisma.StringFilter<"BillingClosing"> | string
+  workspaceId?: Prisma.StringNullableFilter<"BillingClosing"> | string | null
   createdAt?: Prisma.DateTimeFilter<"BillingClosing"> | Date | string
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
 }, "id">
@@ -191,6 +201,7 @@ export type BillingClosingWhereUniqueInput = Prisma.AtLeast<{
 export type BillingClosingOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
+  workspaceId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.BillingClosingCountOrderByAggregateInput
   _max?: Prisma.BillingClosingMaxOrderByAggregateInput
@@ -203,11 +214,13 @@ export type BillingClosingScalarWhereWithAggregatesInput = {
   NOT?: Prisma.BillingClosingScalarWhereWithAggregatesInput | Prisma.BillingClosingScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"BillingClosing"> | string
   organizationId?: Prisma.StringWithAggregatesFilter<"BillingClosing"> | string
+  workspaceId?: Prisma.StringNullableWithAggregatesFilter<"BillingClosing"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"BillingClosing"> | Date | string
 }
 
 export type BillingClosingCreateInput = {
   id?: string
+  workspaceId?: string | null
   createdAt: Date | string
   organization: Prisma.OrganizationCreateNestedOneWithoutBillingClosingsInput
 }
@@ -215,11 +228,13 @@ export type BillingClosingCreateInput = {
 export type BillingClosingUncheckedCreateInput = {
   id?: string
   organizationId: string
+  workspaceId?: string | null
   createdAt: Date | string
 }
 
 export type BillingClosingUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutBillingClosingsNestedInput
 }
@@ -227,23 +242,27 @@ export type BillingClosingUpdateInput = {
 export type BillingClosingUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BillingClosingCreateManyInput = {
   id?: string
   organizationId: string
+  workspaceId?: string | null
   createdAt: Date | string
 }
 
 export type BillingClosingUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BillingClosingUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -260,18 +279,21 @@ export type BillingClosingOrderByRelationAggregateInput = {
 export type BillingClosingCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
+  workspaceId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type BillingClosingMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
+  workspaceId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type BillingClosingMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
+  workspaceId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -319,11 +341,13 @@ export type BillingClosingUncheckedUpdateManyWithoutOrganizationNestedInput = {
 
 export type BillingClosingCreateWithoutOrganizationInput = {
   id?: string
+  workspaceId?: string | null
   createdAt: Date | string
 }
 
 export type BillingClosingUncheckedCreateWithoutOrganizationInput = {
   id?: string
+  workspaceId?: string | null
   createdAt: Date | string
 }
 
@@ -359,26 +383,31 @@ export type BillingClosingScalarWhereInput = {
   NOT?: Prisma.BillingClosingScalarWhereInput | Prisma.BillingClosingScalarWhereInput[]
   id?: Prisma.StringFilter<"BillingClosing"> | string
   organizationId?: Prisma.StringFilter<"BillingClosing"> | string
+  workspaceId?: Prisma.StringNullableFilter<"BillingClosing"> | string | null
   createdAt?: Prisma.DateTimeFilter<"BillingClosing"> | Date | string
 }
 
 export type BillingClosingCreateManyOrganizationInput = {
   id?: string
+  workspaceId?: string | null
   createdAt: Date | string
 }
 
 export type BillingClosingUpdateWithoutOrganizationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BillingClosingUncheckedUpdateWithoutOrganizationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BillingClosingUncheckedUpdateManyWithoutOrganizationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -387,6 +416,7 @@ export type BillingClosingUncheckedUpdateManyWithoutOrganizationInput = {
 export type BillingClosingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   organizationId?: boolean
+  workspaceId?: boolean
   createdAt?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["billingClosing"]>
@@ -394,6 +424,7 @@ export type BillingClosingSelect<ExtArgs extends runtime.Types.Extensions.Intern
 export type BillingClosingSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   organizationId?: boolean
+  workspaceId?: boolean
   createdAt?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["billingClosing"]>
@@ -401,6 +432,7 @@ export type BillingClosingSelectCreateManyAndReturn<ExtArgs extends runtime.Type
 export type BillingClosingSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   organizationId?: boolean
+  workspaceId?: boolean
   createdAt?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["billingClosing"]>
@@ -408,10 +440,11 @@ export type BillingClosingSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
 export type BillingClosingSelectScalar = {
   id?: boolean
   organizationId?: boolean
+  workspaceId?: boolean
   createdAt?: boolean
 }
 
-export type BillingClosingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "createdAt", ExtArgs["result"]["billingClosing"]>
+export type BillingClosingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "createdAt", ExtArgs["result"]["billingClosing"]>
 export type BillingClosingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
 }
@@ -430,6 +463,11 @@ export type $BillingClosingPayload<ExtArgs extends runtime.Types.Extensions.Inte
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     organizationId: string
+    /**
+     * Set when only this workspace is being deleted (src/workspace-delete.ts): the others of the
+     * organization may still start a Checkout. No link: it outlives the workspace a moment.
+     */
+    workspaceId: string | null
     createdAt: Date
   }, ExtArgs["result"]["billingClosing"]>
   composites: {}
@@ -857,6 +895,7 @@ export interface Prisma__BillingClosingClient<T, Null = never, ExtArgs extends r
 export interface BillingClosingFieldRefs {
   readonly id: Prisma.FieldRef<"BillingClosing", 'String'>
   readonly organizationId: Prisma.FieldRef<"BillingClosing", 'String'>
+  readonly workspaceId: Prisma.FieldRef<"BillingClosing", 'String'>
   readonly createdAt: Prisma.FieldRef<"BillingClosing", 'DateTime'>
 }
     

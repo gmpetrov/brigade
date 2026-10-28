@@ -101,7 +101,7 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
         { source: '/:page(sign-in|onboarding)', destination: '/app', permanent: false },
         { source: '/sign-up', destination: 'https://www.brigade.lol/sign-up', permanent: false },
         {
-          source: '/:page(how-it-works|privacy|terms)',
+          source: '/:page(how-it-works|privacy|terms|dpa|subprocessors|legal)',
           destination: 'https://www.brigade.lol/:page',
           permanent: false,
         },

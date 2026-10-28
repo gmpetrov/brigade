@@ -379,8 +379,8 @@ export async function startCheckout(input: {
       const { organizationId } = await tx.workspace.findUniqueOrThrow({
         where: { id: workspaceId },
       })
-      if (await beingDeleted(tx, organizationId))
-        throw new HTTPException(409, { message: 'This organization is being deleted' })
+      if (await beingDeleted(tx, organizationId, workspaceId))
+        throw new HTTPException(409, { message: 'This workspace is being deleted' })
       const current = await workspacePlan(workspaceId, tx)
       if (current && entitles(current.status))
         throw new HTTPException(409, { message: 'This workspace already has Brigade Cloud' })
@@ -459,13 +459,33 @@ export async function startCheckout(input: {
 /** How long an organization stays closed to Checkout once its deletion is decided. */
 const DELETION_LEASE_MS = 10 * 60_000
 
-/** Whether a deletion of the organization is under way: one of its closings is young enough. */
-async function beingDeleted(db: Db, organizationId: string) {
+/**
+ * Whether a deletion of the organization, or of this workspace, is under way: one of their
+ * closings is young enough.
+ */
+async function beingDeleted(db: Db, organizationId: string, workspaceId: string) {
   const since = new Date(Date.now() - DELETION_LEASE_MS)
   return !!(await db.billingClosing.findFirst({
-    where: { organizationId, createdAt: { gt: since } },
+    where: {
+      organizationId,
+      createdAt: { gt: since },
+      OR: [{ workspaceId: null }, { workspaceId }],
+    },
     select: { id: true },
   }))
+}
+
+/**
+ * Under the workspace's lock: its Checkouts still open are expired, and its subscription that
+ * is not over, if any, is returned. Read once a closing is kept, so no Checkout starts after.
+ */
+async function closeWorkspaceBilling(workspaceId: string) {
+  return withWorkspaceLock(workspaceId, async (tx) => {
+    const workspace = await tx.workspace.findUniqueOrThrow({ where: { id: workspaceId } })
+    if (!workspace.stripeCustomerId) return null
+    await closeOpenCheckouts(workspace.stripeCustomerId)
+    return liveSubscription(workspace.stripeCustomerId, workspaceId)
+  })
 }
 
 /**
@@ -490,12 +510,7 @@ export async function guardOrganizationDeletion(organizationId: string) {
     // Read once closed: a workspace made from now on cannot start a Checkout either.
     const workspaces = await prisma.workspace.findMany({ where: { organizationId } })
     for (const { id } of workspaces) {
-      const live = await withWorkspaceLock(id, async (tx) => {
-        const workspace = await tx.workspace.findUniqueOrThrow({ where: { id } })
-        if (!workspace.stripeCustomerId) return null
-        await closeOpenCheckouts(workspace.stripeCustomerId)
-        return liveSubscription(workspace.stripeCustomerId, id)
-      })
+      const live = await closeWorkspaceBilling(id)
       if (live)
         throw new HTTPException(409, {
           message:
@@ -506,4 +521,39 @@ export async function guardOrganizationDeletion(organizationId: string) {
     await prisma.billingClosing.deleteMany({ where: { id: closing.id } })
     throw error
   }
+}
+
+export const CANCEL_CLOUD_FIRST =
+  'This workspace has Brigade Cloud. Cancel Brigade Cloud in Settings › Billing first; you can delete the workspace once it has ended'
+
+/**
+ * Before a workspace is deleted (src/workspace-delete.ts), as guardOrganizationDeletion does for
+ * an organization: closed to Checkout with a closing of its own, its Checkouts still open
+ * expired, and refused while its subscription is not over. Its Stripe customer stays, with its
+ * invoices. Returns how to lift the closing once the deletion is done or has failed; refused,
+ * it is lifted here.
+ */
+export async function guardWorkspaceDeletion(organizationId: string, workspaceId: string) {
+  if (!stripeClient) return async () => {}
+  await prisma.billingClosing.deleteMany({
+    where: {
+      organizationId,
+      workspaceId,
+      createdAt: { lte: new Date(Date.now() - DELETION_LEASE_MS) },
+    },
+  })
+  const closing = await prisma.billingClosing.create({
+    data: { organizationId, workspaceId, createdAt: new Date() },
+  })
+  const lift = async () => {
+    await prisma.billingClosing.deleteMany({ where: { id: closing.id } })
+  }
+  try {
+    if (await closeWorkspaceBilling(workspaceId))
+      throw new HTTPException(409, { message: CANCEL_CLOUD_FIRST })
+  } catch (error) {
+    await lift()
+    throw error
+  }
+  return lift
 }

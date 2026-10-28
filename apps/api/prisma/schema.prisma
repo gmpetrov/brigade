@@ -141,6 +141,9 @@ model BillingClosing {
   id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Set when only this workspace is being deleted (src/workspace-delete.ts): the others of the
+  /// organization may still start a Checkout. No link: it outlives the workspace a moment.
+  workspaceId    String?
   createdAt      DateTime
 
   @@index([organizationId])
@@ -1715,6 +1718,22 @@ model BucketCleanup {
   /// Not before this: a URL issued just before the deletion works until then.
   notBefore DateTime
   createdAt DateTime @default(now())
+
+  @@index([notBefore])
+}
+
+/// A deleted workspace's folder in the bucket (`<org>/<ws>/`), emptied by a sweep in batches
+/// (src/workspace-delete.ts), and again once every signed upload URL issued before its deletion
+/// has expired. Written with the deletion itself: the row is the promise that nothing is left,
+/// and goes only once a listing after that margin finds the folder empty.
+model WorkspaceCleanup {
+  id             String   @id @default(cuid())
+  organizationId String
+  workspaceId    String   @unique
+  prefix         String
+  /// When the workspace was deleted: the folder is empty for good once listed empty a margin after.
+  notBefore      DateTime
+  createdAt      DateTime @default(now())
 
   @@index([notBefore])
 }

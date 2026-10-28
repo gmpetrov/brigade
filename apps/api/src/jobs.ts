@@ -32,6 +32,7 @@ import { sweepDeletedThreadFiles } from './thread-delete.js'
 import { sweepDeliveries } from './triggers.js'
 import { sweepFileUploads } from './uploads.js'
 import { dueWakeups, fireDueWakeups } from './wakeups.js'
+import { dueWorkspaceCleanups, sweepDeletedWorkspaces } from './workspace-delete.js'
 
 /** One run of a job: for a workspace, for one row (an event a webhook kept), or for all (null). */
 export type JobMessage = { job: string; key: string | null }
@@ -70,6 +71,13 @@ export const JOBS = {
     run: (key, now) => resendCommands(now.getTime(), ws(key)),
   },
   'cloud-replace': { every: 60, due: dueReplacements, run: (key) => driveReplacements(ws(key)) },
+  // A deleted workspace's bucket folder, emptied a batch a minute until nothing is left: each
+  // workspace's run alone, as a run deletes at most SWEEP_DELETES objects (Workers' requests).
+  'deleted-workspace-sweep': {
+    every: 60,
+    due: dueWorkspaceCleanups,
+    run: (key) => sweepDeletedWorkspaces(ws(key)),
+  },
 
   // No workspace's.
   notifications: { every: 30, run: (_key, now) => sweepNotifications(now) },

@@ -293,7 +293,7 @@ async function takeOver(other: DomainRow) {
 }
 
 /** A domain out of Resend; gone already is as good. A 502 when Resend did not remove it. */
-async function removeFromResend(name: string, resendDomainId: string, signal?: AbortSignal) {
+export async function removeFromResend(name: string, resendDomainId: string, signal?: AbortSignal) {
   await deleteDomain(resendDomainId, signal).catch((error: unknown) => {
     if (error instanceof ResendError && error.status === 404) return
     console.warn(`mail domain ${name}: not removed from Resend`, error)

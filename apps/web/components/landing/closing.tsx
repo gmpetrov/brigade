@@ -352,6 +352,7 @@ export function Footer() {
           <Link href={SIGN_IN}>Sign in</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
+          <Link href="/legal">Legal</Link>
           <span>© 2026</span>
         </nav>
       </div>

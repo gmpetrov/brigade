@@ -1,9 +1,11 @@
 'use client'
 // Preferences: what each member sets for themselves, never for the workspace: the
-// theme (this browser), next-message suggestions and notifications (theirs).
+// theme (this browser), next-message suggestions and notifications (theirs), and deleting
+// their own account.
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useEffect, useState, type ReactNode } from 'react'
+import { DeleteAccount } from '@/components/danger-zone'
 import { useDashboard } from '@/components/dashboard'
 import { NotificationsPanel } from '@/components/notifications'
 import { Card } from '@/components/ui/card'
@@ -109,6 +111,8 @@ export default function PreferencesPage() {
       >
         <NotificationsPanel />
       </Section>
+
+      <DeleteAccount />
     </div>
   )
 }

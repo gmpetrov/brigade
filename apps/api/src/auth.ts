@@ -114,10 +114,24 @@ export const auth = betterAuth({
             target: { type: 'organization', id: organization.id },
             data: { name: organization.name },
           }),
-        // Not while a workspace of it is still billed (src/billing.ts).
-        beforeDeleteOrganization: async ({ organization }) => {
+        // Not while a workspace of it is still billed (src/billing.ts). Then each workspace goes
+        // as one deleted on its own does, with what it reached outside and its files: its rows
+        // alone would go with the organization.
+        beforeDeleteOrganization: async ({ organization, user }) => {
           try {
             await guardOrganizationDeletion(organization.id)
+            const { deleteWorkspace } = await import('./workspace-delete.js')
+            const { id: memberId } = await memberActor(organization.id, user.id)
+            const workspaces = await prisma.workspace.findMany({
+              where: { organizationId: organization.id },
+              select: { id: true },
+            })
+            for (const { id } of workspaces)
+              await deleteWorkspace(
+                { organizationId: organization.id, workspaceId: id },
+                { userId: user.id, memberId },
+                { keepOrganization: true },
+              )
           } catch (error) {
             if (error instanceof HTTPException)
               throw new APIError('CONFLICT', { message: error.message })

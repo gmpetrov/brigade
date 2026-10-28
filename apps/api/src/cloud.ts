@@ -199,6 +199,18 @@ async function destroyVm(ref: ComputerRef) {
   if (!gone) await provider!.destroy(ref)
 }
 
+/**
+ * Destroy a computer's VM for good, its disk with it: its workspace is being deleted. Throws when
+ * the provider fails. Without a provider configured here there is none to ask: false.
+ */
+export async function destroyComputerVm(computer: { providerRef: unknown }) {
+  const ref = refOf(computer)
+  if (!ref) return true
+  if (!provider) return false
+  await destroyVm(ref)
+  return true
+}
+
 async function provision(computer: { id: string; organizationId: string; workspaceId: string }) {
   // Made before and cut short: that VM holds nothing, a new one is made.
   const before = await prisma.computer.findUniqueOrThrow({ where: { id: computer.id } })
