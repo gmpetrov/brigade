@@ -170,6 +170,11 @@ export type ThreadInput =
   | { kind: 'answer'; questionId: string; answer: QuestionAnswer }
   | { kind: 'ticket'; requestId: string; answer: TicketAnswer }
 
+/** A person's answer to a question or a ticket. */
+type AnswerInput = Extract<ThreadInput, { kind: 'answer' | 'ticket' }>
+const answerId = (input: AnswerInput) =>
+  input.kind === 'answer' ? input.questionId : input.requestId
+
 /** How a turn ended: idle (done), waiting (for an approval), paused (no account has usage left), or failed. */
 export type TurnOutcome = { status: 'idle' | 'waiting' | 'paused' | 'failed'; error?: string }
 
@@ -198,9 +203,10 @@ type SavedState = {
   approvals?: WaitingApproval[]
   /**
    * Tickets and questions set aside for a message the person wrote instead of answering them
-   * (aside.ts): still open, their answer comes as a message of its own (laterAnswer).
+   * (aside.ts): still open, their answer comes as a message of its own (laterAnswer). With
+   * `answer`: answered while messages waited on a decision, it goes in once made (keepsAnswer).
    */
-  later?: WaitingCall[]
+  later?: (WaitingCall & { answer?: AnswerInput })[]
   /**
    * An update handed the running turn over (handOver): it goes on in the harness it ran in,
    * these process groups, which the next session attaches to. With the calls it had under way.
@@ -401,6 +407,8 @@ export class HarnessThread {
   private readonly reasoning = new Map<string, string>()
   /** Built-in tool calls waiting for a person's approval, by approval id. */
   private readonly approvals = new Map<string, { toolName: string; input: unknown }>()
+  /** Kept answers handed out to go in (answersToGive), by call id, until their turn takes them. */
+  private readonly given = new Set<string>()
   /** The teammate's browser is being started for this thread (browserUsed). */
   private browserStarting = false
   private saved: SavedState | undefined
@@ -449,6 +457,9 @@ export class HarnessThread {
   async run(input: ThreadInput, spec: ThreadSpec, signal: AbortSignal): Promise<TurnOutcome> {
     this.spec = spec
     await this.load()
+    // An answer that comes as a message while messages wait on a decision: kept until it is
+    // made (Threads asks first, before the turn starts).
+    if (await this.keepsAnswer(input)) return { status: 'waiting' }
     // An answer to an ask set aside for a message: no turn waits on it, so it comes as a message.
     const later = this.laterAnswer(input)
     if (later !== undefined) input = { kind: 'prompt', text: later }
@@ -660,8 +671,12 @@ export class HarnessThread {
    * waits until a person answers it. A turn frozen mid-run waits on nobody.
    */
   async awaitingPerson() {
+    if (!this.live) await this.load()
+    return this.waitsOnPerson()
+  }
+
+  private waitsOnPerson() {
     if (this.live) return this.live.session.hasUnfinishedTurn() && !this.frozen && !this.drain
-    await this.load()
     const resume = this.saved?.resume as { continueFrom?: unknown } | undefined
     return !!resume?.continueFrom && !frozenMidRun(resume)
   }
@@ -671,7 +686,54 @@ export class HarnessThread {
    * a decision goes on from. One waiting only on tickets and questions takes it now (aside.ts).
    */
   async holdsMessages() {
-    return (await this.awaitingPerson()) && !(await this.asksOnly())
+    if (!this.live) await this.load()
+    return this.holds()
+  }
+
+  private holds() {
+    return this.waitsOnPerson() && !this.asksOnly()
+  }
+
+  /**
+   * Known already, without reading the saved state: this answer comes as a message (laterAnswer)
+   * while messages wait on a decision, so it is kept until that is made (keepsAnswer).
+   */
+  holdsAnswer(input: AnswerInput) {
+    return (
+      (this.live !== undefined || this.saved !== undefined) &&
+      !!this.messageCall(input) &&
+      this.holds()
+    )
+  }
+
+  /**
+   * Keep an answer that comes as a message (laterAnswer) while messages wait on a decision: its
+   * ask saved with it, it goes in once that is made (answersToGive). True when kept.
+   */
+  async keepsAnswer(input: ThreadInput) {
+    if (input.kind !== 'answer' && input.kind !== 'ticket') return false
+    await this.load()
+    const call = this.messageCall(input)
+    if (!call || !this.holds() || !this.saved) return false
+    this.toolCalls.delete(call.toolCallId)
+    this.saved.later = [
+      ...(this.saved.later ?? []).filter((c) => c.toolCallId !== call.toolCallId),
+      { ...call, answer: input },
+    ]
+    await this.persist()
+    return true
+  }
+
+  /**
+   * The answers kept while messages waited on a decision (keepsAnswer), once it is made: each
+   * given once in this process, until its turn takes it (laterAnswer).
+   */
+  async answersToGive(): Promise<ThreadInput[]> {
+    if (!this.live) await this.load()
+    if (this.holds()) return []
+    const kept = (this.saved?.later ?? []).filter((c) => c.answer && !this.given.has(c.toolCallId))
+    for (const c of kept) this.given.add(c.toolCallId)
+    return kept.map((c) => c.answer!)
   }
 
   /** The last turn waits on this approval. A decision on any other (made twice) goes nowhere. */
@@ -697,7 +759,7 @@ export class HarnessThread {
   }
 
   /** The last turn waits on a person only for tickets and questions, which a message sets aside. */
-  private async asksOnly() {
+  private asksOnly() {
     if (this.live)
       return (
         this.live.session.hasUnfinishedTurn() &&
@@ -706,7 +768,6 @@ export class HarnessThread {
         this.approvals.size === 0 &&
         this.waitingAsks().length > 0
       )
-    await this.load()
     const closed = closeTurn(this.saved?.resume)
     return (
       !!closed &&
@@ -761,21 +822,39 @@ export class HarnessThread {
    */
   private laterAnswer(input: ThreadInput) {
     if (input.kind !== 'answer' && input.kind !== 'ticket') return undefined
-    const id = input.kind === 'answer' ? input.questionId : input.requestId
-    const later = this.saved?.later?.find((c) => c.toolCallId === id)
-    if (!later && this.waitsOnCall(id) !== false) return undefined
-    if (later) this.saved!.later = this.saved!.later!.filter((c) => c !== later)
-    const call = later ?? this.toolCalls.get(id)
+    const id = answerId(input)
+    const call = this.messageCall(input)
+    if (!call) return undefined
+    if (this.saved?.later) this.saved.later = this.saved.later.filter((c) => c.toolCallId !== id)
     this.toolCalls.delete(id)
+    this.given.delete(id)
     const result =
       input.kind === 'answer'
         ? this.answerResult(input.questionId, input.answer, call)
         : this.ticketResult(input.requestId, input.answer, call)
     return answerLater(
-      { toolName: result.toolName, input: call?.input },
-      // Without its call, the answer as given: its asks, by id, are not known here.
-      call ? result.output.value : input.answer,
+      { toolName: result.toolName, input: call.input },
+      // Without its call's input, the answer as given: its asks, by id, are not known here.
+      call.input !== undefined ? result.output.value : input.answer,
     )
+  }
+
+  /**
+   * The call an answer is to, when the answer comes as a message (laterAnswer): set aside, or
+   * one the last turn does not wait on while it waits on others. Undefined: it goes on with the
+   * turn that waits on it, or with none (closed-turn.ts).
+   */
+  private messageCall(input: AnswerInput): WaitingCall | undefined {
+    const id = answerId(input)
+    const later = this.saved?.later?.find((c) => c.toolCallId === id)
+    if (later) return { toolCallId: later.toolCallId, toolName: later.toolName, input: later.input }
+    if (this.waitsOnCall(id) !== false) return undefined
+    const seen = this.toolCalls.get(id)
+    return {
+      toolCallId: id,
+      toolName: seen?.toolName ?? (input.kind === 'answer' ? QUESTION_TOOL : OPEN_TICKET_TOOL),
+      input: seen?.input,
+    }
   }
 
   /**
@@ -1014,7 +1093,7 @@ export class HarnessThread {
       const answer = input.kind === 'answer' || input.kind === 'ticket' || input.kind === 'approval'
       // A message while the turn waits only on the person's tickets and questions: they stay
       // open, and the message goes in now (aside.ts). Closed so too when its session stopped.
-      const aside = input.kind === 'prompt' && input.text !== '' && (await this.asksOnly())
+      const aside = input.kind === 'prompt' && input.text !== '' && this.asksOnly()
       // Which, read before closing the turn they wait in.
       const calls = aside ? this.waitingAsks() : []
       let closed = !this.live && (answer || aside) && this.closeTurn()

@@ -132,8 +132,10 @@ export function statusAfter(current: SessionStatus, event: AgentEvent): SessionS
     case 'question.asked':
     case 'ticket.opened':
       return 'waiting'
+    // Answered, unless the answer waits for a decision the teammate waits on (an approval).
     case 'question.answered':
     case 'ticket.answered':
+      return event.waiting ? 'waiting' : 'running'
     case 'turn.started':
       return 'running'
     // Answered a message while its ticket or question stays open: it still waits on a person.

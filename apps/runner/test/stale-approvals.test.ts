@@ -1,7 +1,9 @@
-// A decision on an approval that no turn waits on, such as one a person made twice: it starts
-// no turn and shows nothing. Continued with it, a turn waiting on a ticket would sit on that
-// ticket's call as though it ran, holding the ticket's own answer behind it. The harness is a
-// stand-in, so the thread's queue and events are the runner's own.
+// Decisions on approvals and the answers that wait on them. A decision on an approval that no
+// turn waits on, such as one a person made twice, starts no turn and shows nothing: continued
+// with it, a turn waiting on a ticket would sit on that ticket's call as though it ran. An
+// answer to a ticket set aside while the teammate waits on an approval is kept until the
+// decision, the thread waiting meanwhile. The harness is a stand-in, so the thread's queue and
+// events are the runner's own.
 import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -49,10 +51,14 @@ function setup(sessionId: string, waiting: string[], known: boolean) {
     context: { memoryFor: () => ({ workspace: '', teammate: '' }) },
   } as unknown as ConstructorParameters<typeof Threads>[0])
   made.push(threads)
+  type Input = { kind: string; approvalId?: string; requestId?: string }
+  // Answers kept while an approval waits, as the harness keeps them (keepsAnswer).
+  const kept: Input[] = []
   const harness = {
     active: false,
-    run: async (input: { kind: string; approvalId?: string }) => {
-      inputs.push(`${input.kind}${input.approvalId ? ` ${input.approvalId}` : ''}`)
+    run: async (input: Input) => {
+      inputs.push(`${input.kind} ${input.approvalId ?? input.requestId ?? ''}`.trim())
+      if (input.kind === 'approval') waiting.splice(waiting.indexOf(input.approvalId!), 1)
       return { status: 'idle' }
     },
     park: async () => undefined,
@@ -61,6 +67,9 @@ function setup(sessionId: string, waiting: string[], known: boolean) {
     holdsMessages: async () => waiting.length > 0,
     decidesNothing: (id: string) => known && !waiting.includes(id),
     awaitsApproval: async (id: string) => waiting.includes(id),
+    holdsAnswer: () => waiting.length > 0,
+    keepsAnswer: async (input: Input) => waiting.length > 0 && !!kept.push(input),
+    answersToGive: async () => (waiting.length > 0 ? [] : kept.splice(0)),
   }
   // The runner's own seat, with the stand-in in place of a Claude Code session.
   const seat = {
@@ -89,7 +98,16 @@ function setup(sessionId: string, waiting: string[], known: boolean) {
       approved: true,
       memberId: 'm1',
     })
-  return { events, inputs, decide }
+  const answer = (requestId: string) =>
+    threads.handle({
+      type: 'thread.ticket',
+      commandId: requestId,
+      thread: spec,
+      requestId,
+      answer: { action: 'answered', replies: { a1: { type: 'action', done: true } } },
+      memberId: 'm1',
+    })
+  return { events, inputs, decide, answer }
 }
 
 const shown = (events: AgentEvent[]) =>
@@ -119,4 +137,17 @@ test('one found stale only once its turn comes starts no turn either', async () 
   await sleep(30)
   assert.deepEqual(t.inputs, [])
   assert.deepEqual(shown(t.events), ['approval.resolved'])
+})
+
+test('an answer while an approval waits is kept, the thread waiting, then goes in once decided', async () => {
+  const t = setup('approval-keeps-answer', ['ap-1'], true)
+  t.answer('ticket-1')
+  await sleep(30)
+  // Kept: no turn, and the thread still waits on a person.
+  assert.deepEqual(t.inputs, [])
+  const answered = t.events.find((e) => e.type === 'ticket.answered')
+  assert.equal(answered?.type === 'ticket.answered' && answered.waiting, true)
+  t.decide('ap-1')
+  await sleep(30)
+  assert.deepEqual(t.inputs, ['approval ap-1', 'ticket ticket-1'])
 })

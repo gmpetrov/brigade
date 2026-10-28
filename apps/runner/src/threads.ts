@@ -434,7 +434,17 @@ export class Threads {
       return
     }
     let input: ThreadInput
+    const thread = this.thread(spec.sessionId)
+    // An answer to an ask set aside while, nothing running, its teammate waits on a decision:
+    // kept until that is made (keepsAnswer), the thread still waits on a person meanwhile.
+    const kept = (answer: Extract<ThreadInput, { kind: 'answer' | 'ticket' }>) =>
+      !thread.running &&
+      ![...thread.waiting.values()].some((n) => n > 0) &&
+      this.harness(thread, spec).harness.holdsAnswer(answer)
+        ? { waiting: true }
+        : {}
     if (command.type === 'thread.answer') {
+      input = { kind: 'answer', questionId: command.questionId, answer: command.answer }
       this.options.emit(spec.sessionId, {
         at,
         type: 'question.answered',
@@ -442,9 +452,10 @@ export class Threads {
         questionId: command.questionId,
         answer: command.answer,
         memberId: command.memberId,
+        ...kept(input),
       })
-      input = { kind: 'answer', questionId: command.questionId, answer: command.answer }
     } else if (command.type === 'thread.ticket') {
+      input = { kind: 'ticket', requestId: command.requestId, answer: command.answer }
       this.options.emit(spec.sessionId, {
         at,
         type: 'ticket.answered',
@@ -452,12 +463,12 @@ export class Threads {
         requestId: command.requestId,
         answer: command.answer,
         memberId: command.memberId,
+        ...kept(input),
       })
-      input = { kind: 'ticket', requestId: command.requestId, answer: command.answer }
     } else {
       // A decision on an approval no turn here waits on (one made twice) changes nothing: the
       // thread does not show it, nor go back to running for it.
-      const seat = this.harness(this.thread(spec.sessionId), spec)
+      const seat = this.harness(thread, spec)
       if (seat.harness.decidesNothing(command.approvalId)) {
         console.warn(`thread ${spec.sessionId}: no turn waits on approval ${command.approvalId}`)
         return
@@ -478,8 +489,7 @@ export class Threads {
         ...(command.reason ? { reason: command.reason } : {}),
       }
     }
-    const answers = this.thread(spec.sessionId).answers
-    answers.set(spec.teammate.id, (answers.get(spec.teammate.id) ?? 0) + 1)
+    thread.answers.set(spec.teammate.id, (thread.answers.get(spec.teammate.id) ?? 0) + 1)
     this.enqueue(spec, input)
   }
 
@@ -948,6 +958,13 @@ export class Threads {
           console.warn(`thread ${spec.sessionId}: no turn waits on approval ${turn.approvalId}`)
           return
         }
+        // An answer that comes as a message while messages wait on a decision: kept until it is
+        // made, then given (answersToGive, below).
+        if (
+          (turn.kind === 'answer' || turn.kind === 'ticket') &&
+          (await seat.harness.keepsAnswer(turn))
+        )
+          return
         this.options.emit(spec.sessionId, {
           at: new Date().toISOString(),
           type: 'turn.started',
@@ -987,6 +1004,8 @@ export class Threads {
         // A person answered: the messages that waited on them go now.
         if (turn.kind !== 'prompt' && turn.kind !== 'resume')
           await this.releaseHeld(thread, spec, seat)
+        // Answers kept while it waited on a decision go now that it waits on none.
+        for (const answer of await seat.harness.answersToGive()) this.enqueue(spec, answer)
       } catch (error) {
         console.error(`thread ${spec.sessionId}: turn failed`, error)
       } finally {

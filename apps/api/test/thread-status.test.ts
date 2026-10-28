@@ -63,3 +63,24 @@ test('a message answered while its ticket stays open leaves the thread waiting o
   // Its answer, once given, comes as a message: the turn that reads it ends the wait.
   assert.equal(fold([opened, note(), answered(true), note(), answered()], 'running'), 'idle')
 })
+
+test('an answer kept while the teammate waits on an approval leaves the thread waiting', () => {
+  const requested: AgentEvent = {
+    at,
+    type: 'approval.requested',
+    approvalId: 'a1',
+    toolCallId: 'c1',
+    toolName: 'Bash',
+    input: {},
+  }
+  const answered = (waiting?: boolean): AgentEvent => ({
+    at,
+    type: 'ticket.answered',
+    requestId: 't1',
+    answer: { action: 'answered', replies: {} },
+    memberId: 'm1',
+    ...(waiting ? { waiting } : {}),
+  })
+  assert.equal(fold([requested, answered(true)], 'running'), 'waiting')
+  assert.equal(fold([answered()], 'waiting'), 'running')
+})

@@ -532,6 +532,11 @@ export const AgentEvent = z.discriminatedUnion('type', [
     questionId: z.string(),
     answer: QuestionAnswer,
     memberId: z.string().nullable(),
+    /**
+     * Its teammate's turn no longer waited on it (set aside for a message) and waits on a
+     * decision now: the answer reaches it once that is made, and until then it waits.
+     */
+    waiting: z.boolean().optional(),
   }),
   /** The teammate opens a ticket for a person and waits until it is answered. */
   z.object({
@@ -548,6 +553,11 @@ export const AgentEvent = z.discriminatedUnion('type', [
     requestId: z.string(),
     answer: TicketAnswer,
     memberId: z.string().nullable(),
+    /**
+     * Its teammate's turn no longer waited on it (set aside for a message) and waits on a
+     * decision now: the answer reaches it once that is made, and until then it waits.
+     */
+    waiting: z.boolean().optional(),
   }),
   z.object({
     ...base,

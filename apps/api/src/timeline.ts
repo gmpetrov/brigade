@@ -28,11 +28,12 @@ export function eventsOf<E extends { type: string; data: unknown }>(
 /** What each event means for the teammate's state in that thread. */
 function transitionOf(type: string, data: Record<string, unknown>, at: Date): Transition | null {
   switch (type) {
+    case 'question.answered':
+    case 'ticket.answered':
+      return data.waiting ? null : { at, state: 'working' }
     case 'turn.started':
     case 'message.user':
     case 'approval.resolved':
-    case 'question.answered':
-    case 'ticket.answered':
       return { at, state: 'working' }
     case 'question.asked':
       return { at, state: 'waiting', note: 'question' }

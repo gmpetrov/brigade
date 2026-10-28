@@ -69,6 +69,22 @@ function scriptedHarness(heard: string[], prefix: string, onResult?: () => Promi
             usage,
           })
           // Claude Code then waits on the ticket's result: no `finish` until it comes.
+        } else if (String(prompt).startsWith('Publish')) {
+          // A built-in tool call it asks a person to approve first.
+          emit({
+            type: 'tool-call',
+            toolCallId: 'bash-1',
+            toolName: 'bash',
+            input: '{"command":"publish"}',
+            providerExecuted: true,
+            dynamic: true,
+          })
+          emit({ type: 'tool-approval-request', approvalId: 'approval-1', toolCallId: 'bash-1' })
+          emit({
+            type: 'finish-step',
+            finishReason: { unified: 'tool-calls', raw: 'host-input' },
+            usage,
+          })
         } else {
           reply(emit)
           finish()
@@ -83,6 +99,11 @@ function scriptedHarness(heard: string[], prefix: string, onResult?: () => Promi
           submitToolResult: async (input: { toolCallId: string; output?: unknown }) => {
             heard.push(`result ${input.toolCallId}: ${JSON.stringify(input.output)}`)
             await onResult?.()
+            reply(emit)
+            finish()
+          },
+          submitToolApproval: async (input: { approvalId: string }) => {
+            heard.push(`approved ${input.approvalId}`)
             reply(emit)
             finish()
           },
@@ -332,6 +353,48 @@ test('an answer to a call the turn no longer waits on comes as a message, never 
       t.heard.at(-1) ?? '',
       /^result new-ticket-1: .*answered your ticket \\"Hyperdrive permission\\"/,
     )
+  } finally {
+    await t.done()
+  }
+})
+
+test('an answer while the teammate waits on an approval is kept, and goes in once decided', async () => {
+  const t = await setup()
+  try {
+    await t.run({ kind: 'prompt', text: 'Set up Hyperdrive' })
+    await t.run({ kind: 'prompt', text: 'Which token is it?' })
+    assert.equal((await t.run({ kind: 'prompt', text: 'Publish it' })).status, 'waiting')
+    assert.ok(t.events.some((e) => e.type === 'approval.requested'))
+    const answer = {
+      kind: 'ticket' as const,
+      requestId: 'ticket-1',
+      answer: {
+        action: 'answered' as const,
+        replies: { perm: { type: 'action' as const, done: true, note: 'Added it to token 84219' } },
+      },
+    }
+    // Known before its turn starts: the thread waits on the person still.
+    assert.equal(t.thread.holdsAnswer(answer), true)
+    assert.equal((await t.run(answer)).status, 'waiting')
+    // Kept on disk with its ask, nothing given while the approval waits.
+    const saved = JSON.parse(await readFile(join(t.dir, 'aside-riley.json'), 'utf8')) as {
+      later?: { toolCallId: string; answer?: unknown }[]
+    }
+    assert.deepEqual(
+      saved.later?.map((c) => [c.toolCallId, !!c.answer]),
+      [['ticket-1', true]],
+    )
+    assert.deepEqual(await t.thread.answersToGive(), [])
+    await t.run({ kind: 'approval', approvalId: 'approval-1', approved: true })
+    assert.ok(t.heard.includes('approved approval-1'))
+    // Decided: the answer is given once, and comes as a message.
+    const given = await t.thread.answersToGive()
+    assert.deepEqual(given, [answer])
+    assert.deepEqual(await t.thread.answersToGive(), [])
+    await t.run(given[0]!)
+    assert.match(t.heard.at(-1) ?? '', /^prompt: The person answered your ticket "Hyperdrive/)
+    assert.match(t.heard.at(-1) ?? '', /Added it to token 84219/)
+    assert.deepEqual(await t.thread.answersToGive(), [])
   } finally {
     await t.done()
   }
