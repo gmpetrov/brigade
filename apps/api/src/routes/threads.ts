@@ -1,6 +1,7 @@
 import { addressOf } from '../mail/names.js'
 import { randomUUID } from 'node:crypto'
 import {
+  ASIDE_PROTOCOL,
   clipReport,
   CODE_CHANGES_PROTOCOL,
   CODE_EDIT_PROTOCOL,
@@ -133,6 +134,37 @@ async function attachedTitle(db: ScopedDb, attachmentIds: string[]) {
 /** Send to the thread's computer; a stopped workspace computer is resumed first. */
 const openCapTicket = (db: ScopedDb, sessionId: string) =>
   db.ticket.findFirst({ where: { sessionId, type: 'cap', status: 'open' } })
+
+/**
+ * Why a message can't go to a thread that waits on a person, or undefined: it can, and its
+ * teammate reads it now while the ticket or question it asked stays open (ASIDE_PROTOCOL). It
+ * can't while a decision holds a call (an approval before a built-in tool, an App write, a
+ * credential, a trigger), nor on a runner from before that.
+ */
+async function waitingRefusal(
+  db: ScopedDb,
+  thread: { id: string; computer: { id: string; workspaceId: string } },
+) {
+  const held = await db.heldCall.findMany({
+    where: { sessionId: thread.id, status: 'waiting' },
+    select: { ticketId: true },
+  })
+  const deciding = await db.ticket.count({
+    where: {
+      sessionId: thread.id,
+      status: 'open',
+      OR: [
+        { id: { in: held.map((h) => h.ticketId) } },
+        { type: 'approval', payload: { path: ['source'], equals: 'harness' } },
+      ],
+    },
+  })
+  if (deciding) return 'Approve or deny the pending request first'
+  const protocol = await hubs.get(thread.computer.workspaceId).runnerProtocol(thread.computer.id)
+  if (protocol !== undefined && protocol < ASIDE_PROTOCOL)
+    return 'Answer the pending request first, or update Brigade on this computer to write while it waits'
+  return undefined
+}
 
 async function deliver(
   computer: { id: string; kind: string; workspaceId: string },
@@ -1033,8 +1065,8 @@ export const threads = new Hono<AppEnv>()
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     requireMayPrompt(scope, thread)
-    if (thread.status === 'waiting')
-      throw new HTTPException(409, { message: 'Approve or deny the pending request first' })
+    const refused = thread.status === 'waiting' ? await waitingRefusal(db, thread) : undefined
+    if (refused) throw new HTTPException(409, { message: refused })
     if (thread.status === 'paused' && (await openCapTicket(db, thread.id)))
       throw new HTTPException(409, {
         message: 'This thread is paused at a daily cap. An admin decides in Tickets.',
@@ -1191,16 +1223,21 @@ export const threads = new Hono<AppEnv>()
     requireMayPrompt(scope, thread)
     const input = await parseBody(c.req.raw, ResolveApproval)
     // The approval's ticket: a connector write (its id is the ticket's) or a harness request.
-    const ticket = await db.ticket.findFirst({
+    const tickets = await db.ticket.findMany({
       where: {
         sessionId: thread.id,
-        status: 'open',
         OR: [
           { id: input.approvalId },
           { payload: { path: ['approvalId'], equals: input.approvalId } },
         ],
       },
+      select: { id: true, status: true },
     })
+    const ticket = tickets.find((t) => t.status === 'open')
+    // Decided already (twice, or by someone else): nothing waits on it any more. Sent on, the
+    // runner would continue its teammate's turn with it, whatever that turn waits on now.
+    if (!ticket && tickets.length > 0)
+      throw new HTTPException(409, { message: 'This was decided already' })
     if (ticket) {
       return c.json(
         await resolveTicket(scope, ticket.id, {

@@ -41,7 +41,7 @@ function transitionOf(type: string, data: Record<string, unknown>, at: Date): Tr
     case 'approval.requested':
       return { at, state: 'waiting', note: String(data.toolName ?? '') }
     case 'turn.completed':
-      return { at, state: 'done' }
+      return data.waiting ? { at, state: 'waiting', note: 'ticket' } : { at, state: 'done' }
     case 'error':
       return { at, state: 'blocked', note: 'error' }
     case 'account.switched':

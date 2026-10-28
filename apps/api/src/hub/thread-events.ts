@@ -136,8 +136,9 @@ export function statusAfter(current: SessionStatus, event: AgentEvent): SessionS
     case 'ticket.answered':
     case 'turn.started':
       return 'running'
+    // Answered a message while its ticket or question stays open: it still waits on a person.
     case 'turn.completed':
-      return 'idle'
+      return event.waiting ? 'waiting' : 'idle'
     case 'account.switched':
       return event.toAccountId ? current : 'paused'
     // A takeover pauses the teammate once its turn is over. Handed back before that, the turn

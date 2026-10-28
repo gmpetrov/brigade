@@ -356,6 +356,50 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     assert.match(wakeup.note, /Not this customer/)
   })
 
+  test('a credential allowed for good: the waiting tool hears the decision, and it is kept', async () => {
+    const { decideTicket } = await import('../src/connector-calls.js')
+    const { sealSecret } = await import('../src/vault.js')
+    const credential = await db.credential.create({
+      data: {
+        kind: 'api_key',
+        name: `CLOUDFLARE_API_TOKEN ${suffix}`,
+        createdByMemberId: ids.owner,
+        vaultSecretId: await sealSecret(db, scope, { apiKey: 'secret' }),
+      } as never,
+    })
+    const conn = await connect()
+    const callId = randomUUID()
+    void conn.say({
+      type: 'credential.request',
+      callId,
+      sessionId: ids.session,
+      teammateId: ids.sam,
+      action: 'release',
+      credentialId: credential.id,
+      use: 'env',
+    })
+    const heard = () => conn.sent.filter((m) => m.callId === callId)
+    const ticketId = await pendingOf({
+      get heard() {
+        return heard()
+      },
+    })
+    await decideTicket({ ...scope, memberId: ids.owner }, ticketId, {
+      approved: true,
+      always: true,
+    })
+    await until(() => heard().some((m) => m.type === 'connector.result'), 'the release')
+    const result = heard().find((m) => m.type === 'connector.result')!
+    assert.equal(result.ok, true)
+    // The decision comes with it: the thread shows the approval decided, not still asked.
+    assert.deepEqual(result.decision, { ticketId, approved: true, memberId: ids.owner })
+    const grant = await db.credentialGrant.findFirst({
+      where: { credentialId: credential.id, teammateId: ids.sam },
+    })
+    assert.equal(grant?.withoutAsking, true, 'allowed for good')
+    conn.handle.onClose()
+  })
+
   // -------------------------------------------------------------------------
   // Commands for runners
   // -------------------------------------------------------------------------
