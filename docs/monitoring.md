@@ -71,7 +71,6 @@ told stays open until it is, and a turn for the worse that was not sent is tried
 | `runner-restart`              | Cloud computers' runners not back 2 minutes after an update's restart                                                                          | 1 / 5 in 1 h                           |
 | `runner-reconnects`           | A computer's runner connecting 10 times within a minute: a reconnect storm                                                                     | 1 / 5 in 15 min                        |
 | `runner-outbox`               | Commands refused: too many wait for a computer that stays down (`src/runner-commands.ts`)                                                      | 1 / 20 in 30 min                       |
-| `api-reset`                   | The Api object restarted with the same version of the Worker, as it says itself once up                                                        | 1 / 3 in 30 min                        |
 | `jobs:dead`                   | Job messages that failed every try, waiting in `brigade-jobs-dlq` (once jobs are on the queue)                                                 | 1 / 20 waiting                         |
 | `jobs:late`                   | The jobs' queue holding a message for 10 minutes: its consumer fails or is slow                                                                | warning                                |
 | `job:<name>`                  | A background job throwing (schedules, wake-ups, mail, merges, cloud plans…)                                                                    | 3 / 10 in 15 min                       |
@@ -83,7 +82,6 @@ told stays open until it is, and a turn for the worse that was not sent is tried
 | `worker:<script>`             | A `brigade-*` Worker's or Durable Object's failed invocations (exceptions, exceeded limits), as Cloudflare counts them                         | 5 / 50 in 10 min (checked every 5 min) |
 | `worker:<script>:resets`      | A `brigade-*` Worker's Durable Objects reset by the runtime: past their memory or CPU, or an internal error (each drops the object's sockets)  | 1 / 5 in 10 min (checked every 5 min)  |
 | `api-down`                    | The watchdog: the Api object does not answer, or its checks fail                                                                               | critical                               |
-| `api-restarting`              | The watchdog: the Api object restarted 3 times in 15 minutes without a new version (`src/ops/restarts.ts`)                                     | critical                               |
 
 A failure-count problem ends once none came for a while (15 minutes to 3 hours, by kind).
 Computers of a workspace without a plan are meant to be off and are not checked.
@@ -110,10 +108,10 @@ and they could not alert on it themselves. When the object does not answer, or t
 have not succeeded for 10 minutes, the cron sends `api-down` itself, at most once an hour, and `resolved` once it is
 back. It reads the same secrets as the API.
 
-The object keeps each of its starts in its own storage, with the Worker's version
-(`CF_VERSION_METADATA`): a start with the same version as the one before is a restart no
-deploy explains, as on 2026-10-27, when it went past its memory again and again. The ping says
-how many there were in 15 minutes, and the cron sends `api-restarting` from 3.
+Its resets (past its memory, as on 2026-10-27, or an internal error) are Cloudflare's to count:
+`worker:brigade-api:resets`. It no longer counts its own starts: with the jobs on their queue
+and the sockets in the hub objects, the runtime lets it go between requests, and each start
+looked like a restart no deploy explains.
 
 A whole Worker that does not deploy or load (its cron with it) is not seen from inside
 Cloudflare: for that, an uptime monitor outside (Better Stack, UptimeRobot…) on

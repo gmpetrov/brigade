@@ -22,13 +22,13 @@ and the Queues JavaScript API docs, read the same day.
 All four phases are built, each off until it is turned on, so that a deploy changes nothing by
 itself. What is left is turning them on, one at a time, with the checks below.
 
-| Phase                    | Built                                                                                             | On with                                      |
-| ------------------------ | ------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| 0. Safeguards and alerts | Outbox caps, restart and reconnect-storm alerts, hub sizes in the log, ops alerts start no thread | On at once                                   |
-| 1. A hub per workspace   | `WorkspaceHub` and `hubs.get()`, in the API's process                                             | On at once: no change in behaviour           |
-| 2. Hub objects           | `WorkspaceHubObject`, routing in the front, runner protocol 46                                    | `POST /ops/hubs`, per workspace              |
-| 3. Jobs on Queues        | A job per workspace, the cron's messages, the consumer                                            | `JOBS_ON_QUEUE` in `wrangler.jsonc`          |
-| 4. Stateless HTTP        | Reads in brigade-api's own isolates, placed next to the database                                  | `STATELESS_ROUTES` in `wrangler.front.jsonc` |
+| Phase                    | Built                                                                                           | On with                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 0. Safeguards and alerts | Outbox caps, reset and reconnect-storm alerts, hub sizes in the log, ops alerts start no thread | On at once                                   |
+| 1. A hub per workspace   | `WorkspaceHub` and `hubs.get()`, in the API's process                                           | On at once: no change in behaviour           |
+| 2. Hub objects           | `WorkspaceHubObject`, routing in the front, runner protocol 46                                  | `POST /ops/hubs`, per workspace              |
+| 3. Jobs on Queues        | A job per workspace, the cron's messages, the consumer                                          | `JOBS_ON_QUEUE` in `wrangler.jsonc`          |
+| 4. Stateless HTTP        | Reads in brigade-api's own isolates, placed next to the database                                | `STATELESS_ROUTES` in `wrangler.front.jsonc` |
 
 ### How it works now
 
