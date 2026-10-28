@@ -32,6 +32,8 @@ export function TeammateComputer({ teammate }: { teammate: Teammate }) {
     void reloadThread()
   })
   const t = thread.data?.id === controlId ? thread.data : undefined
+  // Closed, the conversation comes back from the screen's toolbar: a phone has no ⌘J.
+  const reopen = panel.visible ? undefined : panel.toggle
 
   return (
     <div className="h-[calc(100svh-3rem)] min-h-0 md:h-svh">
@@ -46,6 +48,7 @@ export function TeammateComputer({ teammate }: { teammate: Teammate }) {
             // The conversation beside the screen, for the hand back.
             if (beside !== t.id) panel.openThread(t.id)
           }}
+          onCollapse={reopen}
         />
       ) : (
         // No thread on the workspace computer yet: its screen, to watch.
@@ -54,6 +57,7 @@ export function TeammateComputer({ teammate }: { teammate: Teammate }) {
           teammateName={teammate.name}
           control={false}
           mode="open"
+          onCollapse={reopen}
         />
       )}
     </div>
