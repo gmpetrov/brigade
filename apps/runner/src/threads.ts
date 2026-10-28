@@ -211,6 +211,8 @@ type Message = {
   steering?: Promise<void>
   /** The log's end just after it, once shown. */
   upTo?: Promise<number>
+  /** Held while a person had control: only the hand back releases it (releaseAllHeld). */
+  takenOver?: boolean
 }
 
 /** Who said what in a thread, so each teammate can be told what it missed. Never a credential. */
@@ -575,11 +577,13 @@ export class Threads {
     void this.options.previews.threadBusy(spec.sessionId)
     if (interrupt) thread.controller?.abort()
     // Queued messages wait while a person has control, as wake-ups do: they run once handed back.
-    for (const message of thread.messages.values())
+    for (const message of thread.messages.values()) {
       if (message.state === 'queued') {
         message.state = 'held'
         this.emitQueued(spec.sessionId, message, HELD_FOR_HANDBACK)
       }
+      if (message.state === 'held') message.takenOver = true
+    }
     // Wait for the current turn to end, then record the change of control.
     thread.queue = thread.queue.then(() => {
       this.options.emit(spec.sessionId, {
@@ -1237,7 +1241,7 @@ export class Threads {
   /** The teammate no longer waits on a person: the messages held for that are queued again. */
   private async releaseHeld(thread: Thread, spec: ThreadSpec, seat: Seat) {
     const held = [...thread.messages.values()].filter(
-      (m) => m.state === 'held' && m.specs[0]!.teammate.id === spec.teammate.id,
+      (m) => m.state === 'held' && !m.takenOver && m.specs[0]!.teammate.id === spec.teammate.id,
     )
     if (held.length === 0 || thread.takeover || (await seat.harness.awaitingPerson())) return
     for (const message of held) {
@@ -1251,11 +1255,18 @@ export class Threads {
     }
   }
 
-  /** releaseHeld, for each teammate with messages held. */
+  /**
+   * The hand back's turn comes: releaseHeld, for each teammate with messages held. Turns that
+   * ended before it (a ticket's answered as the person handed back, say) left those held while
+   * a person had control, so they run after the hand back's note, and once.
+   */
   private async releaseAllHeld(thread: Thread) {
     const held = new Map<string, ThreadSpec>()
     for (const message of thread.messages.values())
-      if (message.state === 'held') held.set(message.specs[0]!.teammate.id, message.specs[0]!)
+      if (message.state === 'held') {
+        message.takenOver = false
+        held.set(message.specs[0]!.teammate.id, message.specs[0]!)
+      }
     for (const spec of held.values())
       await this.releaseHeld(thread, spec, this.harness(thread, spec))
   }
