@@ -522,6 +522,8 @@ function LivePreviewPanel({
             showCode && coding ? (
               <CodeWorkspace
                 threadId={threadId}
+                // Kept away from its thread: its files are no longer watched.
+                shown={!hidden}
                 teammateId={preview.teammateId!}
                 teammateName={coding.teammateName}
                 mayEdit={coding.mayEdit}
