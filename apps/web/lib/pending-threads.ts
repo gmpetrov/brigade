@@ -71,9 +71,9 @@ export const pendingThreads = {
     const thread = pending.get(id)
     if (!thread) return
     returned = { from: thread.from, text: thread.text, uploads: uploads.get(id) ?? [] }
-    pending.delete(id)
+    // It stays as it is until the page has gone: its conversation would ask for a thread that
+    // never started.
     uploads.delete(id)
-    changed()
     return thread.from
   },
   /** The message given back for the box at this address, once. */
