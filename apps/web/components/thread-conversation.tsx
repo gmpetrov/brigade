@@ -104,9 +104,12 @@ import {
   type ProjectSummary,
   type Teammate,
   type Thread,
+  type Ticket,
 } from '@/lib/api'
 import { useChangesCount } from '@/lib/code-changes'
 import { openCodeTab, setCodePanel } from '@/lib/code-tabs'
+import { useReplyDraft } from '@/lib/reply-drafts'
+import { readThreadSide, rememberThreadSide } from '@/lib/thread-side'
 import { useLive } from '@/lib/use-live'
 import {
   preloadThreadEvents,
@@ -134,7 +137,6 @@ export type ThreadHeading = {
   control: 'mine' | 'other' | null
 }
 
-/** Replies being written, per thread: closing the panel or opening another thread keeps them. */
 /**
  * An element picked in the preview, by the id its page gave it, and the upload of its
  * picture; `drawing` while its page draws it, when the message waits for the picture.
@@ -143,17 +145,6 @@ type Picked = { id: string; element: PreviewElement; upload?: string; drawing?: 
 
 /** How long a message waits for a picture its page is drawing (it may have gone away). */
 const DRAWING_MS = 15_000
-
-const replyDrafts = new Map<string, string>()
-
-function useReplyDraft(id: string) {
-  const [text, setText] = useState(() => replyDrafts.get(id) ?? '')
-  useEffect(() => {
-    if (text) replyDrafts.set(id, text)
-    else replyDrafts.delete(id)
-  }, [id, text])
-  return [text, setText] as const
-}
 
 /** Sends ahead what a thread's conversation asks for as it opens (lib/api.ts's `preload`). */
 export function preloadConversation(id: string) {
@@ -255,7 +246,8 @@ export function ThreadConversation({
   const [error, setError] = useState<string>()
   // The turn asked to stop, until it ends: a tool can take a moment to give up.
   const [stopping, setStopping] = useState<string>()
-  const [text, setText] = useReplyDraft(id)
+  // Text added from elsewhere (a document's Ask) lands here with the cursor after it.
+  const [text, setText] = useReplyDraft(id, () => focusComposer())
   // The teammate's guess at this member's next message, while it stands (suggestionFor).
   const guess = useMemo(
     () =>
@@ -359,12 +351,30 @@ export function ThreadConversation({
     computerRequest,
     takeComputerRequest,
   } = useThreadPanel()
+  // Beside the thread as it was left in this tab: back from another thread, the same one shows.
+  const [side] = useState(() => readThreadSide(id))
   // A file a message names, open beside the thread in the desktop's place.
-  const [file, setFile] = useState<{ path: string; teammateId?: string }>()
+  const [file, setFile] = useState<{ path: string; teammateId?: string } | undefined>(() =>
+    side?.kind === 'file'
+      ? { path: side.path, ...(side.teammateId && { teammateId: side.teammateId }) }
+      : undefined,
+  )
   // The app the teammate runs, beside the thread in the desktop's place.
-  const [previewing, setPreviewing] = useState(false)
+  const [previewing, setPreviewing] = useState(side?.kind === 'preview')
   // The files it changed, beside the thread in the desktop's place, without a preview.
-  const [changesOpen, setChangesOpen] = useState(false)
+  const [changesOpen, setChangesOpen] = useState(side?.kind === 'changes')
+  useEffect(() => {
+    rememberThreadSide(
+      id,
+      file
+        ? { kind: 'file', ...file }
+        : previewing
+          ? { kind: 'preview' }
+          : changesOpen
+            ? { kind: 'changes' }
+            : undefined,
+    )
+  }, [id, file, previewing, changesOpen])
   // The computer expanded over the thread from its details, which it hides until it closes.
   const [computerOpen, setComputerOpen] = useState(false)
   // Teach a task: the computer over the window, recording the person doing it.
@@ -403,9 +413,12 @@ export function ThreadConversation({
       setChangesOpen(false)
     }
   }, [documents.current])
-  // The bar's computer button brings the teammate's panel back in front of a file or preview.
+  // The bar's computer button brings the teammate's panel back in front of a file or preview:
+  // a click since this thread opened, not one made on another thread.
+  const revealedAt = useRef(revealKey)
   useEffect(() => {
-    if (!revealKey) return
+    if (revealKey === revealedAt.current) return
+    revealedAt.current = revealKey
     setFile(undefined)
     setPreviewing(false)
     setChangesOpen(false)
@@ -641,6 +654,9 @@ export function ThreadConversation({
   const t = thread.data
   const current = status ?? t.status
   const busy = current === 'running' || current === 'starting'
+  // Its teammate's call waits on a decision: a message waits for it too. Waiting only on a
+  // ticket or question it opened, the teammate reads a message at once and the ask stays open.
+  const deciding = current === 'waiting' && t.tickets.some(holdsCall)
   // In an empty box only, with nothing attached or quoted, and once the teammate is done.
   const suggestion =
     guess &&
@@ -834,7 +850,7 @@ export function ThreadConversation({
    */
   async function send(e?: React.FormEvent) {
     e?.preventDefault()
-    if (!ready || current === 'waiting') return
+    if (!ready || deciding) return
     const written = text.trim()
     const replying = replyTo
     const moving = moveTo
@@ -1290,9 +1306,7 @@ export function ThreadConversation({
                       )
                     }
                     onChoose={
-                      t.mayPrompt && current !== 'waiting'
-                        ? (text, pick) => deliver(text, [], pick)
-                        : undefined
+                      t.mayPrompt && !deciding ? (text, pick) => deliver(text, [], pick) : undefined
                     }
                     onReply={t.mayPrompt && !t.controlledByMemberId ? replyToMessage : undefined}
                     onRetry={
@@ -1563,7 +1577,7 @@ export function ThreadConversation({
                       <Button
                         size="icon-sm"
                         className="mb-1 rounded-full [&_svg:not([class*='size-'])]:size-5"
-                        disabled={!ready || current === 'waiting'}
+                        disabled={!ready || deciding}
                         aria-label={
                           moveTo
                             ? `Continue on ${moveTo.name}`
@@ -1572,13 +1586,15 @@ export function ThreadConversation({
                               : 'Send'
                         }
                         title={
-                          moveTo
-                            ? busy
-                              ? `Continue on ${moveTo.name} after this turn (↵)`
-                              : `Continue on ${moveTo.name} (↵)`
-                            : busy
-                              ? 'Queue for after this turn (↵)'
-                              : 'Send (↵) · New line (⇧↵)'
+                          deciding
+                            ? 'Approve or deny the request above first'
+                            : moveTo
+                              ? busy
+                                ? `Continue on ${moveTo.name} after this turn (↵)`
+                                : `Continue on ${moveTo.name} (↵)`
+                              : busy
+                                ? 'Queue for after this turn (↵)'
+                                : 'Send (↵) · New line (⇧↵)'
                         }
                       >
                         <ArrowUp aria-hidden />
@@ -1800,6 +1816,19 @@ function MessagesBetween({
 
 /** Room above a message the timeline went to: the bar over the conversation's top. */
 const JUMP_MARGIN = 72
+
+/**
+ * An open ticket whose call waits on a decision: an approval before a built-in tool call, an
+ * App write or its cap, a credential or a trigger. The API refuses a message until then.
+ */
+const holdsCall = ({ type, payload }: Pick<Ticket, 'type' | 'payload'>) =>
+  type === 'cap'
+    ? !!payload.connectionId
+    : type === 'approval' &&
+      (payload.source === 'harness' ||
+        !!payload.connectionId ||
+        !!payload.credentialAction ||
+        !!payload.triggerAction)
 
 const newMessageId = () =>
   typeof crypto.randomUUID === 'function'

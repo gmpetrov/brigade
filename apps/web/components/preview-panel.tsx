@@ -43,6 +43,7 @@ import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { openCodeTab, setCodePanel, useCodePanel } from '@/lib/code-tabs'
 import { previewOrigin, typedPath, withPath } from '@/lib/preview-path'
+import { readPreviewPage, rememberPreviewPage } from '@/lib/thread-side'
 import { cn } from '@/lib/utils'
 
 export type ThreadPreview = PreviewInfo & { teammateId?: string }
@@ -256,6 +257,10 @@ function LivePreviewPanel({
         if (!live) return
         issued.current = { url: v.url, at }
         setView(v)
+        // Back on this thread, or on the panel: the page it was left on, loaded again.
+        const page = readPreviewPage(threadId, preview.previewId)
+        if (page && page !== new URL(v.url).pathname)
+          setOpened({ path: page, url: withPath(v.url, page) })
       },
       (e: Error) => live && setError(e.message),
     )
@@ -281,12 +286,18 @@ function LivePreviewPanel({
     void fresh().then(
       (url) => {
         setView((v) => v && { ...v, url })
-        const at = path ?? opened?.path
+        const at = path ?? select.page ?? opened?.path
         setOpened(at === undefined ? undefined : { path: at, url: withPath(url, at) })
         setFrame((n) => n + 1)
       },
       (e: Error) => setError(e.message),
     )
+
+  // Where it is, kept for coming back to it.
+  const page = select.page ?? opened?.path
+  useEffect(() => {
+    if (page) rememberPreviewPage(threadId, preview.previewId, page)
+  }, [threadId, preview.previewId, page])
 
   // Still open: keep it running.
   const live = previewLive(preview)

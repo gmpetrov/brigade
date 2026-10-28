@@ -5,7 +5,7 @@
 // a teammate changed since you last looked. The panel stays open while you
 // move between pages, and its tabs across a reload.
 import type { EditTarget, LibraryFile } from '@brigade/contracts'
-import { BookOpen, ChevronDown, FileText, History, X } from 'lucide-react'
+import { BookOpen, ChevronDown, FileText, History, MessageSquare, X } from 'lucide-react'
 import {
   createContext,
   useCallback,
@@ -16,6 +16,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useDocumentDiscussion } from '@/components/document-discussion'
 import { DocumentEditor } from '@/components/document-editor'
 import { FileHistory } from '@/components/library-history'
 import { PanelExpandButton, SidePanel } from '@/components/side-panel'
@@ -230,6 +231,13 @@ export function DocumentPanel() {
   const [opened, setOpened] = useState(0)
   const key = JSON.stringify(current?.target ?? null)
   useEffect(() => setHistory(false), [key])
+  const libraryId = current?.target.kind === 'library' ? current.target.id : null
+  const path = current?.subtitle ? `${current.subtitle}/${current.title}` : current?.title
+  const file = useMemo(
+    () => (libraryId && path ? { id: libraryId, path } : null),
+    [libraryId, path],
+  )
+  const discussion = useDocumentDiscussion(file)
   if (!current) return null
   const Icon = current.target.kind === 'library' ? FileText : BookOpen
   const target = current.target
@@ -256,6 +264,18 @@ export function DocumentPanel() {
             </span>
           )}
         </div>
+        {discussion?.teammate && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void discussion.ask()}
+            title={`Talk about this file with ${discussion.teammate.name}`}
+          >
+            <MessageSquare aria-hidden />
+            Ask {discussion.teammate.name}
+          </Button>
+        )}
         {target.kind === 'library' && (
           <Button
             type="button"
@@ -284,10 +304,7 @@ export function DocumentPanel() {
       {history && target.kind === 'library' ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <FileHistory
-            file={{
-              id: target.id,
-              path: current.subtitle ? `${current.subtitle}/${current.title}` : current.title,
-            }}
+            file={{ id: target.id, path: path ?? current.title }}
             onRestored={() => {
               setHistory(false)
               setOpened((n) => n + 1)
@@ -301,6 +318,11 @@ export function DocumentPanel() {
             target={current.target}
             label={current.title}
             className="min-h-full"
+            ask={
+              discussion?.teammate
+                ? { teammate: discussion.teammate.name, onAsk: discussion.ask }
+                : undefined
+            }
           />
         </div>
       )}

@@ -372,7 +372,10 @@ export async function handleCredentialRequest(
   }
 
   let decision: Decided | undefined
-  if (!via) {
+  // Made once a person decided, the call goes by their decision, which its result carries for
+  // the thread to show: the approved ticket would otherwise allow it as an earlier approval in
+  // this thread, leaving the decision unshown and "allow for good" not kept.
+  if (!via || resume) {
     const where = credential.details.url ?? credential.details.host
     const what = `${use === 'browser' ? 'sign in with' : 'use'} ${credential.name}${where ? ` (${where})` : ''}`
     const asked = await ask(

@@ -255,6 +255,13 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   opens a `request` ticket (`ticket.opened`); the answer, sent once every ask has one, goes back as the tool's
   result (`ticket.answered`). From the Tickets page it can only be declined. Invalid input is returned to the
   teammate as a tool error instead of pausing the turn.
+- **Writing instead of answering.** A person may write to a teammate whose turn waits on its own ticket or
+  question, to ask about it without declining it (`apps/runner/src/harness/aside.ts`, runners from
+  `ASIDE_PROTOCOL`). The message goes in at once as the waiting call's result, which says the ask is still open;
+  the ask stays open in the thread and in Needs you, and the turn that answers the message ends with
+  `turn.completed`'s `waiting`, so the thread still waits on a person. The answer, whenever it comes, reaches the
+  teammate as a message of its own. A call that waits on a decision (an approval before a built-in tool, an App
+  write, a credential, a trigger) is not set aside: a message waits for the decision, as before.
 - **Credentials** (`apps/api/src/credentials.ts`, `apps/runner/src/credentials.ts`). Members keep website logins,
   databases, API keys and other secrets in the vault from the Vault page; only non-secret details (URL, username,
   host) are ever returned. A teammate gets `list_credentials`, `use_credential` and, with a browser,

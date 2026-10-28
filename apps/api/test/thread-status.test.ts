@@ -44,3 +44,43 @@ test('a hand back before the turn ends leaves it running', () => {
 test("a person's message still starts a turn", () => {
   assert.equal(fold([note()], 'idle'), 'running')
 })
+
+test('a message answered while its ticket stays open leaves the thread waiting on a person', () => {
+  const opened: AgentEvent = {
+    at,
+    type: 'ticket.opened',
+    requestId: 't1',
+    title: 'Hyperdrive permission',
+    asks: [{ id: 'perm', type: 'action', title: 'Add Hyperdrive: Edit' }],
+  }
+  const answered = (waiting?: boolean): AgentEvent => ({
+    at,
+    type: 'turn.completed',
+    finishReason: 'stop',
+    ...(waiting ? { waiting } : {}),
+  })
+  assert.equal(fold([opened, note(), answered(true)], 'running'), 'waiting')
+  // Its answer, once given, comes as a message: the turn that reads it ends the wait.
+  assert.equal(fold([opened, note(), answered(true), note(), answered()], 'running'), 'idle')
+})
+
+test('an answer kept while the teammate waits on an approval leaves the thread waiting', () => {
+  const requested: AgentEvent = {
+    at,
+    type: 'approval.requested',
+    approvalId: 'a1',
+    toolCallId: 'c1',
+    toolName: 'Bash',
+    input: {},
+  }
+  const answered = (waiting?: boolean): AgentEvent => ({
+    at,
+    type: 'ticket.answered',
+    requestId: 't1',
+    answer: { action: 'answered', replies: {} },
+    memberId: 'm1',
+    ...(waiting ? { waiting } : {}),
+  })
+  assert.equal(fold([requested, answered(true)], 'running'), 'waiting')
+  assert.equal(fold([answered()], 'waiting'), 'running')
+})

@@ -92,8 +92,16 @@ export * from './usage.js'
  * 46: the runner says it is still there with keepalive rather than heartbeat, which a workspace's hub
  *     object answers without waking, and connects to /runner/ws?workspace=<the welcome's workspaceId>
  *     (docs/workspace-hubs-plan.md).
+ * 47: a message to a teammate waiting on its ticket or question reaches it at once, and the ask
+ *     stays open (ASIDE_PROTOCOL); turn.completed says when one still is (`waiting`).
  */
-export const PROTOCOL_VERSION = 46
+export const PROTOCOL_VERSION = 47
+/**
+ * Runners from this version on take a message while their teammate waits on its own ticket or
+ * question: it reads the message now, and the ask stays open for the person to answer later.
+ * Older ones hold it until the ask is answered, so the API refuses it as before.
+ */
+export const ASIDE_PROTOCOL = 47
 /**
  * Runners from this version on send KEEPALIVE instead of heartbeat, and name their workspace when
  * they connect: their hub object can hibernate between their messages.

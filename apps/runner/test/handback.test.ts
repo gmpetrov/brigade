@@ -62,6 +62,12 @@ function setup(sessionId: string, outcomes: Outcome[]) {
     park: async () => undefined,
     backup: async () => undefined,
     awaitingPerson: async () => false,
+    holdsMessages: async () => false,
+    decidesNothing: () => false,
+    awaitsApproval: async () => true,
+    holdsAnswer: () => false,
+    keepsAnswer: async () => false,
+    answersToGive: async () => [],
   }
   // The runner's own seat, with the stand-in in place of a Claude Code session.
   const seat = {
@@ -96,8 +102,11 @@ function setup(sessionId: string, outcomes: Outcome[]) {
   return { threads, events, prompts, spec, message, notes }
 }
 
-/** A thread taken over, whose teammate waits on a ticket until it is answered. */
-function takenOver(sessionId: string) {
+/**
+ * A thread taken over, whose teammate waits on a ticket until it is answered. `approval`: on
+ * an approval instead, which holds messages back until someone decides.
+ */
+function takenOver(sessionId: string, approval = false) {
   const t = setup(sessionId, [])
   const seat = (
     t.threads as unknown as { harness: () => { harness: Record<string, unknown> } }
@@ -105,6 +114,7 @@ function takenOver(sessionId: string) {
   const inputs: string[] = []
   let waiting = true
   seat.harness.awaitingPerson = async () => waiting
+  seat.harness.holdsMessages = async () => waiting && approval
   seat.harness.run = async (input: { kind: string; text?: string }) => {
     inputs.push(input.kind)
     t.prompts.push(input.text ?? '')
@@ -159,8 +169,8 @@ test('a hand back while its teammate waits on a ticket says so, and starts no tu
   assert.deepEqual(t.inputs, ['ticket'])
 })
 
-test('a message sent while a hand back waits on a ticket leaves both waiting', async () => {
-  const t = takenOver('handback-message-meanwhile')
+test('a message sent while a hand back waits on an approval leaves both waiting', async () => {
+  const t = takenOver('handback-message-meanwhile', true)
   let scanned!: (files: string[]) => void
   const scan = new Promise<string[]>((resolve) => (scanned = resolve))
   void t.threads.handback(t.spec, 'm1', 'Still need help', () => scan)
@@ -171,6 +181,21 @@ test('a message sent while a hand back waits on a ticket leaves both waiting', a
   assert.deepEqual(t.inputs, [])
   const message = t.events.find((e) => e.type === 'message.user')
   assert.equal(message?.type === 'message.user' && message.waiting, true)
+})
+
+test('a message sent while a hand back waits on a ticket reaches the teammate, with the note', async () => {
+  const t = takenOver('handback-message-ticket')
+  let scanned!: (files: string[]) => void
+  const scan = new Promise<string[]>((resolve) => (scanned = resolve))
+  void t.threads.handback(t.spec, 'm1', 'Still need help', () => scan)
+  await sleep(10)
+  t.message('Which page is it?')
+  scanned([])
+  await sleep(60)
+  // The hand back alone starts nothing; the message does, and the teammate reads both.
+  assert.deepEqual(t.inputs, ['prompt'])
+  assert.match(t.prompts[0]!, /Still need help/)
+  assert.match(t.prompts[0]!, /Which page is it\?/)
 })
 
 test('a hand back with files and no ticket gives its teammate a turn', async () => {
@@ -257,6 +282,7 @@ test('a hand back during a turn releases the held messages once that turn ends',
   // A live session is not idle until its turn ends.
   let running = true
   seat.harness.awaitingPerson = async () => running
+  seat.harness.holdsMessages = async () => running
   t.threads.takeover(t.spec, 'm1', false)
   await t.threads.handback(t.spec, 'm1', '', async () => [])
   running = false

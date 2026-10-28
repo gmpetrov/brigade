@@ -24,9 +24,19 @@
     { "tag": "v1", "new_sqlite_classes": ["Api"] },
     { "tag": "v2", "new_sqlite_classes": ["WorkspaceHubObject"] },
   ],
-  // Hub objects connect again each time they wake: through Hyperdrive, with its cache off, once a
-  // config exists (`wrangler hyperdrive create brigade-hubs --connection-string=... --caching-disabled`):
-  // "hyperdrive": [{ "binding": "DB_HYPERDRIVE", "id": "<its id>" }],
+  // Hub objects, the cron and the jobs' consumer connect again each time they wake or run: through
+  // Hyperdrive, which keeps connections to Neon open, rather than a new one each time (300 to 500
+  // ms). Its cache is off: it would serve reads older than the latest writes. Made with
+  // `wrangler hyperdrive create brigade-hubs --connection-string=<Neon's direct, not pooled,
+  // address> --caching-disabled`. The Api object does not use it (src/db.ts). Remove this to go
+  // back to direct connections. localConnectionString: for `wrangler dev`, the local database.
+  "hyperdrive": [
+    {
+      "binding": "DB_HYPERDRIVE",
+      "id": "f28736549efe40d2ac7b50c6655308ee",
+      "localConnectionString": "postgresql://brigade:brigade@localhost:5433/brigade",
+    },
+  ],
   // The same source as on Node, with these modules swapped for their Workers versions
   // (import paths, matched exactly). Prisma's Workers client comes from `prisma generate`;
   // jsdom (for @blocknote/server-util, in src/collab.ts) does not run on Workers.

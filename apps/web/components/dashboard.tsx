@@ -517,6 +517,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip="Library"
+                        isActive={pathname.startsWith('/app/library')}
+                      >
+                        <Link href="/app/library">
+                          <Library />
+                          <span>Library</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarGroup>
                 <SidebarWork
