@@ -18,6 +18,7 @@ import { audit, type Actor } from '../src/audit.js'
 import { prisma, scoped, type Prisma } from '../src/db.js'
 import { editMemory, saveLibraryFile, saveSummary, writeMemory } from '../src/library.js'
 import { sealSecret } from '../src/vault.js'
+import { LONG_THREAD_TITLE, longThreadEvents } from './seed-long-thread.js'
 import { seedPlaybooks } from './seed-playbooks.js'
 import { seedUsage } from './seed-usage.js'
 
@@ -460,6 +461,17 @@ export async function seedWorkspace(users: Users) {
     ]
   }
   const harness = (name: string) => `mcp__harness-tools__${name}`
+
+  // Long, for the timeline beside a thread: it opens on its latest page.
+  await thread({
+    title: LONG_THREAD_TITLE,
+    teammateId: riley.id,
+    member: ada,
+    accountId: adaAccount.id,
+    status: 'idle',
+    startedAt: days(4),
+    events: longThreadEvents(riley.id, adaAccount.id, ada.id),
+  })
 
   // Done, with a pull request waiting for review: its task is in Needs you.
   const darkMode = await thread({
