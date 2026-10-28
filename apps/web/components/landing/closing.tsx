@@ -4,6 +4,7 @@ import { BrigadeMark } from '@/components/brigade-mark'
 import { formatCount, mergeDate, type ProofNumbers, REPO, REPO_URL } from '@/lib/github-proof'
 import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
 import { Pebble } from './pebble'
+import { OPERATOR } from './operator'
 import { PebbleRain } from './pebble-rain'
 
 /** Brigade's own team as proof: the GitHub numbers read at build (lib/github-proof.ts), and
@@ -352,7 +353,7 @@ export function Footer() {
           <Link href={SIGN_IN}>Sign in</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
-          <Link href="/legal">Legal</Link>
+          {OPERATOR.company && <Link href="/legal">Legal</Link>}
           <span>© 2026</span>
         </nav>
       </div>

@@ -23,10 +23,12 @@ export default function Privacy() {
 
       <h2>Who we are</h2>
       <p>
-        Brigade is run by {OPERATOR.name}, {OPERATOR.address}. We are the controller of your account
-        data and of the data we need to run and bill the service. For what you and your teammates
-        put in a workspace, we act on your company&apos;s behalf, as a processor: our{' '}
-        <Link href="/dpa">data processing agreement</Link> covers it.
+        {OPERATOR.company
+          ? `Brigade is run by ${OPERATOR.company.name}, ${OPERATOR.company.address}. `
+          : ''}
+        We are the controller of your account data and of the data we need to run and bill the
+        service. For what you and your teammates put in a workspace, we act on your company&apos;s
+        behalf, as a processor: our <Link href="/dpa">data processing agreement</Link> covers it.
       </p>
 
       <h2>What we store</h2>

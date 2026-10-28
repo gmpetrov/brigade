@@ -16,10 +16,10 @@ export default function Terms() {
   return (
     <LegalPage title="Terms of service">
       <p>
-        These terms are a contract between you and {OPERATOR.name} (&ldquo;Brigade&rdquo;,
-        &ldquo;we&rdquo;), which runs the hosted service at www.brigade.lol. By creating an account
-        or using Brigade, you agree to them. If you use Brigade for a company, you agree to them on
-        its behalf and confirm you may do so.
+        These terms are a contract between you and {OPERATOR.name} (
+        {OPERATOR.company ? '“Brigade”, “we”' : '“we”'}), which runs the hosted service at
+        www.brigade.lol. By creating an account or using Brigade, you agree to them. If you use
+        Brigade for a company, you agree to them on its behalf and confirm you may do so.
       </p>
 
       <h2>Who Brigade is for</h2>
@@ -119,10 +119,15 @@ export default function Terms() {
 
       <h2>Contact</h2>
       <p>
-        {OPERATOR.name}, {OPERATOR.address}. Email{' '}
+        {OPERATOR.company && `${OPERATOR.company.name}, ${OPERATOR.company.address}. `}Email{' '}
         <a href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>, or reach us on{' '}
-        <a href={`${REPO_URL}/issues`}>GitHub</a>. Our <Link href="/legal">legal notice</Link> has
-        the rest of our details.
+        <a href={`${REPO_URL}/issues`}>GitHub</a>.
+        {OPERATOR.company && (
+          <>
+            {' '}
+            Our <Link href="/legal">legal notice</Link> has the rest of our details.
+          </>
+        )}
       </p>
     </LegalPage>
   )
