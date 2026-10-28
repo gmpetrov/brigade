@@ -358,73 +358,7 @@ describe('the watchdog', () => {
   })
 })
 
-describe('restarts and reconnect storms', () => {
-  test('a start with the version of the one before is a restart no deploy explains', async () => {
-    const { noteStart, unexpectedRestarts, restartProblem, RESTARTS_ALERT } =
-      await import('../src/ops/restarts.js')
-    const now = t0.getTime()
-    let starts = noteStart([], { at: now - 20 * MIN, version: 'v1' }).starts
-    // A deploy: a new version, expected.
-    const deploy = noteStart(starts, { at: now - 10 * MIN, version: 'v2' })
-    assert.equal(deploy.unexpected, false)
-    starts = deploy.starts
-    // Reset with the same version, again and again (the 2026-10-27 incident).
-    for (let i = 0; i < RESTARTS_ALERT; i++) {
-      const reset = noteStart(starts, { at: now - (RESTARTS_ALERT - i) * 1000, version: 'v2' })
-      assert.equal(reset.unexpected, true)
-      starts = reset.starts
-    }
-    assert.equal(unexpectedRestarts(starts, now), RESTARTS_ALERT)
-    assert.match(restartProblem(unexpectedRestarts(starts, now)) ?? '', /restarted 3 times/)
-    assert.equal(restartProblem(RESTARTS_ALERT - 1), null)
-    // Past the window, they no longer count.
-    assert.equal(unexpectedRestarts(starts, now + 20 * MIN), 0)
-    // Starts older than a day are forgotten.
-    assert.equal(noteStart(starts, { at: now + 25 * 60 * MIN, version: 'v3' }).starts.length, 1)
-  })
-
-  test('an object let go for having nothing to do, then started again, is no restart to tell', async () => {
-    const { noteStart, unexpectedRestarts } = await import('../src/ops/restarts.js')
-    const now = t0.getTime()
-    let starts = noteStart([], { at: now - 20 * MIN, version: 'v2' }).starts
-    // The cron's minute wakes it each time, idle since the minute before (jobs on their queue).
-    for (let i = 10; i > 0; i--) {
-      const woke = noteStart(starts, { at: now - i * MIN, version: 'v2', idle: true })
-      assert.equal(woke.unexpected, false)
-      starts = woke.starts
-    }
-    assert.equal(unexpectedRestarts(starts, now), 0)
-    // Reset while busy: counted, among the idle ones.
-    starts = noteStart(starts, { at: now - 1000, version: 'v2', idle: false }).starts
-    assert.equal(unexpectedRestarts(starts, now), 1)
-  })
-
-  test('the watchdog tells each problem on its own: down, and restarting', async () => {
-    const { API_RESTARTING } = await import('../src/ops/watchdog.js')
-    const to = { webhookUrl: 'https://hooks.example.test/x' }
-    const now = t0.getTime() + 10 * 60 * MIN
-    posted = []
-    await watchdog(to, 'restarting', now, API_RESTARTING)
-    await watchdog(to, 'down', now)
-    await watchdog(to, 'restarting', now + MIN, API_RESTARTING)
-    assert.deepEqual(
-      posted.map((p) => [JSON.parse(p.body).key, JSON.parse(p.body).kind]),
-      [
-        ['api-restarting', 'firing'],
-        ['api-down', 'firing'],
-      ],
-    )
-    await watchdog(to, null, now + 2 * MIN, API_RESTARTING)
-    await watchdog(to, null, now + 2 * MIN)
-    assert.deepEqual(
-      posted.slice(2).map((p) => [JSON.parse(p.body).key, JSON.parse(p.body).kind]),
-      [
-        ['api-restarting', 'resolved'],
-        ['api-down', 'resolved'],
-      ],
-    )
-  })
-
+describe('reconnect storms', () => {
   test('a computer whose runner connects again and again is counted once a minute', async () => {
     const { localHub } = await import('../src/hub/memory-host.js')
     const { STORM_CONNECTS } = await import('../src/hub/workspace-hub.js')

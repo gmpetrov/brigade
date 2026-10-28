@@ -112,15 +112,6 @@ export const RULES: Rule[] = [
     hint: 'A computer that stays down while messages keep coming for it (src/runner-commands.ts): find out why it does not start.',
   },
   {
-    kind: 'api-reset',
-    title: 'API restarting without a deploy',
-    windowMs: 30 * MINUTE,
-    warning: 1,
-    critical: 3,
-    quietMs: 60 * MINUTE,
-    hint: 'The Api object restarted with the same version of the Worker: past its memory, most likely. Every socket dropped with it.',
-  },
-  {
     kind: 'account-signed-out',
     title: "Teammates' accounts signed out (their turns fail: not logged in)",
     windowMs: 60 * MINUTE,
@@ -189,6 +180,9 @@ export function judge(
   return 'keep'
 }
 
+/** Kinds no rule watches any more: an alert of one still open is resolved. */
+const RETIRED = ['api-reset']
+
 async function checkFailures(now: number) {
   const rules: Rule[] = [...RULES]
   // Each job seen failing lately, and each still alerted on.
@@ -210,6 +204,7 @@ async function checkFailures(now: number) {
     if (verdict === 'resolve') await resolve(rule.kind, new Date(now))
     else if (verdict !== 'keep') await raise(verdict.alert, new Date(now))
   }
+  for (const kind of RETIRED) await resolve(kind, new Date(now))
 }
 
 /** A cloud computer still creating or starting after this long is stuck. */

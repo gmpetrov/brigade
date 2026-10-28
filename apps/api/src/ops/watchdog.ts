@@ -10,8 +10,6 @@ export type Pulse = {
   checksAt: number
   /** Why they failed since, if they did: the database out of reach, say. */
   error?: string | null
-  /** Its restarts no deploy explains, lately (src/ops/restarts.ts). */
-  restarts?: number
 }
 
 /** Checks that have not run for this long have stopped (they run each minute). */
@@ -31,9 +29,8 @@ export function diagnose(pulse: Pulse | Error, now: number): string | null {
 /** Told about at most this often while it lasts, as the keys below make it to receivers. */
 const EVERY_MS = 60 * 60_000
 
-/** What the watchdog tells: the object down, or restarting without a deploy. */
+/** What the watchdog tells: the object down. Its resets show in worker:<script>:resets. */
 export const API_DOWN = { key: 'api-down', title: 'Brigade API down' }
-export const API_RESTARTING = { key: 'api-restarting', title: 'Brigade API restarting' }
 
 /** In this isolate's memory only: a new isolate may tell once more, within EVERY_MS's keys. */
 const downs = new Map<string, { since: number; toldAt: number }>()
