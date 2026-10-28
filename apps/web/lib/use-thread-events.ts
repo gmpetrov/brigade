@@ -2,6 +2,7 @@
 import { ApiToBrowser, SequencedEvent } from '@brigade/contracts'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, preload, preloaded } from './api'
+import { latestJump } from './latest-jump'
 import { keepAlive, liveSocket } from './live-socket'
 
 /**
@@ -103,6 +104,7 @@ export function useThreadEvents(
     setLoaded(false)
     begin(1)
     holes([])
+    jumps.clear()
     let socket: WebSocket | undefined
     let retry: ReturnType<typeof setTimeout> | undefined
     let delay = 500
@@ -227,6 +229,7 @@ export function useThreadEvents(
       } finally {
         loading.current = false
         setLoadingOlder(false)
+        jumpWaiting()
       }
     },
     [sessionId, add],
@@ -237,41 +240,58 @@ export function useThreadEvents(
    * it: what lies between stays a gap, loaded as someone scrolls into it. Resolves once it
    * is in, at once when the event is loaded already.
    */
-  const jumpTo = useCallback(
-    async (seq: number) => {
-      if (loading.current || (bySeq.current.has(seq) && !inGap(gapsRef.current, seq))) return
-      const gap = gapsRef.current.find((g) => g.from <= seq && seq < g.to)
-      // Before the oldest loaded: as a gap from the thread's start.
-      const top = first.current
-      const until = gap ? gap.to : top
-      if (seq >= until) return
-      loading.current = true
-      try {
-        const page = await api<JumpPage>(`/threads/${sessionId}/events?from=${seq}&until=${until}`)
-        if (thread.current !== sessionId || first.current !== top) return
-        if (gap && !gapsRef.current.includes(gap)) return
-        add(page.events.map((e) => known(e) as SequencedEvent))
-        if (gap)
-          holes(
-            gapsRef.current.flatMap((g) =>
-              g === gap
-                ? [
-                    { from: g.from, to: Math.max(g.from, page.firstSeq) },
-                    { from: Math.min(page.endSeq, g.to), to: g.to },
-                  ]
-                : [g],
-            ),
-          )
-        else {
-          holes([{ from: page.endSeq, to: top }, ...gapsRef.current])
-          begin(page.firstSeq)
-        }
-      } finally {
-        loading.current = false
-      }
-    },
-    [sessionId, add],
+  // Loads a message's page; false when what was loaded changed meanwhile.
+  const go = useRef<(seq: number) => Promise<boolean>>(async () => true)
+  const [jumps] = useState(() =>
+    latestJump(
+      () => loading.current,
+      (seq) => go.current(seq),
+    ),
   )
+  go.current = async (seq: number) => {
+    if (thread.current !== sessionId) return true
+    if (bySeq.current.has(seq) && !inGap(gapsRef.current, seq)) return true
+    const gap = gapsRef.current.find((g) => g.from <= seq && seq < g.to)
+    // Before the oldest loaded: as a gap from the thread's start.
+    const top = first.current
+    const until = gap ? gap.to : top
+    if (seq >= until) return true
+    loading.current = true
+    try {
+      const page = await api<JumpPage>(`/threads/${sessionId}/events?from=${seq}&until=${until}`)
+      if (thread.current !== sessionId) return true
+      // What was loaded changed meanwhile: tried again with what is loaded now.
+      if (first.current !== top || (gap && !gapsRef.current.includes(gap))) return false
+      add(page.events.map((e) => known(e) as SequencedEvent))
+      if (gap)
+        holes(
+          gapsRef.current.flatMap((g) =>
+            g === gap
+              ? [
+                  { from: g.from, to: Math.max(g.from, page.firstSeq) },
+                  { from: Math.min(page.endSeq, g.to), to: g.to },
+                ]
+              : [g],
+          ),
+        )
+      else {
+        holes([{ from: page.endSeq, to: top }, ...gapsRef.current])
+        begin(page.firstSeq)
+      }
+      return true
+    } finally {
+      loading.current = false
+    }
+  }
+  /**
+   * Load the page holding `seq`, an event before the oldest loaded or in a gap, and only
+   * it: what lies between stays a gap, loaded as someone scrolls into it. Clicked while
+   * another page loads, it goes once that one is in; only the latest clicked goes. Resolves
+   * once it went (at once when the event is loaded already) or gave way to a newer one.
+   */
+  const jumpTo = useCallback((seq: number) => jumps.want(seq), [jumps])
+  // A page that loaded: a message clicked meanwhile goes now.
+  const jumpWaiting = () => void jumps.next().catch(() => undefined)
 
   /**
    * Load a page of a gap: its first one, read down into it, or its last one, read up
@@ -304,6 +324,7 @@ export function useThreadEvents(
         )
       } finally {
         loading.current = false
+        jumpWaiting()
       }
     },
     [sessionId, add],
