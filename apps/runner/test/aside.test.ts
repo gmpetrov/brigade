@@ -28,8 +28,9 @@ const TICKET = {
 }
 
 /**
- * Claude Code as a thread sees it: its first turn opens a ticket and waits on its result; a
- * result, or any later prompt, gets a reply. What it was given is kept, in order.
+ * Claude Code as a thread sees it: asked to set something up, it opens a ticket (ticket-1,
+ * ticket-2…) and waits on its result; a result, or any other prompt, gets a reply. It never
+ * echoes a result back. What it was given is kept, in order.
  */
 function scriptedHarness(heard: string[]) {
   let replies = 0
@@ -40,7 +41,7 @@ function scriptedHarness(heard: string[]) {
     emit({ type: 'text-end', id })
     emit({ type: 'finish-step', finishReason: { unified: 'stop', raw: 'stop' }, usage })
   }
-  let prompts = 0
+  let tickets = 0
   return {
     harnessId: 'scripted',
     specificationVersion: 'harness-v1',
@@ -54,10 +55,10 @@ function scriptedHarness(heard: string[]) {
         let finish!: () => void
         const done = new Promise<void>((resolve) => (finish = resolve))
         emit({ type: 'stream-start', modelId: 'scripted' })
-        if (prompts++ === 0) {
+        if (String(typeof prompt === 'string' ? prompt : '').startsWith('Set up')) {
           emit({
             type: 'tool-call',
-            toolCallId: 'ticket-1',
+            toolCallId: `ticket-${++tickets}`,
             toolName: OPEN_TICKET_TOOL,
             input: JSON.stringify(TICKET),
             providerExecuted: false,
@@ -209,6 +210,33 @@ test('a ticket declined after it was set aside comes as a message too, once', as
     await t.run(decline)
     assert.match(t.heard.at(-1) ?? '', /Use the other one/)
     assert.deepEqual(completions(t.events), ['waiting', 'idle'])
+  } finally {
+    await t.done()
+  }
+})
+
+test('a ticket answered before is not set aside with the next one', async () => {
+  const t = await setup()
+  try {
+    await t.run({ kind: 'prompt', text: 'Set up Hyperdrive' })
+    await t.run({
+      kind: 'ticket',
+      requestId: 'ticket-1',
+      answer: { action: 'answered', replies: { perm: { type: 'action', done: true } } },
+    })
+    assert.equal((await t.run({ kind: 'prompt', text: 'Set up the alerts' })).status, 'waiting')
+    await t.run({ kind: 'prompt', text: 'Which page is it on?' })
+    // Only the open ticket takes the message.
+    const results = t.heard.filter((h) => h.startsWith('result '))
+    assert.equal(results.length, 2)
+    assert.match(results[1]!, /^result ticket-2: .*Which page is it on\?/)
+    await t.run({
+      kind: 'ticket',
+      requestId: 'ticket-2',
+      answer: { action: 'answered', replies: { perm: { type: 'action', done: true } } },
+    })
+    // Its answer ends the wait: nothing else is left asked.
+    assert.deepEqual(completions(t.events), ['idle', 'waiting', 'idle'])
   } finally {
     await t.done()
   }

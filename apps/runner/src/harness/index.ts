@@ -704,7 +704,7 @@ export class HarnessThread {
         !this.frozen &&
         !this.drain &&
         this.approvals.size === 0 &&
-        waitingOn(this.toolCalls, PERSON_TOOLS).length > 0
+        this.waitingAsks().length > 0
       )
     await this.load()
     const closed = closeTurn(this.saved?.resume)
@@ -716,16 +716,35 @@ export class HarnessThread {
     )
   }
 
-  /** The tickets and questions the turn waits on, set aside: still open, answered later. */
-  private setAside(): WaitingCall[] {
+  /**
+   * The person's tickets and questions the last turn waits on. Live, those its session still
+   * waits on (a list the SDK keeps private: without it, the calls seen and not answered);
+   * stopped, those its saved turn does.
+   */
+  private waitingAsks(): WaitingCall[] {
+    if (!this.live)
+      return (closeTurn(this.saved?.resume)?.waiting ?? []).filter((c) =>
+        PERSON_TOOLS.has(c.toolName),
+      )
     const calls = waitingOn(this.toolCalls, PERSON_TOOLS)
+    const pending = (
+      this.live.session as unknown as {
+        getPendingToolResults?: () => { toolCallId: string; completedResult?: unknown }[]
+      }
+    ).getPendingToolResults?.()
+    if (!pending) return calls
+    const ids = new Set(pending.filter((p) => !p.completedResult).map((p) => p.toolCallId))
+    return calls.filter((c) => ids.has(c.toolCallId))
+  }
+
+  /** These tickets and questions, set aside: still open, answered later (laterAnswer). */
+  private setAside(calls: WaitingCall[]) {
     for (const call of calls) this.toolCalls.delete(call.toolCallId)
     const ids = new Set(calls.map((c) => c.toolCallId))
     this.saved!.later = [
       ...(this.saved!.later ?? []).filter((c) => !ids.has(c.toolCallId)),
       ...calls,
     ]
-    return calls
   }
 
   /** A person's answer to an ask set aside earlier, as the message it becomes; else undefined. */
@@ -958,6 +977,8 @@ export class HarnessThread {
       // A message while the turn waits only on the person's tickets and questions: they stay
       // open, and the message goes in now (aside.ts). Closed so too when its session stopped.
       const aside = input.kind === 'prompt' && input.text !== '' && (await this.asksOnly())
+      // Which, read before closing the turn they wait in.
+      const calls = aside ? this.waitingAsks() : []
       let closed = !this.live && (answer || aside) && this.closeTurn()
       const live = (attached = await this.attach())
       // Or nothing kept the turn at all (the process stopped without parking): the session has
@@ -994,8 +1015,8 @@ export class HarnessThread {
       // Set aside, the calls the turn waits on take the message as their result; with that
       // turn closed, the message says what became of them.
       let asides: ReturnType<typeof asideResult>[] | undefined
-      const calls = aside ? this.setAside() : []
       if (calls.length > 0 && text !== undefined) {
+        this.setAside(calls)
         if (live.session.hasUnfinishedTurn()) {
           asides = calls.map((call) => asideResult(call, text!))
           text = undefined
@@ -1087,6 +1108,9 @@ export class HarnessThread {
                       ],
                     })
       if (input.kind === 'approval' && !closed) this.approvals.delete(input.approvalId)
+      // Answered, a call waits no more: kept, it would look asked still (waitingAsks).
+      if (input.kind === 'answer') this.toolCalls.delete(input.questionId)
+      if (input.kind === 'ticket') this.toolCalls.delete(input.requestId)
       if (result) await consumeLast(result.fullStream)
       if (early) return await answeredEarly()
       // The call approved while its turn was lost, made again: approved as the person did.
@@ -1107,6 +1131,7 @@ export class HarnessThread {
       // A ticket nobody could answer: the error goes back and the turn carries on.
       while (mapper.rejected.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
         const rejected = mapper.rejected.splice(0)
+        for (const r of rejected) this.toolCalls.delete(r.toolCallId)
         result = await live.agent.continueStream({
           session: live.session,
           abortSignal: streamSignal(),
