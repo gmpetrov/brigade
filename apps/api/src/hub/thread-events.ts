@@ -123,7 +123,9 @@ export async function noteTurnsEnded(
 /** A thread's status follows from its events, so it survives disconnects and replays. */
 export function statusAfter(current: SessionStatus, event: AgentEvent): SessionStatus {
   switch (event.type) {
+    // Noted while the teammate waits on a person (a hand back's note): no turn starts.
     case 'message.user':
+      return event.waiting ? 'waiting' : 'running'
     case 'approval.resolved':
       return 'running'
     case 'approval.requested':
@@ -138,8 +140,11 @@ export function statusAfter(current: SessionStatus, event: AgentEvent): SessionS
       return 'idle'
     case 'account.switched':
       return event.toAccountId ? current : 'paused'
+    // A takeover pauses the teammate once its turn is over. Handed back before that, the turn
+    // goes on: it still runs. Handed back after, it waits on what it asked, or on nothing.
     case 'control.changed':
-      return event.controller === 'human' ? 'paused' : 'idle'
+      if (event.controller === 'human') return 'paused'
+      return current === 'paused' ? (event.waiting ? 'waiting' : 'idle') : current
     case 'error':
       return 'failed'
     default:

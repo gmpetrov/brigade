@@ -201,8 +201,9 @@ export function useSidebarOrder() {
 /** The lists whose rows drag to another place. */
 type DragList = 'pinned' | SidebarList
 
+// Paused waits on a person too: one who took control of its computer, or usage to come back.
 const groupOf = (status: string): Group =>
-  status === 'waiting'
+  status === 'waiting' || status === 'paused'
     ? 'waiting'
     : status === 'starting' || status === 'running'
       ? 'working'
@@ -210,6 +211,7 @@ const groupOf = (status: string): Group =>
 
 const LABELS: Record<string, string> = {
   waiting: 'needs you',
+  paused: 'paused',
   starting: 'working',
   running: 'working',
 }
