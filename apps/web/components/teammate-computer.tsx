@@ -18,7 +18,8 @@ export function TeammateComputer({ teammate }: { teammate: Teammate }) {
   const { me } = useDashboard()
   const panel = useThreadPanel()
   const threads = useApi<ThreadSummary[]>(`/threads?teammateId=${teammate.id}`)
-  const beside = panel.visible ? panel.threadId : null
+  // Closed, the thread stays docked: still the one control goes through.
+  const beside = panel.threadId
   // The thread beside it, even when the list leaves it out (a child thread's), once it shows
   // it runs here: one on a member's Mac leaves control to the teammate's threads that do.
   const besideThread = useApi<Thread>(beside ? `/threads/${beside}` : null)
@@ -55,7 +56,7 @@ export function TeammateComputer({ teammate }: { teammate: Teammate }) {
             void reloadBeside()
             void reloadThread()
             // The conversation beside the screen, for the hand back.
-            if (beside !== t.id) panel.openThread(t.id)
+            if (!panel.visible || beside !== t.id) panel.openThread(t.id)
           }}
           onCollapse={reopen}
         />
