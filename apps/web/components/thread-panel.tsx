@@ -29,6 +29,7 @@ import { ProjectIcon } from '@/components/projects'
 import { StatusDot } from '@/components/status-badge'
 import { useDesktopPreview } from '@/components/desktop-preview'
 import { useDocumentPanel } from '@/components/document-panel'
+import { useKeptPreviewShown } from '@/components/kept-previews'
 import {
   NewThread,
   TeammatePicker,
@@ -796,6 +797,8 @@ const SPRING =
 function useSlideAcross<T extends HTMLElement>() {
   const ref = useRef<T>(null)
   const last = useRef<number>(undefined)
+  // A thread's preview opens or closes in a render of its own (components/kept-previews.tsx).
+  useKeptPreviewShown()
   const center = (el: T) => {
     const r = el.getBoundingClientRect()
     return r.left + r.width / 2
