@@ -324,6 +324,21 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     )
   }, [me.data])
 
+  // The member could not be read (the API restarting, a deploy, the network): asked again,
+  // sooner then less often, rather than the loader staying for good. 401 signs out above.
+  const failures = useRef(0)
+  const unreachable = !me.data && !!me.error && me.error.status !== 401
+  const reloadMe = me.reload
+  useEffect(() => {
+    if (!me.error || me.error.status === 401) {
+      failures.current = 0
+      return
+    }
+    const wait = Math.min(1000 * 2 ** failures.current++, 15000)
+    const timer = setTimeout(() => void reloadMe(), wait)
+    return () => clearTimeout(timer)
+  }, [me.error, reloadMe])
+
   useSettingsShortcut()
 
   // Brigade.app's screenshot window shows its page alone; signing in there lands it back on it.
@@ -333,7 +348,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     if (pathname === '/app' && inCaptureWindow()) router.replace('/app/capture')
   }, [pathname, router])
 
-  if (!me.data?.activeWorkspaceId || !me.data.aiReady) return <AppLoader />
+  if (!me.data?.activeWorkspaceId || !me.data.aiReady)
+    return <AppLoader note={unreachable ? 'Cannot reach Brigade. Trying again…' : undefined} />
   const data = me.data
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
