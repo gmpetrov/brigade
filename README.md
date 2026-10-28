@@ -14,7 +14,6 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8b5cf6" alt="MIT License" /></a>
-  <a href="https://github.com/gmpetrov/brigade/stargazers"><img src="https://img.shields.io/github/stars/gmpetrov/brigade?style=flat&color=8b5cf6" alt="Stars" /></a>
   <a href="https://github.com/gmpetrov/brigade/commits/main"><img src="https://img.shields.io/github/last-commit/gmpetrov/brigade?color=8b5cf6" alt="Last commit" /></a>
   <a href="https://github.com/gmpetrov/brigade/pulls?q=is%3Apr+is%3Amerged"><img src="https://img.shields.io/github/issues-pr-closed/gmpetrov/brigade?label=pull%20requests&color=8b5cf6" alt="Pull requests" /></a>
 </p>
@@ -415,15 +414,6 @@ tests of the packages you changed (`pnpm --filter <package> test`). Pull request
 MIT &copy; 2026 Georges Petrov. See [LICENSE](LICENSE).
 
 <br/>
-
-## Star history
-
-<a href="https://www.star-history.com/#gmpetrov/brigade&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=gmpetrov/brigade&type=Date&theme=dark" />
-    <img src="https://api.star-history.com/svg?repos=gmpetrov/brigade&type=Date" alt="Star history chart" width="600" />
-  </picture>
-</a>
 
 ---
 
