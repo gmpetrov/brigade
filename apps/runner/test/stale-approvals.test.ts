@@ -70,6 +70,7 @@ function setup(sessionId: string, waiting: string[], known: boolean) {
     holdsAnswer: () => waiting.length > 0,
     keepsAnswer: async (input: Input) => waiting.length > 0 && !!kept.push(input),
     answersToGive: async () => (waiting.length > 0 ? [] : kept.splice(0)),
+    cutOff: async () => false,
   }
   // The runner's own seat, with the stand-in in place of a Claude Code session.
   const seat = {
@@ -107,7 +108,9 @@ function setup(sessionId: string, waiting: string[], known: boolean) {
       answer: { action: 'answered', replies: { a1: { type: 'action', done: true } } },
       memberId: 'm1',
     })
-  return { events, inputs, decide, answer }
+  // The runner reconnects with the thread in progress and no turn of it running.
+  const reconnect = () => threads.resumeLost([spec], [], () => undefined)
+  return { events, inputs, decide, answer, kept, reconnect }
 }
 
 const shown = (events: AgentEvent[]) =>
@@ -150,4 +153,12 @@ test('an answer while an approval waits is kept, the thread waiting, then goes i
   t.decide('ap-1')
   await sleep(30)
   assert.deepEqual(t.inputs, ['approval ap-1', 'ticket ticket-1'])
+})
+
+test('on reconnect, answers kept for a decision made before the restart are given', async () => {
+  const t = setup('approval-kept-restart', [], true)
+  t.kept.push({ kind: 'ticket', requestId: 'ticket-1' })
+  t.reconnect()
+  await sleep(30)
+  assert.deepEqual(t.inputs, ['ticket ticket-1'])
 })

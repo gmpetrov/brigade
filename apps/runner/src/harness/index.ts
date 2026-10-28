@@ -716,6 +716,8 @@ export class HarnessThread {
     const call = this.messageCall(input)
     if (!call || !this.holds() || !this.saved) return false
     this.toolCalls.delete(call.toolCallId)
+    // Given already, and held again (a turn before it waits on another decision): given anew.
+    this.given.delete(call.toolCallId)
     this.saved.later = [
       ...(this.saved.later ?? []).filter((c) => c.toolCallId !== call.toolCallId),
       { ...call, answer: input },
@@ -1817,7 +1819,11 @@ export class HarnessThread {
     this.emitEvent({ ...event, at: new Date().toISOString() } as AgentEvent)
   }
 
-  /** The turn is over. With an ask set aside still open, the teammate still waits on the person. */
+  /**
+   * The turn is over. With an ask set aside still open, the teammate still waits on the person.
+   * An answer kept for a decision and not given yet counts too: a runner that stops before
+   * giving it finds the thread in progress, and gives it then (Threads.pickUp).
+   */
   private completed(finishReason: string) {
     this.emit({
       type: 'turn.completed',

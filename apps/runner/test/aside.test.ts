@@ -42,6 +42,7 @@ function scriptedHarness(heard: string[], prefix: string, onResult?: () => Promi
     emit({ type: 'finish-step', finishReason: { unified: 'stop', raw: 'stop' }, usage })
   }
   let tickets = 0
+  let approvals = 0
   return {
     harnessId: 'scripted',
     specificationVersion: 'harness-v1',
@@ -71,15 +72,20 @@ function scriptedHarness(heard: string[], prefix: string, onResult?: () => Promi
           // Claude Code then waits on the ticket's result: no `finish` until it comes.
         } else if (String(prompt).startsWith('Publish')) {
           // A built-in tool call it asks a person to approve first.
+          const n = ++approvals
           emit({
             type: 'tool-call',
-            toolCallId: 'bash-1',
+            toolCallId: `bash-${n}`,
             toolName: 'bash',
             input: '{"command":"publish"}',
             providerExecuted: true,
             dynamic: true,
           })
-          emit({ type: 'tool-approval-request', approvalId: 'approval-1', toolCallId: 'bash-1' })
+          emit({
+            type: 'tool-approval-request',
+            approvalId: `approval-${n}`,
+            toolCallId: `bash-${n}`,
+          })
           emit({
             type: 'finish-step',
             finishReason: { unified: 'tool-calls', raw: 'host-input' },
@@ -397,6 +403,56 @@ test('an answer while the teammate waits on an approval is kept, and goes in onc
     assert.deepEqual(await t.thread.answersToGive(), [])
   } finally {
     await t.done()
+  }
+})
+
+/** A ticket set aside, answered while the teammate waits on an approval, which is decided. */
+async function keptThenDecided() {
+  const t = await setup()
+  await t.run({ kind: 'prompt', text: 'Set up Hyperdrive' })
+  await t.run({ kind: 'prompt', text: 'Which token is it?' })
+  await t.run({ kind: 'prompt', text: 'Publish it' })
+  const answer = {
+    kind: 'ticket' as const,
+    requestId: 'ticket-1',
+    answer: {
+      action: 'answered' as const,
+      replies: { perm: { type: 'action' as const, done: true, note: 'Added it to token 84219' } },
+    },
+  }
+  await t.run(answer)
+  await t.run({ kind: 'approval', approvalId: 'approval-1', approved: true })
+  return { ...t, answer }
+}
+
+test('a kept answer held again by another decision is given again once that is made', async () => {
+  const t = await keptThenDecided()
+  try {
+    assert.deepEqual(await t.thread.answersToGive(), [t.answer])
+    // A turn queued before it asks for another approval: the answer waits again.
+    assert.equal((await t.run({ kind: 'prompt', text: 'Publish again' })).status, 'waiting')
+    assert.equal((await t.run(t.answer)).status, 'waiting')
+    assert.deepEqual(await t.thread.answersToGive(), [])
+    await t.run({ kind: 'approval', approvalId: 'approval-2', approved: true })
+    assert.deepEqual(await t.thread.answersToGive(), [t.answer])
+  } finally {
+    await t.done()
+  }
+})
+
+test('a runner that stops before giving a kept answer gives it from what it saved', async () => {
+  const before = await keptThenDecided()
+  let after: Awaited<ReturnType<typeof setup>> | undefined
+  try {
+    // The decided turn left the thread in progress: the next runner looks at it (pickUp).
+    assert.deepEqual(completions(before.events).at(-1), 'waiting')
+    const saved = await readFile(join(before.dir, 'aside-riley.json'), 'utf8')
+    after = await setup({ saved })
+    Object.assign(after.thread, { live: undefined })
+    assert.deepEqual(await after.thread.answersToGive(), [before.answer])
+  } finally {
+    await before.done()
+    await after?.done()
   }
 })
 

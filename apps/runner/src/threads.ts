@@ -524,6 +524,14 @@ export class Threads {
    * go on is closed as interrupted. Null: no turn now.
    */
   private async pickUp(spec: ThreadSpec, seat: Seat, lost: Lost): Promise<ThreadInput | null> {
+    const turn = await this.lostTurn(spec, seat, lost)
+    // Answers kept for a decision made before the runner stopped: given now, rather than once
+    // someone writes. After a turn, they are given as after any.
+    if (!turn) for (const answer of await seat.harness.answersToGive()) this.enqueue(spec, answer)
+    return turn
+  }
+
+  private async lostTurn(spec: ThreadSpec, seat: Seat, lost: Lost): Promise<ThreadInput | null> {
     if (lost.ended) return null
     if (await seat.harness.cutOff())
       return { kind: 'resume', text: await this.catchUp(spec, undefined, true) }
