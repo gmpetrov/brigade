@@ -439,10 +439,10 @@ export const AgentEvent = z.discriminatedUnion('type', [
     messageId: z.string().optional(),
     /** Given to the teammate during its running turn rather than in a turn of its own. */
     steered: z.boolean().optional(),
+    /** Noted while the teammate waits on a person's answer: it reads it then, so no turn starts now. */
+    waiting: z.boolean().optional(),
     /** The earlier message it replies to. */
     replyTo: ReplyTo.optional(),
-    /** Its teammate waits on a person (a ticket): no turn starts for it until they answer. */
-    waiting: z.boolean().optional(),
   }),
   /**
    * A message waits for the turn before it to end, or for a person to answer
@@ -590,6 +590,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
     type: z.literal('control.changed'),
     controller: z.enum(['teammate', 'human']),
     memberId: z.string().nullable(),
+    /** Handed back while the teammate still waits on a person's answer: no turn starts yet. */
+    waiting: z.boolean().optional(),
   }),
   /** A teammate starts answering. In a thread with several, they answer one after another. */
   z.object({
