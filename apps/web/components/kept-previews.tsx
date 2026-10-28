@@ -65,7 +65,7 @@ export function dropKeptPreview(threadId: string) {
 export function KeepPreview({ threadId, shown, ...props }: PanelProps & { shown: boolean }) {
   // Each render: its callbacks and the preview as it stands. Before the browser paints, so
   // the page makes room for it in the same frame (and the thread's pill slides across).
-  useLayoutEffect(() => show(threadId, props as PanelProps, shown))
+  useLayoutEffect(() => show(threadId, { ...props, threadId }, shown))
   useLayoutEffect(() => () => hide(threadId), [threadId])
   return null
 }
