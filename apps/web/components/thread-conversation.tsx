@@ -735,8 +735,13 @@ export function ThreadConversation({
             ? `Moves to ${movingTo} once it is online`
             : `Moving to ${movingTo}…`
       : undefined
-  // The computer's own page, the thread docked beside it.
-  const showComputer = () => openComputer(t.teammate.id, { threadId: id })
+  // Expanded, its screen in the panel beside the thread, in front of a file, preview or
+  // document; docked, the computer's own page, the thread beside it.
+  const showComputer = () => {
+    if (!expanded) return openComputer(t.teammate.id, { threadId: id })
+    documents.close()
+    setWatching(true)
+  }
 
   async function call(path: string, body?: unknown) {
     setError(undefined)

@@ -2,9 +2,9 @@
 // A teammate's computer, a page like any other (/app/teammates/<id>/computer): the
 // workspace computer's screen, the threads panel docked beside it as on every page.
 // The screen is the workspace's, the same for every teammate; control is a thread's.
-// Through the thread open beside it when the teammate is in it, else the one the
-// teammate is working in (or its newest): taking control there opens it beside the
-// screen, where it waits for the hand back.
+// Through the thread open beside it, else the one the teammate is working in (or its
+// newest): taking control there opens it beside the screen, where it waits for the hand
+// back.
 import { ComputerScreen } from '@/components/computer-panel'
 import { useDashboard } from '@/components/dashboard'
 import { DesktopScreen } from '@/components/desktop-preview'
@@ -19,10 +19,9 @@ export function TeammateComputer({ teammate }: { teammate: Teammate }) {
   const panel = useThreadPanel()
   const threads = useApi<ThreadSummary[]>(`/threads?teammateId=${teammate.id}`)
   const beside = panel.visible ? panel.threadId : null
+  // The thread beside it even when the list leaves it out (a child thread's).
   const controlId =
-    threads.data?.find((t) => t.id === beside)?.id ??
-    threads.data?.find((t) => BUSY.has(t.status))?.id ??
-    threads.data?.[0]?.id
+    beside ?? threads.data?.find((t) => BUSY.has(t.status))?.id ?? threads.data?.[0]?.id
   const thread = useApi<Thread>(controlId ? `/threads/${controlId}` : null)
   const reloadThreads = threads.reload
   const reloadThread = thread.reload
