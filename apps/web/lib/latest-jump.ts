@@ -2,7 +2,10 @@
 // another page loads waits, and only the latest one clicked goes once that load ends.
 
 export type Jumps = {
-  /** Go to `seq`: now, or once the page loading ends. Resolves once it went or gave way. */
+  /**
+   * Go to `seq`: now, or once the page loading ends. Resolves once it went or gave way to
+   * a newer click; rejects when its own page could not load.
+   */
   want: (seq: number) => Promise<void>
   /** A load ended: the message waiting, if any, goes now. */
   next: () => Promise<void>
@@ -10,42 +13,45 @@ export type Jumps = {
   clear: () => void
 }
 
+type Waiting = { seq: number; tries: number; done: () => void; failed: (e: unknown) => void }
+
 /**
  * `busy` says whether a page loads now. `go` loads the page of a message and says whether
  * it went in; false (what was loaded changed meanwhile) tries again with what is loaded now.
  */
 export function latestJump(busy: () => boolean, go: (seq: number) => Promise<boolean>): Jumps {
-  let waiting: number | undefined
-  let tries = 0
+  let waiting: Waiting | undefined
+  const settle = (w: Waiting, error?: { e: unknown }) => {
+    if (waiting === w) waiting = undefined
+    if (error) w.failed(error.e)
+    else w.done()
+  }
   const next = async () => {
-    const seq = waiting
-    if (seq === undefined || busy()) return
+    const w = waiting
+    if (!w || busy()) return
     let went: boolean
     try {
-      went = await go(seq)
+      went = await go(w.seq)
     } catch (e) {
-      // It could not load: it stops waiting, and says so. A newer one still goes.
-      if (waiting === seq) waiting = undefined
-      void next().catch(() => undefined)
-      throw e
+      // Given way to a newer click meanwhile, its failure is not said: the newer one goes.
+      if (waiting === w) settle(w, { e })
+      return next()
     }
-    // Gone, or tried enough: it stops waiting. A newer one clicked meanwhile goes now.
-    if (waiting === seq && (went || ++tries >= MAX_TRIES)) {
-      waiting = undefined
-      tries = 0
-    }
-    if (waiting !== undefined) await next()
+    if (waiting === w && (went || ++w.tries >= MAX_TRIES)) settle(w)
+    return next()
   }
   return {
-    want: (seq) => {
-      waiting = seq
-      tries = 0
-      return next()
-    },
+    want: (seq) =>
+      new Promise<void>((done, failed) => {
+        // The one waiting gives way: it went nowhere, and says nothing went wrong.
+        if (waiting) waiting.done()
+        waiting = { seq, tries: 0, done, failed }
+        void next()
+      }),
     next,
     clear: () => {
+      waiting?.done()
       waiting = undefined
-      tries = 0
     },
   }
 }

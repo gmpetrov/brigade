@@ -551,7 +551,8 @@ export function ThreadConversation({
   const jump = (seq: number) => {
     setSettled(false)
     setJumping(seq)
-    void jumpTo(seq).catch(() => setJumping(undefined))
+    // Only this message's own failure: a newer click keeps its place.
+    void jumpTo(seq).catch(() => setJumping((was) => (was === seq ? undefined : was)))
   }
   useLayoutEffect(() => {
     const view = scroller.current

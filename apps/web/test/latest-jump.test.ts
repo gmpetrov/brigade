@@ -85,3 +85,44 @@ test('another thread: nothing waits any more', async () => {
   await tick()
   assert.deepEqual(p.asked, [100])
 })
+
+test('a failed load given way to a newer click: the newer one goes, and that failure is not said', async () => {
+  const asked: number[] = []
+  const pending: { resolve: (went: boolean) => void; reject: (e: Error) => void }[] = []
+  let loading = false
+  const jumps = latestJump(
+    () => loading,
+    (seq) => {
+      asked.push(seq)
+      loading = true
+      return new Promise<boolean>((resolve, reject) =>
+        pending.push({
+          resolve: (went) => ((loading = false), resolve(went)),
+          reject: (e) => ((loading = false), reject(e)),
+        }),
+      )
+    },
+  )
+  const first = jumps.want(100)
+  const second = jumps.want(4000)
+  // The first gave way: it settles without an error.
+  await first
+  pending.shift()!.reject(new Error('offline'))
+  await tick()
+  assert.deepEqual(asked, [100, 4000])
+  pending.shift()!.reject(new Error('offline again'))
+  // The newer one hears of its own failure.
+  await assert.rejects(second, /offline again/)
+})
+
+test('a failed load nothing newer waits on: its click hears of it', async () => {
+  const jumps = latestJump(
+    () => false,
+    async () => {
+      throw new Error('offline')
+    },
+  )
+  await assert.rejects(jumps.want(100), /offline/)
+  // And nothing waits after it.
+  await jumps.next()
+})
