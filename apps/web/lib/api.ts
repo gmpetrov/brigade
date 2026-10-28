@@ -999,6 +999,9 @@ export type Ticket = {
     /** Its thread (a child's: its parent) put away for later by this member: none waits on them. */
     laterAt?: string | null
     teammate: { id: string; name: string }
+    /** Where it runs, and who has taken it over: Home's takeover from a ticket. */
+    computer?: { kind: string }
+    controlledByMemberId?: string | null
   } | null
   /**
    * A playbook's open approvals, listed as one: this ticket (their latest) stands for them all.

@@ -18,7 +18,8 @@ import { useEffect, useState } from 'react'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { PlaybookApprovals } from '@/components/playbook-approvals'
 import { PullCard } from '@/components/pull-card'
-import { QuestionCard, TicketCard } from '@/components/thread-view'
+import { QuestionCard, TicketCard, type TicketTakeover } from '@/components/thread-view'
+import { useThreadPanel } from '@/components/thread-panel'
 import { TicketRow } from '@/components/ticket-row'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -94,9 +95,24 @@ function HarnessTicket({
   /** Answered: what to say it did, before the next one. */
   onDone: (sent: string) => Promise<void>
 }) {
-  const { teammates } = useDashboard()
+  const { me, teammates } = useDashboard()
+  const { showComputer } = useThreadPanel()
   const session = t.session!
   const asker = t.payload.teammateId ?? session.teammate.id
+  // Something to do in the teammate's browser: taken over from here as in the thread, on the
+  // cloud computer unless another member has control; doing it opens the thread's computer.
+  const controller = session.controlledByMemberId
+  const takeover: TicketTakeover | undefined =
+    session.computer?.kind === 'cloud' && me.memberId && (!controller || controller === me.memberId)
+      ? {
+          mine: controller === me.memberId,
+          open: async () => {
+            if (controller !== me.memberId)
+              await api(`/threads/${session.id}/takeover`, { body: { interrupt: false } })
+            showComputer(session.id)
+          },
+        }
+      : undefined
   const askerName = teammates.find((m) => m.id === asker)?.name ?? session.teammate.name
   const from = <From teammate={{ id: asker, name: askerName }} thread={session} />
 
@@ -138,7 +154,7 @@ function HarnessTicket({
           teammateId: asker,
         }}
         canAnswer
-        takeover={undefined}
+        takeover={takeover}
         teammates={teammates}
         askerId={asker}
         askerName={askerName}

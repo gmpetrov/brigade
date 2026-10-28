@@ -351,6 +351,8 @@ export function ThreadConversation({
     computerPage,
     previewRequest,
     takePreviewRequest,
+    computerRequest,
+    takeComputerRequest,
   } = useThreadPanel()
   // A file a message names, open beside the thread in the desktop's place.
   const [file, setFile] = useState<{ path: string; teammateId?: string }>()
@@ -410,6 +412,12 @@ export function ThreadConversation({
     takePreviewRequest()
     setAwaitingPreview(true)
   }, [previewRequest, id, takePreviewRequest])
+  // Opened from Home's ticket once the member took control: its computer, over the window.
+  useEffect(() => {
+    if (computerRequest?.threadId !== id) return
+    takeComputerRequest()
+    setComputerOpen(true)
+  }, [computerRequest, id, takeComputerRequest])
   useEffect(() => {
     if (!awaitingPreview || !live) return
     setAwaitingPreview(false)
@@ -735,12 +743,11 @@ export function ThreadConversation({
             ? `Moves to ${movingTo} once it is online`
             : `Moving to ${movingTo}…`
       : undefined
-  // Expanded, its screen in the panel beside the thread, in front of a file, preview or
-  // document; docked, the computer's own page, the thread beside it.
+  // Expanded, its computer over the window, to act there (its details' screen is to watch);
+  // docked, the computer's own page, the thread beside it.
   const showComputer = () => {
     if (!expanded) return openComputer(t.teammate.id, { threadId: id })
-    documents.close()
-    setWatching(true)
+    setComputerOpen(true)
   }
 
   async function call(path: string, body?: unknown) {

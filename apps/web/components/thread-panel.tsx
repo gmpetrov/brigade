@@ -104,6 +104,14 @@ type ThreadPanel = {
   /** The latest such request, until the thread's page takes it up: once, not on each visit. */
   previewRequest?: { threadId: string; key: number }
   takePreviewRequest: () => void
+  /**
+   * Opens a thread on its computer, over the whole window (from Home's ticket, once the
+   * member took control): the thread, then its computer.
+   */
+  showComputer: (threadId: string) => void
+  /** The latest such request, until the thread's page takes it up. */
+  computerRequest?: { threadId: string; key: number }
+  takeComputerRequest: () => void
   /** A thread's file or preview is in the teammate panel's place. */
   covered: boolean
   setCovered: (covered: boolean) => void
@@ -288,6 +296,15 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
     [openThread],
   )
   const takePreviewRequest = useCallback(() => setPreviewRequest(undefined), [])
+  const [computerRequest, setComputerRequest] = useState<{ threadId: string; key: number }>()
+  const showComputer = useCallback(
+    (id: string) => {
+      setComputerRequest({ threadId: id, key: Date.now() })
+      router.push(`/app/threads/${id}`)
+    },
+    [router],
+  )
+  const takeComputerRequest = useCallback(() => setComputerRequest(undefined), [])
   const back = useCallback(() => {
     if (expanded) router.push('/app/threads')
     else setDocked(null)
@@ -437,6 +454,9 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       openPreview,
       previewRequest,
       takePreviewRequest,
+      showComputer,
+      computerRequest,
+      takeComputerRequest,
       covered,
       setCovered,
       teammateId,
@@ -471,6 +491,9 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       openPreview,
       previewRequest,
       takePreviewRequest,
+      showComputer,
+      computerRequest,
+      takeComputerRequest,
       covered,
       teammateId,
       chooseTeammate,

@@ -69,6 +69,10 @@ const TICKET_SESSION = {
     // Archived: it no longer waits on anyone (waitsOn), though the Tickets page lists it.
     archivedAt: true,
     teammate: { select: { id: true, name: true } },
+    // A ticket to do in the teammate's browser is taken over from Home too: on the cloud
+    // computer, unless another member has control.
+    computer: { select: { kind: true } },
+    controlledByMemberId: true,
   },
 } as const
 
