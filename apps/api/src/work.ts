@@ -407,8 +407,8 @@ export async function startThread(
      */
     id?: string
     /**
-     * With `id`: the browser chose it, so a thread that has it already is refused (409), never
-     * taken up as a trigger's is: else a member could write in a thread not theirs by its id.
+     * With `id`: the browser chose it, so a thread that has it already is never taken up as a
+     * trigger's is (else a member could write in a thread not theirs by its id): making it fails.
      */
     fresh?: boolean
   },
@@ -433,58 +433,51 @@ export async function startThread(
     input.id && !input.fresh ? await db.session.findFirst({ where: { id: input.id } }) : null
   const created =
     made ??
-    (await db.session
-      .create({
-        data: {
-          ...(input.id ? { id: input.id } : {}),
-          teammateId: input.teammate.id,
-          startedByMemberId: input.memberId,
-          computerId: input.computer.id,
-          accountId: account.id,
-          title: input.title.slice(0, 120),
-          ...(input.taskId ? { taskId: input.taskId } : {}),
-          ...(input.projectId ? { projectId: input.projectId } : {}),
-          ...(input.effort ? { effort: input.effort } : {}),
-          ...(input.playbookRunId ? { playbookRunId: input.playbookRunId } : {}),
-          ...(input.quiet ? { quiet: true } : {}),
-          ...(input.origin?.kind === 'trigger'
+    (await db.session.create({
+      data: {
+        ...(input.id ? { id: input.id } : {}),
+        teammateId: input.teammate.id,
+        startedByMemberId: input.memberId,
+        computerId: input.computer.id,
+        accountId: account.id,
+        title: input.title.slice(0, 120),
+        ...(input.taskId ? { taskId: input.taskId } : {}),
+        ...(input.projectId ? { projectId: input.projectId } : {}),
+        ...(input.effort ? { effort: input.effort } : {}),
+        ...(input.playbookRunId ? { playbookRunId: input.playbookRunId } : {}),
+        ...(input.quiet ? { quiet: true } : {}),
+        ...(input.origin?.kind === 'trigger'
+          ? {
+              origin: 'trigger',
+              triggerId: input.origin.triggerId,
+              conversationKey: input.origin.conversationKey ?? null,
+            }
+          : input.origin?.kind === 'schedule'
             ? {
-                origin: 'trigger',
-                triggerId: input.origin.triggerId,
-                conversationKey: input.origin.conversationKey ?? null,
+                origin: 'schedule',
+                scheduleId: input.origin.scheduleId,
+                ...(input.origin.parent
+                  ? childOf(input.origin.parent, {
+                      teammateId: input.origin.parentTeammateId ?? input.teammate.id,
+                      awaited: false,
+                    })
+                  : {}),
               }
-            : input.origin?.kind === 'schedule'
+            : input.origin?.kind === 'child'
               ? {
-                  origin: 'schedule',
-                  scheduleId: input.origin.scheduleId,
-                  ...(input.origin.parent
-                    ? childOf(input.origin.parent, {
-                        teammateId: input.origin.parentTeammateId ?? input.teammate.id,
-                        awaited: false,
-                      })
+                  origin: 'child',
+                  ...childOf(input.origin.parent, {
+                    teammateId: input.origin.byTeammateId,
+                    awaited: input.origin.awaited,
+                    ...(input.origin.awaitUntil ? { awaitUntil: input.origin.awaitUntil } : {}),
+                  }),
+                  ...(input.origin.playbookTeammate
+                    ? { playbookTeammate: input.origin.playbookTeammate }
                     : {}),
                 }
-              : input.origin?.kind === 'child'
-                ? {
-                    origin: 'child',
-                    ...childOf(input.origin.parent, {
-                      teammateId: input.origin.byTeammateId,
-                      awaited: input.origin.awaited,
-                      ...(input.origin.awaitUntil ? { awaitUntil: input.origin.awaitUntil } : {}),
-                    }),
-                    ...(input.origin.playbookTeammate
-                      ? { playbookTeammate: input.origin.playbookTeammate }
-                      : {}),
-                  }
-                : {}),
-        } as never,
-      })
-      .catch((error: unknown) => {
-        // Its id is taken, here or in another workspace: one the browser chose.
-        if ((error as { code?: string }).code === 'P2002')
-          throw new HTTPException(409, { message: 'That thread id is taken' })
-        throw error
-      }))
+              : {}),
+      } as never,
+    }))
   // Each step below is a trip to the database: what does not wait on another goes with it.
   const [, { refs: attachments }] = await Promise.all([
     joinThread(db, created.id, teammateIds),
