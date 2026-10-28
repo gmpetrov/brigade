@@ -106,6 +106,9 @@ const retried = (error: string) =>
   `Your last turn in this thread stopped on an error: ${error.slice(0, 2_000)}\n\n` +
   'Before you redo anything, check what is already done (files, commands you ran, messages you sent), then carry on where you left off.'
 
+/** A queued message's note while a person has control of its thread. */
+const HELD_FOR_HANDBACK = 'A person has control of this thread. It runs once they hand it back.'
+
 /** Events that end a turn: one still on its way to the API says the turn was over. */
 const TURN_ENDED = new Set<AgentEvent['type']>(['turn.completed', 'error'])
 
@@ -208,6 +211,8 @@ type Message = {
   steering?: Promise<void>
   /** The log's end just after it, once shown. */
   upTo?: Promise<number>
+  /** Its turn is still in the thread's queue, to run or be skipped there. */
+  pending?: boolean
 }
 
 /** Who said what in a thread, so each teammate can be told what it missed. Never a credential. */
@@ -571,16 +576,12 @@ export class Threads {
     this.settleFailure(thread)
     void this.options.previews.threadBusy(spec.sessionId)
     if (interrupt) thread.controller?.abort()
-    // Queued messages do not run while a person has control: say so, rather than drop them silently.
+    // Queued messages wait while a person has control, as wake-ups do: they run once handed back.
     for (const message of thread.messages.values())
-      if (message.state !== 'steering')
-        this.cancel(
-          spec.sessionId,
-          thread,
-          message,
-          null,
-          'A person took over the thread before it ran.',
-        )
+      if (message.state === 'queued') {
+        message.state = 'held'
+        this.emitQueued(spec.sessionId, message, HELD_FOR_HANDBACK)
+      }
     // Wait for the current turn to end, then record the change of control.
     thread.queue = thread.queue.then(() => {
       this.options.emit(spec.sessionId, {
@@ -624,6 +625,13 @@ export class Threads {
       const upTo = await this.note(spec, null, 'A member', text)
       return waiting ? null : upTo
     })
+    // The messages held while the person had control run after it, each teammate's once it
+    // waits on nobody (releaseHeld).
+    const held = new Map<string, ThreadSpec>()
+    for (const message of thread.messages.values())
+      if (message.state === 'held') held.set(message.specs[0]!.teammate.id, message.specs[0]!)
+    for (const next of held.values())
+      void this.releaseHeld(thread, next, this.harness(thread, next)).catch(console.error)
   }
 
   /**
@@ -797,7 +805,7 @@ export class Threads {
     spec: ThreadSpec,
     input: ThreadInput | 'prompt' | Lost | Retry,
     prepare?: () => Promise<number | undefined | null>,
-  ) {
+  ): Promise<void> {
     const thread = this.thread(spec.sessionId)
     const seat = this.harness(thread, spec)
     clearTimeout(seat.parkTimer)
@@ -834,6 +842,9 @@ export class Threads {
         const upTo = prepare ? await prepare() : undefined
         started()
         if (upTo === null) return
+        // Set when the turn before it ended, after this one was queued: it would park this one.
+        clearTimeout(seat.parkTimer)
+        seat.parkTimer = undefined
         const controller = new AbortController()
         thread.controller = controller
         thread.running = { teammateId: me, turnId }
@@ -932,6 +943,7 @@ export class Threads {
         if (acquired) this.release()
       }
     })
+    return thread.queue
   }
 
   /**
@@ -1026,7 +1038,8 @@ export class Threads {
   private enqueueMessage(thread: Thread, message: Message) {
     const [first, ...then] = message.specs
     const sessionId = first!.sessionId
-    this.enqueue(first!, 'prompt', async () => {
+    message.pending = true
+    const step = this.enqueue(first!, 'prompt', async () => {
       await message.steering
       if (message.state !== 'queued' && message.state !== 'shown') return null
       // Its teammate waits on a person: the message runs once they answer (releaseHeld).
@@ -1049,6 +1062,7 @@ export class Threads {
       thread.messages.delete(message.id)
       return message.upTo
     })
+    void step.finally(() => (message.pending = false))
     // Each teammate after it is told what was said since its last turn, its predecessors' replies too.
     for (const next of then)
       this.enqueue(next, 'prompt', async () =>
@@ -1160,7 +1174,9 @@ export class Threads {
         this.emitQueued(
           spec.sessionId,
           message,
-          `${name} is waiting for an answer. It runs once someone answers.`,
+          thread.takeover
+            ? HELD_FOR_HANDBACK
+            : `${name} is waiting for an answer. It runs once someone answers.`,
         )
       return
     }
@@ -1234,11 +1250,14 @@ export class Threads {
     )
     if (held.length === 0 || thread.takeover || (await seat.harness.awaitingPerson())) return
     for (const message of held) {
+      // Released meanwhile, or cancelled.
+      if (message.state !== 'held') continue
       message.state = 'queued'
       // One already in the thread runs without showing as queued again.
       if (message.upTo) message.state = 'shown'
       else this.emitQueued(spec.sessionId, message)
-      this.enqueueMessage(thread, message)
+      // Held by a takeover before its turn came, it still has that turn to run in.
+      if (!message.pending) this.enqueueMessage(thread, message)
     }
   }
 
