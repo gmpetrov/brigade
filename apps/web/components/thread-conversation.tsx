@@ -106,6 +106,7 @@ import {
 } from '@/lib/api'
 import { useChangesCount } from '@/lib/code-changes'
 import { openCodeTab, setCodePanel } from '@/lib/code-tabs'
+import { useReplyDraft } from '@/lib/reply-drafts'
 import { useLive } from '@/lib/use-live'
 import {
   preloadThreadEvents,
@@ -132,7 +133,6 @@ export type ThreadHeading = {
   control: 'mine' | 'other' | null
 }
 
-/** Replies being written, per thread: closing the panel or opening another thread keeps them. */
 /**
  * An element picked in the preview, by the id its page gave it, and the upload of its
  * picture; `drawing` while its page draws it, when the message waits for the picture.
@@ -141,17 +141,6 @@ type Picked = { id: string; element: PreviewElement; upload?: string; drawing?: 
 
 /** How long a message waits for a picture its page is drawing (it may have gone away). */
 const DRAWING_MS = 15_000
-
-const replyDrafts = new Map<string, string>()
-
-function useReplyDraft(id: string) {
-  const [text, setText] = useState(() => replyDrafts.get(id) ?? '')
-  useEffect(() => {
-    if (text) replyDrafts.set(id, text)
-    else replyDrafts.delete(id)
-  }, [id, text])
-  return [text, setText] as const
-}
 
 /** Sends ahead what a thread's conversation asks for as it opens (lib/api.ts's `preload`). */
 export function preloadConversation(id: string) {
@@ -250,7 +239,8 @@ export function ThreadConversation({
   const [error, setError] = useState<string>()
   // The turn asked to stop, until it ends: a tool can take a moment to give up.
   const [stopping, setStopping] = useState<string>()
-  const [text, setText] = useReplyDraft(id)
+  // Text added from elsewhere (a document's Ask) lands here with the cursor after it.
+  const [text, setText] = useReplyDraft(id, () => focusComposer())
   // The teammate's guess at this member's next message, while it stands (suggestionFor).
   const guess = useMemo(
     () =>

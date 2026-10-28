@@ -11,7 +11,11 @@ export type DocumentEditorProps = {
   className?: string
   /** After a save, e.g. to refresh a list's sizes and times. */
   onSaved?: () => void
+  /** Ask, first in the toolbar over selected text: talk about it with this teammate. */
+  ask?: DocumentAsk
 }
+
+export type DocumentAsk = { teammate: string; onAsk: (passage: string) => void | Promise<void> }
 
 /**
  * A document edited as rich text, Notion-style, and together: everyone who

@@ -6,7 +6,11 @@ import { mentionConfig } from '@brigade/editor'
 import { BlockNoteSchema, defaultInlineContentSpecs, type BlockNoteEditor } from '@blocknote/core'
 import {
   createReactInlineContentSpec,
+  FormattingToolbar,
+  FormattingToolbarController,
+  getFormattingToolbarItems,
   SuggestionMenuController,
+  useBlockNoteEditor,
   useComponentsContext,
   useDictionary,
   type DefaultReactSuggestionItem,
@@ -14,6 +18,7 @@ import {
 } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import { isLegacyProjectMention, type Mention } from '@brigade/contracts'
+import { MessageSquare } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -23,6 +28,7 @@ import {
   useMentionOptions,
   type MentionOption,
 } from '@/components/composer'
+import type { DocumentAsk } from '@/components/document-editor'
 import { libraryDocument, useOptionalDocumentPanel } from '@/components/document-panel'
 import { MentionChip, MentionIcon } from '@/components/mention'
 import { documentFileUrl, uploadDocumentAsset } from '@/lib/api'
@@ -110,11 +116,13 @@ export function DocumentBlockNoteView({
   documentId,
   label,
   onChange,
+  ask,
 }: {
   editor: DocumentBlockEditor
   documentId: string
   label: string
   onChange?: () => void
+  ask?: DocumentAsk
 }) {
   const { resolvedTheme } = useTheme()
   const options = useMentionOptions()
@@ -184,7 +192,19 @@ export function DocumentBlockNoteView({
         aria-label={label}
         className="document-editor"
         onChange={onChange}
+        // With Ask, BlockNote's toolbar with Ask first; else BlockNote's own.
+        formattingToolbar={!ask}
       >
+        {ask && (
+          <FormattingToolbarController
+            formattingToolbar={() => (
+              <FormattingToolbar>
+                <AskButton key="ask" ask={ask} />
+                {getFormattingToolbarItems()}
+              </FormattingToolbar>
+            )}
+          />
+        )}
         <SuggestionMenuController
           triggerCharacter="@"
           getItems={getItems}
@@ -192,6 +212,26 @@ export function DocumentBlockNoteView({
         />
       </BlockNoteView>
     </div>
+  )
+}
+
+/** First in the toolbar over selected text: the passage, quoted, to a teammate's reply box. */
+function AskButton({ ask }: { ask: DocumentAsk }) {
+  const Components = useComponentsContext()!
+  const editor = useBlockNoteEditor()
+  return (
+    <>
+      <Components.FormattingToolbar.Button
+        className="bn-button document-ask"
+        mainTooltip={`Ask ${ask.teammate} about this passage`}
+        icon={<MessageSquare aria-hidden className="size-4" />}
+        label={`Ask ${ask.teammate}`}
+        onClick={() => void ask.onAsk(editor.getSelectedText())}
+      >
+        Ask {ask.teammate}
+      </Components.FormattingToolbar.Button>
+      <span aria-hidden className="mx-0.5 h-5 w-px self-center bg-border" />
+    </>
   )
 }
 
