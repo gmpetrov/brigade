@@ -406,6 +406,11 @@ export async function startThread(
      * again after a restart cut it off, the thread it made then is taken up rather than a second.
      */
     id?: string
+    /**
+     * With `id`: the browser chose it, so a thread that has it already is never taken up as a
+     * trigger's is (else a member could write in a thread not theirs by its id): making it fails.
+     */
+    fresh?: boolean
   },
 ) {
   // Nor a new thread, before its row is made (members, triggers, schedules, tasks, children).
@@ -424,7 +429,8 @@ export async function startThread(
     preferredId: input.accountId ?? null,
   })
   if (!account) throw noAccount(input.teammate.harness)
-  const made = input.id ? await db.session.findFirst({ where: { id: input.id } }) : null
+  const made =
+    input.id && !input.fresh ? await db.session.findFirst({ where: { id: input.id } }) : null
   const created =
     made ??
     (await db.session.create({

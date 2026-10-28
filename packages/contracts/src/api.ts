@@ -241,8 +241,17 @@ export const ResolveTicket = z.object({
 const hasContent = (m: { text: string; attachmentIds: string[] }) =>
   m.text.length > 0 || m.attachmentIds.length > 0
 
+/**
+ * A new thread's id, chosen by the browser so that it can open the thread before it exists: a
+ * cuid's shape (a `c` and 24 lowercase letters or digits), random, as it also names the thread's
+ * folders in storage.
+ */
+export const NewThreadId = z.string().regex(/^c[a-z0-9]{24}$/, 'Not a thread id')
+
 export const StartThread = z
   .object({
+    /** Its id, chosen beforehand (NewThreadId): refused when a thread has it already. */
+    id: NewThreadId.optional(),
     teammateId: z.string(),
     computerId: z.string(),
     /** Omit to use the member's default account for the teammate's harness. */

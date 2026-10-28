@@ -1,10 +1,16 @@
 'use client'
 import { ArrowUp, Check, ChevronDown, FolderKanban, List, Monitor, Plus } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { defaultEffort, type Effort } from '@brigade/contracts'
-import { ComposerMenu, UploadList, useFileDrop, useUploads } from '@/components/attachments'
+import {
+  ComposerMenu,
+  UploadList,
+  useFileDrop,
+  useUploads,
+  type Upload,
+} from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { EffortButton, type EffortPick } from '@/components/effort'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
@@ -38,6 +44,8 @@ import {
   api,
   computerName,
   harnessLabel,
+  preload,
+  preloadSettled,
   teammateModelLabel,
   usableComputers,
   useApi,
@@ -47,6 +55,8 @@ import {
   type ThreadSummary,
 } from '@/lib/api'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { newThreadId, pendingThreads } from '@/lib/pending-threads'
+import { preloadThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 
 const quietSelect =
@@ -271,6 +281,8 @@ export function useThreadDraft() {
   const [text, setText] = useState('')
   const [computerId, setComputerId] = useState<string>()
   const [accountId, setAccountId] = useState<string>()
+  // The project picked in the box; unset: the page's, else the one picked last.
+  const [projectId, setProjectId] = useState<string>()
   // How hard its teammates think, from the + menu; null: the harness's default.
   const [effort, setEffort] = useState<Effort | null>(null)
   const files = useUploads()
@@ -281,6 +293,8 @@ export function useThreadDraft() {
     setComputerId,
     accountId,
     setAccountId,
+    projectId,
+    setProjectId,
     effort,
     setEffort,
     files,
@@ -290,9 +304,27 @@ export function useThreadDraft() {
 export type ThreadDraft = ReturnType<typeof useThreadDraft>
 
 /**
+ * A message out of a box (NewThread's `onSending`, or one set aside), with where and how it runs,
+ * as the box's draft holds them: unset, the box's default.
+ */
+export type SentMessage = {
+  teammateId: string
+  text: string
+  uploads: Upload[]
+  effort: Effort | null
+  projectId?: string
+  computerId?: string
+  accountId?: string
+}
+
+/**
  * The box a new thread starts from: a message, files, where it runs and on which account.
  * With `picker`, the member also chooses the teammate it goes to. With `draft`, what is
  * written is kept outside; with `onStarted`, the box stays put instead of opening the thread.
+ * With `onSending`, it does not wait for the thread either: the box empties at once, and what
+ * was sent is the caller's to give back should the thread not start. With `openAtOnce` (a page's
+ * own box, which is there again when its page is), the thread opens before it exists
+ * (lib/pending-threads.ts), and the message comes back here should it not start.
  */
 export function NewThread({
   teammate,
@@ -301,6 +333,8 @@ export function NewThread({
   rows = 3,
   draft,
   onStarted,
+  onSending,
+  openAtOnce,
   autoFocus,
   typeToFocus,
   projectId: initialProject,
@@ -320,6 +354,13 @@ export function NewThread({
   rows?: number
   draft?: ThreadDraft
   onStarted?: (thread: { id: string }) => void
+  /**
+   * Sent, the thread still starting: it settles with the thread, or the reason it did not. What
+   * was sent is not put back in the box: another message may be written there meanwhile.
+   */
+  onSending?: (thread: Promise<{ id: string }>, sent: SentMessage) => void
+  /** Opens the thread at once, before it exists: for a page's own box (Home, a project's). */
+  openAtOnce?: boolean
   /** Puts the cursor in the message as soon as the box appears. */
   autoFocus?: boolean
   /** The page's main message box: typing with nothing focused lands in it (Composer). */
@@ -333,12 +374,33 @@ export function NewThread({
   fill?: boolean
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { me, projects } = useDashboard()
   const pickable = projects.filter((p) => !p.archivedAt)
   // A project page's own project first; else the one picked last, while it is still pickable.
   const [last, remember] = useLastProject()
-  const [picked, setPicked] = useState<string>()
-  useEffect(() => setPicked(undefined), [initialProject])
+  const own = useThreadDraft()
+  const {
+    text,
+    setText,
+    computerId,
+    setComputerId,
+    accountId,
+    setAccountId,
+    projectId: picked,
+    setProjectId: setPicked,
+    effort: effortValue,
+    setEffort: setEffortValue,
+    files,
+  } = draft ?? own
+  // Another page's project: what was picked for the last one no longer holds. Not as the box
+  // mounts: a draft that outlives it (the threads panel's) keeps its pick.
+  const pageProject = useRef(initialProject)
+  useEffect(() => {
+    if (pageProject.current === initialProject) return
+    pageProject.current = initialProject
+    setPicked(undefined)
+  }, [initialProject, setPicked])
   const projectId =
     picked ?? initialProject ?? (last && pickable.some((p) => p.id === last) ? last : 'none')
   const chosenProject = pickable.find((p) => p.id === projectId)
@@ -350,18 +412,6 @@ export function NewThread({
   }
   const computers = useApi<ComputersResponse>('/computers')
   const accounts = useApi<Account[]>('/accounts')
-  const own = useThreadDraft()
-  const {
-    text,
-    setText,
-    computerId,
-    setComputerId,
-    accountId,
-    setAccountId,
-    effort: effortValue,
-    setEffort: setEffortValue,
-    files,
-  } = draft ?? own
   const effort: EffortPick = {
     value: effortValue,
     fallback: defaultEffort(teammate.harness, teammate.model),
@@ -369,6 +419,22 @@ export function NewThread({
   }
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  // A message whose thread did not start, back from it (lib/pending-threads.ts).
+  useEffect(() => {
+    if (!openAtOnce) return
+    const back = pendingThreads.takeReturned(pathname)?.message
+    if (!back) return
+    // To whom and where it was to run as well: sent again, it goes there.
+    if (back.teammateId !== teammate.id && picker?.teammates.some((t) => t.id === back.teammateId))
+      picker.onChange(back.teammateId)
+    setText(back.text)
+    files.put(back.uploads)
+    setEffortValue(back.effort)
+    setPicked(back.projectId)
+    setComputerId(back.computerId)
+    setAccountId(back.accountId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const drop = useFileDrop(files.add)
   // Teach a task: recorded on the cloud computer, and the thread starts once it is sent.
   const [teaching, setTeaching] = useState(false)
@@ -390,9 +456,10 @@ export function NewThread({
   const ready =
     (text.trim() || files.ids.length > 0) && !files.busy && !files.failed && computer && account
 
-  const create = (message: string, attachmentIds: string[]) =>
+  const create = (message: string, attachmentIds: string[], id?: string) =>
     api<{ id: string }>('/threads', {
       body: {
+        ...(id && { id }),
         teammateId: teammate.id,
         computerId: computer!.id,
         accountId: account!.id,
@@ -406,6 +473,66 @@ export function NewThread({
   async function start(e?: FormEvent) {
     e?.preventDefault()
     if (busy || !ready) return
+    if (onSending) {
+      const sending = create(text, files.ids)
+      const taken = files.take()
+      setText('')
+      setEffortValue(null)
+      onSending(
+        sending.then((thread) => {
+          taken.done()
+          return thread
+        }),
+        // Where it was to run, as sent: given back, it runs there again.
+        {
+          teammateId: teammate.id,
+          text,
+          uploads: taken.uploads,
+          effort: effortValue,
+          projectId,
+          computerId: computer!.id,
+          accountId: account!.id,
+        },
+      )
+      return
+    }
+    if (openAtOnce) {
+      // Opened at once: it shows this message until it has started, then its conversation.
+      const id = newThreadId()
+      const sending = create(text, files.ids, id)
+      const taken = files.take()
+      pendingThreads.add(
+        id,
+        { teammate, text, files: taken.uploads.map((u) => u.name), from: pathname },
+        {
+          teammateId: teammate.id,
+          text,
+          uploads: taken.uploads,
+          effort: effortValue,
+          projectId,
+          computerId: computer!.id,
+          accountId: account!.id,
+        },
+      )
+      setText('')
+      setEffortValue(null)
+      router.push(`/app/threads/${id}`)
+      sending.then(
+        async () => {
+          // Its conversation takes over once what it opens on is in: no blank in between.
+          preload(`/threads/${id}`)
+          preloadThreadEvents(id)
+          await Promise.all([
+            preloadSettled(`/threads/${id}`),
+            preloadSettled(`/threads/${id}/events`),
+          ])
+          pendingThreads.started(id)
+          taken.done()
+        },
+        (error: unknown) => pendingThreads.failed(id, (error as Error).message),
+      )
+      return
+    }
     setBusy(true)
     setError(undefined)
     try {

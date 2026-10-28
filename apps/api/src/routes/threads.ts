@@ -281,6 +281,13 @@ async function archive(c: Context<AppEnv>, on: boolean) {
 const unread = (lastTurnAt: Date | null | undefined, seenAt: Date | undefined) =>
   !!lastTurnAt && (!seenAt || lastTurnAt > seenAt)
 
+/** A thread with the id the browser chose (`id`) exists already, in this workspace or another. */
+const idTaken = (error: unknown, id: string | undefined): never => {
+  if (id && (error as { code?: string }).code === 'P2002')
+    throw new HTTPException(409, { message: 'That thread id is taken' })
+  throw error
+}
+
 export const threads = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
@@ -1044,6 +1051,8 @@ export const threads = new Hono<AppEnv>()
     if ('error' in project) throw project.error
     const projectId = project.id
     const { thread, outcome } = await startThread(db, scope, {
+      // Chosen by the browser, which opened the thread already: never one that exists.
+      ...(input.id ? { id: input.id, fresh: true } : {}),
       teammate,
       computer,
       memberId: scope.memberId,
@@ -1058,7 +1067,7 @@ export const threads = new Hono<AppEnv>()
       attachmentIds: input.attachmentIds,
       projectId,
       effort: input.effort ?? null,
-    })
+    }).catch((error: unknown) => idTaken(error, input.id))
     if (outcome === 'offline') {
       throw new HTTPException(409, {
         message: 'That computer is offline. Start its runner and try again.',

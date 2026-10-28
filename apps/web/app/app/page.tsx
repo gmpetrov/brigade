@@ -80,6 +80,7 @@ export default function Home() {
           teammate={teammate}
           rows={3}
           typeToFocus
+          openAtOnce
           picker={teammates.length > 1 ? { teammates, onChange: choose } : undefined}
           placeholder={`Chat with ${teammate.name}`}
         />
