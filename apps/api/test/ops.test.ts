@@ -43,7 +43,8 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 
 const { onRaise, REMIND_MS, FLAP_MS, raise, resolve, settle } = await import('../src/ops/alerts.js')
 const checks = await import('../src/ops/checks.js')
-const { judge, RULES, computerProblem, workerProblems, STUCK_MS, OFFLINE_MS } = checks
+const { judge, RULES, computerProblem, workerProblems, objectResetProblems, STUCK_MS, OFFLINE_MS } =
+  checks
 const { noteFailure, failuresOf, summary, clearFailures } = await import('../src/ops/failures.js')
 const { sendNotice, noticeText } = await import('../src/ops/send.js')
 const { diagnose, watchdog, STALLED_MS } = await import('../src/ops/watchdog.js')
@@ -233,6 +234,33 @@ test("Workers' failed invocations, by Worker, from a few", () => {
   assert.equal(alerts.length, 1)
   assert.equal(alerts[0]!.key, 'worker:brigade-api')
   assert.match(alerts[0]!.detail!, /5 failed invocations.*3 scriptThrewException, 2 exceededCpu/)
+})
+
+test('Durable Objects reset past their memory alert, by Worker; others are not ours', () => {
+  const names = [
+    { dimensions: { scriptName: 'brigade-api', namespaceId: 'ns-api' } },
+    { dimensions: { scriptName: 'brigade-api', namespaceId: 'ns-hubs' } },
+  ]
+  const reset = (namespaceId: string, memory: number, internal = 0) => ({
+    sum: { exceededMemoryErrors: memory, exceededCpuErrors: 0, fatalInternalErrors: internal },
+    dimensions: { namespaceId },
+  })
+  const alerts = objectResetProblems(names, [
+    reset('ns-api', 3),
+    reset('ns-hubs', 1, 1),
+    reset('ns-hubs', 0),
+    // Another Worker's namespace (not named by Brigade's invocations): not ours to tell.
+    reset('ns-funfun', 40),
+  ])
+  assert.equal(alerts.length, 1)
+  assert.equal(alerts[0]!.key, 'worker:brigade-api:resets')
+  assert.equal(alerts[0]!.severity, 'critical')
+  assert.match(
+    alerts[0]!.detail!,
+    /5 reset\(s\).*4 past their memory, 0 past their CPU, 1 by an internal error/,
+  )
+  assert.deepEqual(objectResetProblems(names, [reset('ns-api', 0)]), [])
+  assert.equal(objectResetProblems(names, [reset('ns-hubs', 1)])[0]!.severity, 'warning')
 })
 
 describe('sending', () => {

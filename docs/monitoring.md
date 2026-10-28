@@ -81,6 +81,7 @@ told stays open until it is, and a turn for the worse that was not sent is tried
 | `backlog:<computerId>`        | Commands (`RunnerCommand`) its runner has not acknowledged: 20 or more, or the oldest 30 min old; never a member's machine while it is offline | warning; critical at 100 or 3 h        |
 | `disk:<computerId>`           | A `disk_full` ticket open on a cloud computer                                                                                                  | warning                                |
 | `worker:<script>`             | A `brigade-*` Worker's or Durable Object's failed invocations (exceptions, exceeded limits), as Cloudflare counts them                         | 5 / 50 in 10 min (checked every 5 min) |
+| `worker:<script>:resets`      | A `brigade-*` Worker's Durable Objects reset by the runtime: past their memory or CPU, or an internal error (each drops the object's sockets)  | 1 / 5 in 10 min (checked every 5 min)  |
 | `api-down`                    | The watchdog: the Api object does not answer, or its checks fail                                                                               | critical                               |
 | `api-restarting`              | The watchdog: the Api object restarted 3 times in 15 minutes without a new version (`src/ops/restarts.ts`)                                     | critical                               |
 
