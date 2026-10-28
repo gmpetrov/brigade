@@ -35,6 +35,11 @@ export type RunnerState = RunnerInfo & {
    * long it has been silent. Kept again once it is HEARD_KEEP_MS old, not at each message.
    */
   heardKept?: number
+  /**
+   * Welcomed while its workspace was being deleted (src/deletion-fence.ts): told to carry on
+   * nothing, its queued messages kept. Sent away once the deletion fails, so it says hello again.
+   */
+  heldBack?: boolean
 }
 
 /** A runner's connection, in the hub's memory. */

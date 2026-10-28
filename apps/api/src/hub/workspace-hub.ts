@@ -230,6 +230,14 @@ export class WorkspaceHub {
    * or the runner went silent (tick). Such a connection dies without closing: kept, it looked
    * online, so commands went into it and were lost, and the computer was never started again.
    */
+  /**
+   * A deletion of the workspace failed: runners welcomed while it ran carry on nothing yet. Each
+   * is sent away, and its next hello resumes its turns and queues its messages again.
+   */
+  releaseHeldBack() {
+    for (const [computerId, conn] of this.runners) if (conn.heldBack) this.dropRunner(computerId)
+  }
+
   dropRunner(computerId: string) {
     const conn = this.runners.get(computerId)
     if (!conn) return
@@ -752,6 +760,10 @@ export class WorkspaceHub {
    * something, before their socket looks idle, unless they keep it alive themselves.
    */
   async tick(now = Date.now()) {
+    // A deletion cut short (a restart) lowers no fence: once its lease is over, runners it held
+    // back are sent away too.
+    if ([...this.runners.values()].some((c) => c.heldBack))
+      if (!(await beingDeleted(this.workspaceId).catch(() => true))) this.releaseHeldBack()
     for (const conn of [...this.runners.values()]) {
       if ((conn.protocolVersion ?? 0) < HEARTBEAT_PROTOCOL) continue
       const heard = Math.max(conn.heardAt, this.host.heardAt?.(conn.socket) ?? 0)

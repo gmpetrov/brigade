@@ -53,7 +53,9 @@ const { getObject, putObject, threadFileKey, workspacePrefix } = await import('.
 const { deleteWorkspace, sweepDeletedWorkspaces } = await import('../src/workspace-delete.js')
 const { LATE_UPLOADS_MS } = await import('../src/thread-delete.js')
 const { workspaces } = await import('../src/routes/workspaces.js')
-const { BEING_DELETED, raiseFence } = await import('../src/deletion-fence.js')
+const { BEING_DELETED, lowerFence, raiseFence } = await import('../src/deletion-fence.js')
+const { hubs, runnerSocket } = await import('../src/hub.js')
+const { PROTOCOL_VERSION } = await import('@brigade/contracts')
 const { promptThread, startThread } = await import('../src/work.js')
 const { cloudAvailable } = await import('../src/cloud.js')
 
@@ -394,6 +396,116 @@ test(
     assert.equal(after.deletingAt, null)
     // Work starts again: past the fence, it stops only for want of an AI account here.
     await assert.rejects(start(), (error: { message?: string }) => error.message !== BEING_DELETED)
+  },
+)
+
+test(
+  'a runner that reconnects during the deletion carries on nothing, and keeps its queued messages',
+  { skip },
+  async () => {
+    const ada = await person('Ada10')
+    const org = await organization([{ userId: ada.userId, role: 'owner' }], ['Reconnect'])
+    const scope = { organizationId: org.organizationId, workspaceId: org.workspaces[0]!.id }
+    const memberId = org.members[ada.userId]!
+    const teammate = await prisma.teammate.create({ data: { ...scope, name: 'Riley' } })
+    const computer = await prisma.computer.create({
+      data: { ...scope, kind: 'member_machine', memberId, name: 'Laptop', status: 'running' },
+    })
+    const account = await prisma.account.create({
+      data: {
+        ...scope,
+        computerId: computer.id,
+        memberId,
+        provider: 'claude_code',
+        label: 'Test',
+        status: 'ready',
+      },
+    })
+    const session = await prisma.session.create({
+      data: {
+        ...scope,
+        teammateId: teammate.id,
+        computerId: computer.id,
+        startedByMemberId: memberId,
+        accountId: account.id,
+        title: 'Queued',
+        status: 'idle',
+        origin: 'member',
+      } as never,
+    })
+    await prisma.threadTeammate.create({
+      data: { ...scope, sessionId: session.id, teammateId: teammate.id },
+    })
+    const queued = {
+      type: 'message.queued',
+      text: 'Carry on',
+      memberId,
+      messageId: `queued-${id}`,
+      at: new Date().toISOString(),
+    }
+    await prisma.sessionEvent.create({
+      data: {
+        ...scope,
+        sessionId: session.id,
+        seq: 1,
+        type: 'message.queued',
+        data: queued,
+        at: new Date(),
+      },
+    })
+    const runner = await prisma.runner.create({
+      data: { ...scope, computerId: computer.id, tokenHash: `wsdel-${id}` },
+    })
+
+    /** A runner says hello: its welcome, what else it was sent, and whether the hub sent it away. */
+    async function hello() {
+      const handle = runnerSocket({ id: runner.id, computerId: computer.id, ...scope })
+      const sent: Record<string, any>[] = []
+      let closed = false
+      const ws = {
+        send: (raw: string) => void sent.push(JSON.parse(raw)),
+        close: () => void (closed = true),
+      }
+      handle.onMessage(
+        JSON.stringify({
+          type: 'hello',
+          protocolVersion: PROTOCOL_VERSION,
+          version: '0.0.0',
+          platform: 'linux-x64',
+        }),
+        ws as never,
+      )
+      for (let i = 0; i < 200 && !sent.some((m) => m.type === 'welcome'); i++)
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      return { welcome: sent.find((m) => m.type === 'welcome')!, sent, closed: () => closed }
+    }
+
+    // Its deletion under way: told of no thread, so nothing is resumed, requeued or cancelled.
+    assert.ok(await raiseFence(scope.workspaceId))
+    const held = await hello()
+    assert.ok(held.welcome)
+    assert.deepEqual(held.welcome.requeue ?? [], [])
+    assert.deepEqual(held.welcome.resume ?? [], [])
+    assert.deepEqual(held.welcome.queuedMessages, [])
+    assert.deepEqual(held.welcome.runningThreads, [])
+    assert.ok(!held.sent.some((m) => m.type === 'thread.prompt'))
+    assert.equal(
+      await prisma.sessionEvent.count({ where: { sessionId: session.id, type: 'message.queued' } }),
+      1,
+    )
+
+    // The deletion failed: the fence goes, and the runner held back is sent away to reconnect.
+    await lowerFence(scope.workspaceId)
+    await hubs.get(scope.workspaceId).releaseHeldBack()
+    assert.ok(held.closed())
+    const again = await hello()
+    assert.equal(again.welcome.requeue?.length, 1)
+    assert.equal(again.welcome.requeue[0].messageId, queued.messageId)
+    assert.equal(again.welcome.requeue[0].text, 'Carry on')
+    assert.deepEqual(again.welcome.queuedMessages, [
+      { sessionId: session.id, messageId: queued.messageId },
+    ])
+    await hubs.get(scope.workspaceId).dropRunner(computer.id)
   },
 )
 

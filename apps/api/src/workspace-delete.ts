@@ -93,9 +93,16 @@ export async function deleteWorkspace(
     return await deleteFenced(workspace, scope, options)
   } catch (error) {
     // Refused or failed: the workspace works again, and its deletion can be tried again.
+    // Runners welcomed meanwhile reconnect, and carry on their turns and queued messages.
     await lowerFence(workspaceId).catch((failure: unknown) =>
       console.warn(`deleting ${workspaceId}: fence not lowered`, failure),
     )
+    await hubs
+      .get(workspaceId)
+      .releaseHeldBack()
+      .catch((failure: unknown) =>
+        console.warn(`deleting ${workspaceId}: held-back runners not released`, failure),
+      )
     throw error
   }
 }

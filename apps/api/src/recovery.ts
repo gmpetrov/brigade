@@ -8,6 +8,7 @@ import {
   type ThreadSpec,
 } from '@brigade/contracts'
 import { scoped, type ScopedDb } from './db.js'
+import { beingDeleted } from './deletion-fence.js'
 import {
   currentTeammate,
   loadThread,
@@ -32,6 +33,8 @@ export type QueuedMessage = {
  * interrupted when it was running, as before.
  */
 export async function turnsToResume(runner: Runner, sessionIds: string[]) {
+  // None while its workspace is being deleted (src/deletion-fence.ts).
+  if (await beingDeleted(runner.workspaceId)) return []
   const db = scoped(runner)
   const specs: ThreadSpec[] = []
   for (const id of sessionIds) {
@@ -52,6 +55,8 @@ export async function turnsToResume(runner: Runner, sessionIds: string[]) {
  * go (a person has control, no account) is left out, and the runner cancels it.
  */
 export async function messagesToRequeue(runner: Runner, queued: QueuedMessage[]) {
+  // None while its workspace is being deleted: they stay queued (src/deletion-fence.ts).
+  if (await beingDeleted(runner.workspaceId)) return []
   const db = scoped(runner)
   const threads = new Map<string, LoadedThread | null>()
   const prompts: ThreadPrompt[] = []
