@@ -186,6 +186,7 @@ function LivePreviewPanel({
   picked = 0,
   code: codeOptions,
   expectedCommit,
+  hidden = false,
 }: {
   threadId: string
   preview: ThreadPreview
@@ -216,6 +217,11 @@ function LivePreviewPanel({
   code?: { mayEdit: boolean; teammateName: (id: string) => string }
   /** The commit it should run (a pull request's head): when it runs another, the panel says so. */
   expectedCommit?: string
+  /**
+   * Kept while its thread is away (components/kept-previews.tsx): not shown, the page in its
+   * frame as it was left, and no longer keeping the preview running.
+   */
+  hidden?: boolean
 }) {
   const [view, setView] = useState<PreviewView>()
   const [error, setError] = useState<string>()
@@ -299,17 +305,17 @@ function LivePreviewPanel({
     if (page) rememberPreviewPage(threadId, preview.previewId, page)
   }, [threadId, preview.previewId, page])
 
-  // Still open: keep it running.
+  // Still open: keep it running. Kept away from its thread, it may stop as one closed would.
   const live = previewLive(preview)
   useEffect(() => {
-    if (!live) return
+    if (!live || hidden) return
     const timer = setInterval(
       () =>
         void api(`/threads/${threadId}/preview`, { body: { touch: true } }).catch(() => undefined),
       TOUCH_MS,
     )
     return () => clearInterval(timer)
-  }, [threadId, live])
+  }, [threadId, live, hidden])
 
   const loadLogs = useCallback(async () => {
     try {
@@ -324,7 +330,7 @@ function LivePreviewPanel({
   }, [showLogs, live, preview.status, loadLogs])
 
   // While it starts, its latest line of output: what the setup or the app is doing.
-  const waiting = preview.status === 'starting'
+  const waiting = preview.status === 'starting' && !hidden
   useEffect(() => {
     if (!waiting) return setLastLine(undefined)
     let live = true
@@ -374,6 +380,7 @@ function LivePreviewPanel({
     <SidePanel
       aria-label="Preview"
       name={PREVIEW_PANEL}
+      hidden={hidden}
       onClose={onClose}
       rememberFull={`brigade:preview-full:${threadId}`}
     >
@@ -1320,6 +1327,7 @@ function NoticeAction({ onClick, children }: { onClick: () => void; children: Re
 
 /** In the demo, what it would show: there is no computer behind it (components/demo-machine.tsx). */
 export function PreviewPanel(props: Parameters<typeof LivePreviewPanel>[0]) {
+  if (DEMO && props.hidden) return null
   return DEMO ? (
     <DemoMachine what="preview" onClose={props.onClose} />
   ) : (

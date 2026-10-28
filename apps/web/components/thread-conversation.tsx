@@ -61,9 +61,9 @@ import { TeachTask } from '@/components/teach-task'
 import { useDocumentPanel } from '@/components/document-panel'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
+import { dropKeptPreview, KeepPreview } from '@/components/kept-previews'
 import {
   PHASE,
-  PreviewPanel,
   previewLive,
   previewPhase,
   useCheckedPreview,
@@ -358,6 +358,10 @@ export function ThreadConversation({
   const [previewing, setPreviewing] = useState(side?.kind === 'preview')
   // The files it changed, beside the thread in the desktop's place, without a preview.
   const [changesOpen, setChangesOpen] = useState(side?.kind === 'changes')
+  // Closed, or something else beside it: its kept frame goes too.
+  useEffect(() => {
+    if (!previewing) dropKeptPreview(id)
+  }, [id, previewing])
   useEffect(() => {
     rememberThreadSide(
       id,
@@ -1081,8 +1085,10 @@ export function ThreadConversation({
         />
       )}
 
-      {expanded && !file && !documents.current && previewing && preview && (
-        <PreviewPanel
+      {/* Rendered by the dashboard, so its frame stays as it was while another thread shows. */}
+      {previewing && preview && (
+        <KeepPreview
+          shown={expanded && !file && !documents.current}
           threadId={t.id}
           preview={preview}
           teammateName={people.find((p) => p.id === preview.teammateId)?.name ?? answering.name}

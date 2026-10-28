@@ -42,6 +42,7 @@ import {
 import { AppLoader } from '@/components/app-loader'
 import { ConnectAppsDialog, openConnectApps } from '@/components/connect-apps'
 import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
+import { KeptPreviews } from '@/components/kept-previews'
 import { openShortcuts, ShortcutsDialog } from '@/components/help-menu'
 import { PebbleAvatar } from '@/components/pebble-avatar'
 import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
@@ -862,6 +863,8 @@ function Inset({ children }: { children: ReactNode }) {
       {!expanded && <TopBar />}
       {/* Before the document: a document opened over a docked thread covers it until closed. */}
       <ThreadPanel />
+      {/* A thread's preview: here, so its page stays as it was while another thread shows. */}
+      <KeptPreviews />
       <QuickThread />
       <DocumentPanel />
       {/* A computer's screen, and the Inbox, take the whole page, edge to edge. */}

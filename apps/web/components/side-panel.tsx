@@ -281,6 +281,7 @@ export function SidePanel({
   name,
   raiseKey,
   rememberFull,
+  hidden = false,
   style,
   ...props
 }: ComponentProps<'aside'> & {
@@ -297,9 +298,14 @@ export function SidePanel({
    * this key for the browser tab (the preview, per thread). Without it, it opens as a panel.
    */
   rememberFull?: string
+  /**
+   * Kept but not shown (a thread's preview while another thread shows): out of the stack and
+   * of the page's layout, and what it shows keeps its state. Shown again, it comes in front.
+   */
+  hidden?: boolean
 }) {
   const panel = useRef<HTMLElement>(null)
-  const stack = usePanelStack(!expanded, name, raiseKey)
+  const stack = usePanelStack(!expanded && !hidden, name, raiseKey)
   const [own, setOwn] = useState(false)
   const remembered = useSyncExternalStore(
     subscribeFull,
@@ -317,16 +323,17 @@ export function SidePanel({
   // Only once it was in front: as it opens, it is not yet.
   const wasFront = useRef(false)
   useEffect(() => {
-    if (wasFront.current && !stack.front) setFull(false)
+    if (wasFront.current && !stack.front && !hidden) setFull(false)
     wasFront.current = stack.front
-  }, [stack.front, setFull])
+  }, [stack.front, hidden, setFull])
   // Laid over the window, Escape brings it back to the panel first.
   useEscapeToClose(panel, stack.front ? (over ? back : onClose) : undefined)
   return (
     <FullContext.Provider value={expanded ? null : { full, setFull }}>
       <aside
         ref={panel}
-        data-desktop-panel={expanded ? undefined : ''}
+        // The page makes room for it only while it shows (globals.css).
+        data-desktop-panel={expanded || hidden ? undefined : ''}
         data-expanded={expanded || undefined}
         className={cn(
           expanded
@@ -338,6 +345,7 @@ export function SidePanel({
               ],
           over && FULL,
           className,
+          hidden && 'hidden',
         )}
         style={expanded ? style : { ...stack.style, ...style }}
         {...props}
