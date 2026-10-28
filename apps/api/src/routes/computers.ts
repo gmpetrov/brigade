@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { RunnerLink, type RunnerLinkResult } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
+import { personOfMember, trackLater } from '../analytics.js'
 import { audit } from '../audit.js'
 import { billingEnabled, cloudEntitled, requireCloudPlan } from '../billing.js'
 import { cloudAvailable, createWorkspaceComputer, desktopUrl } from '../cloud.js'
@@ -70,6 +71,8 @@ export const computers = new Hono<AppEnv>()
       actor: { type: 'member', id: c.var.scope.memberId },
       action: 'runner.link_code_issued',
       target: { type: 'member', id: c.var.scope.memberId },
+      // The machine the member chose, as their browser says (the code is for this one).
+      track: { kind: osOfAgent(c.req.header('user-agent')) },
     })
     const bin = '~/.brigade/bin/brigade-runner'
     return c.json({
@@ -94,6 +97,10 @@ export const computers = new Hono<AppEnv>()
     const computer = await createWorkspaceComputer({
       id: c.var.scope.workspaceId,
       organizationId: c.var.scope.organizationId,
+    })
+    trackLater(personOfMember(c.var.scope.memberId), 'computer_chosen', c.var.scope, {
+      feature: 'onboarding',
+      kind: 'cloud',
     })
     return c.json({ id: computer!.id }, 201)
   })
@@ -158,6 +165,15 @@ export const computers = new Hono<AppEnv>()
   })
 
 /** Called by the runner command with a link code. No browser session. */
+/** The kind of machine a browser runs on, for computer_chosen. */
+function osOfAgent(agent: string | undefined) {
+  if (/iPhone|iPad|Android/.test(agent ?? '')) return 'mobile'
+  if (/Mac/.test(agent ?? '')) return 'mac'
+  if (/Linux|X11|CrOS/.test(agent ?? '')) return 'linux'
+  if (/Windows/.test(agent ?? '')) return 'windows'
+  return 'other'
+}
+
 export const runnerLink = new Hono().post('/link', async (c) => {
   const input = await parseBody(c.req.raw, RunnerLink)
   const grant = await redeemLinkCode(input.code)

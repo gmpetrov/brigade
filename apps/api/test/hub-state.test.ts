@@ -38,6 +38,11 @@ const ALLOWED: Record<string, string> = {
   'src/front.ts:routes': "where each workspace's sockets went lately: the front Worker's own cache",
   'src/jobs.ts:running': "jobs running on the process's own timers: one run of each at a time",
   'src/platform/workers.ts:modes': "each workspace's hub mode as last read: data, by workspace",
+  'src/analytics.ts:queue':
+    'analytics events waiting to be sent together a moment later: an outbox, no workspace state',
+  'src/analytics.ts:underWay': "analytics sends under way, so a Worker's run can wait for them",
+  'src/analytics.ts:people': "whose a member's or thread's events are: a cache of data",
+  'src/analytics.ts:harnesses': "teammates' harnesses, for turn_completed: a cache of data",
 }
 
 const root = new URL('../', import.meta.url).pathname

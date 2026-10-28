@@ -10,6 +10,7 @@
 // transaction: a run that outlived its lock (a slow Stripe) writes nothing.
 import { HTTPException } from 'hono/http-exception'
 import Stripe from 'stripe'
+import { identifyWorkspace, personOfMember, trackLater } from './analytics.js'
 import { env } from './config.js'
 import { prisma, type Prisma } from './db.js'
 import { noteFailure } from './ops/failures.js'
@@ -141,9 +142,65 @@ async function savePlan(
           where: { id: rowId, workspaceId, stripeSubscriptionId: null },
         })
       : null)
-  return row
+  const saved = await (row
     ? tx.billingSubscription.update({ where: { id: row.id }, data: state })
-    : tx.billingSubscription.create({ data: { workspaceId, plan: CLOUD_PLAN.name, ...state } })
+    : tx.billingSubscription.create({ data: { workspaceId, plan: CLOUD_PLAN.name, ...state } }))
+  trackPlanChange(workspaceId, row?.status ?? null, subscription)
+  return saved
+}
+
+/**
+ * Product analytics (src/analytics.ts) for a subscription that changed status: started,
+ * canceled, or a payment failed. Of the member who started its Checkout.
+ */
+function trackPlanChange(
+  workspaceId: string,
+  before: string | null,
+  subscription: Stripe.Subscription,
+) {
+  const after = subscription.status
+  if (before === after) return
+  identifyWorkspace(workspaceId)
+  const event =
+    !(before && entitles(before)) && (after === 'active' || after === 'trialing')
+      ? 'subscription_started'
+      : after === 'canceled'
+        ? 'subscription_canceled'
+        : after === 'past_due' || after === 'unpaid'
+          ? 'payment_failed'
+          : null
+  if (!event) return
+  const userId = subscription.metadata?.userId
+  const price = subscription.items.data[0]?.price
+  const months = (Date.now() - subscription.start_date * 1000) / (30.44 * 24 * 60 * 60_000)
+  void prisma.workspace
+    .findUnique({ where: { id: workspaceId }, select: { organizationId: true } })
+    .then((workspace) => {
+      if (!workspace) return
+      trackLater(
+        userId ? personOfMember(userId) : null,
+        event,
+        { ...workspace, workspaceId },
+        {
+          feature: 'billing',
+          plan: CLOUD_PLAN.name,
+          status: after,
+          ...(event === 'subscription_started' && price
+            ? {
+                currency: price.currency,
+                ...(price.unit_amount !== null && { amount: price.unit_amount / 100 }),
+              }
+            : {}),
+          ...(event === 'subscription_canceled' && {
+            months_active: Math.max(0, Math.round(months * 10) / 10),
+            ...(subscription.cancellation_details?.reason && {
+              reason: subscription.cancellation_details.reason,
+            }),
+          }),
+        },
+      )
+    })
+    .catch((error: unknown) => console.warn(`analytics: ${String(error)}`))
 }
 
 /**

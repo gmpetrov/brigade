@@ -3,6 +3,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { APIError } from 'better-auth/api'
 import { captcha, emailOTP, organization } from 'better-auth/plugins'
 import { HTTPException } from 'hono/http-exception'
+import { recordSignup } from './analytics.js'
 import { audit } from './audit.js'
 import { guardOrganizationDeletion } from './billing.js'
 import { env } from './config.js'
@@ -75,6 +76,19 @@ export const auth = betterAuth({
     },
   },
   account: { modelName: 'authAccount' },
+  // Where a new person came from (src/signup-source.ts), kept on them, and `signed_up`
+  // (src/analytics.ts). After the user's row is written; never fails the sign-up.
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user, context) => {
+          await recordSignup(user, context).catch((error: unknown) =>
+            console.warn(`sign-up of ${user.id} not recorded: ${String(error)}`),
+          )
+        },
+      },
+    },
+  },
   advanced: {
     ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] },
     ...(env.CROSS_SITE_COOKIES && {

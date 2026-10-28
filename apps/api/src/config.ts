@@ -177,6 +177,27 @@ const Env = z.object({
    */
   CLOUDFLARE_API_TOKEN: z.string().optional(),
   CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
+  /**
+   * Product analytics (src/analytics.ts, docs/analytics.md): the PostHog project's API key
+   * (phc_…). Without it, nothing is sent: locally, in tests, previews and self-hosted.
+   */
+  POSTHOG_KEY: z.string().optional(),
+  /** PostHog's ingestion address: its EU cloud unless set. */
+  POSTHOG_HOST: z.url().default('https://eu.i.posthog.com'),
+  /**
+   * Email domains whose people are Brigade's own (the team, demo accounts), comma-separated:
+   * their events carry `internal: true`, to leave them out of analyses. The address itself is
+   * never sent.
+   */
+  POSTHOG_INTERNAL_EMAIL_DOMAINS: z
+    .string()
+    .optional()
+    .transform((v) =>
+      (v ?? '')
+        .split(',')
+        .map((d) => d.trim().toLowerCase().replace(/^@/, ''))
+        .filter(Boolean),
+    ),
 })
 
 // An empty value (KEY= in .env, as .env.example has them) means unset.

@@ -11,6 +11,7 @@ import {
   type ApiToRunner,
   type SequencedEvent,
 } from '@brigade/contracts'
+import { trackTurns } from '../analytics.js'
 import { handlePreviewCall, handlePreviewExpose, notePreviewEvents } from '../app-previews.js'
 import { audit } from '../audit.js'
 import { noteChildEvents } from '../children.js'
@@ -602,6 +603,8 @@ async function advance(hub: WorkspaceHub, conn: RunnerConn, session: Session) {
       void movesOn(conn.computerId, session.id).catch(console.error)
     // Not awaited: a merge under way may call GitHub and prompt the author.
     void noteTurnsEnded(session, fresh).catch(console.error)
+    // Product analytics (src/analytics.ts): the turns these events end. Not awaited.
+    trackTurns(session, fresh)
     // Not awaited, nor tried again: the tokens a turn spent never hold its thread back.
     void noteTokenUsage(session, fresh).catch((error) =>
       console.warn(`thread ${session.id}: token usage not kept: ${String(error)}`),

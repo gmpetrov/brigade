@@ -18,6 +18,7 @@ import {
   type TeammateReview,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { personOfThread, trackLater } from './analytics.js'
 import { previewStates, stopThreadPreview } from './app-previews.js'
 import { audit, type Actor } from './audit.js'
 import { GITHUB_API, githubHeaders, installationToken } from './connectors/github-app.js'
@@ -616,6 +617,11 @@ export async function notePullRequestCall(
     const out = call.output as { number: number; title: string; head: string; base: string }
     const existing = await db.pullRequest.findFirst({
       where: { repository: repo, number: out.number },
+    })
+    // Product analytics: a teammate opened it, in the thread of the member it works for.
+    trackLater(personOfThread(call.sessionId), 'pull_request_opened', scope, {
+      feature: 'pull_requests',
+      by: 'teammate',
     })
     // GitHub's webhook may have recorded it first, without its thread.
     if (existing) {

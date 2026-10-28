@@ -904,6 +904,7 @@ export async function disconnect(
     actor: { type: 'member', id: scope.memberId },
     action: 'connection.removed',
     target: { type: 'connection', id: connection.id },
+    track: { app: connection.kind },
   })
 }
 

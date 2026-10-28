@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import { AuthLink } from '@/components/landing/auth-link'
 import { Footer } from '@/components/landing/closing'
 import { Header } from '@/components/landing/hero'
 import { c, SIGN_UP } from '@/components/landing/parts'
@@ -34,9 +34,9 @@ export default function HowItWorks() {
               Your teammates run on the same agents you would run in a terminal, on the plans you
               already pay for, on your Mac or Brigade&apos;s cloud computer.
             </p>
-            <Link className={c('btn pri lg')} href={SIGN_UP}>
+            <AuthLink className={c('btn pri lg')} href={SIGN_UP}>
               Sign up
-            </Link>
+            </AuthLink>
           </div>
         </section>
         <UnderTheHood />

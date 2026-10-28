@@ -58,6 +58,7 @@ export const billing = new Hono<AppEnv>()
       actor: { type: 'member', id: c.var.scope.memberId },
       action: 'billing.checkout_started',
       target: { type: 'workspace', id: c.var.scope.workspaceId },
+      track: { from },
     })
     return c.json({ url })
   })

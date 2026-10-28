@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import { BrigadeMark } from '@/components/brigade-mark'
+import { AuthLink } from './auth-link'
 import { Dancers } from './dancers'
 import { c, SIGN_IN, SIGN_UP } from './parts'
+import { SiteAnalytics } from './site-analytics'
 
 export function Header() {
   return (
     <header className={c('wrap top')}>
+      <SiteAnalytics />
       <Link className={c('word')} href="/">
         <BrigadeMark className={c('word-mark')} />
         Brigade
@@ -14,10 +17,10 @@ export function Header() {
         <a className={c('hide-m')} href="/#pricing">
           Pricing
         </a>
-        <Link href={SIGN_IN}>Sign in</Link>
-        <Link className={c('btn pri')} href={SIGN_UP}>
+        <AuthLink href={SIGN_IN}>Sign in</AuthLink>
+        <AuthLink className={c('btn pri')} href={SIGN_UP}>
           Sign up
-        </Link>
+        </AuthLink>
       </nav>
     </header>
   )
@@ -41,9 +44,9 @@ export function Hero() {
             in one list on your phone.
           </p>
           <div className={c('cta-row')}>
-            <Link className={c('btn pri lg')} href={SIGN_UP}>
+            <AuthLink className={c('btn pri lg')} href={SIGN_UP}>
               Sign up
-            </Link>
+            </AuthLink>
           </div>
         </div>
       </div>

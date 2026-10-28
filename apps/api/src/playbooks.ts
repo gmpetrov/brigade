@@ -893,6 +893,7 @@ export async function setPlaybookPaused(
     actor: { type: 'member', id: scope.memberId },
     action: paused ? 'playbook.paused' : activating ? 'playbook.activated' : 'playbook.resumed',
     target: { type: 'playbook', id },
+    track: { playbook: installation.playbookKey },
   })
   return getInstallation(db, id)
 }

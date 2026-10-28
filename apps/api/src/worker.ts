@@ -139,7 +139,11 @@ async function stateless<T>(env: Env, ctx: ExecutionContext, fn: () => Promise<T
   } finally {
     ctx.waitUntil(
       Promise.all([
-        client.$disconnect().catch(() => undefined),
+        // Its analytics events (src/analytics.ts) first: their lookups use the client.
+        withPrismaClient(client, () => import('./analytics.js').then((a) => a.flushAnalytics()))
+          .catch(() => undefined)
+          .then(() => client.$disconnect())
+          .catch(() => undefined),
         failures.length
           ? apiObject(env.API)
               .noteFailures(failures)
