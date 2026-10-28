@@ -1,6 +1,7 @@
 'use client'
 // A thread in the sidebar, with its menu (thread-menu.tsx): ⋮ on hover in place of the time,
-// or a right-click on the row. Rename, or a double-click on the title, edits the title in the
+// or a right-click on the row. Its status dot, when it has one, sits before the time and stays
+// on hover, where it says its word. Rename, or a double-click on the title, edits the title in the
 // row itself. Under Pinned, a row can be dragged to another place (`drag`). A thread whose
 // preview is up shows its icon, which opens the preview on hover (and in the menu on phones).
 import { EllipsisVertical, Laptop, Eye } from 'lucide-react'
@@ -22,7 +23,7 @@ export function ThreadRow({
   thread,
   href,
   active,
-  icon,
+  dot,
   trailing,
   memberId,
   admin,
@@ -33,7 +34,8 @@ export function ThreadRow({
   thread: ThreadSummary
   href: string
   active: boolean
-  icon: ReactNode
+  /** Before the time, only while the thread has something to say: none when it is idle and read. */
+  dot?: ReactNode
   /** At the row's end: its time or what it asks. Hidden while the menu is in reach. */
   trailing: ReactNode
   memberId: string | null
@@ -63,7 +65,6 @@ export function ThreadRow({
     return (
       <SidebarMenuItem>
         <div className="flex h-8 items-center gap-2 rounded-md px-2 ring-1 ring-sidebar-ring">
-          {icon}
           <input
             autoFocus
             defaultValue={thread.title}
@@ -109,13 +110,13 @@ export function ThreadRow({
             setRenaming(true)
           }}
         >
-          {icon}
           <span className="flex-1 truncate">
             <StreamedTitle threadId={thread.id} text={title} />
           </span>
+          {dot}
           <span
             className={cn(
-              'ml-auto flex shrink-0 items-center gap-1.5 text-xs',
+              'flex shrink-0 items-center gap-1.5 text-xs',
               // On a phone ⋮ is always there: the time goes beside it.
               'max-md:mr-5 md:group-hover/menu-item:opacity-0',
               open && 'opacity-0',

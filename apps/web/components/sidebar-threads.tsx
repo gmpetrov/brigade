@@ -737,13 +737,15 @@ export function SidebarWork({
         thread={t}
         href={href}
         active={threadId === t.id && (expanded || pathname === href)}
-        icon={
-          <ThreadStatusIcon
-            status={t.status}
-            unread={t.unread}
-            stuck={!!t.eventsWaitingSince}
-            ask={asks.get(t.id)}
-          />
+        dot={
+          (statusKey(t) || t.eventsWaitingSince) && (
+            <ThreadStatusIcon
+              status={t.status}
+              unread={t.unread}
+              stuck={!!t.eventsWaitingSince}
+              ask={asks.get(t.id)}
+            />
+          )
         }
         // The dot says it waits on a person: the row's end stays how old it is.
         trailing={
