@@ -274,6 +274,8 @@ type Thread = {
   log: Promise<Log>
   /** Turns queued and not yet started, by teammate id. */
   waiting: Map<string, number>
+  /** Answers a person gave to a teammate's ask (a ticket, a question, an approval), by teammate id. */
+  answers: Map<string, number>
   /** Handoffs since a member last wrote. */
   handoffs: number
   /** Fires when the thread goes quiet, to take its memory. */
@@ -467,6 +469,8 @@ export class Threads {
         ...(command.reason ? { reason: command.reason } : {}),
       }
     }
+    const answers = this.thread(spec.sessionId).answers
+    answers.set(spec.teammate.id, (answers.get(spec.teammate.id) ?? 0) + 1)
     this.enqueue(spec, input)
   }
 
@@ -628,6 +632,7 @@ export class Threads {
     if (!takeover) return
     // Control returns at once: a ticket answered with the handback comes right behind it.
     thread.takeover = undefined
+    const answers = thread.answers.get(spec.teammate.id) ?? 0
     this.options.emit(spec.sessionId, {
       at: new Date().toISOString(),
       type: 'control.changed',
@@ -648,13 +653,24 @@ export class Threads {
       if (!note.trim() && files.length === 0) return null
       const text = handbackMessage({ note, files })
       const at = new Date().toISOString()
+      // Still waiting on that person, and not answered since the hand back (a ticket answered
+      // with it, whose turn reads it): nothing runs until they answer. A message sent
+      // meanwhile is no answer, and is held too.
+      const held = waiting && (thread.answers.get(spec.teammate.id) ?? 0) === answers
       this.options.emit(spec.sessionId, {
         at,
         type: 'message.user',
         text,
         memberId,
-        ...(waiting ? { waiting: true } : {}),
+        ...(held ? { waiting: true } : {}),
       })
+      if (held)
+        this.options.emit(spec.sessionId, {
+          at,
+          type: 'raw',
+          source: 'runner',
+          value: `${spec.teammate.name} reads this once the pending request is answered.`,
+        })
       thread.handoffs = 0
       const upTo = await this.note(spec, null, 'A member', text)
       return waiting ? null : upTo
@@ -1596,6 +1612,7 @@ export class Threads {
         messages: new Map(),
         memorizing: false,
         waiting: new Map(),
+        answers: new Map(),
         handoffs: 0,
         log: readFile(this.logFile(sessionId), 'utf8').then(
           (text) => JSON.parse(text) as Log,

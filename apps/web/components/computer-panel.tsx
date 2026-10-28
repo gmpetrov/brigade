@@ -30,6 +30,7 @@ import {
   type Thread,
   type ThreadSummary,
 } from '@/lib/api'
+import { savedReplies } from '@/lib/ticket-replies'
 
 function Section({
   title,
@@ -252,7 +253,10 @@ function useControl(thread: Thread, memberId: string, onChange: () => void) {
     takeOver: () =>
       void act(() => api(`/threads/${thread.id}/takeover`, { body: { interrupt: false } })),
     // No note from here: the thread's own hand back, below the conversation, takes one.
-    handBack: () => void act(() => api(`/threads/${thread.id}/handback`, { body: { note: '' } })),
+    handBack: () =>
+      void act(() =>
+        api(`/threads/${thread.id}/handback`, { body: { note: '', replies: savedReplies() } }),
+      ),
     openBrowser: () =>
       void act(() => api(`/teammates/${thread.teammate.id}/browser`, { body: {} })),
   }

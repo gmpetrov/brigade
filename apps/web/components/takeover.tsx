@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { api, type Thread } from '@/lib/api'
+import { savedReplies } from '@/lib/ticket-replies'
 
 /** While a member has the workspace computer for a thread: hand back. Takeover starts in the computer panel. */
 export function Takeover({
@@ -70,7 +71,9 @@ export function Takeover({
         className="flex flex-wrap gap-2"
         onSubmit={(e) => {
           e.preventDefault()
-          void act(() => api(`/threads/${thread.id}/handback`, { body: { note } }))
+          void act(() =>
+            api(`/threads/${thread.id}/handback`, { body: { note, replies: savedReplies() } }),
+          )
         }}
       >
         <Input

@@ -30,6 +30,19 @@ function savedFor(requestId: string, asks: Ask[]): Replies {
   )
 }
 
+/**
+ * Every ticket's replies saved here, by ticket: a hand back sends them, so it can answer
+ * the ticket it ends with the asks already answered (apps/api/src/routes/threads.ts).
+ */
+export function savedReplies(): Record<string, Replies> {
+  const now = Date.now()
+  return Object.fromEntries(
+    Object.entries(load()).flatMap(([id, s]) =>
+      now - s.at < KEEP_MS && s.replies ? [[id, s.replies]] : [],
+    ),
+  )
+}
+
 function save(requestId: string, replies: Replies | undefined) {
   try {
     const now = Date.now()

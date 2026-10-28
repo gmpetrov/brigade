@@ -1,7 +1,7 @@
 // HTTP payloads and the browser WebSocket protocol.
 import { z } from 'zod'
 import { AttachmentIds } from './attachments.js'
-import { QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
+import { AskReply, QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath } from './library.js'
 import { isHarnessModel } from './models.js'
 import { Logo } from './projects.js'
@@ -258,7 +258,11 @@ export const AddAccount = z.object({
   label: z.string().trim().max(80).optional(),
 })
 export const TakeOver = z.object({ interrupt: z.boolean().default(false) })
-export const HandBack = z.object({ note: z.string().max(20_000).default('') })
+export const HandBack = z.object({
+  note: z.string().max(20_000).default(''),
+  /** The asks answered so far in the member's browser, by ticket (its requestId) then ask. */
+  replies: z.record(z.string().max(200), z.record(z.string().max(200), AskReply)).optional(),
+})
 /** With text: put it on the desktop's clipboard. Without: read the clipboard. */
 export const DesktopClipboard = z.object({ text: z.string().max(CLIPBOARD_MAX).optional() })
 /** Teach a task holds the cloud computer: from a thread, which its own count of others leaves out. */
