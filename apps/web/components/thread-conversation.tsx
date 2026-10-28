@@ -107,6 +107,7 @@ import {
 import { useChangesCount } from '@/lib/code-changes'
 import { openCodeTab, setCodePanel } from '@/lib/code-tabs'
 import { useReplyDraft } from '@/lib/reply-drafts'
+import { readThreadSide, rememberThreadSide } from '@/lib/thread-side'
 import { useLive } from '@/lib/use-live'
 import {
   preloadThreadEvents,
@@ -344,12 +345,30 @@ export function ThreadConversation({
     computerRequest,
     takeComputerRequest,
   } = useThreadPanel()
+  // Beside the thread as it was left in this tab: back from another thread, the same one shows.
+  const [side] = useState(() => readThreadSide(id))
   // A file a message names, open beside the thread in the desktop's place.
-  const [file, setFile] = useState<{ path: string; teammateId?: string }>()
+  const [file, setFile] = useState<{ path: string; teammateId?: string } | undefined>(() =>
+    side?.kind === 'file'
+      ? { path: side.path, ...(side.teammateId && { teammateId: side.teammateId }) }
+      : undefined,
+  )
   // The app the teammate runs, beside the thread in the desktop's place.
-  const [previewing, setPreviewing] = useState(false)
+  const [previewing, setPreviewing] = useState(side?.kind === 'preview')
   // The files it changed, beside the thread in the desktop's place, without a preview.
-  const [changesOpen, setChangesOpen] = useState(false)
+  const [changesOpen, setChangesOpen] = useState(side?.kind === 'changes')
+  useEffect(() => {
+    rememberThreadSide(
+      id,
+      file
+        ? { kind: 'file', ...file }
+        : previewing
+          ? { kind: 'preview' }
+          : changesOpen
+            ? { kind: 'changes' }
+            : undefined,
+    )
+  }, [id, file, previewing, changesOpen])
   // The computer expanded over the thread from its details, which it hides until it closes.
   const [computerOpen, setComputerOpen] = useState(false)
   // Teach a task: the computer over the window, recording the person doing it.
@@ -381,9 +400,12 @@ export function ThreadConversation({
       setChangesOpen(false)
     }
   }, [documents.current])
-  // The bar's computer button brings the teammate's panel back in front of a file or preview.
+  // The bar's computer button brings the teammate's panel back in front of a file or preview:
+  // a click since this thread opened, not one made on another thread.
+  const revealedAt = useRef(revealKey)
   useEffect(() => {
-    if (!revealKey) return
+    if (revealKey === revealedAt.current) return
+    revealedAt.current = revealKey
     setFile(undefined)
     setPreviewing(false)
     setChangesOpen(false)
