@@ -843,8 +843,12 @@ const routes: [string, RegExp, Handler][] = [
     ([threadId], _, url) =>
       url.searchParams.has('before')
         ? { firstSeq: 1, events: [] }
-        : structuredClone(page(threadId)),
+        : // A demo thread is loaded whole: the timeline never needs a page of it.
+          url.searchParams.has('from')
+          ? { firstSeq: 1, endSeq: 1, events: [] }
+          : structuredClone(page(threadId)),
   ],
+  ['GET', /^\/threads\/([^/]+)\/prompts$/, () => []],
   // What makes something new (a teammate, a task, a project, an App, a file) answers with
   // what it made, which the page then opens: in the demo it says it is off, where the
   // page shows errors, rather than open nothing.

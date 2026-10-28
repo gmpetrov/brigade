@@ -7,7 +7,9 @@ import {
   OUTPUT_TOOLS,
   THREAD_PAGE_EVENTS,
   THREAD_PAGE_STARTS,
+  THREAD_PROMPT_CHARS,
   type SequencedEvent,
+  type TimelineMessage,
 } from '@brigade/contracts'
 import { prisma, type Prisma } from './db.js'
 
@@ -20,10 +22,14 @@ const sequenced = (r: Row): SequencedEvent => ({
 
 /** The first seq of the page that ends before `before`: a turn's start about a page back, else 1. */
 export async function pageStart(sessionId: string, before: number) {
-  const target = before - THREAD_PAGE_EVENTS
-  if (target <= 1) return 1
+  return startAt(sessionId, before - THREAD_PAGE_EVENTS)
+}
+
+/** Where a page holding `seq` starts: the turn's start or member's message at or before it, else 1. */
+export async function startAt(sessionId: string, seq: number) {
+  if (seq <= 1) return 1
   const start = await prisma.sessionEvent.findFirst({
-    where: { sessionId, seq: { lte: target }, type: { in: THREAD_PAGE_STARTS } },
+    where: { sessionId, seq: { lte: seq }, type: { in: THREAD_PAGE_STARTS } },
     orderBy: { seq: 'desc' },
     select: { seq: true, type: true },
   })
@@ -37,6 +43,37 @@ export async function pageStart(sessionId: string, before: number) {
     if (asked) return asked.seq
   }
   return start.seq
+}
+
+/**
+ * Where the page starting at `from` ends, not included: the first turn's start or member's
+ * message about a page on, else `until`, past which the dashboard has the thread already.
+ */
+export async function pageEnd(sessionId: string, from: number, until: number) {
+  const end = await prisma.sessionEvent.findFirst({
+    where: {
+      sessionId,
+      seq: { gte: from + THREAD_PAGE_EVENTS, lt: until },
+      type: { in: THREAD_PAGE_STARTS },
+    },
+    orderBy: { seq: 'asc' },
+    select: { seq: true },
+  })
+  return end?.seq ?? until
+}
+
+/**
+ * The messages people wrote in a thread, for its timeline: each one's start only, cut in
+ * the database, so a long thread's list stays small and its events' other fields (files,
+ * replies) are not read. Brigade's own messages (wake-ups, reports) are left out.
+ */
+export async function threadPrompts(sessionId: string): Promise<TimelineMessage[]> {
+  const rows = await prisma.$queryRaw<{ seq: number; at: Date; text: string | null }[]>`
+    SELECT "seq", "at", left("data"->>'text', ${THREAD_PROMPT_CHARS}) AS "text"
+    FROM "SessionEvent"
+    WHERE "sessionId" = ${sessionId} AND "type" = 'message.user' AND "data"->>'memberId' IS NOT NULL
+    ORDER BY "seq"`
+  return rows.map((r) => ({ seq: r.seq, at: r.at.toISOString(), text: r.text ?? '' }))
 }
 
 /** The events from `from` up to, not including, `before`. */

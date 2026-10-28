@@ -8,6 +8,15 @@ export const THREAD_PAGE_EVENTS = 2000
 /** Where a page may start: a member's message or a turn, never inside a reply. */
 export const THREAD_PAGE_STARTS: AgentEventType[] = ['message.user', 'turn.started']
 
+/**
+ * A person's message in a thread, for the timeline beside a long one: where it is and
+ * its first words only, so the whole thread's list stays small.
+ */
+export type TimelineMessage = { seq: number; at: string; text: string }
+
+/** How much of each message the timeline gets: enough for a line or two on hover. */
+export const THREAD_PROMPT_CHARS = 160
+
 /** Files made to hand over, not code a teammate read or wrote to make them. */
 export const DELIVERABLE_EXTENSIONS =
   'pdf|docx?|xlsx?|pptx?|odt|ods|odp|csv|zip|png|jpe?g|gif|webp|svg|mp3|mp4|wav'
