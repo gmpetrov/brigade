@@ -4,7 +4,7 @@
 // starts it. Once it has, the thread's own conversation takes over; should it not, the thread
 // says why and the message goes back to the box it came from.
 import { useSyncExternalStore } from 'react'
-import type { Upload } from '@/components/attachments'
+import type { SentMessage } from '@/components/new-thread'
 import type { Teammate } from '@/lib/api'
 import { DEMO, DEMO_THREAD } from '@/lib/demo/flag'
 
@@ -20,10 +20,11 @@ export type PendingThread = {
 }
 
 /** A message on its way back to the box it came from, after its thread did not start. */
-export type ReturnedDraft = { from: string; text: string; uploads: Upload[] }
+export type ReturnedDraft = { from: string; message: SentMessage }
 
 const pending = new Map<string, PendingThread>()
-const uploads = new Map<string, Upload[]>()
+// As sent, with its files and where it was to run: what goes back to the box.
+const messages = new Map<string, SentMessage>()
 let returned: ReturnedDraft | undefined
 const listeners = new Set<() => void>()
 const changed = () => {
@@ -49,15 +50,15 @@ export function newThreadId() {
 }
 
 export const pendingThreads = {
-  add(id: string, thread: PendingThread, files: Upload[]) {
+  add(id: string, thread: PendingThread, message: SentMessage) {
     pending.set(id, thread)
-    uploads.set(id, files)
+    messages.set(id, message)
     changed()
   },
   /** It started: its conversation shows from now on. */
   started(id: string) {
     pending.delete(id)
-    uploads.delete(id)
+    messages.delete(id)
     changed()
   },
   failed(id: string, error: string) {
@@ -70,10 +71,12 @@ export const pendingThreads = {
   giveBack(id: string) {
     const thread = pending.get(id)
     if (!thread) return
-    returned = { from: thread.from, text: thread.text, uploads: uploads.get(id) ?? [] }
+    const message = messages.get(id)
+    if (!message) return
+    returned = { from: thread.from, message }
     // It stays as it is until the page has gone: its conversation would ask for a thread that
     // never started.
-    uploads.delete(id)
+    messages.delete(id)
     return thread.from
   },
   /** The message given back for the box at this address, once. */

@@ -45,10 +45,16 @@ export function QuickThread() {
             text: draft.text,
             uploads: files.take().uploads,
             effort: draft.effort,
+            projectId: draft.projectId,
+            computerId: draft.computerId,
+            accountId: draft.accountId,
           }
         : undefined
     draft.setText(message.text)
     draft.setEffort(message.effort)
+    draft.setProjectId(message.projectId)
+    draft.setComputerId(message.computerId)
+    draft.setAccountId(message.accountId)
     files.put(message.uploads)
     if (teammates.some((t) => t.id === message.teammateId)) chooseTeammate(message.teammateId)
     setAside((list) => [...list.filter((m) => m.key !== message.key), ...(held ? [held] : [])])

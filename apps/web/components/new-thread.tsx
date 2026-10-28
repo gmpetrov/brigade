@@ -281,6 +281,8 @@ export function useThreadDraft() {
   const [text, setText] = useState('')
   const [computerId, setComputerId] = useState<string>()
   const [accountId, setAccountId] = useState<string>()
+  // The project picked in the box; unset: the page's, else the one picked last.
+  const [projectId, setProjectId] = useState<string>()
   // How hard its teammates think, from the + menu; null: the harness's default.
   const [effort, setEffort] = useState<Effort | null>(null)
   const files = useUploads()
@@ -291,6 +293,8 @@ export function useThreadDraft() {
     setComputerId,
     accountId,
     setAccountId,
+    projectId,
+    setProjectId,
     effort,
     setEffort,
     files,
@@ -299,12 +303,18 @@ export function useThreadDraft() {
 
 export type ThreadDraft = ReturnType<typeof useThreadDraft>
 
-/** A message sent from a box that does not wait (NewThread's `onSending`), as it was. */
+/**
+ * A message out of a box (NewThread's `onSending`, or one set aside), with where and how it runs,
+ * as the box's draft holds them: unset, the box's default.
+ */
 export type SentMessage = {
   teammateId: string
   text: string
   uploads: Upload[]
   effort: Effort | null
+  projectId?: string
+  computerId?: string
+  accountId?: string
 }
 
 /**
@@ -369,8 +379,28 @@ export function NewThread({
   const pickable = projects.filter((p) => !p.archivedAt)
   // A project page's own project first; else the one picked last, while it is still pickable.
   const [last, remember] = useLastProject()
-  const [picked, setPicked] = useState<string>()
-  useEffect(() => setPicked(undefined), [initialProject])
+  const own = useThreadDraft()
+  const {
+    text,
+    setText,
+    computerId,
+    setComputerId,
+    accountId,
+    setAccountId,
+    projectId: picked,
+    setProjectId: setPicked,
+    effort: effortValue,
+    setEffort: setEffortValue,
+    files,
+  } = draft ?? own
+  // Another page's project: what was picked for the last one no longer holds. Not as the box
+  // mounts: a draft that outlives it (the threads panel's) keeps its pick.
+  const pageProject = useRef(initialProject)
+  useEffect(() => {
+    if (pageProject.current === initialProject) return
+    pageProject.current = initialProject
+    setPicked(undefined)
+  }, [initialProject, setPicked])
   const projectId =
     picked ?? initialProject ?? (last && pickable.some((p) => p.id === last) ? last : 'none')
   const chosenProject = pickable.find((p) => p.id === projectId)
@@ -382,18 +412,6 @@ export function NewThread({
   }
   const computers = useApi<ComputersResponse>('/computers')
   const accounts = useApi<Account[]>('/accounts')
-  const own = useThreadDraft()
-  const {
-    text,
-    setText,
-    computerId,
-    setComputerId,
-    accountId,
-    setAccountId,
-    effort: effortValue,
-    setEffort: setEffortValue,
-    files,
-  } = draft ?? own
   const effort: EffortPick = {
     value: effortValue,
     fallback: defaultEffort(teammate.harness, teammate.model),
@@ -404,10 +422,15 @@ export function NewThread({
   // A message whose thread did not start, back from it (lib/pending-threads.ts).
   useEffect(() => {
     if (!openAtOnce) return
-    const back = pendingThreads.takeReturned(pathname)
+    const back = pendingThreads.takeReturned(pathname)?.message
     if (!back) return
-    setText((now) => (now.trim() ? now : back.text))
+    // Where it was to run as well: sent again, it runs there.
+    setText(back.text)
     files.put(back.uploads)
+    setEffortValue(back.effort)
+    setPicked(back.projectId)
+    setComputerId(back.computerId)
+    setAccountId(back.accountId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const drop = useFileDrop(files.add)
@@ -458,7 +481,16 @@ export function NewThread({
           taken.done()
           return thread
         }),
-        { teammateId: teammate.id, text, uploads: taken.uploads, effort: effortValue },
+        // Where it was to run, as sent: given back, it runs there again.
+        {
+          teammateId: teammate.id,
+          text,
+          uploads: taken.uploads,
+          effort: effortValue,
+          projectId,
+          computerId: computer!.id,
+          accountId: account!.id,
+        },
       )
       return
     }
@@ -470,7 +502,15 @@ export function NewThread({
       pendingThreads.add(
         id,
         { teammate, text, files: taken.uploads.map((u) => u.name), from: pathname },
-        taken.uploads,
+        {
+          teammateId: teammate.id,
+          text,
+          uploads: taken.uploads,
+          effort: effortValue,
+          projectId,
+          computerId: computer!.id,
+          accountId: account!.id,
+        },
       )
       setText('')
       setEffortValue(null)
