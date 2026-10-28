@@ -372,7 +372,12 @@ export function ThreadConversation({
   // Recording a task needs a desktop to do it on: not offered on phones.
   const phone = useIsMobile()
   // Asked of the API only for a thread not loaded from its start, shown wide.
-  const prompts = useThreadPrompts(id, items, firstSeq <= 1, expanded && !phone)
+  const prompts = useThreadPrompts(
+    id,
+    items,
+    firstSeq <= 1 && gaps.length === 0,
+    expanded && !phone,
+  )
   // No Tab key to take a suggestion: a Use button beside the box instead.
   const touch = useTouchScreen()
   // One panel beside the thread: a document opened anywhere replaces the file, preview or computer.

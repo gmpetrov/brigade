@@ -2,10 +2,11 @@
 // Beside a long thread, a mark for each message a person wrote: hover one to read its start,
 // click it to go there. A message not loaded loads with its own page only (useThreadEvents'
 // jumpTo), never the whole thread up to it.
-import { groupMarks, mentionsToText, type TimelineMessage } from '@brigade/contracts'
+import { mentionsToText, type TimelineMessage } from '@brigade/contracts'
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import type { Item } from '@/components/thread-view'
 import { api } from '@/lib/api'
+import { timelineMarks } from '@/lib/timeline-marks'
 import { pauseLabel } from '@/lib/thread-times'
 import { cn } from '@/lib/utils'
 
@@ -39,7 +40,7 @@ export function useThreadPrompts(
   whole: boolean,
   wanted: boolean,
 ): ThreadPrompts {
-  const [fetched, setFetched] = useState<{ threadId: string; marks: TimelineMessage[] }>()
+  const [fetched, setFetched] = useState<{ threadId: string; marks?: TimelineMessage[] }>()
   const asked = useRef<string>(undefined)
   useEffect(() => {
     if (whole || !wanted || asked.current === threadId) return
@@ -47,7 +48,7 @@ export function useThreadPrompts(
     api<TimelineMessage[]>(`/threads/${threadId}/prompts`)
       .then((marks) => setFetched({ threadId, marks }))
       // Without it, the timeline holds what is loaded.
-      .catch(() => setFetched({ threadId, marks: [] }))
+      .catch(() => setFetched({ threadId }))
   }, [threadId, whole, wanted])
   const ready = whole || fetched?.threadId === threadId
   return useMemo(() => {
@@ -64,15 +65,11 @@ export function useThreadPrompts(
     )
     const mine = new Set(loaded.map((m) => m.seq))
     if (!ready) return { marks: [], mine }
-    if (whole || fetched?.threadId !== threadId) return { marks: groupMarks(loaded), mine }
-    // What the answer counted: messages after it are new, a mark each.
-    const through = Math.max(0, ...fetched.marks.map((m) => m.last))
-    const after = loaded.filter((m) => m.seq > through)
     return {
-      marks: [...fetched.marks, ...after.map((m) => ({ ...m, count: 1, last: m.seq }))],
+      marks: timelineMarks(loaded, fetched?.threadId === threadId ? fetched.marks : undefined),
       mine,
     }
-  }, [ready, whole, fetched, threadId, items])
+  }, [ready, fetched, threadId, items])
 }
 
 /**
