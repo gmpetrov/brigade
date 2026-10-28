@@ -424,7 +424,9 @@ export function NewThread({
     if (!openAtOnce) return
     const back = pendingThreads.takeReturned(pathname)?.message
     if (!back) return
-    // Where it was to run as well: sent again, it runs there.
+    // To whom and where it was to run as well: sent again, it goes there.
+    if (back.teammateId !== teammate.id && picker?.teammates.some((t) => t.id === back.teammateId))
+      picker.onChange(back.teammateId)
     setText(back.text)
     files.put(back.uploads)
     setEffortValue(back.effort)
