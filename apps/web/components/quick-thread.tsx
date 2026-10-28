@@ -1,23 +1,32 @@
 'use client'
 // Start a thread without leaving where you are: ⌘⇧K (Ctrl+Shift+K) opens the
 // new-thread box in a dialog. It is the threads panel's box: the same draft and
-// teammate, so closing it by mistake loses nothing. Sending closes it and says
-// so in the corner; Open there goes to the thread.
-import { ArrowRight, CircleCheck, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+// teammate, so closing it by mistake loses nothing. Sending closes it at once and
+// says so in the corner; Open there goes to the thread once it has started. If it
+// could not, the message is back in the box and the note says why.
+import { ArrowRight, CircleAlert, CircleCheck, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { NewThread } from '@/components/new-thread'
 import { useThreadPanel } from '@/components/thread-panel'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { isMac } from '@/lib/platform'
+import { cn } from '@/lib/utils'
 
 export function QuickThread() {
   const [open, onOpenChange] = useState(false)
   const { teammates } = useDashboard()
   const { draft, teammateId, chooseTeammate, openThread } = useThreadPanel()
   const teammate = teammates.find((t) => t.id === teammateId) ?? teammates[0]
-  const [started, setStarted] = useState<{ id: string; teammate: string }>()
+  const [started, setStarted] = useState<{
+    teammate: string
+    /** Its id once it has started. */
+    id?: string
+    error?: string
+  }>()
+  // Only the last send's outcome updates the note.
+  const last = useRef(0)
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -39,9 +48,9 @@ export function QuickThread() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  // The note that it started fades on its own.
+  // The note that it started fades on its own; one that it is starting, or failed, stays.
   useEffect(() => {
-    if (!started) return
+    if (!started?.id) return
     const timer = setTimeout(() => setStarted(undefined), 6000)
     return () => clearTimeout(timer)
   }, [started])
@@ -73,9 +82,19 @@ export function QuickThread() {
                 : undefined
             }
             placeholder={`Chat with ${teammate.name}`}
-            onStarted={(thread) => {
+            onSending={(thread) => {
+              const send = ++last.current
+              const name = teammate.name
               onOpenChange(false)
-              setStarted({ id: thread.id, teammate: teammate.name })
+              setStarted({ teammate: name })
+              thread.then(
+                ({ id }) => {
+                  if (send === last.current) setStarted({ id, teammate: name })
+                },
+                (error: Error) => {
+                  if (send === last.current) setStarted({ teammate: name, error: error.message })
+                },
+              )
             }}
           />
         </DialogContent>
@@ -88,19 +107,46 @@ export function QuickThread() {
       >
         {started && (
           <div className="pointer-events-auto flex items-center gap-3 rounded-xl border bg-card py-2 pr-2 pl-3 text-sm shadow-lg animate-in fade-in-0 slide-in-from-bottom-2">
-            <CircleCheck className="size-4 shrink-0 text-success" aria-hidden />
-            <span>Thread started with {started.teammate}</span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                openThread(started.id)
-                setStarted(undefined)
-              }}
-            >
-              Open
-              <ArrowRight aria-hidden />
-            </Button>
+            {started.error ? (
+              <CircleAlert className="size-4 shrink-0 text-destructive-text" aria-hidden />
+            ) : (
+              <CircleCheck
+                className={cn('size-4 shrink-0 text-success', !started.id && 'opacity-50')}
+                aria-hidden
+              />
+            )}
+            <span>
+              {started.error
+                ? `Not started: ${started.error}`
+                : started.id
+                  ? `Thread started with ${started.teammate}`
+                  : `Starting thread with ${started.teammate}…`}
+            </span>
+            {started.error ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setStarted(undefined)
+                  onOpenChange(true)
+                }}
+              >
+                Back to message
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!started.id}
+                onClick={() => {
+                  if (started.id) openThread(started.id)
+                  setStarted(undefined)
+                }}
+              >
+                Open
+                <ArrowRight aria-hidden />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon-sm"

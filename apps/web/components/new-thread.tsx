@@ -293,6 +293,8 @@ export type ThreadDraft = ReturnType<typeof useThreadDraft>
  * The box a new thread starts from: a message, files, where it runs and on which account.
  * With `picker`, the member also chooses the teammate it goes to. With `draft`, what is
  * written is kept outside; with `onStarted`, the box stays put instead of opening the thread.
+ * With `onSending`, it does not wait for the thread either: the box empties at once and is
+ * given back what was in it if the thread could not start.
  */
 export function NewThread({
   teammate,
@@ -301,6 +303,7 @@ export function NewThread({
   rows = 3,
   draft,
   onStarted,
+  onSending,
   autoFocus,
   typeToFocus,
   projectId: initialProject,
@@ -320,6 +323,8 @@ export function NewThread({
   rows?: number
   draft?: ThreadDraft
   onStarted?: (thread: { id: string }) => void
+  /** Sent, the thread still starting: it settles with the thread, or the reason it did not. */
+  onSending?: (thread: Promise<{ id: string }>) => void
   /** Puts the cursor in the message as soon as the box appears. */
   autoFocus?: boolean
   /** The page's main message box: typing with nothing focused lands in it (Composer). */
@@ -406,6 +411,29 @@ export function NewThread({
   async function start(e?: FormEvent) {
     e?.preventDefault()
     if (busy || !ready) return
+    if (onSending) {
+      const sending = create(text, files.ids)
+      const effortWas = effortValue
+      const taken = files.take()
+      setText('')
+      setEffortValue(null)
+      onSending(
+        sending.then(
+          (thread) => {
+            taken.done()
+            return thread
+          },
+          (error: unknown) => {
+            // Back in the box, unless something new was written there meanwhile.
+            setText((now) => (now.trim() ? now : text))
+            setEffortValue((now) => now ?? effortWas)
+            taken.restore()
+            throw error
+          },
+        ),
+      )
+      return
+    }
     setBusy(true)
     setError(undefined)
     try {

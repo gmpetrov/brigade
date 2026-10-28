@@ -144,6 +144,21 @@ export function useUploads() {
     commit([])
   }, [commit])
 
+  /**
+   * Sending in the background: the files leave the box at once, and come back with
+   * `restore` if the message could not go.
+   */
+  const take = useCallback(() => {
+    const taken = list.current
+    commit([])
+    return {
+      restore: () => commit([...taken, ...list.current]),
+      done: () => {
+        for (const u of taken) if (u.preview) URL.revokeObjectURL(u.preview)
+      },
+    }
+  }, [commit])
+
   // Leaving the page with files still on the message: let their previews go.
   useEffect(
     () => () => {
@@ -157,6 +172,7 @@ export function useUploads() {
     add,
     remove,
     clear,
+    take,
     ids: uploads.flatMap((u) => (u.info ? [u.info.id] : [])),
     /** Still uploading: the message waits. */
     busy: uploads.some((u) => !u.info && !u.error),
