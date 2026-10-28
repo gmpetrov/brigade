@@ -98,6 +98,7 @@ export function ThreadTimeline({
   // Where the pointer is along the marks, in marks (fractional), while it is over them.
   const [pointer, setPointer] = useState<number>()
   const railRef = useRef<HTMLElement>(null)
+  const frame = useRef(0)
   const seqs = useMemo(() => prompts.map((p) => p.seq), [prompts])
 
   // Its room and its length, as the conversation resizes or grows.
@@ -188,15 +189,24 @@ export function ThreadTimeline({
     <nav
       ref={railRef}
       aria-label="Your messages in this thread"
-      className="absolute top-1/2 left-3 z-10 flex -translate-y-1/2 animate-in flex-col duration-[220ms] ease-out fade-in motion-reduce:animate-none"
+      className="absolute top-1/2 left-3 z-10 flex [contain:layout_style] -translate-y-1/2 animate-in flex-col duration-[220ms] ease-out fade-in motion-reduce:animate-none"
       style={{ height: `min(${prompts.length * MARK_PX}px, 60vh)` }}
+      // Once a frame at most: a pointer reports more often than the screen draws. Its layout
+      // is contained: a mark or the card moving lays out the timeline, not the whole thread.
       onPointerMove={(e) => {
-        const f = toIndex(e.clientY)
-        if (f === undefined) return
-        setPointer(f)
-        setHovered(prompts[Math.round(f)]?.seq)
+        const y = e.clientY
+        if (frame.current) return
+        frame.current = requestAnimationFrame(() => {
+          frame.current = 0
+          const f = toIndex(y)
+          if (f === undefined) return
+          setPointer(f)
+          setHovered(prompts[Math.round(f)]?.seq)
+        })
       }}
       onPointerLeave={() => {
+        cancelAnimationFrame(frame.current)
+        frame.current = 0
         setPointer(undefined)
         setHovered(undefined)
       }}
@@ -225,7 +235,8 @@ export function ThreadTimeline({
           >
             <span
               className={cn(
-                'h-0.5 rounded-full transition-[width,background-color,opacity] duration-150 ease-out motion-reduce:transition-none',
+                // Drawn at its widest and scaled: only the compositor works as it swells.
+                'h-0.5 origin-left rounded-full transition-[transform,background-color,opacity] duration-150 ease-out will-change-transform motion-reduce:transition-none',
                 p.seq === hovered
                   ? 'bg-foreground'
                   : isCurrent
@@ -233,7 +244,8 @@ export function ThreadTimeline({
                     : 'bg-muted-foreground',
               )}
               style={{
-                width,
+                width: PEAK_PX,
+                transform: `scaleX(${width / PEAK_PX})`,
                 opacity: p.seq === hovered || isCurrent ? 1 : 0.35 + 0.5 * near,
               }}
             />
@@ -243,7 +255,7 @@ export function ThreadTimeline({
       {shown && (
         // Slides from mark to mark as the pointer moves along them.
         <div
-          className="pointer-events-none absolute w-72 -translate-y-1/2 animate-in rounded-xl border bg-popover/95 px-3 py-2 text-[13px] leading-snug text-popover-foreground shadow-lg backdrop-blur-sm transition-[top] duration-150 ease-out fade-in slide-in-from-left-1 motion-reduce:animate-none motion-reduce:transition-none"
+          className="pointer-events-none absolute w-72 -translate-y-1/2 animate-in rounded-xl border bg-popover px-3 py-2 text-[13px] leading-snug text-popover-foreground shadow-lg transition-[top] duration-150 ease-out fade-in slide-in-from-left-1 motion-reduce:animate-none motion-reduce:transition-none"
           style={{ top: `${((at + 0.5) / prompts.length) * 100}%`, left: PEAK_PX + 16 }}
         >
           <p className="line-clamp-2 break-words">{preview(shown.text) || 'Attachment'}</p>
