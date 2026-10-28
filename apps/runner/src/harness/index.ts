@@ -737,28 +737,66 @@ export class HarnessThread {
     return calls.filter((c) => ids.has(c.toolCallId))
   }
 
-  /** These tickets and questions, set aside: still open, answered later (laterAnswer). */
-  private setAside(calls: WaitingCall[]) {
+  /**
+   * These tickets and questions, set aside: still open, answered later (laterAnswer). Saved
+   * before the turn goes on: a process that stops while it answers the message must still
+   * find their answer a message, not a result for a turn that waits on them no more.
+   */
+  private async setAside(calls: WaitingCall[]) {
     for (const call of calls) this.toolCalls.delete(call.toolCallId)
     const ids = new Set(calls.map((c) => c.toolCallId))
     this.saved!.later = [
       ...(this.saved!.later ?? []).filter((c) => !ids.has(c.toolCallId)),
       ...calls,
     ]
+    if (this.saved!.waiting)
+      this.saved!.waiting = this.saved!.waiting.filter((c) => !ids.has(c.toolCallId))
+    await this.persist()
   }
 
-  /** A person's answer to an ask set aside earlier, as the message it becomes; else undefined. */
+  /**
+   * A person's answer as the message it becomes when no turn waits on its call: one set aside
+   * earlier, or any the last turn does not wait on while it waits on others (continued with
+   * it, the turn would sit on those). Undefined: it goes on with the turn that waits on it.
+   */
   private laterAnswer(input: ThreadInput) {
     if (input.kind !== 'answer' && input.kind !== 'ticket') return undefined
     const id = input.kind === 'answer' ? input.questionId : input.requestId
-    const call = this.saved?.later?.find((c) => c.toolCallId === id)
-    if (!call) return undefined
-    this.saved!.later = this.saved!.later!.filter((c) => c !== call)
+    const later = this.saved?.later?.find((c) => c.toolCallId === id)
+    if (!later && this.waitsOnCall(id) !== false) return undefined
+    if (later) this.saved!.later = this.saved!.later!.filter((c) => c !== later)
+    const call = later ?? this.toolCalls.get(id)
+    this.toolCalls.delete(id)
     const result =
       input.kind === 'answer'
         ? this.answerResult(input.questionId, input.answer, call)
         : this.ticketResult(input.requestId, input.answer, call)
-    return answerLater(call, result.output.value)
+    return answerLater(
+      { toolName: result.toolName, input: call?.input },
+      // Without its call, the answer as given: its asks, by id, are not known here.
+      call ? result.output.value : input.answer,
+    )
+  }
+
+  /**
+   * Whether the last turn waits on this call, when it waits on something: live, as its
+   * session says (a list the SDK keeps private: without it, the calls seen and not answered);
+   * stopped, as its saved turn does. Undefined when it waits on nothing.
+   */
+  private waitsOnCall(toolCallId: string) {
+    if (!this.live) {
+      const closed = closeTurn(this.saved?.resume)
+      return closed && closed.waiting.some((c) => c.toolCallId === toolCallId)
+    }
+    if (!this.live.session.hasUnfinishedTurn()) return undefined
+    const pending = (
+      this.live.session as unknown as {
+        getPendingToolResults?: () => { toolCallId: string; completedResult?: unknown }[]
+      }
+    ).getPendingToolResults?.()
+    return pending
+      ? pending.some((p) => !p.completedResult && p.toolCallId === toolCallId)
+      : this.toolCalls.has(toolCallId)
   }
 
   /**
@@ -1016,7 +1054,7 @@ export class HarnessThread {
       // turn closed, the message says what became of them.
       let asides: ReturnType<typeof asideResult>[] | undefined
       if (calls.length > 0 && text !== undefined) {
-        this.setAside(calls)
+        await this.setAside(calls)
         if (live.session.hasUnfinishedTurn()) {
           asides = calls.map((call) => asideResult(call, text!))
           text = undefined

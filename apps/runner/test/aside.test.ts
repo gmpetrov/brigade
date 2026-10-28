@@ -4,7 +4,7 @@
 // scripted, the session the runner's own (HarnessThread), so what goes in is what Claude
 // Code would read.
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -32,7 +32,7 @@ const TICKET = {
  * ticket-2…) and waits on its result; a result, or any other prompt, gets a reply. It never
  * echoes a result back. What it was given is kept, in order.
  */
-function scriptedHarness(heard: string[]) {
+function scriptedHarness(heard: string[], prefix: string, onResult?: () => Promise<void>) {
   let replies = 0
   const reply = (emit: Emit) => {
     const id = `reply-${++replies}`
@@ -58,7 +58,7 @@ function scriptedHarness(heard: string[]) {
         if (String(typeof prompt === 'string' ? prompt : '').startsWith('Set up')) {
           emit({
             type: 'tool-call',
-            toolCallId: `ticket-${++tickets}`,
+            toolCallId: `${prefix}-${++tickets}`,
             toolName: OPEN_TICKET_TOOL,
             input: JSON.stringify(TICKET),
             providerExecuted: false,
@@ -82,6 +82,7 @@ function scriptedHarness(heard: string[]) {
         return {
           submitToolResult: async (input: { toolCallId: string; output?: unknown }) => {
             heard.push(`result ${input.toolCallId}: ${JSON.stringify(input.output)}`)
+            await onResult?.()
             reply(emit)
             finish()
           },
@@ -99,8 +100,17 @@ function scriptedHarness(heard: string[]) {
   }
 }
 
-async function setup() {
+/**
+ * A thread whose session is the scripted harness. `prefix`: its tickets' ids. `onResult`: what
+ * the harness does once a result reaches it. `saved`: the state a process before it left.
+ */
+async function setup({
+  prefix = 'ticket',
+  onResult,
+  saved,
+}: { prefix?: string; onResult?: () => Promise<void>; saved?: string } = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'brigade-aside-'))
+  if (saved) await writeFile(join(dir, 'aside-riley.json'), saved)
   const heard: string[] = []
   const events: AgentEvent[] = []
   const spec = {
@@ -121,7 +131,7 @@ async function setup() {
   )
   const agent = new HarnessAgent({
     // The harness interface is the SDK's internal one; this plays only what a thread uses.
-    harness: scriptedHarness(heard) as never,
+    harness: scriptedHarness(heard, prefix, onResult) as never,
     tools: { [OPEN_TICKET_TOOL]: openTicketTool },
     permissionMode: 'allow-all',
     sandboxConfig: { workDir: '.' },
@@ -151,7 +161,7 @@ async function setup() {
     await sandbox.destroy()
     await rm(dir, { recursive: true, force: true })
   }
-  return { thread, run, heard, events, done }
+  return { thread, run, heard, events, done, dir, spec }
 }
 
 const completions = (events: AgentEvent[]) =>
@@ -237,6 +247,91 @@ test('a ticket answered before is not set aside with the next one', async () => 
     })
     // Its answer ends the wait: nothing else is left asked.
     assert.deepEqual(completions(t.events), ['idle', 'waiting', 'idle'])
+  } finally {
+    await t.done()
+  }
+})
+
+const done = (ticket: string) => ({
+  kind: 'ticket' as const,
+  requestId: ticket,
+  answer: {
+    action: 'answered' as const,
+    replies: { perm: { type: 'action' as const, done: true } },
+  },
+})
+
+test('a process that stops while the teammate answers keeps the ask set aside', async () => {
+  // The harness holds its reply once the message reached it: the process stops there.
+  let reached!: () => void
+  const atReply = new Promise<void>((resolve) => (reached = resolve))
+  let release!: () => void
+  const held = new Promise<void>((resolve) => (release = resolve))
+  const before = await setup({
+    prefix: 'old-ticket',
+    onResult: async () => {
+      reached()
+      await held
+    },
+  })
+  let after: Awaited<ReturnType<typeof setup>> | undefined
+  try {
+    await before.run({ kind: 'prompt', text: 'Set up Hyperdrive' })
+    const answering = before.run({ kind: 'prompt', text: 'Which token is it?' })
+    await atReply
+    // What the next process finds on disk.
+    const saved = await readFile(join(before.dir, 'aside-riley.json'), 'utf8')
+    // It says the ticket is set aside, and no longer that the turn waits on it.
+    const state = JSON.parse(saved) as { later?: { toolCallId: string }[]; waiting?: unknown[] }
+    assert.deepEqual(
+      state.later?.map((c) => c.toolCallId),
+      ['old-ticket-1'],
+    )
+    assert.deepEqual(state.waiting ?? [], [])
+    release()
+    await answering
+    after = await setup({ prefix: 'new-ticket', saved })
+    // It carries on from the cut turn, then opens another ticket.
+    await after.run({ kind: 'resume', text: '' })
+    assert.equal((await after.run({ kind: 'prompt', text: 'Set up the alerts' })).status, 'waiting')
+    // The first ticket is answered: a message, not a result for the turn waiting on the other.
+    const answered = await Promise.race([
+      after.run(done('old-ticket-1')).then(() => 'answered'),
+      new Promise((resolve) => setTimeout(() => resolve('stuck'), 1000)),
+    ])
+    assert.equal(answered, 'answered')
+    // The other ticket stays open: it took the answer as a message, set aside in turn.
+    const message = after.heard.at(-1) ?? ''
+    assert.match(message, /^result new-ticket-1: /)
+    assert.match(message, /The person answered your ticket \\"Hyperdrive permission\\"/)
+    assert.match(message, /\\"done\\":true/)
+    assert.deepEqual(completions(after.events).at(-1), 'waiting')
+  } finally {
+    release()
+    await before.done()
+    await after?.done()
+  }
+})
+
+test('an answer to a call the turn no longer waits on comes as a message, never stuck', async () => {
+  // State a process left with a ticket it saw and nothing saying it was set aside.
+  const saved = JSON.stringify({
+    accountId: 'acct',
+    transcript: [],
+    waiting: [{ toolCallId: 'old-ticket-1', toolName: OPEN_TICKET_TOOL, input: TICKET }],
+  })
+  const t = await setup({ prefix: 'new-ticket', saved })
+  try {
+    assert.equal((await t.run({ kind: 'prompt', text: 'Set up the alerts' })).status, 'waiting')
+    const answered = await Promise.race([
+      t.run(done('old-ticket-1')).then(() => 'answered'),
+      new Promise((resolve) => setTimeout(() => resolve('stuck'), 1000)),
+    ])
+    assert.equal(answered, 'answered')
+    assert.match(
+      t.heard.at(-1) ?? '',
+      /^result new-ticket-1: .*answered your ticket \\"Hyperdrive permission\\"/,
+    )
   } finally {
     await t.done()
   }
