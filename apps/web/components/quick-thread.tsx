@@ -2,17 +2,21 @@
 // Start a thread without leaving where you are: ⌘⇧K (Ctrl+Shift+K) opens the
 // new-thread box in a dialog. It is the threads panel's box: the same draft and
 // teammate, so closing it by mistake loses nothing. Sending closes it at once and
-// says so in the corner; Open there goes to the thread once it has started. If it
-// could not, the message is back in the box and the note says why.
+// says so in the corner; Open there goes to the thread once it has started. A message
+// whose thread did not start is kept aside, never mixed with what the box holds since:
+// Back to message swaps it with that, which is kept aside in its turn.
 import { ArrowRight, CircleAlert, CircleCheck, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useDashboard } from '@/components/dashboard'
-import { NewThread } from '@/components/new-thread'
+import { NewThread, type SentMessage } from '@/components/new-thread'
 import { useThreadPanel } from '@/components/thread-panel'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { isMac } from '@/lib/platform'
 import { cn } from '@/lib/utils'
+
+/** A message out of the box: one whose thread did not start, or one swapped out for it. */
+type Aside = SentMessage & { key: number; error?: string }
 
 export function QuickThread() {
   const [open, onOpenChange] = useState(false)
@@ -23,10 +27,34 @@ export function QuickThread() {
     teammate: string
     /** Its id once it has started. */
     id?: string
-    error?: string
   }>()
-  // Only the last send's outcome updates the note.
+  // Only the last send's outcome updates that note.
   const last = useRef(0)
+  // Newest last: the note offers it first.
+  const [aside, setAside] = useState<Aside[]>([])
+  const kept = aside.at(-1)
+
+  /** The message kept aside in the box, and what the box held kept aside instead. */
+  function backToMessage(message: Aside) {
+    const files = draft.files
+    const held =
+      draft.text.trim() || files.uploads.length > 0
+        ? {
+            key: Date.now(),
+            teammateId: teammateId ?? teammate!.id,
+            text: draft.text,
+            uploads: files.take().uploads,
+            effort: draft.effort,
+          }
+        : undefined
+    draft.setText(message.text)
+    draft.setEffort(message.effort)
+    files.put(message.uploads)
+    if (teammates.some((t) => t.id === message.teammateId)) chooseTeammate(message.teammateId)
+    setAside((list) => [...list.filter((m) => m.key !== message.key), ...(held ? [held] : [])])
+    setStarted(undefined)
+    onOpenChange(true)
+  }
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -82,7 +110,7 @@ export function QuickThread() {
                 : undefined
             }
             placeholder={`Chat with ${teammate.name}`}
-            onSending={(thread) => {
+            onSending={(thread, sent) => {
               const send = ++last.current
               const name = teammate.name
               onOpenChange(false)
@@ -92,7 +120,8 @@ export function QuickThread() {
                   if (send === last.current) setStarted({ id, teammate: name })
                 },
                 (error: Error) => {
-                  if (send === last.current) setStarted({ teammate: name, error: error.message })
+                  if (send === last.current) setStarted(undefined)
+                  setAside((list) => [...list, { ...sent, key: send, error: error.message }])
                 },
               )
             }}
@@ -105,35 +134,46 @@ export function QuickThread() {
         aria-live="polite"
         className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex justify-center"
       >
-        {started && (
+        {kept ? (
           <div className="pointer-events-auto flex items-center gap-3 rounded-xl border bg-card py-2 pr-2 pl-3 text-sm shadow-lg animate-in fade-in-0 slide-in-from-bottom-2">
-            {started.error ? (
+            {kept.error && (
               <CircleAlert className="size-4 shrink-0 text-destructive-text" aria-hidden />
-            ) : (
+            )}
+            <span>
+              {kept.error ? `Not started: ${kept.error}` : 'Your other message is kept aside'}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              // A file still uploading in the box would lose its upload on the way aside.
+              disabled={draft.files.busy}
+              title={draft.files.busy ? 'Once the files in the box have uploaded' : undefined}
+              onClick={() => backToMessage(kept)}
+            >
+              {kept.error ? 'Back to message' : 'Back to it'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Dismiss"
+              title="Dismiss: the message is gone"
+              onClick={() => setAside((list) => list.filter((m) => m.key !== kept.key))}
+            >
+              <X aria-hidden />
+            </Button>
+          </div>
+        ) : (
+          started && (
+            <div className="pointer-events-auto flex items-center gap-3 rounded-xl border bg-card py-2 pr-2 pl-3 text-sm shadow-lg animate-in fade-in-0 slide-in-from-bottom-2">
               <CircleCheck
                 className={cn('size-4 shrink-0 text-success', !started.id && 'opacity-50')}
                 aria-hidden
               />
-            )}
-            <span>
-              {started.error
-                ? `Not started: ${started.error}`
-                : started.id
+              <span>
+                {started.id
                   ? `Thread started with ${started.teammate}`
                   : `Starting thread with ${started.teammate}…`}
-            </span>
-            {started.error ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setStarted(undefined)
-                  onOpenChange(true)
-                }}
-              >
-                Back to message
-              </Button>
-            ) : (
+              </span>
               <Button
                 size="sm"
                 variant="outline"
@@ -146,16 +186,16 @@ export function QuickThread() {
                 Open
                 <ArrowRight aria-hidden />
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Dismiss"
-              onClick={() => setStarted(undefined)}
-            >
-              <X aria-hidden />
-            </Button>
-          </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Dismiss"
+                onClick={() => setStarted(undefined)}
+              >
+                <X aria-hidden />
+              </Button>
+            </div>
+          )
         )}
       </div>
     </>

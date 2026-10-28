@@ -145,15 +145,14 @@ export function useUploads() {
   }, [commit])
 
   /**
-   * Sending in the background: the files leave the box at once, and come back with
-   * `restore` if the message could not go.
+   * Sending in the background: the files leave the box at once, and `put` brings them back to
+   * one should the message not go; `done` lets their previews go once it has.
    */
   const take = useCallback(() => {
     const taken = list.current
     commit([])
     return {
       uploads: taken,
-      restore: () => commit([...taken, ...list.current]),
       done: () => {
         for (const u of taken) if (u.preview) URL.revokeObjectURL(u.preview)
       },

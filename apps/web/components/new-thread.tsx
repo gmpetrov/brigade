@@ -4,7 +4,13 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { defaultEffort, type Effort } from '@brigade/contracts'
-import { ComposerMenu, UploadList, useFileDrop, useUploads } from '@/components/attachments'
+import {
+  ComposerMenu,
+  UploadList,
+  useFileDrop,
+  useUploads,
+  type Upload,
+} from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { EffortButton, type EffortPick } from '@/components/effort'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
@@ -293,14 +299,22 @@ export function useThreadDraft() {
 
 export type ThreadDraft = ReturnType<typeof useThreadDraft>
 
+/** A message sent from a box that does not wait (NewThread's `onSending`), as it was. */
+export type SentMessage = {
+  teammateId: string
+  text: string
+  uploads: Upload[]
+  effort: Effort | null
+}
+
 /**
  * The box a new thread starts from: a message, files, where it runs and on which account.
  * With `picker`, the member also chooses the teammate it goes to. With `draft`, what is
  * written is kept outside; with `onStarted`, the box stays put instead of opening the thread.
- * With `onSending`, it does not wait for the thread either: the box empties at once and is
- * given back what was in it if the thread could not start. With neither, the thread opens at
- * once, before it exists (lib/pending-threads.ts), and the message comes back here if it could
- * not start.
+ * With `onSending`, it does not wait for the thread either: the box empties at once, and what
+ * was sent is the caller's to give back should the thread not start. With `openAtOnce` (a page's
+ * own box, which is there again when its page is), the thread opens before it exists
+ * (lib/pending-threads.ts), and the message comes back here should it not start.
  */
 export function NewThread({
   teammate,
@@ -310,6 +324,7 @@ export function NewThread({
   draft,
   onStarted,
   onSending,
+  openAtOnce,
   autoFocus,
   typeToFocus,
   projectId: initialProject,
@@ -329,8 +344,13 @@ export function NewThread({
   rows?: number
   draft?: ThreadDraft
   onStarted?: (thread: { id: string }) => void
-  /** Sent, the thread still starting: it settles with the thread, or the reason it did not. */
-  onSending?: (thread: Promise<{ id: string }>) => void
+  /**
+   * Sent, the thread still starting: it settles with the thread, or the reason it did not. What
+   * was sent is not put back in the box: another message may be written there meanwhile.
+   */
+  onSending?: (thread: Promise<{ id: string }>, sent: SentMessage) => void
+  /** Opens the thread at once, before it exists: for a page's own box (Home, a project's). */
+  openAtOnce?: boolean
   /** Puts the cursor in the message as soon as the box appears. */
   autoFocus?: boolean
   /** The page's main message box: typing with nothing focused lands in it (Composer). */
@@ -383,6 +403,7 @@ export function NewThread({
   const [busy, setBusy] = useState(false)
   // A message whose thread did not start, back from it (lib/pending-threads.ts).
   useEffect(() => {
+    if (!openAtOnce) return
     const back = pendingThreads.takeReturned(pathname)
     if (!back) return
     setText((now) => (now.trim() ? now : back.text))
@@ -429,28 +450,19 @@ export function NewThread({
     if (busy || !ready) return
     if (onSending) {
       const sending = create(text, files.ids)
-      const effortWas = effortValue
       const taken = files.take()
       setText('')
       setEffortValue(null)
       onSending(
-        sending.then(
-          (thread) => {
-            taken.done()
-            return thread
-          },
-          (error: unknown) => {
-            // Back in the box, unless something new was written there meanwhile.
-            setText((now) => (now.trim() ? now : text))
-            setEffortValue((now) => now ?? effortWas)
-            taken.restore()
-            throw error
-          },
-        ),
+        sending.then((thread) => {
+          taken.done()
+          return thread
+        }),
+        { teammateId: teammate.id, text, uploads: taken.uploads, effort: effortValue },
       )
       return
     }
-    if (!onStarted) {
+    if (openAtOnce) {
       // Opened at once: it shows this message until it has started, then its conversation.
       const id = newThreadId()
       const sending = create(text, files.ids, id)
@@ -487,9 +499,11 @@ export function NewThread({
       // The effort went with that thread; the next one starts on Default, even from a
       // draft that outlives the box (the threads panel).
       setEffortValue(null)
-      setText('')
-      setBusy(false)
-      onStarted(thread)
+      if (onStarted) {
+        setText('')
+        setBusy(false)
+        onStarted(thread)
+      } else router.push(`/app/threads/${thread.id}`)
     } catch (e) {
       setError((e as Error).message)
       setBusy(false)
