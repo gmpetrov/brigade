@@ -160,3 +160,111 @@ test('a hand back with no note and no files says nothing', async () => {
   assert.deepEqual(t.inputs, [])
   assert.deepEqual(said(t.events), [])
 })
+
+/** A thread whose teammate's first turn runs until `finish`, with a message queued behind it. */
+async function queuedBehind(sessionId: string) {
+  const t = setup(sessionId, [])
+  const seat = (
+    t.threads as unknown as { harness: () => { harness: Record<string, unknown> } }
+  ).harness()
+  let finish!: () => void
+  const first = new Promise<void>((resolve) => (finish = resolve))
+  let turns = 0
+  seat.harness.run = async (input: { text?: string }) => {
+    t.prompts.push(input.text ?? '')
+    if (turns++ === 0) await first
+    return { status: 'idle' }
+  }
+  t.message('Start')
+  await sleep(20)
+  t.message('Then this')
+  await sleep(20)
+  return { ...t, finish }
+}
+
+const cancelled = (events: AgentEvent[]) => events.filter((e) => e.type === 'message.cancelled')
+
+test('a message queued when a person takes over runs once they hand back', async () => {
+  // Handed back while the turn before it still runs, or once it ended.
+  for (const early of [true, false]) {
+    const t = await queuedBehind(`handback-queued-${early}`)
+    t.threads.takeover(t.spec, 'm1', false)
+    if (!early) {
+      t.finish()
+      await sleep(30)
+    }
+    const queued = t.events.findLast((e) => e.type === 'message.queued')
+    assert.equal(queued?.type === 'message.queued' && queued.waitingFor, 'person')
+    assert.equal(t.prompts.length, 1)
+    await t.threads.handback(t.spec, 'm1', '', async () => [])
+    t.finish()
+    await sleep(50)
+    assert.deepEqual(cancelled(t.events), [])
+    assert.deepEqual(said(t.events), ['Start', 'Then this'])
+    assert.equal(t.prompts.length, 2)
+    assert.match(t.prompts[1]!, /Then this/)
+  }
+})
+
+test("a hand back's note reaches the teammate before the messages held during it", async () => {
+  const t = await queuedBehind('handback-note-first')
+  t.threads.takeover(t.spec, 'm1', false)
+  await t.threads.handback(t.spec, 'm1', 'Do not send the email, I sent it', async () => [
+    'sent.txt',
+  ])
+  t.finish()
+  await sleep(50)
+  assert.equal(t.prompts.length, 3)
+  assert.match(t.prompts[1]!, /Do not send the email/)
+  assert.match(t.prompts[2]!, /Then this/)
+})
+
+test('a hand back during a turn releases the held messages once that turn ends', async () => {
+  const t = await queuedBehind('handback-mid-turn')
+  const seat = (
+    t.threads as unknown as { harness: () => { harness: Record<string, unknown> } }
+  ).harness()
+  // A live session is not idle until its turn ends.
+  let running = true
+  seat.harness.awaitingPerson = async () => running
+  t.threads.takeover(t.spec, 'm1', false)
+  await t.threads.handback(t.spec, 'm1', '', async () => [])
+  running = false
+  t.finish()
+  await sleep(50)
+  assert.equal(t.prompts.length, 2)
+  assert.match(t.prompts[1]!, /Then this/)
+})
+
+test('a hand back during a ticket turn runs its note, then the held message, once', async () => {
+  const t = setup('handback-ticket-turn', [])
+  const seat = (
+    t.threads as unknown as { harness: () => { harness: Record<string, unknown> } }
+  ).harness()
+  let finish!: () => void
+  const first = new Promise<void>((resolve) => (finish = resolve))
+  let turns = 0
+  seat.harness.run = async (input: { text?: string }) => {
+    t.prompts.push(input.text ?? 'ticket')
+    if (turns++ === 0) await first
+    return { status: 'idle' }
+  }
+  t.threads.handle({
+    type: 'thread.ticket',
+    commandId: 'answer',
+    thread: t.spec,
+    requestId: 'req',
+    memberId: 'm1',
+    answer: { action: 'answered', replies: { a1: { type: 'action', done: true } } },
+  })
+  await sleep(20)
+  t.message('Then this')
+  await sleep(20)
+  t.threads.takeover(t.spec, 'm1', false)
+  await t.threads.handback(t.spec, 'm1', 'Do not send the email, I sent it', async () => [])
+  finish()
+  await sleep(50)
+  assert.equal(t.prompts.length, 3)
+  assert.match(t.prompts[1]!, /Do not send the email/)
+  assert.match(t.prompts[2]!, /Then this/)
+})
