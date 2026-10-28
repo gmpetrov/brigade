@@ -1,11 +1,13 @@
 'use client'
 // The panel beside a page: a document, a file a thread mentions, a teammate's
 // computer. Fixed to the right on wide screens (the page makes room for it,
-// see globals.css), a sheet from the bottom on narrow ones. Its width is one
-// --desktop-w for all of them: drag the left edge to change it, double-click
-// to reset; remembered in this browser. Escape closes it. Panels open together
+// see globals.css), a sheet from the bottom on narrow ones, and the whole
+// screen on a phone: the page behind holds still, so a glimpse of it is no
+// use. Its width is one --desktop-w for all of them: drag the left edge to
+// change it, double-click to reset; remembered in this browser. Escape closes it. Panels open together
 // share the right edge: the last one opened, or brought forward, is on top.
-// PanelExpandButton in its header lays it over the whole window and back.
+// PanelExpandButton in its header lays it over the whole window and back; not
+// on a phone, where it already is.
 import { Maximize2, Minimize2 } from 'lucide-react'
 import {
   createContext,
@@ -237,6 +239,7 @@ export function PanelExpandButton() {
       size="icon-sm"
       title={label}
       aria-label={label}
+      className="max-md:hidden"
       onClick={() => setFull(!full)}
     >
       {full ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
@@ -330,6 +333,7 @@ export function SidePanel({
             ? 'relative flex h-svh min-w-0 flex-col overflow-hidden bg-background'
             : [
                 'fixed inset-x-0 bottom-0 z-(--sheet-z) flex h-[70vh] flex-col overflow-hidden rounded-t-xl border-t bg-card shadow-lg',
+                'max-md:top-0 max-md:h-auto max-md:rounded-none max-md:border-t-0',
                 'xl:inset-y-0 xl:right-0 xl:left-auto xl:z-(--panel-z) xl:h-auto xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-t-0 xl:border-l xl:shadow-none',
               ],
           over && FULL,
