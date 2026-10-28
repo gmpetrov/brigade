@@ -724,7 +724,7 @@ const FOLDED_HEIGHT = 416
  * A person's message bubble: a long one (a pasted page, a log) folds to its first lines,
  * fading out, with Show more to unfold it in place.
  */
-function MessageBubble({ text }: { text: string }) {
+export function MessageBubble({ text }: { text: string }) {
   const [open, setOpen] = useState(false)
   // Fold only when there is clearly more to show than a few lines.
   const [long, setLong] = useState(false)
@@ -1784,7 +1784,7 @@ function ComputerAway({
  * Between a message and the first thing its teammate does: a line saying how far it got,
  * where the answer will show. It counts up past the first seconds.
  */
-function Answering({
+export function Answering({
   teammate,
   phase,
   since,

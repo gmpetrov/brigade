@@ -252,6 +252,13 @@ export function preload(path: string) {
   setTimeout(() => ahead.get(path) === request && ahead.delete(path), 10_000)
 }
 
+/** Settles once the request `preload` sent for this path has, leaving it for what takes it. */
+export const preloadSettled = (path: string) =>
+  ahead.get(path)?.then(
+    () => undefined,
+    () => undefined,
+  ) ?? Promise.resolve()
+
 /** The request `preload` sent for this path, once: undefined when there is none. */
 export function preloaded<T>(path: string) {
   const request = ahead.get(path)

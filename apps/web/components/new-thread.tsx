@@ -1,7 +1,7 @@
 'use client'
 import { ArrowUp, Check, ChevronDown, FolderKanban, List, Monitor, Plus } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { defaultEffort, type Effort } from '@brigade/contracts'
 import { ComposerMenu, UploadList, useFileDrop, useUploads } from '@/components/attachments'
@@ -38,6 +38,8 @@ import {
   api,
   computerName,
   harnessLabel,
+  preload,
+  preloadSettled,
   teammateModelLabel,
   usableComputers,
   useApi,
@@ -47,6 +49,8 @@ import {
   type ThreadSummary,
 } from '@/lib/api'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { newThreadId, pendingThreads } from '@/lib/pending-threads'
+import { preloadThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 
 const quietSelect =
@@ -294,7 +298,9 @@ export type ThreadDraft = ReturnType<typeof useThreadDraft>
  * With `picker`, the member also chooses the teammate it goes to. With `draft`, what is
  * written is kept outside; with `onStarted`, the box stays put instead of opening the thread.
  * With `onSending`, it does not wait for the thread either: the box empties at once and is
- * given back what was in it if the thread could not start.
+ * given back what was in it if the thread could not start. With neither, the thread opens at
+ * once, before it exists (lib/pending-threads.ts), and the message comes back here if it could
+ * not start.
  */
 export function NewThread({
   teammate,
@@ -338,6 +344,7 @@ export function NewThread({
   fill?: boolean
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { me, projects } = useDashboard()
   const pickable = projects.filter((p) => !p.archivedAt)
   // A project page's own project first; else the one picked last, while it is still pickable.
@@ -374,6 +381,14 @@ export function NewThread({
   }
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  // A message whose thread did not start, back from it (lib/pending-threads.ts).
+  useEffect(() => {
+    const back = pendingThreads.takeReturned(pathname)
+    if (!back) return
+    setText((now) => (now.trim() ? now : back.text))
+    files.put(back.uploads)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const drop = useFileDrop(files.add)
   // Teach a task: recorded on the cloud computer, and the thread starts once it is sent.
   const [teaching, setTeaching] = useState(false)
@@ -395,9 +410,10 @@ export function NewThread({
   const ready =
     (text.trim() || files.ids.length > 0) && !files.busy && !files.failed && computer && account
 
-  const create = (message: string, attachmentIds: string[]) =>
+  const create = (message: string, attachmentIds: string[], id?: string) =>
     api<{ id: string }>('/threads', {
       body: {
+        ...(id && { id }),
         teammateId: teammate.id,
         computerId: computer!.id,
         accountId: account!.id,
@@ -434,6 +450,35 @@ export function NewThread({
       )
       return
     }
+    if (!onStarted) {
+      // Opened at once: it shows this message until it has started, then its conversation.
+      const id = newThreadId()
+      const sending = create(text, files.ids, id)
+      const taken = files.take()
+      pendingThreads.add(
+        id,
+        { teammate, text, files: taken.uploads.map((u) => u.name), from: pathname },
+        taken.uploads,
+      )
+      setText('')
+      setEffortValue(null)
+      router.push(`/app/threads/${id}`)
+      sending.then(
+        async () => {
+          // Its conversation takes over once what it opens on is in: no blank in between.
+          preload(`/threads/${id}`)
+          preloadThreadEvents(id)
+          await Promise.all([
+            preloadSettled(`/threads/${id}`),
+            preloadSettled(`/threads/${id}/events`),
+          ])
+          pendingThreads.started(id)
+          taken.done()
+        },
+        (error: unknown) => pendingThreads.failed(id, (error as Error).message),
+      )
+      return
+    }
     setBusy(true)
     setError(undefined)
     try {
@@ -442,11 +487,9 @@ export function NewThread({
       // The effort went with that thread; the next one starts on Default, even from a
       // draft that outlives the box (the threads panel).
       setEffortValue(null)
-      if (onStarted) {
-        setText('')
-        setBusy(false)
-        onStarted(thread)
-      } else router.push(`/app/threads/${thread.id}`)
+      setText('')
+      setBusy(false)
+      onStarted(thread)
     } catch (e) {
       setError((e as Error).message)
       setBusy(false)

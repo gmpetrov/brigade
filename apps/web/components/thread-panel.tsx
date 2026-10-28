@@ -58,6 +58,8 @@ import {
   type Teammate,
   type ThreadSummary,
 } from '@/lib/api'
+import { PendingThread } from '@/components/pending-thread'
+import { usePendingThread } from '@/lib/pending-threads'
 import { isMac } from '@/lib/platform'
 import { StreamedTitle } from '@/components/streamed-title'
 import { useLive } from '@/lib/use-live'
@@ -529,6 +531,7 @@ export function ThreadPanel() {
     if (!lead || !inThread || !teammate || inThread.includes(teammate.id)) return
     if (teammates.some((t) => t.id === lead.id)) choose(lead.id)
   }, [shown, lead, inThread, teammate, teammates, choose])
+  const pending = usePendingThread(panel.threadId)
   // Docked, Escape closes it (SidePanel's own). Expanded it is the page: Escape leaves it be.
   if (!panel.visible) return null
   const { expanded, threadId } = panel
@@ -676,14 +679,25 @@ export function ThreadPanel() {
           )}
           {threadId && (
             <div className="flex min-w-0 flex-1 flex-col">
-              <ThreadConversation
-                key={threadId}
-                id={threadId}
-                expanded={expanded}
-                onExpand={panel.expand}
-                onHeading={(h) => setHeading({ id: threadId, ...h })}
-                top={top}
-              />
+              {/* Opened before it exists: its message, until it has started. */}
+              {pending ? (
+                <PendingThread
+                  key={threadId}
+                  id={threadId}
+                  thread={pending}
+                  expanded={expanded}
+                  top={top}
+                />
+              ) : (
+                <ThreadConversation
+                  key={threadId}
+                  id={threadId}
+                  expanded={expanded}
+                  onExpand={panel.expand}
+                  onHeading={(h) => setHeading({ id: threadId, ...h })}
+                  top={top}
+                />
+              )}
             </div>
           )}
         </div>

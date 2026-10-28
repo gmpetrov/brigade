@@ -57,7 +57,7 @@ export function fileSize(bytes: number) {
   return `${Math.round(bytes / (1024 * 102.4)) / 10} MB`
 }
 
-type Upload = {
+export type Upload = {
   key: string
   name: string
   size: number
@@ -152,12 +152,16 @@ export function useUploads() {
     const taken = list.current
     commit([])
     return {
+      uploads: taken,
       restore: () => commit([...taken, ...list.current]),
       done: () => {
         for (const u of taken) if (u.preview) URL.revokeObjectURL(u.preview)
       },
     }
   }, [commit])
+
+  /** Files taken from a box (`take`) that has gone since, back on this one. */
+  const put = useCallback((uploads: Upload[]) => commit([...list.current, ...uploads]), [commit])
 
   // Leaving the page with files still on the message: let their previews go.
   useEffect(
@@ -173,6 +177,7 @@ export function useUploads() {
     remove,
     clear,
     take,
+    put,
     ids: uploads.flatMap((u) => (u.info ? [u.info.id] : [])),
     /** Still uploading: the message waits. */
     busy: uploads.some((u) => !u.info && !u.error),

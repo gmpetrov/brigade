@@ -342,6 +342,8 @@ const actions = {
 let threadCount = 0
 /** A new thread from Home or a teammate's page: a copy of the teammate's latest one, empty. */
 function newThread(input: {
+  /** The id the dashboard chose, which opened the thread already (lib/pending-threads.ts). */
+  id?: string
   text?: string
   teammateId?: string
   title?: string
@@ -356,7 +358,7 @@ function newThread(input: {
     (list.find((t) => (t.teammate as Json | undefined)?.id === teammate.id) as Json | undefined) ??
     list[0]!
   const project = (body<Json[]>('GET /projects') ?? []).find((p) => p.id === input.projectId)
-  const threadId = `${DEMO_THREAD}${++threadCount}-${id()}`
+  const threadId = input.id ?? `${DEMO_THREAD}${++threadCount}-${id()}`
   const title = input.title ?? (input.text ?? 'New thread').split('\n')[0]!.slice(0, 70)
   const fresh = {
     ...structuredClone(template),
