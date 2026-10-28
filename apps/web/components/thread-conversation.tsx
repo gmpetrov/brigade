@@ -103,6 +103,7 @@ import {
   type ProjectSummary,
   type Teammate,
   type Thread,
+  type Ticket,
 } from '@/lib/api'
 import { useChangesCount } from '@/lib/code-changes'
 import { openCodeTab, setCodePanel } from '@/lib/code-tabs'
@@ -592,6 +593,9 @@ export function ThreadConversation({
   const t = thread.data
   const current = status ?? t.status
   const busy = current === 'running' || current === 'starting'
+  // Its teammate's call waits on a decision: a message waits for it too. Waiting only on a
+  // ticket or question it opened, the teammate reads a message at once and the ask stays open.
+  const deciding = current === 'waiting' && t.tickets.some(holdsCall)
   // In an empty box only, with nothing attached or quoted, and once the teammate is done.
   const suggestion =
     guess &&
@@ -785,7 +789,7 @@ export function ThreadConversation({
    */
   async function send(e?: React.FormEvent) {
     e?.preventDefault()
-    if (!ready || current === 'waiting') return
+    if (!ready || deciding) return
     const written = text.trim()
     const replying = replyTo
     const moving = moveTo
@@ -1224,9 +1228,7 @@ export function ThreadConversation({
                       )
                     }
                     onChoose={
-                      t.mayPrompt && current !== 'waiting'
-                        ? (text, pick) => deliver(text, [], pick)
-                        : undefined
+                      t.mayPrompt && !deciding ? (text, pick) => deliver(text, [], pick) : undefined
                     }
                     onReply={t.mayPrompt && !t.controlledByMemberId ? replyToMessage : undefined}
                     onRetry={
@@ -1497,7 +1499,7 @@ export function ThreadConversation({
                       <Button
                         size="icon-sm"
                         className="mb-1 rounded-full [&_svg:not([class*='size-'])]:size-5"
-                        disabled={!ready || current === 'waiting'}
+                        disabled={!ready || deciding}
                         aria-label={
                           moveTo
                             ? `Continue on ${moveTo.name}`
@@ -1506,13 +1508,15 @@ export function ThreadConversation({
                               : 'Send'
                         }
                         title={
-                          moveTo
-                            ? busy
-                              ? `Continue on ${moveTo.name} after this turn (↵)`
-                              : `Continue on ${moveTo.name} (↵)`
-                            : busy
-                              ? 'Queue for after this turn (↵)'
-                              : 'Send (↵) · New line (⇧↵)'
+                          deciding
+                            ? 'Approve or deny the request above first'
+                            : moveTo
+                              ? busy
+                                ? `Continue on ${moveTo.name} after this turn (↵)`
+                                : `Continue on ${moveTo.name} (↵)`
+                              : busy
+                                ? 'Queue for after this turn (↵)'
+                                : 'Send (↵) · New line (⇧↵)'
                         }
                       >
                         <ArrowUp aria-hidden />
@@ -1671,6 +1675,19 @@ export function EarlierMessages({
     </div>
   )
 }
+
+/**
+ * An open ticket whose call waits on a decision: an approval before a built-in tool call, an
+ * App write or its cap, a credential or a trigger. The API refuses a message until then.
+ */
+const holdsCall = ({ type, payload }: Pick<Ticket, 'type' | 'payload'>) =>
+  type === 'cap'
+    ? !!payload.connectionId
+    : type === 'approval' &&
+      (payload.source === 'harness' ||
+        !!payload.connectionId ||
+        !!payload.credentialAction ||
+        !!payload.triggerAction)
 
 const newMessageId = () =>
   typeof crypto.randomUUID === 'function'
