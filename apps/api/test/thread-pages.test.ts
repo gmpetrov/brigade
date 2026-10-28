@@ -39,8 +39,15 @@ async function reachable() {
 const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env DATABASE_URL)'
 
 const { prisma } = await import('../src/db.js')
-const { pageEnd, pageEvents, startAt, threadPrompts } = await import('../src/thread-history.js')
-const { THREAD_PAGE_EVENTS, THREAD_PROMPT_CHARS } = await import('@brigade/contracts')
+const { pageEnd, pageEvents, pageStart, startAt, threadPrompts } =
+  await import('../src/thread-history.js')
+const {
+  THREAD_PAGE_EVENTS,
+  THREAD_PAGE_MESSAGES,
+  THREAD_PROMPT_CHARS,
+  THREAD_TIMELINE_MARKS,
+  groupMarks,
+} = await import('@brigade/contracts')
 
 const id = randomUUID().slice(0, 8)
 const ids = {
@@ -49,6 +56,9 @@ const ids = {
   member: `mem-pages-${id}`,
 }
 let sessionId: string
+/** A thread of many short messages: its timeline groups them. */
+let chattyId: string
+const CHATTY = 123
 /** Where each turn's message is: turns of TURN events, a message, its turn, steps, its end. */
 const messages: number[] = []
 const TURNS = 9
@@ -109,6 +119,38 @@ before(async () => {
   await prisma.sessionEvent.createMany({
     data: rows.map((r) => ({ ...scope, sessionId, ...r, at: new Date(+at + r.seq * 1000) })),
   })
+  chattyId = (
+    await prisma.session.create({
+      data: {
+        ...scope,
+        teammateId,
+        startedByMemberId: ids.member,
+        computerId,
+        title: 'A chatty thread',
+        status: 'idle',
+        origin: 'member',
+      },
+    })
+  ).id
+  // The member's messages, a reply after each, and a wake-up every tenth.
+  await prisma.sessionEvent.createMany({
+    data: Array.from({ length: CHATTY * 2 }, (_, k) => {
+      const seq = k + 1
+      const memberId = k % 20 === 18 ? null : ids.member
+      const data =
+        k % 2 === 0
+          ? { type: 'message.user', text: `Question ${seq}`, memberId }
+          : { type: 'message.done', id: `m${seq}`, text: 'Answer' }
+      return {
+        ...scope,
+        sessionId: chattyId,
+        seq,
+        type: data.type,
+        data,
+        at: new Date(+at + seq * 1000),
+      }
+    }),
+  })
 })
 
 after(async () => {
@@ -131,6 +173,38 @@ test('the timeline lists the member’s messages only, each cut short', { skip }
     prompts[1]!.at,
     new Date(Date.parse('2026-10-01T10:00:00Z') + (TURN + 1) * 1000).toISOString(),
   )
+})
+
+test('a long thread’s timeline groups its messages, as the dashboard does', { skip }, async () => {
+  const marks = await threadPrompts(chattyId)
+  assert.equal(marks.length, THREAD_TIMELINE_MARKS)
+  const mine = await prisma.sessionEvent.findMany({
+    where: {
+      sessionId: chattyId,
+      type: 'message.user',
+      NOT: { data: { path: ['memberId'], equals: null } },
+    },
+    orderBy: { seq: 'asc' },
+    select: { seq: true, at: true, data: true },
+  })
+  assert.equal(
+    marks.reduce((sum, m) => sum + m.count, 0),
+    mine.length,
+  )
+  // The same marks as groupMarks makes of the same messages, each with its first one's start.
+  const expected = groupMarks(
+    mine.map((m) => ({
+      seq: m.seq,
+      at: m.at.toISOString(),
+      text: (m.data as { text: string }).text,
+    })),
+  )
+  assert.deepEqual(marks, expected)
+})
+
+test('a short thread’s timeline has a mark per message', { skip }, async () => {
+  const marks = await threadPrompts(sessionId)
+  assert.ok(marks.every((m) => m.count === 1 && m.last === m.seq))
 })
 
 test('a page jumped to starts at its message and ends about a page on', { skip }, async () => {
@@ -157,3 +231,19 @@ test('a page jumped to stops where the dashboard has the thread already', { skip
   const last = TURNS * TURN + 1
   assert.equal(await pageEnd(sessionId, messages[7]!, last), last)
 })
+
+test(
+  'a page holds at most THREAD_PAGE_MESSAGES messages, however few events',
+  { skip },
+  async () => {
+    // Messages at seq 1, 3, 5…: the 30th from the end, and the 31st from the start.
+    const last = CHATTY * 2 + 1
+    assert.equal(await pageStart(chattyId, last), last - 2 * THREAD_PAGE_MESSAGES)
+    assert.equal(await pageEnd(chattyId, 1, last), 1 + 2 * THREAD_PAGE_MESSAGES)
+    const start = await pageStart(chattyId, last)
+    const shown = (await pageEvents(chattyId, start, last)).filter(
+      (e) => e.event.type === 'message.user',
+    )
+    assert.equal(shown.length, THREAD_PAGE_MESSAGES)
+  },
+)

@@ -2,7 +2,7 @@
 // Beside a long thread, a mark for each message a person wrote: hover one to read its start,
 // click it to go there. A message not loaded loads with its own page only (useThreadEvents'
 // jumpTo), never the whole thread up to it.
-import { mentionsToText, type TimelineMessage } from '@brigade/contracts'
+import { groupMarks, mentionsToText, type TimelineMessage } from '@brigade/contracts'
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import type { Item } from '@/components/thread-view'
 import { api } from '@/lib/api'
@@ -19,44 +19,60 @@ const CURRENT_PX = 10
 const PEAK_PX = 26
 /** How far, in marks, the pointer's swell reaches either side. */
 const SPREAD = 1.6
+/** Closer than this to the end of the conversation, it is at the end. */
+const END_PX = 8
+
+/** The timeline's marks, and the messages people wrote that are loaded, by where they are. */
+export type ThreadPrompts = { marks: TimelineMessage[]; mine: Set<number> }
 
 /**
- * The messages people wrote in the thread, oldest first. Those loaded come from its items;
- * a thread not loaded from its start (`whole` false) asks the API once for the others, and
- * only when the timeline shows (`wanted`): each one's start, cut in the database. Until
- * that answer is in, none: the timeline shows once, with all its marks, rather than
- * growing as the rest arrives.
+ * The messages people wrote in the thread, as marks, oldest first: one each, or in a long
+ * thread at most THREAD_TIMELINE_MARKS, each standing for several in a row. A thread
+ * loaded from its start (`whole`) makes them from its items; another asks the API once,
+ * only when the timeline shows (`wanted`), which groups them and cuts each mark's start in
+ * the database. Messages loaded after that answer get a mark each. Until it is in, none:
+ * the timeline shows once, with all its marks, rather than growing as the rest arrives.
  */
 export function useThreadPrompts(
   threadId: string,
   items: Item[],
   whole: boolean,
   wanted: boolean,
-): TimelineMessage[] {
-  const [fetched, setFetched] = useState<{ threadId: string; prompts: TimelineMessage[] }>()
+): ThreadPrompts {
+  const [fetched, setFetched] = useState<{ threadId: string; marks: TimelineMessage[] }>()
   const asked = useRef<string>(undefined)
   useEffect(() => {
     if (whole || !wanted || asked.current === threadId) return
     asked.current = threadId
     api<TimelineMessage[]>(`/threads/${threadId}/prompts`)
-      .then((prompts) => setFetched({ threadId, prompts }))
+      .then((marks) => setFetched({ threadId, marks }))
       // Without it, the timeline holds what is loaded.
-      .catch(() => setFetched({ threadId, prompts: [] }))
+      .catch(() => setFetched({ threadId, marks: [] }))
   }, [threadId, whole, wanted])
   const ready = whole || fetched?.threadId === threadId
   return useMemo(() => {
-    if (!ready) return []
-    const bySeq = new Map<number, TimelineMessage>()
-    if (fetched?.threadId === threadId) for (const p of fetched.prompts) bySeq.set(p.seq, p)
-    for (const item of items)
-      if (item.kind === 'user' && !item.note && !item.brigade && !item.email)
-        bySeq.set(item.seq, {
-          seq: item.seq,
-          at: new Date(item.at).toISOString(),
-          text: item.handed?.note ?? item.text,
-        })
-    return [...bySeq.values()].sort((a, b) => a.seq - b.seq)
-  }, [ready, fetched, threadId, items])
+    const loaded = items.flatMap((item) =>
+      item.kind === 'user' && !item.note && !item.brigade && !item.email
+        ? [
+            {
+              seq: item.seq,
+              at: new Date(item.at).toISOString(),
+              text: item.handed?.note ?? item.text,
+            },
+          ]
+        : [],
+    )
+    const mine = new Set(loaded.map((m) => m.seq))
+    if (!ready) return { marks: [], mine }
+    if (whole || fetched?.threadId !== threadId) return { marks: groupMarks(loaded), mine }
+    // What the answer counted: messages after it are new, a mark each.
+    const through = Math.max(0, ...fetched.marks.map((m) => m.last))
+    const after = loaded.filter((m) => m.seq > through)
+    return {
+      marks: [...fetched.marks, ...after.map((m) => ({ ...m, count: 1, last: m.seq }))],
+      mine,
+    }
+  }, [ready, whole, fetched, threadId, items])
 }
 
 /**
@@ -65,13 +81,13 @@ export function useThreadPrompts(
  */
 export function ThreadTimeline({
   scroller,
-  prompts,
+  prompts: { marks: prompts, mine },
   long,
   onJump,
 }: {
   /** What scrolls the conversation: which message is in view, and whether it is long. */
   scroller: RefObject<HTMLElement | null>
-  prompts: TimelineMessage[]
+  prompts: ThreadPrompts
   /** The thread is not loaded from its start: long, whatever its height now. */
   long: boolean
   onJump: (seq: number) => void
@@ -82,7 +98,7 @@ export function ThreadTimeline({
   // Where the pointer is along the marks, in marks (fractional), while it is over them.
   const [pointer, setPointer] = useState<number>()
   const railRef = useRef<HTMLElement>(null)
-  const seqs = useMemo(() => new Set(prompts.map((p) => p.seq)), [prompts])
+  const seqs = useMemo(() => prompts.map((p) => p.seq), [prompts])
 
   // Its room and its length, as the conversation resizes or grows.
   useEffect(() => {
@@ -97,33 +113,60 @@ export function ThreadTimeline({
     return () => observer.disconnect()
   }, [scroller, long])
 
-  // The message being read: the last one whose top is above the upper part of the view.
+  // The message being read: the last one whose top is above the upper part of the view, or,
+  // at the end, the last one in sight (the last messages never scroll up that far). One
+  // clicked stays it until the person scrolls on their own: near the end, it cannot reach
+  // that line either.
+  const clicked = useRef<number>(undefined)
   useEffect(() => {
     const view = scroller.current
     if (!view || !fits) return
     let frame = 0
     const find = () => {
       frame = 0
-      const line = view.getBoundingClientRect().top + view.clientHeight * 0.4
+      const box = view.getBoundingClientRect()
+      // Out of sight (the scroll bar, back to the end…), it no longer says.
+      const node =
+        clicked.current !== undefined &&
+        view.querySelector<HTMLElement>(`[data-seq="${clicked.current}"]`)
+      const rect = node ? node.getBoundingClientRect() : undefined
+      if (rect && rect.bottom > box.top && rect.top < box.bottom) return setCurrent(clicked.current)
+      // Not in yet (its page loading): it waits.
+      if (clicked.current !== undefined && !node) return setCurrent(clicked.current)
+      clicked.current = undefined
+      const atEnd = view.scrollHeight - view.scrollTop - view.clientHeight < END_PX
+      const line = atEnd ? box.bottom : box.top + view.clientHeight * 0.4
       let at: number | undefined
       for (const node of view.querySelectorAll<HTMLElement>('[data-seq]')) {
         const seq = Number(node.dataset.seq)
-        if (!seqs.has(seq)) continue
+        if (!mine.has(seq)) continue
         if (node.getBoundingClientRect().top > line) break
         at = seq
       }
-      setCurrent(at)
+      // The mark it is in: the last that starts at or before it.
+      setCurrent(at === undefined ? undefined : seqs.findLast((s) => s <= at))
     }
     const onScroll = () => {
       frame ||= requestAnimationFrame(find)
     }
+    // Scrolled by the person: what is in view says again.
+    const own = () => {
+      clicked.current = undefined
+      onScroll()
+    }
     find()
     view.addEventListener('scroll', onScroll, { passive: true })
+    view.addEventListener('wheel', own, { passive: true })
+    view.addEventListener('touchmove', own, { passive: true })
+    view.addEventListener('keydown', own)
     return () => {
       view.removeEventListener('scroll', onScroll)
+      view.removeEventListener('wheel', own)
+      view.removeEventListener('touchmove', own)
+      view.removeEventListener('keydown', own)
       cancelAnimationFrame(frame)
     }
-  }, [scroller, fits, seqs])
+  }, [scroller, fits, seqs, mine])
 
   if (!fits || prompts.length < MIN_PROMPTS) return null
   const shown = prompts.find((p) => p.seq === hovered)
@@ -174,7 +217,11 @@ export function ThreadTimeline({
             className="flex min-h-0 w-9 flex-1 items-center outline-none"
             onFocus={() => setHovered(p.seq)}
             onBlur={() => setHovered(undefined)}
-            onClick={() => onJump(p.seq)}
+            onClick={() => {
+              clicked.current = p.seq
+              setCurrent(p.seq)
+              onJump(p.seq)
+            }}
           >
             <span
               className={cn(
@@ -200,6 +247,11 @@ export function ThreadTimeline({
           style={{ top: `${((at + 0.5) / prompts.length) * 100}%`, left: PEAK_PX + 16 }}
         >
           <p className="line-clamp-2 break-words">{preview(shown.text) || 'Attachment'}</p>
+          {shown.count > 1 && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              and {shown.count - 1} more {shown.count === 2 ? 'message' : 'messages'} after it
+            </p>
+          )}
           <p className="mt-1 text-xs text-muted-foreground">{pauseLabel(Date.parse(shown.at))}</p>
         </div>
       )}

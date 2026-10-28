@@ -6,8 +6,10 @@ import {
   isOutputTool,
   OUTPUT_TOOLS,
   THREAD_PAGE_EVENTS,
+  THREAD_PAGE_MESSAGES,
   THREAD_PAGE_STARTS,
   THREAD_PROMPT_CHARS,
+  THREAD_TIMELINE_MARKS,
   type SequencedEvent,
   type TimelineMessage,
 } from '@brigade/contracts'
@@ -20,9 +22,18 @@ const sequenced = (r: Row): SequencedEvent => ({
   event: r.data as unknown as SequencedEvent['event'],
 })
 
-/** The first seq of the page that ends before `before`: a turn's start about a page back, else 1. */
+/**
+ * The first seq of the page that ends before `before`: a turn's start about a page back, or
+ * THREAD_PAGE_MESSAGES messages back when that comes first, else 1.
+ */
 export async function pageStart(sessionId: string, before: number) {
-  return startAt(sessionId, before - THREAD_PAGE_EVENTS)
+  const back = await prisma.sessionEvent.findFirst({
+    where: { sessionId, type: 'message.user', seq: { lt: before } },
+    orderBy: { seq: 'desc' },
+    skip: THREAD_PAGE_MESSAGES - 1,
+    select: { seq: true },
+  })
+  return startAt(sessionId, Math.max(before - THREAD_PAGE_EVENTS, back?.seq ?? 1))
 }
 
 /** Where a page holding `seq` starts: the turn's start or member's message at or before it, else 1. */
@@ -47,33 +58,59 @@ export async function startAt(sessionId: string, seq: number) {
 
 /**
  * Where the page starting at `from` ends, not included: the first turn's start or member's
- * message about a page on, else `until`, past which the dashboard has the thread already.
+ * message about a page on, or the message after THREAD_PAGE_MESSAGES of them when that
+ * comes first, else `until`, past which the dashboard has the thread already.
  */
 export async function pageEnd(sessionId: string, from: number, until: number) {
-  const end = await prisma.sessionEvent.findFirst({
-    where: {
-      sessionId,
-      seq: { gte: from + THREAD_PAGE_EVENTS, lt: until },
-      type: { in: THREAD_PAGE_STARTS },
-    },
-    orderBy: { seq: 'asc' },
-    select: { seq: true },
-  })
-  return end?.seq ?? until
+  const [end, next] = await Promise.all([
+    prisma.sessionEvent.findFirst({
+      where: {
+        sessionId,
+        seq: { gte: from + THREAD_PAGE_EVENTS, lt: until },
+        type: { in: THREAD_PAGE_STARTS },
+      },
+      orderBy: { seq: 'asc' },
+      select: { seq: true },
+    }),
+    prisma.sessionEvent.findFirst({
+      where: { sessionId, type: 'message.user', seq: { gte: from, lt: until } },
+      orderBy: { seq: 'asc' },
+      skip: THREAD_PAGE_MESSAGES,
+      select: { seq: true },
+    }),
+  ])
+  return Math.min(end?.seq ?? until, next?.seq ?? until)
 }
 
 /**
- * The messages people wrote in a thread, for its timeline: each one's start only, cut in
- * the database, so a long thread's list stays small and its events' other fields (files,
- * replies) are not read. Brigade's own messages (wake-ups, reports) are left out.
+ * The messages people wrote in a thread, for its timeline: at most THREAD_TIMELINE_MARKS
+ * marks, each the first of a group of messages in a row (markOf), with how many it stands
+ * for. Only those first messages' starts are read and cut, in the database, so the answer
+ * stays small however long the thread. Brigade's own messages (wake-ups, reports) are left out.
  */
 export async function threadPrompts(sessionId: string): Promise<TimelineMessage[]> {
-  const rows = await prisma.$queryRaw<{ seq: number; at: Date; text: string | null }[]>`
-    SELECT "seq", "at", left("data"->>'text', ${THREAD_PROMPT_CHARS}) AS "text"
-    FROM "SessionEvent"
-    WHERE "sessionId" = ${sessionId} AND "type" = 'message.user' AND "data"->>'memberId' IS NOT NULL
-    ORDER BY "seq"`
-  return rows.map((r) => ({ seq: r.seq, at: r.at.toISOString(), text: r.text ?? '' }))
+  const rows = await prisma.$queryRaw<
+    { seq: number; at: Date; text: string | null; count: bigint; last: number }[]
+  >`
+    WITH mine AS (
+      SELECT "seq", row_number() OVER (ORDER BY "seq") - 1 AS i, count(*) OVER () AS n
+      FROM "SessionEvent"
+      WHERE "sessionId" = ${sessionId} AND "type" = 'message.user' AND "data"->>'memberId' IS NOT NULL
+    ), marks AS (
+      SELECT min("seq") AS first, max("seq") AS last, count(*) AS count
+      FROM mine
+      GROUP BY floor(i * least(n, ${THREAD_TIMELINE_MARKS}) / n)
+    )
+    SELECT e."seq", e."at", left(e."data"->>'text', ${THREAD_PROMPT_CHARS}) AS "text", m.count, m.last
+    FROM marks m JOIN "SessionEvent" e ON e."sessionId" = ${sessionId} AND e."seq" = m.first
+    ORDER BY e."seq"`
+  return rows.map((r) => ({
+    seq: r.seq,
+    at: r.at.toISOString(),
+    text: r.text ?? '',
+    count: Number(r.count),
+    last: r.last,
+  }))
 }
 
 /** The events from `from` up to, not including, `before`. */

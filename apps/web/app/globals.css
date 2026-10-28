@@ -504,6 +504,10 @@
       opacity: 1;
     }
   }
+  /* Out of sight (pebble-avatar.tsx): it stands still, and costs nothing on each frame. */
+  .pebble[data-still] * {
+    animation-play-state: paused;
+  }
   @media (prefers-reduced-motion: reduce) {
     .pebble-body,
     .pebble-face,
