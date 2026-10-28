@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { EmailSignIn } from '@/components/email-sign-in'
 import { GoogleSignIn } from '@/components/google-sign-in'
+import { LegalConsent } from '@/components/legal-consent'
 import { Card, CardContent } from '@/components/ui/card'
 import { markSignedIn } from '@/lib/signed-in'
 
@@ -36,6 +37,7 @@ export default function SignUp() {
                 router.push('/onboarding')
               }}
             />
+            <LegalConsent />
           </CardContent>
         </Card>
         <p className="text-center text-sm text-muted-foreground">

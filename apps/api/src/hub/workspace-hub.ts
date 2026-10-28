@@ -13,6 +13,7 @@ import {
 } from '@brigade/contracts'
 import { wake } from '../cloud.js'
 import { prisma } from '../db.js'
+import { beingDeleted } from '../deletion-fence.js'
 import { movesOn } from '../move.js'
 import { noteFailure } from '../ops/failures.js'
 import {
@@ -229,6 +230,14 @@ export class WorkspaceHub {
    * or the runner went silent (tick). Such a connection dies without closing: kept, it looked
    * online, so commands went into it and were lost, and the computer was never started again.
    */
+  /**
+   * A deletion of the workspace failed: runners welcomed while it ran carry on nothing yet. Each
+   * is sent away, and its next hello resumes its turns and queues its messages again.
+   */
+  releaseHeldBack() {
+    for (const [computerId, conn] of this.runners) if (conn.heldBack) this.dropRunner(computerId)
+  }
+
   dropRunner(computerId: string) {
     const conn = this.runners.get(computerId)
     if (!conn) return
@@ -403,6 +412,9 @@ export class WorkspaceHub {
   /** Send a kept command on this connection, unless an older runner took it already. */
   async sendKept(computerId: string, conn: RunnerConn, kept: DurableCommand) {
     const protocol = conn.protocolVersion ?? 0
+    // A turn kept before its workspace's deletion began: held, pending, until the deletion is
+    // done (and the command with it) or has failed.
+    if (kept.type === 'thread.prompt' && (await beingDeleted(this.workspaceId))) return
     // Not where its thread is now: not sent.
     if (!(await asOfNow(computerId, kept))) return
     // Claimed, as it is now (runner-commands.ts).
@@ -748,6 +760,10 @@ export class WorkspaceHub {
    * something, before their socket looks idle, unless they keep it alive themselves.
    */
   async tick(now = Date.now()) {
+    // A deletion cut short (a restart) lowers no fence: once its lease is over, runners it held
+    // back are sent away too.
+    if ([...this.runners.values()].some((c) => c.heldBack))
+      if (!(await beingDeleted(this.workspaceId).catch(() => true))) this.releaseHeldBack()
     for (const conn of [...this.runners.values()]) {
       if ((conn.protocolVersion ?? 0) < HEARTBEAT_PROTOCOL) continue
       const heard = Math.max(conn.heardAt, this.host.heardAt?.(conn.socket) ?? 0)

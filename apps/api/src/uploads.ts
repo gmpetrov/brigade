@@ -260,7 +260,9 @@ export async function sweepOrphanUploads() {
   let removed = 0
   for (const workspace of workspaces) {
     const scope = { organizationId: workspace.organizationId, workspaceId: workspace.id }
-    const keys = (await Promise.all(uploadsPrefixes(scope).map(listObjects))).flat()
+    const keys = (
+      await Promise.all(uploadsPrefixes(scope).map((prefix) => listObjects(prefix)))
+    ).flat()
     if (keys.length === 0) continue
     const ids = [...new Set(keys.map((k) => k.match(UPLOAD_ID)?.[1]).filter(Boolean))] as string[]
     const known = new Set(

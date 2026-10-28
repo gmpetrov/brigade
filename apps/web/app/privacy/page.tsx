@@ -1,6 +1,8 @@
+import Link from 'next/link'
 import { LegalPage, legalMetadata } from '@/components/landing/legal'
+import { OPERATOR } from '@/components/landing/operator'
 
-const CONTACT = 'support@brigade.lol'
+const CONTACT = OPERATOR.email
 
 export const dynamic = 'force-static'
 export const revalidate = false
@@ -17,6 +19,16 @@ export default function Privacy() {
       <p>
         Brigade gives your company AI teammates. This page explains what we store to run it, and
         what we don&apos;t do with it.
+      </p>
+
+      <h2>Who we are</h2>
+      <p>
+        {OPERATOR.company
+          ? `Brigade is run by ${OPERATOR.company.name}, ${OPERATOR.company.address}. `
+          : ''}
+        We are the controller of your account data and of the data we need to run and bill the
+        service. For what you and your teammates put in a workspace, we act on your company&apos;s
+        behalf, as a processor: our <Link href="/dpa">data processing agreement</Link> covers it.
       </p>
 
       <h2>What we store</h2>
@@ -38,7 +50,27 @@ export default function Privacy() {
           <strong>Your devices:</strong> the computers you link to Brigade, and a push subscription
           when you turn on notifications.
         </li>
+        <li>
+          <strong>Sign-in and security:</strong> the IP address and browser of each session, the
+          codes we email you to sign in (they expire within minutes), and counts of recent attempts,
+          to stop abuse.
+        </li>
+        <li>
+          <strong>Email:</strong> mail your teammates send and receive at their Brigade addresses.
+        </li>
+        <li>
+          <strong>Cloud computer:</strong> what your teammates keep on it, and an encrypted copy of
+          its Claude or Codex sign-in, so a new machine can take over when we replace it.
+        </li>
+        <li>
+          <strong>Billing:</strong> your plan, invoices and the email of who pays. Stripe keeps the
+          card details.
+        </li>
       </ul>
+      <p>
+        We set only the cookies Brigade needs to work, such as the one that keeps you signed in. We
+        don&apos;t use analytics, advertising or tracking cookies.
+      </p>
 
       <h2>How we use it</h2>
       <p>
@@ -46,12 +78,19 @@ export default function Privacy() {
         for, and send the notifications you chose. We don&apos;t sell your data, show ads, or use
         your content to train AI models.
       </p>
+      <p>
+        We do this to perform our contract with you (running your account and workspace, billing),
+        for our legitimate interest in keeping Brigade secure and preventing abuse, to meet legal
+        obligations (such as keeping invoices), and with your consent where we ask for it (such as
+        notifications).
+      </p>
 
       <h2>AI models</h2>
       <p>
-        Your teammates run on your own Claude or Codex subscription, on your Mac or on
-        Brigade&apos;s cloud computer. What they read and write is sent to that provider under your
-        account with them, and their own privacy policy applies.
+        Your teammates run on your own Claude or Codex subscription, on your computer or on
+        Brigade&apos;s cloud computer. What they read and write is sent to Anthropic or OpenAI under
+        your account with them, and their own privacy policy applies: they are your providers, not
+        ours.
       </p>
 
       <h2>Data from Google</h2>
@@ -98,18 +137,15 @@ export default function Privacy() {
       </p>
       <ul>
         <li>
-          <strong>Anthropic or OpenAI:</strong> what your teammates read and write, under your own
-          Claude or Codex subscription.
+          <strong>Cloudflare:</strong> runs Brigade, keeps your files (Cloudflare R2) and checks
+          sign-ups for bots.
         </li>
         <li>
-          <strong>Cloudflare:</strong> runs Brigade and keeps your files (Cloudflare R2).
+          <strong>Neon:</strong> hosts Brigade&apos;s database, in the EU (Frankfurt).
         </li>
         <li>
-          <strong>Neon:</strong> hosts Brigade&apos;s database.
-        </li>
-        <li>
-          <strong>Our cloud computer provider:</strong> runs the cloud computer your teammates work
-          on, when your workspace has one.
+          <strong>Boat:</strong> runs the cloud computer your teammates work on, in the EU, when
+          your workspace has one.
         </li>
         <li>
           <strong>Resend:</strong> sends and receives Brigade&apos;s email, such as sign-in codes
@@ -118,8 +154,23 @@ export default function Privacy() {
         <li>
           <strong>Stripe:</strong> handles payments. We never see your card number.
         </li>
+        <li>
+          <strong>Google:</strong> when you sign in with Google or connect a Google App.
+        </li>
+        <li>
+          <strong>GitHub:</strong> when you connect your repositories.
+        </li>
+        <li>
+          <strong>Your browser&apos;s push service</strong> (Apple, Google or Mozilla): the
+          notifications you turned on.
+        </li>
       </ul>
-      <p>We don&apos;t sell your data or share it with anyone else.</p>
+      <p>
+        The <Link href="/subprocessors">list of subprocessors</Link> says where each one is and what
+        it does. Some of them are in the United States: transfers there rely on the EU-US Data
+        Privacy Framework or the European Commission&apos;s standard contractual clauses. We
+        don&apos;t sell your data or share it with anyone else, unless the law requires it.
+      </p>
 
       <h2>How we protect it</h2>
       <ul>
@@ -141,9 +192,24 @@ export default function Privacy() {
         thread at any time from the dashboard: disconnecting a Google App also revokes
         Brigade&apos;s access in your Google account, and deleting a thread deletes its files. You
         can also remove Brigade&apos;s access at any time from{' '}
-        <a href="https://myaccount.google.com/permissions">your Google account</a>. To delete your
-        account and workspace, email us at <a href={`mailto:${CONTACT}`}>{CONTACT}</a>: we delete
-        them within 30 days.
+        <a href="https://myaccount.google.com/permissions">your Google account</a>.
+      </p>
+      <p>
+        An owner can delete a workspace, and you can delete your account, in Settings. Deleting a
+        workspace deletes its threads, files, library, teammates and Apps, and destroys its cloud
+        computer; deleting your account deletes your profile and the threads you started. Files go
+        from storage within hours. Copies in our database backups expire within 30 days. We keep
+        invoices for 10 years, as French law requires, and a short record that the workspace was
+        deleted and by whom.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>
+        You can ask us to access, correct, delete or export your personal data, to restrict how we
+        use it, or object to it, by emailing <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. We answer
+        within a month. If your data is in a workspace someone else&apos;s company runs, we may pass
+        your request on to them. You can also complain to the French data protection authority, the{' '}
+        <a href="https://www.cnil.fr/en/contact-cnil">CNIL</a>, or the one where you live.
       </p>
 
       <h2>Contact</h2>

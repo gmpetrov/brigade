@@ -180,7 +180,7 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
  * and would put the image back in the deleted thread's folder. So the folder is emptied
  * again once that long has passed, with a margin.
  */
-const LATE_UPLOADS_MS = 15 * 60_000
+export const LATE_UPLOADS_MS = 15 * 60_000
 
 /**
  * Empty again the files folders of deleted threads whose late uploads can no longer land

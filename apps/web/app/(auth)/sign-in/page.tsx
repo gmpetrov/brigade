@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { EmailSignIn } from '@/components/email-sign-in'
 import { GoogleSignIn } from '@/components/google-sign-in'
+import { LegalConsent } from '@/components/legal-consent'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { authClient } from '@/lib/auth-client'
@@ -103,6 +104,7 @@ export default function SignIn() {
                 <span className="h-px flex-1 bg-border" />
               </div>
               <EmailSignIn withPassword submitLabel="Sign in" onSignedIn={signedIn} />
+              <LegalConsent />
             </CardContent>
           </Card>
         )}

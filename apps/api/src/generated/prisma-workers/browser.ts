@@ -309,6 +309,14 @@ export type DocumentAsset = Prisma.DocumentAssetModel
  */
 export type BucketCleanup = Prisma.BucketCleanupModel
 /**
+ * Model WorkspaceCleanup
+ * A deleted workspace's folder in the bucket (`<org>/<ws>/`), emptied by a sweep in batches
+ * (src/workspace-delete.ts), and again once every signed upload URL issued before its deletion
+ * has expired. Written with the deletion itself: the row is the promise that nothing is left,
+ * and goes only once a listing after that margin finds the folder empty.
+ */
+export type WorkspaceCleanup = Prisma.WorkspaceCleanupModel
+/**
  * Model AuditEntry
  * Append-only record of an action. workspaceId is null for organization-level actions.
  */

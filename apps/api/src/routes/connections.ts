@@ -852,7 +852,7 @@ export const connections = new Hono<AppEnv>()
   })
 
 /** Revoke at the provider, delete the credential, drop grants and triggers, keep the call log. */
-async function disconnect(
+export async function disconnect(
   scope: WorkspaceScope,
   db: ScopedDb,
   connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null; appId: string },

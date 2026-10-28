@@ -53,6 +53,7 @@ export const operations = {
     options?: { touch?: boolean; offline?: string },
   ) => hub.askRunner(computerId, message, timeoutMs, options),
   dropRunner: (hub: WorkspaceHub, computerId: string) => hub.dropRunner(computerId),
+  releaseHeldBack: (hub: WorkspaceHub) => hub.releaseHeldBack(),
   resendCommands: (hub: WorkspaceHub, waiting: { computerId: string; since: number }[]) =>
     hub.resendCommands(waiting),
 

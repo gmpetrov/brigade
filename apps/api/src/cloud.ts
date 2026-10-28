@@ -9,6 +9,7 @@ import { audit } from './audit.js'
 import { billingEnabled, cloudEntitled, requireCloudPlan } from './billing.js'
 import { defaults, env } from './config.js'
 import { Prisma, prisma } from './db.js'
+import { BEING_DELETED, beingDeleted, refuseWhileDeleting } from './deletion-fence.js'
 import type { Computer } from './generated/prisma/client.js'
 import { hubs } from './hub.js'
 import { currentHub } from './hub/context.js'
@@ -81,6 +82,8 @@ export async function createWorkspaceComputer(workspace: { id: string; organizat
   const found = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`cloud:${workspace.id}`}))`
     if (!(await cloudEntitled(workspace.id))) return null
+    // Its deletion destroys its VMs: none is made meanwhile.
+    if (await beingDeleted(workspace.id, tx)) return null
     const existing = await tx.computer.findFirst({
       where: { workspaceId: workspace.id, kind: 'cloud', status: { not: 'destroyed' } },
     })
@@ -199,6 +202,18 @@ async function destroyVm(ref: ComputerRef) {
   if (!gone) await provider!.destroy(ref)
 }
 
+/**
+ * Destroy a computer's VM for good, its disk with it: its workspace is being deleted. Throws when
+ * the provider fails. Without a provider configured here there is none to ask: false.
+ */
+export async function destroyComputerVm(computer: { providerRef: unknown }) {
+  const ref = refOf(computer)
+  if (!ref) return true
+  if (!provider) return false
+  await destroyVm(ref)
+  return true
+}
+
 async function provision(computer: { id: string; organizationId: string; workspaceId: string }) {
   // Made before and cut short: that VM holds nothing, a new one is made.
   const before = await prisma.computer.findUniqueOrThrow({ where: { id: computer.id } })
@@ -268,8 +283,9 @@ export function ensureRunning(computerId: string): Promise<void> {
 export function wake(computerId: string) {
   const hub = currentHub()
   void ensureRunning(computerId).catch(async (error: unknown) => {
-    // Its workspace has no Cloud plan: it stays stopped, nothing is broken.
+    // Its workspace has no Cloud plan, or is being deleted: it stays stopped, nothing is broken.
     if (error instanceof HTTPException && error.status === 402) return
+    if (error instanceof HTTPException && error.message === BEING_DELETED) return
     console.error(`waking ${computerId} failed: ${await providerReason(error)}`, error)
     const computer = await prisma.computer
       .update({ where: { id: computerId }, data: { status: 'error' } })
@@ -284,6 +300,8 @@ async function bringUp(computerId: string) {
   // A workspace whose plan ended keeps its computer, stopped, until the plan comes back;
   // whatever its row says (a stop whose answer was lost leaves it "running").
   if (computer?.kind === 'cloud') await requireCloudPlan(computer.workspaceId)
+  // Neither started nor made again while its workspace is deleted: its VM is being destroyed.
+  if (computer?.kind === 'cloud') await refuseWhileDeleting(computer.workspaceId)
   const ref = computer && refOf(computer)
   if (computer?.kind === 'cloud' && (await unfinished(computer))) return reprovision(computer)
   if (

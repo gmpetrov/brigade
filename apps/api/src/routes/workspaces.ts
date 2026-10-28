@@ -1,12 +1,16 @@
 import {
   CreateWorkspace,
+  DeleteAccount,
+  DeleteWorkspace,
   SetSuggestions,
   SwitchWorkspace,
   UpdateWorkspace,
 } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
+import { deleteAccount } from '../account-delete.js'
 import { audit } from '../audit.js'
+import { auth } from '../auth.js'
 import { workspaceLogoKey } from '../bucket.js'
 import { ensureChief } from '../chief.js'
 import { createWorkspaceComputer } from '../cloud.js'
@@ -21,6 +25,7 @@ import {
   resolveScope,
   type AppEnv,
 } from '../scope.js'
+import { deleteWorkspace } from '../workspace-delete.js'
 import { updateWorkspace } from '../workspace-settings.js'
 import { z } from 'zod'
 
@@ -191,6 +196,46 @@ export const workspaces = new Hono<AppEnv>()
     const input = await parseBody(c.req.raw, UpdateWorkspace)
     const workspace = await updateWorkspace(scope, input)
     return c.json({ id: workspace.id, name: workspace.name, logo: workspace.logo })
+  })
+
+  /**
+   * Delete the active workspace for good: owners only, typing its name to confirm. The session
+   * moves to another workspace of the organization, or to none (onboarding) when it was the last,
+   * which takes the organization with it.
+   */
+  .delete('/workspace', requireWorkspace, async (c) => {
+    const scope = c.var.scope
+    if (scope.role !== 'owner')
+      throw new HTTPException(403, { message: 'Only an owner can delete the workspace' })
+    const { name } = await parseBody(c.req.raw, DeleteWorkspace)
+    const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: scope.workspaceId } })
+    if (name.trim() !== workspace.name.trim())
+      throw new HTTPException(400, { message: 'Type the workspace’s name to confirm' })
+    const { organizationGone } = await deleteWorkspace(scope, scope)
+    const session = await prisma.authSession.findUnique({
+      where: { id: c.var.authSessionId },
+      select: { activeWorkspaceId: true },
+    })
+    return c.json({ activeWorkspaceId: session?.activeWorkspaceId ?? null, organizationGone })
+  })
+
+  /**
+   * Delete the signed-in person's account for good, typing their email address to confirm
+   * (src/account-delete.ts). Signed out in the same answer.
+   */
+  .delete('/me', async (c) => {
+    const { email } = await parseBody(c.req.raw, DeleteAccount)
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: c.var.userId } })
+    if (email.trim().toLowerCase() !== user.email.toLowerCase())
+      throw new HTTPException(400, { message: 'Type your email address to confirm' })
+    await deleteAccount(user.id)
+    // Its session is gone already: this only clears the cookie.
+    const signedOut = await auth.api
+      .signOut({ headers: c.req.raw.headers, returnHeaders: true })
+      .catch(() => null)
+    for (const cookie of signedOut?.headers.getSetCookie() ?? [])
+      c.header('set-cookie', cookie, { append: true })
+    return c.body(null, 204)
   })
 
   /** A workspace's logo, for any member of its organization (the switcher shows them all). */

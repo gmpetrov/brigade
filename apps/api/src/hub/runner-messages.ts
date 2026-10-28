@@ -19,6 +19,7 @@ import { onRestored, restoreFor } from '../cloud-replace.js'
 import { handleConnectorCall } from '../connector-calls.js'
 import { handleCredentialRequest } from '../credentials.js'
 import { prisma, type Prisma } from '../db.js'
+import { beingDeleted } from '../deletion-fence.js'
 import { noteDisk } from '../disk-tickets.js'
 import { keepFilesApart } from '../event-files.js'
 import { dropDeadWaiters, type Live } from '../held-calls.js'
@@ -330,6 +331,14 @@ async function hello(
   // Turns and queued messages a restart may have cut off: the runner continues those it
   // lost (an older one closes and cancels them). Waiting threads too: a turn waiting on
   // a connector call's approval was still running there.
+  // Its workspace is being deleted (src/deletion-fence.ts): nothing goes on, and nothing is
+  // dropped either. Told of no thread, the runner neither resumes, requeues, cancels nor
+  // closes one; its queued messages stay as they are, for a hello once the deletion failed.
+  const fenced = await beingDeleted(runner.workspaceId)
+  if (fenced !== Boolean(conn.heldBack)) {
+    conn.heldBack = fenced
+    hub.host.persist(conn)
+  }
   const inProgress = await prisma.session.findMany({
     where: { computerId: runner.computerId, status: { in: ['running', 'waiting'] } },
     select: { id: true, status: true },
@@ -350,9 +359,11 @@ async function hello(
     // Its workspace: the runner connects to its hub with it from now on.
     workspaceId: runner.workspaceId,
     ...(bundle ? { bundle } : {}),
-    runningThreads,
-    queuedMessages: queuedMessages.map(({ sessionId, messageId }) => ({ sessionId, messageId })),
-    ...(resumes
+    runningThreads: fenced ? [] : runningThreads,
+    queuedMessages: fenced
+      ? []
+      : queuedMessages.map(({ sessionId, messageId }) => ({ sessionId, messageId })),
+    ...(resumes && !fenced
       ? {
           resume: await turnsToResume(
             runner,
@@ -381,8 +392,9 @@ async function hello(
   await hub.flushQueue(runner.computerId, conn)
   // Running now, as written above: a status a dashboard kept (stopped, error) is over.
   hub.broadcastComputer(runner.computerId, computer.status)
-  // Threads that moved here while it was offline get their message now.
-  void movesOn(runner.computerId).catch(console.error)
+  // Threads that moved here while it was offline get their message now; not while its
+  // workspace is being deleted, as that message starts a turn: on its next hello.
+  if (!fenced) void movesOn(runner.computerId).catch(console.error)
 }
 
 /** A sign-in the runner runs said where it stands: its member hears it. */

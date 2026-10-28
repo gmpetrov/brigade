@@ -85,6 +85,13 @@ export function skillFileKey(scope: Scope, sha256: string) {
   return `${scope.organizationId}/${scope.workspaceId}/skill-files/${sha256}`
 }
 
+/** The bucket folder of everything a workspace holds: every key of it starts so. */
+export function workspacePrefix(scope: Scope) {
+  for (const part of [scope.organizationId, scope.workspaceId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/`
+}
+
 /** The bucket folder of the images and PDFs a thread's events refer to (event-files.ts). */
 export function threadFilesPrefix(scope: Scope, sessionId: string) {
   for (const part of [scope.organizationId, scope.workspaceId, sessionId])
@@ -495,21 +502,27 @@ export async function streamRange(
   return { status: 206, body: response.body, contentRange }
 }
 
-/** The keys of every object in a folder, such as `threadFilesPrefix`: it ends with a slash. */
-export async function listObjects(prefix: string): Promise<string[]> {
+/**
+ * The keys of every object in a folder, such as `threadFilesPrefix`: it ends with a slash. With
+ * a limit, at most that many: a workspace's whole folder may hold more than one request can delete.
+ */
+export async function listObjects(prefix: string, options: { limit?: number } = {}) {
   if (!prefix.endsWith('/')) throw new Error('List a folder')
+  const limit = options.limit ?? Infinity
   if (!r2) {
     const root = join(env.BUCKET_DIR, prefix)
     const entries = await readdir(root, { withFileTypes: true, recursive: true }).catch(() => [])
     return entries
       .filter((e) => e.isFile() && !e.name.endsWith('.part'))
       .map((e) => `${prefix}${relative(root, join(e.parentPath, e.name)).split(sep).join('/')}`)
+      .slice(0, limit)
   }
   const keys: string[] = []
   let token: string | undefined
   do {
     const query = new URLSearchParams({ 'list-type': '2', prefix })
     if (token) query.set('continuation-token', token)
+    if (Number.isFinite(limit)) query.set('max-keys', String(Math.min(1000, limit - keys.length)))
     const response = await r2.client.fetch(`${r2.base}?${query}`)
     if (!response.ok) throw new Error(`bucket list failed: ${response.status}`)
     const xml = await response.text()
@@ -517,8 +530,8 @@ export async function listObjects(prefix: string): Promise<string[]> {
     token = /<IsTruncated>true<\/IsTruncated>/.test(xml)
       ? unescapeXml(xml.match(/<NextContinuationToken>([^<]*)</)?.[1] ?? '') || undefined
       : undefined
-  } while (token)
-  return keys
+  } while (token && keys.length < limit)
+  return keys.slice(0, limit)
 }
 
 const unescapeXml = (text: string) =>
