@@ -35,3 +35,27 @@ export function rememberThreadSide(threadId: string, side: ThreadSide | undefine
     // Full or blocked: forgotten on leaving the thread.
   }
 }
+
+const pageKey = (threadId: string) => `brigade:preview-page:${threadId}`
+
+/** The page a thread's preview was last on, for the same run only: a new run starts afresh. */
+export function readPreviewPage(threadId: string, previewId: string): string | undefined {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(pageKey(threadId)) ?? 'null') as {
+      previewId?: unknown
+      page?: unknown
+    } | null
+    if (saved?.previewId === previewId && typeof saved.page === 'string') return saved.page
+  } catch {
+    // Nothing saved, or no storage: its first page.
+  }
+  return undefined
+}
+
+export function rememberPreviewPage(threadId: string, previewId: string, page: string) {
+  try {
+    sessionStorage.setItem(pageKey(threadId), JSON.stringify({ previewId, page }))
+  } catch {
+    // Full or blocked: its first page next time.
+  }
+}
