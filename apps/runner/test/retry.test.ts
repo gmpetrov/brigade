@@ -63,6 +63,9 @@ function setup(sessionId: string, outcomes: Outcome[]) {
     park: async () => undefined,
     backup: async () => undefined,
     awaitingPerson: async () => false,
+    holdsMessages: async () => false,
+    decidesNothing: () => false,
+    awaitsApproval: async () => true,
   }
   // The runner's own seat, with the stand-in in place of a Claude Code session.
   const seat = {

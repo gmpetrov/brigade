@@ -453,6 +453,13 @@ export class Threads {
       })
       input = { kind: 'ticket', requestId: command.requestId, answer: command.answer }
     } else {
+      // A decision on an approval no turn here waits on (one made twice) changes nothing: the
+      // thread does not show it, nor go back to running for it.
+      const seat = this.harness(this.thread(spec.sessionId), spec)
+      if (seat.harness.decidesNothing(command.approvalId)) {
+        console.warn(`thread ${spec.sessionId}: no turn waits on approval ${command.approvalId}`)
+        return
+      }
       this.options.emit(spec.sessionId, {
         at,
         type: 'approval.resolved',
@@ -933,6 +940,12 @@ export class Threads {
                   }
                 : input
         if (!turn || this.stopping) return
+        // A decision on an approval its turn does not wait on (one made twice) starts nothing:
+        // continued with it, the turn would sit on whatever it waits on as though it ran.
+        if (turn.kind === 'approval' && !(await seat.harness.awaitsApproval(turn.approvalId))) {
+          console.warn(`thread ${spec.sessionId}: no turn waits on approval ${turn.approvalId}`)
+          return
+        }
         this.options.emit(spec.sessionId, {
           at: new Date().toISOString(),
           type: 'turn.started',
@@ -1083,8 +1096,9 @@ export class Threads {
     this.enqueue(first!, 'prompt', async () => {
       await message.steering
       if (message.state !== 'queued' && message.state !== 'shown') return null
-      // Its teammate waits on a person: the message runs once they answer (releaseHeld).
-      if (await this.harness(thread, first!).harness.awaitingPerson()) {
+      // Its teammate waits on a person's approval: the message runs once they decide
+      // (releaseHeld). Waiting only on its own ticket or question, it reads the message now.
+      if (await this.harness(thread, first!).harness.holdsMessages()) {
         const shown = message.state === 'shown'
         message.state = 'held'
         thread.messages.set(message.id, message)
@@ -1288,7 +1302,7 @@ export class Threads {
     const held = [...thread.messages.values()].filter(
       (m) => m.state === 'held' && !m.takenOver && m.specs[0]!.teammate.id === spec.teammate.id,
     )
-    if (held.length === 0 || thread.takeover || (await seat.harness.awaitingPerson())) return
+    if (held.length === 0 || thread.takeover || (await seat.harness.holdsMessages())) return
     for (const message of held) {
       // Released meanwhile, or cancelled.
       if (message.state !== 'held') continue

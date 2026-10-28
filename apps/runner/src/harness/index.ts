@@ -61,6 +61,7 @@ import {
   linkAccount,
   teammateHome,
 } from '../teammates.js'
+import { answerLater, asideAfterRestart, asideResult } from './aside.js'
 import {
   answerAfterRestart,
   approvalAfterRestart,
@@ -195,6 +196,11 @@ type SavedState = {
   waiting?: WaitingCall[]
   /** The built-in tool calls the last turn stopped on, waiting to be approved, for the same reason. */
   approvals?: WaitingApproval[]
+  /**
+   * Tickets and questions set aside for a message the person wrote instead of answering them
+   * (aside.ts): still open, their answer comes as a message of its own (laterAnswer).
+   */
+  later?: WaitingCall[]
   /**
    * An update handed the running turn over (handOver): it goes on in the harness it ran in,
    * these process groups, which the next session attaches to. With the calls it had under way.
@@ -442,10 +448,13 @@ export class HarnessThread {
 
   async run(input: ThreadInput, spec: ThreadSpec, signal: AbortSignal): Promise<TurnOutcome> {
     this.spec = spec
+    await this.load()
+    // An answer to an ask set aside for a message: no turn waits on it, so it comes as a message.
+    const later = this.laterAnswer(input)
+    if (later !== undefined) input = { kind: 'prompt', text: later }
     // An approval, an answer or a ticket goes on with the turn it paused.
     if (input.kind === 'prompt') this.replies.start()
     else if (input.kind === 'resume') this.replies.resume()
-    await this.load()
     if (spec.moved && this.saved?.movedAt !== spec.moved.at) await this.arrive(spec.moved)
     let handoff: string | undefined
     // The first turn here since the thread moved: a new session, told the thread so far.
@@ -576,7 +585,7 @@ export class HarnessThread {
         source: 'runner',
         value: `${spec.teammate.name}'s turn was cut off by ${MAX_RECOVERIES} restarts in a row, so it was not continued again. Send a message to continue.`,
       })
-      this.emit({ type: 'turn.completed', finishReason: 'interrupted' })
+      this.completed('interrupted')
       return null
     }
     saved.recoveries = recoveries
@@ -655,6 +664,82 @@ export class HarnessThread {
     await this.load()
     const resume = this.saved?.resume as { continueFrom?: unknown } | undefined
     return !!resume?.continueFrom && !frozenMidRun(resume)
+  }
+
+  /**
+   * A new message waits until a person answers: the last turn waits on an approval, which only
+   * a decision goes on from. One waiting only on tickets and questions takes it now (aside.ts).
+   */
+  async holdsMessages() {
+    return (await this.awaitingPerson()) && !(await this.asksOnly())
+  }
+
+  /** The last turn waits on this approval. A decision on any other (made twice) goes nowhere. */
+  async awaitsApproval(approvalId: string) {
+    await this.load()
+    return this.waitsOnApproval(approvalId)
+  }
+
+  /**
+   * Known already, without reading the saved state: no turn of this teammate waits on this
+   * approval. False when it can't tell yet (awaitsApproval tells, once its turn comes).
+   */
+  decidesNothing(approvalId: string) {
+    return (
+      (this.live !== undefined || this.saved !== undefined) && !this.waitsOnApproval(approvalId)
+    )
+  }
+
+  private waitsOnApproval(approvalId: string) {
+    if (this.approvals.has(approvalId)) return true
+    if (this.live) return false
+    return !!closeTurn(this.saved?.resume)?.approvals.some((a) => a.approvalId === approvalId)
+  }
+
+  /** The last turn waits on a person only for tickets and questions, which a message sets aside. */
+  private async asksOnly() {
+    if (this.live)
+      return (
+        this.live.session.hasUnfinishedTurn() &&
+        !this.frozen &&
+        !this.drain &&
+        this.approvals.size === 0 &&
+        waitingOn(this.toolCalls, PERSON_TOOLS).length > 0
+      )
+    await this.load()
+    const closed = closeTurn(this.saved?.resume)
+    return (
+      !!closed &&
+      closed.approvals.length === 0 &&
+      closed.waiting.length > 0 &&
+      closed.waiting.every((call) => PERSON_TOOLS.has(call.toolName))
+    )
+  }
+
+  /** The tickets and questions the turn waits on, set aside: still open, answered later. */
+  private setAside(): WaitingCall[] {
+    const calls = waitingOn(this.toolCalls, PERSON_TOOLS)
+    for (const call of calls) this.toolCalls.delete(call.toolCallId)
+    const ids = new Set(calls.map((c) => c.toolCallId))
+    this.saved!.later = [
+      ...(this.saved!.later ?? []).filter((c) => !ids.has(c.toolCallId)),
+      ...calls,
+    ]
+    return calls
+  }
+
+  /** A person's answer to an ask set aside earlier, as the message it becomes; else undefined. */
+  private laterAnswer(input: ThreadInput) {
+    if (input.kind !== 'answer' && input.kind !== 'ticket') return undefined
+    const id = input.kind === 'answer' ? input.questionId : input.requestId
+    const call = this.saved?.later?.find((c) => c.toolCallId === id)
+    if (!call) return undefined
+    this.saved!.later = this.saved!.later!.filter((c) => c !== call)
+    const result =
+      input.kind === 'answer'
+        ? this.answerResult(input.questionId, input.answer, call)
+        : this.ticketResult(input.requestId, input.answer, call)
+    return answerLater(call, result.output.value)
   }
 
   /**
@@ -822,7 +907,7 @@ export class HarnessThread {
             return
           early = true
           this.drain = { stop: tail, done: new Promise<void>((resolve) => (drained = resolve)) }
-          this.emit({ type: 'turn.completed', finishReason: 'stop' })
+          this.completed('stop')
           return
         }
         // A guess counts once the turn is answered: before that, more of the turn comes after it
@@ -870,7 +955,10 @@ export class HarnessThread {
       // that turn is closed, and the answer comes as a new message (closed-turn.ts).
       // An approval too: continued, the call it approved comes back interrupted, never run.
       const answer = input.kind === 'answer' || input.kind === 'ticket' || input.kind === 'approval'
-      let closed = !this.live && answer && this.closeTurn()
+      // A message while the turn waits only on the person's tickets and questions: they stay
+      // open, and the message goes in now (aside.ts). Closed so too when its session stopped.
+      const aside = input.kind === 'prompt' && input.text !== '' && (await this.asksOnly())
+      let closed = !this.live && (answer || aside) && this.closeTurn()
       const live = (attached = await this.attach())
       // Or nothing kept the turn at all (the process stopped without parking): the session has
       // no turn to continue, and the answer comes as a new message just the same.
@@ -903,6 +991,16 @@ export class HarnessThread {
       let text = input.kind === 'prompt' || input.kind === 'resume' ? input.text : undefined
       // Nothing frozen came back after all: the teammate is told what happened instead.
       if (input.kind === 'resume' && !text && !live.session.hasUnfinishedTurn()) text = RESTARTED
+      // Set aside, the calls the turn waits on take the message as their result; with that
+      // turn closed, the message says what became of them.
+      let asides: ReturnType<typeof asideResult>[] | undefined
+      const calls = aside ? this.setAside() : []
+      if (calls.length > 0 && text !== undefined) {
+        if (live.session.hasUnfinishedTurn()) {
+          asides = calls.map((call) => asideResult(call, text!))
+          text = undefined
+        } else text = asideAfterRestart(calls, text)
+      }
       if (text !== undefined && live.session.hasUnfinishedTurn()) {
         if (!this.frozen) {
           return {
@@ -931,8 +1029,13 @@ export class HarnessThread {
       const held =
         text !== undefined &&
         (live.session.hasUnfinishedTurn() || signal.aborted || !!mapper.exhausted || !!mapper.error)
-      let result =
-        held || text === ''
+      let result = asides
+        ? await live.agent.continueStream({
+            session: live.session,
+            abortSignal: streamSignal(),
+            toolResultContinuations: asides,
+          })
+        : held || text === ''
           ? undefined
           : closed && input.kind === 'approval'
             ? await live.agent.stream({
@@ -1049,10 +1152,7 @@ export class HarnessThread {
         await this.drop()
         return { kind: 'done', result: { status: 'failed', error: mapper.error } }
       }
-      this.emit({
-        type: 'turn.completed',
-        finishReason: signal.aborted ? 'interrupted' : mapper.finishReason,
-      })
+      this.completed(signal.aborted ? 'interrupted' : mapper.finishReason)
       await this.persist()
       return { kind: 'done', result: { status: 'idle' } }
     } catch (error) {
@@ -1063,7 +1163,7 @@ export class HarnessThread {
       }
       if (frozenUnder()) return { kind: 'done', result: { status: 'waiting' } }
       if (signal.aborted) {
-        this.emit({ type: 'turn.completed', finishReason: 'interrupted' })
+        this.completed('interrupted')
         return { kind: 'done', result: { status: 'idle' } }
       }
       const message = errorMessage(error)
@@ -1170,8 +1270,11 @@ export class HarnessThread {
   }
 
   /** A person's answer as the result of the question tool that asked it. */
-  private answerResult(questionId: string, answer: QuestionAnswer) {
-    const call = this.toolCalls.get(questionId)
+  private answerResult(
+    questionId: string,
+    answer: QuestionAnswer,
+    call = this.toolCalls.get(questionId),
+  ) {
     const questions = call?.toolName === ASK_USER_TOOL ? askUserQuestions(call.input) : undefined
     return {
       type: 'tool-result' as const,
@@ -1202,8 +1305,11 @@ export class HarnessThread {
   }
 
   /** A person's answer as the result of the open_ticket call that opened the ticket. */
-  private ticketResult(requestId: string, answer: TicketAnswer) {
-    const call = this.toolCalls.get(requestId)
+  private ticketResult(
+    requestId: string,
+    answer: TicketAnswer,
+    call = this.toolCalls.get(requestId),
+  ) {
     const asks = ticketAsks(call?.input)?.asks ?? []
     return {
       type: 'tool-result' as const,
@@ -1236,6 +1342,8 @@ export class HarnessThread {
     })
     this.saved = {
       ...(this.saved?.recoveries ? { recoveries: this.saved.recoveries } : {}),
+      // Still open for the person: their answer comes to the new session as a message.
+      ...(this.saved?.later?.length ? { later: this.saved.later } : {}),
       accountId: account.id,
       transcript: this.saved?.transcript ?? [],
     }
@@ -1565,6 +1673,15 @@ export class HarnessThread {
 
   private emit(event: DistributiveOmit<AgentEvent, 'at'>) {
     this.emitEvent({ ...event, at: new Date().toISOString() } as AgentEvent)
+  }
+
+  /** The turn is over. With an ask set aside still open, the teammate still waits on the person. */
+  private completed(finishReason: string) {
+    this.emit({
+      type: 'turn.completed',
+      finishReason,
+      ...(this.saved?.later?.length ? { waiting: true } : {}),
+    })
   }
 }
 
