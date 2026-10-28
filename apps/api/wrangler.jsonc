@@ -33,7 +33,7 @@
   "hyperdrive": [
     {
       "binding": "DB_HYPERDRIVE",
-      "id": "HYPERDRIVE_ID",
+      "id": "f28736549efe40d2ac7b50c6655308ee",
       "localConnectionString": "postgresql://brigade:brigade@localhost:5433/brigade",
     },
   ],
