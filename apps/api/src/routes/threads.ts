@@ -1014,6 +1014,8 @@ export const threads = new Hono<AppEnv>()
     if ('error' in project) throw project.error
     const projectId = project.id
     const { thread, outcome } = await startThread(db, scope, {
+      // Chosen by the browser, which opened the thread already: never one that exists.
+      ...(input.id ? { id: input.id, fresh: true } : {}),
       teammate,
       computer,
       memberId: scope.memberId,
