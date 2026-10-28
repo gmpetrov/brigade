@@ -205,3 +205,33 @@ test('a message queued when a person takes over runs once they hand back', async
     assert.match(t.prompts[1]!, /Then this/)
   }
 })
+
+test("a hand back's note reaches the teammate before the messages held during it", async () => {
+  const t = await queuedBehind('handback-note-first')
+  t.threads.takeover(t.spec, 'm1', false)
+  await t.threads.handback(t.spec, 'm1', 'Do not send the email, I sent it', async () => [
+    'sent.txt',
+  ])
+  t.finish()
+  await sleep(50)
+  assert.equal(t.prompts.length, 3)
+  assert.match(t.prompts[1]!, /Do not send the email/)
+  assert.match(t.prompts[2]!, /Then this/)
+})
+
+test('a hand back during a turn releases the held messages once that turn ends', async () => {
+  const t = await queuedBehind('handback-mid-turn')
+  const seat = (
+    t.threads as unknown as { harness: () => { harness: Record<string, unknown> } }
+  ).harness()
+  // A live session is not idle until its turn ends.
+  let running = true
+  seat.harness.awaitingPerson = async () => running
+  t.threads.takeover(t.spec, 'm1', false)
+  await t.threads.handback(t.spec, 'm1', '', async () => [])
+  running = false
+  t.finish()
+  await sleep(50)
+  assert.equal(t.prompts.length, 2)
+  assert.match(t.prompts[1]!, /Then this/)
+})

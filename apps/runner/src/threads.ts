@@ -211,8 +211,6 @@ type Message = {
   steering?: Promise<void>
   /** The log's end just after it, once shown. */
   upTo?: Promise<number>
-  /** Its turn is still in the thread's queue, to run or be skipped there. */
-  pending?: boolean
 }
 
 /** Who said what in a thread, so each teammate can be told what it missed. Never a credential. */
@@ -616,6 +614,9 @@ export class Threads {
     // only fail. The teammate reads the message with its next turn.
     this.enqueue(spec, 'prompt', async () => {
       const waiting = await this.harness(thread, spec).harness.awaitingPerson()
+      // The messages held while the person had control queue behind this turn, each teammate's
+      // once it waits on nobody (releaseHeld). Here, every turn queued before is over.
+      await this.releaseAllHeld(thread)
       const files = await changedFiles(takeover.since).catch(() => [])
       if (!note.trim() && files.length === 0) return null
       const text = handbackMessage({ note, files })
@@ -625,13 +626,6 @@ export class Threads {
       const upTo = await this.note(spec, null, 'A member', text)
       return waiting ? null : upTo
     })
-    // The messages held while the person had control run after it, each teammate's once it
-    // waits on nobody (releaseHeld).
-    const held = new Map<string, ThreadSpec>()
-    for (const message of thread.messages.values())
-      if (message.state === 'held') held.set(message.specs[0]!.teammate.id, message.specs[0]!)
-    for (const next of held.values())
-      void this.releaseHeld(thread, next, this.harness(thread, next)).catch(console.error)
   }
 
   /**
@@ -805,7 +799,7 @@ export class Threads {
     spec: ThreadSpec,
     input: ThreadInput | 'prompt' | Lost | Retry,
     prepare?: () => Promise<number | undefined | null>,
-  ): Promise<void> {
+  ) {
     const thread = this.thread(spec.sessionId)
     const seat = this.harness(thread, spec)
     clearTimeout(seat.parkTimer)
@@ -943,7 +937,6 @@ export class Threads {
         if (acquired) this.release()
       }
     })
-    return thread.queue
   }
 
   /**
@@ -1038,8 +1031,7 @@ export class Threads {
   private enqueueMessage(thread: Thread, message: Message) {
     const [first, ...then] = message.specs
     const sessionId = first!.sessionId
-    message.pending = true
-    const step = this.enqueue(first!, 'prompt', async () => {
+    this.enqueue(first!, 'prompt', async () => {
       await message.steering
       if (message.state !== 'queued' && message.state !== 'shown') return null
       // Its teammate waits on a person: the message runs once they answer (releaseHeld).
@@ -1062,7 +1054,6 @@ export class Threads {
       thread.messages.delete(message.id)
       return message.upTo
     })
-    void step.finally(() => (message.pending = false))
     // Each teammate after it is told what was said since its last turn, its predecessors' replies too.
     for (const next of then)
       this.enqueue(next, 'prompt', async () =>
@@ -1256,9 +1247,17 @@ export class Threads {
       // One already in the thread runs without showing as queued again.
       if (message.upTo) message.state = 'shown'
       else this.emitQueued(spec.sessionId, message)
-      // Held by a takeover before its turn came, it still has that turn to run in.
-      if (!message.pending) this.enqueueMessage(thread, message)
+      this.enqueueMessage(thread, message)
     }
+  }
+
+  /** releaseHeld, for each teammate with messages held. */
+  private async releaseAllHeld(thread: Thread) {
+    const held = new Map<string, ThreadSpec>()
+    for (const message of thread.messages.values())
+      if (message.state === 'held') held.set(message.specs[0]!.teammate.id, message.specs[0]!)
+    for (const spec of held.values())
+      await this.releaseHeld(thread, spec, this.harness(thread, spec))
   }
 
   /** Put the thread's files in the teammate's folder; say in the thread which could not be. */
