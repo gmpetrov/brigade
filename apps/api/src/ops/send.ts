@@ -109,8 +109,12 @@ export async function sendNotice(to: Destinations, notice: Notice) {
         }),
         signal: AbortSignal.timeout(10_000),
       }).then(async (response) => {
-        if (!response.ok)
-          throw new Error(`Resend ${response.status}: ${(await response.text()).slice(0, 200)}`)
+        if (response.ok) return
+        const answer = (await response.text()).slice(0, 200)
+        // Sent already under this key (another isolate, an earlier run of the hour), with other
+        // words: Resend keeps the first, which is what the key is for.
+        if (response.status === 409 && /idempotency key/i.test(answer)) return
+        throw new Error(`Resend ${response.status}: ${answer}`)
       }),
     )
   }

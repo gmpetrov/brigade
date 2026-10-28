@@ -20,7 +20,13 @@ import type { OperationName } from './hub/operations.js'
 import type { JobMessage } from './jobs.js'
 import type { ThreadWaiting } from './hub/host.js'
 import type { Failure } from './ops/failures.js'
-import { noteStart, restartProblem, unexpectedRestarts, type Start } from './ops/restarts.js'
+import {
+  IDLE_MS,
+  noteStart,
+  restartProblem,
+  unexpectedRestarts,
+  type Start,
+} from './ops/restarts.js'
 import { API_RESTARTING, diagnose, watchdog, type Pulse } from './ops/watchdog.js'
 
 export { WorkspaceHubObject } from './hub-object.js'
@@ -51,6 +57,8 @@ const onQueue = (env: Env) => Boolean(env.JOBS) && env.JOBS_ON_QUEUE === '1'
 export class Api extends DurableObject<Env> {
   /** Its starts, from its own storage (src/ops/restarts.ts). */
   private starts: Start[] = []
+  /** When it last noted it was busy, in its storage: a start long after it was idle. */
+  private activeNotedAt = 0
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
@@ -68,14 +76,32 @@ export class Api extends DurableObject<Env> {
     try {
       const sql = this.ctx.storage.sql
       sql.exec('CREATE TABLE IF NOT EXISTS starts (at INTEGER NOT NULL, version TEXT NOT NULL)')
+      // Added after the table: an object made before has none.
+      const columns = sql.exec<{ name: string }>('PRAGMA table_info(starts)').toArray()
+      if (!columns.some((c) => c.name === 'idle'))
+        sql.exec('ALTER TABLE starts ADD COLUMN idle INTEGER NOT NULL DEFAULT 0')
       const before = sql
-        .exec<{ at: number; version: string }>('SELECT at, version FROM starts ORDER BY at')
+        .exec<{ at: number; version: string; idle: number }>(
+          'SELECT at, version, idle FROM starts ORDER BY at',
+        )
         .toArray()
-      const start = { at: startedAt.at, version: this.env.CF_VERSION_METADATA?.id ?? 'unknown' }
+        .map((s) => ({ at: s.at, version: s.version, idle: s.idle === 1 }))
+      const activeAt = this.ctx.storage.kv.get<number>('activeAt') ?? 0
+      const start = {
+        at: startedAt.at,
+        version: this.env.CF_VERSION_METADATA?.id ?? 'unknown',
+        idle: startedAt.at - activeAt >= IDLE_MS,
+      }
       const { starts, unexpected } = noteStart(before, start)
       sql.exec('DELETE FROM starts')
       for (const s of starts)
-        sql.exec('INSERT INTO starts (at, version) VALUES (?, ?)', s.at, s.version)
+        sql.exec(
+          'INSERT INTO starts (at, version, idle) VALUES (?, ?, ?)',
+          s.at,
+          s.version,
+          s.idle ? 1 : 0,
+        )
+      this.noteActive()
       this.starts = starts
       if (unexpected) {
         console.error(`api: restarted without a new version (${start.version})`)
@@ -88,7 +114,20 @@ export class Api extends DurableObject<Env> {
     }
   }
 
+  /** Busy now, as kept in its storage: at most every few seconds, a write each. */
+  private noteActive() {
+    const now = Date.now()
+    if (now - this.activeNotedAt < 5_000) return
+    this.activeNotedAt = now
+    try {
+      this.ctx.storage.kv.put('activeAt', now)
+    } catch (error) {
+      console.error(`api: activity not noted: ${String(error)}`)
+    }
+  }
+
   override async fetch(request: Request) {
+    this.noteActive()
     const { app } = await import('./app.js')
     return runIn({ kind: 'api' }, () => app.fetch(request))
   }
@@ -99,6 +138,7 @@ export class Api extends DurableObject<Env> {
    * on there, once.
    */
   async hubCall(workspaceId: string, name: OperationName, args: unknown[], forwarded: boolean) {
+    this.noteActive()
     return runIn({ kind: 'api' }, async () => {
       const [{ outcomeHere }, { hubIsElsewhere, hubStub }] = await Promise.all([
         import('./hub.js'),
@@ -112,12 +152,14 @@ export class Api extends DurableObject<Env> {
 
   /** Failures of the workspaces' hub objects, counted here, where the checks run. */
   async noteFailures(failures: Failure[]) {
+    this.noteActive()
     const { keepFailure } = await import('./ops/failures.js')
     for (const failure of failures) keepFailure(failure)
   }
 
   /** A hub object's threads whose events wait, for the checks (src/ops/checks.ts). */
   async noteThreadsWaiting(workspaceId: string, waiting: ThreadWaiting[]) {
+    this.noteActive()
     const { noteReportedWaiting } = await import('./ops/checks.js')
     noteReportedWaiting(workspaceId, waiting)
   }
@@ -128,6 +170,7 @@ export class Api extends DurableObject<Env> {
    * own hubs (src/hub/jobs.ts).
    */
   async ping(): Promise<Pulse> {
+    this.noteActive()
     const { lastChecksAt, lastCheckError, runChecks } = await import('./ops/checks.js')
     if (onQueue(this.env) && (this.ctx.id.name ?? NAME) === NAME) {
       const { logLocalHubs, tickLocalHubs } = await import('./hub/jobs.js')
