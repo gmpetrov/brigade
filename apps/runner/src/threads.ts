@@ -261,7 +261,16 @@ type Thread = {
   /** A memory run is queued or running: a new message waits for it. */
   memorizing: boolean
   /** Set while a person holds control: no teammate acts in the thread. */
-  takeover?: { memberId: string; since: number; teammateId: string }
+  /**
+   * A person has control. `paused` once its teammate stopped for them (control.changed), with
+   * whether it waited on a person's answer then; handed back before, its turn went on.
+   */
+  takeover?: {
+    memberId: string
+    since: number
+    teammateId: string
+    paused?: { waiting: boolean }
+  }
   log: Promise<Log>
   /** Turns queued and not yet started, by teammate id. */
   waiting: Map<string, number>
@@ -572,7 +581,12 @@ export class Threads {
   takeover(spec: ThreadSpec, memberId: string, interrupt: boolean) {
     const thread = this.thread(spec.sessionId)
     if (thread.takeover) return
-    thread.takeover = { memberId, since: Date.now(), teammateId: spec.teammate.id }
+    const takeover: NonNullable<Thread['takeover']> = {
+      memberId,
+      since: Date.now(),
+      teammateId: spec.teammate.id,
+    }
+    thread.takeover = takeover
     this.settleFailure(thread)
     void this.options.previews.threadBusy(spec.sessionId)
     if (interrupt) thread.controller?.abort()
@@ -584,8 +598,15 @@ export class Threads {
       }
       if (message.state === 'held') message.takenOver = true
     }
-    // Wait for the current turn to end, then record the change of control.
-    thread.queue = thread.queue.then(() => {
+    // Wait for the current turn to end, then record the change of control: unless it was
+    // handed back meanwhile, which would leave the thread paused with nobody in control.
+    thread.queue = thread.queue.then(async () => {
+      if (thread.takeover !== takeover) return
+      const waiting = await this.harness(thread, spec)
+        .harness.awaitingPerson()
+        .catch(() => false)
+      if (thread.takeover !== takeover) return
+      takeover.paused = { waiting }
       this.options.emit(spec.sessionId, {
         at: new Date().toISOString(),
         type: 'control.changed',
@@ -612,6 +633,8 @@ export class Threads {
       type: 'control.changed',
       controller: 'teammate',
       memberId,
+      // Still waiting on what it asked: the thread waits on a person again, rather than idle.
+      ...(takeover.paused?.waiting ? { waiting: true } : {}),
     })
     // In the queue at once, ahead of a ticket answered with the hand back: it runs first,
     // while its teammate still waits on that person, and then starts no turn, which would
@@ -625,7 +648,13 @@ export class Threads {
       if (!note.trim() && files.length === 0) return null
       const text = handbackMessage({ note, files })
       const at = new Date().toISOString()
-      this.options.emit(spec.sessionId, { at, type: 'message.user', text, memberId })
+      this.options.emit(spec.sessionId, {
+        at,
+        type: 'message.user',
+        text,
+        memberId,
+        ...(waiting ? { waiting: true } : {}),
+      })
       thread.handoffs = 0
       const upTo = await this.note(spec, null, 'A member', text)
       return waiting ? null : upTo

@@ -268,3 +268,40 @@ test('a hand back during a ticket turn runs its note, then the held message, onc
   assert.match(t.prompts[1]!, /Do not send the email/)
   assert.match(t.prompts[2]!, /Then this/)
 })
+
+const controls = (events: AgentEvent[]) =>
+  events.flatMap((e) =>
+    e.type === 'control.changed' ? [`${e.controller}${e.waiting ? ' waiting' : ''}`] : [],
+  )
+
+test('a takeover handed back before its turn ends never pauses the thread', async () => {
+  const t = await queuedBehind('handback-before-pause')
+  t.threads.takeover(t.spec, 'm1', false)
+  await sleep(20)
+  await t.threads.handback(t.spec, 'm1', '', async () => [])
+  t.finish()
+  await sleep(50)
+  // Only the hand back: the teammate never stopped for the person, so the thread is not paused.
+  assert.deepEqual(controls(t.events), ['teammate'])
+  assert.equal(t.prompts.length, 2)
+})
+
+test('a hand back while the teammate still waits on its ticket says so, and starts no turn', async () => {
+  const t = takenOver('handback-still-waiting')
+  await sleep(20)
+  assert.deepEqual(controls(t.events), ['human'])
+  await t.threads.handback(t.spec, 'm1', 'I do not understand', async () => [])
+  await sleep(30)
+  assert.deepEqual(controls(t.events), ['human', 'teammate waiting'])
+  const note = t.events.findLast((e) => e.type === 'message.user')
+  assert.equal(note?.type === 'message.user' && note.waiting, true)
+  assert.deepEqual(t.inputs, [])
+})
+
+test('a hand back once the teammate waits on nobody leaves it idle', async () => {
+  const t = takenOver('handback-not-waiting')
+  t.stopWaiting()
+  await sleep(20)
+  await t.threads.handback(t.spec, 'm1', '', async () => [])
+  assert.deepEqual(controls(t.events), ['human', 'teammate'])
+})
