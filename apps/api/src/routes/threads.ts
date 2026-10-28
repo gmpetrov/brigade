@@ -103,7 +103,14 @@ import { stopWatching } from '../replies.js'
 import { cancelWakeup } from '../wakeups.js'
 import { surface } from '../playbooks.js'
 import { runLog } from '../timeline.js'
-import { historyContext, pageEvents, pageStart } from '../thread-history.js'
+import {
+  historyContext,
+  pageEnd,
+  pageEvents,
+  pageStart,
+  startAt,
+  threadPrompts,
+} from '../thread-history.js'
 import { noteInThread } from '../thread-notes.js'
 import {
   parseBody,
@@ -580,18 +587,39 @@ export const threads = new Hono<AppEnv>()
   })
 
   /**
-   * An older page of the thread's events: those before `before`, from a turn's start. Without
-   * `before`, the latest page and what the whole thread needs from before it, as a socket's
+   * A page of the thread's events. `before`: the page ending there, from a turn's start, and
+   * not before `since` when given (what the dashboard has already). `from`: the page holding
+   * that event, from the turn's start or message at or before it, up to about a page on and
+   * not past `until`: the timeline jumps there without loading what lies between. Without
+   * either, the latest page and what the whole thread needs from before it, as a socket's
    * `history` then `events` bring them: the dashboard opens a thread on it, with the thread,
    * and its socket only brings what follows.
    */
   .get('/:id/events', async (c) => {
-    if (c.req.query('before') === undefined) {
-      const thread = await c.var.db.session.findFirst({
-        where: { id: c.req.param('id') },
-        select: { id: true, lastSeq: true },
+    const seq = z.coerce.number().int().min(1)
+    const query = z
+      .object({
+        before: seq.optional(),
+        since: seq.optional(),
+        from: seq.optional(),
+        until: seq.optional(),
       })
-      if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
+      .safeParse(c.req.query())
+    if (!query.success)
+      throw new HTTPException(400, { message: 'Pages are named by sequence numbers' })
+    const { before, since, from, until } = query.data
+    const thread = await c.var.db.session.findFirst({
+      where: { id: c.req.param('id') },
+      select: { id: true, lastSeq: true },
+    })
+    if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
+    if (from !== undefined) {
+      const end = Math.min(until ?? thread.lastSeq + 1, thread.lastSeq + 1)
+      const firstSeq = Math.min(await startAt(thread.id, from), end)
+      const endSeq = await pageEnd(thread.id, firstSeq, end)
+      return c.json({ firstSeq, endSeq, events: await pageEvents(thread.id, firstSeq, endSeq) })
+    }
+    if (before === undefined) {
       const firstSeq = await pageStart(thread.id, thread.lastSeq + 1)
       const [context, events] = await Promise.all([
         historyContext(thread.id, firstSeq),
@@ -599,16 +627,18 @@ export const threads = new Hono<AppEnv>()
       ])
       return c.json({ firstSeq, lastSeq: thread.lastSeq, context, events })
     }
-    const before = z.coerce.number().int().min(1).safeParse(c.req.query('before'))
-    if (!before.success)
-      throw new HTTPException(400, { message: 'before must be a sequence number' })
+    const firstSeq = Math.max(await pageStart(thread.id, before), Math.min(since ?? 1, before))
+    return c.json({ firstSeq, events: await pageEvents(thread.id, firstSeq, before) })
+  })
+
+  /** The messages people wrote in the thread, each one's start: the timeline beside a long thread. */
+  .get('/:id/prompts', async (c) => {
     const thread = await c.var.db.session.findFirst({
       where: { id: c.req.param('id') },
       select: { id: true },
     })
     if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
-    const firstSeq = await pageStart(thread.id, before.data)
-    return c.json({ firstSeq, events: await pageEvents(thread.id, firstSeq, before.data) })
+    return c.json(await threadPrompts(thread.id))
   })
 
   /**

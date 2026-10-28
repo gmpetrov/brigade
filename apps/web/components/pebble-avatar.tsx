@@ -1,5 +1,20 @@
+'use client'
 import type { CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
+
+/**
+ * One watcher for every pebble: those out of sight stand still. Each morph repaints its
+ * pebble on every frame, which a long thread's hundreds of replies, each with its
+ * teammate's pebble, turned into seconds of work.
+ */
+let watcher: IntersectionObserver | undefined
+function stillOutOfSight(node: HTMLElement) {
+  watcher ??= new IntersectionObserver((entries) => {
+    for (const e of entries) e.target.toggleAttribute('data-still', !e.isIntersecting)
+  })
+  watcher.observe(node)
+  return () => watcher?.unobserve(node)
+}
 
 /** A 32-bit hash of the seed (cyrb53's mixing, folded down). */
 function hash(seed: string) {
@@ -79,6 +94,7 @@ export function PebbleAvatar({
 }) {
   return (
     <span
+      ref={stillOutOfSight}
       data-slot="avatar"
       role="img"
       aria-label={title}

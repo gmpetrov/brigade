@@ -141,6 +141,7 @@ import {
 } from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
 import { slotWait } from '@/lib/slot-wait'
+import { inGap, type EventGap } from '@/lib/use-thread-events'
 import { pauseLabel, pauses } from '@/lib/thread-times'
 import { cn } from '@/lib/utils'
 
@@ -234,6 +235,8 @@ export type Item =
   /** A turn waits for a free slot on its computer, all of them taken by other turns. */
   | { kind: 'slot'; key: string; at: number; teammateId: string; running: number }
   | { kind: 'turn'; key: string; finishReason: string; startedAt?: number; at: number }
+  /** Events not loaded here, after the timeline jumped past them: they load as it comes near. */
+  | { kind: 'gap'; key: string; gap: EventGap }
   | { kind: 'error'; key: string; message: string }
   /** settles: something happened that the buttons asked before it no longer fit (thread.note). */
   | { kind: 'note'; key: string; text: string; settles?: true }
@@ -294,9 +297,10 @@ const ASKS = new Set<Item['kind']>(['approval', 'question', 'ticket'])
 /**
  * Fold the event log into what a person reads: messages, tool calls, approvals.
  * Events before `firstSeq` (the context of a thread opened by its latest page)
- * count for its state but do not show, but for asks still open.
+ * count for its state but do not show, but for asks still open; so do those in `gaps`,
+ * each of which shows as a line where it is.
  */
-export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
+export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: EventGap[] = NO_GAPS) {
   return useMemo(() => {
     const items: Item[] = []
     const byKey = new Map<string, Item>()
@@ -319,8 +323,18 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
       if (shown || ASKS.has(item.kind)) items.push(item)
       byKey.set(item.key, item)
     }
+    let nextGap = 0
     for (const { seq, event: e } of events) {
-      shown = seq >= firstSeq
+      // Past a gap: its line, and what was open before it closes, as unknown.
+      while (nextGap < gaps.length && gaps[nextGap]!.to <= seq) {
+        const gap = gaps[nextGap++]!
+        items.push({ kind: 'gap', key: `g${gap.from}`, gap })
+        turnStartedAt = undefined
+        idle = undefined
+        commands = []
+        handed = undefined
+      }
+      shown = seq >= firstSeq && !inGap(gaps, seq)
       switch (e.type) {
         case 'message.user':
           if (e.messageId) {
@@ -623,8 +637,10 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
       turnId,
       background: [...background.values()],
     }
-  }, [events, firstSeq])
+  }, [events, firstSeq, gaps])
 }
+
+const NO_GAPS: EventGap[] = []
 
 /** The background work after one of Claude Code's task messages. */
 function backgroundTasks(tasks: Map<string, BackgroundTask>, value: unknown) {
@@ -1109,6 +1125,13 @@ function layoutThread(items: Item[], working: boolean) {
   let since: number[] = []
   const worked = (to: number, from?: number) => (from === undefined ? 0 : to - from)
   items.forEach((item, i) => {
+    // What came before a gap stands on its own: its turn's end, if any, is in the gap.
+    if (item.kind === 'gap') {
+      nodes.push(...group(since), { type: 'item', i })
+      since = []
+      running = steered = undefined
+      return
+    }
     // A turn starting again before it ended (resumed) goes on.
     if (item.kind === 'start' && running === undefined) {
       nodes.push(...group(since))
@@ -1841,6 +1864,7 @@ export function ThreadItems({
   drafting = false,
   onRetry,
   admin = false,
+  gapLine,
 }: {
   threadId: string
   items: Item[]
@@ -1886,6 +1910,8 @@ export function ThreadItems({
   onRetry?: () => Promise<void>
   /** An owner or admin: they alone allow what only admins may (a teammate's trigger). */
   admin?: boolean
+  /** Where events are not loaded: what loads them. */
+  gapLine?: (gap: EventGap) => React.ReactNode
 }) {
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
@@ -2469,6 +2495,8 @@ export function ThreadItems({
               )}
           </div>
         )
+      case 'gap':
+        return <Fragment key={item.key}>{gapLine?.(item.gap)}</Fragment>
       case 'start':
       case 'woke':
       case 'slot':

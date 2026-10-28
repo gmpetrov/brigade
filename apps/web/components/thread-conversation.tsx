@@ -87,6 +87,7 @@ import { useThreadOutputs } from '@/components/thread-outputs'
 import { ChangesPanel } from '@/components/changes-panel'
 import { useThreadPanel } from '@/components/thread-panel'
 import { ThreadSkeleton } from '@/components/thread-skeleton'
+import { ThreadTimeline, useThreadPrompts } from '@/components/thread-timeline'
 import { ThreadItems, useThreadItems, type ComputerDown } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -114,6 +115,7 @@ import {
   preloadThreadEvents,
   useThreadEvents,
   type ComputerAvailability,
+  type EventGap,
 } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 
@@ -214,8 +216,11 @@ export function ThreadConversation({
     events,
     connected,
     firstSeq,
+    gaps,
     loadOlder,
     loadingOlder,
+    jumpTo,
+    fillGap,
     loaded: eventsLoaded,
     reconnect,
   } = useThreadEvents(id, (status, computer) => {
@@ -225,7 +230,7 @@ export function ThreadConversation({
     // It moved while this page was away: the thread again, for its new computer's name and move.
     if (thread.data && computer.id !== thread.data.computer.id) void thread.reload()
   })
-  const { items, queued, seen, turnId, background } = useThreadItems(events, firstSeq)
+  const { items, queued, seen, turnId, background } = useThreadItems(events, firstSeq, gaps)
   const outputs = useThreadOutputs(events)
   const preview = useCheckedPreview(id, useThreadPreview(events))
   // Preview is offered once there is something to preview: a preview it had, or code it checked out.
@@ -376,6 +381,13 @@ export function ThreadConversation({
   const [teaching, setTeaching] = useState(false)
   // Recording a task needs a desktop to do it on: not offered on phones.
   const phone = useIsMobile()
+  // Asked of the API only for a thread not loaded from its start, shown wide.
+  const prompts = useThreadPrompts(
+    id,
+    items,
+    firstSeq <= 1 && gaps.length === 0,
+    expanded && !phone,
+  )
   // No Tab key to take a suggestion: a Use button beside the box instead.
   const touch = useTouchScreen()
   // One panel beside the thread: a document opened anywhere replaces the file, preview or computer.
@@ -534,7 +546,56 @@ export function ThreadConversation({
     anchor.current = undefined
     const view = scroller.current
     if (fromEnd !== undefined && view) view.scrollTop = view.scrollHeight - fromEnd
-  }, [firstSeq])
+  }, [firstSeq, gaps])
+  // A gap's page goes in where it is: read up into it, what is on screen stays where it was.
+  const loadGap = (gap: EventGap, line: HTMLElement) => {
+    const view = scroller.current
+    const fromBelow =
+      !!view &&
+      line.getBoundingClientRect().top < view.getBoundingClientRect().top + view.clientHeight / 2
+    return fillGap(gap, fromBelow ? 'last' : 'first', () => {
+      if (fromBelow && view) anchor.current = view.scrollHeight - view.scrollTop
+    })
+  }
+
+  // The timeline: a message it went to, once it shows, comes to the top of the view. Pages
+  // near it then wait for a scroll of the person's own, rather than loading at once.
+  const [jumping, setJumping] = useState<number>()
+  const [settled, setSettled] = useState(true)
+  useEffect(() => {
+    setJumping(undefined)
+    setSettled(true)
+  }, [id])
+  const jump = (seq: number) => {
+    setSettled(false)
+    setJumping(seq)
+    // Only this message's own failure: a newer click keeps its place.
+    void jumpTo(seq).catch(() => setJumping((was) => (was === seq ? undefined : was)))
+  }
+  useLayoutEffect(() => {
+    const view = scroller.current
+    const node =
+      jumping !== undefined && view?.querySelector<HTMLElement>(`[data-seq="${jumping}"]`)
+    if (!view || !node) return
+    setJumping(undefined)
+    following.current = false
+    // Below the bar floating over the top of the conversation.
+    const top = node.getBoundingClientRect().top - view.getBoundingClientRect().top
+    view.scrollTo({ top: view.scrollTop + top - JUMP_MARGIN })
+  }, [jumping, events, gaps])
+  useEffect(() => {
+    const view = scroller.current
+    if (!view || settled) return
+    const scrolled = () => setSettled(true)
+    view.addEventListener('wheel', scrolled, { passive: true })
+    view.addEventListener('touchmove', scrolled, { passive: true })
+    view.addEventListener('keydown', scrolled)
+    return () => {
+      view.removeEventListener('wheel', scrolled)
+      view.removeEventListener('touchmove', scrolled)
+      view.removeEventListener('keydown', scrolled)
+    }
+  }, [settled])
   useEffect(() => {
     if (thread.data) setStatus(thread.data.status)
     if (thread.data) setEventsWaitingSince(thread.data.eventsWaitingSince)
@@ -1164,6 +1225,14 @@ export function ThreadConversation({
         {drop.dragging && <DropOverlay />}
         {top}
         {previewButton}
+        {expanded && eventsLoaded && (
+          <ThreadTimeline
+            scroller={scroller}
+            prompts={prompts}
+            long={firstSeq > 1 || gaps.length > 0}
+            onJump={jump}
+          />
+        )}
         <div ref={scroller} className="scroll-fade scroll-fade-y min-h-0 flex-1 overflow-y-auto">
           <div className={cn(column, top ? 'pt-16' : expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
             {t.parent && (
@@ -1192,6 +1261,7 @@ export function ThreadConversation({
                       root={scroller}
                       loading={loadingOlder}
                       onLoad={loadEarlier}
+                      auto={settled}
                     />
                   )}
                   <ThreadItems
@@ -1207,6 +1277,14 @@ export function ThreadConversation({
                     background={background}
                     eventsWaitingSince={eventsWaitingSince}
                     computerDown={machineDown}
+                    gapLine={(gap) => (
+                      <MessagesBetween
+                        key={`${gap.from}-${gap.to}`}
+                        root={scroller}
+                        auto={settled}
+                        onLoad={(line) => loadGap(gap, line)}
+                      />
+                    )}
                     childThreads={t.children}
                     onOpenPreview={previewLive(preview) ? openPreview : undefined}
                     previewStart={{
@@ -1629,6 +1707,7 @@ export function EarlierMessages({
   loading,
   onLoad,
   noun = 'messages',
+  auto = true,
 }: {
   /** What scrolls the thread: "near" is near its top. */
   root: RefObject<HTMLElement | null>
@@ -1636,6 +1715,8 @@ export function EarlierMessages({
   onLoad: () => Promise<void>
   /** What it loads: messages, or threads in the threads panel. */
   noun?: string
+  /** Loads as it comes near; else only on a click. */
+  auto?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [failed, setFailed] = useState(false)
@@ -1644,7 +1725,7 @@ export function EarlierMessages({
   // Keyed by the page: a new observer per page, which loads the next one if this is still near.
   useEffect(() => {
     const node = ref.current
-    if (!node || failed) return
+    if (!node || failed || !auto) return
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) void load.current().catch(() => setFailed(true))
@@ -1653,7 +1734,7 @@ export function EarlierMessages({
     )
     observer.observe(node)
     return () => observer.disconnect()
-  }, [failed, root])
+  }, [failed, root, auto])
   return (
     <div ref={ref} className="mb-4 flex justify-center text-sm text-muted-foreground">
       {loading ? (
@@ -1675,6 +1756,66 @@ export function EarlierMessages({
     </div>
   )
 }
+
+/** Where the timeline left messages out: loads them as it comes in sight, from the side it is read. */
+function MessagesBetween({
+  root,
+  auto,
+  onLoad,
+}: {
+  root: RefObject<HTMLElement | null>
+  /** Loads as it comes in sight; else only on a click. */
+  auto: boolean
+  onLoad: (line: HTMLElement) => Promise<void>
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const load = useRef(onLoad)
+  load.current = onLoad
+  const run = () => {
+    const node = ref.current
+    if (!node) return
+    setLoading(true)
+    setFailed(false)
+    void load
+      .current(node)
+      .catch(() => setFailed(true))
+      .finally(() => setLoading(false))
+  }
+  const runRef = useRef(run)
+  runRef.current = run
+  useEffect(() => {
+    const node = ref.current
+    if (!node || failed || !auto) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) runRef.current()
+      },
+      { root: root.current, rootMargin: '400px 0px' },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [failed, root, auto])
+  return (
+    <div ref={ref} className="flex items-center gap-3 text-sm text-muted-foreground">
+      <span className="h-px flex-1 bg-border" />
+      {loading ? (
+        <span className="flex items-center gap-2">
+          <LoaderCircle aria-hidden className="size-4 animate-spin" /> Loading messages…
+        </span>
+      ) : (
+        <Button variant="ghost" size="sm" onClick={run}>
+          {failed ? 'Could not load these messages. Try again' : 'Show messages in between'}
+        </Button>
+      )}
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  )
+}
+
+/** Room above a message the timeline went to: the bar over the conversation's top. */
+const JUMP_MARGIN = 72
 
 /**
  * An open ticket whose call waits on a decision: an approval before a built-in tool call, an
