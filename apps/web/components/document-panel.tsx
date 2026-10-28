@@ -238,6 +238,12 @@ export function DocumentPanel() {
     [libraryId, path],
   )
   const discussion = useDocumentDiscussion(file)
+  const askName = discussion?.teammate?.name
+  const onAsk = discussion?.ask
+  const ask = useMemo(
+    () => (askName && onAsk ? { teammate: askName, onAsk } : undefined),
+    [askName, onAsk],
+  )
   if (!current) return null
   const Icon = current.target.kind === 'library' ? FileText : BookOpen
   const target = current.target
@@ -318,11 +324,7 @@ export function DocumentPanel() {
             target={current.target}
             label={current.title}
             className="min-h-full"
-            ask={
-              discussion?.teammate
-                ? { teammate: discussion.teammate.name, onAsk: discussion.ask }
-                : undefined
-            }
+            ask={ask}
           />
         </div>
       )}
