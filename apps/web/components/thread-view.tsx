@@ -1161,10 +1161,12 @@ function layoutThread(items: Item[], working: boolean) {
       running = steered = undefined
     }
   })
-  nodes.push(...group(since))
+  // The running turn's steps fold under its Working line, below its messages and cards.
+  const live = working && running !== undefined ? since.filter((i) => isActivity(items[i]!)) : []
+  nodes.push(...group(live.length ? since.filter((i) => !live.includes(i)) : since))
   const last = nodes.at(-1)
   if (working && last?.type === 'activity') last.live = true
-  return Object.assign(nodes, { running: steered ?? running })
+  return Object.assign(nodes, { running: steered ?? running, live })
 }
 
 /** "45s", "1m 52s", "2h 5m". */
@@ -1692,20 +1694,74 @@ function WorkedFor({ ms, children }: { ms: number; children: React.ReactNode }) 
   )
 }
 
-/** How long the running turn has worked, counting up. Not for the first seconds of a quick reply. */
-function WorkingFor({ since }: { since: number }) {
+/**
+ * The running turn as one line: "Working · 4 steps · 1 in background", how long it has worked,
+ * and its steps and background work under it. Not for the first seconds of a quick reply.
+ */
+function WorkingLine({
+  since,
+  steps,
+  background,
+  children,
+}: {
+  /** When the turn began; unset when how long it worked is not known or not to be said. */
+  since?: number
+  steps: ActivityItem[]
+  background: BackgroundTask[]
+  children: React.ReactNode
+}) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
+    if (since === undefined) return
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
-  }, [])
-  const ms = now - since
-  if (ms < 5_000) return null
+  }, [since])
+  const ms = since === undefined ? 0 : now - since
+  if (!steps.length && !background.length && ms < 5_000) return null
+  // Thinking is no step of its own: it shows under the line, uncounted.
+  const count = steps.filter((item) => item.kind !== 'thinking').length
+  const failed = steps.filter((item) => item.kind === 'tool' && item.isError).length
   return (
-    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-      <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
-      Working for {duration(ms)}
-    </div>
+    <Collapsible className="flex min-w-0 flex-col text-sm">
+      <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-1.5 text-left text-muted-foreground hover:text-foreground">
+        <span
+          className="mr-0.5 size-1.5 flex-none animate-pulse rounded-full bg-primary"
+          aria-hidden
+        />
+        <span className="flex-none text-foreground">Working</span>
+        {count > 0 && <span className="flex-none">· {plural(count, '1 step', 'steps')}</span>}
+        {background.length > 0 && (
+          <span className="min-w-0 truncate">· {background.length} in background</span>
+        )}
+        {failed > 0 && (
+          <StatusBadge status="failed" label={failed === 1 ? '1 failed' : `${failed} failed`} />
+        )}
+        <span className="ml-auto flex flex-none items-center gap-1.5 pl-2">
+          {ms >= 5_000 && duration(ms)}
+          <ChevronRight
+            className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
+            aria-hidden
+          />
+        </span>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2 ml-0.5 flex flex-col gap-2 border-l pl-3">
+        {children}
+        {background.map((task) => (
+          <div key={task.id} className="flex min-w-0 items-center gap-2 text-muted-foreground">
+            <span
+              className="size-1.5 flex-none animate-pulse rounded-full bg-primary"
+              aria-hidden
+            />
+            <span className="min-w-0 truncate text-foreground/80">{task.description}</span>
+            <span className="ml-auto flex-none pl-2 text-xs">
+              {task.kind === 'agent' && task.steps > 0
+                ? `${plural(task.steps, '1 step', 'steps')} · in background`
+                : 'in background'}
+            </span>
+          </div>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 
@@ -1739,40 +1795,6 @@ function EventsWaiting({ since }: { since: string }) {
     >
       Updates from this thread have not reached Brigade since {when}. Its computer keeps sending
       them.
-    </div>
-  )
-}
-
-/** The work a teammate left running in the background: its turn goes on until it reports back. */
-function BackgroundTasks({ tasks }: { tasks: BackgroundTask[] }) {
-  const agents = tasks.filter((t) => t.kind === 'agent').length
-  const heading =
-    tasks.length === 1
-      ? agents
-        ? 'An agent is working in the background'
-        : 'A command is running in the background'
-      : agents === tasks.length
-        ? `${tasks.length} agents are working in the background`
-        : agents === 0
-          ? `${tasks.length} commands are running in the background`
-          : `${tasks.length} tasks are running in the background`
-  return (
-    <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-      <span>{heading}</span>
-      <ul className="flex flex-col gap-1 pl-1">
-        {tasks.map((task) => (
-          <li key={task.id} className="flex min-w-0 items-center gap-2">
-            <span
-              className="size-1.5 flex-none animate-pulse rounded-full bg-primary"
-              aria-hidden
-            />
-            <span className="min-w-0 truncate text-foreground/80">{task.description}</span>
-            {task.steps > 0 && (
-              <span className="flex-none text-xs">{plural(task.steps, '1 step', 'steps')}</span>
-            )}
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }
@@ -2265,7 +2287,11 @@ export function ThreadItems({
                 aria-hidden
               />
               {!item.finished ? (
-                <StatusBadge status="running" />
+                <span
+                  role="img"
+                  aria-label="Running"
+                  className="size-1.5 flex-none animate-pulse rounded-full bg-primary"
+                />
               ) : item.isError ? (
                 <StatusBadge status="failed" />
               ) : null}
@@ -2561,6 +2587,16 @@ export function ThreadItems({
   return (
     <div className="flex flex-col gap-4">
       {show(nodes)}
+      {working && ((nodes.running !== undefined && !waitingFor) || background.length > 0) && (
+        <WorkingLine
+          key="working"
+          {...(nodes.running !== undefined && !eventsWaitingSince ? { since: nodes.running } : {})}
+          steps={nodes.live.map((i) => items[i]!) as ActivityItem[]}
+          background={background}
+        >
+          {nodes.live.map((i) => render(items[i]!, i))}
+        </WorkingLine>
+      )}
       {eventsWaitingSince ? (
         <EventsWaiting since={eventsWaitingSince} />
       ) : working && computerDown ? (
@@ -2573,10 +2609,7 @@ export function ThreadItems({
           phase={waiting ? 'thinking' : starting ? 'starting' : 'reading'}
           {...(from !== undefined ? { since: from } : {})}
         />
-      ) : (
-        working && nodes.running !== undefined && <WorkingFor since={nodes.running} />
-      )}
-      {working && background.length > 0 && <BackgroundTasks tasks={background} />}
+      ) : null}
     </div>
   )
 }
