@@ -44,6 +44,7 @@ import { TeammateTitle } from '@/components/teammate-title'
 import { ProjectIcon } from '@/components/projects'
 import { RailPanel } from '@/components/rail-menu'
 import { useThreadPanel } from '@/components/thread-panel'
+import { FadeText } from '@/components/fade-text'
 import { ThreadRow } from '@/components/thread-row'
 import { StreamedTitle } from '@/components/streamed-title'
 import {
@@ -222,15 +223,12 @@ function SubThreads({
                     title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
                     className={SUB_ROW}
                   >
-                    {/* Fades out at its end rather than cut by an ellipsis. */}
-                    <span
-                      className={cn(
-                        'min-w-0 flex-1 overflow-hidden whitespace-nowrap [mask-image:linear-gradient(90deg,#000_80%,transparent)]',
-                        group === 'working' && 'text-shimmer-dim',
-                      )}
+                    <FadeText
+                      className="flex-1"
+                      textClassName={cn(group === 'working' && 'text-shimmer-dim')}
                     >
                       <StreamedTitle threadId={c.id} text={c.title} />
-                    </span>
+                    </FadeText>
                     {state ? (
                       <ThreadStatusIcon {...status} />
                     ) : (

@@ -1,6 +1,6 @@
 'use client'
 // A thread in the sidebar, with its menu (thread-menu.tsx): ⋮ on hover in place of its status
-// dot, or a right-click on the row. The dot shows only while the thread has a state; how old it
+// dot, or a right-click on the row. A title too long for the row fades out (FadeText). The dot shows only while the thread has a state; how old it
 // is and what the dot means show on hover, in the row's tooltip. Rename, or a double-click on the title, edits the title in the
 // row itself. Under Pinned, a row can be dragged to another place (`drag`). A thread whose
 // preview is up shows its icon, which opens the preview on hover (and in the menu on phones).
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import { FadeText } from '@/components/fade-text'
 import { StreamedTitle } from '@/components/streamed-title'
 import { renameThread, useThreadMenu } from '@/components/thread-menu'
 import { useThreadPanel } from '@/components/thread-panel'
@@ -123,9 +124,9 @@ export function ThreadRow({
           }}
         >
           <span className="flex min-w-0 flex-1 items-center gap-1.5">
-            <span className={cn('truncate', working && 'text-shimmer-dim')}>
+            <FadeText textClassName={cn(working && 'text-shimmer-dim')}>
               <StreamedTitle threadId={thread.id} text={title} />
-            </span>
+            </FadeText>
             {/* Right after the title: folds its child threads under it, without opening it. The
                 row below it ("N sub-threads") does the same from the keyboard. */}
             {caret && (
