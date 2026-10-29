@@ -323,9 +323,10 @@ export type SentMessage = {
  * With `picker`, the member also chooses the teammate it goes to. With `draft`, what is
  * written is kept outside; with `onStarted`, the box stays put instead of opening the thread.
  * With `onSending`, it does not wait for the thread either: the box empties at once, and what
- * was sent is the caller's to give back should the thread not start. With `openAtOnce` (a page's
- * own box, which is there again when its page is), the thread opens before it exists
- * (lib/pending-threads.ts), and the message comes back here should it not start.
+ * was sent is the caller's to give back should the thread not start. With `openAtOnce`, the
+ * thread opens before it exists (lib/pending-threads.ts), through `onStarted` if given; should it
+ * not start, the message comes back here with `giveBackHere` (a page's own box, there again when
+ * its page is), else it is kept aside for the new-thread dialog to take up.
  */
 export function NewThread({
   teammate,
@@ -336,6 +337,7 @@ export function NewThread({
   onStarted,
   onSending,
   openAtOnce,
+  giveBackHere,
   autoFocus,
   typeToFocus,
   projectId: initialProject,
@@ -360,8 +362,13 @@ export function NewThread({
    * was sent is not put back in the box: another message may be written there meanwhile.
    */
   onSending?: (thread: Promise<{ id: string }>, sent: SentMessage) => void
-  /** Opens the thread at once, before it exists: for a page's own box (Home, a project's). */
+  /** Opens the thread at once, before it exists. */
   openAtOnce?: boolean
+  /**
+   * With `openAtOnce`, a message whose thread did not start comes back to this box, rather than
+   * aside for the new-thread dialog: for a page's own box (Home, a project's).
+   */
+  giveBackHere?: boolean
   /** Puts the cursor in the message as soon as the box appears. */
   autoFocus?: boolean
   /** The page's main message box: typing with nothing focused lands in it (Composer). */
@@ -422,7 +429,7 @@ export function NewThread({
   const [busy, setBusy] = useState(false)
   // A message whose thread did not start, back from it (lib/pending-threads.ts).
   useEffect(() => {
-    if (!openAtOnce) return
+    if (!openAtOnce || !giveBackHere) return
     const back = pendingThreads.takeReturned(pathname)?.message
     if (!back) return
     // To whom and where it was to run as well: sent again, it goes there.
@@ -504,7 +511,13 @@ export function NewThread({
       const taken = files.take()
       pendingThreads.add(
         id,
-        { teammate, text, files: taken.uploads.map((u) => u.name), from: pathname },
+        {
+          teammate,
+          text,
+          files: taken.uploads,
+          from: pathname,
+          giveBack: giveBackHere ? 'box' : 'dialog',
+        },
         {
           teammateId: teammate.id,
           text,
@@ -517,7 +530,8 @@ export function NewThread({
       )
       setText('')
       setEffortValue(null)
-      router.push(`/app/threads/${id}`)
+      if (onStarted) onStarted({ id })
+      else router.push(`/app/threads/${id}`)
       sending.then(
         async () => {
           // Its conversation takes over once what it opens on is in: no blank in between.
@@ -527,8 +541,8 @@ export function NewThread({
             preloadSettled(`/threads/${id}`),
             preloadSettled(`/threads/${id}/events`),
           ])
+          // Its files' previews go once its conversation has the message (pendingThreads.delivered).
           pendingThreads.started(id)
-          taken.done()
         },
         (error: unknown) => pendingThreads.failed(id, (error as Error).message),
       )

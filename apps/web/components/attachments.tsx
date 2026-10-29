@@ -631,6 +631,42 @@ export function MediaPreview({
 }
 
 /**
+ * The files of a message whose thread is starting (components/pending-thread.tsx), as
+ * MessageAttachments will show them once it has: from this browser's own copies.
+ */
+export function SentAttachments({
+  uploads,
+  className,
+}: {
+  uploads: Pick<Upload, 'key' | 'name' | 'size' | 'preview' | 'media'>[]
+  className?: string
+}) {
+  return (
+    <ul className={cn('flex flex-wrap gap-2', className)} aria-label="Attached files">
+      {uploads.map((u) => (
+        <li
+          key={u.key}
+          className="flex max-w-64 items-center gap-2 rounded-lg border bg-card py-1.5 pr-3 pl-2 text-xs"
+          title={u.name}
+        >
+          {u.preview && u.media ? (
+            <span className="relative size-8 shrink-0 overflow-hidden rounded">
+              <Thumbnail src={u.preview} kind={u.media} small />
+            </span>
+          ) : (
+            <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+          )}
+          <span className="flex min-w-0 flex-col text-left">
+            <span className="truncate font-medium">{u.name}</span>
+            <span className="truncate text-muted-foreground">{fileSize(u.size)}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
  * The files a message came with, under it: an image or video opens over the page
  * like in the composer, any other file in the file panel.
  */

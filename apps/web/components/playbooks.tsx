@@ -240,6 +240,7 @@ function InstallDialog({
           projectId={projectId}
           picker={teammates.length > 1 ? { teammates, onChange: setChosen } : undefined}
           placeholder={`Chat with ${teammate.name}`}
+          openAtOnce
         />
       </DialogContent>
     </Dialog>
@@ -322,6 +323,7 @@ function UpdateDialog({
             autoFocus
             projectId={p.project?.id}
             placeholder={`Chat with ${chief.name}`}
+            openAtOnce
           />
         </DialogContent>
       </Dialog>

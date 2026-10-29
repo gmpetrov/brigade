@@ -709,6 +709,7 @@ function AskTeammateDialog({
             picker={{ teammates, onChange: setLastId }}
             draft={draft}
             rows={10}
+            openAtOnce
           />
         ) : (
           <p className="text-sm text-muted-foreground">
