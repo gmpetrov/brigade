@@ -132,6 +132,8 @@ export function ThreadRow({
             {caret && (
               <span
                 aria-hidden
+                // Folds in place: on a phone, the sidebar stays open (ui/sidebar.tsx).
+                data-keeps-sidebar
                 title={caret.open ? 'Hide sub-threads' : 'Show sub-threads'}
                 className="text-muted-foreground hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
                 onClick={(e) => {
