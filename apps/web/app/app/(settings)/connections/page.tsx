@@ -81,9 +81,20 @@ function AppsList() {
     setOpen({ kind: account.kind, appId: account.appId })
   }, [connected, connections, shown])
 
+  // Opened for one App (/app/connections?app=cloudflare, from a page that needs it): its sheet.
+  // Once: a sign-in started from it comes back with the account and its own `connected`.
+  const asked = params.get('app')
+  const known = !!data.data && !!asked && asked in data.data.catalog
+  const [askedShown, setAskedShown] = useState<string>()
+  useEffect(() => {
+    if (!known || askedShown === asked) return
+    setAskedShown(asked!)
+    setOpen({ kind: asked as Open['kind'] })
+  }, [known, asked, askedShown])
+
   function close() {
     setOpen(undefined)
-    if (connected || params.get('error')) router.replace('/app/connections')
+    if (connected || asked || params.get('error')) router.replace('/app/connections')
   }
 
   const reload = () => Promise.all([data.reload(), triggers.reload()])

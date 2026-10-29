@@ -4,7 +4,12 @@
 // mail reaches Brigade, directly (its MX points to Brigade) or by forwarding (its mail stays with
 // its provider and each address is forwarded to its mailbox). Any mailbox can then have an address
 // on it. The header with the Mailboxes and Domains tabs is shared with the mailboxes' list.
-import type { DomainLookup, MailDomainView } from '@brigade/contracts'
+import type {
+  CloudflareDnsResult,
+  CloudflareDnsSetup,
+  DomainLookup,
+  MailDomainView,
+} from '@brigade/contracts'
 import { ArrowLeft, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useState, type FormEvent, type ReactNode } from 'react'
@@ -14,6 +19,13 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { api, isAdmin, useApi, type EmailState } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -349,6 +361,7 @@ function DomainCard({
           ? `Mail to its addresses stays with ${d.name}'s mail provider; each mailbox's page says where to forward its address.`
           : `Its MX points to Brigade: mail to any of its mailboxes' addresses arrives directly.`}
       </p>
+      {admin && !verified && <CloudflareRecords domain={d} reload={reload} />}
       {!verified && (
         <p className="text-sm text-muted-foreground">
           Add its records within 3 days. After that, while they are not in, another workspace on
@@ -374,6 +387,134 @@ function DomainCard({
       </div>
       {records && <DnsRecords domain={d} />}
     </Card>
+  )
+}
+
+const RESULT_WORDS: Record<CloudflareDnsResult['result'], string> = {
+  added: 'Added',
+  present: 'Already there',
+  conflict: 'Left alone: another record has its name',
+  failed: 'Not added',
+}
+
+/**
+ * A domain whose DNS is at Cloudflare: its records added there in one click, with one of the
+ * workspace's Cloudflare accounts, instead of copied by hand. Without an account, a link to
+ * connect one. Nothing shows for a domain whose DNS is elsewhere.
+ */
+function CloudflareRecords({
+  domain: d,
+  reload,
+}: {
+  domain: MailDomainView
+  reload: () => Promise<unknown>
+}) {
+  const setup = useApi<CloudflareDnsSetup>(`/email/domains/${d.id}/cloudflare`, [
+    'connections.updated',
+  ])
+  const [chosen, setChosen] = useState<string>()
+  const [done, setDone] = useState<{ zone: string; results: CloudflareDnsResult[] }>()
+  const add = useAction()
+  if (!setup.data?.onCloudflare) return null
+  const accounts = setup.data.accounts
+  const account = chosen ?? accounts[0]?.id
+
+  async function addRecords() {
+    if (!account) return
+    const answer = await add.run(() =>
+      api<{ zone: string; results: CloudflareDnsResult[] }>(`/email/domains/${d.id}/cloudflare`, {
+        body: { connectionId: account },
+      }),
+    )
+    if (!answer) return
+    setDone(answer)
+    await reload()
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border bg-muted/50 p-3 text-sm">
+      <span className="font-medium">{d.name}&apos;s DNS is on Cloudflare</span>
+      {accounts.length === 0 ? (
+        <p className="text-muted-foreground">
+          Connect your Cloudflare account and Brigade adds these records for you.{' '}
+          <Link
+            href="/app/connections?app=cloudflare"
+            className="font-medium text-primary hover:underline"
+          >
+            Connect Cloudflare
+          </Link>
+        </p>
+      ) : (
+        <>
+          <p className="text-muted-foreground">
+            Brigade can add these records there for you. It leaves the domain&apos;s other records
+            as they are, and never replaces one.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {accounts.length > 1 && (
+              <Select value={account} onValueChange={setChosen}>
+                <SelectTrigger aria-label="Cloudflare account" className="w-64 bg-card">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button size="sm" disabled={add.busy} onClick={() => void addRecords()}>
+              {add.busy ? 'Adding…' : 'Add them on Cloudflare'}
+            </Button>
+          </div>
+        </>
+      )}
+      <ErrorLine error={add.error} />
+      {done && (
+        <ul className="flex flex-col gap-1">
+          {done.results.map((r) => (
+            <li key={`${r.type}-${r.name}`} className="flex flex-wrap items-baseline gap-x-2">
+              <Dot
+                tone={r.result === 'added' || r.result === 'present' ? 'success' : 'failed'}
+                label={RESULT_WORDS[r.result]}
+              />
+              <span className="font-mono text-xs">
+                {r.type} {r.name}
+              </span>
+              <span className="text-muted-foreground">
+                {RESULT_WORDS[r.result]}
+                {r.note ? ` (${r.note})` : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {done?.results.some((r) => r.result === 'failed') && (
+        <p className="text-muted-foreground">
+          Cloudflare refused some of them: the account may not be allowed to edit DNS.{' '}
+          <Link
+            href="/app/connections?app=cloudflare"
+            className="font-medium text-primary hover:underline"
+          >
+            Reconnect it
+          </Link>{' '}
+          and allow DNS editing, or add them by hand.
+        </p>
+      )}
+      {done?.results.some((r) => r.result === 'conflict') && (
+        <p className="text-muted-foreground">
+          Brigade never replaces a record: change the one in the way on Cloudflare, then add them
+          again.
+        </p>
+      )}
+      {done?.results.every((r) => r.result === 'added' || r.result === 'present') && (
+        <p className="text-muted-foreground">
+          Resend checks them within minutes; the domain turns green once it has.
+        </p>
+      )}
+    </div>
   )
 }
 

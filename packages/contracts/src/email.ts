@@ -33,6 +33,9 @@ export const CreateDomain = z.object({
   receiving: z.enum(DOMAIN_RECEIVING).optional(),
 })
 
+/** Add a domain's records on Cloudflare with one of the workspace's Cloudflare accounts. */
+export const AddDomainRecords = z.object({ connectionId: z.string().min(1) })
+
 /** What Brigade sees of a domain before it is added: where its mail goes now. */
 export type DomainLookup = {
   name: string
@@ -41,6 +44,24 @@ export type DomainLookup = {
   /** Brigade's own receiving already (its MX points to it). */
   brigade: boolean
   suggested: DomainReceiving
+}
+
+/** Whether a domain's records can be added on Cloudflare, and with which of the workspace's accounts. */
+export type CloudflareDnsSetup = {
+  /** Its DNS is served by Cloudflare (its zone's nameservers). */
+  onCloudflare: boolean
+  /** The Cloudflare App accounts the member may use: shared ones, and their own. */
+  accounts: { id: string; label: string }[]
+}
+
+/** One record Brigade tried to add on Cloudflare. */
+export type CloudflareDnsResult = {
+  type: string
+  /** Its full name, e.g. resend._domainkey.acme.com. */
+  name: string
+  /** added; present (already there); conflict (another record holds its name: left alone); failed. */
+  result: 'added' | 'present' | 'conflict' | 'failed'
+  note?: string
 }
 
 /** A domain of the workspace, as Inbox › Mail settings › Domains shows it. */
