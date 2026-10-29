@@ -90,6 +90,7 @@ function LiveDocument({
       connection={connection}
       user={live.user}
       documentId={session.documentId}
+      list={target.kind === 'library'}
       {...props}
     />
   )
@@ -102,10 +103,12 @@ function LiveEditor({
   label,
   className,
   ask,
+  list,
 }: Omit<DocumentEditorProps, 'target'> & {
   connection: Connection
   user: { name: string; color: string }
   documentId: string
+  list: boolean
 }) {
   const [status, setStatus] = useState<Status>('connecting')
   const [synced, setSynced] = useState(false)
@@ -188,7 +191,13 @@ function LiveEditor({
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {synced ? (
-        <DocumentBlockNoteView editor={editor} documentId={documentId} label={label} ask={ask} />
+        <DocumentBlockNoteView
+          editor={editor}
+          documentId={documentId}
+          label={label}
+          ask={ask}
+          list={list}
+        />
       ) : (
         <Skeleton className="h-32 w-full" />
       )}
@@ -264,6 +273,7 @@ function SavedDocument({
   className,
   onSaved,
   ask,
+  target,
 }: DocumentEditorProps & { session: EditSession }) {
   const self = useRef<DocumentBlockEditor>(null)
   const editor = useCreateBlockNote({
@@ -306,6 +316,7 @@ function SavedDocument({
         documentId={session.documentId}
         label={label}
         ask={ask}
+        list={target.kind === 'library'}
         onChange={() =>
           void blocksToMarkdown(editor, editor.document).then((text) => setDirty(text !== saved))
         }

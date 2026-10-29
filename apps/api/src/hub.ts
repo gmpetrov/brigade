@@ -153,4 +153,6 @@ onScopedWrite((model, scope) => {
     notify('mail.updated')
   else if (model === 'Teammate') notify('teammates.updated')
   else if (model === 'Connection' || model === 'Grant') notify('connections.updated')
+  else if (model === 'ListItem' || model === 'ListItemThread' || model === 'ListItemPull')
+    notify('lists.updated')
 })

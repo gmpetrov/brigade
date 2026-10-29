@@ -925,6 +925,28 @@
   --level: 1.15em;
 }
 
+/* A list's filters (app/app/lists/[id]): only its lines that stand so, under their headings.
+ * Where a line stands comes from its marker's chips (components/list-items.tsx). */
+.list-filter-open
+  .bn-block-outer:has(> .bn-block > [data-content-type='checkListItem'][data-checked='true']),
+.list-filter-done
+  .bn-block-outer:has(> .bn-block > [data-content-type='checkListItem']:not([data-checked='true'])),
+.list-filter-needs_you
+  .bn-block-outer:has(> .bn-block > [data-content-type='checkListItem']):not(
+    :has(> .bn-block > .bn-block-content [data-item-state='needs_you'])
+  ),
+.list-filter-in_progress
+  .bn-block-outer:has(> .bn-block > [data-content-type='checkListItem']):not(
+    :has(> .bn-block > .bn-block-content [data-item-state='in_progress'])
+  ),
+:is(.list-filter-open, .list-filter-done, .list-filter-needs_you, .list-filter-in_progress)
+  .bn-block-outer:has(
+    > .bn-block
+      > .bn-block-content:not([data-content-type='checkListItem'], [data-content-type='heading'])
+  ) {
+  display: none;
+}
+
 /* While the sidebar's edge is dragged (components/sidebar-resizer.tsx): it follows the
    pointer without easing, and nothing gets selected on the way. */
 html[data-sidebar-resizing] {

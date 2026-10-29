@@ -69,6 +69,8 @@ const UNSCOPED = new Set([
   'BillingClosing',
   // Webhooks as they came, before anyone knows whose they are: src/inbound.ts's only.
   'InboundEvent',
+  // A library file's lock, by workspace and file: src/library.ts's withLibraryLock only.
+  'LibraryLock',
 ])
 const READS_AND_BULK = new Set([
   'findUnique',

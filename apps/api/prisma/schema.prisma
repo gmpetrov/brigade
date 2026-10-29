@@ -303,6 +303,10 @@ model Workspace {
   contacts              Contact[]
   contactHandles        ContactHandle[]
 
+  listItems       ListItem[]
+  listItemThreads ListItemThread[]
+  listItemPulls   ListItemPull[]
+
   @@index([organizationId])
 }
 
@@ -657,6 +661,9 @@ model Session {
   /// Threads that follow it.
   followers            ThreadFollow[]     @relation("ThreadFollowed")
   folderBackups        FolderBackup[]
+
+  /// The list items it works on (docs/lists.md).
+  listItems ListItemThread[]
 
   @@index([workspaceId, createdAt])
   @@index([projectId, createdAt])
@@ -1033,6 +1040,9 @@ model PullRequest {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
   reviews             PullRequestReview[]
+
+  /// The list items it works on, or finishes (docs/lists.md).
+  listItems ListItemPull[]
 
   @@unique([workspaceId, repository, number])
   @@index([sessionId])
@@ -1553,6 +1563,9 @@ model Document {
   updatedById        String?
   /// The thread a teammate last changed it from.
   updatedInSessionId String?
+  /// Set when a save whose lease ended mid-write may have overwritten its stored bytes: they are
+  /// put back from what its row says (repairBytes, src/library.ts), retried until they are.
+  bytesStaleAt       DateTime?
   /// A memory file: when a tidy run last laid it out (core within budget, topics, archive).
   memoryTidiedAt     DateTime?
   /// Set while a library file is in the trash. Its path is then ".trash/<id>/<path it had>",
@@ -1568,9 +1581,84 @@ model Document {
   /// The members who pinned it.
   pins               DocumentPin[]
 
+  /// Its checklist lines that work is attached to (docs/lists.md).
+  listItems ListItem[]
+
   @@unique([workspaceId, kind, path])
   @@index([search], type: Gin)
   @@index([workspaceId, deletedAt])
+}
+
+/// A checklist line of a library Markdown file that work is attached to (docs/lists.md). The file
+/// holds the line itself, marked `<!-- item:<id> -->` at its end, and whether it is ticked; this
+/// row holds what the file cannot: the threads working on it, the pull requests that finish it,
+/// and who ticked it from Brigade.
+model ListItem {
+  /// The id in its marker: made when a line is first handed to a teammate, linked or added.
+  id             String           @id
+  organizationId String
+  workspaceId    String
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documentId     String
+  document       Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  /// The line as last seen, without its checkbox and marker: for threads while the file is out of reach.
+  text           String
+  /// Who ticked it from Brigade (a teammate's complete_item, a merged pull request), and when.
+  /// A person ticks it in the file; the file says whether it is ticked, never this.
+  doneByType     ActorType?
+  doneById       String?
+  doneAt         DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  threads        ListItemThread[]
+  pulls          ListItemPull[]
+
+  @@index([documentId])
+}
+
+/// A thread working on a list item. A thread can carry several items, an item several threads.
+model ListItemThread {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  itemId         String
+  item           ListItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
+
+  @@id([itemId, sessionId])
+  @@index([sessionId])
+}
+
+/// A pull request that works on a list item: `closes` ticks the item once it is merged; else it is
+/// only part of the work, shown on the line.
+model ListItemPull {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  itemId         String
+  item           ListItem    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  pullRequestId  String
+  pullRequest    PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  closes         Boolean     @default(false)
+  /// When its merge was dealt with for this item (ticked, or nothing to tick); while unset after a
+  /// merge, the item is tried again (sweepListMerges).
+  settledAt      DateTime?
+  createdAt      DateTime    @default(now())
+
+  @@id([itemId, pullRequestId])
+  @@index([pullRequestId])
+}
+
+/// A library file being changed (withLibraryLock, src/library.ts): one change at a time. A lease,
+/// so that waiting holds no database connection and a holder that crashed frees it at `until`.
+model LibraryLock {
+  /// `<workspaceId>:<documentId>`.
+  key   String   @id
+  /// The holder, a random id of its own.
+  owner String
+  until DateTime
 }
 
 /// A library file a member pinned: it stays at the top of their Library. Each member's own,

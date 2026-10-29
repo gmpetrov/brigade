@@ -496,7 +496,11 @@ const brief = (task: { title: string; description: string }) =>
  * machines that is online; the first where they have an account with usage
  * left for the teammate's harness.
  */
-async function computerFor(db: ScopedDb, memberId: string, harness: 'claude_code' | 'codex') {
+export async function computerFor(
+  db: ScopedDb,
+  memberId: string,
+  harness: 'claude_code' | 'codex',
+) {
   const machines = await db.computer.findMany({
     where: { kind: 'member_machine', memberId },
     orderBy: { updatedAt: 'desc' },

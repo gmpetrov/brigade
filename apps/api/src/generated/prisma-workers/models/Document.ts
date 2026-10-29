@@ -54,6 +54,7 @@ export type DocumentMinAggregateOutputType = {
   updatedByType: $Enums.ActorType | null
   updatedById: string | null
   updatedInSessionId: string | null
+  bytesStaleAt: Date | null
   memoryTidiedAt: Date | null
   deletedAt: Date | null
   deletedByType: $Enums.ActorType | null
@@ -81,6 +82,7 @@ export type DocumentMaxAggregateOutputType = {
   updatedByType: $Enums.ActorType | null
   updatedById: string | null
   updatedInSessionId: string | null
+  bytesStaleAt: Date | null
   memoryTidiedAt: Date | null
   deletedAt: Date | null
   deletedByType: $Enums.ActorType | null
@@ -108,6 +110,7 @@ export type DocumentCountAggregateOutputType = {
   updatedByType: number
   updatedById: number
   updatedInSessionId: number
+  bytesStaleAt: number
   memoryTidiedAt: number
   deletedAt: number
   deletedByType: number
@@ -145,6 +148,7 @@ export type DocumentMinAggregateInputType = {
   updatedByType?: true
   updatedById?: true
   updatedInSessionId?: true
+  bytesStaleAt?: true
   memoryTidiedAt?: true
   deletedAt?: true
   deletedByType?: true
@@ -172,6 +176,7 @@ export type DocumentMaxAggregateInputType = {
   updatedByType?: true
   updatedById?: true
   updatedInSessionId?: true
+  bytesStaleAt?: true
   memoryTidiedAt?: true
   deletedAt?: true
   deletedByType?: true
@@ -199,6 +204,7 @@ export type DocumentCountAggregateInputType = {
   updatedByType?: true
   updatedById?: true
   updatedInSessionId?: true
+  bytesStaleAt?: true
   memoryTidiedAt?: true
   deletedAt?: true
   deletedByType?: true
@@ -313,6 +319,7 @@ export type DocumentGroupByOutputType = {
   updatedByType: $Enums.ActorType | null
   updatedById: string | null
   updatedInSessionId: string | null
+  bytesStaleAt: Date | null
   memoryTidiedAt: Date | null
   deletedAt: Date | null
   deletedByType: $Enums.ActorType | null
@@ -363,6 +370,7 @@ export type DocumentWhereInput = {
   updatedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
   updatedById?: Prisma.StringNullableFilter<"Document"> | string | null
   updatedInSessionId?: Prisma.StringNullableFilter<"Document"> | string | null
+  bytesStaleAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
   memoryTidiedAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
   deletedAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
   deletedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
@@ -377,6 +385,7 @@ export type DocumentWhereInput = {
   versions?: Prisma.DocumentVersionListRelationFilter
   memoryLines?: Prisma.MemoryLineListRelationFilter
   pins?: Prisma.DocumentPinListRelationFilter
+  listItems?: Prisma.ListItemListRelationFilter
 }
 
 export type DocumentOrderByWithRelationInput = {
@@ -398,6 +407,7 @@ export type DocumentOrderByWithRelationInput = {
   updatedByType?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedById?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedInSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  bytesStaleAt?: Prisma.SortOrderInput | Prisma.SortOrder
   memoryTidiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   deletedByType?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -412,6 +422,7 @@ export type DocumentOrderByWithRelationInput = {
   versions?: Prisma.DocumentVersionOrderByRelationAggregateInput
   memoryLines?: Prisma.MemoryLineOrderByRelationAggregateInput
   pins?: Prisma.DocumentPinOrderByRelationAggregateInput
+  listItems?: Prisma.ListItemOrderByRelationAggregateInput
 }
 
 export type DocumentWhereUniqueInput = Prisma.AtLeast<{
@@ -437,6 +448,7 @@ export type DocumentWhereUniqueInput = Prisma.AtLeast<{
   updatedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
   updatedById?: Prisma.StringNullableFilter<"Document"> | string | null
   updatedInSessionId?: Prisma.StringNullableFilter<"Document"> | string | null
+  bytesStaleAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
   memoryTidiedAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
   deletedAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
   deletedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
@@ -451,6 +463,7 @@ export type DocumentWhereUniqueInput = Prisma.AtLeast<{
   versions?: Prisma.DocumentVersionListRelationFilter
   memoryLines?: Prisma.MemoryLineListRelationFilter
   pins?: Prisma.DocumentPinListRelationFilter
+  listItems?: Prisma.ListItemListRelationFilter
 }, "id" | "workspaceId_kind_path">
 
 export type DocumentOrderByWithAggregationInput = {
@@ -472,6 +485,7 @@ export type DocumentOrderByWithAggregationInput = {
   updatedByType?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedById?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedInSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  bytesStaleAt?: Prisma.SortOrderInput | Prisma.SortOrder
   memoryTidiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   deletedByType?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -507,6 +521,7 @@ export type DocumentScalarWhereWithAggregatesInput = {
   updatedByType?: Prisma.EnumActorTypeNullableWithAggregatesFilter<"Document"> | $Enums.ActorType | null
   updatedById?: Prisma.StringNullableWithAggregatesFilter<"Document"> | string | null
   updatedInSessionId?: Prisma.StringNullableWithAggregatesFilter<"Document"> | string | null
+  bytesStaleAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Document"> | Date | string | null
   memoryTidiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Document"> | Date | string | null
   deletedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Document"> | Date | string | null
   deletedByType?: Prisma.EnumActorTypeNullableWithAggregatesFilter<"Document"> | $Enums.ActorType | null
@@ -530,6 +545,7 @@ export type DocumentCreateInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -544,6 +560,7 @@ export type DocumentCreateInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateInput = {
@@ -565,6 +582,7 @@ export type DocumentUncheckedCreateInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -575,6 +593,7 @@ export type DocumentUncheckedCreateInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUpdateInput = {
@@ -592,6 +611,7 @@ export type DocumentUpdateInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -606,6 +626,7 @@ export type DocumentUpdateInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateInput = {
@@ -627,6 +648,7 @@ export type DocumentUncheckedUpdateInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -637,6 +659,7 @@ export type DocumentUncheckedUpdateInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentCreateManyInput = {
@@ -658,6 +681,7 @@ export type DocumentCreateManyInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -681,6 +705,7 @@ export type DocumentUpdateManyMutationInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -708,6 +733,7 @@ export type DocumentUncheckedUpdateManyInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -751,6 +777,7 @@ export type DocumentCountOrderByAggregateInput = {
   updatedByType?: Prisma.SortOrder
   updatedById?: Prisma.SortOrder
   updatedInSessionId?: Prisma.SortOrder
+  bytesStaleAt?: Prisma.SortOrder
   memoryTidiedAt?: Prisma.SortOrder
   deletedAt?: Prisma.SortOrder
   deletedByType?: Prisma.SortOrder
@@ -782,6 +809,7 @@ export type DocumentMaxOrderByAggregateInput = {
   updatedByType?: Prisma.SortOrder
   updatedById?: Prisma.SortOrder
   updatedInSessionId?: Prisma.SortOrder
+  bytesStaleAt?: Prisma.SortOrder
   memoryTidiedAt?: Prisma.SortOrder
   deletedAt?: Prisma.SortOrder
   deletedByType?: Prisma.SortOrder
@@ -809,6 +837,7 @@ export type DocumentMinOrderByAggregateInput = {
   updatedByType?: Prisma.SortOrder
   updatedById?: Prisma.SortOrder
   updatedInSessionId?: Prisma.SortOrder
+  bytesStaleAt?: Prisma.SortOrder
   memoryTidiedAt?: Prisma.SortOrder
   deletedAt?: Prisma.SortOrder
   deletedByType?: Prisma.SortOrder
@@ -965,6 +994,20 @@ export type NullableEnumActorTypeFieldUpdateOperationsInput = {
   set?: $Enums.ActorType | null
 }
 
+export type DocumentCreateNestedOneWithoutListItemsInput = {
+  create?: Prisma.XOR<Prisma.DocumentCreateWithoutListItemsInput, Prisma.DocumentUncheckedCreateWithoutListItemsInput>
+  connectOrCreate?: Prisma.DocumentCreateOrConnectWithoutListItemsInput
+  connect?: Prisma.DocumentWhereUniqueInput
+}
+
+export type DocumentUpdateOneRequiredWithoutListItemsNestedInput = {
+  create?: Prisma.XOR<Prisma.DocumentCreateWithoutListItemsInput, Prisma.DocumentUncheckedCreateWithoutListItemsInput>
+  connectOrCreate?: Prisma.DocumentCreateOrConnectWithoutListItemsInput
+  upsert?: Prisma.DocumentUpsertWithoutListItemsInput
+  connect?: Prisma.DocumentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DocumentUpdateToOneWithWhereWithoutListItemsInput, Prisma.DocumentUpdateWithoutListItemsInput>, Prisma.DocumentUncheckedUpdateWithoutListItemsInput>
+}
+
 export type DocumentCreateNestedOneWithoutPinsInput = {
   create?: Prisma.XOR<Prisma.DocumentCreateWithoutPinsInput, Prisma.DocumentUncheckedCreateWithoutPinsInput>
   connectOrCreate?: Prisma.DocumentCreateOrConnectWithoutPinsInput
@@ -1080,6 +1123,7 @@ export type DocumentCreateWithoutWorkspaceInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1093,6 +1137,7 @@ export type DocumentCreateWithoutWorkspaceInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutWorkspaceInput = {
@@ -1113,6 +1158,7 @@ export type DocumentUncheckedCreateWithoutWorkspaceInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1123,6 +1169,7 @@ export type DocumentUncheckedCreateWithoutWorkspaceInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutWorkspaceInput = {
@@ -1173,6 +1220,7 @@ export type DocumentScalarWhereInput = {
   updatedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
   updatedById?: Prisma.StringNullableFilter<"Document"> | string | null
   updatedInSessionId?: Prisma.StringNullableFilter<"Document"> | string | null
+  bytesStaleAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
   memoryTidiedAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
   deletedAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
   deletedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
@@ -1196,6 +1244,7 @@ export type DocumentCreateWithoutTeammateInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1209,6 +1258,7 @@ export type DocumentCreateWithoutTeammateInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutTeammateInput = {
@@ -1229,6 +1279,7 @@ export type DocumentUncheckedCreateWithoutTeammateInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1239,6 +1290,7 @@ export type DocumentUncheckedCreateWithoutTeammateInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutTeammateInput = {
@@ -1282,6 +1334,7 @@ export type DocumentCreateWithoutSessionInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1295,6 +1348,7 @@ export type DocumentCreateWithoutSessionInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutSessionInput = {
@@ -1315,6 +1369,7 @@ export type DocumentUncheckedCreateWithoutSessionInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1325,6 +1380,7 @@ export type DocumentUncheckedCreateWithoutSessionInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutSessionInput = {
@@ -1353,6 +1409,150 @@ export type DocumentUpdateManyWithWhereWithoutSessionInput = {
   data: Prisma.XOR<Prisma.DocumentUpdateManyMutationInput, Prisma.DocumentUncheckedUpdateManyWithoutSessionInput>
 }
 
+export type DocumentCreateWithoutListItemsInput = {
+  id?: string
+  organizationId: string
+  kind?: $Enums.DocumentKind
+  path: string
+  contentType: string
+  size: number
+  sha256?: string
+  text?: string
+  indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
+  memoryTidiedAt?: Date | string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
+  updatedAt?: Date | string
+  createdAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutDocumentsInput
+  project?: Prisma.ProjectCreateNestedOneWithoutDocumentsInput
+  teammate?: Prisma.TeammateCreateNestedOneWithoutDocumentsInput
+  session?: Prisma.SessionCreateNestedOneWithoutDocumentsInput
+  assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
+  memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
+  pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+}
+
+export type DocumentUncheckedCreateWithoutListItemsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  kind?: $Enums.DocumentKind
+  path: string
+  projectId?: string | null
+  teammateId?: string | null
+  sessionId?: string | null
+  contentType: string
+  size: number
+  sha256?: string
+  text?: string
+  indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
+  memoryTidiedAt?: Date | string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
+  updatedAt?: Date | string
+  createdAt?: Date | string
+  assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
+  memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
+  pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+}
+
+export type DocumentCreateOrConnectWithoutListItemsInput = {
+  where: Prisma.DocumentWhereUniqueInput
+  create: Prisma.XOR<Prisma.DocumentCreateWithoutListItemsInput, Prisma.DocumentUncheckedCreateWithoutListItemsInput>
+}
+
+export type DocumentUpsertWithoutListItemsInput = {
+  update: Prisma.XOR<Prisma.DocumentUpdateWithoutListItemsInput, Prisma.DocumentUncheckedUpdateWithoutListItemsInput>
+  create: Prisma.XOR<Prisma.DocumentCreateWithoutListItemsInput, Prisma.DocumentUncheckedCreateWithoutListItemsInput>
+  where?: Prisma.DocumentWhereInput
+}
+
+export type DocumentUpdateToOneWithWhereWithoutListItemsInput = {
+  where?: Prisma.DocumentWhereInput
+  data: Prisma.XOR<Prisma.DocumentUpdateWithoutListItemsInput, Prisma.DocumentUncheckedUpdateWithoutListItemsInput>
+}
+
+export type DocumentUpdateWithoutListItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumDocumentKindFieldUpdateOperationsInput | $Enums.DocumentKind
+  path?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutDocumentsNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutDocumentsNestedInput
+  teammate?: Prisma.TeammateUpdateOneWithoutDocumentsNestedInput
+  session?: Prisma.SessionUpdateOneWithoutDocumentsNestedInput
+  assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
+  memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
+  pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+}
+
+export type DocumentUncheckedUpdateWithoutListItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumDocumentKindFieldUpdateOperationsInput | $Enums.DocumentKind
+  path?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contentType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
+  memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
+  pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+}
+
 export type DocumentCreateWithoutPinsInput = {
   id?: string
   organizationId: string
@@ -1368,6 +1568,7 @@ export type DocumentCreateWithoutPinsInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1381,6 +1582,7 @@ export type DocumentCreateWithoutPinsInput = {
   assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutPinsInput = {
@@ -1402,6 +1604,7 @@ export type DocumentUncheckedCreateWithoutPinsInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1411,6 +1614,7 @@ export type DocumentUncheckedCreateWithoutPinsInput = {
   assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutPinsInput = {
@@ -1444,6 +1648,7 @@ export type DocumentUpdateWithoutPinsInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -1457,6 +1662,7 @@ export type DocumentUpdateWithoutPinsInput = {
   assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutPinsInput = {
@@ -1478,6 +1684,7 @@ export type DocumentUncheckedUpdateWithoutPinsInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -1487,6 +1694,7 @@ export type DocumentUncheckedUpdateWithoutPinsInput = {
   assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentCreateWithoutMemoryLinesInput = {
@@ -1504,6 +1712,7 @@ export type DocumentCreateWithoutMemoryLinesInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1517,6 +1726,7 @@ export type DocumentCreateWithoutMemoryLinesInput = {
   assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutMemoryLinesInput = {
@@ -1538,6 +1748,7 @@ export type DocumentUncheckedCreateWithoutMemoryLinesInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1547,6 +1758,7 @@ export type DocumentUncheckedCreateWithoutMemoryLinesInput = {
   assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutMemoryLinesInput = {
@@ -1580,6 +1792,7 @@ export type DocumentUpdateWithoutMemoryLinesInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -1593,6 +1806,7 @@ export type DocumentUpdateWithoutMemoryLinesInput = {
   assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutMemoryLinesInput = {
@@ -1614,6 +1828,7 @@ export type DocumentUncheckedUpdateWithoutMemoryLinesInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -1623,6 +1838,7 @@ export type DocumentUncheckedUpdateWithoutMemoryLinesInput = {
   assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentCreateWithoutVersionsInput = {
@@ -1640,6 +1856,7 @@ export type DocumentCreateWithoutVersionsInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1653,6 +1870,7 @@ export type DocumentCreateWithoutVersionsInput = {
   assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutVersionsInput = {
@@ -1674,6 +1892,7 @@ export type DocumentUncheckedCreateWithoutVersionsInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1683,6 +1902,7 @@ export type DocumentUncheckedCreateWithoutVersionsInput = {
   assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutVersionsInput = {
@@ -1716,6 +1936,7 @@ export type DocumentUpdateWithoutVersionsInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -1729,6 +1950,7 @@ export type DocumentUpdateWithoutVersionsInput = {
   assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutVersionsInput = {
@@ -1750,6 +1972,7 @@ export type DocumentUncheckedUpdateWithoutVersionsInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -1759,6 +1982,7 @@ export type DocumentUncheckedUpdateWithoutVersionsInput = {
   assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentCreateWithoutAssetsInput = {
@@ -1776,6 +2000,7 @@ export type DocumentCreateWithoutAssetsInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1789,6 +2014,7 @@ export type DocumentCreateWithoutAssetsInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutAssetsInput = {
@@ -1810,6 +2036,7 @@ export type DocumentUncheckedCreateWithoutAssetsInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1819,6 +2046,7 @@ export type DocumentUncheckedCreateWithoutAssetsInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutAssetsInput = {
@@ -1852,6 +2080,7 @@ export type DocumentUpdateWithoutAssetsInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -1865,6 +2094,7 @@ export type DocumentUpdateWithoutAssetsInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutAssetsInput = {
@@ -1886,6 +2116,7 @@ export type DocumentUncheckedUpdateWithoutAssetsInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -1895,6 +2126,7 @@ export type DocumentUncheckedUpdateWithoutAssetsInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentCreateWithoutProjectInput = {
@@ -1912,6 +2144,7 @@ export type DocumentCreateWithoutProjectInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1925,6 +2158,7 @@ export type DocumentCreateWithoutProjectInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutProjectInput = {
@@ -1945,6 +2179,7 @@ export type DocumentUncheckedCreateWithoutProjectInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -1955,6 +2190,7 @@ export type DocumentUncheckedCreateWithoutProjectInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutProjectInput = {
@@ -2001,6 +2237,7 @@ export type DocumentCreateManyWorkspaceInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -2024,6 +2261,7 @@ export type DocumentUpdateWithoutWorkspaceInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2037,6 +2275,7 @@ export type DocumentUpdateWithoutWorkspaceInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutWorkspaceInput = {
@@ -2057,6 +2296,7 @@ export type DocumentUncheckedUpdateWithoutWorkspaceInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2067,6 +2307,7 @@ export type DocumentUncheckedUpdateWithoutWorkspaceInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -2087,6 +2328,7 @@ export type DocumentUncheckedUpdateManyWithoutWorkspaceInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2113,6 +2355,7 @@ export type DocumentCreateManyTeammateInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -2136,6 +2379,7 @@ export type DocumentUpdateWithoutTeammateInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2149,6 +2393,7 @@ export type DocumentUpdateWithoutTeammateInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutTeammateInput = {
@@ -2169,6 +2414,7 @@ export type DocumentUncheckedUpdateWithoutTeammateInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2179,6 +2425,7 @@ export type DocumentUncheckedUpdateWithoutTeammateInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateManyWithoutTeammateInput = {
@@ -2199,6 +2446,7 @@ export type DocumentUncheckedUpdateManyWithoutTeammateInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2225,6 +2473,7 @@ export type DocumentCreateManySessionInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -2248,6 +2497,7 @@ export type DocumentUpdateWithoutSessionInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2261,6 +2511,7 @@ export type DocumentUpdateWithoutSessionInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutSessionInput = {
@@ -2281,6 +2532,7 @@ export type DocumentUncheckedUpdateWithoutSessionInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2291,6 +2543,7 @@ export type DocumentUncheckedUpdateWithoutSessionInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateManyWithoutSessionInput = {
@@ -2311,6 +2564,7 @@ export type DocumentUncheckedUpdateManyWithoutSessionInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2337,6 +2591,7 @@ export type DocumentCreateManyProjectInput = {
   updatedByType?: $Enums.ActorType | null
   updatedById?: string | null
   updatedInSessionId?: string | null
+  bytesStaleAt?: Date | string | null
   memoryTidiedAt?: Date | string | null
   deletedAt?: Date | string | null
   deletedByType?: $Enums.ActorType | null
@@ -2360,6 +2615,7 @@ export type DocumentUpdateWithoutProjectInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2373,6 +2629,7 @@ export type DocumentUpdateWithoutProjectInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutProjectInput = {
@@ -2393,6 +2650,7 @@ export type DocumentUncheckedUpdateWithoutProjectInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2403,6 +2661,7 @@ export type DocumentUncheckedUpdateWithoutProjectInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateManyWithoutProjectInput = {
@@ -2423,6 +2682,7 @@ export type DocumentUncheckedUpdateManyWithoutProjectInput = {
   updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
@@ -2441,6 +2701,7 @@ export type DocumentCountOutputType = {
   versions: number
   memoryLines: number
   pins: number
+  listItems: number
 }
 
 export type DocumentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2448,6 +2709,7 @@ export type DocumentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensio
   versions?: boolean | DocumentCountOutputTypeCountVersionsArgs
   memoryLines?: boolean | DocumentCountOutputTypeCountMemoryLinesArgs
   pins?: boolean | DocumentCountOutputTypeCountPinsArgs
+  listItems?: boolean | DocumentCountOutputTypeCountListItemsArgs
 }
 
 /**
@@ -2488,6 +2750,13 @@ export type DocumentCountOutputTypeCountPinsArgs<ExtArgs extends runtime.Types.E
   where?: Prisma.DocumentPinWhereInput
 }
 
+/**
+ * DocumentCountOutputType without action
+ */
+export type DocumentCountOutputTypeCountListItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ListItemWhereInput
+}
+
 
 export type DocumentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2508,6 +2777,7 @@ export type DocumentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   updatedByType?: boolean
   updatedById?: boolean
   updatedInSessionId?: boolean
+  bytesStaleAt?: boolean
   memoryTidiedAt?: boolean
   deletedAt?: boolean
   deletedByType?: boolean
@@ -2522,6 +2792,7 @@ export type DocumentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   versions?: boolean | Prisma.Document$versionsArgs<ExtArgs>
   memoryLines?: boolean | Prisma.Document$memoryLinesArgs<ExtArgs>
   pins?: boolean | Prisma.Document$pinsArgs<ExtArgs>
+  listItems?: boolean | Prisma.Document$listItemsArgs<ExtArgs>
   _count?: boolean | Prisma.DocumentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["document"]>
 
@@ -2544,6 +2815,7 @@ export type DocumentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   updatedByType?: boolean
   updatedById?: boolean
   updatedInSessionId?: boolean
+  bytesStaleAt?: boolean
   memoryTidiedAt?: boolean
   deletedAt?: boolean
   deletedByType?: boolean
@@ -2575,6 +2847,7 @@ export type DocumentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   updatedByType?: boolean
   updatedById?: boolean
   updatedInSessionId?: boolean
+  bytesStaleAt?: boolean
   memoryTidiedAt?: boolean
   deletedAt?: boolean
   deletedByType?: boolean
@@ -2606,6 +2879,7 @@ export type DocumentSelectScalar = {
   updatedByType?: boolean
   updatedById?: boolean
   updatedInSessionId?: boolean
+  bytesStaleAt?: boolean
   memoryTidiedAt?: boolean
   deletedAt?: boolean
   deletedByType?: boolean
@@ -2614,7 +2888,7 @@ export type DocumentSelectScalar = {
   createdAt?: boolean
 }
 
-export type DocumentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "kind" | "path" | "projectId" | "teammateId" | "sessionId" | "contentType" | "size" | "sha256" | "text" | "indexed" | "createdByType" | "createdById" | "updatedByType" | "updatedById" | "updatedInSessionId" | "memoryTidiedAt" | "deletedAt" | "deletedByType" | "deletedById" | "updatedAt" | "createdAt", ExtArgs["result"]["document"]>
+export type DocumentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "kind" | "path" | "projectId" | "teammateId" | "sessionId" | "contentType" | "size" | "sha256" | "text" | "indexed" | "createdByType" | "createdById" | "updatedByType" | "updatedById" | "updatedInSessionId" | "bytesStaleAt" | "memoryTidiedAt" | "deletedAt" | "deletedByType" | "deletedById" | "updatedAt" | "createdAt", ExtArgs["result"]["document"]>
 export type DocumentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   project?: boolean | Prisma.Document$projectArgs<ExtArgs>
@@ -2624,6 +2898,7 @@ export type DocumentInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   versions?: boolean | Prisma.Document$versionsArgs<ExtArgs>
   memoryLines?: boolean | Prisma.Document$memoryLinesArgs<ExtArgs>
   pins?: boolean | Prisma.Document$pinsArgs<ExtArgs>
+  listItems?: boolean | Prisma.Document$listItemsArgs<ExtArgs>
   _count?: boolean | Prisma.DocumentCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type DocumentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2653,6 +2928,10 @@ export type $DocumentPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * The members who pinned it.
      */
     pins: Prisma.$DocumentPinPayload<ExtArgs>[]
+    /**
+     * Its checklist lines that work is attached to (docs/lists.md).
+     */
+    listItems: Prisma.$ListItemPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2697,6 +2976,11 @@ export type $DocumentPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * The thread a teammate last changed it from.
      */
     updatedInSessionId: string | null
+    /**
+     * Set when a save whose lease ended mid-write may have overwritten its stored bytes: they are
+     * put back from what its row says (repairBytes, src/library.ts), retried until they are.
+     */
+    bytesStaleAt: Date | null
     /**
      * A memory file: when a tidy run last laid it out (core within budget, topics, archive).
      */
@@ -3112,6 +3396,7 @@ export interface Prisma__DocumentClient<T, Null = never, ExtArgs extends runtime
   versions<T extends Prisma.Document$versionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$versionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentVersionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   memoryLines<T extends Prisma.Document$memoryLinesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$memoryLinesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MemoryLinePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pins<T extends Prisma.Document$pinsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$pinsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPinPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  listItems<T extends Prisma.Document$listItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$listItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3159,6 +3444,7 @@ export interface DocumentFieldRefs {
   readonly updatedByType: Prisma.FieldRef<"Document", 'ActorType'>
   readonly updatedById: Prisma.FieldRef<"Document", 'String'>
   readonly updatedInSessionId: Prisma.FieldRef<"Document", 'String'>
+  readonly bytesStaleAt: Prisma.FieldRef<"Document", 'DateTime'>
   readonly memoryTidiedAt: Prisma.FieldRef<"Document", 'DateTime'>
   readonly deletedAt: Prisma.FieldRef<"Document", 'DateTime'>
   readonly deletedByType: Prisma.FieldRef<"Document", 'ActorType'>
@@ -3716,6 +4002,30 @@ export type Document$pinsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.DocumentPinScalarFieldEnum | Prisma.DocumentPinScalarFieldEnum[]
+}
+
+/**
+ * Document.listItems
+ */
+export type Document$listItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ListItem
+   */
+  select?: Prisma.ListItemSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ListItem
+   */
+  omit?: Prisma.ListItemOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ListItemInclude<ExtArgs> | null
+  where?: Prisma.ListItemWhereInput
+  orderBy?: Prisma.ListItemOrderByWithRelationInput | Prisma.ListItemOrderByWithRelationInput[]
+  cursor?: Prisma.ListItemWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ListItemScalarFieldEnum | Prisma.ListItemScalarFieldEnum[]
 }
 
 /**

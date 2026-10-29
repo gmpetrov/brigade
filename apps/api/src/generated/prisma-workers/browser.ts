@@ -268,6 +268,31 @@ export type Ticket = Prisma.TicketModel
  */
 export type Document = Prisma.DocumentModel
 /**
+ * Model ListItem
+ * A checklist line of a library Markdown file that work is attached to (docs/lists.md). The file
+ * holds the line itself, marked `<!-- item:<id> -->` at its end, and whether it is ticked; this
+ * row holds what the file cannot: the threads working on it, the pull requests that finish it,
+ * and who ticked it from Brigade.
+ */
+export type ListItem = Prisma.ListItemModel
+/**
+ * Model ListItemThread
+ * A thread working on a list item. A thread can carry several items, an item several threads.
+ */
+export type ListItemThread = Prisma.ListItemThreadModel
+/**
+ * Model ListItemPull
+ * A pull request that works on a list item: `closes` ticks the item once it is merged; else it is
+ * only part of the work, shown on the line.
+ */
+export type ListItemPull = Prisma.ListItemPullModel
+/**
+ * Model LibraryLock
+ * A library file being changed (withLibraryLock, src/library.ts): one change at a time. A lease,
+ * so that waiting holds no database connection and a holder that crashed frees it at `until`.
+ */
+export type LibraryLock = Prisma.LibraryLockModel
+/**
  * Model DocumentPin
  * A library file a member pinned: it stays at the top of their Library. Each member's own,
  * like a thread's pin. A file in the trash keeps its pin, which shows again once restored.

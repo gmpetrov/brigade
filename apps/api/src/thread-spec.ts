@@ -1,4 +1,10 @@
-import { Effort, folderExceptions, MCP_PROTOCOL, type ThreadSpec } from '@brigade/contracts'
+import {
+  Effort,
+  folderExceptions,
+  libraryAccessFor,
+  MCP_PROTOCOL,
+  type ThreadSpec,
+} from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { usableIn } from './apps.js'
 import { hubs } from './hub.js'
@@ -15,6 +21,7 @@ import { threadDesignSystems } from './designs.js'
 import { threadSkills } from './skills.js'
 import { playbookAccount, threadPlaybook } from './playbooks.js'
 import { gitAccess } from './git.js'
+import { specItems } from './lists.js'
 import { folderRules } from './library-folders.js'
 import { projectCatalog, threadProject } from './projects.js'
 import { accountRef, usableAccounts } from './routes/accounts.js'
@@ -122,6 +129,7 @@ export async function specFor(
     projects,
     [imageAccount],
     playbook,
+    items,
   ] = await Promise.all([
     usableAccounts(db, {
       memberId: thread.startedByMemberId,
@@ -152,6 +160,7 @@ export async function specFor(
           provider: 'codex',
         }),
     threadPlaybook(db, thread.playbookRunId, thread.playbookTeammate),
+    specItems(db, thread.id),
   ])
   // Takeover and terminals need no usage: they may use the thread's current account as is.
   const current =
@@ -292,6 +301,12 @@ export async function specFor(
     task: thread.task
       ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }
       : null,
+    // Only those of lists this teammate may read: the thread's items are anyone's who joins it.
+    items: items.filter(
+      (i) =>
+        libraryAccessFor(i.path, { id: teammate.id, library: teammate.libraryAccess }, rules) !==
+        'none',
+    ),
     designSystems,
     skills,
     project,

@@ -369,6 +369,7 @@ export type PullRequestWhereInput = {
   authorTeammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
   reviewSession?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
   reviews?: Prisma.PullRequestReviewListRelationFilter
+  listItems?: Prisma.ListItemPullListRelationFilter
 }
 
 export type PullRequestOrderByWithRelationInput = {
@@ -400,6 +401,7 @@ export type PullRequestOrderByWithRelationInput = {
   authorTeammate?: Prisma.TeammateOrderByWithRelationInput
   reviewSession?: Prisma.SessionOrderByWithRelationInput
   reviews?: Prisma.PullRequestReviewOrderByRelationAggregateInput
+  listItems?: Prisma.ListItemPullOrderByRelationAggregateInput
 }
 
 export type PullRequestWhereUniqueInput = Prisma.AtLeast<{
@@ -435,6 +437,7 @@ export type PullRequestWhereUniqueInput = Prisma.AtLeast<{
   authorTeammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
   reviewSession?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
   reviews?: Prisma.PullRequestReviewListRelationFilter
+  listItems?: Prisma.ListItemPullListRelationFilter
 }, "id" | "workspaceId_repository_number">
 
 export type PullRequestOrderByWithAggregationInput = {
@@ -522,6 +525,7 @@ export type PullRequestCreateInput = {
   authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
   reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
   reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
+  listItems?: Prisma.ListItemPullCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestUncheckedCreateInput = {
@@ -549,6 +553,7 @@ export type PullRequestUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   reviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutPullRequestInput
+  listItems?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestUpdateInput = {
@@ -576,6 +581,7 @@ export type PullRequestUpdateInput = {
   authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
   reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
   reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
+  listItems?: Prisma.ListItemPullUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestUncheckedUpdateInput = {
@@ -603,6 +609,7 @@ export type PullRequestUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutPullRequestNestedInput
+  listItems?: Prisma.ListItemPullUncheckedUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestCreateManyInput = {
@@ -974,6 +981,20 @@ export type PullRequestUpdateOneRequiredWithoutReviewsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.PullRequestUpdateToOneWithWhereWithoutReviewsInput, Prisma.PullRequestUpdateWithoutReviewsInput>, Prisma.PullRequestUncheckedUpdateWithoutReviewsInput>
 }
 
+export type PullRequestCreateNestedOneWithoutListItemsInput = {
+  create?: Prisma.XOR<Prisma.PullRequestCreateWithoutListItemsInput, Prisma.PullRequestUncheckedCreateWithoutListItemsInput>
+  connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutListItemsInput
+  connect?: Prisma.PullRequestWhereUniqueInput
+}
+
+export type PullRequestUpdateOneRequiredWithoutListItemsNestedInput = {
+  create?: Prisma.XOR<Prisma.PullRequestCreateWithoutListItemsInput, Prisma.PullRequestUncheckedCreateWithoutListItemsInput>
+  connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutListItemsInput
+  upsert?: Prisma.PullRequestUpsertWithoutListItemsInput
+  connect?: Prisma.PullRequestWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PullRequestUpdateToOneWithWhereWithoutListItemsInput, Prisma.PullRequestUpdateWithoutListItemsInput>, Prisma.PullRequestUncheckedUpdateWithoutListItemsInput>
+}
+
 export type PullRequestCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
@@ -998,6 +1019,7 @@ export type PullRequestCreateWithoutWorkspaceInput = {
   authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
   reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
   reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
+  listItems?: Prisma.ListItemPullCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestUncheckedCreateWithoutWorkspaceInput = {
@@ -1024,6 +1046,7 @@ export type PullRequestUncheckedCreateWithoutWorkspaceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   reviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutPullRequestInput
+  listItems?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestCreateOrConnectWithoutWorkspaceInput = {
@@ -1105,6 +1128,7 @@ export type PullRequestCreateWithoutAuthorTeammateInput = {
   session?: Prisma.SessionCreateNestedOneWithoutPullRequestsInput
   reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
   reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
+  listItems?: Prisma.ListItemPullCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestUncheckedCreateWithoutAuthorTeammateInput = {
@@ -1131,6 +1155,7 @@ export type PullRequestUncheckedCreateWithoutAuthorTeammateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   reviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutPullRequestInput
+  listItems?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestCreateOrConnectWithoutAuthorTeammateInput = {
@@ -1183,6 +1208,7 @@ export type PullRequestCreateWithoutSessionInput = {
   authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
   reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
   reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
+  listItems?: Prisma.ListItemPullCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestUncheckedCreateWithoutSessionInput = {
@@ -1209,6 +1235,7 @@ export type PullRequestUncheckedCreateWithoutSessionInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   reviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutPullRequestInput
+  listItems?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestCreateOrConnectWithoutSessionInput = {
@@ -1245,6 +1272,7 @@ export type PullRequestCreateWithoutReviewSessionInput = {
   session?: Prisma.SessionCreateNestedOneWithoutPullRequestsInput
   authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
   reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
+  listItems?: Prisma.ListItemPullCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestUncheckedCreateWithoutReviewSessionInput = {
@@ -1271,6 +1299,7 @@ export type PullRequestUncheckedCreateWithoutReviewSessionInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   reviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutPullRequestInput
+  listItems?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestCreateOrConnectWithoutReviewSessionInput = {
@@ -1339,6 +1368,7 @@ export type PullRequestCreateWithoutReviewsInput = {
   session?: Prisma.SessionCreateNestedOneWithoutPullRequestsInput
   authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
   reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
+  listItems?: Prisma.ListItemPullCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestUncheckedCreateWithoutReviewsInput = {
@@ -1365,6 +1395,7 @@ export type PullRequestUncheckedCreateWithoutReviewsInput = {
   mergedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  listItems?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutPullRequestInput
 }
 
 export type PullRequestCreateOrConnectWithoutReviewsInput = {
@@ -1407,6 +1438,7 @@ export type PullRequestUpdateWithoutReviewsInput = {
   session?: Prisma.SessionUpdateOneWithoutPullRequestsNestedInput
   authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
   reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
+  listItems?: Prisma.ListItemPullUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestUncheckedUpdateWithoutReviewsInput = {
@@ -1433,6 +1465,131 @@ export type PullRequestUncheckedUpdateWithoutReviewsInput = {
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  listItems?: Prisma.ListItemPullUncheckedUpdateManyWithoutPullRequestNestedInput
+}
+
+export type PullRequestCreateWithoutListItemsInput = {
+  id?: string
+  organizationId: string
+  repository: string
+  number: number
+  title: string
+  headRef: string
+  baseRef: string
+  noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
+  mergeStatus?: $Enums.MergeStatus
+  mergeMethod?: string | null
+  requestedByMemberId?: string | null
+  round?: number
+  resolveFromSha?: string | null
+  note?: string | null
+  state?: string
+  mergedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutPullRequestsInput
+  session?: Prisma.SessionCreateNestedOneWithoutPullRequestsInput
+  authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
+  reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
+  reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
+}
+
+export type PullRequestUncheckedCreateWithoutListItemsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  repository: string
+  number: number
+  title: string
+  headRef: string
+  baseRef: string
+  sessionId?: string | null
+  authorTeammateId?: string | null
+  reviewSessionId?: string | null
+  noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
+  mergeStatus?: $Enums.MergeStatus
+  mergeMethod?: string | null
+  requestedByMemberId?: string | null
+  round?: number
+  resolveFromSha?: string | null
+  note?: string | null
+  state?: string
+  mergedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  reviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutPullRequestInput
+}
+
+export type PullRequestCreateOrConnectWithoutListItemsInput = {
+  where: Prisma.PullRequestWhereUniqueInput
+  create: Prisma.XOR<Prisma.PullRequestCreateWithoutListItemsInput, Prisma.PullRequestUncheckedCreateWithoutListItemsInput>
+}
+
+export type PullRequestUpsertWithoutListItemsInput = {
+  update: Prisma.XOR<Prisma.PullRequestUpdateWithoutListItemsInput, Prisma.PullRequestUncheckedUpdateWithoutListItemsInput>
+  create: Prisma.XOR<Prisma.PullRequestCreateWithoutListItemsInput, Prisma.PullRequestUncheckedCreateWithoutListItemsInput>
+  where?: Prisma.PullRequestWhereInput
+}
+
+export type PullRequestUpdateToOneWithWhereWithoutListItemsInput = {
+  where?: Prisma.PullRequestWhereInput
+  data: Prisma.XOR<Prisma.PullRequestUpdateWithoutListItemsInput, Prisma.PullRequestUncheckedUpdateWithoutListItemsInput>
+}
+
+export type PullRequestUpdateWithoutListItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.IntFieldUpdateOperationsInput | number
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  headRef?: Prisma.StringFieldUpdateOperationsInput | string
+  baseRef?: Prisma.StringFieldUpdateOperationsInput | string
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  round?: Prisma.IntFieldUpdateOperationsInput | number
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.StringFieldUpdateOperationsInput | string
+  mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPullRequestsNestedInput
+  session?: Prisma.SessionUpdateOneWithoutPullRequestsNestedInput
+  authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
+  reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
+  reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
+}
+
+export type PullRequestUncheckedUpdateWithoutListItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.IntFieldUpdateOperationsInput | number
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  headRef?: Prisma.StringFieldUpdateOperationsInput | string
+  baseRef?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  round?: Prisma.IntFieldUpdateOperationsInput | number
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.StringFieldUpdateOperationsInput | string
+  mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  reviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestCreateManyWorkspaceInput = {
@@ -1484,6 +1641,7 @@ export type PullRequestUpdateWithoutWorkspaceInput = {
   authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
   reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
   reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
+  listItems?: Prisma.ListItemPullUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestUncheckedUpdateWithoutWorkspaceInput = {
@@ -1510,6 +1668,7 @@ export type PullRequestUncheckedUpdateWithoutWorkspaceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutPullRequestNestedInput
+  listItems?: Prisma.ListItemPullUncheckedUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -1586,6 +1745,7 @@ export type PullRequestUpdateWithoutAuthorTeammateInput = {
   session?: Prisma.SessionUpdateOneWithoutPullRequestsNestedInput
   reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
   reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
+  listItems?: Prisma.ListItemPullUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestUncheckedUpdateWithoutAuthorTeammateInput = {
@@ -1612,6 +1772,7 @@ export type PullRequestUncheckedUpdateWithoutAuthorTeammateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutPullRequestNestedInput
+  listItems?: Prisma.ListItemPullUncheckedUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestUncheckedUpdateManyWithoutAuthorTeammateInput = {
@@ -1713,6 +1874,7 @@ export type PullRequestUpdateWithoutSessionInput = {
   authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
   reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
   reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
+  listItems?: Prisma.ListItemPullUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestUncheckedUpdateWithoutSessionInput = {
@@ -1739,6 +1901,7 @@ export type PullRequestUncheckedUpdateWithoutSessionInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutPullRequestNestedInput
+  listItems?: Prisma.ListItemPullUncheckedUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestUncheckedUpdateManyWithoutSessionInput = {
@@ -1790,6 +1953,7 @@ export type PullRequestUpdateWithoutReviewSessionInput = {
   session?: Prisma.SessionUpdateOneWithoutPullRequestsNestedInput
   authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
   reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
+  listItems?: Prisma.ListItemPullUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestUncheckedUpdateWithoutReviewSessionInput = {
@@ -1816,6 +1980,7 @@ export type PullRequestUncheckedUpdateWithoutReviewSessionInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutPullRequestNestedInput
+  listItems?: Prisma.ListItemPullUncheckedUpdateManyWithoutPullRequestNestedInput
 }
 
 export type PullRequestUncheckedUpdateManyWithoutReviewSessionInput = {
@@ -1850,10 +2015,12 @@ export type PullRequestUncheckedUpdateManyWithoutReviewSessionInput = {
 
 export type PullRequestCountOutputType = {
   reviews: number
+  listItems: number
 }
 
 export type PullRequestCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   reviews?: boolean | PullRequestCountOutputTypeCountReviewsArgs
+  listItems?: boolean | PullRequestCountOutputTypeCountListItemsArgs
 }
 
 /**
@@ -1871,6 +2038,13 @@ export type PullRequestCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.
  */
 export type PullRequestCountOutputTypeCountReviewsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PullRequestReviewWhereInput
+}
+
+/**
+ * PullRequestCountOutputType without action
+ */
+export type PullRequestCountOutputTypeCountListItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ListItemPullWhereInput
 }
 
 
@@ -1903,6 +2077,7 @@ export type PullRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   authorTeammate?: boolean | Prisma.PullRequest$authorTeammateArgs<ExtArgs>
   reviewSession?: boolean | Prisma.PullRequest$reviewSessionArgs<ExtArgs>
   reviews?: boolean | Prisma.PullRequest$reviewsArgs<ExtArgs>
+  listItems?: boolean | Prisma.PullRequest$listItemsArgs<ExtArgs>
   _count?: boolean | Prisma.PullRequestCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["pullRequest"]>
 
@@ -1999,6 +2174,7 @@ export type PullRequestInclude<ExtArgs extends runtime.Types.Extensions.Internal
   authorTeammate?: boolean | Prisma.PullRequest$authorTeammateArgs<ExtArgs>
   reviewSession?: boolean | Prisma.PullRequest$reviewSessionArgs<ExtArgs>
   reviews?: boolean | Prisma.PullRequest$reviewsArgs<ExtArgs>
+  listItems?: boolean | Prisma.PullRequest$listItemsArgs<ExtArgs>
   _count?: boolean | Prisma.PullRequestCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type PullRequestIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2022,6 +2198,10 @@ export type $PullRequestPayload<ExtArgs extends runtime.Types.Extensions.Interna
     authorTeammate: Prisma.$TeammatePayload<ExtArgs> | null
     reviewSession: Prisma.$SessionPayload<ExtArgs> | null
     reviews: Prisma.$PullRequestReviewPayload<ExtArgs>[]
+    /**
+     * The list items it works on, or finishes (docs/lists.md).
+     */
+    listItems: Prisma.$ListItemPullPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2479,6 +2659,7 @@ export interface Prisma__PullRequestClient<T, Null = never, ExtArgs extends runt
   authorTeammate<T extends Prisma.PullRequest$authorTeammateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PullRequest$authorTeammateArgs<ExtArgs>>): Prisma.Prisma__TeammateClient<runtime.Types.Result.GetResult<Prisma.$TeammatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   reviewSession<T extends Prisma.PullRequest$reviewSessionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PullRequest$reviewSessionArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   reviews<T extends Prisma.PullRequest$reviewsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PullRequest$reviewsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PullRequestReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  listItems<T extends Prisma.PullRequest$listItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PullRequest$listItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListItemPullPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3010,6 +3191,30 @@ export type PullRequest$reviewsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.PullRequestReviewScalarFieldEnum | Prisma.PullRequestReviewScalarFieldEnum[]
+}
+
+/**
+ * PullRequest.listItems
+ */
+export type PullRequest$listItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ListItemPull
+   */
+  select?: Prisma.ListItemPullSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ListItemPull
+   */
+  omit?: Prisma.ListItemPullOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ListItemPullInclude<ExtArgs> | null
+  where?: Prisma.ListItemPullWhereInput
+  orderBy?: Prisma.ListItemPullOrderByWithRelationInput | Prisma.ListItemPullOrderByWithRelationInput[]
+  cursor?: Prisma.ListItemPullWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ListItemPullScalarFieldEnum | Prisma.ListItemPullScalarFieldEnum[]
 }
 
 /**

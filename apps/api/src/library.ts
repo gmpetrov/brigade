@@ -2,7 +2,7 @@
 // Library files: bytes in the bucket, metadata and text in `Document`. Memory
 // files and thread summaries: Markdown text in `Document` only. One search,
 // PostgreSQL full text over all of them.
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { extname } from 'node:path'
 import {
   LIBRARY_FILE_MAX,
@@ -28,7 +28,7 @@ import { notifyCollab } from './collab.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs } from './hub.js'
 import { folderRules, teammateLibraryAccess } from './library-folders.js'
-import { actorNames, ensureFirstVersion, recordVersion } from './library-history.js'
+import { actorNames, ensureFirstVersion, readVersion, recordVersion } from './library-history.js'
 import {
   applyMemoryEdit,
   applyMemoryLayout,
@@ -207,7 +207,180 @@ export async function saveLibraryFile(
     fromCollab?: boolean
     /** Set when the save brings back an older version. */
     restoredFromId?: string
+    /** The stored text it builds on: when the file changed since, nothing is written (StaleMemory). */
+    baseSha?: string
+    /** Its caller holds the file's lock already (withLibraryLock): the lease it writes under. */
+    lease?: LibraryLease
   } = {},
+): Promise<Awaited<ReturnType<typeof writeLibraryFile>>> {
+  // A Markdown file is changed one save at a time: a list's lines are read, changed and written
+  // back (src/lists.ts), and a save landing in between would be lost.
+  if (!options.lease && contentTypeFor(input.path, input.contentType) === 'text/markdown') {
+    const existing = await db.document.findFirst({
+      where: { kind: 'library', path: input.path, deletedAt: null },
+      select: { id: true },
+    })
+    if (existing)
+      return withLibraryLock(scope, existing.id, (lease) =>
+        writeLibraryFile(db, scope, actor, input, context, { ...options, lease }),
+      )
+  }
+  return writeLibraryFile(db, scope, actor, input, context, options)
+}
+
+/** How long a library file's lock is held at most: a crashed holder frees it after that. */
+const LEASE_MS = 30_000
+/** What a holder keeps in hand of its lease before it stops writing: clocks and a slow write. */
+const LEASE_MARGIN_MS = 10_000
+
+/**
+ * A held lock of a library file. `check` throws once too little of it is left to start a write;
+ * `fence` runs a database write only while the lease is still this holder's, atomically (it locks
+ * the lease's row, so no one can take the lease meanwhile), else throws LeaseLost.
+ */
+export type LibraryLease = {
+  check: () => void
+  fence: <T>(write: (tx: Prisma.TransactionClient) => Promise<T>) => Promise<T>
+}
+
+/** The lease ended before a holder's write: someone else may have saved since. */
+export class LeaseLost extends HTTPException {
+  constructor() {
+    super(409, { message: 'The file took too long to change; try again' })
+  }
+}
+
+/**
+ * Run `work` holding a library file's lock, which every save of a Markdown file takes: what it
+ * reads of the file stays what it writes over. The lock is a lease in the database: waiting for
+ * it holds no connection (the pool is small), and a holder that crashed frees it once its lease
+ * ends. A holder past its lease writes nothing more (`lease.check`, before each write).
+ */
+export async function withLibraryLock<T>(
+  scope: Scope,
+  documentId: string,
+  work: (lease: LibraryLease) => Promise<T>,
+  options: { leaseMs?: number; waitMs?: number } = {},
+): Promise<T> {
+  const key = `${scope.workspaceId}:${documentId}`
+  const owner = randomUUID()
+  const leaseMs = options.leaseMs ?? LEASE_MS
+  const giveUp = Date.now() + (options.waitMs ?? 20_000)
+  let started = 0
+  for (let pause = 20; ; pause = Math.min(pause * 2, 400)) {
+    started = Date.now()
+    const taken = await prisma.$queryRaw<{ owner: string }[]>`
+      INSERT INTO "LibraryLock" ("key", "owner", "until")
+      VALUES (${key}, ${owner}, timezone('UTC', now()) + make_interval(secs => ${leaseMs / 1000}))
+      ON CONFLICT ("key") DO UPDATE SET "owner" = EXCLUDED."owner", "until" = EXCLUDED."until"
+      WHERE "LibraryLock"."until" < timezone('UTC', now())
+      RETURNING "owner"`
+    if (taken[0]?.owner === owner) break
+    if (Date.now() > giveUp)
+      throw new HTTPException(409, { message: 'The file is being changed; try again' })
+    await new Promise((resolve) => setTimeout(resolve, pause))
+  }
+  const margin = Math.min(LEASE_MARGIN_MS, leaseMs / 3)
+  const lease: LibraryLease = {
+    check: () => {
+      if (Date.now() - started > leaseMs - margin) throw new LeaseLost()
+    },
+    fence: (write) =>
+      prisma.$transaction(async (tx) => {
+        const held = await tx.$queryRaw<unknown[]>`
+          SELECT 1 FROM "LibraryLock"
+          WHERE "key" = ${key} AND "owner" = ${owner} AND "until" > timezone('UTC', now())
+          FOR UPDATE`
+        if (!held.length) throw new LeaseLost()
+        return write(tx)
+      }),
+  }
+  try {
+    return await work(lease)
+  } finally {
+    await prisma.libraryLock
+      .deleteMany({ where: { key, owner } })
+      .catch((error) => console.warn(`library: lock ${key} not released: ${String(error)}`))
+  }
+}
+
+/**
+ * A file's bytes as its row says they are (its sha): its full text when the row holds all of
+ * it, else the saved version with that sha. Null when neither is there yet.
+ */
+export async function committedBytes(
+  scope: Scope,
+  row: { id: string; text: string; sha256: string },
+) {
+  const text = new TextEncoder().encode(row.text)
+  if (sha256(text) === row.sha256) return text
+  const version = await prisma.documentVersion.findFirst({
+    where: { documentId: row.id, sha256: row.sha256 },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true },
+  })
+  const bytes = version ? await readVersion(scope, version.id).catch(() => null) : null
+  return bytes && sha256(bytes) === row.sha256 ? bytes : null
+}
+
+/**
+ * Put a file's stored bytes back to what its row says, once a save whose lease ended mid-write
+ * may have overwritten them (`bytesStaleAt`). Under the file's lock; clears the mark only once
+ * its bytes match. False when it could not yet: the sweep tries again (repairStaleBytes).
+ */
+export async function repairBytes(scope: Scope, documentId: string) {
+  return withLibraryLock(scope, documentId, async (lease) => {
+    const row = await prisma.document.findFirst({ where: { id: documentId } })
+    if (!row?.bytesStaleAt) return true
+    const stored = await getObject(documentKey(scope, documentId)).catch(() => null)
+    if (!stored || sha256(stored) !== row.sha256) {
+      const bytes = await committedBytes(scope, row)
+      if (!bytes) return false
+      lease.check()
+      await putObject(documentKey(scope, documentId), bytes, row.contentType)
+    }
+    try {
+      await lease.fence((tx) =>
+        tx.document.updateMany({
+          where: { id: documentId, sha256: row.sha256, bytesStaleAt: row.bytesStaleAt },
+          data: { bytesStaleAt: null },
+        }),
+      )
+    } catch (error) {
+      // Its own write landed past its lease, maybe over a newer save's: marked again, anew.
+      if (error instanceof LeaseLost)
+        await prisma.document.updateMany({
+          where: { id: documentId },
+          data: { bytesStaleAt: new Date() },
+        })
+      throw error
+    }
+    return true
+  })
+}
+
+/** Files whose bytes a late save may have overwritten, put back (jobs.ts). */
+export async function repairStaleBytes() {
+  const rows = await prisma.document.findMany({
+    where: { bytesStaleAt: { not: null } },
+    select: { id: true, organizationId: true, workspaceId: true },
+    take: 50,
+  })
+  for (const row of rows) {
+    const scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
+    await repairBytes(scope, row.id).catch((error) =>
+      console.warn(`library: ${row.id}'s bytes not put back yet: ${String(error)}`),
+    )
+  }
+}
+
+async function writeLibraryFile(
+  db: ScopedDb,
+  scope: Scope,
+  actor: Actor,
+  input: Parameters<typeof saveLibraryFile>[3],
+  context: Record<string, string>,
+  options: Parameters<typeof saveLibraryFile>[5] & {},
 ) {
   const size = 'bytes' in input ? input.bytes.byteLength : input.upload.size
   if (size > LIBRARY_FILE_MAX)
@@ -217,6 +390,7 @@ export async function saveLibraryFile(
   const existing = await db.document.findFirst({
     where: { kind: 'library', path: input.path, deletedAt: null },
   })
+  if (options.baseSha && existing && existing.sha256 !== options.baseSha) throw new StaleMemory()
   // The same bytes again: nothing changed, nothing to record.
   if (
     existing &&
@@ -247,8 +421,40 @@ export async function saveLibraryFile(
   if (existing) {
     // A file from before versions keeps what it was as its first.
     await ensureFirstVersion(db, scope, existing)
-    await keep(documentKey(scope, existing.id))
-    row = await db.document.update({ where: { id: existing.id }, data: fields })
+    if (options.lease) {
+      const lease = options.lease
+      lease.check()
+      await keep(documentKey(scope, existing.id))
+      // Its row changes only while the lease is still this save's. Past it, another save may
+      // have landed, whose bytes this one's may have just overwritten: the file is marked, so
+      // they are put back from what its row says (now, else by the sweep until they are).
+      row = await lease
+        .fence(async (tx) => {
+          const saved = await tx.document.update({ where: { id: existing.id }, data: fields })
+          // Bytes a late save overwrote before this one's: this save's replaced them.
+          if (existing.bytesStaleAt)
+            await tx.document.updateMany({
+              where: { id: existing.id, bytesStaleAt: existing.bytesStaleAt },
+              data: { bytesStaleAt: null },
+            })
+          return saved
+        })
+        .catch(async (error: unknown) => {
+          if (error instanceof LeaseLost) {
+            await prisma.document.updateMany({
+              where: { id: existing.id },
+              data: { bytesStaleAt: new Date() },
+            })
+            await repairBytes(scope, existing.id).catch((failed) =>
+              console.warn(`library: ${existing.id}'s bytes not put back yet: ${String(failed)}`),
+            )
+          }
+          throw error
+        })
+    } else {
+      await keep(documentKey(scope, existing.id))
+      row = await db.document.update({ where: { id: existing.id }, data: fields })
+    }
   } else {
     row = await db.document.create({
       data: {
@@ -422,7 +628,10 @@ export async function saveDocumentText(
       actor,
       { path: row.path, bytes: new TextEncoder().encode(text), contentType: row.contentType },
       {},
-      { fromCollab: options.fromCollab },
+      {
+        fromCollab: options.fromCollab,
+        ...(options.baseSha ? { baseSha: options.baseSha } : {}),
+      },
     )
   if (text.length > MEMORY_MAX)
     throw new HTTPException(413, {
@@ -431,7 +640,10 @@ export async function saveDocumentText(
   return writeMemory(db, scope, actor, memoryTarget(row), text, options)
 }
 
-/** A person's save built on a memory file's text that a thread or a tidy run changed since. */
+/**
+ * A person's save built on a document's text that changed since: a memory file a thread or a
+ * tidy run wrote to, a library file a teammate or a list's change wrote to.
+ */
 export class StaleMemory extends Error {
   constructor() {
     super('The memory changed since this edit started')
