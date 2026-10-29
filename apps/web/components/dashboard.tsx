@@ -148,10 +148,10 @@ export { isAdmin }
 const WORK_NAV = [
   { href: '/app', label: 'Home', icon: House },
   { href: '/app/inbox', label: 'Inbox', icon: Mail },
+  { href: '/app/lists', label: 'Lists', icon: ListChecks },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },
-  { href: '/app/lists', label: 'Lists', icon: ListChecks },
   { href: '/app/routines', label: 'Routines', icon: CalendarClock },
 ]
 
@@ -552,24 +552,24 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        tooltip="Library"
-                        isActive={pathname.startsWith('/app/library')}
-                      >
-                        <Link href="/app/library">
-                          <Library />
-                          <span>Library</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
                         tooltip="Lists"
                         isActive={pathname.startsWith('/app/lists')}
                       >
                         <Link href="/app/lists">
                           <ListChecks />
                           <span>Lists</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip="Library"
+                        isActive={pathname.startsWith('/app/library')}
+                      >
+                        <Link href="/app/library">
+                          <Library />
+                          <span>Library</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
