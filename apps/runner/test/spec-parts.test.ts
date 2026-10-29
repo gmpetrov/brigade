@@ -29,6 +29,24 @@ const hash = createHash('sha256').update(text).digest('hex')
 const tampered = 'f'.repeat(64)
 const missing = 'e'.repeat(64)
 
+// An App's catalog (CATALOG_PROTOCOL): a connector names it by a version, and its operations come
+// from the API once per version, then from the disk; one the API refuses leaves the App without
+// tools in that turn, one it cannot give now holds the command.
+const catalogOperations = [
+  { name: 'search', description: 'Search', write: false, inputSchema: { type: 'object' } },
+  { name: 'send', description: 'Send', write: true, inputSchema: { type: 'object' } },
+]
+const catalogRequests: string[] = []
+const named = (connectionId: string, version: string) => ({
+  connectionId,
+  kind: 'gmail',
+  label: 'Gmail',
+  externalAccount: null,
+  scope: 'read_write' as const,
+  catalog: { version },
+  operations: [],
+})
+
 let server: Server
 let dir: string
 let requests = 0
@@ -41,6 +59,14 @@ before(async () => {
     if (req.headers.authorization !== 'Bearer token') return res.writeHead(401).end()
     if (req.url === `/runner/spec-parts/${hash}`) return res.end(text)
     if (req.url === `/runner/spec-parts/${tampered}`) return res.end(text)
+    const catalog = new URL(req.url ?? '/', 'http://api').pathname.match(
+      /^\/runner\/catalogs\/(.+)$/,
+    )
+    if (catalog) {
+      catalogRequests.push(req.url!)
+      if (catalog[1] === 'c1') return res.end(JSON.stringify(catalogOperations))
+      if (catalog[1] === 'busy') return res.writeHead(503).end()
+    }
     res.writeHead(404).end()
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
@@ -185,5 +211,54 @@ test('commands are handed on in the order they came, one not filled is not taken
   assert.deepEqual(handled, ['first', 'second', 'third'])
   assert.equal(settled[2]!.status, 'rejected')
   assert.ok((settled[2] as PromiseRejectedResult).reason instanceof NotTaken)
+  await rm(fresh, { recursive: true, force: true })
+})
+
+test("a connector's operations come from its App's catalog once, then from the disk", async () => {
+  catalogRequests.length = 0
+  const fresh = await mkdtemp(join(tmpdir(), 'spec-parts-'))
+  const withCatalog = { ...spec(), connectors: [named('c1', 'v1')] }
+  const filled = await new SpecParts({ apiUrl, token: 'token' }, fresh).spec(withCatalog)
+  assert.deepEqual(filled.connectors[0]!.operations, catalogOperations)
+  assert.deepEqual(catalogRequests, ['/runner/catalogs/c1?scope=read_write&version=v1'])
+  // Specs naming it at once, and another process later: no more fetches.
+  const parts = new SpecParts({ apiUrl, token: 'token' }, fresh)
+  const again = await Promise.all(Array.from({ length: 3 }, () => parts.spec(withCatalog)))
+  assert.ok(again.every((s) => s.connectors[0]!.operations.length === 2))
+  assert.equal(catalogRequests.length, 1)
+  // A new version is fetched again.
+  await parts.spec({ ...spec(), connectors: [named('c1', 'v2')] })
+  assert.equal(catalogRequests.length, 2)
+  await rm(fresh, { recursive: true, force: true })
+})
+
+test('a catalog named in a part is filled once the part is', async () => {
+  catalogRequests.length = 0
+  const fresh = await mkdtemp(join(tmpdir(), 'spec-parts-'))
+  const part = JSON.stringify([named('c1', 'v3')])
+  const partHash = createHash('sha256').update(part).digest('hex')
+  const local = createServer((req, res) => {
+    if (req.url === `/runner/spec-parts/${partHash}`) return res.end(part)
+    if (req.url?.startsWith('/runner/catalogs/c1?'))
+      return res.end(JSON.stringify(catalogOperations))
+    res.writeHead(404).end()
+  })
+  await new Promise<void>((resolve) => local.listen(0, '127.0.0.1', resolve))
+  const url = `http://127.0.0.1:${(local.address() as AddressInfo).port}`
+  const filled = await new SpecParts({ apiUrl: url, token: 'token' }, fresh).spec(
+    spec({ connectors: partHash }),
+  )
+  assert.deepEqual(filled.connectors[0]!.operations, catalogOperations)
+  local.close()
+  await rm(fresh, { recursive: true, force: true })
+})
+
+test('a catalog the API refuses leaves its App without tools; one it cannot give holds the command', async () => {
+  const fresh = await mkdtemp(join(tmpdir(), 'spec-parts-'))
+  const parts = new SpecParts({ apiUrl, token: 'token' }, fresh, [1])
+  const gone = await parts.spec({ ...spec(), connectors: [named('gone', 'v1'), named('c1', 'v1')] })
+  assert.deepEqual(gone.connectors[0]!.operations, [])
+  assert.deepEqual(gone.connectors[1]!.operations, catalogOperations)
+  await assert.rejects(parts.spec({ ...spec(), connectors: [named('busy', 'v1')] }), /answered 503/)
   await rm(fresh, { recursive: true, force: true })
 })

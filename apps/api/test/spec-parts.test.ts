@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
-import { SPEC_PARTS_PROTOCOL, ThreadSpec } from '@brigade/contracts'
+import { PROTOCOL_VERSION, SPEC_PARTS_PROTOCOL, ThreadSpec } from '@brigade/contracts'
 
 // A thread spec's large parts named by hash (src/spec-parts.ts), against the API's development
 // database (apps/api/.env), in an organization of its own removed at the end; skipped when no
@@ -228,7 +228,8 @@ describe('spec parts', { skip: !database && 'no database answers' }, () => {
 
   test('a prompt is kept small, and sent by hash or whole by the runner it goes to', async () => {
     const dispatch = await dispatcher()
-    const current = await connect(SPEC_PARTS_PROTOCOL)
+    // A current runner: one before CATALOG_PROTOCOL gets its Apps' operations whole as well.
+    const current = await connect(PROTOCOL_VERSION)
     const recent = prompt()
     assert.equal(await dispatch(computer(), recent), 'sent')
     const row = await prisma.runnerCommand.findUniqueOrThrow({ where: { id: recent.commandId } })

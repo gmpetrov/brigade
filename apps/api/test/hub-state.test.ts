@@ -18,6 +18,7 @@ const ALLOWED: Record<string, string> = {
   'src/git.ts:publicRepos': 'a cache of public repositories: data',
   'src/connectors/github-app.ts:tokens': "a cache of the GitHub App's installation tokens: data",
   'src/spec-parts.ts:kept': 'when parts were last written, a cache to skip writes: data',
+  'src/catalogs.ts:made': "Apps' catalogs made lately, by connection and version, bounded: data",
   'src/project-sites.ts:recent':
     'reads of websites for the HTTP routes that ask, deduped: never reached from a hub',
   'src/cloud.ts:desktopRequests':
