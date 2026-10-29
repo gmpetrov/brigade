@@ -262,7 +262,11 @@ function SubThreads({
               type="button"
               aria-expanded={false}
               onClick={onToggle}
-              className={cn(SUB_ROW, 'text-muted-foreground h-5 text-[11px]')}
+              className={cn(
+                SUB_ROW,
+                // Too short for a background: only its text lights up on hover.
+                'text-muted-foreground hover:text-sidebar-foreground h-5 text-[11px] hover:bg-transparent',
+              )}
             >
               {items.length} sub-thread{items.length === 1 ? '' : 's'}
             </button>
