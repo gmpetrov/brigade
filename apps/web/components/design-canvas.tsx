@@ -107,6 +107,8 @@ type FromPage =
 /** Space above a group of boards for its name. */
 const GROUP_TITLE = 72
 const GROUP_GAP = 200
+/** Live pages at once on a phone or tablet. */
+const TOUCH_LIVE = 2
 const ZOOM_MIN = 0.02
 /** The widest a board grows to fit its page: the widest a design may set. */
 const BOARD_WIDTH_MAX = 4000
@@ -144,6 +146,8 @@ function DesignCanvasInner({
 }) {
   const box = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
+  const [touch, setTouch] = useState(false)
+  useEffect(() => setTouch(window.matchMedia('(pointer: coarse)').matches), [])
   const [view, setView] = useState({ x: 40, y: 40, zoom: 0.25 })
   const viewRef = useRef(view)
   viewRef.current = view
@@ -658,6 +662,26 @@ function DesignCanvasInner({
       s.top + h > -size.height
     )
   }
+  // On a phone or tablet, only the boards that fill most of the view keep a live page:
+  // each is a whole document, and iOS ends the tab once they take too much memory.
+  const live = useMemo(() => {
+    if (!touch) return null
+    const shown = (b: { x: number; y: number; width: number; frame: number }) => {
+      const s = screen(b.x, b.y)
+      const w = Math.min(size.width, s.left + b.width * view.zoom) - Math.max(0, s.left)
+      const h = Math.min(size.height, s.top + b.frame * view.zoom) - Math.max(0, s.top)
+      return w > 0 && h > 0 ? w * h : 0
+    }
+    return new Set(
+      layout.boards
+        .map((b) => ({ key: b.key, area: shown(b) }))
+        .filter((b) => b.area > 0)
+        .sort((a, b) => b.area - a.area)
+        .slice(0, TOUCH_LIVE)
+        .map((b) => b.key),
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- screen reads view
+  }, [touch, layout.boards, view, size.width, size.height])
   const outline = (board: string, r: Rect | null | undefined) => {
     const b = layout.boards.find((x) => x.key === board)
     if (!b || !r) return null
@@ -704,7 +728,8 @@ function DesignCanvasInner({
             key={b.key}
             board={b}
             height={b.frame}
-            mounted={near(b)}
+            mounted={live ? live.has(b.key) : near(b)}
+            linger={!live}
             reload={reloads[b.key] ?? 0}
             select={mode === 'select' && !panning && !(retyping && retyping.board === b.key)}
             onFrame={(frame) => {
@@ -801,6 +826,7 @@ const BoardView = memo(function BoardView({
   board,
   height,
   mounted,
+  linger,
   reload,
   select,
   onFrame,
@@ -812,6 +838,8 @@ const BoardView = memo(function BoardView({
   board: CanvasBoard
   height: number
   mounted: boolean
+  /** Keeps its page a moment after it leaves, for a pan that comes back. */
+  linger: boolean
   reload: number
   select: boolean
   onFrame: (frame: HTMLIFrameElement | null) => void
@@ -823,14 +851,15 @@ const BoardView = memo(function BoardView({
   // Once shown, a board keeps its page while it stays near the view.
   const [shown, setShown] = useState(mounted)
   if (mounted && !shown) setShown(true)
+  if (!mounted && shown && !linger) setShown(false)
   const onFrameRef = useRef(onFrame)
   onFrameRef.current = onFrame
   useEffect(() => {
-    if (!mounted && shown) {
+    if (!mounted && shown && linger) {
       const timer = setTimeout(() => setShown(false), 5000)
       return () => clearTimeout(timer)
     }
-  }, [mounted, shown])
+  }, [mounted, shown, linger])
   useEffect(() => () => onFrameRef.current(null), [])
 
   return (
