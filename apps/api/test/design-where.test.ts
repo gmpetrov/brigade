@@ -16,12 +16,16 @@ type Pick = { from: string; to: string; at?: Date }
 function db(files: string[], picks: Pick[] = [], trashed: Record<string, Date> = {}) {
   return {
     document: {
-      findFirst: async ({ where }: { where: { path: string; deletedAt: unknown } }) => {
-        if (where.deletedAt === null)
-          return files.includes(where.path) ? { path: where.path } : null
-        const at = trashed[where.path]
-        return at ? { path: where.path, deletedAt: at } : null
-      },
+      findFirst: async ({ where }: { where: { path: string; deletedAt: unknown } }) =>
+        where.deletedAt === null && files.includes(where.path) ? { path: where.path } : null,
+      // Stored as the trash keeps them: `.trash/<id>/<where it was>`.
+      findMany: async ({ where }: { where: { path: { startsWith: string; endsWith: string } } }) =>
+        Object.entries(trashed)
+          .map(([was, at], i) => ({ path: `.trash/doc${i}/${was}`, deletedAt: at }))
+          .filter(
+            (d) => d.path.startsWith(where.path.startsWith) && d.path.endsWith(where.path.endsWith),
+          )
+          .sort((x, y) => y.deletedAt.getTime() - x.deletedAt.getTime()),
     },
     auditEntry: {
       findFirst: async ({ where }: { where: { action: string; targetId: string } }) => {
@@ -87,6 +91,17 @@ test('an option trashed by a pick, before it was recorded, stays in the trash', 
   const pick = { from: `${OPTIONS}/b-the-pass.design`, to, at }
   assert.deepEqual(await findDesign(db([`${to}/index.html`], [pick], before), a), {
     path: a,
+    trashed: true,
+  })
+})
+
+test('a same-named option elsewhere in the trash is not this one', async () => {
+  const to = 'Projects/Acme/designs/landing.design'
+  const old = { from: `${OPTIONS}/a-old.design`, to, at: new Date('2026-10-01') }
+  const b = `${OPTIONS}/b-new.design`
+  const elsewhere = { [`Archive/${b}/index.html`]: new Date('2026-10-20') }
+  assert.deepEqual(await findDesign(db([`${to}/index.html`], [old], elsewhere), b), {
+    path: b,
     trashed: true,
   })
 })
