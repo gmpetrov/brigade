@@ -51,7 +51,7 @@ const brigadeDomain = (name: string) => name === mailDomain() || name.endsWith(`
  * Public DNS (Cloudflare's, over HTTPS): a name's records of a type, or null when the name does not
  * exist (NXDOMAIN). Any other failure is a 502: a resolver failing is never an empty answer.
  */
-async function lookup(name: string, type: 'MX' | 'TXT') {
+export async function lookup(name: string, type: 'MX' | 'TXT' | 'NS') {
   const unread = () => new HTTPException(502, { message: 'DNS could not be read, try again' })
   const response = await fetch(
     `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`,
@@ -66,7 +66,7 @@ async function lookup(name: string, type: 'MX' | 'TXT') {
   }
   if (answer.Status === 3) return null
   if (answer.Status !== 0) throw unread()
-  return (answer.Answer ?? []).filter((a) => a.type === (type === 'MX' ? 15 : 16))
+  return (answer.Answer ?? []).filter((a) => a.type === { MX: 15, TXT: 16, NS: 2 }[type])
 }
 
 /** A domain's MX hosts, best first. */
