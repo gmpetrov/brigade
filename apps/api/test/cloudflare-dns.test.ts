@@ -211,9 +211,11 @@ test('a domain is on Cloudflare when its closest zone’s nameservers are Cloudf
     'acme.com': ['ada.ns.cloudflare.com.', 'bob.ns.cloudflare.com.'],
     'google.test': ['ns1.google.com.'],
   }
+  const failing = new Set<string>()
   const previousFetch = globalThis.fetch
   globalThis.fetch = (async (input: string | URL | Request) => {
     const name = new URL(String(input)).searchParams.get('name') ?? ''
+    if (failing.has(name)) return Response.json({ Status: 2 })
     return Response.json(
       name in ns
         ? { Status: 0, Answer: ns[name]!.map((data) => ({ type: 2, data })) }
@@ -236,6 +238,10 @@ test('a domain is on Cloudflare when its closest zone’s nameservers are Cloudf
       onCloudflare: true,
     })
     assert.equal(await authoritativeZone('nowhere.test'), null)
+    // A delegation that could not be read is never taken for none: no fallback to the parent.
+    failing.add('team.acme.com')
+    await assert.rejects(authoritativeZone('team.acme.com'), /DNS could not be read/)
+    assert.equal(await dnsOnCloudflare('team.acme.com'), false)
   } finally {
     globalThis.fetch = previousFetch
   }

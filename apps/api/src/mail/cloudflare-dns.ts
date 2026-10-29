@@ -44,20 +44,21 @@ export function fqdnOf(name: string, domain: string) {
 /**
  * The zone that answers for the domain: the closest name with nameservers of its own (a subdomain
  * delegated elsewhere is its own zone, and its parent's records below it are never seen), and
- * whether Cloudflare serves it. Null when DNS says nothing.
+ * whether Cloudflare serves it. Null when DNS says nothing. A resolver failing throws (a 502) rather
+ * than moving on to the parent: an unread delegation must never pass for none.
  */
 export async function authoritativeZone(domain: string) {
   for (const name of zoneCandidates(domain)) {
-    const ns = await lookup(name, 'NS').catch(() => null)
+    const ns = await lookup(name, 'NS')
     if (ns?.length)
       return { zone: name, onCloudflare: ns.some((a) => CLOUDFLARE_NS.test(a.data.trim())) }
   }
   return null
 }
 
-/** Whether the domain's DNS is served by Cloudflare: its zone's nameservers. */
+/** Whether the domain's DNS is served by Cloudflare: its zone's nameservers. Unread: not shown. */
 export const dnsOnCloudflare = async (domain: string) =>
-  (await authoritativeZone(domain))?.onCloudflare ?? false
+  (await authoritativeZone(domain).catch(() => null))?.onCloudflare ?? false
 
 /** The workspace's Cloudflare accounts this member may use: shared ones, and their own. */
 const usableAccounts = (db: ScopedDb, scope: WorkspaceScope) =>
