@@ -915,6 +915,7 @@ export const DocumentScalarFieldEnum = {
   updatedByType: 'updatedByType',
   updatedById: 'updatedById',
   updatedInSessionId: 'updatedInSessionId',
+  bytesStaleAt: 'bytesStaleAt',
   memoryTidiedAt: 'memoryTidiedAt',
   deletedAt: 'deletedAt',
   deletedByType: 'deletedByType',

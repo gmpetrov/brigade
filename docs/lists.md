@@ -32,9 +32,13 @@ mission; threads stay where the work happens.
   save lands in between and is lost. The lock is a lease row (`LibraryLock`, 30 s): waiting for it
   holds no database connection, a crashed holder frees it when its lease ends, and a holder past
   its lease writes nothing more: its row changes only while the lease is still its own (checked
-  atomically, `lease.fence`), and when its bytes landed after the lease ended, the stored bytes
-  are put back to what the row says, so a newer save is never undone. A list is read from its row
-  while its bytes and its row disagree. A person's live save built on an older text is refused
+  atomically, `lease.fence`). Its bytes may still land late, over a newer save's (the bucket key is
+  shared): the file is then marked (`Document.bytesStaleAt`) and its bytes are put back from what its
+  row says (its full text, or the saved version with its sha), at once and else by a sweep every
+  minute until they are (`repairBytes`). Until then a list is read from that source, and an edit is
+  refused when there is none yet. Readers of the raw file (the runner's mirror, downloads) can see
+  the late bytes for that minute; immutable per-save keys would close it, a change of the whole
+  library's storage. A person's live save built on an older text is refused
   (409) and the collab server reconciles first.
 - **Ticks are changes to the file, made by code.** Ticking marks the line's box (`[x]`) and may
   add a short note after its text (`*PR #491, 29 Oct*`), a save of its own credited to who did

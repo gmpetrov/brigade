@@ -35,7 +35,7 @@ import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs } from './hub.js'
 import { teammateLibraryAccess } from './library-folders.js'
 import { actorNames } from './library-history.js'
-import { documentText, saveLibraryFile, withLibraryLock } from './library.js'
+import { committedBytes, documentText, saveLibraryFile, withLibraryLock } from './library.js'
 import { computerFor } from './tasks.js'
 import { noteInThread } from './thread-notes.js'
 import { startThread } from './work.js'
@@ -94,13 +94,23 @@ async function editList(
 }
 
 /**
- * A list's text as last saved: its stored bytes, or its row's text when the bytes are not what
- * the row says (a save whose lease ended mid-write, until its bytes are put back).
+ * A list's text as last saved: its stored bytes, or what its row says they are (its full text, or
+ * its saved version) when they differ, as after a save whose lease ended mid-write until its
+ * bytes are put back. Never bytes the row does not vouch for: refused when nothing else is there.
  */
 async function storedText(scope: Scope, row: FileRow) {
+  if (row.bytesStaleAt) {
+    const bytes = await committedBytes(scope, row)
+    if (!bytes)
+      throw new HTTPException(409, { message: 'The list is being repaired; try again shortly' })
+    return new TextDecoder().decode(bytes)
+  }
   const text = await documentText(scope, row)
   if (sha256(text) === row.sha256) return text
-  return sha256(row.text) === row.sha256 ? row.text : text
+  const bytes = await committedBytes(scope, row)
+  if (!bytes)
+    throw new HTTPException(409, { message: 'The list is being saved; try again shortly' })
+  return new TextDecoder().decode(bytes)
 }
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex')

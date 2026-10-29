@@ -1563,6 +1563,9 @@ model Document {
   updatedById        String?
   /// The thread a teammate last changed it from.
   updatedInSessionId String?
+  /// Set when a save whose lease ended mid-write may have overwritten its stored bytes: they are
+  /// put back from what its row says (repairBytes, src/library.ts), retried until they are.
+  bytesStaleAt       DateTime?
   /// A memory file: when a tidy run last laid it out (core within budget, topics, archive).
   memoryTidiedAt     DateTime?
   /// Set while a library file is in the trash. Its path is then ".trash/<id>/<path it had>",

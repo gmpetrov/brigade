@@ -805,4 +805,92 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
     assert.equal(bytes, '* [x] New winning edit\n')
     assert.equal(createHash('sha256').update(bytes).digest('hex'), row?.sha256)
   })
+
+  /** A save under a 300 ms lease whose bucket write stalls past it while a newer save lands. */
+  async function lateSave(path: string, padding: string, stallVersion = 0) {
+    const fs = (await import('node:fs/promises')).default
+    const { syncBuiltinESMExports } = await import('node:module')
+    const encode = (text: string) => new TextEncoder().encode(text + padding)
+    const file = await save(path, '* [ ] Initial\n' + padding)
+    const original = fs.writeFile
+    let entered!: () => void
+    const stalled = new Promise<void>((resolve) => (entered = resolve))
+    const has = (bytes: unknown, text: string) =>
+      bytes instanceof Uint8Array && new TextDecoder().decode(bytes.subarray(0, 64)).includes(text)
+    ;(fs as { writeFile: unknown }).writeFile = async (
+      ...args: Parameters<typeof fs.writeFile>
+    ) => {
+      if (String(args[0]).endsWith(`/library/${file.id}`) && has(args[1], 'Slow stale edit')) {
+        entered()
+        await new Promise((resolve) => setTimeout(resolve, 700))
+      }
+      if (
+        stallVersion &&
+        String(args[0]).includes('/library-versions/') &&
+        has(args[1], 'New winning edit')
+      )
+        await new Promise((resolve) => setTimeout(resolve, stallVersion))
+      return original(...args)
+    }
+    syncBuiltinESMExports()
+    try {
+      const slow = library.withLibraryLock(
+        scope,
+        file.id,
+        (lease) =>
+          library.saveLibraryFile(
+            db,
+            scope,
+            actor(),
+            { path, bytes: encode('* [x] Slow stale edit\n') },
+            {},
+            { lease },
+          ),
+        { leaseMs: 300 },
+      )
+      // Its failure is taken as it comes: the newer save may still be running then.
+      const failed = slow.then(
+        () => null,
+        (error: unknown) => error,
+      )
+      await stalled
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      await library.saveLibraryFile(db, scope, actor(), {
+        path,
+        bytes: encode('* [x] New winning edit\n'),
+      })
+      assert.match(String(await failed), /took too long/)
+    } finally {
+      ;(fs as { writeFile: unknown }).writeFile = original
+      syncBuiltinESMExports()
+    }
+    return file
+  }
+
+  const consistent = async (id: string) => {
+    const { createHash } = await import('node:crypto')
+    const row = await db.document.findFirst({ where: { id } })
+    const bytes = await read(id)
+    assert.match(bytes.slice(0, 30), /New winning edit/)
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), row?.sha256)
+    assert.equal(row?.bytesStaleAt, null)
+  }
+
+  test("a late write to a file larger than the row's text is put back from its saved version", async () => {
+    const file = await lateSave('Lease/large.md', '\n' + 'x'.repeat(400_001))
+    await consistent(file.id)
+  })
+
+  test(
+    'a late write whose repair waits too long is put back by the sweep',
+    { timeout: 60_000 },
+    async () => {
+      // The newer save holds its lease past the 20 s the late save's repair waits for it.
+      const file = await lateSave('Lease/version.md', '', 22_000)
+      const marked = await db.document.findFirst({ where: { id: file.id } })
+      assert.ok(marked?.bytesStaleAt, 'marked for repair')
+      await library.repairStaleBytes()
+      await consistent(file.id)
+    },
+  )
 })

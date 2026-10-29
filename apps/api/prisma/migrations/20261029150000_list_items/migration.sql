@@ -80,3 +80,6 @@ CREATE TABLE "LibraryLock" (
 
     CONSTRAINT "LibraryLock_pkey" PRIMARY KEY ("key")
 );
+
+-- AlterTable
+ALTER TABLE "Document" ADD COLUMN     "bytesStaleAt" TIMESTAMP(3);
