@@ -1,0 +1,52 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Brigade",
+  "description": "AI teammates that run your whole company, on the Claude or ChatGPT plan you already pay for.",
+  "colors": {
+    "primary": "#6c43e6",
+    "light": "#a58af9",
+    "dark": "#6c43e6"
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://www.brigade.lol"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": ["index", "quickstart", "computers"]
+      },
+      {
+        "group": "Working with teammates",
+        "pages": ["apps", "security"]
+      },
+      {
+        "group": "Help",
+        "pages": ["faq"]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      { "label": "Live demo", "href": "https://demo.brigade.lol" },
+      { "label": "GitHub", "href": "https://github.com/gmpetrov/brigade" }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Sign up",
+      "href": "https://www.brigade.lol/sign-up"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/gmpetrov/brigade"
+    }
+  },
+  "seo": {
+    "indexing": "navigable"
+  }
+}

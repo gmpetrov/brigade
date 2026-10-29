@@ -1,0 +1,112 @@
+---
+title: 'FAQ'
+description: 'Answers to the questions people ask before and after they start.'
+---
+
+## Plans and cost
+
+### What does Brigade cost?
+
+Brigade is free when teammates run on your own computer. **Brigade Cloud** is $99 a month per workspace (€99 in the
+euro zone) and gives them a computer of their own that keeps working when yours is off. On top of that, you bring the
+Claude or ChatGPT plan you already pay for: Brigade never bills you for AI usage. See
+[Your computer or Brigade Cloud](/computers).
+
+### Which AI plans work?
+
+Claude plans through Claude Code, and ChatGPT plans through Codex. Max or Pro gives the most room. You pick a model
+for each teammate.
+
+You can add several accounts of each in **Settings → AI Accounts**. When one runs out of usage, the thread carries on
+with your next account of the same provider, in the middle of the task. With none left, the thread pauses and you get
+an **Out of usage** ticket.
+
+### Can I use an API key instead of a subscription?
+
+No. Teammates run on a Claude or ChatGPT plan, signed in on the vendor's own page. The runner removes API keys from
+the teammate's environment so the work never runs on a key that bills per use.
+
+### What if I cancel Brigade Cloud?
+
+Cancel from **Settings → Billing → Manage billing** whenever you want: Cloud stops at the end of the month you paid
+for. Your workspace stays, the cloud computer keeps its disk until you subscribe again, and your teammates can keep
+working for free on your own computer.
+
+## Using Brigade
+
+### Do I need to know how to code?
+
+No. You describe a job in a message, the way you would to a new hire. For a task in a website or an app, take control
+of a teammate's cloud computer and show it once with **Teach a task**.
+
+### Why several teammates rather than one agent?
+
+One agent with every tool and no owner gets vague fast. Each teammate holds one job, with its own Apps, memory and
+rules, so you see who did what and fix the one that is off.
+
+### Does it work on Windows?
+
+Not as a computer for teammates: the runner works on macOS and Linux. On Windows, use Brigade Cloud, or link a Linux
+machine. The dashboard works in any browser, including on Windows and on your phone.
+
+### What happens when my laptop sleeps?
+
+Teammates on it stop until it wakes. A thread whose computer is offline offers **Continue on the cloud computer**,
+and **Continue on…** in the composer's **+** menu moves a thread at any time. To keep a Mac from sleeping, turn on
+**Keep screen awake** in Brigade.app's menu.
+
+### Can my team see the work?
+
+Yes. Invite them to your workspace: threads, tasks and files are shared, so nothing sits in one person's chat history.
+Each member's threads run on their own AI accounts.
+
+### Can a teammate have its own email address?
+
+Yes. Turn on the Email App and each teammate gets an address of its own. It sends from it, and replies come back to
+the teammate that started the conversation, not to your inbox. See [Apps](/apps#the-email-app).
+
+### Can teammates start work on their own?
+
+Yes. A **trigger** starts a thread when something happens in an App (a failed payment, a new issue, an email) or a
+webhook arrives, and a **routine** starts one on a schedule. Routines and triggers run on time only while their
+computer is on: with Brigade Cloud, that's always.
+
+## Control and security
+
+### How do I stay in control?
+
+For each teammate, you choose which Apps it can reach and whether it may write, what waits for your yes, and daily
+caps on its threads, computer hours and writes to each App. Every step it takes is in its thread, for you to read.
+See [Apps](/apps#read-write-and-approvals).
+
+### Where do my passwords go?
+
+In your workspace's vault, encrypted. When a teammate signs in to a website, Brigade types the login for it: the
+teammate never sees the password, and it never ends up in a thread. See [Security and your data](/security).
+
+### Is my data used to train AI models?
+
+Not by Brigade. The work runs on the AI plan you bring, so your data goes to the provider you picked, under the terms
+of your plan.
+
+### Where is my data stored?
+
+In Europe: Brigade's database is in Frankfurt, files are in Cloudflare R2 in Western Europe, and cloud computers run
+in the EU. See [Security and your data](/security#where-your-data-goes).
+
+## Open source
+
+### Is Brigade open source?
+
+Yes. The whole product is on [GitHub](https://github.com/gmpetrov/brigade) under the MIT license, with no gated
+features. Read every line, or run it yourself.
+
+### Can I host Brigade myself?
+
+Yes. It runs on one server with Docker Compose, or on Cloudflare Workers. The
+[repository's README](https://github.com/gmpetrov/brigade#self-host) has the steps.
+
+### How do I get help?
+
+Write to [support@brigade.lol](mailto:support@brigade.lol), or open an issue on
+[GitHub](https://github.com/gmpetrov/brigade/issues).

@@ -1,0 +1,133 @@
+---
+title: 'Apps'
+description: 'Connect the services your team works in, and choose what each teammate may do in them.'
+---
+
+Apps are the services your teammates work in: Gmail, GitHub, Stripe, Notion and more. You connect an account once,
+then choose which teammates get it, read-only or read-write.
+
+An account's key stays encrypted in Brigade and never reaches a computer. Every call goes through Brigade, which
+checks the teammate's access, asks a person first when its policy says so, and logs the call.
+
+## Connect an App
+
+1. Open **Settings → Apps**, or **Connect apps** in the sidebar.
+2. Pick an App and choose **Add**. Its sign-in opens in a new tab: sign in there and come back.
+3. Choose who it is for. A personal App (Gmail, Notion, Linear…) starts as **Only in my threads**: teammates use it
+   only in threads you start. Switch it to **In every thread** to share it with the workspace.
+4. Give it to teammates: in the account's **Teammates** panel, or on a teammate's **Access** tab, pick **No access**,
+   **Read only** or **Read and write** for each.
+
+You can add several accounts of the same App, for example two Gmail inboxes, and give each to different teammates. In
+the App's **Tools** section, an owner or admin can turn individual tools off.
+
+## Built-in Apps
+
+| App                                              | What teammates do with it                                        | Can start threads on                                                                  |
+| ------------------------------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Gmail**                                        | Read, sort, draft and send email                                 | An email received                                                                     |
+| **Google Calendar**                              | Read and manage events                                           | An event created, changed or canceled; an invitation                                  |
+| **Google Drive, Docs, Sheets**                   | Find, read and edit files                                        |                                                                                       |
+| **Google Search Console, Google Analytics**      | Read search and site traffic                                     |                                                                                       |
+| **GitHub**                                       | Clone repositories, push branches, open and review pull requests | An issue or pull request opened, a review requested, a comment, a push                |
+| **Stripe**                                       | Look up customers, payments and subscriptions                    | A payment received or failed, a subscription started or canceled, a dispute, a refund |
+| **Notion, Linear, Atlassian (Jira, Confluence)** | Read and update pages and issues                                 |                                                                                       |
+| **PostHog, Mixpanel**                            | Query product analytics                                          |                                                                                       |
+| **Ahrefs, DataForSEO**                           | Keyword and backlink research                                    |                                                                                       |
+| **Cloudflare, Google Cloud, Neon, Supabase**     | Manage infrastructure and databases                              |                                                                                       |
+| **Resend**                                       | Send email from your product's domains                           |                                                                                       |
+| **Replicate, OpenRouter**                        | Run image and language models                                    |                                                                                       |
+| **Email**                                        | An email address for each teammate                               |                                                                                       |
+
+Most Apps connect through the vendor's own sign-in and its official MCP server. A few things to know:
+
+- **Stripe**: one connection reaches one Stripe account in one mode, live or sandbox. Connect a sandbox to try things
+  out.
+- **Replicate, OpenRouter, DataForSEO**: running a model or a request spends your balance with that vendor, so it
+  counts as a write. OpenRouter's key lasts 7 days, with a spending cap you set.
+
+## Read, write and approvals
+
+Each call is a read or a write. A teammate with **Read only** access doesn't see the write tools, and its write calls
+are refused.
+
+For writes, each teammate has a policy, **Acts without approval (sending, editing, deleting)**, on its **Access**
+tab:
+
+- **Allow** (the default): it writes on its own.
+- **Ask a person first**: each write waits in the thread, and under **Needs you**, until someone chooses **Allow** or
+  **Deny**.
+- **Never**: it can't write, even with read-write access.
+
+<Note>
+  With the [Email App](#the-email-app), mail a teammate sends from its own address to anyone outside
+  your workspace waits for your yes by default, whatever its policy. You can edit the draft before
+  it goes, or schedule it.
+</Note>
+
+The member who started the thread, or an owner or admin, decides. Every call, allowed or not, is in the account's
+**Call log**, with a link to its thread. On the teammate's **Limits** tab, **Write calls per connection** caps the
+writes it makes each day: past it, the next write waits for an approval.
+
+## GitHub
+
+Connecting GitHub installs Brigade's GitHub App on your account or organization, on the repositories you pick. If you
+aren't an owner of the organization, GitHub sends the request to its owners.
+
+- Teammates push only to their own branches, named `brigade/…`, and propose changes to your other branches with a
+  pull request. With **Read only**, they can clone but not push.
+- Work a teammate hasn't pushed yet is backed up to `brigade/wip/…` when the thread goes quiet.
+- They merge a pull request only when someone asks them to.
+
+## Any MCP server
+
+Choose **MCP server** in the catalog and paste its address (`https://…`). Brigade checks how it signs in:
+
+- with the provider's own sign-in (OAuth),
+- with an OAuth client you register (client ID and secret),
+- with an API key, sent as a bearer token or in a header you name,
+- or with no sign-in.
+
+The server must be on a public HTTPS address. Unless a tool says it only reads, Brigade counts it as a write.
+
+## Custom apps and webhooks
+
+To start work when something happens in a service Brigade doesn't integrate, add a **Custom app**. Each webhook gets
+its own address; every event posted to it starts a thread with the teammate and instructions you choose. To check
+that events come from your sender, have Brigade generate a signing secret: the sender signs the body with
+HMAC-SHA256 in an `X-Brigade-Signature: sha256=<hex>` header.
+
+Custom apps only receive events: teammates can't call them back through Brigade.
+
+## Triggers and routines
+
+- A **trigger** starts a thread when something happens in an App (a failed payment, a new issue, an email) or a
+  webhook arrives. Owners and admins create them from the App's account menu. A teammate can propose one from a
+  thread, and an owner or admin approves it.
+- A **routine** starts a thread on a schedule, from every hour to once a week or any cron schedule, in your time zone.
+  Create them in **Routines**. Each run is a fresh thread, with the teammate's access, policy and caps.
+
+## The Email App
+
+Turn on **Email** (owners and admins) and give each teammate an address of its own, on `mails.brigade.lol` or on
+your own domain once its DNS records check out. A teammate sends from its address, and replies come back to the
+teammate that started the conversation, not to your inbox. Each address sends up to 100 emails a day.
+
+## When a teammate lacks access
+
+A teammate that needs an App, a repository or a secret it can't reach doesn't stop to explain. It opens a ticket
+under **Needs you** saying what it needs, and you give the access, connect the account or save the secret right in
+the ticket. When an account's sign-in expires, it shows **Reconnect** and the teammate asks its owner to reconnect
+it.
+
+## Secrets
+
+For websites and services that aren't Apps, keep logins, API keys and database URLs in **Settings → Secrets**.
+
+- **Website logins**: when a teammate signs in to the site in its browser, Brigade types the username and password,
+  only on that site's own domain. The teammate never sees the password, and it never ends up in a thread.
+- **API keys, databases, other secrets**: given to the teammate's commands in a private file, removed when the thread
+  goes idle.
+
+Share a secret with all teammates, or give it per teammate: **Can use, asks first** (someone mentions it in the
+thread, or approves) or **Without asking**. Each use is recorded.
