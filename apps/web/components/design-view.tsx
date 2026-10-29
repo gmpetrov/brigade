@@ -19,6 +19,7 @@ import {
   type DesignView as DesignViewInfo,
 } from '@brigade/contracts'
 import {
+  ChevronDown,
   Download,
   ExternalLink,
   Hammer,
@@ -38,7 +39,15 @@ import {
   X,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { useDashboard } from '@/components/dashboard'
 import {
   DesignCanvas,
@@ -65,6 +74,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
@@ -150,6 +164,11 @@ function DesignFrame({
   onExpand,
   onInfo,
   onStart,
+  title,
+  about,
+  description,
+  libraryHref,
+  controls,
 }: {
   /** The design's library folder ("acme/pricing.design"). */
   folder: string
@@ -162,6 +181,14 @@ function DesignFrame({
   onExpand?: () => void
   onInfo?: (info: DesignViewInfo) => void
   onStart: (start: Starting) => void
+  title: string
+  /** What it is and where it lives, in the title's menu. */
+  about: ReactNode
+  description?: string
+  /** The design in the library, from the title's menu (not when already there). */
+  libraryHref?: string
+  /** The panel's own buttons, at the end of the bar: expand, close. */
+  controls: ReactNode
 }) {
   const folders = useMemo(
     () => (options && options.length > 1 && options.includes(folder) ? options : [folder]),
@@ -301,6 +328,8 @@ function DesignFrame({
   const boardByKey = (key: string) => groups.flatMap((g) => g.boards).find((b) => b.key === key)
 
   const wide = width >= WIDE
+  /** Too narrow for the bar's labels: icons only. */
+  const compact = width > 0 && width < 520
   const last = selection.at(-1)
   const lastInspected = last ? inspected[`${last.board}:${last.h}`] : undefined
   const lastBoard = last ? boardByKey(last.board) : undefined
@@ -566,191 +595,149 @@ function DesignFrame({
 
   return (
     <div ref={root} className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-1 border-b px-3 py-1.5">
-        <div role="radiogroup" aria-label="Mode" className="flex rounded-md bg-muted p-0.5">
-          {(
-            [
-              ['select', MousePointer2, 'Select: pick elements to change or ask about'],
-              ['play', Play, 'Play: use the pages'],
-            ] as const
-          ).map(([m, Icon, title]) => (
-            <button
-              key={m}
+      <div className="flex flex-nowrap items-center gap-1 border-b px-2 py-1.5">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
               type="button"
-              role="radio"
-              aria-checked={mode === m}
-              title={title}
-              onClick={() => {
-                setMode(m)
-                if (m === 'play') setSelection([])
-              }}
-              className={cn(
-                'flex size-7 items-center justify-center rounded',
-                mode === m
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
+              variant="ghost"
+              size="sm"
+              className="min-w-0 shrink justify-start gap-1.5 px-1.5"
+              title="About this design, export, hand off"
             >
-              <Icon aria-hidden className="size-3.5" />
-              <span className="sr-only">{m}</span>
-            </button>
-          ))}
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          title="Fit everything (⇧1)"
-          aria-label="Fit everything"
-          onClick={() => canvas.current?.fit()}
-        >
-          <Maximize aria-hidden />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          title="Undo (⌘Z)"
-          aria-label="Undo"
-          disabled={!edits.current.canUndo}
-          onClick={() => applyUndo(edits.current!.undo())}
-        >
-          <Undo2 aria-hidden />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          title="Redo (⇧⌘Z)"
-          aria-label="Redo"
-          disabled={!edits.current.canRedo}
-          onClick={() => applyUndo(edits.current!.redo())}
-        >
-          <Redo2 aria-hidden />
-        </Button>
-        <span className="text-xs text-muted-foreground">{edits.current.busy ? 'Saving…' : ''}</span>
+              <Palette aria-hidden className="shrink-0 text-muted-foreground" />
+              <span className="truncate font-semibold">{title}</span>
+              <ChevronDown aria-hidden className="shrink-0 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-80">
+            <DropdownMenuLabel className="flex flex-col gap-1.5 font-normal">
+              <span className="text-xs break-words text-muted-foreground">{about}</span>
+              {description && <span className="text-xs leading-relaxed">{description}</span>}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {libraryHref && (
+              <DropdownMenuItem asChild>
+                <Link href={libraryHref}>
+                  <Library aria-hidden />
+                  Open in the library
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {view && (
+              <DropdownMenuItem asChild>
+                <a
+                  href={lastBoard ? (srcs[lastBoard.key] ?? view.url) : view.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  <ExternalLink aria-hidden />
+                  Open in a new tab
+                </a>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger disabled={!view}>
+                <Download aria-hidden />
+                Export
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem asChild>
+                  <a href={`${API_URL}/api/designs/zip?path=${encodeURIComponent(folder)}`}>
+                    HTML (.zip)
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!view}
+                  onSelect={() => {
+                    const board = exportBoard()
+                    if (board) canvas.current?.post(board.key, { type: 'brigade:print' })
+                  }}
+                >
+                  PDF (print)
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={!view} onSelect={() => void exportPng()}>
+                  Image (.png), {lastBoard ? 'the selected board' : 'the first board'}
+                </DropdownMenuItem>
+                {slides > 0 && (
+                  <DropdownMenuItem onSelect={() => void exportPptx()}>
+                    PowerPoint (.pptx)
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuItem
+              disabled={!view}
+              onSelect={() =>
+                onStart({
+                  title: 'Hand off the design',
+                  description:
+                    'Start a thread that builds it. Mention the repository it goes in (type @).',
+                  text: handoffText(folder),
+                })
+              }
+            >
+              <Hammer aria-hidden />
+              Hand off: start a thread that builds it
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => {
+                setSelection([])
+                shown.current.clear()
+                setReloadAll((n) => n + 1)
+              }}
+            >
+              <RotateCw aria-hidden />
+              Reload
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <span className="flex-1" />
         {!wide && (
           <>
             <Button
               type="button"
               variant={tab === 'ask' ? 'secondary' : 'ghost'}
-              size="sm"
+              size={compact ? 'icon-sm' : 'sm'}
+              title="Comment"
+              aria-label={compact ? 'Comment' : undefined}
               aria-pressed={tab === 'ask'}
               disabled={!view}
               onClick={() => setTab(tab === 'ask' ? null : 'ask')}
             >
               <MessageSquarePlus aria-hidden />
-              Comment
+              {!compact && 'Comment'}
             </Button>
             {view && view.knobs.length > 0 && (
               <Button
                 type="button"
                 variant={tab === 'knobs' ? 'secondary' : 'ghost'}
-                size="sm"
+                size={compact ? 'icon-sm' : 'sm'}
+                title="Knobs"
+                aria-label={compact ? 'Knobs' : undefined}
                 aria-pressed={tab === 'knobs'}
                 onClick={() => setTab(tab === 'knobs' ? null : 'knobs')}
               >
                 <SlidersHorizontal aria-hidden />
-                Knobs
+                {!compact && 'Knobs'}
               </Button>
             )}
             {onExpand && !expanded && (
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
+                size={compact ? 'icon-sm' : 'sm'}
                 title="Edit by hand: expand the design"
+                aria-label={compact ? 'Edit' : undefined}
                 onClick={onExpand}
               >
                 <Pencil aria-hidden />
-                Edit
+                {!compact && 'Edit'}
               </Button>
             )}
           </>
         )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              title="Export"
-              aria-label="Export"
-              disabled={!view}
-            >
-              <Download aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <a href={`${API_URL}/api/designs/zip?path=${encodeURIComponent(folder)}`}>
-                HTML (.zip)
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={!view}
-              onSelect={() => {
-                const board = exportBoard()
-                if (board) canvas.current?.post(board.key, { type: 'brigade:print' })
-              }}
-            >
-              PDF (print)
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={!view} onSelect={() => void exportPng()}>
-              Image (.png), {lastBoard ? 'the selected board' : 'the first board'}
-            </DropdownMenuItem>
-            {slides > 0 && (
-              <DropdownMenuItem onSelect={() => void exportPptx()}>
-                PowerPoint (.pptx)
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          title="Hand off: start a thread that builds it"
-          aria-label="Hand off"
-          disabled={!view}
-          onClick={() =>
-            onStart({
-              title: 'Hand off the design',
-              description:
-                'Start a thread that builds it. Mention the repository it goes in (type @).',
-              text: handoffText(folder),
-            })
-          }
-        >
-          <Hammer aria-hidden />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          title="Reload"
-          aria-label="Reload"
-          onClick={() => {
-            setSelection([])
-            shown.current.clear()
-            setReloadAll((n) => n + 1)
-          }}
-        >
-          <RotateCw aria-hidden />
-        </Button>
-        {view && (
-          <Button asChild variant="ghost" size="icon-sm" title="Open in a new tab">
-            <a
-              href={lastBoard ? (srcs[lastBoard.key] ?? view.url) : view.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              aria-label="Open in a new tab"
-            >
-              <ExternalLink aria-hidden />
-            </a>
-          </Button>
-        )}
+        {controls}
       </div>
 
       {(busy || notice) && (
@@ -773,13 +760,77 @@ function DesignFrame({
         </p>
       )}
 
-      {!wide && tab === 'knobs' && knobsPanel}
-
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
+        <div className="pointer-events-none absolute top-2 left-2 z-10 flex items-center gap-0.5 rounded-lg border bg-background/95 p-0.5 shadow-sm backdrop-blur [&>*]:pointer-events-auto">
+          <div role="radiogroup" aria-label="Mode" className="flex rounded-md bg-muted p-0.5">
+            {(
+              [
+                ['select', MousePointer2, 'Select: pick elements to change or ask about'],
+                ['play', Play, 'Play: use the pages'],
+              ] as const
+            ).map(([m, Icon, title]) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={mode === m}
+                title={title}
+                onClick={() => {
+                  setMode(m)
+                  if (m === 'play') setSelection([])
+                }}
+                className={cn(
+                  'flex size-7 items-center justify-center rounded',
+                  mode === m
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Icon aria-hidden className="size-3.5" />
+                <span className="sr-only">{m}</span>
+              </button>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            title="Fit everything (⇧1)"
+            aria-label="Fit everything"
+            onClick={() => canvas.current?.fit()}
+          >
+            <Maximize aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            title="Undo (⌘Z)"
+            aria-label="Undo"
+            disabled={!edits.current.canUndo}
+            onClick={() => applyUndo(edits.current!.undo())}
+          >
+            <Undo2 aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            title="Redo (⇧⌘Z)"
+            aria-label="Redo"
+            disabled={!edits.current.canRedo}
+            onClick={() => applyUndo(edits.current!.redo())}
+          >
+            <Redo2 aria-hidden />
+          </Button>
+          {edits.current.busy && (
+            <span className="px-1.5 text-xs text-muted-foreground">Saving…</span>
+          )}
+        </div>
         {error ? (
-          <p className="p-4 text-sm text-destructive-text">{error}</p>
+          <p className="p-4 pt-14 text-sm text-destructive-text">{error}</p>
         ) : groups.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">Loading…</p>
+          <p className="p-4 pt-14 text-sm text-muted-foreground">Loading…</p>
         ) : (
           <DesignCanvas
             handle={canvas}
@@ -848,7 +899,44 @@ function DesignFrame({
         )}
       </div>
 
-      {!wide && tab === 'ask' && askBox}
+      {!wide && (tab === 'ask' || (tab === 'knobs' && knobsPanel)) && (
+        <section aria-label="Design tools" className="flex max-h-[45%] min-h-0 flex-col border-t">
+          <div role="tablist" className="flex items-center gap-1 px-2 pt-1.5">
+            {(
+              [['ask', 'Comment'], ...(knobsPanel ? ([['knobs', 'Knobs']] as const) : [])] as const
+            ).map(([t, label]) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={tab === t}
+                onClick={() => setTab(t)}
+                className={cn(
+                  'rounded-md px-2 py-1 text-xs',
+                  tab === t
+                    ? 'bg-secondary font-medium'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+            <span className="flex-1" />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Close"
+              onClick={() => setTab(null)}
+            >
+              <X aria-hidden />
+            </Button>
+          </div>
+          <div className="min-h-0 overflow-y-auto [&>div]:border-0">
+            {tab === 'ask' ? askBox : knobsPanel}
+          </div>
+        </section>
+      )}
     </div>
   )
 }
@@ -1132,56 +1220,6 @@ export function DesignPanel({
           'inset-0 z-50 h-auto rounded-none border-0 xl:inset-0 xl:left-0 xl:z-50 xl:w-auto xl:border-l-0',
       )}
     >
-      <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
-        <Palette aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <strong className="truncate text-sm font-semibold">
-            {set
-              ? `${options.length} options for ${designName(parent.replace(/\.options$/, '.design'))}`
-              : title}
-          </strong>
-          <span className="truncate text-xs text-muted-foreground">
-            Design
-            {info?.manifest?.designSystem && ` · ${info.manifest.designSystem}`}
-            {info?.teammate && ` · by ${info.teammate.name}`}
-            {parent && <span className="font-mono"> · {parent}</span>}
-          </span>
-        </div>
-        {libraryLink && (
-          <Button asChild variant="ghost" size="icon-sm" title="Open the library">
-            <Link
-              href={`/app/library?design=${encodeURIComponent(folder)}`}
-              aria-label="Open the library"
-            >
-              <Library aria-hidden />
-            </Link>
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          title={expanded ? 'Back to the panel' : 'Expand'}
-          aria-label={expanded ? 'Back to the panel' : 'Expand'}
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClose}
-          aria-label="Close design"
-        >
-          <X aria-hidden />
-        </Button>
-      </div>
-      {!set && info?.manifest?.description && (
-        <p className="border-b px-3 py-2 text-xs text-muted-foreground">
-          {info.manifest.description}
-        </p>
-      )}
       <DesignFrame
         folder={folder}
         version={version}
@@ -1191,6 +1229,46 @@ export function DesignPanel({
         onExpand={() => setExpanded(true)}
         onInfo={setInfo}
         onStart={setStart}
+        title={
+          set
+            ? `${options.length} options for ${designName(parent.replace(/\.options$/, '.design'))}`
+            : title
+        }
+        about={
+          <>
+            Design
+            {info?.manifest?.designSystem && ` · ${info.manifest.designSystem}`}
+            {info?.teammate && ` · by ${info.teammate.name}`}
+            {parent && <span className="font-mono"> · {parent}</span>}
+          </>
+        }
+        {...(!set && info?.manifest?.description ? { description: info.manifest.description } : {})}
+        {...(libraryLink
+          ? { libraryHref: `/app/library?design=${encodeURIComponent(folder)}` }
+          : {})}
+        controls={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              title={expanded ? 'Back to the panel' : 'Expand'}
+              aria-label={expanded ? 'Back to the panel' : 'Expand'}
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={onClose}
+              aria-label="Close design"
+            >
+              <X aria-hidden />
+            </Button>
+          </>
+        }
       />
       {start && <StartThreadDialog start={start} onClose={() => setStart(undefined)} />}
     </SidePanel>
