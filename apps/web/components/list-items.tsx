@@ -298,7 +298,8 @@ function HandOffDialog({
   const shown = picked.lines.slice(0, 5)
   return (
     <Dialog open onOpenChange={(open) => !open && !sending && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      {/* One column no wider than the dialog: a long line is cut, never widening it. */}
+      <DialogContent className="grid-cols-1 sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             {count === 1 ? 'Hand this item over' : `Hand ${count} items over`}
@@ -307,9 +308,9 @@ function HandOffDialog({
             Their lines show the thread working on them, and get ticked as the work lands.
           </DialogDescription>
         </DialogHeader>
-        <ul className="flex flex-col gap-1 rounded-lg bg-muted px-3 py-2 text-sm">
+        <ul className="flex min-w-0 flex-col gap-1 rounded-lg bg-muted px-3 py-2 text-sm">
           {shown.map((l, i) => (
-            <li key={i} className="truncate">
+            <li key={i} className="min-w-0 truncate" title={plainItemText(l.text)}>
               {plainItemText(l.text)}
             </li>
           ))}
