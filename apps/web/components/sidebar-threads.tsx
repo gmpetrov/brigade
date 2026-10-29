@@ -66,9 +66,6 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import {
   api,
@@ -166,6 +163,16 @@ function useOpenChildren() {
 }
 
 /**
+ * A child thread's branch: a line down from its parent, which the last one ends in a rounded
+ * elbow, as in a tree.
+ */
+const BRANCH =
+  'relative pl-3.5 before:pointer-events-none before:absolute before:top-0 before:bottom-0 before:left-0 before:border-l before:border-sidebar-border last:before:bottom-1/2 last:before:w-2 last:before:rounded-bl-lg last:before:border-b'
+/** A row under a thread: a child thread or a control, the height of the list's rows. */
+const SUB_ROW =
+  'flex h-8 w-full min-w-0 items-center gap-2 rounded-[10px] px-2 text-left text-sm text-sidebar-foreground outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground'
+
+/**
  * A thread's child threads, under it: folded, one "N sub-threads" row; unfolded, the first
  * of them (waiting on a person, then working, then the latest), the one open among them, and
  * a "+N more" for the rest. No dot on those rows: they are controls, not threads.
@@ -184,84 +191,80 @@ function SubThreads({
   needsYou: Record<string, string>
 }) {
   const [all, setAll] = useState(false)
-  if (!open)
-    return (
-      <SidebarMenuItem>
-        <SidebarMenuSub className="py-0">
-          <SidebarMenuSubItem>
-            <SidebarMenuSubButton
-              asChild
-              size="sm"
-              className="text-muted-foreground rounded-[10px]"
-            >
-              <button type="button" aria-expanded={false} onClick={onToggle}>
-                <span>
-                  {items.length} sub-thread{items.length === 1 ? '' : 's'}
-                </span>
-              </button>
-            </SidebarMenuSubButton>
-          </SidebarMenuSubItem>
-        </SidebarMenuSub>
-      </SidebarMenuItem>
-    )
   // What waits on this member is more than its own status, as for the list's threads.
   const { shown, hidden } = subThreadRows(items, { needsYou, activeId, all, cap: CHILD_CAP })
   return (
     <SidebarMenuItem>
-      <SidebarMenuSub className="mr-0 gap-0 pr-0">
-        {/* Folds them again from the keyboard: the caret is a mouse's only. Shown once
-            focused, so the list keeps no row for it. */}
-        <SidebarMenuSubItem className="sr-only has-focus-visible:not-sr-only">
-          <SidebarMenuSubButton asChild size="sm" className="text-muted-foreground rounded-[10px]">
-            <button type="button" aria-expanded onClick={onToggle}>
-              <span>Hide sub-threads</span>
-            </button>
-          </SidebarMenuSubButton>
-        </SidebarMenuSubItem>
-        {shown.map((c) => {
-          const status = { status: c.status, unread: c.unread, ask: c.ask }
-          const group = groupOf(c.status)
-          const state = group !== 'rest' || c.status === 'failed' || c.unread
-          return (
-            <SidebarMenuSubItem key={c.id}>
-              <SidebarMenuSubButton
-                asChild
-                isActive={c.id === activeId}
-                className="h-8 rounded-[10px] pr-2 data-[active=true]:font-medium"
+      <ul className="ml-[18px] flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
+        {open ? (
+          <>
+            {/* Folds them again from the keyboard: the caret is a mouse's only. Shown once
+                focused, so the list keeps no row for it. */}
+            <li className={cn(BRANCH, 'sr-only has-focus-visible:not-sr-only')}>
+              <button
+                type="button"
+                aria-expanded
+                onClick={onToggle}
+                className={cn(SUB_ROW, 'text-muted-foreground')}
               >
-                <Link
-                  href={`/app/threads/${c.id}`}
-                  title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
-                >
-                  <span
-                    className={cn('flex-1 truncate', group === 'working' && 'text-shimmer-dim')}
-                  >
-                    <StreamedTitle threadId={c.id} text={c.title} />
-                  </span>
-                  {state ? (
-                    <ThreadStatusIcon {...status} />
-                  ) : (
-                    <span aria-hidden className="size-4" />
-                  )}
-                </Link>
-              </SidebarMenuSubButton>
-            </SidebarMenuSubItem>
-          )
-        })}
-        {hidden > 0 && (
-          <SidebarMenuSubItem>
-            <SidebarMenuSubButton
-              asChild
-              size="sm"
-              className="text-muted-foreground rounded-[10px]"
-            >
-              <button type="button" onClick={() => setAll(true)}>
-                <span>{`+${hidden} more`}</span>
+                Hide sub-threads
               </button>
-            </SidebarMenuSubButton>
-          </SidebarMenuSubItem>
+            </li>
+            {shown.map((c) => {
+              const status = { status: c.status, unread: c.unread, ask: c.ask }
+              const group = groupOf(c.status)
+              const state = group !== 'rest' || c.status === 'failed' || c.unread
+              return (
+                <li key={c.id} className={BRANCH}>
+                  <Link
+                    href={`/app/threads/${c.id}`}
+                    data-active={c.id === activeId}
+                    title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
+                    className={SUB_ROW}
+                  >
+                    {/* Fades out at its end rather than cut by an ellipsis. */}
+                    <span
+                      className={cn(
+                        'min-w-0 flex-1 overflow-hidden whitespace-nowrap [mask-image:linear-gradient(90deg,#000_80%,transparent)]',
+                        group === 'working' && 'text-shimmer-dim',
+                      )}
+                    >
+                      <StreamedTitle threadId={c.id} text={c.title} />
+                    </span>
+                    {state ? (
+                      <ThreadStatusIcon {...status} />
+                    ) : (
+                      <span aria-hidden className="size-4 shrink-0" />
+                    )}
+                  </Link>
+                </li>
+              )
+            })}
+            {hidden > 0 && (
+              <li className={BRANCH}>
+                <button
+                  type="button"
+                  onClick={() => setAll(true)}
+                  className={cn(SUB_ROW, 'text-muted-foreground')}
+                >
+                  {`+${hidden} more`}
+                </button>
+              </li>
+            )}
+          </>
+        ) : (
+          <li className={BRANCH}>
+            <button
+              type="button"
+              aria-expanded={false}
+              onClick={onToggle}
+              className={cn(SUB_ROW, 'text-muted-foreground')}
+            >
+              {items.length} sub-thread{items.length === 1 ? '' : 's'}
+            </button>
+          </li>
         )}
-      </SidebarMenuSub>
+      </ul>
     </SidebarMenuItem>
   )
 }
