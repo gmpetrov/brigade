@@ -752,7 +752,7 @@ export async function handleListCall(
         }
       }
       const file = await fileAt(op.path, false)
-      const list = parseList(await documentText(scope, file))
+      const list = parseList(await storedText(scope, file))
       const lines = byLine(list)
       const rows = await itemRows(db, { documentId: { in: [file.id] } })
       const viewMap = new Map((await views(db, scope, rows, lines)).map((v) => [v.id, v]))
@@ -766,7 +766,7 @@ export async function handleListCall(
 
     if (op.name === 'link_items') {
       const file = await fileAt(op.path, false)
-      const list = parseList(await documentText(scope, file))
+      const list = parseList(await storedText(scope, file))
       const picked: Picked[] = []
       for (const ref of op.items) {
         const line = findLine(list, ref)
@@ -803,7 +803,7 @@ export async function handleListCall(
       } else {
         if (!op.path) return { error: 'Give the item’s id, or its text with the list’s path' }
         const file = await fileAt(op.path, true)
-        const line = findLine(parseList(await documentText(scope, file)), op.item)
+        const line = findLine(parseList(await storedText(scope, file)), op.item)
         if (typeof line === 'string') return { error: line }
         ;[itemId] = await itemsFor(
           db,

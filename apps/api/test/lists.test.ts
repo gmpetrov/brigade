@@ -889,6 +889,12 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
       const file = await lateSave('Lease/version.md', '', 22_000)
       const marked = await db.document.findFirst({ where: { id: file.id } })
       assert.ok(marked?.bytesStaleAt, 'marked for repair')
+      // Before the repair, a teammate reads the list as its row says, not the late bytes.
+      const listed = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
+        name: 'list_items',
+        path: 'Lease/version.md',
+      })) as { lines: { text: string }[] }
+      assert.equal(listed.lines[0]?.text, 'New winning edit')
       await library.repairStaleBytes()
       await consistent(file.id)
     },
