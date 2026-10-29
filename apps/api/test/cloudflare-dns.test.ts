@@ -15,7 +15,14 @@ const RECORDS = [
   { type: 'CNAME', name: 'rsend', value: 'send.forge.rmta.net' },
 ]
 
-type Row = { id: string; type: string; name: string; content: string; priority?: number }
+type Row = {
+  id: string
+  type: string
+  name: string
+  content: string
+  priority?: number
+  proxied?: boolean
+}
 
 /** Cloudflare's API as the script sees it: zones, and each zone's records. */
 function fakeCloudflare(zones: Record<string, Row[]>, refuse?: string) {
@@ -82,7 +89,10 @@ test('on Cloudflare: missing records are added, ones in place kept, clashing one
   }
   const { cloudflare, writes } = fakeCloudflare(zones)
   const named = RECORDS.map((r) => ({ ...r, name: r.name === 'rsend' ? r.name : `${r.name}.team` }))
-  const answer = await run(addRecordsCode('team.acme.com', [...named, RECORDS[3]!]), cloudflare)
+  const answer = await run(
+    addRecordsCode('team.acme.com', 'acme.com', [...named, RECORDS[3]!]),
+    cloudflare,
+  )
   assert.equal(answer.zone, 'acme.com')
   assert.deepEqual(
     answer.results.map((r) => [r.type, r.name, r.result]),
@@ -131,7 +141,10 @@ test('a CNAME never goes where another record is, and an MX at another priority 
       },
     ],
   })
-  const answer = await run(addRecordsCode('acme.com', [RECORDS[1]!, RECORDS[3]!]), cloudflare)
+  const answer = await run(
+    addRecordsCode('acme.com', 'acme.com', [RECORDS[1]!, RECORDS[3]!]),
+    cloudflare,
+  )
   assert.deepEqual(
     answer.results.map((r) => r.result),
     ['conflict', 'conflict'],
@@ -139,15 +152,47 @@ test('a CNAME never goes where another record is, and an MX at another priority 
   assert.deepEqual(writes, [])
 })
 
+test('only the zone that answers for the domain is written to, and a proxied CNAME is not ready', async () => {
+  const { addRecordsCode } = await import('../src/mail/cloudflare-dns.js')
+  // team.acme.com is delegated to a zone of its own, in another account: this one has only
+  // acme.com, whose records below the delegation nobody would see.
+  const parentOnly = fakeCloudflare({ 'acme.com': [] })
+  const named = RECORDS.map((r) => ({ ...r, name: `${r.name}.team` }))
+  assert.deepEqual(
+    await run(addRecordsCode('team.acme.com', 'team.acme.com', named), parentOnly.cloudflare),
+    { zone: null, results: [] },
+  )
+  assert.deepEqual(parentOnly.writes, [])
+
+  const proxied = fakeCloudflare({
+    'acme.com': [
+      {
+        id: 'a',
+        type: 'CNAME',
+        name: 'rsend.acme.com',
+        content: 'send.forge.rmta.net',
+        proxied: true,
+      },
+    ],
+  })
+  const answer = await run(
+    addRecordsCode('acme.com', 'acme.com', [RECORDS[3]!]),
+    proxied.cloudflare,
+  )
+  assert.equal(answer.results[0]!.result, 'conflict')
+  assert.match(answer.results[0]!.note!, /DNS only/)
+  assert.deepEqual(proxied.writes, [])
+})
+
 test('no zone for the domain in the account, and Cloudflare refusing, change nothing', async () => {
   const { addRecordsCode, readAnswer } = await import('../src/mail/cloudflare-dns.js')
   const none = fakeCloudflare({ 'other.com': [] })
-  assert.deepEqual(await run(addRecordsCode('acme.com', RECORDS), none.cloudflare), {
+  assert.deepEqual(await run(addRecordsCode('acme.com', 'acme.com', RECORDS), none.cloudflare), {
     zone: null,
     results: [],
   })
   const refused = fakeCloudflare({}, 'Authentication error')
-  assert.deepEqual(await run(addRecordsCode('acme.com', RECORDS), refused.cloudflare), {
+  assert.deepEqual(await run(addRecordsCode('acme.com', 'acme.com', RECORDS), refused.cloudflare), {
     error: 'Authentication error',
   })
   assert.deepEqual([...none.writes, ...refused.writes], [])
@@ -161,7 +206,7 @@ test('no zone for the domain in the account, and Cloudflare refusing, change not
 })
 
 test('a domain is on Cloudflare when its closest zone’s nameservers are Cloudflare’s', async () => {
-  const { dnsOnCloudflare } = await import('../src/mail/cloudflare-dns.js')
+  const { authoritativeZone, dnsOnCloudflare } = await import('../src/mail/cloudflare-dns.js')
   const ns: Record<string, string[]> = {
     'acme.com': ['ada.ns.cloudflare.com.', 'bob.ns.cloudflare.com.'],
     'google.test': ['ns1.google.com.'],
@@ -180,6 +225,17 @@ test('a domain is on Cloudflare when its closest zone’s nameservers are Cloudf
     assert.equal(await dnsOnCloudflare('acme.com'), true)
     assert.equal(await dnsOnCloudflare('mail.google.test'), false)
     assert.equal(await dnsOnCloudflare('nowhere.test'), false)
+    // Delegated: the subdomain's own nameservers answer for it, not its parent's.
+    ns['team.google.test'] = ['ada.ns.cloudflare.com.']
+    assert.deepEqual(await authoritativeZone('team.google.test'), {
+      zone: 'team.google.test',
+      onCloudflare: true,
+    })
+    assert.deepEqual(await authoritativeZone('team.acme.com'), {
+      zone: 'acme.com',
+      onCloudflare: true,
+    })
+    assert.equal(await authoritativeZone('nowhere.test'), null)
   } finally {
     globalThis.fetch = previousFetch
   }

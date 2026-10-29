@@ -41,14 +41,23 @@ export function fqdnOf(name: string, domain: string) {
   return `${relative}.${domain}`
 }
 
-/** Whether the domain's DNS is served by Cloudflare: its closest zone's nameservers. */
-export async function dnsOnCloudflare(domain: string) {
+/**
+ * The zone that answers for the domain: the closest name with nameservers of its own (a subdomain
+ * delegated elsewhere is its own zone, and its parent's records below it are never seen), and
+ * whether Cloudflare serves it. Null when DNS says nothing.
+ */
+export async function authoritativeZone(domain: string) {
   for (const name of zoneCandidates(domain)) {
     const ns = await lookup(name, 'NS').catch(() => null)
-    if (ns?.length) return ns.some((a) => CLOUDFLARE_NS.test(a.data.trim()))
+    if (ns?.length)
+      return { zone: name, onCloudflare: ns.some((a) => CLOUDFLARE_NS.test(a.data.trim())) }
   }
-  return false
+  return null
 }
+
+/** Whether the domain's DNS is served by Cloudflare: its zone's nameservers. */
+export const dnsOnCloudflare = async (domain: string) =>
+  (await authoritativeZone(domain))?.onCloudflare ?? false
 
 /** The workspace's Cloudflare accounts this member may use: shared ones, and their own. */
 const usableAccounts = (db: ScopedDb, scope: WorkspaceScope) =>
@@ -81,12 +90,12 @@ export async function cloudflareSetup(
 }
 
 /**
- * The script run on Cloudflare: find the domain's zone (the domain or its closest parent the
- * account has), then for each record, keep it when it is there already, report a clash when
+ * The script run on Cloudflare: find the domain's zone in the account (only the one that answers
+ * for it, `authoritativeZone`: records written in another would never be seen), then for each record, keep it when it is there already, report a clash when
  * another record holds its name (a CNAME shares its name with nothing; two SPF or DKIM values
  * would break both), else add it. Returns the zone and each record's result.
  */
-export function addRecordsCode(domain: string, records: DomainRecord[]) {
+export function addRecordsCode(domain: string, zone: string, records: DomainRecord[]) {
   const wanted = records.map((r) => ({
     type: r.type.toUpperCase(),
     name: fqdnOf(r.name, domain),
@@ -94,7 +103,7 @@ export function addRecordsCode(domain: string, records: DomainRecord[]) {
     ...(r.priority !== undefined ? { priority: r.priority } : {}),
   }))
   return `async () => {
-  const zones = ${JSON.stringify(zoneCandidates(domain))};
+  const zones = ${JSON.stringify([zone])};
   const wanted = ${JSON.stringify(wanted)};
   const same = (type, a, b) => {
     const clean = (v) => String(v ?? '').trim().replace(/^"|"$/g, '').replace(/"\\s*"/g, '').replace(/\\.$/, '');
@@ -113,7 +122,13 @@ export function addRecordsCode(domain: string, records: DomainRecord[]) {
     if (!at.success) { results.push({ ...record, result: 'failed', note: (at.errors?.[0]?.message) || 'Not read' }); continue; }
     const existing = at.result ?? [];
     const sameType = existing.filter((r) => r.type === record.type);
-    if (sameType.some((r) => same(record.type, r.content, record.content) && (record.type !== 'MX' || r.priority === record.priority))) {
+    const match = sameType.find((r) => same(record.type, r.content, record.content) && (record.type !== 'MX' || r.priority === record.priority));
+    // Proxied, a CNAME shows Cloudflare's addresses to the world, not its target: Resend never sees it.
+    if (match && match.proxied) {
+      results.push({ ...record, result: 'conflict', note: 'proxied: set it to DNS only' });
+      continue;
+    }
+    if (match) {
       results.push({ ...record, result: 'present' });
       continue;
     }
@@ -171,9 +186,13 @@ export async function addRecordsOnCloudflare(
   if (!records.length)
     throw new HTTPException(409, { message: 'Its records are not known yet: try again shortly' })
 
+  const zone = await authoritativeZone(row.name)
+  if (!zone?.onCloudflare)
+    throw new HTTPException(409, { message: `${row.name}'s DNS is not served by Cloudflare` })
+
   const signedIn = await authorisedFetch(db, scope, account)
   const output = await callMcpTool(signedIn, cloudflare.mcp!, 'execute', {
-    code: addRecordsCode(row.name, records),
+    code: addRecordsCode(row.name, zone.zone, records),
   }).catch((error: unknown) => {
     throw new HTTPException(502, {
       message: `Cloudflare did not run it: ${error instanceof Error ? error.message : String(error)}`,
@@ -186,7 +205,7 @@ export async function addRecordsOnCloudflare(
     })
   if (!answer.zone)
     throw new HTTPException(409, {
-      message: `This Cloudflare account has no zone for ${row.name}: connect the account that has it`,
+      message: `This Cloudflare account does not have the zone ${zone.zone}, which serves ${row.name}: connect the account that has it`,
     })
   const results: CloudflareDnsResult[] = answer.results.map((r) => ({
     type: r.type,
