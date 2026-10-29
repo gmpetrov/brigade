@@ -76,5 +76,5 @@ read. Memory holds facts: its core is always loaded, its topics when the work to
   `thread-spec.ts`; proposals in `library-calls.ts` and `decide.ts`.
 - Runner: `apps/runner/src/skills.ts` (writing them), `instructions.ts` (Brigade's own
   skills and the Skills section), `harness/tools.ts` (`propose_skill`).
-- Web: `components/skills.tsx` on the Connections page, the composer's `/` menu, and
+- Web: `components/skills.tsx` on Settings › Skills (`/app/skills`), the composer's `/` menu, and
   skill proposals in `ticket-row.tsx`.

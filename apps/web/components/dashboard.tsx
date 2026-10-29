@@ -1,6 +1,7 @@
 'use client'
 import { workspaceLogoPath } from '@brigade/contracts'
 import {
+  BookOpenText,
   Building2,
   CalendarClock,
   ChartColumn,
@@ -158,6 +159,7 @@ export const SETTINGS_NAV = [
   { href: '/app/preferences', label: 'Preferences', icon: SlidersHorizontal },
   { href: '/app/workspace', label: 'Workspace', icon: Building2 },
   { href: '/app/connections', label: 'Apps', icon: Plug },
+  { href: '/app/skills', label: 'Skills', icon: BookOpenText },
   { href: '/app/vault', label: 'Secrets', icon: KeyRound },
   { href: '/app/security', label: 'Security', icon: ShieldCheck },
   { href: '/app/accounts', label: 'AI Accounts', icon: UserRound },
