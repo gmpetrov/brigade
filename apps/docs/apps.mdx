@@ -59,6 +59,10 @@ tab:
   **Deny**.
 - **Never**: it can't write, even with read-write access.
 
+This policy covers calls to Apps. On its own computer, a teammate runs commands, edits files and uses its browser
+without asking, the way Claude Code or Codex does with its permissions set to run freely. Keep what it must not touch
+off that computer, and give it Apps for actions that should wait for you.
+
 <Note>
   With the [Email App](#the-email-app), mail a teammate sends from its own address to anyone outside
   your workspace waits for your yes by default, whatever its policy. You can edit the draft before
@@ -125,9 +129,11 @@ it.
 For websites and services that aren't Apps, keep logins, API keys and database URLs in **Settings → Secrets**.
 
 - **Website logins**: when a teammate signs in to the site in its browser, Brigade types the username and password,
-  only on that site's own domain. The teammate never sees the password, and it never ends up in a thread.
+  only on that site's own domain. The teammate never sees the password, and it never ends up in a thread. This works
+  on cloud computers, where teammates have a browser of their own; not yet on your own computer.
 - **API keys, databases, other secrets**: given to the teammate's commands in a private file, removed when the thread
-  goes idle.
+  goes idle. The teammate can read them, so a command that prints one puts it in the thread. See
+  [Security and your data](/security#how-secrets-reach-a-teammate).
 
 Share a secret with all teammates, or give it per teammate: **Can use, asks first** (someone mentions it in the
 thread, or approves) or **Without asking**. Each use is recorded.

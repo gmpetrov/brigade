@@ -41,15 +41,17 @@ Brigade is open source: everything on this page can be checked in the
 Nobody, teammate or member, can read a secret back from the dashboard or the API once it is saved. Brigade's
 operators hold the encryption key, as any hosted service does; if that matters to you, run Brigade yourself.
 
-## Secrets never reach the model
+## How secrets reach a teammate
 
-- **Website logins**: when a teammate signs in to a website, Brigade types the username and password into its
-  browser, only on that site's own domain. The teammate never sees the password, and it never ends up in a thread.
 - **App accounts**: an App's key stays in Brigade. The computer asks Brigade to make the call, and Brigade adds the
-  key. The key never reaches a computer.
-- **Other secrets** (API keys, database URLs): available to the teammate's commands in a private file, removed when
-  the thread goes idle, and only when someone mentioned the secret, approved its use, or allowed it without asking.
-  Each use is recorded.
+  key. The key never reaches a computer or the model.
+- **Website logins** (on a cloud computer): when a teammate signs in to a website, Brigade types the username and
+  password into its browser, only on that site's own domain. The teammate never sees the password, and it never ends
+  up in a thread.
+- **Other secrets** (API keys, database URLs): Brigade puts them in a private file on the computer that the
+  teammate's commands can read, and removes it when the thread goes idle. The teammate can read them: a command that prints the file puts the secret in the thread. Give these
+  only to teammates that need them, and prefer keys with narrow permissions. A teammate gets one only when someone
+  mentioned it in the thread, approved its use, or allowed it without asking, and each use is recorded.
 
 ## Your computers
 
@@ -71,8 +73,10 @@ operators hold the encryption key, as any hosted service does; if that matters t
   settings are for owners and admins. Only an owner deletes a workspace.
 - **Teammates** reach only the Apps, accounts and secrets you give them, read-only or read-write, teammate by
   teammate. A member's personal account is used only in that member's threads unless they share it.
-- **Approvals**: set a teammate to **Ask a person first** and every write waits for a person's **Allow**. Email to
-  people outside your workspace waits by default. See [Apps](/apps#read-write-and-approvals).
+- **Approvals**: set a teammate to **Ask a person first** and each write it makes in an App (sending, editing,
+  deleting) waits for a person's **Allow**. Email to people outside your workspace waits by default. Approvals cover
+  Apps only: on its computer, a teammate runs commands, edits files and uses its browser without asking. See
+  [Apps](/apps#read-write-and-approvals).
 - **Caps**: daily limits per teammate on threads started, computer hours and writes to each App.
 - **Every step is logged**: each thread shows what the teammate read, ran and changed, and each App account has a
   call log. Owners and admins see who used, granted, changed or approved what in **Settings → Security →
