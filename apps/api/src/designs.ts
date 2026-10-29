@@ -42,7 +42,7 @@ import { scoped, type Scope, type ScopedDb } from './db.js'
 import { bridgeScript } from './design-bridge.js'
 import { annotate, applyEdits, EditError } from './design-source.js'
 import { moveFolder, trashFolder } from './library-folders.js'
-import { actorNames, originalPath } from './library-history.js'
+import { actorNames } from './library-history.js'
 import { readLibraryFile, saveLibraryFile } from './library.js'
 import { discardUpload, readyUpload, uploadBytesKey } from './uploads.js'
 
@@ -694,22 +694,16 @@ export async function findDesign(db: ScopedDb, path: string): Promise<DesignWher
     orderBy: { at: 'desc' },
   })
   const pick = last?.data as { from?: string; to?: string } | undefined
-  // Trashed after the last pick (a pick trashes the other options before it is
-  // recorded): a later round, settled by saving the design itself. A trashed
-  // file's path is `.trash/<id>/<where it was>` (library-history.ts).
-  const entry = `${folder}/${DESIGN_ENTRY}`
-  const trashed = (
-    await db.document.findMany({
-      where: {
-        kind: 'library',
-        path: { startsWith: '.trash/', endsWith: `/${entry}` },
-        deletedAt: { not: null },
-      },
-      orderBy: { deletedAt: 'desc' },
-      select: { path: true, deletedAt: true },
-    })
-  ).find((d) => originalPath(d.path) === entry)
-  if (!last || !pick?.to || (trashed?.deletedAt && trashed.deletedAt > last.at)) {
+  // The options folder trashed after the last pick (a pick trashes it before it
+  // is recorded): a later round, settled by saving the design itself. The audit
+  // outlives the trash.
+  const cleared =
+    last &&
+    (await db.auditEntry.findFirst({
+      where: { action: 'library.folder_trashed', targetId: options, at: { gt: last.at } },
+      select: { at: true },
+    }))
+  if (!last || !pick?.to || cleared) {
     const settled = await db.document.findFirst({
       where: { ...live, path: `${to}/${DESIGN_ENTRY}` },
     })

@@ -12,23 +12,26 @@ const OPTIONS = 'Projects/Acme/designs/landing.options'
 
 type Pick = { from: string; to: string; at?: Date }
 
-/** A library holding these files (and these in its trash, by when), after these picks (oldest first). */
-function db(files: string[], picks: Pick[] = [], trashed: Record<string, Date> = {}) {
+/**
+ * A library holding these files, after these picks (oldest first) and with these
+ * folders sent to the trash (by when): as the audit log keeps them, past the trash.
+ */
+function db(files: string[], picks: Pick[] = [], trashedFolders: Record<string, Date> = {}) {
   return {
     document: {
       findFirst: async ({ where }: { where: { path: string; deletedAt: unknown } }) =>
         where.deletedAt === null && files.includes(where.path) ? { path: where.path } : null,
-      // Stored as the trash keeps them: `.trash/<id>/<where it was>`.
-      findMany: async ({ where }: { where: { path: { startsWith: string; endsWith: string } } }) =>
-        Object.entries(trashed)
-          .map(([was, at], i) => ({ path: `.trash/doc${i}/${was}`, deletedAt: at }))
-          .filter(
-            (d) => d.path.startsWith(where.path.startsWith) && d.path.endsWith(where.path.endsWith),
-          )
-          .sort((x, y) => y.deletedAt.getTime() - x.deletedAt.getTime()),
     },
     auditEntry: {
-      findFirst: async ({ where }: { where: { action: string; targetId: string } }) => {
+      findFirst: async ({
+        where,
+      }: {
+        where: { action: string; targetId: string; at?: { gt: Date } }
+      }) => {
+        if (where.action === 'library.folder_trashed') {
+          const at = trashedFolders[where.targetId]
+          return at && (!where.at || at > where.at.gt) ? { at } : null
+        }
         const pick = picks
           .filter((p) => where.action === 'design.picked' && p.to === where.targetId)
           .at(-1)
@@ -76,7 +79,8 @@ test('an option of a later round, settled by saving the design, leads to it desp
   const to = 'Projects/Acme/designs/landing.design'
   const old = { from: `${OPTIONS}/a-old.design`, to, at: new Date('2026-10-01') }
   const b = `${OPTIONS}/b-new.design`
-  const later = { [`${b}/index.html`]: new Date('2026-10-20') }
+  // Still so once the trash is emptied: only the audit says when the folder went.
+  const later = { [OPTIONS]: new Date('2026-10-20') }
   assert.deepEqual(await findDesign(db([`${to}/index.html`], [old], later), b), {
     path: to,
     trashed: false,
@@ -87,21 +91,10 @@ test('an option trashed by a pick, before it was recorded, stays in the trash', 
   const to = 'Projects/Acme/designs/landing.design'
   const at = new Date('2026-10-20T10:00:00Z')
   const a = `${OPTIONS}/a-bold.design`
-  const before = { [`${a}/index.html`]: new Date('2026-10-20T09:59:59Z') }
+  const before = { [OPTIONS]: new Date('2026-10-20T09:59:59Z') }
   const pick = { from: `${OPTIONS}/b-the-pass.design`, to, at }
   assert.deepEqual(await findDesign(db([`${to}/index.html`], [pick], before), a), {
     path: a,
-    trashed: true,
-  })
-})
-
-test('a same-named option elsewhere in the trash is not this one', async () => {
-  const to = 'Projects/Acme/designs/landing.design'
-  const old = { from: `${OPTIONS}/a-old.design`, to, at: new Date('2026-10-01') }
-  const b = `${OPTIONS}/b-new.design`
-  const elsewhere = { [`Archive/${b}/index.html`]: new Date('2026-10-20') }
-  assert.deepEqual(await findDesign(db([`${to}/index.html`], [old], elsewhere), b), {
-    path: b,
     trashed: true,
   })
 })
