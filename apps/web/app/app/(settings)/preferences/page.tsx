@@ -1,9 +1,7 @@
 'use client'
-// Preferences: what each member sets for themselves, never for the workspace: the
-// theme (this browser), next-message suggestions and notifications (theirs), and deleting
-// their own account.
-import { Monitor, Moon, Sun } from 'lucide-react'
-import { useTheme } from 'next-themes'
+// Preferences: what each member sets for themselves, never for the workspace: next-message
+// suggestions and notifications (theirs), and deleting their own account. The theme is
+// picked in the member's menu, in the sidebar.
 import { useEffect, useState, type ReactNode } from 'react'
 import { DeleteAccount } from '@/components/danger-zone'
 import { useDashboard } from '@/components/dashboard'
@@ -12,13 +10,6 @@ import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { api } from '@/lib/api'
-import { cn } from '@/lib/utils'
-
-const THEMES = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
-] as const
 
 function Section({
   title,
@@ -42,10 +33,6 @@ function Section({
 
 export default function PreferencesPage() {
   const { me, reloadMe } = useDashboard()
-  const { theme, setTheme } = useTheme()
-  // The theme is known only in the browser: no pick shows until it is.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
   const [suggestions, setSuggestions] = useState(me.suggestions)
   useEffect(() => setSuggestions(me.suggestions), [me.suggestions])
 
@@ -65,32 +52,6 @@ export default function PreferencesPage() {
           Yours alone: the rest of the workspace keeps its own.
         </p>
       </header>
-
-      <Section title="Appearance" detail="How Brigade looks in this browser.">
-        <div role="radiogroup" aria-label="Theme" className="grid grid-cols-3 gap-2">
-          {THEMES.map(({ value, label, icon: Icon }) => {
-            const active = mounted && theme === value
-            return (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setTheme(value)}
-                className={cn(
-                  'focus-visible:ring-ring flex flex-col items-center gap-1.5 rounded-md border px-3 py-3 text-sm transition-colors outline-none focus-visible:ring-2',
-                  active
-                    ? 'border-primary bg-accent text-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
-                )}
-              >
-                <Icon className="size-4" aria-hidden />
-                {label}
-              </button>
-            )
-          })}
-        </div>
-      </Section>
 
       <Section title="Messages" detail="Help while you write to a teammate.">
         <div className="flex items-start justify-between gap-4">

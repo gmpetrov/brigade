@@ -28,6 +28,7 @@ import {
   UserRound,
   UsersRound,
   FolderKanban,
+  type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
@@ -147,28 +148,52 @@ export { isAdmin }
 const WORK_NAV = [
   { href: '/app', label: 'Home', icon: House },
   { href: '/app/inbox', label: 'Inbox', icon: Mail },
+  { href: '/app/lists', label: 'Lists', icon: ListChecks },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },
-  { href: '/app/lists', label: 'Lists', icon: ListChecks },
   { href: '/app/routines', label: 'Routines', icon: CalendarClock },
 ]
 
-/** The Settings page's sections, its first one first: the member's own, then what every project shares. */
-export const SETTINGS_NAV = [
-  { href: '/app/preferences', label: 'Preferences', icon: SlidersHorizontal },
-  { href: '/app/workspace', label: 'Workspace', icon: Building2 },
-  { href: '/app/connections', label: 'Apps', icon: Plug },
-  { href: '/app/skills', label: 'Skills', icon: BookOpenText },
-  { href: '/app/vault', label: 'Secrets', icon: KeyRound },
-  { href: '/app/security', label: 'Security', icon: ShieldCheck },
-  { href: '/app/accounts', label: 'AI Accounts', icon: UserRound },
-  { href: '/app/usage', label: 'Usage', icon: ChartColumn },
-  { href: '/app/computers', label: 'Computers', icon: Monitor },
-  { href: '/app/billing', label: 'Billing', icon: CreditCard },
+/** The Settings page's sections, in groups, its first one first: the member's own, then the
+ * workspace and its plan, then what teammates work with and who may reach it. */
+export const SETTINGS_GROUPS: {
+  label: string
+  items: { href: string; label: string; icon: LucideIcon; search?: string }[]
+}[] = [
+  {
+    label: 'You',
+    items: [
+      { href: '/app/preferences', label: 'Preferences', icon: SlidersHorizontal },
+      { href: '/app/accounts', label: 'AI Accounts', icon: UserRound },
+    ],
+  },
+  {
+    label: 'Workspace',
+    items: [
+      { href: '/app/workspace', label: 'General', icon: Building2, search: 'Workspace' },
+      { href: '/app/computers', label: 'Computers', icon: Monitor },
+      { href: '/app/usage', label: 'Usage', icon: ChartColumn },
+      { href: '/app/billing', label: 'Billing', icon: CreditCard },
+    ],
+  },
+  {
+    label: 'Teammates',
+    items: [
+      { href: '/app/connections', label: 'Apps', icon: Plug },
+      { href: '/app/skills', label: 'Skills', icon: BookOpenText },
+      { href: '/app/vault', label: 'Secrets', icon: KeyRound },
+      { href: '/app/security', label: 'Security', icon: ShieldCheck },
+    ],
+  },
 ]
 
-export const NAV = [...WORK_NAV, ...SETTINGS_NAV]
+export const SETTINGS_NAV = SETTINGS_GROUPS.flatMap((g) => g.items)
+
+export const NAV: { href: string; label: string; search?: string }[] = [
+  ...WORK_NAV,
+  ...SETTINGS_NAV,
+]
 
 const THEMES = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -527,24 +552,24 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        tooltip="Library"
-                        isActive={pathname.startsWith('/app/library')}
-                      >
-                        <Link href="/app/library">
-                          <Library />
-                          <span>Library</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
                         tooltip="Lists"
                         isActive={pathname.startsWith('/app/lists')}
                       >
                         <Link href="/app/lists">
                           <ListChecks />
                           <span>Lists</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip="Library"
+                        isActive={pathname.startsWith('/app/library')}
+                      >
+                        <Link href="/app/library">
+                          <Library />
+                          <span>Library</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
