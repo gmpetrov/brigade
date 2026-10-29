@@ -1,13 +1,14 @@
 import Link from 'next/link'
-import { LegalPage, legalMetadata } from '@/components/landing/legal'
+import { LegalPage } from '@/components/landing/legal'
 import { OPERATOR } from '@/components/landing/operator'
+import { pageMetadata } from '@/lib/page-metadata'
 
 const CONTACT = OPERATOR.email
 
 export const dynamic = 'force-static'
 export const revalidate = false
 
-export const metadata = legalMetadata(
+export const metadata = pageMetadata(
   '/privacy',
   'Privacy policy · Brigade',
   'What Brigade stores about you and your workspace, why, and how to have it deleted.',

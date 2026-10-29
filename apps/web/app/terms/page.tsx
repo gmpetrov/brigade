@@ -1,12 +1,13 @@
 import Link from 'next/link'
-import { LegalPage, legalMetadata } from '@/components/landing/legal'
+import { LegalPage } from '@/components/landing/legal'
 import { OPERATOR } from '@/components/landing/operator'
 import { REPO_URL } from '@/lib/github-proof'
+import { pageMetadata } from '@/lib/page-metadata'
 
 export const dynamic = 'force-static'
 export const revalidate = false
 
-export const metadata = legalMetadata(
+export const metadata = pageMetadata(
   '/terms',
   'Terms of service · Brigade',
   'The rules for using Brigade: your account, your content, your AI teammates and our service.',

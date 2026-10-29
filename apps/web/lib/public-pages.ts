@@ -1,6 +1,7 @@
-// The site's public pages, the only ones its analytics may send from
-// (components/landing/site-analytics.tsx): never the sign-in pages, the dashboard or the demo.
-const PUBLIC_PAGES = new Set([
+// The site's public pages: the only ones its analytics may send from
+// (components/landing/site-analytics.tsx), and the ones its sitemap lists (app/sitemap.ts).
+// Never the sign-in pages, the dashboard or the demo.
+export const PUBLIC_PAGES = [
   '/',
   '/how-it-works',
   '/privacy',
@@ -8,7 +9,8 @@ const PUBLIC_PAGES = new Set([
   '/dpa',
   '/subprocessors',
   '/legal',
-])
+] as const
 
-export const isPublicPage = (pathname: string) =>
-  PUBLIC_PAGES.has(pathname.replace(/\/+$/, '') || '/')
+const pages = new Set<string>(PUBLIC_PAGES)
+
+export const isPublicPage = (pathname: string) => pages.has(pathname.replace(/\/+$/, '') || '/')
