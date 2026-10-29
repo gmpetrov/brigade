@@ -3,7 +3,7 @@ import { createHmac, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
-import { OUTBOX_PROTOCOL } from '@brigade/contracts'
+import { OUTBOX_PROTOCOL, SETTLE_PROTOCOL } from '@brigade/contracts'
 
 // Work the API keeps as rows rather than in its memory (docs/deployment-plan.md, Phase 2), against
 // the API's development database (apps/api/.env), in an organization of its own removed at the
@@ -197,6 +197,9 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     await until(() => call.heard.some((m) => m.type === 'connector.pending'), 'the call to wait')
     return call.heard.find((m) => m.type === 'connector.pending')!.ticketId as string
   }
+  /** The decision the runner was sent for an approval, on a connection. */
+  const settleOf = (conn: { sent: Sent[] }, ticketId: string) =>
+    conn.sent.find((m) => m.type === 'thread.settle' && m.commandId === `settle:${ticketId}`)
   /** As a restart of the workspace's hub leaves it: no tool waits on a connection any more. */
   const forgetWaiters = async () => {
     const { forgetWaiters } = await import('../src/held-calls.js')
@@ -209,7 +212,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
   test('a decision after an API restart: the write is made once, and the thread hears it', async () => {
     const { decideTicket } = await import('../src/connector-calls.js')
     const before = sends.length
-    const call = await send()
+    const call = await send(await connect(SETTLE_PROTOCOL))
     const ticketId = await pendingOf(call)
     const held = await db.heldCall.findFirstOrThrow({ where: { ticketId } })
     assert.equal(held.status, 'waiting')
@@ -243,6 +246,18 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     assert.match(wakeup.note, /approved/)
     assert.match(wakeup.note, /do not make it again/)
     assert.match(wakeup.note, /m-\d+/, 'with its result')
+    // And the runner is sent the decision, so the thread's approval card shows it decided.
+    await until(() => settleOf(call.conn, ticketId) !== undefined, 'the decision to the runner')
+    assert.deepEqual(settleOf(call.conn, ticketId), {
+      type: 'thread.settle',
+      commandId: `settle:${ticketId}`,
+      sessionId: ids.session,
+      teammateId: ids.sam,
+      approvalId: ticketId,
+      approved: true,
+      memberId: ids.owner,
+      moved: null,
+    })
 
     // Deciding again does nothing more.
     assert.equal(
@@ -339,7 +354,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
   test('a denial after a restart: nothing is sent, and the thread hears why', async () => {
     const { decideTicket } = await import('../src/connector-calls.js')
     const before = sends.length
-    const call = await send()
+    const call = await send(await connect(SETTLE_PROTOCOL))
     const ticketId = await pendingOf(call)
     await forgetWaiters()
     await decideTicket({ ...scope, memberId: ids.owner }, ticketId, {
@@ -354,6 +369,89 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     const wakeup = await db.wakeup.findFirstOrThrow({ where: { sourceId: `held:${ticketId}` } })
     assert.match(wakeup.note, /denied/)
     assert.match(wakeup.note, /Not this customer/)
+    await until(() => settleOf(call.conn, ticketId) !== undefined, 'the decision to the runner')
+    assert.equal(settleOf(call.conn, ticketId)?.approved, false)
+  })
+
+  test('a cap that holds the wake-up, then denied: the approval still shows decided', async () => {
+    const { decideTicket } = await import('../src/connector-calls.js')
+    const { resolveTicket } = await import('../src/decide.js')
+    const call = await send(await connect(SETTLE_PROTOCOL))
+    const ticketId = await pendingOf(call)
+    await forgetWaiters()
+    await db.teammate.updateMany({
+      where: { id: ids.sam },
+      data: { caps: { computerHoursPerDay: 0 } },
+    })
+    try {
+      await decideTicket({ ...scope, memberId: ids.owner }, ticketId, { approved: true })
+      await until(
+        async () => (await db.heldCall.findFirst({ where: { ticketId } }))?.status === 'done',
+        'the held call to be made',
+      )
+      const cap = await db.ticket.findFirstOrThrow({
+        where: { sessionId: ids.session, type: 'cap', status: 'open' },
+      })
+      await resolveTicket(
+        { ...scope, memberId: ids.owner, userId: `owner-${suffix}`, role: 'owner' } as never,
+        cap.id,
+        { approved: false },
+      )
+      assert.equal(settleOf(call.conn, ticketId)?.approved, true)
+      const wakeup = await db.wakeup.findFirstOrThrow({ where: { sourceId: `held:${ticketId}` } })
+      assert.equal(
+        call.conn.sent.filter((m) => m.commandId === `wakeup:${wakeup.id}`).length,
+        0,
+        'no turn: the cap held it',
+      )
+    } finally {
+      await db.teammate.updateMany({ where: { id: ids.sam }, data: { caps: {} } })
+    }
+  })
+
+  test('a thread whose commands are at their cap: the decision is still kept and sent', async () => {
+    const { decideTicket } = await import('../src/connector-calls.js')
+    const { keepCommand, PENDING_PER_THREAD } = await import('../src/runner-commands.js')
+    const conn = await connect(SETTLE_PROTOCOL)
+    const call = await send(conn)
+    const ticketId = await pendingOf(call)
+    await forgetWaiters()
+    // Up to the cap, with what earlier tests left waiting.
+    const waiting = await prisma.runnerCommand.count({
+      where: { computerId: ids.laptop, sessionId: ids.session, status: 'pending' },
+    })
+    for (let i = waiting; i < PENDING_PER_THREAD; i++)
+      await keepCommand({ id: ids.laptop, ...scope }, queuedCommand())
+    try {
+      await decideTicket({ ...scope, memberId: ids.owner }, ticketId, { approved: true })
+      await until(
+        async () => (await db.heldCall.findFirst({ where: { ticketId } }))?.status === 'done',
+        'the held call to be made',
+      )
+      assert.equal(await prisma.runnerCommand.count({ where: { id: `settle:${ticketId}` } }), 1)
+      await until(() => settleOf(call.conn, ticketId) !== undefined, 'the decision to the runner')
+    } finally {
+      await prisma.runnerCommand.deleteMany({
+        where: { computerId: ids.laptop, type: 'thread.queued' },
+      })
+    }
+  })
+
+  test('a runner too old for it is not sent the decision', async () => {
+    const { decideTicket } = await import('../src/connector-calls.js')
+    const call = await send(await connect())
+    const ticketId = await pendingOf(call)
+    await forgetWaiters()
+    await decideTicket({ ...scope, memberId: ids.owner }, ticketId, { approved: false })
+    await until(
+      async () => (await db.wakeup.count({ where: { sourceId: `held:${ticketId}` } })) > 0,
+      'the thread to be told',
+    )
+    assert.equal(settleOf(call.conn, ticketId), undefined)
+    const kept = await prisma.runnerCommand.findFirstOrThrow({
+      where: { id: `settle:${ticketId}` },
+    })
+    assert.equal(kept.status, 'pending', 'kept for an updated runner')
   })
 
   test('a credential allowed for good: the waiting tool hears the decision, and it is kept', async () => {

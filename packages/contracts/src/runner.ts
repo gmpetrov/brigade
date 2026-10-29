@@ -919,6 +919,21 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     reason: z.string().optional(),
     memberId: z.string(),
   }),
+  /**
+   * A held call decided once no tool waited on it (the API's src/held-calls.ts): its approval, whose
+   * id is its ticket's, shows decided. It starts no turn: the thread hears the result apart.
+   */
+  z.object({
+    type: z.literal('thread.settle'),
+    commandId: z.string(),
+    sessionId: z.string(),
+    teammateId: z.string(),
+    approvalId: z.string(),
+    approved: z.boolean(),
+    memberId: z.string().nullable(),
+    /** The thread's latest arrival here (ThreadSpec.moved): taken in first, as a spec's is. */
+    moved: ThreadSpec.shape.moved,
+  }),
   /** A person's answer to the harness's question. */
   z.object({
     type: z.literal('thread.answer'),

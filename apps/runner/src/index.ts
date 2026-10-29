@@ -448,7 +448,7 @@ async function start() {
     event: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
   })
   // A thread that moved here: its events go on after the API's, and what this runner kept of it from before goes.
-  const arrive = (spec: ThreadSpec) => {
+  const arrive = (spec: Pick<ThreadSpec, 'sessionId' | 'moved'>) => {
     if (!spec.moved || !outbox.arrive(spec.sessionId, spec.moved.at, spec.moved.seq)) return
     threads.forget(spec.sessionId)
     // The thread says where it went, numbered after the API's last event.
@@ -503,6 +503,10 @@ async function start() {
         )
         return threads.closeLost(message.runningThreads ?? [], last)
       }
+      case 'thread.settle':
+        // Numbered after the thread's history here, as a spec's arrival does.
+        arrive(message)
+        return threads.settleApproval(message)
       case 'thread.prompt':
       case 'thread.approval':
       case 'thread.answer':

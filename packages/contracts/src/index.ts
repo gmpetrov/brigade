@@ -98,8 +98,15 @@ export * from './usage.js'
  * 48: a connector's operations are left out of the spec and named by a catalog (ConnectorGrant's
  *     `catalog`): the runner fetches each App's once (GET /runner/catalogs/<connectionId>) and
  *     keeps it while its version holds (CATALOG_PROTOCOL).
+ * 49: a held call decided once its tool no longer waited shows decided in its thread
+ *     (thread.settle, SETTLE_PROTOCOL).
  */
-export const PROTOCOL_VERSION = 48
+export const PROTOCOL_VERSION = 49
+/**
+ * Runners from this version on take thread.settle: a held call's decision no tool heard, which
+ * shows its approval decided. Older ones are not sent it, and the approval stays as it was.
+ */
+export const SETTLE_PROTOCOL = 49
 /**
  * Runners from this version on fetch a connector's operations themselves (ConnectorGrant's
  * `catalog`), so a thread's spec stays a few kilobytes whatever its Apps' tools weigh. Older ones

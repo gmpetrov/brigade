@@ -1665,6 +1665,22 @@ export class Threads {
    * Something that happened outside a turn (thread.note): a line in the thread,
    * and what each teammate is told at the start of its next turn.
    */
+  /**
+   * A held call decided once no tool here waited on it: its approval shows decided. No turn
+   * starts for it; the thread hears the result as a message of its own.
+   */
+  settleApproval(command: Extract<ApiToRunner, { type: 'thread.settle' }>) {
+    if (!SAFE_ID.test(command.sessionId)) throw new Error('Invalid thread id')
+    this.options.emit(command.sessionId, {
+      at: new Date().toISOString(),
+      type: 'approval.resolved',
+      teammateId: command.teammateId,
+      approvalId: command.approvalId,
+      approved: command.approved,
+      memberId: command.memberId,
+    })
+  }
+
   async noteFromOutside(sessionId: string, text: string) {
     this.options.emit(sessionId, {
       at: new Date().toISOString(),
