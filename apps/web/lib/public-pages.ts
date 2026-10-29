@@ -8,7 +8,11 @@ const PUBLIC_PAGES = new Set([
   '/dpa',
   '/subprocessors',
   '/legal',
+  '/changelog',
 ])
 
-export const isPublicPage = (pathname: string) =>
-  PUBLIC_PAGES.has(pathname.replace(/\/+$/, '') || '/')
+export const isPublicPage = (pathname: string) => {
+  const path = pathname.replace(/\/+$/, '') || '/'
+  // A release's page, /changelog/<day>, but not the feed.
+  return PUBLIC_PAGES.has(path) || /^\/changelog\/\d{4}-\d{2}-\d{2}$/.test(path)
+}
