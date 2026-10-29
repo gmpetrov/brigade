@@ -111,7 +111,7 @@ import {
   startAt,
   threadPrompts,
 } from '../thread-history.js'
-import { threadLists } from '../lists.js'
+import { nextPinPosition, pinnedListThreads, threadLists } from '../lists.js'
 import { noteInThread } from '../thread-notes.js'
 import {
   parseBody,
@@ -357,9 +357,11 @@ export const threads = new Hono<AppEnv>()
       c.req.query('archived') !== '1'
     ) {
       const loaded = new Set(rows.map((r) => r.id))
-      const missing = [...new Set([...pins.map((p) => p.sessionId), ...laters.keys()])].filter(
-        (id) => !loaded.has(id),
-      )
+      // And those on the lists they pinned, which show under each list, however old.
+      const onPinnedLists = await pinnedListThreads(c.var.db, c.var.scope.memberId)
+      const missing = [
+        ...new Set([...pins.map((p) => p.sessionId), ...laters.keys(), ...onPinnedLists]),
+      ].filter((id) => !loaded.has(id))
       // A child thread shows only in its parent, unless this member pinned it.
       const pinnedIds = new Set(pins.map((p) => p.sessionId))
       if (missing.length)
@@ -1791,17 +1793,25 @@ export const threads = new Hono<AppEnv>()
     return c.json({ ok: true })
   })
 
-  /** This member's pinned threads in the order they dragged them to: the ids, first to last. */
+  /**
+   * This member's pinned threads and lists in the order they dragged them to: the ids, first to
+   * last, a list's as `list:<documentId>` (its sidebar row's).
+   */
   .put('/pins/order', async (c) => {
     const { scope, db } = c.var
     const { ids } = await parseBody(c.req.raw, z.object({ ids: z.array(z.string()).max(500) }))
     // Only their own pins move; ids they did not pin are left out.
     await db.$transaction(
-      ids.map((sessionId, position) =>
-        db.threadPin.updateMany({
-          where: { memberId: scope.memberId, sessionId },
-          data: { position },
-        }),
+      ids.map((id, position) =>
+        id.startsWith('list:')
+          ? db.listPin.updateMany({
+              where: { memberId: scope.memberId, documentId: id.slice('list:'.length) },
+              data: { position },
+            })
+          : db.threadPin.updateMany({
+              where: { memberId: scope.memberId, sessionId: id },
+              data: { position },
+            }),
       ),
     )
     return c.json({ ok: true })
@@ -1812,11 +1822,8 @@ export const threads = new Hono<AppEnv>()
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     await surface(db, thread)
-    // At the end of Pinned, below those the member placed.
-    const last = await db.threadPin.aggregate({
-      where: { memberId: scope.memberId },
-      _max: { position: true },
-    })
+    // At the end of Pinned, below the threads and lists the member placed.
+    const position = await nextPinPosition(db, scope.memberId)
     await db.threadPin.upsert({
       where: { memberId_sessionId: { memberId: scope.memberId, sessionId: thread.id } },
       create: {
@@ -1824,7 +1831,7 @@ export const threads = new Hono<AppEnv>()
         workspaceId: scope.workspaceId,
         memberId: scope.memberId,
         sessionId: thread.id,
-        position: (last._max.position ?? -1) + 1,
+        position,
       },
       update: {},
     })

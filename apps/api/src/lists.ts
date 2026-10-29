@@ -361,6 +361,73 @@ export async function threadLists(db: ScopedDb, sessionIds: string[]) {
   return out
 }
 
+/** The lists this member pinned in their sidebar, with their titles; those since deleted left out. */
+export async function pinnedLists(db: ScopedDb, memberId: string) {
+  const pins = await db.listPin.findMany({
+    where: { memberId, document: LIST_FILE },
+    select: {
+      documentId: true,
+      pinnedAt: true,
+      position: true,
+      document: { select: { path: true, text: true } },
+    },
+  })
+  return pins.map((p) => ({
+    documentId: p.documentId,
+    title: titleOf(p.document.path, parseList(p.document.text.slice(0, 8_000))),
+    pinnedAt: p.pinnedAt.toISOString(),
+    position: p.position,
+  }))
+}
+
+/** The threads working on the lists this member pinned: the sidebar shows them under each. */
+export async function pinnedListThreads(db: ScopedDb, memberId: string) {
+  // The threads themselves, not their item links: one thread on many items takes one place.
+  const threads = await db.session.findMany({
+    where: {
+      archivedAt: null,
+      parentId: null,
+      listItems: {
+        some: { item: { document: { ...LIST_FILE, listPins: { some: { memberId } } } } },
+      },
+    },
+    select: { id: true },
+    orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+    take: 200,
+  })
+  return threads.map((t) => t.id)
+}
+
+/** Where a new pin goes under Pinned: after this member's pinned threads and lists alike. */
+export async function nextPinPosition(db: ScopedDb, memberId: string) {
+  const [threads, lists] = await Promise.all([
+    db.threadPin.aggregate({ where: { memberId }, _max: { position: true } }),
+    db.listPin.aggregate({ where: { memberId }, _max: { position: true } }),
+  ])
+  return Math.max(threads._max.position ?? -1, lists._max.position ?? -1) + 1
+}
+
+/** Pin it under this member's Pinned, at the end. */
+export async function pinList(
+  db: ScopedDb,
+  scope: Scope & { memberId: string },
+  documentId: string,
+) {
+  const file = await listFile(db, { id: documentId })
+  const position = await nextPinPosition(db, scope.memberId)
+  await db.listPin.upsert({
+    where: { memberId_documentId: { memberId: scope.memberId, documentId: file.id } },
+    create: {
+      organizationId: scope.organizationId,
+      workspaceId: scope.workspaceId,
+      memberId: scope.memberId,
+      documentId: file.id,
+      position,
+    },
+    update: {},
+  })
+}
+
 /** What a thread's teammate is told it works on (ThreadSpec.items). */
 export async function specItems(db: ScopedDb, sessionId: string) {
   const links = await db.listItemThread.findMany({

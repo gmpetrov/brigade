@@ -416,6 +416,15 @@ export type ThreadSummary = {
   list?: { documentId: string; title: string } | null
 }
 
+/** A list this member pinned in their sidebar (GET /lists/pins): under Pinned, with its threads. */
+export type PinnedList = {
+  documentId: string
+  title: string
+  pinnedAt: string
+  /** Where it sits under Pinned, in the same order as a thread's pinPosition. */
+  position: number
+}
+
 /** A child thread under its parent in the sidebar: newest activity first. */
 export type SidebarChild = {
   id: string

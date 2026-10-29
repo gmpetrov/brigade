@@ -293,6 +293,12 @@ export type ListItemPull = Prisma.ListItemPullModel
  */
 export type LibraryLock = Prisma.LibraryLockModel
 /**
+ * Model ListPin
+ * A list (docs/lists.md) a member pinned in their sidebar: under Pinned, among their pinned
+ * threads, with the threads working on its items under it. Each member's own, like a thread's pin.
+ */
+export type ListPin = Prisma.ListPinModel
+/**
  * Model DocumentPin
  * A library file a member pinned: it stays at the top of their Library. Each member's own,
  * like a thread's pin. A file in the trash keeps its pin, which shows again once restored.

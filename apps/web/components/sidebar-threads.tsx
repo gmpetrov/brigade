@@ -5,7 +5,8 @@
 // teammate or project without going anywhere. The list shows its first few threads (waiting
 // on a person first, then working, then the rest) and folds the others into a "+N" row, so
 // the teammates and projects stay in reach however many there are; older ones load on asking.
-// Threads this member pinned sit above them, under Pinned, in the order they drag them to;
+// Threads this member pinned sit above them, under Pinned, in the order they drag them to,
+// with the lists they pinned (each with the threads on its items, which leave Threads);
 // archived ones are out of both, and so are those the member put away for later, and the
 // filter lists each (Later with how many). The teammates and projects stay in the order the
 // member drags them to, too (useSidebarOrder). Pinned, Threads, Teammates and Projects each
@@ -21,6 +22,7 @@ import {
   ChevronDown,
   Clock,
   ChevronUp,
+  ListChecks,
   ListFilter,
   MessagesSquare,
   Plus,
@@ -72,13 +74,14 @@ import {
 import {
   api,
   useApi,
+  type PinnedList,
   type ProjectSummary,
   type SidebarChild,
   type Teammate,
   type ThreadSummary,
 } from '@/lib/api'
 import { latestSave } from '@/lib/latest-save'
-import { groupByList, isListRow } from '@/lib/list-groups'
+import { groupByList, isListRow, listRowId } from '@/lib/list-groups'
 import { groupOf, holds, subThreadRows, type Group } from '@/lib/sub-threads'
 import { cn } from '@/lib/utils'
 
@@ -367,6 +370,15 @@ export function useSidebarOrder() {
 
 /** The lists whose rows drag to another place. */
 type DragList = 'pinned' | SidebarList
+
+/** Under Pinned: a thread, or a list (`list`) with its threads' row when any work on it. */
+type PinnedEntry = {
+  id: string
+  pinnedAt: string
+  position: number
+  thread?: ThreadSummary
+  list?: PinnedList
+}
 
 const LABELS: Record<string, string> = {
   waiting: 'needs you',
@@ -697,18 +709,52 @@ export function SidebarWork({
       needsYou,
     )
   }, [threads, older, needsYou, archived])
-  // Pinned: where the member dragged them, else in the order they were pinned, whatever the
-  // filter. Pinned since the last drag, at the end.
-  const pinned = useMemo(() => {
+  // The lists this member pinned: under Pinned, each with the threads on its items (those not
+  // pinned themselves), which leave Threads.
+  const pinnedLists = useApi<PinnedList[]>('/lists/pins', ['lists.updated'])
+  const pinnedListIds = useMemo(
+    () => new Set((pinnedLists.data ?? []).map((l) => l.documentId)),
+    [pinnedLists.data],
+  )
+  const onPinnedList = useCallback(
+    (t: ThreadSummary) => !!t.list && pinnedListIds.has(t.list.documentId),
+    [pinnedListIds],
+  )
+  async function pinList(documentId: string, pinned: boolean) {
+    await api(`/lists/${documentId}/pin`, { method: pinned ? 'DELETE' : 'POST' })
+    // Threads on it from long ago come with the list's pin.
+    await Promise.all([pinnedLists.reload(), reloadThreads()])
+  }
+  // Pinned threads and lists: where the member dragged them, else in the order they were
+  // pinned, whatever the filter. Pinned since the last drag, at the end. A list is its row
+  // with its threads under it, or alone while no thread works on it (`thread` unset).
+  const pinned = useMemo((): PinnedEntry[] => {
     if (instead) return []
-    const rank = (t: ThreadSummary) => {
-      const i = pinOrder?.indexOf(t.id) ?? -1
-      return pinOrder ? (i < 0 ? pinOrder.length : i) : (t.pinPosition ?? 0)
+    const onList = new Map<string, ThreadSummary[]>()
+    for (const t of all)
+      if (!t.pinnedAt && !t.laterAt && onPinnedList(t))
+        onList.set(t.list!.documentId, [...(onList.get(t.list!.documentId) ?? []), t])
+    const entries: PinnedEntry[] = [
+      ...all
+        .filter((t) => t.pinnedAt && !t.laterAt)
+        .map((t) => ({ id: t.id, pinnedAt: t.pinnedAt!, position: t.pinPosition ?? 0, thread: t })),
+      ...(pinnedLists.data ?? []).map((l) => {
+        const threads = onList.get(l.documentId)
+        return {
+          id: listRowId(l.documentId),
+          pinnedAt: l.pinnedAt,
+          position: l.position,
+          list: l,
+          thread: threads && groupByList(threads)[0],
+        }
+      }),
+    ]
+    const rank = (e: PinnedEntry) => {
+      const i = pinOrder?.indexOf(e.id) ?? -1
+      return pinOrder ? (i < 0 ? pinOrder.length : i) : e.position
     }
-    return all
-      .filter((t) => t.pinnedAt && !t.laterAt)
-      .sort((a, b) => rank(a) - rank(b) || a.pinnedAt!.localeCompare(b.pinnedAt!))
-  }, [all, instead, pinOrder])
+    return entries.sort((a, b) => rank(a) - rank(b) || a.pinnedAt.localeCompare(b.pinnedAt))
+  }, [all, instead, pinOrder, pinnedLists.data, onPinnedList])
 
   /** The list's ids with `id` moved before or after `to`; undefined when nothing moves. */
   function moved(list: { id: string }[], id: string, to: { id: string; after: boolean }) {
@@ -802,13 +848,13 @@ export function SidebarWork({
     () =>
       all.filter(
         (t) =>
-          (instead || !t.pinnedAt) &&
+          (instead || (!t.pinnedAt && !onPinnedList(t))) &&
           (later ? !!t.laterAt : !t.laterAt) &&
           (!filter.teammateId || inThread(t, filter.teammateId)) &&
           (!filter.projectId || t.projectId === filter.projectId) &&
           (!filter.statuses.length || filter.statuses.includes(statusKey(t)!)),
       ),
-    [all, filter, instead, later],
+    [all, filter, instead, later, onPinnedList],
   )
   const groups = useMemo(() => {
     const by: Record<Group, ThreadSummary[]> = { waiting: [], working: [], rest: [] }
@@ -884,7 +930,7 @@ export function SidebarWork({
   // A child thread open: its parent, which shows it unfolded.
   const inView =
     !!openId &&
-    (pinned.some((t) => holds(t, openId)) ||
+    (pinned.some((p) => !!p.thread && holds(p.thread, openId)) ||
       waitingShown.some((t) => holds(t, openId)) ||
       ordered.slice(0, visible).some((t) => holds(t, openId)))
   const loaded = openId ? all.find((t) => holds(t, openId)) : undefined
@@ -938,13 +984,18 @@ export function SidebarWork({
     const open = children.length > 0 && (childrenSet[t.id] ?? !!activeChild)
     const toggle = () => toggleChildren(t.id, open)
     if (isListRow(t)) {
-      const listHref = `/app/lists/${t.list!.documentId}`
+      const documentId = t.list!.documentId
+      const listHref = `/app/lists/${documentId}`
+      const listPinned = pinnedListIds.has(documentId)
       return (
         <Fragment key={t.id}>
           <ListGroupRow
             title={t.title}
             href={listHref}
             active={pathname === listHref}
+            pinned={listPinned}
+            onPin={() => pinList(documentId, listPinned)}
+            drag={drag}
             dot={state ? <ThreadStatusIcon {...status} /> : undefined}
             working={working}
             hint={
@@ -1000,6 +1051,23 @@ export function SidebarWork({
           />
         )}
       </Fragment>
+    )
+  }
+
+  /** A pinned thread or list; a list no thread works on now, alone. */
+  function pinnedRow(p: PinnedEntry, drag?: ComponentProps<'li'>) {
+    if (p.thread) return row(p.thread, drag)
+    const href = `/app/lists/${p.list!.documentId}`
+    return (
+      <ListGroupRow
+        key={p.id}
+        title={p.list!.title}
+        href={href}
+        active={pathname === href}
+        pinned
+        onPin={() => pinList(p.list!.documentId, true)}
+        drag={drag}
+      />
     )
   }
 
@@ -1083,7 +1151,7 @@ export function SidebarWork({
             {pinned.length > 0 && (
               <>
                 <SidebarGroupLabel className="h-6">Pinned</SidebarGroupLabel>
-                <SidebarMenu>{pinned.map((t) => row(t))}</SidebarMenu>
+                <SidebarMenu>{pinned.map((p) => pinnedRow(p))}</SidebarMenu>
                 <hr className="border-sidebar-border mx-2 my-1" />
               </>
             )}
@@ -1094,7 +1162,32 @@ export function SidebarWork({
           {pinned.length > 0 && (
             <li aria-hidden className="bg-sidebar-border mx-auto my-1 h-px w-4" />
           )}
-          {pinned.map((t) => {
+          {pinned.map((p) => {
+            const t = p.thread
+            // A list: its icon, and its threads' dot.
+            if (!t || isListRow(t)) {
+              const href = `/app/lists/${p.list!.documentId}`
+              return (
+                <SidebarMenuItem key={p.id}>
+                  <SidebarMenuButton asChild tooltip={p.list!.title} isActive={pathname === href}>
+                    <Link href={href} aria-label={p.list!.title}>
+                      <span className="relative flex size-4 shrink-0 items-center justify-center">
+                        <ListChecks aria-hidden className="size-4" />
+                        {t && statusKey(t) && (
+                          <ThreadStatusIcon
+                            status={t.status}
+                            unread={t.unread}
+                            stuck={!!t.eventsWaitingSince}
+                            className="absolute -right-1.5 -bottom-1.5 size-3"
+                          />
+                        )}
+                      </span>
+                      <span>{p.list!.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            }
             const href = `/app/threads/${t.id}`
             const title = t.title || 'New thread'
             return (
@@ -1138,7 +1231,7 @@ export function SidebarWork({
           </SidebarGroupLabel>
           {!folded.pinned && (
             <SidebarGroupContent>
-              <SidebarMenu>{pinned.map((t) => row(t, dragRow('pinned', t.id)))}</SidebarMenu>
+              <SidebarMenu>{pinned.map((p) => pinnedRow(p, dragRow('pinned', p.id)))}</SidebarMenu>
             </SidebarGroupContent>
           )}
         </SidebarGroup>

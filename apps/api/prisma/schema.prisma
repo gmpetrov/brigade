@@ -181,6 +181,7 @@ model Member {
   threadReads           ThreadRead[]
   threadPins            ThreadPin[]
   documentPins          DocumentPin[]
+  listPins              ListPin[]
   sidebarOrders         SidebarOrder[]
   threadLaters          ThreadLater[]
   homeDismissals        HomeDismissal[]
@@ -286,6 +287,7 @@ model Workspace {
   threadReads           ThreadRead[]
   threadPins            ThreadPin[]
   documentPins          DocumentPin[]
+  listPins              ListPin[]
   sidebarOrders         SidebarOrder[]
   threadLaters          ThreadLater[]
   homeDismissals        HomeDismissal[]
@@ -1586,6 +1588,8 @@ model Document {
   memoryLines        MemoryLine[]
   /// The members who pinned it.
   pins               DocumentPin[]
+  /// The members who pinned it, as a list, in their sidebar.
+  listPins           ListPin[]
 
   /// Its checklist lines that work is attached to (docs/lists.md).
   listItems ListItem[]
@@ -1666,6 +1670,24 @@ model LibraryLock {
   /// The holder, a random id of its own.
   owner String
   until DateTime
+}
+
+/// A list (docs/lists.md) a member pinned in their sidebar: under Pinned, among their pinned
+/// threads, with the threads working on its items under it. Each member's own, like a thread's pin.
+model ListPin {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  documentId     String
+  document       Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  pinnedAt       DateTime  @default(now())
+  /// Where it sits under Pinned, in the same order as ThreadPin.position.
+  position       Int       @default(0)
+
+  @@id([memberId, documentId])
+  @@index([documentId])
 }
 
 /// A library file a member pinned: it stays at the top of their Library. Each member's own,
