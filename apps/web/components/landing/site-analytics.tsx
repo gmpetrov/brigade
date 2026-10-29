@@ -1,6 +1,8 @@
 'use client'
+import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import { DEMO } from '@/lib/demo/flag'
+import { isPublicPage } from '@/lib/public-pages'
 import { visitSource } from '@/lib/signup-source'
 
 // The site's own analytics (docs/analytics.md): pages seen and calls to action clicked, on
@@ -54,7 +56,8 @@ function load(key: string) {
       persistence: 'memory',
       disable_session_recording: true,
       autocapture: false,
-      capture_pageview: 'history_change',
+      // Sent by SiteAnalytics itself, for the public pages it is mounted on only.
+      capture_pageview: false,
       capture_pageleave: false,
       capture_dead_clicks: false,
       capture_heatmaps: false,
@@ -69,6 +72,9 @@ function load(key: string) {
       advanced_disable_flags: true,
       mask_personal_data_properties: true,
       person_profiles: 'identified_only',
+      // Once loaded, posthog-js outlives the header: a client-side navigation to /sign-in or
+      // /app keeps it, so anything it would send from there is dropped.
+      before_send: (event) => (isPublicPage(location.pathname) ? event : null),
     })
     // At once, with the browser's beacon: the click may leave the page.
     return (event, properties) =>
@@ -79,6 +85,11 @@ function load(key: string) {
 
 /** Mounted in the site's header: pages seen and calls to action clicked. */
 export function SiteAnalytics() {
+  const pathname = usePathname()
+  useEffect(() => {
+    if (KEY && isPublicPage(pathname))
+      void load(KEY).then((capture) => capture('$pageview', { $current_url: location.href }))
+  }, [pathname])
   useEffect(() => {
     // Where this visit came from, read before any of the site's pages changes the address.
     visitSource()
@@ -87,7 +98,7 @@ export function SiteAnalytics() {
     function clicked(event: MouseEvent) {
       const link = (event.target as Element | null)?.closest?.('a[href]')
       const target = link && ctaTarget(link.getAttribute('href') ?? '')
-      if (link && target)
+      if (link && target && isPublicPage(location.pathname))
         void ready.then((capture) =>
           capture('cta_clicked', { location: ctaLocation(link), target }),
         )
