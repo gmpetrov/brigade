@@ -193,7 +193,10 @@ test('a turn the memory guard stopped goes on once the computer has memory again
     notes[0]!,
     /^Mark goes on once the computer has memory again, in .+ at the earliest\.$/,
   )
-  assert.match(notes[1]!, /^The computer is still short of memory\. Mark goes on once/)
+  assert.equal(
+    notes[1],
+    'The computer is still short of memory. Mark goes on once it has some again.',
+  )
   assert.match(
     t.prompts[1]!,
     /^Your last turn in this thread stopped on an error: Stopped to give the computer memory back: the computer is nearly out of memory, and it held the most \(2\.1 GB\)\./,
@@ -213,4 +216,39 @@ test('a turn waits for the computer to have memory before it starts', async () =
   room = true
   await sleep(5_200)
   assert.equal(turns(t.events), 1)
+})
+
+test('waiting for memory does not use up the tries of a turn the guard stopped', async () => {
+  let room = true
+  const t = setup(
+    'budget',
+    [{ status: 'failed', error: BRIDGE_CLOSED, memoryStop: 'pressure' }],
+    async () => room,
+  )
+  t.message('Go')
+  await sleep(50)
+  // Short of memory longer than all three tries would take.
+  room = false
+  await sleep(500)
+  assert.equal(turns(t.events), 1)
+  room = true
+  await sleep(250)
+  assert.equal(turns(t.events), 2, JSON.stringify(t.notes()))
+  assert.ok(!t.notes().some((n) => /tried again 3 times/.test(n)))
+  assert.equal(t.notes().filter((n) => /still short of memory/.test(n)).length, 1, 'said once')
+})
+
+test('a person taking control while a try waits for memory: it does not run', async () => {
+  let room = true
+  const t = setup('takeover-wait', [{ status: 'failed', error: BRIDGE_CLOSED }], async () => room)
+  t.message('Go')
+  await sleep(50)
+  // The try is queued, then waits for memory before it starts.
+  room = false
+  await sleep(200)
+  t.threads.takeover(t.spec, 'm1', true)
+  room = true
+  // Past the wait's next check of memory.
+  await sleep(5_300)
+  assert.equal(turns(t.events), 1, 'the try ran despite the takeover')
 })

@@ -297,7 +297,14 @@ type Thread = {
    * The latest turn failed: whose, on what error, and how many times it was tried again on
    * its own since a person last asked; with the timer of the next try (failed).
    */
-  failed?: { spec: ThreadSpec; error: string; tries: number; timer?: NodeJS.Timeout }
+  failed?: {
+    spec: ThreadSpec
+    error: string
+    tries: number
+    timer?: NodeJS.Timeout
+    /** Its next try waits for the computer to have memory, said in the thread (tryAgain). */
+    shortOfMemory?: boolean
+  }
   /** The memory guard stopped its running turn, and why (stoppedForMemory). */
   memoryStop?: string
 }
@@ -923,7 +930,8 @@ export class Threads {
         })
         thread.slotWait = undefined
         acquired = true
-        await this.waitForMemory(spec)
+        // Stopped, or taken over, while it waited for memory: the turn does not happen.
+        if (!(await this.waitForMemory(thread, spec)) || thread.takeover) return
         // The runner is stopping: the API still has the turn, and gives it to the next runner.
         if (this.stopping) return
         const upTo = prepare ? await prepare() : undefined
@@ -1056,7 +1064,7 @@ export class Threads {
    * once there is room on it. Else, and after those tries, a person tries it again
    * (thread.retry) or writes.
    */
-  private failed(thread: Thread, spec: ThreadSpec, error: string, still?: 'disk' | 'memory') {
+  private failed(thread: Thread, spec: ThreadSpec, error: string, diskFull = false) {
     const tries = thread.failed?.tries ?? 0
     clearTimeout(thread.failed?.timer)
     thread.failed = { spec, error, tries }
@@ -1069,12 +1077,7 @@ export class Threads {
         spec.sessionId,
         `${name} tried again ${tries} times and the error came back. Try again once it is fixed.`,
       )
-    const why =
-      still === 'disk'
-        ? "The computer's disk is still full. "
-        : still === 'memory'
-          ? 'The computer is still short of memory. '
-          : ''
+    const why = diskFull ? "The computer's disk is still full. " : ''
     this.say(
       spec.sessionId,
       memory
@@ -1089,14 +1092,25 @@ export class Threads {
     const failed = thread.failed
     if (!failed || this.stopping || thread.takeover) return
     failed.timer = undefined
-    failed.tries = tries
-    if (DISK_ERROR.test(failed.error) && !(await roomOnDisk()))
-      return this.failed(thread, failed.spec, failed.error, 'disk')
+    // Stopped for memory, while the computer is still short of it: checked again later, without
+    // counting as a try, since the turn did not run. Said once.
     if (
       MEMORY_STOPPED.test(failed.error) &&
       !(await (this.options.memoryRoom?.() ?? Promise.resolve(true)))
-    )
-      return this.failed(thread, failed.spec, failed.error, 'memory')
+    ) {
+      if (thread.failed !== failed || failed.timer || this.stopping || thread.takeover) return
+      if (!failed.shortOfMemory)
+        this.say(
+          failed.spec.sessionId,
+          `The computer is still short of memory. ${failed.spec.teammate.name} goes on once it has some again.`,
+        )
+      failed.shortOfMemory = true
+      failed.timer = setTimeout(() => void this.tryAgain(thread, tries), RETRY_AFTER_MS[0])
+      return
+    }
+    failed.tries = tries
+    if (DISK_ERROR.test(failed.error) && !(await roomOnDisk()))
+      return this.failed(thread, failed.spec, failed.error, true)
     this.retryTurn(thread, failed)
   }
 
@@ -1826,19 +1840,27 @@ export class Threads {
    * Before a turn starts, the computer has memory for it: else it would only push the memory
    * guard to stop another turn. It waits, said once in its thread, MEMORY_WAIT_MS at most.
    */
-  private async waitForMemory(spec: ThreadSpec) {
+  private async waitForMemory(thread: Thread, spec: ThreadSpec) {
     const room = this.options.memoryRoom
-    if (!room || (await room())) return
+    if (!room || (await room())) return true
     this.options.emit(spec.sessionId, {
       at: new Date().toISOString(),
       type: 'raw',
       source: 'runner',
       value: `The computer is short of memory: ${spec.teammate.name} starts once it has some again.`,
     })
-    const until = Date.now() + MEMORY_WAIT_MS
-    while (!this.stopping && Date.now() < until) {
-      await sleep(5_000)
-      if (await room()) return
+    // Stop, or a person taking control, ends the wait, as they would end the turn.
+    const controller = new AbortController()
+    thread.controller = controller
+    try {
+      const until = Date.now() + MEMORY_WAIT_MS
+      while (!this.stopping && !controller.signal.aborted && Date.now() < until) {
+        await sleep(5_000, undefined, { signal: controller.signal }).catch(() => undefined)
+        if (controller.signal.aborted || (await room())) break
+      }
+      return !controller.signal.aborted
+    } finally {
+      if (thread.controller === controller) thread.controller = undefined
     }
   }
 
