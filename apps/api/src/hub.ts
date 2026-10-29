@@ -12,6 +12,7 @@ import { onScopedWrite, prisma } from './db.js'
 import { inHub, runningHub } from './hub/context.js'
 import { localHub } from './hub/memory-host.js'
 import { NOTIFY, runOperation, type Hub, type OperationName } from './hub/operations.js'
+import { noteFailure } from './ops/failures.js'
 import { hubElsewhere } from './platform/node.js'
 
 export type { Hub } from './hub/operations.js'
@@ -40,6 +41,15 @@ export type Outcome =
   { ok: true; value: unknown } | { ok: false; error: { message: string; status?: number } }
 
 /**
+ * An error as one line: its kind and message, or what was thrown. A hub object reset mid-operation
+ * fails it with an error whose message can be empty: its name and kind still say what it was.
+ */
+export const describeError = (error: unknown) =>
+  error instanceof Error
+    ? `${error.name}: ${error.message || '(no message)'}`
+    : `thrown ${typeof error}: ${String(error)}`
+
+/**
  * Run an operation in the workspace's hub here: the running one when it is the workspace's (a
  * hub object's own), else this process's.
  */
@@ -58,13 +68,12 @@ export async function outcomeHere(
   try {
     return { ok: true, value: await runHere(workspaceId, name, args) }
   } catch (error) {
-    return {
-      ok: false,
-      error: {
-        message: error instanceof Error ? error.message : String(error),
-        ...(error instanceof HTTPException ? { status: error.status } : {}),
-      },
-    }
+    if (error instanceof HTTPException)
+      return { ok: false, error: { message: error.message, status: error.status } }
+    // Said here, with its stack: the caller in another object gets only a line.
+    console.error(`hub ${workspaceId}: ${name} failed`, error)
+    noteFailure('hub-op', `${name}: ${describeError(error)}`, { workspaceId })
+    return { ok: false, error: { message: `${name} failed in the hub: ${describeError(error)}` } }
   }
 }
 

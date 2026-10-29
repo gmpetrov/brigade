@@ -85,6 +85,15 @@ export const RULES: Rule[] = [
     hint: 'Failing in several workspaces at once points at Brigade or a provider, not one member’s account.',
   },
   {
+    kind: 'hub-op',
+    title: "Workspace hubs' operations failing",
+    windowMs: 60 * MINUTE,
+    warning: 3,
+    critical: 15,
+    quietMs: 2 * 60 * MINUTE,
+    hint: 'Each is logged with its error by brigade-api ("hub <workspace>: <operation> failed"). A hub object reset mid-operation drops its sockets too (1006), and its runner reconnects.',
+  },
+  {
     kind: 'runner-silent',
     title: "Cloud computers' runners going silent",
     windowMs: 15 * MINUTE,

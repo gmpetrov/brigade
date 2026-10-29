@@ -14,7 +14,7 @@ import { capLabel, turnCapReached } from './caps.js'
 import type { RunnerToApi } from '@brigade/contracts'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { refuseWhileDeleting } from './deletion-fence.js'
-import { hubs, threadUpdated } from './hub.js'
+import { describeError, hubs, threadUpdated } from './hub.js'
 import { isKept } from './runner-commands.js'
 import { usableAccounts } from './routes/accounts.js'
 import {
@@ -181,20 +181,31 @@ export async function promptThread(
     ),
   )
   const [first, ...then] = specs
-  return hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
-    type: 'thread.prompt',
-    commandId: options.commandId ?? randomUUID(),
-    thread: first!,
-    text: prompt.text,
-    memberId: prompt.memberId,
-    then,
-    ...(prompt.handoff ? { handoff: true } : {}),
-    attachments: prompt.attachments ?? [],
-    ...(prompt.messageId ? { messageId: prompt.messageId } : {}),
-    ...(prompt.steer ? { steer: true } : {}),
-    ...(prompt.replyTo ? { replyTo: prompt.replyTo } : {}),
-    ...(options.nameThread ? { nameThread: options.nameThread } : {}),
-  })
+  const commandId = options.commandId ?? randomUUID()
+  try {
+    return await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
+      type: 'thread.prompt',
+      commandId,
+      thread: first!,
+      text: prompt.text,
+      memberId: prompt.memberId,
+      then,
+      ...(prompt.handoff ? { handoff: true } : {}),
+      attachments: prompt.attachments ?? [],
+      ...(prompt.messageId ? { messageId: prompt.messageId } : {}),
+      ...(prompt.steer ? { steer: true } : {}),
+      ...(prompt.replyTo ? { replyTo: prompt.replyTo } : {}),
+      ...(options.nameThread ? { nameThread: options.nameThread } : {}),
+    })
+  } catch (error) {
+    // Kept before it failed (a hub object reset as it sent it, say): it goes when the runner
+    // connects again, as a queued one does, so the message is not refused while it gets through.
+    if (error instanceof HTTPException || !(await isKept(commandId).catch(() => false))) throw error
+    console.warn(
+      `thread ${thread.id}: prompt ${commandId} kept, sending it failed: ${describeError(error)}`,
+    )
+    return 'queued'
+  }
 }
 
 /** The member in control hands the thread back: the teammate continues, told their note and what changed. */
