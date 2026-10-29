@@ -78,6 +78,11 @@ mission; threads stay where the work happens.
   behind a quiet row. A thread with items of several lists goes under the first it was given.
   Lists group, sections do not: a list's page shows its sections. Pinned threads stay under
   Pinned; the archived and Later views show threads as they come.
+- **Pinning a list**: the list's row has a menu (⋮, or a right-click) whose Pin puts it under
+  Pinned, each member's own (`ListPin`), among their pinned threads and dragged with them (one
+  order, `PUT /api/threads/pins/order` with the list as `list:<documentId>`). Its threads go with
+  it, out of Threads, however old (`GET /api/threads` loads them); with none, the row stays and
+  opens the list. `GET /api/lists/pins`, `POST|DELETE /api/lists/:documentId/pin`.
 - **A list** (`/app/lists/<documentId>`): the file in the document editor, its progress, and
   filters (All, Open, In progress, Needs you, Done) that hide the other lines (CSS over each
   line's state, `globals.css`). Each line with work on it shows its threads (state dot,
@@ -117,7 +122,7 @@ Writes to items, their threads and pull requests broadcast `lists.updated`.
 
 ## Not done yet
 
-- Pinning a list in the sidebar with its progress.
+- A pinned list's progress in its sidebar row.
 - Making a new list from the Lists page (a new Markdown file with a checkbox does it).
 - A line's state from its threads' open tickets alone (a thread waiting on a ticket is already
   `waiting`).

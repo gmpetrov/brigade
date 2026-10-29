@@ -208,6 +208,27 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     })
   })
 
+  test('a pinned list sits under Pinned with its threads, in one order with pinned threads', async () => {
+    const member = { ...scope, memberId: ids.member }
+    // A thread pinned first, then the list: the list goes after it.
+    await db.threadPin.create({
+      data: { ...scope, memberId: ids.member, sessionId: threadId, position: 0 },
+    } as never)
+    await lists.pinList(db, member, ids.file)
+    await lists.pinList(db, member, ids.file)
+    assert.deepEqual(
+      (await lists.pinnedLists(db, ids.member)).map((l) => [l.documentId, l.title, l.position]),
+      [[ids.file, 'Launch', 1]],
+      'pinned once, after the pinned thread, with its title',
+    )
+    assert.equal(await lists.nextPinPosition(db, ids.member), 2)
+    assert.deepEqual(await lists.pinnedListThreads(db, ids.member), [threadId])
+    await assert.rejects(lists.pinList(db, member, 'no-such-file'), /No Markdown file/)
+    await db.threadPin.deleteMany({ where: { memberId: ids.member } })
+    await db.listPin.deleteMany({ where: { memberId: ids.member } })
+    assert.deepEqual(await lists.pinnedListThreads(db, ids.member), [])
+  })
+
   test('a list shows its lines with their threads and where each stands', async () => {
     const detail = await lists.listDetail(db, scope, ids.file)
     assert.equal(detail.title, 'Launch')

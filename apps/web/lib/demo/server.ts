@@ -720,6 +720,7 @@ const routes: [string, RegExp, Handler][] = [
   ['POST', /^\/threads$/, (_, input) => newThread(input as never)],
   // Lists (docs/lists.md) were recorded before they existed: none, and handing lines over is off.
   ['GET', /^\/lists$/, () => []],
+  ['GET', /^\/lists\/pins$/, () => []],
   ['POST', /^\/lists\/.+$/, () => ({ status: 403, body: { error: OFF } })],
   ['PUT', /^\/lists\/.+$/, () => ({ status: 403, body: { error: OFF } })],
   [

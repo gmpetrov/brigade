@@ -9,6 +9,8 @@ import {
   linkToThread,
   listDetail,
   listSummaries,
+  pinList,
+  pinnedLists,
   setItemDone,
   threadItems,
 } from '../lists.js'
@@ -33,6 +35,21 @@ export const lists = new Hono<AppEnv>()
     return c.json(
       await setItemDone(db, scope, { type: 'member', id: scope.memberId }, c.req.param('id'), done),
     )
+  })
+
+  /** The lists this member pinned in their sidebar. */
+  .get('/pins', async (c) => c.json(await pinnedLists(c.var.db, c.var.scope.memberId)))
+
+  /** Pin it under Pinned in this member's sidebar; DELETE unpins it. Each member's own. */
+  .post('/:documentId/pin', async (c) => {
+    await pinList(c.var.db, c.var.scope, c.req.param('documentId'))
+    return c.json({ ok: true })
+  })
+  .delete('/:documentId/pin', async (c) => {
+    await c.var.db.listPin.deleteMany({
+      where: { memberId: c.var.scope.memberId, documentId: c.req.param('documentId') },
+    })
+    return c.json({ ok: true })
   })
 
   .get('/:documentId', async (c) =>

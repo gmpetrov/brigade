@@ -99,6 +99,7 @@ export const ModelName = {
   ListItemThread: 'ListItemThread',
   ListItemPull: 'ListItemPull',
   LibraryLock: 'LibraryLock',
+  ListPin: 'ListPin',
   DocumentPin: 'DocumentPin',
   MemoryLine: 'MemoryLine',
   DocumentVersion: 'DocumentVersion',
@@ -977,6 +978,18 @@ export const LibraryLockScalarFieldEnum = {
 } as const
 
 export type LibraryLockScalarFieldEnum = (typeof LibraryLockScalarFieldEnum)[keyof typeof LibraryLockScalarFieldEnum]
+
+
+export const ListPinScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  documentId: 'documentId',
+  pinnedAt: 'pinnedAt',
+  position: 'position'
+} as const
+
+export type ListPinScalarFieldEnum = (typeof ListPinScalarFieldEnum)[keyof typeof ListPinScalarFieldEnum]
 
 
 export const DocumentPinScalarFieldEnum = {

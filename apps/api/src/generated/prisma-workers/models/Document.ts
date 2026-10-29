@@ -393,6 +393,7 @@ export type DocumentWhereInput = {
   versions?: Prisma.DocumentVersionListRelationFilter
   memoryLines?: Prisma.MemoryLineListRelationFilter
   pins?: Prisma.DocumentPinListRelationFilter
+  listPins?: Prisma.ListPinListRelationFilter
   listItems?: Prisma.ListItemListRelationFilter
 }
 
@@ -431,6 +432,7 @@ export type DocumentOrderByWithRelationInput = {
   versions?: Prisma.DocumentVersionOrderByRelationAggregateInput
   memoryLines?: Prisma.MemoryLineOrderByRelationAggregateInput
   pins?: Prisma.DocumentPinOrderByRelationAggregateInput
+  listPins?: Prisma.ListPinOrderByRelationAggregateInput
   listItems?: Prisma.ListItemOrderByRelationAggregateInput
 }
 
@@ -473,6 +475,7 @@ export type DocumentWhereUniqueInput = Prisma.AtLeast<{
   versions?: Prisma.DocumentVersionListRelationFilter
   memoryLines?: Prisma.MemoryLineListRelationFilter
   pins?: Prisma.DocumentPinListRelationFilter
+  listPins?: Prisma.ListPinListRelationFilter
   listItems?: Prisma.ListItemListRelationFilter
 }, "id" | "workspaceId_kind_path">
 
@@ -573,6 +576,7 @@ export type DocumentCreateInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
@@ -607,6 +611,7 @@ export type DocumentUncheckedCreateInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
@@ -641,6 +646,7 @@ export type DocumentUpdateInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
@@ -675,6 +681,7 @@ export type DocumentUncheckedUpdateInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
@@ -1030,6 +1037,20 @@ export type DocumentUpdateOneRequiredWithoutListItemsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.DocumentUpdateToOneWithWhereWithoutListItemsInput, Prisma.DocumentUpdateWithoutListItemsInput>, Prisma.DocumentUncheckedUpdateWithoutListItemsInput>
 }
 
+export type DocumentCreateNestedOneWithoutListPinsInput = {
+  create?: Prisma.XOR<Prisma.DocumentCreateWithoutListPinsInput, Prisma.DocumentUncheckedCreateWithoutListPinsInput>
+  connectOrCreate?: Prisma.DocumentCreateOrConnectWithoutListPinsInput
+  connect?: Prisma.DocumentWhereUniqueInput
+}
+
+export type DocumentUpdateOneRequiredWithoutListPinsNestedInput = {
+  create?: Prisma.XOR<Prisma.DocumentCreateWithoutListPinsInput, Prisma.DocumentUncheckedCreateWithoutListPinsInput>
+  connectOrCreate?: Prisma.DocumentCreateOrConnectWithoutListPinsInput
+  upsert?: Prisma.DocumentUpsertWithoutListPinsInput
+  connect?: Prisma.DocumentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DocumentUpdateToOneWithWhereWithoutListPinsInput, Prisma.DocumentUpdateWithoutListPinsInput>, Prisma.DocumentUncheckedUpdateWithoutListPinsInput>
+}
+
 export type DocumentCreateNestedOneWithoutPinsInput = {
   create?: Prisma.XOR<Prisma.DocumentCreateWithoutPinsInput, Prisma.DocumentUncheckedCreateWithoutPinsInput>
   connectOrCreate?: Prisma.DocumentCreateOrConnectWithoutPinsInput
@@ -1160,6 +1181,7 @@ export type DocumentCreateWithoutWorkspaceInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
@@ -1193,6 +1215,7 @@ export type DocumentUncheckedCreateWithoutWorkspaceInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
@@ -1284,6 +1307,7 @@ export type DocumentCreateWithoutTeammateInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
@@ -1317,6 +1341,7 @@ export type DocumentUncheckedCreateWithoutTeammateInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
@@ -1376,6 +1401,7 @@ export type DocumentCreateWithoutSessionInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
@@ -1409,6 +1435,7 @@ export type DocumentUncheckedCreateWithoutSessionInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
@@ -1469,6 +1496,7 @@ export type DocumentCreateWithoutListItemsInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutListItemsInput = {
@@ -1502,6 +1530,7 @@ export type DocumentUncheckedCreateWithoutListItemsInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutListItemsInput = {
@@ -1551,6 +1580,7 @@ export type DocumentUpdateWithoutListItemsInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutListItemsInput = {
@@ -1584,6 +1614,159 @@ export type DocumentUncheckedUpdateWithoutListItemsInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutDocumentNestedInput
+}
+
+export type DocumentCreateWithoutListPinsInput = {
+  id?: string
+  organizationId: string
+  kind?: $Enums.DocumentKind
+  path: string
+  contentType: string
+  size: number
+  sha256?: string
+  text?: string
+  indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  objectKey?: string | null
+  bytesStaleAt?: Date | string | null
+  memoryTidiedAt?: Date | string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
+  updatedAt?: Date | string
+  createdAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutDocumentsInput
+  project?: Prisma.ProjectCreateNestedOneWithoutDocumentsInput
+  teammate?: Prisma.TeammateCreateNestedOneWithoutDocumentsInput
+  session?: Prisma.SessionCreateNestedOneWithoutDocumentsInput
+  assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
+  memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
+  pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
+}
+
+export type DocumentUncheckedCreateWithoutListPinsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  kind?: $Enums.DocumentKind
+  path: string
+  projectId?: string | null
+  teammateId?: string | null
+  sessionId?: string | null
+  contentType: string
+  size: number
+  sha256?: string
+  text?: string
+  indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  objectKey?: string | null
+  bytesStaleAt?: Date | string | null
+  memoryTidiedAt?: Date | string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
+  updatedAt?: Date | string
+  createdAt?: Date | string
+  assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
+  memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
+  pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
+}
+
+export type DocumentCreateOrConnectWithoutListPinsInput = {
+  where: Prisma.DocumentWhereUniqueInput
+  create: Prisma.XOR<Prisma.DocumentCreateWithoutListPinsInput, Prisma.DocumentUncheckedCreateWithoutListPinsInput>
+}
+
+export type DocumentUpsertWithoutListPinsInput = {
+  update: Prisma.XOR<Prisma.DocumentUpdateWithoutListPinsInput, Prisma.DocumentUncheckedUpdateWithoutListPinsInput>
+  create: Prisma.XOR<Prisma.DocumentCreateWithoutListPinsInput, Prisma.DocumentUncheckedCreateWithoutListPinsInput>
+  where?: Prisma.DocumentWhereInput
+}
+
+export type DocumentUpdateToOneWithWhereWithoutListPinsInput = {
+  where?: Prisma.DocumentWhereInput
+  data: Prisma.XOR<Prisma.DocumentUpdateWithoutListPinsInput, Prisma.DocumentUncheckedUpdateWithoutListPinsInput>
+}
+
+export type DocumentUpdateWithoutListPinsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumDocumentKindFieldUpdateOperationsInput | $Enums.DocumentKind
+  path?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  objectKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutDocumentsNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutDocumentsNestedInput
+  teammate?: Prisma.TeammateUpdateOneWithoutDocumentsNestedInput
+  session?: Prisma.SessionUpdateOneWithoutDocumentsNestedInput
+  assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
+  memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
+  pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
+}
+
+export type DocumentUncheckedUpdateWithoutListPinsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumDocumentKindFieldUpdateOperationsInput | $Enums.DocumentKind
+  path?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contentType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  objectKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bytesStaleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  memoryTidiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
+  memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
+  pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentCreateWithoutPinsInput = {
@@ -1616,6 +1799,7 @@ export type DocumentCreateWithoutPinsInput = {
   assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
@@ -1649,6 +1833,7 @@ export type DocumentUncheckedCreateWithoutPinsInput = {
   assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
@@ -1698,6 +1883,7 @@ export type DocumentUpdateWithoutPinsInput = {
   assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
@@ -1731,6 +1917,7 @@ export type DocumentUncheckedUpdateWithoutPinsInput = {
   assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
@@ -1764,6 +1951,7 @@ export type DocumentCreateWithoutMemoryLinesInput = {
   assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
@@ -1797,6 +1985,7 @@ export type DocumentUncheckedCreateWithoutMemoryLinesInput = {
   assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
@@ -1846,6 +2035,7 @@ export type DocumentUpdateWithoutMemoryLinesInput = {
   assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
@@ -1879,6 +2069,7 @@ export type DocumentUncheckedUpdateWithoutMemoryLinesInput = {
   assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
@@ -1912,6 +2103,7 @@ export type DocumentCreateWithoutVersionsInput = {
   assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
@@ -1945,6 +2137,7 @@ export type DocumentUncheckedCreateWithoutVersionsInput = {
   assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
@@ -1994,6 +2187,7 @@ export type DocumentUpdateWithoutVersionsInput = {
   assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2027,6 +2221,7 @@ export type DocumentUncheckedUpdateWithoutVersionsInput = {
   assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2060,6 +2255,7 @@ export type DocumentCreateWithoutAssetsInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
@@ -2093,6 +2289,7 @@ export type DocumentUncheckedCreateWithoutAssetsInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
@@ -2142,6 +2339,7 @@ export type DocumentUpdateWithoutAssetsInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2175,6 +2373,7 @@ export type DocumentUncheckedUpdateWithoutAssetsInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2208,6 +2407,7 @@ export type DocumentCreateWithoutProjectInput = {
   versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemCreateNestedManyWithoutDocumentInput
 }
 
@@ -2241,6 +2441,7 @@ export type DocumentUncheckedCreateWithoutProjectInput = {
   versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
   memoryLines?: Prisma.MemoryLineUncheckedCreateNestedManyWithoutDocumentInput
   pins?: Prisma.DocumentPinUncheckedCreateNestedManyWithoutDocumentInput
+  listPins?: Prisma.ListPinUncheckedCreateNestedManyWithoutDocumentInput
   listItems?: Prisma.ListItemUncheckedCreateNestedManyWithoutDocumentInput
 }
 
@@ -2328,6 +2529,7 @@ export type DocumentUpdateWithoutWorkspaceInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2361,6 +2563,7 @@ export type DocumentUncheckedUpdateWithoutWorkspaceInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2450,6 +2653,7 @@ export type DocumentUpdateWithoutTeammateInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2483,6 +2687,7 @@ export type DocumentUncheckedUpdateWithoutTeammateInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2572,6 +2777,7 @@ export type DocumentUpdateWithoutSessionInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2605,6 +2811,7 @@ export type DocumentUncheckedUpdateWithoutSessionInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2694,6 +2901,7 @@ export type DocumentUpdateWithoutProjectInput = {
   versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2727,6 +2935,7 @@ export type DocumentUncheckedUpdateWithoutProjectInput = {
   versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
   memoryLines?: Prisma.MemoryLineUncheckedUpdateManyWithoutDocumentNestedInput
   pins?: Prisma.DocumentPinUncheckedUpdateManyWithoutDocumentNestedInput
+  listPins?: Prisma.ListPinUncheckedUpdateManyWithoutDocumentNestedInput
   listItems?: Prisma.ListItemUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
@@ -2768,6 +2977,7 @@ export type DocumentCountOutputType = {
   versions: number
   memoryLines: number
   pins: number
+  listPins: number
   listItems: number
 }
 
@@ -2776,6 +2986,7 @@ export type DocumentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensio
   versions?: boolean | DocumentCountOutputTypeCountVersionsArgs
   memoryLines?: boolean | DocumentCountOutputTypeCountMemoryLinesArgs
   pins?: boolean | DocumentCountOutputTypeCountPinsArgs
+  listPins?: boolean | DocumentCountOutputTypeCountListPinsArgs
   listItems?: boolean | DocumentCountOutputTypeCountListItemsArgs
 }
 
@@ -2815,6 +3026,13 @@ export type DocumentCountOutputTypeCountMemoryLinesArgs<ExtArgs extends runtime.
  */
 export type DocumentCountOutputTypeCountPinsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.DocumentPinWhereInput
+}
+
+/**
+ * DocumentCountOutputType without action
+ */
+export type DocumentCountOutputTypeCountListPinsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ListPinWhereInput
 }
 
 /**
@@ -2860,6 +3078,7 @@ export type DocumentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   versions?: boolean | Prisma.Document$versionsArgs<ExtArgs>
   memoryLines?: boolean | Prisma.Document$memoryLinesArgs<ExtArgs>
   pins?: boolean | Prisma.Document$pinsArgs<ExtArgs>
+  listPins?: boolean | Prisma.Document$listPinsArgs<ExtArgs>
   listItems?: boolean | Prisma.Document$listItemsArgs<ExtArgs>
   _count?: boolean | Prisma.DocumentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["document"]>
@@ -2969,6 +3188,7 @@ export type DocumentInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   versions?: boolean | Prisma.Document$versionsArgs<ExtArgs>
   memoryLines?: boolean | Prisma.Document$memoryLinesArgs<ExtArgs>
   pins?: boolean | Prisma.Document$pinsArgs<ExtArgs>
+  listPins?: boolean | Prisma.Document$listPinsArgs<ExtArgs>
   listItems?: boolean | Prisma.Document$listItemsArgs<ExtArgs>
   _count?: boolean | Prisma.DocumentCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -2999,6 +3219,10 @@ export type $DocumentPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * The members who pinned it.
      */
     pins: Prisma.$DocumentPinPayload<ExtArgs>[]
+    /**
+     * The members who pinned it, as a list, in their sidebar.
+     */
+    listPins: Prisma.$ListPinPayload<ExtArgs>[]
     /**
      * Its checklist lines that work is attached to (docs/lists.md).
      */
@@ -3475,6 +3699,7 @@ export interface Prisma__DocumentClient<T, Null = never, ExtArgs extends runtime
   versions<T extends Prisma.Document$versionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$versionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentVersionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   memoryLines<T extends Prisma.Document$memoryLinesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$memoryLinesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MemoryLinePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pins<T extends Prisma.Document$pinsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$pinsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPinPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  listPins<T extends Prisma.Document$listPinsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$listPinsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListPinPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   listItems<T extends Prisma.Document$listItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$listItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -4082,6 +4307,30 @@ export type Document$pinsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.DocumentPinScalarFieldEnum | Prisma.DocumentPinScalarFieldEnum[]
+}
+
+/**
+ * Document.listPins
+ */
+export type Document$listPinsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ListPin
+   */
+  select?: Prisma.ListPinSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ListPin
+   */
+  omit?: Prisma.ListPinOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ListPinInclude<ExtArgs> | null
+  where?: Prisma.ListPinWhereInput
+  orderBy?: Prisma.ListPinOrderByWithRelationInput | Prisma.ListPinOrderByWithRelationInput[]
+  cursor?: Prisma.ListPinWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ListPinScalarFieldEnum | Prisma.ListPinScalarFieldEnum[]
 }
 
 /**
