@@ -94,8 +94,17 @@ export * from './usage.js'
  *     (docs/workspace-hubs-plan.md).
  * 47: a message to a teammate waiting on its ticket or question reaches it at once, and the ask
  *     stays open (ASIDE_PROTOCOL); turn.completed says when one still is (`waiting`).
+ * 48: a connector's operations are left out of the spec and named by a catalog (ConnectorGrant's
+ *     `catalog`): the runner fetches each App's once (GET /runner/catalogs/<connectionId>) and
+ *     keeps it while its version holds (CATALOG_PROTOCOL).
  */
-export const PROTOCOL_VERSION = 47
+export const PROTOCOL_VERSION = 48
+/**
+ * Runners from this version on fetch a connector's operations themselves (ConnectorGrant's
+ * `catalog`), so a thread's spec stays a few kilobytes whatever its Apps' tools weigh. Older ones
+ * are sent them in the spec, as before.
+ */
+export const CATALOG_PROTOCOL = 48
 /**
  * Runners from this version on take a message while their teammate waits on its own ticket or
  * question: it reads the message now, and the ask stays open for the person to answer later.

@@ -220,6 +220,16 @@ Done on 2026-10-27:
   hash;
 - stale kept commands are expired or brought up to date.
 
+Done on 2026-10-29:
+
+- an App's tools leave thread specs (`src/catalogs.ts`, CATALOG_PROTOCOL): each connector
+  names its App's catalog by a version, and the runner fetches it once from the API Worker's
+  own isolates (`GET /runner/catalogs/<connectionId>`). A hub builds specs at each message,
+  reconnect (one per running thread) and child report; with an MCP App's tools in them (PostHog's
+  came to 2.7 MB), it went past the 128 MB of its isolate, which several hub objects may share,
+  and dropped every socket. A catalog past 2 M characters is reported (`catalog-size`), past 8 M
+  its last tools are left out.
+
 To do:
 
 1. **Alert on resets.** Alert when the `Api` object restarts outside a deploy: the cron's

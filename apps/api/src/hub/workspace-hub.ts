@@ -11,6 +11,7 @@ import {
   type ApiToRunner,
   type RunnerToApi,
 } from '@brigade/contracts'
+import { inlineCatalogs, takesCatalogs } from '../catalogs.js'
 import { wake } from '../cloud.js'
 import { prisma } from '../db.js'
 import { beingDeleted } from '../deletion-fence.js'
@@ -426,9 +427,11 @@ export class WorkspaceHub {
     // Kept with its specs' large parts by hash: whole for a runner that cannot fetch them. One that
     // cannot be made whole (a part gone) stays pending, not sent: a ticket says so after a day.
     let whole: ApiToRunner = message
-    if (!takesParts(protocol))
+    if (!takesParts(protocol) || !takesCatalogs(protocol))
       try {
         whole = await unpackCommand(this.workspaceId, message)
+        // Its Apps' operations too, which a runner before CATALOG_PROTOCOL does not fetch.
+        if (!takesCatalogs(protocol)) whole = await inlineCatalogs(this.workspaceId, whole)
       } catch (error) {
         console.error(`command ${message.commandId} not sent: ${String(error)}`)
         noteFailure('spec-parts', `command ${message.commandId} not sent: ${String(error)}`)
