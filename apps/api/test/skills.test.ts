@@ -117,10 +117,11 @@ function tarball(files: Record<string, Uint8Array>) {
   for (const [name, data] of Object.entries(files)) {
     const path = `acme-kit-abc123/${name}`
     if (path.length > 100) {
-      const record = ` path=${path}\n`
-      let line = `${record.length + 3}${record}`
-      line = `${record.length + String(line.length).length}${record}`
-      parts.push(block('PaxHeader', line.length, 'x'), pad(strToU8(line)))
+      const record = strToU8(` path=${path}\n`)
+      let length = record.byteLength + 1
+      while (String(length).length + record.byteLength > length) length++
+      const line = new Uint8Array([...strToU8(String(length)), ...record])
+      parts.push(block('PaxHeader', line.byteLength, 'x'), pad(line))
     }
     parts.push(block(path, data.byteLength, '0'), pad(data))
   }
@@ -130,12 +131,15 @@ function tarball(files: Record<string, Uint8Array>) {
 
 test('reads only a folder of a GitHub tarball, its paths from the repository root', async () => {
   const long = `skills/pdf/${'deep/'.repeat(20)}note.md`
+  // A path may hold a newline: it must not end the pax record early.
+  const tricky = `skills/pdf/SKILL.md\n${'x'.repeat(100)}`
   const entries = await readTarball(
     tarball({
       'README.md': strToU8('# Kit'),
       'skills/pdf/SKILL.md': strToU8(SKILL),
       'skills/pdf/form.md': strToU8('fill it'),
       [long]: strToU8('far down'),
+      [tricky]: strToU8('not the SKILL.md'),
       'skills/pdf/.cache/x': strToU8('x'),
       'skills/other/SKILL.md': strToU8(SKILL),
       'assets/video.bin': new Uint8Array(4096),
@@ -144,9 +148,10 @@ test('reads only a folder of a GitHub tarball, its paths from the repository roo
   )
   assert.deepEqual(
     Object.keys(entries).sort(),
-    ['skills/pdf/SKILL.md', long, 'skills/pdf/form.md'].sort(),
+    ['skills/pdf/SKILL.md', long, 'skills/pdf/form.md', tricky].sort(),
   )
   assert.equal(new TextDecoder().decode(entries['skills/pdf/form.md']!), 'fill it')
+  assert.equal(new TextDecoder().decode(entries['skills/pdf/SKILL.md']!), SKILL)
 })
 
 test('a GitHub folder keeps its files to 50 MB, whatever the repository holds besides', async () => {

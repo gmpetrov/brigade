@@ -365,8 +365,8 @@ export async function readTarball(
         // A long path: a pax record (`<length> path=<path>\n`) or GNU's own.
         const data = await input.read(padded)
         if (!data) break
-        const body = tarString(data.subarray(0, size))
-        longPath = type === 'L' ? body : (/(?:^|\n)\d+ path=([^\n]*)\n/.exec(body)?.[1] ?? longPath)
+        const body = data.subarray(0, size)
+        longPath = type === 'L' ? tarString(body) : (paxPath(body) ?? longPath)
         continue
       }
       const ustar = tarString(header.subarray(257, 262)) === 'ustar'
@@ -451,6 +451,24 @@ const latin = new TextDecoder('utf-8')
 const tarString = (bytes: Uint8Array) => {
   const end = bytes.indexOf(0)
   return latin.decode(end < 0 ? bytes : bytes.subarray(0, end))
+}
+
+/**
+ * The path in pax records, each `<length> <key>=<value>\n` with its length in bytes
+ * counting itself: read by length, since a path may hold a newline.
+ */
+function paxPath(bytes: Uint8Array) {
+  let path: string | undefined
+  let at = 0
+  while (at < bytes.byteLength) {
+    const space = bytes.indexOf(0x20, at)
+    const length = space < 0 ? Number.NaN : Number(latin.decode(bytes.subarray(at, space)))
+    if (!Number.isInteger(length) || length <= space - at || at + length > bytes.byteLength) break
+    const record = latin.decode(bytes.subarray(space + 1, at + length - 1))
+    if (record.startsWith('path=')) path = record.slice(5)
+    at += length
+  }
+  return path
 }
 
 /** A size: octal text, or base-256 when its first bit is set. */
