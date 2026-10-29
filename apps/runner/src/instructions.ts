@@ -296,7 +296,8 @@ function designSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
       `arrives as their next message, and by then it has become the design (\`acme/pricing${DESIGN_SUFFIX}\`, replacing ` +
       'any design there) and the other options are in the trash: go on from that path. When they answer in their own ' +
       `words instead (mix two, change one), save new options into the same folder and offer them again, or save the ` +
-      `result as the design itself (\`acme/pricing${DESIGN_SUFFIX}\`) once they settle.`,
+      `result as the design itself (\`acme/pricing${DESIGN_SUFFIX}\`) once they settle: saving it sends its options ` +
+      'to the trash, so do not save the design while its options still wait for an answer.',
     'People comment on a design from its canvas: such a message starts with "Comment on the design" and names the ' +
       'board (its file and width), the element by its `data-id` (or a CSS path) and its line in the file. Change the ' +
       'design, check it and save it again.',

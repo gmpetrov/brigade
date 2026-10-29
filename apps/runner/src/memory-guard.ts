@@ -151,6 +151,20 @@ export class MemoryGuard {
   }
 }
 
+/**
+ * Whether the computer has room for a turn to start: some memory available and hardly any
+ * waiting on it. Short of that, a new turn would only push the guard to stop another.
+ */
+export function roomFor(reading: Reading) {
+  return reading.available >= 0.15 && reading.full < 10
+}
+
+/** The computer has room for a turn (roomFor); true where it says nothing of its memory. */
+export async function memoryRoom() {
+  const reading = await readMemory()
+  return !reading || roomFor(reading)
+}
+
 /** The computer's memory, from /proc; null where it says nothing of it (not Linux). */
 export async function readMemory(): Promise<Reading | null> {
   const [pressure, meminfo, vmstat] = await Promise.all([

@@ -761,7 +761,7 @@ function DesignFrame({
       )}
 
       <div className="relative flex min-h-0 flex-1">
-        <div className="pointer-events-none absolute top-2 left-2 z-10 flex items-center gap-0.5 rounded-lg border bg-background/95 p-0.5 shadow-sm backdrop-blur [&>*]:pointer-events-auto">
+        <div className="pointer-events-none absolute top-2 left-2 z-10 flex items-center gap-0.5 rounded-lg border bg-background p-0.5 shadow-sm [&>*]:pointer-events-auto">
           <div role="radiogroup" aria-label="Mode" className="flex rounded-md bg-muted p-0.5">
             {(
               [
@@ -900,7 +900,7 @@ function DesignFrame({
       </div>
 
       {!wide && (tab === 'ask' || (tab === 'knobs' && knobsPanel)) && (
-        <section aria-label="Design tools" className="flex max-h-[45%] min-h-0 flex-col border-t">
+        <section aria-label="Design tools" className="flex max-h-[60%] min-h-0 flex-col border-t">
           <div role="tablist" className="flex items-center gap-1 px-2 pt-1.5">
             {(
               [['ask', 'Comment'], ...(knobsPanel ? ([['knobs', 'Knobs']] as const) : [])] as const
@@ -932,7 +932,7 @@ function DesignFrame({
               <X aria-hidden />
             </Button>
           </div>
-          <div className="min-h-0 overflow-y-auto [&>div]:border-0">
+          <div className="min-h-0 overflow-y-auto [&>div]:max-h-none [&>div]:border-0">
             {tab === 'ask' ? askBox : knobsPanel}
           </div>
         </section>
@@ -1215,7 +1215,10 @@ export function DesignPanel({
       onClose={onClose}
       raiseKey={folder}
       // Expanded over the whole page; the same element, so the page keeps its state.
+      // The whole screen until the panel sits beside the page: a sheet over a page that
+      // scrolls would fight the canvas for the pointer.
       className={cn(
+        'max-xl:top-0 max-xl:h-auto max-xl:rounded-none max-xl:border-t-0',
         expanded &&
           'inset-0 z-50 h-auto rounded-none border-0 xl:inset-0 xl:left-0 xl:z-50 xl:w-auto xl:border-l-0',
       )}

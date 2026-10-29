@@ -94,6 +94,15 @@ export const RULES: Rule[] = [
     hint: 'Each is logged with its error by brigade-api ("hub <workspace>: <operation> failed"). A hub object reset mid-operation drops its sockets too (1006), and its runner reconnects.',
   },
   {
+    kind: 'catalog-size',
+    title: "An App's tools too large for one catalog",
+    windowMs: 6 * 60 * MINUTE,
+    warning: 1,
+    critical: 20,
+    quietMs: 12 * 60 * MINUTE,
+    hint: "Past 2 M characters an App's catalog is reported, past 8 M its last tools are left out (src/catalogs.ts). Switch off the tools its teammates do not need in the App's settings.",
+  },
+  {
     kind: 'runner-silent',
     title: "Cloud computers' runners going silent",
     windowMs: 15 * MINUTE,

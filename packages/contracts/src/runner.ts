@@ -62,6 +62,12 @@ export const AccountRef = z.object({
 export type AccountRef = z.infer<typeof AccountRef>
 
 /** A connection the teammate is granted, as tools. Never its credential. */
+/**
+ * Set on a catalog the API could not list now (an MCP server down or signed out): empty for this
+ * turn, and not to be kept, so the next turn asks again.
+ */
+export const CATALOG_INCOMPLETE_HEADER = 'x-brigade-catalog-incomplete'
+
 export const ConnectorGrant = z.object({
   connectionId: z.string(),
   /** gmail, google_calendar, google_drive, google_docs, google_sheets, google_search_console, google_analytics, stripe, github, or an MCP App's kind such as cloudflare (MCP_PROTOCOL). */
@@ -69,6 +75,13 @@ export const ConnectorGrant = z.object({
   label: z.string(),
   externalAccount: z.string().nullable(),
   scope: z.enum(['read', 'read_write']),
+  /**
+   * CATALOG_PROTOCOL: `operations` is left empty and the runner fetches them, the App's catalog
+   * for this scope (GET /runner/catalogs/<connectionId>?scope=<scope>&version=<version>), then
+   * keeps them while `version` is the same. An MCP App's tools come from its server: what it
+   * lists can change without any version here, so its version also turns over each hour.
+   */
+  catalog: z.object({ version: z.string().min(1).max(200) }).optional(),
   operations: z.array(
     z.object({
       name: z.string(),

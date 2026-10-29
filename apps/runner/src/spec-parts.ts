@@ -1,11 +1,18 @@
 // The large parts of a thread's spec (SPEC_PARTS_PROTOCOL): a command names its connectors,
 // skills, project and design systems by the SHA-256 of their JSON, and they are fetched from the
-// API once (GET /runner/spec-parts/<sha256>), then kept here. Filled in before a command is
-// handled, so nothing past this reads a spec with its parts missing.
+// API once (GET /runner/spec-parts/<sha256>), then kept here. Its Apps' operations too
+// (CATALOG_PROTOCOL): each connector names its App's catalog by a version, fetched once (GET
+// /runner/catalogs/<connectionId>) and kept while that version holds. Filled in before a
+// command is handled, so nothing past this reads a spec with its parts missing.
 import { createHash } from 'node:crypto'
 import { mkdir, readdir, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { ThreadSpec, type ApiToRunner } from '@brigade/contracts'
+import {
+  CATALOG_INCOMPLETE_HEADER,
+  ConnectorGrant,
+  ThreadSpec,
+  type ApiToRunner,
+} from '@brigade/contracts'
 import { HOME, type RunnerConfig } from './config.js'
 import { NotTaken } from './connection.js'
 
@@ -27,6 +34,9 @@ export class SpecParts {
   private readonly memory = new Map<string, unknown>()
   /** Parts being read or fetched, by hash: specs naming the same one wait for one fetch. */
   private readonly reading = new Map<string, Promise<unknown>>()
+  /** Catalogs read lately, and being read, by connection, scope and version. */
+  private readonly catalogs = new Map<string, ConnectorGrant['operations']>()
+  private readonly cataloging = new Map<string, Promise<ConnectorGrant['operations']>>()
 
   constructor(
     private readonly config: Pick<RunnerConfig, 'apiUrl' | 'token'>,
@@ -79,13 +89,78 @@ export class SpecParts {
     return { ...message, thread, then: await Promise.all(message.then.map((s) => this.spec(s))) }
   }
 
-  /** The spec with its parts filled in. */
+  /** The spec with its parts, then its Apps' catalogs, filled in. */
   async spec(spec: ThreadSpec): Promise<ThreadSpec> {
-    if (!spec.parts) return spec
-    const { parts, ...rest } = spec
-    const filled: Record<string, unknown> = { ...rest }
-    for (const [name, hash] of Object.entries(parts)) filled[name] = await this.part(hash)
-    return ThreadSpec.parse(filled)
+    let whole = spec
+    if (spec.parts) {
+      const { parts, ...rest } = spec
+      const filled: Record<string, unknown> = { ...rest }
+      for (const [name, hash] of Object.entries(parts)) filled[name] = await this.part(hash)
+      whole = ThreadSpec.parse(filled)
+    }
+    if (!whole.connectors.some((c) => c.catalog)) return whole
+    const connectors = await Promise.all(
+      whole.connectors.map(async (grant) =>
+        grant.catalog ? { ...grant, operations: await this.catalog(grant) } : grant,
+      ),
+    )
+    return { ...whole, connectors }
+  }
+
+  /**
+   * A connector's operations, from its App's catalog: kept, or fetched. One the API will not
+   * give (the connection gone since) leaves the App without tools in this turn, as a signed-out
+   * one does; one it could not give now holds the command, as a part does.
+   */
+  private catalog(grant: ConnectorGrant): Promise<ConnectorGrant['operations']> {
+    const key = `${grant.connectionId}:${grant.scope}:${grant.catalog!.version}`
+    const hit = this.catalogs.get(key)
+    if (hit) return Promise.resolve(hit)
+    const pending = this.cataloging.get(key)
+    if (pending) return pending
+    const read = this.readCatalog(grant, key)
+      .then(({ operations, keep }) => {
+        if (this.catalogs.size > 200) this.catalogs.clear()
+        if (keep) this.catalogs.set(key, operations)
+        return operations
+      })
+      .finally(() => this.cataloging.delete(key))
+    this.cataloging.set(key, read)
+    return read
+  }
+
+  private async readCatalog(grant: ConnectorGrant, key: string) {
+    const file = join(this.dir, `catalog-${sha256(key)}.json`)
+    const kept = await readFile(file, 'utf8')
+      .then((text) => JSON.parse(text) as unknown)
+      .catch(() => null)
+    if (Array.isArray(kept)) {
+      const now = new Date()
+      await utimes(file, now, now).catch(() => undefined)
+      return { operations: ConnectorGrant.shape.operations.parse(kept), keep: true }
+    }
+    const path = `/runner/catalogs/${encodeURIComponent(grant.connectionId)}?scope=${grant.scope}&version=${encodeURIComponent(grant.catalog!.version)}`
+    let text: string
+    let complete = true
+    try {
+      text = await this.fetch(path, (_, response) => {
+        complete = response.headers.get(CATALOG_INCOMPLETE_HEADER) !== '1'
+      })
+    } catch (error) {
+      if (!(error instanceof Refused)) throw error
+      console.warn(`${grant.kind} (${grant.connectionId}): no tools in this turn: ${error.message}`)
+      return { operations: [], keep: false }
+    }
+    const operations = ConnectorGrant.shape.operations.parse(JSON.parse(text))
+    // Not listed now (its server down): for this turn only, asked again at the next.
+    if (!complete) {
+      console.warn(`${grant.kind} (${grant.connectionId}): its tools could not be listed now`)
+      return { operations, keep: false }
+    }
+    await mkdir(this.dir, { recursive: true, mode: 0o700 })
+      .then(() => writeFile(file, text, { mode: 0o600 }))
+      .catch((error: unknown) => console.warn(`catalog ${key} not kept: ${String(error)}`))
+    return { operations, keep: true }
   }
 
   private part(hash: string): Promise<unknown> {
@@ -105,7 +180,7 @@ export class SpecParts {
       const now = new Date()
       await utimes(file, now, now).catch(() => undefined)
     } else {
-      text = await this.fetch(hash)
+      text = await this.fetchPart(hash)
       // Kept for next time if the disk lets it (it may be full): this command has it either way.
       await mkdir(this.dir, { recursive: true, mode: 0o700 })
         .then(() => writeFile(file, text!, { mode: 0o600 }))
@@ -117,10 +192,23 @@ export class SpecParts {
     return value
   }
 
-  private async fetch(hash: string) {
+  private async fetchPart(hash: string) {
+    try {
+      const text = await this.fetch(`/runner/spec-parts/${hash}`, (body) => {
+        // As hashed: anything else changed on the way.
+        if (sha256(body) !== hash) throw new Error('it changed on the way')
+      })
+      return text
+    } catch (error) {
+      throw new Error(`could not fetch the thread's spec part ${hash}: ${String(error)}`)
+    }
+  }
+
+  /** A path of the API, tried again while the API may answer otherwise; Refused once it will not. */
+  private async fetch(path: string, check?: (body: string, response: Response) => void) {
     for (let attempt = 0; ; attempt++) {
       try {
-        const response = await fetch(new URL(`/runner/spec-parts/${hash}`, this.config.apiUrl), {
+        const response = await fetch(new URL(path, this.config.apiUrl), {
           headers: { authorization: `Bearer ${this.config.token}` },
           signal: AbortSignal.timeout(this.attemptMs),
         })
@@ -129,12 +217,11 @@ export class SpecParts {
           throw new Refused(`the API answered ${response.status}`)
         if (!response.ok) throw new Error(`the API answered ${response.status}`)
         const text = await response.text()
-        if (sha256(text) !== hash) throw new Error('it changed on the way')
+        check?.(text, response)
         return text
       } catch (error) {
         const wait = error instanceof Refused ? undefined : this.retriesMs[attempt]
-        if (wait === undefined)
-          throw new Error(`could not fetch the thread's spec part ${hash}: ${String(error)}`)
+        if (wait === undefined) throw error
         await new Promise((resolve) => setTimeout(resolve, wait))
       }
     }

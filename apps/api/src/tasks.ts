@@ -86,8 +86,13 @@ export function columnOf(task: {
   if (task.completedAt) return 'done'
   if (!task.session) return 'backlog'
   if (task.session._count.tickets > 0 || task.session.status === 'waiting') return 'needs_you'
-  // Only an open one waits on a person: once merged or closed, a reopened task is Doing.
-  if (task.session.pullRequests.some(pullWaitsOnPerson) && !ACTIVE.includes(task.session.status))
+  // Only an open one waits on a person: once merged or closed, a reopened task is Doing. Not
+  // while its thread failed before it was done either: that thread shows as failed.
+  if (
+    task.session.pullRequests.some(pullWaitsOnPerson) &&
+    !ACTIVE.includes(task.session.status) &&
+    task.session.status !== 'failed'
+  )
     return 'needs_you'
   return 'doing'
 }

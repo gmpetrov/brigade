@@ -449,6 +449,26 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     assert.equal(await column(), 'needs_you')
   })
 
+  test('a pull request whose thread failed before it was done does not wait on a person', async () => {
+    const { listTasks } = await import('../src/tasks.js')
+    const task = await db.task.create({
+      data: { title: 'Design options', createdByMemberId: ids.owner } as never,
+    })
+    const taskThread = await thread(ids.web, 'Design options', task.id)
+    await open(taskThread, 23, { wanted: true, reason: 'Several files' })
+    const child = (await row(23)).reviewSessionId!
+    await db.session.updateMany({ where: { id: child }, data: { reportDeliveredAt: new Date() } })
+    const column = async () => (await listTasks(db)).find((t) => t.id === task.id)?.column
+    // Fixing what the review found, its turn stopped on an error.
+    await db.session.updateMany({ where: { id: taskThread }, data: { status: 'failed' } })
+    assert.equal(await column(), 'doing')
+    assert.ok(!(await waiting()).includes(23))
+    // It went on and stopped: the pull request is the person's.
+    await db.session.updateMany({ where: { id: taskThread }, data: { status: 'idle' } })
+    assert.equal(await column(), 'needs_you')
+    assert.ok((await waiting()).includes(23))
+  })
+
   test('a review at work past its wait still keeps the pull request out of Needs you', async () => {
     await open(ids.thread, 22, { wanted: true, reason: 'Concurrency' })
     const child = (await row(22)).reviewSessionId!

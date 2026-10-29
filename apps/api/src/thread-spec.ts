@@ -9,12 +9,13 @@ import { HTTPException } from 'hono/http-exception'
 import { usableIn } from './apps.js'
 import { hubs } from './hub.js'
 import { customMcp } from './mcp-servers.js'
-import { isMcp, mcpOperationSpecs } from './mcp-tools.js'
+import { isMcp } from './mcp-tools.js'
+import { catalogVersion, grantOperations, takesCatalogs } from './catalogs.js'
 import { threadAttachments } from './attachments.js'
 import { chiefRoster } from './chief.js'
 import type { ScopedDb } from './db.js'
 import type { WorkspaceScope } from './scope.js'
-import { connectors, operationSpecs } from './connectors/index.js'
+import { connectors } from './connectors/index.js'
 import { threadAddress } from './connectors/email.js'
 import { threadDesignSystems } from './designs.js'
 import { threadSkills } from './skills.js'
@@ -140,7 +141,9 @@ export async function specFor(
     db.grant.findMany({
       where: { teammateId: teammate.id, connection: { status: { not: 'removed' } } },
       include: {
-        connection: { include: { app: { select: { disabledTools: true, mcp: true } } } },
+        connection: {
+          include: { app: { select: { disabledTools: true, mcp: true, updatedAt: true } } },
+        },
       },
     }),
     teammate.kind === 'chief' ? chiefRoster(db) : [],
@@ -213,6 +216,7 @@ export async function specFor(
   // An MCP connector's tools come from its server; a runner too old to know its kind gets none.
   const protocol = await hubs.get(thread.workspaceId).runnerProtocol(thread.computerId)
   const scope = { organizationId: thread.organizationId, workspaceId: thread.workspaceId }
+  const catalogs = takesCatalogs(protocol)
   const specs = await Promise.all(
     grants
       .filter((g) => connectors[g.connection.kind] || g.connection.kind === 'mcp')
@@ -227,19 +231,11 @@ export async function specFor(
         label: g.connection.label,
         externalAccount: g.connection.externalAccount,
         scope: g.scope,
-        operations: isMcp(g.connection.kind)
-          ? await mcpOperationSpecs(
-              db,
-              scope,
-              g.connection,
-              g.scope,
-              g.connection.app.disabledTools,
-            ).catch((error) => {
-              // Signed out or the server is down: the thread runs without its tools.
-              console.warn(`mcp tools of ${g.connection.id}: ${String(error)}`)
-              return []
-            })
-          : operationSpecs(g.connection.kind, g.scope, g.connection.app.disabledTools),
+        // Named by their App's catalog, which the runner fetches once (src/catalogs.ts): listed
+        // here, an App's tools came to megabytes in every spec. Whole for an older runner.
+        ...(catalogs
+          ? { operations: [], catalog: { version: catalogVersion(g.connection) } }
+          : { operations: await grantOperations(db, scope, g.connection, g.scope) }),
       })),
   )
   // An App's skills only for teammates that can use one of its accounts here.
