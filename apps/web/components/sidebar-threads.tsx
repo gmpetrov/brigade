@@ -196,7 +196,13 @@ function SubThreads({
   const { shown, hidden } = subThreadRows(items, { needsYou, activeId, all, cap: CHILD_CAP })
   return (
     <SidebarMenuItem>
-      <ul className="ml-[18px] flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
+      {/* Folded, a short row tucked under its parent: less height than a thread's. */}
+      <ul
+        className={cn(
+          'ml-[18px] flex min-w-0 flex-col group-data-[collapsible=icon]:hidden',
+          !open && '-mt-1',
+        )}
+      >
         {open ? (
           <>
             {/* Folds them again from the keyboard: the caret is a mouse's only. Shown once
@@ -256,7 +262,7 @@ function SubThreads({
               type="button"
               aria-expanded={false}
               onClick={onToggle}
-              className={cn(SUB_ROW, 'text-muted-foreground')}
+              className={cn(SUB_ROW, 'text-muted-foreground h-5 text-[11px]')}
             >
               {items.length} sub-thread{items.length === 1 ? '' : 's'}
             </button>
