@@ -40,6 +40,8 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
     // Always set, so the build sees through `process.env.NEXT_PUBLIC_DEMO === '1'` and leaves
     // the demo out of other builds (lib/config.ts).
     NEXT_PUBLIC_DEMO: DEMO ? '1' : '',
+    // The site's analytics (components/landing/site-analytics.tsx): never in the demo's build.
+    NEXT_PUBLIC_POSTHOG_KEY: DEMO ? '' : (process.env.NEXT_PUBLIC_POSTHOG_KEY ?? ''),
     BRIGADE_LANDING_PROOF: DEMO ? '' : await landingProof(phase),
   },
   // A sample workspace is not something to find in a search engine.

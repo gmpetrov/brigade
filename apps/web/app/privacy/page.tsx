@@ -66,10 +66,21 @@ export default function Privacy() {
           <strong>Billing:</strong> your plan, invoices and the email of who pays. Stripe keeps the
           card details.
         </li>
+        <li>
+          <strong>Usage:</strong> where you came from when you signed up (such as the site that
+          linked to us, or a campaign&apos;s name in the link), and which features you use and when.
+          Never the content of your workspace or your email address.
+        </li>
       </ul>
       <p>
         We set only the cookies Brigade needs to work, such as the one that keeps you signed in. We
-        don&apos;t use analytics, advertising or tracking cookies.
+        don&apos;t use advertising or tracking cookies.
+      </p>
+      <p>
+        We use PostHog, in the EU, to measure visits and how Brigade is used. On this website it
+        runs without cookies or any storage in your browser, and it doesn&apos;t record your screen.
+        From Brigade itself we send it only pseudonymous ids, counts and the kind of each action
+        (such as &ldquo;a thread started&rdquo;), never your content, names or email address.
       </p>
 
       <h2>How we use it</h2>
@@ -80,9 +91,9 @@ export default function Privacy() {
       </p>
       <p>
         We do this to perform our contract with you (running your account and workspace, billing),
-        for our legitimate interest in keeping Brigade secure and preventing abuse, to meet legal
-        obligations (such as keeping invoices), and with your consent where we ask for it (such as
-        notifications).
+        for our legitimate interest in keeping Brigade secure and preventing abuse and in measuring
+        how people find and use Brigade to improve it, to meet legal obligations (such as keeping
+        invoices), and with your consent where we ask for it (such as notifications).
       </p>
 
       <h2>AI models</h2>
@@ -153,6 +164,10 @@ export default function Privacy() {
         </li>
         <li>
           <strong>Stripe:</strong> handles payments. We never see your card number.
+        </li>
+        <li>
+          <strong>PostHog:</strong> measures visits and feature usage, in the EU, without your
+          content or email address.
         </li>
         <li>
           <strong>Google:</strong> when you sign in with Google or connect a Google App.

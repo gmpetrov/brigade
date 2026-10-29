@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
+import { signupSourceHere } from '@/lib/signup-source'
 
 /**
  * Signs in, or up, with Google: the API sends the browser to Google and back to /app (or
@@ -11,6 +12,7 @@ export function GoogleSignIn({ onError }: { onError: (message: string) => void }
   const [busy, setBusy] = useState(false)
 
   async function signIn() {
+    const source = signupSourceHere()
     setBusy(true)
     try {
       const { error } = await authClient.signIn.social({
@@ -20,6 +22,9 @@ export function GoogleSignIn({ onError }: { onError: (message: string) => void }
           ? `${location.origin}/sign-in${location.search}&signed`
           : `${location.origin}/app`,
         errorCallbackURL: `${location.origin}/sign-in`,
+        // Where a new account came from (lib/signup-source.ts), through Google and back in the
+        // OAuth state: the API keeps it once.
+        ...(source ? { additionalData: { signupSource: source } } : {}),
       })
       if (error) {
         onError(error.message ?? 'Could not sign in with Google')

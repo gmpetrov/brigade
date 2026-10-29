@@ -1,10 +1,10 @@
 'use client'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { EmailSignIn } from '@/components/email-sign-in'
 import { GoogleSignIn } from '@/components/google-sign-in'
+import { AuthLink } from '@/components/landing/auth-link'
 import { LegalConsent } from '@/components/legal-consent'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -110,12 +110,13 @@ export default function SignIn() {
         )}
         <p className="text-center text-sm text-muted-foreground">
           New here?{' '}
-          <Link
+          <AuthLink
+            passOn
             href="/sign-up"
             className="font-semibold text-primary underline-offset-4 hover:underline"
           >
             Create an account
-          </Link>
+          </AuthLink>
         </p>
       </div>
     </main>

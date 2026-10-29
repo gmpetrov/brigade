@@ -31,6 +31,11 @@ const SUBPROCESSORS = [
     where: 'Ireland, and the United States',
   },
   {
+    name: 'PostHog, Inc.',
+    does: 'Product analytics: visits to the website and feature usage, without content',
+    where: 'EU (Frankfurt)',
+  },
+  {
     name: 'Google LLC',
     does: 'Sign in with Google; Gmail notifications for connected Google Apps',
     where: 'United States',

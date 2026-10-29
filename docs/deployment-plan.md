@@ -93,6 +93,11 @@ Cloudflare shipped first, more simply than the phases below:
       `pnpm --filter @brigade/api exec wrangler secret list` names them. Billing's
       (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) are in [billing.md](billing.md).
     - `brigade-collab` has `COLLAB_SECRET`, the same as the API's.
+    - Product analytics ([analytics.md](analytics.md)): `POSTHOG_KEY` (and optionally
+      `POSTHOG_INTERNAL_EMAIL_DOMAINS`) are secrets of `brigade-api`; the website's
+      `NEXT_PUBLIC_POSTHOG_KEY` is a build variable of `brigade-web` (Settings > Build), as
+      `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is, since Next inlines it at build time. Without them,
+      nothing is sent.
     - To change one, run `pnpm --filter @brigade/api exec wrangler secret put <NAME>`
       (`@brigade/collab` for collab), or use the Worker's Settings in the dashboard. The
       Worker restarts with it at once.

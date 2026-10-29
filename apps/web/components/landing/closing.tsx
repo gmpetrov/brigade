@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { CSSProperties } from 'react'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { formatCount, mergeDate, type ProofNumbers, REPO, REPO_URL } from '@/lib/github-proof'
+import { AuthLink } from './auth-link'
 import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
 import { Pebble } from './pebble'
 import { OPERATOR } from './operator'
@@ -123,9 +124,9 @@ export function Pricing() {
                 Unlimited teammates, threads and members
               </li>
             </ul>
-            <Link className={c('btn lg')} href={SIGN_UP}>
+            <AuthLink className={c('btn lg')} href={SIGN_UP}>
               Sign up
-            </Link>
+            </AuthLink>
           </div>
           <div className={c('plan cloud')} data-pebble-card>
             <div className={c('plan-n')}>
@@ -150,9 +151,9 @@ export function Pricing() {
                 Everything in Free, plus Brigade&apos;s cloud computer
               </li>
             </ul>
-            <Link className={c('btn pri lg')} href={SIGN_UP} data-pebble-target>
+            <AuthLink className={c('btn pri lg')} href={SIGN_UP} data-pebble-target>
               Start with Cloud
-            </Link>
+            </AuthLink>
           </div>
           <PebbleRain />
         </div>
@@ -331,9 +332,9 @@ export function FinalCall() {
       <div className={c('wrap')}>
         <h2 id="final-title">Meet your first teammate</h2>
         <p className={c('lead')}>He does the work. You make the calls.</p>
-        <Link className={c('btn pri lg')} href={SIGN_UP}>
+        <AuthLink className={c('btn pri lg')} href={SIGN_UP}>
           Sign up
-        </Link>
+        </AuthLink>
       </div>
     </section>
   )
@@ -350,7 +351,7 @@ export function Footer() {
         <nav aria-label="Footer">
           <a href={REPO_URL}>GitHub</a>
           <a href="https://status.brigade.lol">Status</a>
-          <Link href={SIGN_IN}>Sign in</Link>
+          <AuthLink href={SIGN_IN}>Sign in</AuthLink>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
           {OPERATOR.company && <Link href="/legal">Legal</Link>}

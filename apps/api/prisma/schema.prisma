@@ -23,18 +23,33 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id            String        @id
-  name          String
-  email         String        @unique
-  emailVerified Boolean       @default(false)
-  image         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  authSessions  AuthSession[]
-  authAccounts  AuthAccount[]
-  members       Member[]
-  invitations   Invitation[]
-  pushDevices   PushDevice[]
+  id              String           @id
+  name            String
+  email           String           @unique
+  emailVerified   Boolean          @default(false)
+  image           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  authSessions    AuthSession[]
+  authAccounts    AuthAccount[]
+  members         Member[]
+  invitations     Invitation[]
+  pushDevices     PushDevice[]
+  /// Where the person came from when they signed up (src/signup-source.ts): set once, never
+  /// changed. Utm values, the referrer's host, the first page and the derived channel; no URL.
+  attribution     Json?
+  analyticsFirsts AnalyticsFirst[]
+}
+
+/// The product analytics events a person has sent once already (src/analytics.ts): the next
+/// of each carries `first: false`. People who existed before analytics have them all.
+model AnalyticsFirst {
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event  String
+  at     DateTime @default(now())
+
+  @@id([userId, event])
 }
 
 /// A workspace's paid plan (src/billing.ts): Cloud, which gives it the cloud computer. It

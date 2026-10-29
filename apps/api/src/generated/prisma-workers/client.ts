@@ -44,6 +44,12 @@ export { Prisma }
  */
 export type User = Prisma.UserModel
 /**
+ * Model AnalyticsFirst
+ * The product analytics events a person has sent once already (src/analytics.ts): the next
+ * of each carries `first: false`. People who existed before analytics have them all.
+ */
+export type AnalyticsFirst = Prisma.AnalyticsFirstModel
+/**
  * Model BillingSubscription
  * A workspace's paid plan (src/billing.ts): Cloud, which gives it the cloud computer. It
  * only ever holds Stripe's current state for its subscription. A row with no

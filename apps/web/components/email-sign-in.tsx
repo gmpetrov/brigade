@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth-client'
+import { signupSourceHere } from '@/lib/signup-source'
 
 /** Cloudflare Turnstile's site key: with it, a code is mailed only after its check (the API has the secret). */
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
@@ -164,6 +165,7 @@ export function EmailSignIn({
   }
 
   async function signIn() {
+    const source = signupSourceHere()
     setError(undefined)
     setBusy(true)
     try {
@@ -171,6 +173,8 @@ export function EmailSignIn({
         email,
         otp: code.replace(/\s/g, ''),
         ...(withName && name.trim() ? { name: name.trim() } : {}),
+        // Where a new account came from (lib/signup-source.ts), kept once by the API.
+        ...(source ? { signupSource: source } : {}),
       })
       if (error) return setError(codeError(error) ?? error.message ?? 'Could not sign in')
       onSignedIn()

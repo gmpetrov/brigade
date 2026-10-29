@@ -10,6 +10,7 @@
 // transaction: a run that outlived its lock (a slow Stripe) writes nothing.
 import { HTTPException } from 'hono/http-exception'
 import Stripe from 'stripe'
+import { identifyWorkspace, personOfMember, trackLater } from './analytics.js'
 import { env } from './config.js'
 import { prisma, type Prisma } from './db.js'
 import { noteFailure } from './ops/failures.js'
@@ -110,8 +111,10 @@ const fromUnix = (seconds: number | null | undefined) => (seconds ? new Date(sec
 /**
  * A Stripe subscription, as Stripe has it now, on the workspace's row: the row already naming
  * it, else the one its Checkout was for (`rowId`, from Brigade's own metadata), else a new one.
+ * `committed` sends its analytics: the caller runs it once the transaction has committed, so
+ * nothing is sent for a change rolled back, and the workspace's plan is read as saved.
  */
-async function savePlan(
+export async function savePlan(
   tx: Prisma.TransactionClient,
   workspaceId: string,
   subscription: Stripe.Subscription,
@@ -141,9 +144,65 @@ async function savePlan(
           where: { id: rowId, workspaceId, stripeSubscriptionId: null },
         })
       : null)
-  return row
+  const saved = await (row
     ? tx.billingSubscription.update({ where: { id: row.id }, data: state })
-    : tx.billingSubscription.create({ data: { workspaceId, plan: CLOUD_PLAN.name, ...state } })
+    : tx.billingSubscription.create({ data: { workspaceId, plan: CLOUD_PLAN.name, ...state } }))
+  const before = row?.status ?? null
+  return { saved, committed: () => trackPlanChange(workspaceId, before, subscription) }
+}
+
+/**
+ * Product analytics (src/analytics.ts) for a subscription that changed status: started,
+ * canceled, or a payment failed. Of the member who started its Checkout.
+ */
+function trackPlanChange(
+  workspaceId: string,
+  before: string | null,
+  subscription: Stripe.Subscription,
+) {
+  const after = subscription.status
+  if (before === after) return
+  identifyWorkspace(workspaceId)
+  const event =
+    !(before && entitles(before)) && (after === 'active' || after === 'trialing')
+      ? 'subscription_started'
+      : after === 'canceled'
+        ? 'subscription_canceled'
+        : after === 'past_due' || after === 'unpaid'
+          ? 'payment_failed'
+          : null
+  if (!event) return
+  const userId = subscription.metadata?.userId
+  const price = subscription.items.data[0]?.price
+  const months = (Date.now() - subscription.start_date * 1000) / (30.44 * 24 * 60 * 60_000)
+  void prisma.workspace
+    .findUnique({ where: { id: workspaceId }, select: { organizationId: true } })
+    .then((workspace) => {
+      if (!workspace) return
+      trackLater(
+        userId ? personOfMember(userId) : null,
+        event,
+        { ...workspace, workspaceId },
+        {
+          feature: 'billing',
+          plan: CLOUD_PLAN.name,
+          status: after,
+          ...(event === 'subscription_started' && price
+            ? {
+                currency: price.currency,
+                ...(price.unit_amount !== null && { amount: price.unit_amount / 100 }),
+              }
+            : {}),
+          ...(event === 'subscription_canceled' && {
+            months_active: Math.max(0, Math.round(months * 10) / 10),
+            ...(subscription.cancellation_details?.reason && {
+              reason: subscription.cancellation_details.reason,
+            }),
+          }),
+        },
+      )
+    })
+    .catch((error: unknown) => console.warn(`analytics: ${String(error)}`))
 }
 
 /**
@@ -167,11 +226,12 @@ export async function reconcile(target: {
   }
   const saved = await withWorkspaceLock(workspaceId, async (tx) => {
     const subscription = await stripeClient!.subscriptions.retrieve(target.subscriptionId)
-    if (subscription.metadata?.workspaceId !== workspaceId) return false
-    await savePlan(tx, workspaceId, subscription, target.rowId)
-    return true
+    if (subscription.metadata?.workspaceId !== workspaceId) return null
+    return (await savePlan(tx, workspaceId, subscription, target.rowId)).committed
   })
-  if (saved) await applyPlan(workspaceId)
+  if (!saved) return
+  saved()
+  await applyPlan(workspaceId)
 }
 
 /** What a webhook event is about, from Brigade's metadata: its workspace and subscription. */
@@ -373,7 +433,7 @@ export async function startCheckout(input: {
   const stripe = stripeClient!
   const { workspaceId, user } = input
   let made: string | undefined
-  let outcome: { url: string } | { adopted: Stripe.Subscription }
+  let outcome: { url: string } | { adopted: Stripe.Subscription; committed: () => void }
   try {
     outcome = await withWorkspaceLock(workspaceId, async (tx) => {
       const { organizationId } = await tx.workspace.findUniqueOrThrow({
@@ -388,8 +448,8 @@ export async function startCheckout(input: {
       await closeOpenCheckouts(customer)
       const known = await liveSubscription(customer, workspaceId)
       if (known) {
-        await savePlan(tx, workspaceId, known, known.metadata.rowId)
-        return { adopted: known }
+        const { committed } = await savePlan(tx, workspaceId, known, known.metadata.rowId)
+        return { adopted: known, committed }
       }
       const [price] = (
         await stripe.prices.list({ lookup_keys: [CLOUD_PLAN.lookupKey], active: true, limit: 1 })
@@ -444,6 +504,7 @@ export async function startCheckout(input: {
     throw error
   }
   if ('url' in outcome) return outcome.url
+  outcome.committed()
   await applyPlan(workspaceId)
   const status = outcome.adopted.status
   throw new HTTPException(409, {
