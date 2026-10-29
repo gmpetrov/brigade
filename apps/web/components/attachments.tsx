@@ -24,7 +24,14 @@ import {
   Plus,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type DragEvent,
+} from 'react'
 import { EffortBars, type EffortPick, EffortSlider } from '@/components/effort'
 import { useFileLinks } from '@/components/file-links'
 import { Button } from '@/components/ui/button'
@@ -71,20 +78,55 @@ export type Upload = {
   media?: Media['kind']
 }
 
-/** The files of the message being written: each uploads as soon as it is added. */
-export function useUploads() {
-  const [uploads, setUploads] = useState<Upload[]>([])
-  // The list as of now, for adds and removes between renders; uploads start outside any updater.
-  const list = useRef<Upload[]>([])
-  const count = useRef(0)
-  const commit = useCallback((next: Upload[]) => {
-    list.current = next
-    setUploads(next)
-  }, [])
+/** The files of a message being written, outside the box: uploads go on while it is closed. */
+type UploadDraft = {
+  list: Upload[]
+  listeners: Set<() => void>
+  count: number
+}
+
+/** The files of each thread's reply, by thread: opening another thread keeps them, like its text. */
+const drafts = new Map<string, UploadDraft>()
+
+const newDraft = (): UploadDraft => ({ list: [], listeners: new Set(), count: 0 })
+
+/**
+ * The files of the message being written: each uploads as soon as it is added. With a
+ * `draftKey` (a thread's id), they stay when the box closes and are back when it opens again.
+ */
+export function useUploads(draftKey?: string) {
+  // The thread's files kept from before, else new ones, kept once there are some.
+  const kept = useRef<{ key?: string; draft: UploadDraft }>(null)
+  if (!kept.current || kept.current.key !== draftKey)
+    kept.current = { key: draftKey, draft: (draftKey && drafts.get(draftKey)) || newDraft() }
+  const draft = kept.current.draft
+  const uploads = useSyncExternalStore(
+    useCallback(
+      (listener: () => void) => {
+        draft.listeners.add(listener)
+        return () => {
+          draft.listeners.delete(listener)
+        }
+      },
+      [draft],
+    ),
+    () => draft.list,
+    () => draft.list,
+  )
+  const commit = useCallback(
+    (next: Upload[]) => {
+      draft.list = next
+      // An empty one is let go; the next file starts it again.
+      if (draftKey && !next.length && drafts.get(draftKey) === draft) drafts.delete(draftKey)
+      else if (draftKey && next.length) drafts.set(draftKey, draft)
+      for (const listener of draft.listeners) listener()
+    },
+    [draft, draftKey],
+  )
   const update = useCallback(
     (key: string, change: Partial<Upload>) =>
-      commit(list.current.map((u) => (u.key === key ? { ...u, ...change } : u))),
-    [commit],
+      commit(draft.list.map((u) => (u.key === key ? { ...u, ...change } : u))),
+    [draft, commit],
   )
 
   /** Add files to the message; returns their keys, in order. */
@@ -92,7 +134,7 @@ export function useUploads() {
     (files: Iterable<File>) => {
       const keys: string[] = []
       for (const file of files) {
-        const key = `${Date.now()}-${count.current++}`
+        const key = `${Date.now()}-${draft.count++}`
         keys.push(key)
         const upload: Upload = {
           key,
@@ -105,14 +147,14 @@ export function useUploads() {
             : {}),
         }
         const error =
-          list.current.filter((u) => !u.error).length >= ATTACHMENTS_PER_MESSAGE
+          draft.list.filter((u) => !u.error).length >= ATTACHMENTS_PER_MESSAGE
             ? `A message takes up to ${ATTACHMENTS_PER_MESSAGE} files`
             : file.size > uploadMax(file.type)
               ? isVideoType(file.type)
                 ? 'Larger than 500 MB'
                 : 'Larger than 25 MB'
               : undefined
-        commit([...list.current, error ? { ...upload, error } : upload])
+        commit([...draft.list, error ? { ...upload, error } : upload])
         if (error) continue
         uploadAttachment(file, (progress) => update(key, { progress }), upload.controller.signal)
           .then((info) => update(key, { info, progress: 1 }))
@@ -122,34 +164,34 @@ export function useUploads() {
       }
       return keys
     },
-    [commit, update],
+    [draft, commit, update],
   )
 
   /** Take a file off the message; one already uploaded is deleted. */
   const remove = useCallback(
     (key: string) => {
-      const upload = list.current.find((u) => u.key === key)
+      const upload = draft.list.find((u) => u.key === key)
       upload?.controller.abort()
       if (upload?.preview) URL.revokeObjectURL(upload.preview)
       if (upload?.info)
         void api(`/attachments/${upload.info.id}`, { method: 'DELETE' }).catch(() => undefined)
-      commit(list.current.filter((u) => u.key !== key))
+      commit(draft.list.filter((u) => u.key !== key))
     },
-    [commit],
+    [draft, commit],
   )
 
   /** After sending: the files went with the message. */
   const clear = useCallback(() => {
-    for (const u of list.current) if (u.preview) URL.revokeObjectURL(u.preview)
+    for (const u of draft.list) if (u.preview) URL.revokeObjectURL(u.preview)
     commit([])
-  }, [commit])
+  }, [draft, commit])
 
   /**
    * Sending in the background: the files leave the box at once, and `put` brings them back to
    * one should the message not go; `done` lets their previews go once it has.
    */
   const take = useCallback(() => {
-    const taken = list.current
+    const taken = draft.list
     commit([])
     return {
       uploads: taken,
@@ -157,17 +199,21 @@ export function useUploads() {
         for (const u of taken) if (u.preview) URL.revokeObjectURL(u.preview)
       },
     }
-  }, [commit])
+  }, [draft, commit])
 
   /** Files taken from a box (`take`) that has gone since, back on this one. */
-  const put = useCallback((uploads: Upload[]) => commit([...list.current, ...uploads]), [commit])
+  const put = useCallback(
+    (uploads: Upload[]) => commit([...draft.list, ...uploads]),
+    [draft, commit],
+  )
 
-  // Leaving the page with files still on the message: let their previews go.
+  // Leaving the page with files still on a message no thread keeps: let their previews go.
   useEffect(
     () => () => {
-      for (const u of list.current) if (u.preview) URL.revokeObjectURL(u.preview)
+      if (draftKey) return
+      for (const u of draft.list) if (u.preview) URL.revokeObjectURL(u.preview)
     },
-    [],
+    [draft, draftKey],
   )
 
   return {
