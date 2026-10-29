@@ -1831,6 +1831,225 @@ describe('what comes next: a reply to approve, a reply set for later', { skip },
   })
 })
 
+describe('what a thread did without replying', { skip }, () => {
+  before(async () => {
+    computerFor ??= (
+      await prisma.computer.create({
+        data: { ...scope, kind: 'member_machine', memberId: members[0]!, name: 'Laptop' },
+      })
+    ).id
+  })
+
+  /** Riley's call of one of the Email App's tools, in its thread. */
+  const call = async (op: string, session: { id: string }, input: Record<string, unknown>) => {
+    const { email } = await import('../src/connectors/email.js')
+    const thread = await prisma.session.findUniqueOrThrow({ where: { id: session.id } })
+    return email.operations[op]!.run(
+      {
+        scope,
+        connectionId: agent.connectionId,
+        teammateId: riley.id,
+        thread,
+        callId: randomUUID(),
+        fetch: globalThis.fetch,
+      } as never,
+      input as never,
+    )
+  }
+  const sent = (received: { box: string; conversationId: string }, extra = {}) =>
+    prisma.mailMessage.create({
+      data: {
+        ...scope,
+        addressId: agent.id,
+        box: received.box,
+        direction: 'out',
+        status: 'sent',
+        conversationId: received.conversationId,
+        fromAddress: `riley-inbox-${id}@mails.brigade.test`,
+        to: ['client@outside.test'],
+        receivedAt: new Date(),
+        ...extra,
+      } as never,
+    })
+
+  test('no reply: To do with its reason, until something is sent; handled stays with the teammate', async () => {
+    const db = scoped(scope)
+    const handed = await thread(riley.id)
+    const received = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(),
+    })
+    const item = `mail:${received.id}`
+    const list = (status: 'waiting' | 'handled') =>
+      inbox.listInbox(db, as(0), { status }).then((r) => r.items.find((i) => i.id === item))
+    assert.ok(await list('handled'), 'with the teammate first')
+    const before = await inbox.waitingCount(db, as(0))
+
+    await call('email_no_reply', handed, { id: received.id, reason: 'A test sent through a group' })
+    const todo = await list('waiting')
+    assert.equal(todo?.status, 'waiting')
+    assert.equal(todo?.outcome?.kind, 'no_reply')
+    assert.equal(todo?.outcome?.note, 'A test sent through a group')
+    assert.equal(await list('handled'), undefined)
+    assert.equal(await inbox.waitingCount(db, as(0)), before + 1)
+
+    // A reply sent since: it is answered, with the teammate again.
+    const reply = await sent(received)
+    assert.ok(await list('handled'), 'answered')
+    assert.equal((await list('handled'))?.outcome, null)
+    assert.equal(await list('waiting'), undefined)
+    await prisma.mailMessage.delete({ where: { id: reply.id } })
+
+    // Done without a reply: said, but nothing for a person to do.
+    await call('email_no_reply', handed, { id: received.id, reason: 'Filed it', handled: true })
+    assert.deepEqual(
+      {
+        kind: (await list('handled'))?.outcome?.kind,
+        note: (await list('handled'))?.outcome?.note,
+      },
+      { kind: 'handled', note: 'Filed it' },
+    )
+    assert.equal(await list('waiting'), undefined)
+
+    // Only mail of its own box.
+    const other = await mail(support, { receivedAt: new Date() })
+    await assert.rejects(call('email_no_reply', handed, { id: other.id, reason: 'x' }), /No email/)
+  })
+
+  test('asked to reply after all: back with the teammate, by who may write in its thread', async () => {
+    const db = scoped(scope)
+    const handed = await thread(riley.id)
+    const received = await mail(agent, { route: 'handed', sessionId: handed.id })
+    const item = `mail:${received.id}`
+    await call('email_no_reply', handed, { id: received.id, reason: 'Nothing asked' })
+    const ada = await inbox.readItem(db, as(0), item)
+    assert.equal(ada.mayPrompt, true)
+    assert.equal(ada.canReply, true)
+    // Bob may not write in Ada's thread, nor reply in its name.
+    const bob = await inbox.readItem(db, as(1), item)
+    assert.equal(bob.mayPrompt, false)
+    assert.equal(bob.canReply, false)
+    await assert.rejects(inbox.askedToReply(db, as(1), item), /Only who may write/)
+
+    await prisma.mailMessage.update({
+      where: { id: received.id },
+      data: { outcomeAskedAt: new Date() },
+    })
+    await inbox.askedToReply(db, as(0), item)
+    const after = await inbox.readItem(db, as(0), item)
+    assert.equal(after.outcome, null)
+    assert.equal(after.status, 'handled')
+    // Should its next turn end without a reply again, it is asked again.
+    const { unaccounted } = await import('../src/mail/outcomes.js')
+    assert.deepEqual(
+      (await unaccounted(db, handed.id)).map((m) => m.id),
+      [received.id],
+    )
+  })
+
+  test('a turn that left mail without a reply or a word is asked once', async () => {
+    const db = scoped(scope)
+    const { askOutcomes, unaccounted } = await import('../src/mail/outcomes.js')
+    const handed = await thread(riley.id)
+    const left = await mail(agent, { route: 'handed', sessionId: handed.id })
+    const answered = await mail(agent, { route: 'conversation', sessionId: handed.id })
+    await sent(answered)
+    const accounted = await mail(agent, { route: 'rule', sessionId: handed.id })
+    await call('email_no_reply', handed, { id: accounted.id, reason: 'Spam' })
+    const coming = await mail(agent, { route: 'conversation', sessionId: handed.id })
+    await prisma.wakeup.create({
+      data: {
+        ...scope,
+        sessionId: handed.id,
+        teammateId: riley.id,
+        kind: 'reply',
+        note: 'mail',
+        wakeAt: new Date(Date.now() + 3600_000),
+        sourceId: `email:${coming.id}`,
+      } as never,
+    })
+    const drafted = await mail(agent, { route: 'conversation', sessionId: handed.id })
+    await prisma.ticket.create({
+      data: {
+        ...scope,
+        sessionId: handed.id,
+        type: 'approval',
+        title: 'Riley: email send',
+        payload: { operation: 'email_send', input: { replyTo: drafted.id } },
+      },
+    })
+    // A member's own request is answered in the chat, not by mail.
+    await mail(agent, { route: 'member', sessionId: handed.id })
+
+    assert.deepEqual(
+      (await unaccounted(db, handed.id)).map((m) => m.id),
+      [left.id],
+    )
+    await askOutcomes(scope, { id: handed.id, teammateId: riley.id })
+    const asked = await prisma.wakeup.findMany({
+      where: { sessionId: handed.id, sourceId: { startsWith: 'outcome:' } },
+    })
+    assert.equal(asked.length, 1)
+    assert.match(asked[0]!.note ?? '', /email_no_reply/)
+    assert.ok(asked[0]!.note?.includes(left.id))
+    // Once: the next end of turn asks nothing more.
+    await askOutcomes(scope, { id: handed.id, teammateId: riley.id })
+    assert.equal(
+      await prisma.wakeup.count({
+        where: { sessionId: handed.id, sourceId: { startsWith: 'outcome:' } },
+      }),
+      1,
+    )
+  })
+
+  test('a person’s own reply leaves from the mailbox, and the teammate does not answer twice', async () => {
+    const db = scoped(scope)
+    const handed = await thread(riley.id)
+    const received = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      messageId: `<own-${id}@outside.test>`,
+    })
+    const item = `mail:${received.id}`
+    await call('email_no_reply', handed, { id: received.id, reason: 'Unsure what to say' })
+    await assert.rejects(inbox.replyItem(db, as(1), item, 'Hi'), /cannot reply/)
+
+    const requests: { to: string[]; text: string; headers?: Record<string, string> }[] = []
+    const beforeFetch = globalThis.fetch
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      assert.equal(String(input), 'https://api.resend.com/emails')
+      requests.push(JSON.parse(String(init?.body)))
+      return json({ id: `own-out-${id}` })
+    }) as typeof fetch
+    let reply
+    try {
+      reply = await inbox.replyItem(db, as(0), item, 'Thanks, we are on it.')
+    } finally {
+      globalThis.fetch = beforeFetch
+    }
+    assert.deepEqual(requests[0]!.to, ['client@outside.test'])
+    assert.equal(requests[0]!.headers?.['In-Reply-To'], `<own-${id}@outside.test>`)
+    const row = await prisma.mailMessage.findUniqueOrThrow({
+      where: { id: reply.id.slice('mail:'.length) },
+    })
+    assert.equal(row.sentByMemberId, members[0])
+    assert.equal(row.teammateId, null)
+    assert.equal(row.sessionId, handed.id)
+    // Answered: no longer To do.
+    assert.equal((await inbox.readItem(db, as(0), item)).outcome, null)
+
+    // The teammate's own reply afterwards is stopped before anyone is asked.
+    const problem = await call('email_send', handed, {
+      to: ['client@outside.test'],
+      subject: '',
+      text: 'Hello again',
+      replyTo: received.id,
+    }).catch((e: Error) => e.message)
+    assert.match(String(problem), /A person already replied/)
+  })
+})
+
 describe('mailboxes', { skip }, () => {
   test('every mailbox in one list; one whole, with its rules in order and who reads it', async () => {
     const db = scoped(scope)

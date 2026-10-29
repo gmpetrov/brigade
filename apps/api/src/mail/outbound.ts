@@ -124,6 +124,9 @@ export async function checkDraft(
         route: true,
         receivedAt: true,
         fromName: true,
+        direction: true,
+        status: true,
+        sentByMemberId: true,
       },
     })
     const people = new Set(
@@ -138,6 +141,16 @@ export async function checkDraft(
     )
     if (human)
       return `Someone already replied in this conversation from the mailbox itself, at ${human.receivedAt.toISOString()}. Read the conversation (email_read) before replying, and tell the person rather than answer twice.`
+    // A person replied from the Inbox after it (Reply myself).
+    const person = conversation.find(
+      (m) =>
+        m.direction === 'out' &&
+        m.sentByMemberId &&
+        m.status !== 'cancelled' &&
+        m.receivedAt > original.receivedAt,
+    )
+    if (person)
+      return `A person already replied in this conversation from the Inbox, at ${person.receivedAt.toISOString()}. Read the conversation (email_read) before replying, and tell the person rather than answer twice.`
   }
   return null
 }
@@ -193,6 +206,8 @@ export async function sendDraft(
     draft: Draft
     callId: string
     approvedByMemberId?: string
+    /** A person wrote it and sends it from the Inbox: theirs, not the teammate's. */
+    sentByMemberId?: string
   },
 ) {
   const { address, thread, draft } = input
@@ -250,8 +265,9 @@ export async function sendDraft(
       subject: subject.slice(0, 1000),
       text: draft.text,
       sessionId: thread.id,
-      teammateId: input.teammateId,
+      teammateId: input.sentByMemberId ? null : input.teammateId,
       approvedByMemberId: input.approvedByMemberId ?? null,
+      sentByMemberId: input.sentByMemberId ?? null,
       sendAt,
       attachments: files.map((f) => ({ id: f.id, filename: f.name, contentType: f.contentType })),
     } as never,
@@ -289,7 +305,9 @@ export async function sendDraft(
     await contactFor(db, recipient).catch(() => undefined)
   await audit({
     ...scope,
-    actor: { type: 'teammate', id: input.teammateId },
+    actor: input.sentByMemberId
+      ? { type: 'member', id: input.sentByMemberId }
+      : { type: 'teammate', id: input.teammateId },
     action: 'email.sent',
     target: { type: 'mail_message', id: row.id },
     data: { to: draft.to, subject, threadId: thread.id },
