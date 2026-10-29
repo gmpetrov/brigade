@@ -143,6 +143,9 @@ export type ThreadHeading = {
  */
 type Picked = { id: string; element: PreviewElement; upload?: string; drawing?: boolean }
 
+/** Elements picked in each thread's preview, kept when another thread opens. */
+const keptElements = new Map<string, Picked[]>()
+
 /** How long a message waits for a picture its page is drawing (it may have gone away). */
 const DRAWING_MS = 15_000
 
@@ -280,11 +283,18 @@ export function ThreadConversation({
   // Its machine went offline: Wait keeps the card offering the cloud computer away.
   const [waitForMachine, setWaitForMachine] = useState(false)
   useEffect(() => setWaitForMachine(false), [id])
-  const files = useUploads()
+  // Its files stay with the thread, like its text, when another thread opens.
+  const files = useUploads(id)
   // Elements picked in the preview, as chips above it; the message carries them, and their
   // pictures as files of its own that show in their chips rather than with the other files.
-  const [elements, setElements] = useState<Picked[]>([])
-  useEffect(() => setElements([]), [id])
+  // Kept with the thread's files: a picture's file shows in its chip.
+  const [elements, setElements] = useState<Picked[]>(() =>
+    (keptElements.get(id) ?? []).map(({ drawing: _drawing, ...e }) => e),
+  )
+  useEffect(() => {
+    if (elements.length) keptElements.set(id, elements)
+    else keptElements.delete(id)
+  }, [id, elements])
   const elementsRef = useRef(elements)
   elementsRef.current = elements
   const pickElement = useMemo<PickHandlers>(() => {
