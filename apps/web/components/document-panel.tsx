@@ -5,7 +5,7 @@
 // a teammate changed since you last looked. The panel stays open while you
 // move between pages, and its tabs across a reload.
 import type { EditTarget, LibraryFile } from '@brigade/contracts'
-import { BookOpen, ChevronDown, FileText, History, MessageSquare, X } from 'lucide-react'
+import { ArrowUpRight, BookOpen, ChevronDown, FileText, History, MessageSquare, X } from 'lucide-react'
 import {
   createContext,
   useCallback,
@@ -495,10 +495,11 @@ export function AskedDocument({ text }: { text: string }) {
         type="button"
         onClick={() => documents.open(asked)}
         title={`Open ${asked.title}`}
+        aria-label={`Open ${asked.title}`}
         className="flex min-w-0 flex-1 items-center gap-1.5 text-left outline-none hover:text-foreground focus-visible:underline"
       >
         <span className="min-w-0 truncate font-medium text-foreground">{asked.title}</span>
-        <span className="shrink-0">· Open</span>
+        <ArrowUpRight aria-hidden className="size-4 shrink-0" />
       </button>
       <Button
         type="button"
