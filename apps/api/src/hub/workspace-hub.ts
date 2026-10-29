@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto'
 import {
   HEARTBEAT_PROTOCOL,
   OUTBOX_PROTOCOL,
+  SETTLE_PROTOCOL,
   type ApiToBrowser,
   type ApiToRunner,
   type RunnerToApi,
@@ -421,6 +422,8 @@ export class WorkspaceHub {
     // A turn kept before its workspace's deletion began: held, pending, until the deletion is
     // done (and the command with it) or has failed.
     if (kept.type === 'thread.prompt' && (await beingDeleted(this.workspaceId))) return
+    // A runner too old to take it: it stays pending for one that is updated (MOOT_AFTER_MS).
+    if (kept.type === 'thread.settle' && protocol < SETTLE_PROTOCOL) return
     // Not where its thread is now: not sent.
     if (!(await asOfNow(computerId, kept))) return
     // Claimed, as it is now (runner-commands.ts).

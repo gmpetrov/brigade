@@ -1,6 +1,6 @@
 // A person decides a held call (a credential, an App's write) once its tool no longer waits: the
-// API tells the thread with a message that carries the decision, and the runner shows the
-// approval decided before the message. The harness is a stand-in.
+// API sends the decision (thread.settle), and the runner shows the approval decided, without a
+// turn. The harness is a stand-in.
 import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -77,48 +77,45 @@ function setup(sessionId: string) {
   return { threads, events, spec }
 }
 
-test('a message telling of a held call decided later shows its approval decided, then itself', async () => {
-  const { threads, events, spec } = setup('settled-1')
-  threads.handle({
-    type: 'thread.prompt',
-    commandId: 'wakeup:w1',
-    thread: spec,
-    text: 'A person approved what you asked for earlier…',
-    memberId: null,
-    then: [],
-    attachments: [],
-    settles: { approvalId: 'ticket-1', approved: true, memberId: 'm1' },
+test('a held call decided later shows its approval decided, with no turn', async () => {
+  const { threads, events } = setup('settled-1')
+  threads.settleApproval({
+    type: 'thread.settle',
+    commandId: 'settle:ticket-1',
+    sessionId: 'settled-1',
+    teammateId: 'riley',
+    approvalId: 'ticket-1',
+    approved: true,
+    memberId: 'm1',
   })
   await sleep(50)
-  const resolved = events.findIndex((e) => e.type === 'approval.resolved')
-  const message = events.findIndex((e) => e.type === 'message.user')
-  assert.ok(resolved >= 0, 'the approval is decided')
-  assert.ok(message > resolved, 'before the message')
   assert.deepEqual(
-    { ...events[resolved], at: undefined },
-    {
-      at: undefined,
-      type: 'approval.resolved',
-      teammateId: 'riley',
-      approvalId: 'ticket-1',
-      approved: true,
-      memberId: 'm1',
-    },
+    events.map((e) => ({ ...e, at: undefined })),
+    [
+      {
+        at: undefined,
+        type: 'approval.resolved',
+        teammateId: 'riley',
+        approvalId: 'ticket-1',
+        approved: true,
+        memberId: 'm1',
+      },
+    ],
+    'only the decision: no message, no turn',
   )
 })
 
-test('a message without a decision decides no approval', async () => {
-  const { threads, events, spec } = setup('settled-2')
-  threads.handle({
-    type: 'thread.prompt',
-    commandId: 'c',
-    thread: spec,
-    text: 'Hello',
-    memberId: 'm1',
-    then: [],
-    attachments: [],
+test('a denial shows denied', async () => {
+  const { threads, events } = setup('settled-2')
+  threads.settleApproval({
+    type: 'thread.settle',
+    commandId: 'settle:ticket-2',
+    sessionId: 'settled-2',
+    teammateId: 'riley',
+    approvalId: 'ticket-2',
+    approved: false,
+    memberId: null,
   })
-  await sleep(50)
-  assert.equal(events.filter((e) => e.type === 'approval.resolved').length, 0)
-  assert.equal(events.filter((e) => e.type === 'message.user').length, 1)
+  const resolved = events.find((e) => e.type === 'approval.resolved')
+  assert.equal(resolved?.type === 'approval.resolved' && resolved.approved, false)
 })

@@ -694,13 +694,6 @@ export const ThreadPrompt = z.object({
    * runner suggests a better one with a short harness run (thread.title).
    */
   nameThread: z.string().optional(),
-  /**
-   * A held call's decision this message tells of (src/held-calls.ts in the API): taken on its
-   * ticket once the call no longer waited, so no tool heard it. Its approval shows decided.
-   */
-  settles: z
-    .object({ approvalId: z.string(), approved: z.boolean(), memberId: z.string().nullable() })
-    .optional(),
 })
 export type ThreadPrompt = z.infer<typeof ThreadPrompt>
 
@@ -925,6 +918,19 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     approved: z.boolean(),
     reason: z.string().optional(),
     memberId: z.string(),
+  }),
+  /**
+   * A held call decided once no tool waited on it (the API's src/held-calls.ts): its approval, whose
+   * id is its ticket's, shows decided. It starts no turn: the thread hears the result apart.
+   */
+  z.object({
+    type: z.literal('thread.settle'),
+    commandId: z.string(),
+    sessionId: z.string(),
+    teammateId: z.string(),
+    approvalId: z.string(),
+    approved: z.boolean(),
+    memberId: z.string().nullable(),
   }),
   /** A person's answer to the harness's question. */
   z.object({

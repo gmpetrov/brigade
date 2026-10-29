@@ -182,7 +182,6 @@ async function fire(wakeup: {
   kind: 'wakeup' | 'report' | 'reply'
   wakeAt: Date
   createdAt: Date
-  sourceId: string | null
 }) {
   const scope: Scope = { organizationId: wakeup.organizationId, workspaceId: wakeup.workspaceId }
   const db = scoped(scope)
@@ -221,7 +220,6 @@ async function fire(wakeup: {
           : wakeup.note,
       memberId: null,
       ...(seat && !seat.teammate.archivedAt ? { teammateIds: [wakeup.teammateId] } : {}),
-      ...(await settledBy(db, wakeup.sourceId)),
     },
     { commandId: `wakeup:${wakeup.id}` },
   ).catch((error: unknown) => {
@@ -234,26 +232,6 @@ async function fire(wakeup: {
   } else if (!(await settle('fired'))) return
   // paused: a cap ticket holds the prompt and sends it when allowed.
   changed(scope, thread)
-}
-
-/**
- * A held call's decision, for the wake-up that tells of it (its source is `held:<ticket id>`,
- * src/held-calls.ts): no tool heard it, so the thread's approval, whose id is the ticket's, shows
- * decided only once the runner is told with the message.
- */
-async function settledBy(db: ScopedDb, sourceId: string | null) {
-  if (!sourceId?.startsWith('held:')) return {}
-  const ticketId = sourceId.slice('held:'.length)
-  const held = await db.heldCall.findFirst({ where: { ticketId }, select: { decision: true } })
-  const decision = held?.decision as { approved?: unknown; memberId?: unknown } | null | undefined
-  if (typeof decision?.approved !== 'boolean') return {}
-  return {
-    settles: {
-      approvalId: ticketId,
-      approved: decision.approved,
-      memberId: typeof decision.memberId === 'string' ? decision.memberId : null,
-    },
-  }
 }
 
 /**

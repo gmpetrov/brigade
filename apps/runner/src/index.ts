@@ -503,6 +503,8 @@ async function start() {
         )
         return threads.closeLost(message.runningThreads ?? [], last)
       }
+      case 'thread.settle':
+        return threads.settleApproval(message)
       case 'thread.prompt':
       case 'thread.approval':
       case 'thread.answer':

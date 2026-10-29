@@ -25,6 +25,8 @@ export const isDurable = (message: ApiToRunner): message is DurableCommand =>
 const MOOT_AFTER_MS: Partial<Record<DurableCommand['type'], number>> = {
   'thread.interrupt': 10 * 60_000,
   'browser.open': 10 * 60_000,
+  // Only shows an approval decided: not worth a ticket when an old runner never takes it.
+  'thread.settle': 12 * 60 * 60_000,
 }
 /** Past this, a command that did not get through opens a ticket. */
 export const GIVE_UP_MS = 24 * 60 * 60_000
@@ -157,9 +159,9 @@ export async function unclaim(id: string) {
  * it the runner numbers the thread's events from its own count, and the API drops them.
  */
 export async function asOfNow(computerId: string, message: DurableCommand) {
-  if (!('thread' in message)) return message
+  if (!('thread' in message) && message.type !== 'thread.settle') return message
   const session = await prisma.session.findUnique({
-    where: { id: message.thread.sessionId },
+    where: { id: 'thread' in message ? message.thread.sessionId : message.sessionId },
     select: {
       computerId: true,
       movedAt: true,
@@ -177,7 +179,7 @@ export async function asOfNow(computerId: string, message: DurableCommand) {
     return null
   }
   const moved = movedOf(session)
-  if (!moved || message.thread.moved?.at === moved.at) return message
+  if (!('thread' in message) || !moved || message.thread.moved?.at === moved.at) return message
   if (message.type === 'thread.prompt')
     return {
       ...message,
@@ -283,6 +285,8 @@ const described = (message: DurableCommand) => {
       return 'an answer to a question'
     case 'thread.ticket':
       return 'an answer to a ticket'
+    case 'thread.settle':
+      return `a decision shown on an approval (${message.approved ? 'approved' : 'denied'})`
     case 'thread.retry':
       return 'a request to try the failed turn again'
     case 'thread.takeover':
