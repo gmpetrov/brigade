@@ -405,6 +405,32 @@ export const threads = new Hono<AppEnv>()
           _count: { _all: true },
         })
       : []
+    // Its child threads, out of lists: the sidebar shows them under it, folded. Those a
+    // teammate started (start_child), not a schedule's runs, which would fill it.
+    const children = rows.length
+      ? await c.var.db.session.findMany({
+          where: { parentId: { in: rows.map((r) => r.id) }, origin: 'child', archivedAt: null },
+          select: { id: true, title: true, status: true, parentId: true, updatedAt: true },
+          orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+        })
+      : []
+    // Which of them a teammate answered since this member last looked.
+    const [childTurns, childReads] = children.length
+      ? await Promise.all([
+          c.var.db.sessionEvent.groupBy({
+            by: ['sessionId'],
+            where: { sessionId: { in: children.map((r) => r.id) }, type: 'turn.completed' },
+            _max: { at: true },
+          }),
+          c.var.db.threadRead.findMany({
+            where: {
+              memberId: c.var.scope.memberId,
+              sessionId: { in: children.map((r) => r.id) },
+            },
+            select: { sessionId: true, seenAt: true },
+          }),
+        ])
+      : [[], []]
     // Whose preview is up: the sidebar marks them. Not on a computer that is gone, whatever
     // the events say, as on the preview panel.
     const previews = await previewStates(
@@ -440,6 +466,15 @@ export const threads = new Hono<AppEnv>()
           unread: unread(turns?._max.at, reads.find((r) => r.sessionId === row.id)?.seenAt),
           pullsWaiting: pulls.find((p) => p.sessionId === row.id)?._count._all ?? 0,
           childrenWorking: working.find((w) => w.parentId === row.id)?._count._all ?? 0,
+          children: children
+            .filter((child) => child.parentId === row.id)
+            .map(({ parentId: _, ...child }) => ({
+              ...child,
+              unread: unread(
+                childTurns.find((t) => t.sessionId === child.id)?._max.at,
+                childReads.find((r) => r.sessionId === child.id)?.seenAt,
+              ),
+            })),
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
           pinPosition: pins.find((p) => p.sessionId === row.id)?.position ?? null,
           laterAt: laters.get(row.id)?.toISOString() ?? null,

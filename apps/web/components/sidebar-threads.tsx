@@ -13,6 +13,9 @@
 // browser remembers which are folded.
 // Inside Threads, the latest thread waiting on a person shows first, and the others behind a
 // "+N waiting on you".
+// A thread's child threads stay out of the list: folded under it behind an "N sub-threads"
+// row, and unfolded by its caret or that row (SubThreads). The thread already shows their
+// state: working while one it waits for works, waiting while one waits on a person.
 import {
   Archive,
   ChevronDown,
@@ -27,6 +30,7 @@ import {
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -62,8 +66,18 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
-import { api, useApi, type ProjectSummary, type Teammate, type ThreadSummary } from '@/lib/api'
+import {
+  api,
+  useApi,
+  type ProjectSummary,
+  type SidebarChild,
+  type Teammate,
+  type ThreadSummary,
+} from '@/lib/api'
 import { latestSave } from '@/lib/latest-save'
 import { cn } from '@/lib/utils'
 
@@ -73,6 +87,14 @@ type Group = 'waiting' | 'working' | 'rest'
 const CAP = 5
 /** Each "+N more" shows this many more; folding "Threads" goes back to the cap. */
 const STEP = 20
+
+/** How many of a thread's child threads show unfolded before their "+N more". */
+const CHILD_CAP = 5
+
+/** Whose child threads this browser unfolded, or folded while one of them was open. */
+const CHILDREN_KEY = 'brigade:sidebar-children'
+/** The most remembered: the latest set first. */
+const CHILDREN_KEPT = 100
 
 /** Which of the sidebar's sections this browser folded. */
 const FOLDED_KEY = 'brigade:sidebar-folded'
@@ -106,6 +128,144 @@ function useFolded() {
       return next
     })
   return [folded, toggle] as const
+}
+
+/**
+ * Whose child threads show under them. Folded unless the member unfolded them, or one of them
+ * is open; what the member set wins, and this browser remembers it.
+ */
+function useOpenChildren() {
+  const [set, setSet] = useState<Record<string, boolean>>({})
+  // Read after the first render, so the server's page and the browser's agree.
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(CHILDREN_KEY) ?? 'null') as unknown
+      if (saved && typeof saved === 'object')
+        setSet(
+          Object.fromEntries(
+            Object.entries(saved).filter((e): e is [string, boolean] => typeof e[1] === 'boolean'),
+          ),
+        )
+    } catch {
+      // Nothing saved, or not readable: all folded.
+    }
+  }, [])
+  const toggle = (id: string, open: boolean) =>
+    setSet((s) => {
+      const { [id]: _, ...rest } = s
+      const next = Object.fromEntries(
+        [[id, !open] as const, ...Object.entries(rest)].slice(0, CHILDREN_KEPT),
+      )
+      try {
+        localStorage.setItem(CHILDREN_KEY, JSON.stringify(next))
+      } catch {
+        // Private mode or full: as set until the page reloads.
+      }
+      return next
+    })
+  return [set, toggle] as const
+}
+
+/**
+ * A thread's child threads, under it: folded, one "N sub-threads" row; unfolded, the first
+ * of them (waiting on a person, then working, then the latest), the one open among them, and
+ * a "+N more" for the rest. No dot on those rows: they are controls, not threads.
+ */
+function SubThreads({
+  items,
+  open,
+  onToggle,
+  activeId,
+  needsYou,
+}: {
+  items: SidebarChild[]
+  open: boolean
+  onToggle: () => void
+  activeId: string | null
+  needsYou: Record<string, string>
+}) {
+  const [all, setAll] = useState(false)
+  if (!open)
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuSub className="py-0">
+          <SidebarMenuSubItem>
+            <SidebarMenuSubButton
+              asChild
+              size="sm"
+              className="text-muted-foreground rounded-[10px]"
+            >
+              <button type="button" aria-expanded={false} onClick={onToggle}>
+                <span>
+                  {items.length} sub-thread{items.length === 1 ? '' : 's'}
+                </span>
+              </button>
+            </SidebarMenuSubButton>
+          </SidebarMenuSubItem>
+        </SidebarMenuSub>
+      </SidebarMenuItem>
+    )
+  // What waits on this member is more than its own status, as for the list's threads.
+  const rows = items.map((c) => {
+    const ask = needsYou[c.id]
+    return ask && groupOf(c.status) === 'rest' ? { ...c, status: 'waiting', ask } : { ...c, ask }
+  })
+  const rank: Record<Group, number> = { waiting: 0, working: 1, rest: 2 }
+  const ordered = rows
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => rank[groupOf(a.c.status)] - rank[groupOf(b.c.status)] || a.i - b.i)
+    .map(({ c }) => c)
+  const shown = all ? ordered : ordered.filter((c, i) => i < CHILD_CAP || c.id === activeId)
+  const hidden = ordered.length - shown.length
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuSub className="mr-0 gap-0 pr-0">
+        {shown.map((c) => {
+          const status = { status: c.status, unread: c.unread, ask: c.ask }
+          const group = groupOf(c.status)
+          const state = group !== 'rest' || c.status === 'failed' || c.unread
+          return (
+            <SidebarMenuSubItem key={c.id}>
+              <SidebarMenuSubButton
+                asChild
+                isActive={c.id === activeId}
+                className="h-8 rounded-[10px] pr-2 data-[active=true]:font-medium"
+              >
+                <Link
+                  href={`/app/threads/${c.id}`}
+                  title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
+                >
+                  <span
+                    className={cn('flex-1 truncate', group === 'working' && 'text-shimmer-dim')}
+                  >
+                    <StreamedTitle threadId={c.id} text={c.title} />
+                  </span>
+                  {state ? (
+                    <ThreadStatusIcon {...status} />
+                  ) : (
+                    <span aria-hidden className="size-4" />
+                  )}
+                </Link>
+              </SidebarMenuSubButton>
+            </SidebarMenuSubItem>
+          )
+        })}
+        {hidden > 0 && (
+          <SidebarMenuSubItem>
+            <SidebarMenuSubButton
+              asChild
+              size="sm"
+              className="text-muted-foreground rounded-[10px]"
+            >
+              <button type="button" onClick={() => setAll(true)}>
+                <span>{`+${hidden} more`}</span>
+              </button>
+            </SidebarMenuSubButton>
+          </SidebarMenuSubItem>
+        )}
+      </SidebarMenuSub>
+    </SidebarMenuItem>
+  )
 }
 
 /**
@@ -455,6 +615,7 @@ export function SidebarWork({
   // How many more than the cap the list shows: a step at a time.
   const [extra, setExtra] = useState(0)
   const [folded, toggleFolded] = useFolded()
+  const [childrenSet, toggleChildren] = useOpenChildren()
   // Whether the list shows every thread waiting on a person, not only the latest.
   const [allWaiting, setAllWaiting] = useState(false)
   // Threads older than the latest the panel loads, asked for from the end of the list; and
@@ -758,28 +919,48 @@ export function SidebarWork({
     // Working also shows on the title, a band passing over it. Stuck: its red dot alone.
     const working = statusKey(t) === 'working' && !t.eventsWaitingSince
     const state = !!(statusKey(t) || t.eventsWaitingSince)
+    // Its child threads, folded under it unless the member unfolded them or one is open.
+    const children = t.children ?? []
+    const activeChild =
+      children.find((c) => c.id === threadId && (expanded || pathname === `/app/threads/${c.id}`))
+        ?.id ?? null
+    const open = children.length > 0 && (childrenSet[t.id] ?? !!activeChild)
+    const toggle = () => toggleChildren(t.id, open)
     return (
-      <ThreadRow
-        key={t.id}
-        thread={t}
-        href={href}
-        active={threadId === t.id && (expanded || pathname === href)}
-        dot={state ? <ThreadStatusIcon {...status} /> : undefined}
-        working={working}
-        hint={
-          state ? `${threadStatusLabel(status)} · ${shortAgo(t.updatedAt)}` : shortAgo(t.updatedAt)
-        }
-        trailing={
-          dated && (
-            <span className="text-muted-foreground font-normal">{shortAgo(t.updatedAt)}</span>
-          )
-        }
-        memberId={memberId}
-        admin={admin}
-        onChanged={changed}
-        onDeleted={deleted}
-        drag={drag}
-      />
+      <Fragment key={t.id}>
+        <ThreadRow
+          caret={children.length ? { open, onToggle: toggle } : undefined}
+          thread={t}
+          href={href}
+          active={threadId === t.id && (expanded || pathname === href)}
+          dot={state ? <ThreadStatusIcon {...status} /> : undefined}
+          working={working}
+          hint={
+            state
+              ? `${threadStatusLabel(status)} · ${shortAgo(t.updatedAt)}`
+              : shortAgo(t.updatedAt)
+          }
+          trailing={
+            dated && (
+              <span className="text-muted-foreground font-normal">{shortAgo(t.updatedAt)}</span>
+            )
+          }
+          memberId={memberId}
+          admin={admin}
+          onChanged={changed}
+          onDeleted={deleted}
+          drag={drag}
+        />
+        {children.length > 0 && (
+          <SubThreads
+            items={children}
+            open={open}
+            onToggle={toggle}
+            activeId={activeChild}
+            needsYou={needsYou}
+          />
+        )}
+      </Fragment>
     )
   }
 
