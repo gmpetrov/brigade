@@ -116,7 +116,7 @@ export function ThreadChip({ thread, className }: { thread: ListThread; classNam
         router.push(`/app/threads/${thread.id}`)
       }}
       className={cn(
-        'inline-flex h-6 max-w-64 cursor-pointer items-center gap-1.5 rounded-full border bg-card px-2 text-xs font-medium text-foreground hover:bg-accent',
+        'inline-flex h-6 max-w-52 cursor-pointer items-center gap-1.5 rounded-full border bg-card px-2 text-xs font-medium text-foreground hover:bg-accent',
         waiting && 'border-warning/45 bg-warning/10',
         className,
       )}
