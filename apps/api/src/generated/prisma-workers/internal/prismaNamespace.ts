@@ -444,6 +444,7 @@ export const ModelName = {
   ListItem: 'ListItem',
   ListItemThread: 'ListItemThread',
   ListItemPull: 'ListItemPull',
+  LibraryLock: 'LibraryLock',
   DocumentPin: 'DocumentPin',
   MemoryLine: 'MemoryLine',
   DocumentVersion: 'DocumentVersion',
@@ -502,7 +503,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement"
+    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "documentPin" | "memoryLine" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3981,6 +3982,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ListItemPullCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ListItemPullCountAggregateOutputType> | number
+        }
+      }
+    }
+    LibraryLock: {
+      payload: Prisma.$LibraryLockPayload<ExtArgs>
+      fields: Prisma.LibraryLockFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LibraryLockFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LibraryLockFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload>
+        }
+        findFirst: {
+          args: Prisma.LibraryLockFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LibraryLockFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload>
+        }
+        findMany: {
+          args: Prisma.LibraryLockFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload>[]
+        }
+        create: {
+          args: Prisma.LibraryLockCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload>
+        }
+        createMany: {
+          args: Prisma.LibraryLockCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LibraryLockCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload>[]
+        }
+        delete: {
+          args: Prisma.LibraryLockDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload>
+        }
+        update: {
+          args: Prisma.LibraryLockUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload>
+        }
+        deleteMany: {
+          args: Prisma.LibraryLockDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LibraryLockUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LibraryLockUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload>[]
+        }
+        upsert: {
+          args: Prisma.LibraryLockUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryLockPayload>
+        }
+        aggregate: {
+          args: Prisma.LibraryLockAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLibraryLock>
+        }
+        groupBy: {
+          args: Prisma.LibraryLockGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LibraryLockGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LibraryLockCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LibraryLockCountAggregateOutputType> | number
         }
       }
     }
@@ -8011,6 +8086,15 @@ export const ListItemPullScalarFieldEnum = {
 export type ListItemPullScalarFieldEnum = (typeof ListItemPullScalarFieldEnum)[keyof typeof ListItemPullScalarFieldEnum]
 
 
+export const LibraryLockScalarFieldEnum = {
+  key: 'key',
+  owner: 'owner',
+  until: 'until'
+} as const
+
+export type LibraryLockScalarFieldEnum = (typeof LibraryLockScalarFieldEnum)[keyof typeof LibraryLockScalarFieldEnum]
+
+
 export const DocumentPinScalarFieldEnum = {
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
@@ -9714,6 +9798,7 @@ export type GlobalOmitConfig = {
   listItem?: Prisma.ListItemOmit
   listItemThread?: Prisma.ListItemThreadOmit
   listItemPull?: Prisma.ListItemPullOmit
+  libraryLock?: Prisma.LibraryLockOmit
   documentPin?: Prisma.DocumentPinOmit
   memoryLine?: Prisma.MemoryLineOmit
   documentVersion?: Prisma.DocumentVersionOmit

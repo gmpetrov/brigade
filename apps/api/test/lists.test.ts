@@ -657,4 +657,97 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
     assert.equal(lines[0], '* [x] Original <!-- item:dupitem123456789 -->')
     assert.equal(lines[1], `* [ ] Copied and reworded <!-- item:${linked.itemIds[0]} -->`)
   })
+
+  test('five changes of one file at once all land, on a pool of three connections', async () => {
+    const { newPrismaClient, withPrismaClient } = await import('../src/db.js')
+    const client = newPrismaClient(process.env.DATABASE_URL!, { max: 3 })
+    const ids5 = [
+      'pool000000000001',
+      'pool000000000002',
+      'pool000000000003',
+      'pool000000000004',
+      'pool000000000005',
+    ]
+    const file = await save(
+      'Pool/list.md',
+      ids5.map((id, i) => `* [ ] Line ${i} <!-- item:${id} -->`).join('\n'),
+    )
+    await db.listItem.createMany({
+      data: ids5.map((id, i) => ({ id, documentId: file.id, text: `Line ${i}` })),
+    } as never)
+    try {
+      await withPrismaClient(client, () =>
+        Promise.all(ids5.map((id) => lists.setItemDone(scoped(scope), scope, actor(), id, true))),
+      )
+    } finally {
+      await client.$disconnect()
+    }
+    assert.equal(((await read(file.id)).match(/\[x\]/g) ?? []).length, 5)
+  })
+
+  test('a holder past its lease writes nothing more, and the next one takes the lock', async () => {
+    const file = await save('Lease/list.md', '* [ ] Slow\n')
+    const order: string[] = []
+    const slow = library.withLibraryLock(
+      scope,
+      file.id,
+      async (lease) => {
+        order.push('slow in')
+        await new Promise((resolve) => setTimeout(resolve, 700))
+        lease.check()
+        order.push('slow wrote')
+      },
+      { leaseMs: 300 },
+    )
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    const next = library.withLibraryLock(scope, file.id, async () => {
+      order.push('next in')
+    })
+    await assert.rejects(slow, /took too long/)
+    await next
+    assert.deepEqual(order, ['slow in', 'next in'])
+  })
+
+  test("a line pasted with another workspace's marker gets an id of its own", async () => {
+    const source = await save(
+      'Original.md',
+      '* [ ] Copied content <!-- item:sharedmarker12345 -->\n',
+    )
+    await db.listItem.create({
+      data: { id: 'sharedmarker12345', documentId: source.id, text: 'Copied content' },
+    } as never)
+    const otherScope = { organizationId: ids.org, workspaceId: ids.other }
+    const otherDb = scoped(otherScope)
+    const otherTeammate = await otherDb.teammate.create({ data: { name: 'Pasted' } } as never)
+    const otherComputer = await otherDb.computer.create({
+      data: { kind: 'member_machine', memberId: ids.member, name: 'Pasted' },
+    } as never)
+    const thread = await otherDb.session.create({
+      data: {
+        teammateId: otherTeammate.id,
+        computerId: otherComputer.id,
+        startedByMemberId: ids.member,
+        title: 'Pasted',
+      },
+    } as never)
+    const copy = await save(
+      'Pasted.md',
+      '* [ ] Copied content <!-- item:sharedmarker12345 -->\n',
+      otherScope,
+      otherDb,
+    )
+    const linked = await lists.linkToThread(otherDb, otherScope, ids.member, copy.id, {
+      sessionId: thread.id,
+      items: [{ id: 'sharedmarker12345', text: 'Copied content' }],
+    })
+    assert.notEqual(linked.itemIds[0], 'sharedmarker12345')
+    assert.equal(
+      (await read(copy.id, otherScope, otherDb)).split('\n')[0],
+      `* [ ] Copied content <!-- item:${linked.itemIds[0]} -->`,
+    )
+    assert.equal(
+      (await prisma.listItem.findFirst({ where: { id: 'sharedmarker12345' } }))?.documentId,
+      source.id,
+    )
+  })
 })

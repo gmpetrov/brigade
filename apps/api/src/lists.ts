@@ -76,7 +76,7 @@ async function editList(
   context: Record<string, string>,
   edit: (text: string, list: ParsedList) => string,
 ) {
-  return withLibraryLock(scope, documentId, async () => {
+  return withLibraryLock(scope, documentId, async (lease) => {
     const row = await listFile(db, { id: documentId })
     const text = await documentText(scope, row)
     const next = edit(text, parseList(text))
@@ -87,7 +87,7 @@ async function editList(
       actor,
       { path: row.path, bytes: new TextEncoder().encode(next), contentType: row.contentType },
       context,
-      { locked: true },
+      { lease },
     )
   })
 }
@@ -347,11 +347,16 @@ async function itemsFor(
   picked: Picked[],
   context: Record<string, string> = {},
 ) {
-  // Across workspaces: ids are the rows' keys, and an editor can be handed any marker.
+  // Across workspaces: ids are the rows' keys, and a file or an editor can hold any marker (a
+  // line pasted from elsewhere with its own). Those of the picked lines, and the file's.
+  const stored = parseList(file.text).lines.flatMap((l) => (l.marker ? [l.marker] : []))
   const elsewhere = new Set(
     (
       await prisma.listItem.findMany({
-        where: { id: { in: picked.map((p) => p.id) }, documentId: { not: file.id } },
+        where: {
+          id: { in: [...new Set([...picked.map((p) => p.id), ...stored])] },
+          documentId: { not: file.id },
+        },
         select: { id: true },
       })
     ).map((r) => r.id),
@@ -365,7 +370,8 @@ async function itemsFor(
       const line = marked ?? findLine(list, p.text)
       // Not in the stored file yet (typed just now): the editor's save brings its marker.
       if (typeof line === 'string') return
-      if (line.id) {
+      // Its own item already; a marker another list's item has is not, and is replaced.
+      if (line.id && !elsewhere.has(line.id)) {
         ids[i] = line.id
         return
       }

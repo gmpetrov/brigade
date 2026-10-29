@@ -2,7 +2,7 @@
 // Library files: bytes in the bucket, metadata and text in `Document`. Memory
 // files and thread summaries: Markdown text in `Document` only. One search,
 // PostgreSQL full text over all of them.
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { extname } from 'node:path'
 import {
   LIBRARY_FILE_MAX,
@@ -209,37 +209,77 @@ export async function saveLibraryFile(
     restoredFromId?: string
     /** The stored text it builds on: when the file changed since, nothing is written (StaleMemory). */
     baseSha?: string
-    /** Its caller holds the file's lock already (withLibraryLock). */
-    locked?: boolean
+    /** Its caller holds the file's lock already (withLibraryLock): the lease it writes under. */
+    lease?: LibraryLease
   } = {},
 ): Promise<Awaited<ReturnType<typeof writeLibraryFile>>> {
   // A Markdown file is changed one save at a time: a list's lines are read, changed and written
   // back (src/lists.ts), and a save landing in between would be lost.
-  if (!options.locked && contentTypeFor(input.path, input.contentType) === 'text/markdown') {
+  if (!options.lease && contentTypeFor(input.path, input.contentType) === 'text/markdown') {
     const existing = await db.document.findFirst({
       where: { kind: 'library', path: input.path, deletedAt: null },
       select: { id: true },
     })
     if (existing)
-      return withLibraryLock(scope, existing.id, () =>
-        writeLibraryFile(db, scope, actor, input, context, options),
+      return withLibraryLock(scope, existing.id, (lease) =>
+        writeLibraryFile(db, scope, actor, input, context, { ...options, lease }),
       )
   }
   return writeLibraryFile(db, scope, actor, input, context, options)
 }
 
+/** How long a library file's lock is held at most: a crashed holder frees it after that. */
+const LEASE_MS = 30_000
+/** What a holder keeps in hand of its lease before it stops writing: clocks and a slow write. */
+const LEASE_MARGIN_MS = 10_000
+
+/** A held lock of a library file: `check` throws once too little of it is left to write safely. */
+export type LibraryLease = { check: () => void }
+
 /**
  * Run `work` holding a library file's lock, which every save of a Markdown file takes: what it
- * reads of the file stays what it writes over.
+ * reads of the file stays what it writes over. The lock is a lease in the database: waiting for
+ * it holds no connection (the pool is small), and a holder that crashed frees it once its lease
+ * ends. A holder past its lease writes nothing more (`lease.check`, before each write).
  */
-export function withLibraryLock<T>(scope: Scope, documentId: string, work: () => Promise<T>) {
-  return prisma.$transaction(
-    async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${scope.workspaceId}:library:${documentId}`}))`
-      return work()
+export async function withLibraryLock<T>(
+  scope: Scope,
+  documentId: string,
+  work: (lease: LibraryLease) => Promise<T>,
+  options: { leaseMs?: number; waitMs?: number } = {},
+): Promise<T> {
+  const key = `${scope.workspaceId}:${documentId}`
+  const owner = randomUUID()
+  const leaseMs = options.leaseMs ?? LEASE_MS
+  const giveUp = Date.now() + (options.waitMs ?? 20_000)
+  let started = 0
+  for (let pause = 20; ; pause = Math.min(pause * 2, 400)) {
+    started = Date.now()
+    const taken = await prisma.$queryRaw<{ owner: string }[]>`
+      INSERT INTO "LibraryLock" ("key", "owner", "until")
+      VALUES (${key}, ${owner}, timezone('UTC', now()) + make_interval(secs => ${leaseMs / 1000}))
+      ON CONFLICT ("key") DO UPDATE SET "owner" = EXCLUDED."owner", "until" = EXCLUDED."until"
+      WHERE "LibraryLock"."until" < timezone('UTC', now())
+      RETURNING "owner"`
+    if (taken[0]?.owner === owner) break
+    if (Date.now() > giveUp)
+      throw new HTTPException(409, { message: 'The file is being changed; try again' })
+    await new Promise((resolve) => setTimeout(resolve, pause))
+  }
+  const margin = Math.min(LEASE_MARGIN_MS, leaseMs / 3)
+  const lease: LibraryLease = {
+    check: () => {
+      if (Date.now() - started > leaseMs - margin)
+        throw new HTTPException(409, { message: 'The file took too long to change; try again' })
     },
-    { maxWait: 10_000, timeout: 30_000 },
-  )
+  }
+  try {
+    return await work(lease)
+  } finally {
+    await prisma.libraryLock
+      .deleteMany({ where: { key, owner } })
+      .catch((error) => console.warn(`library: lock ${key} not released: ${String(error)}`))
+  }
 }
 
 async function writeLibraryFile(
@@ -289,7 +329,9 @@ async function writeLibraryFile(
   if (existing) {
     // A file from before versions keeps what it was as its first.
     await ensureFirstVersion(db, scope, existing)
+    options.lease?.check()
     await keep(documentKey(scope, existing.id))
+    options.lease?.check()
     row = await db.document.update({ where: { id: existing.id }, data: fields })
   } else {
     row = await db.document.create({

@@ -29,7 +29,9 @@ mission; threads stay where the work happens.
   a thread that runs already (its teammate is told at its next turn, `thread.note`).
 - **One change of a list's file at a time.** Every save of a Markdown library file takes the
   file's lock (`withLibraryLock`), and Brigade reads, changes and writes a list under it, so no
-  save lands in between and is lost. A person's live save built on an older text is refused
+  save lands in between and is lost. The lock is a lease row (`LibraryLock`, 30 s): waiting for it
+  holds no database connection, a crashed holder frees it when its lease ends, and a holder past
+  its lease writes nothing more. A person's live save built on an older text is refused
   (409) and the collab server reconciles first.
 - **Ticks are changes to the file, made by code.** Ticking marks the line's box (`[x]`) and may
   add a short note after its text (`*PR #491, 29 Oct*`), a save of its own credited to who did

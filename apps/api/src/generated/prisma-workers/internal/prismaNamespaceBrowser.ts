@@ -98,6 +98,7 @@ export const ModelName = {
   ListItem: 'ListItem',
   ListItemThread: 'ListItemThread',
   ListItemPull: 'ListItemPull',
+  LibraryLock: 'LibraryLock',
   DocumentPin: 'DocumentPin',
   MemoryLine: 'MemoryLine',
   DocumentVersion: 'DocumentVersion',
@@ -963,6 +964,15 @@ export const ListItemPullScalarFieldEnum = {
 } as const
 
 export type ListItemPullScalarFieldEnum = (typeof ListItemPullScalarFieldEnum)[keyof typeof ListItemPullScalarFieldEnum]
+
+
+export const LibraryLockScalarFieldEnum = {
+  key: 'key',
+  owner: 'owner',
+  until: 'until'
+} as const
+
+export type LibraryLockScalarFieldEnum = (typeof LibraryLockScalarFieldEnum)[keyof typeof LibraryLockScalarFieldEnum]
 
 
 export const DocumentPinScalarFieldEnum = {

@@ -71,3 +71,12 @@ ALTER TABLE "ListItemPull" ADD CONSTRAINT "ListItemPull_itemId_fkey" FOREIGN KEY
 -- AddForeignKey
 ALTER TABLE "ListItemPull" ADD CONSTRAINT "ListItemPull_pullRequestId_fkey" FOREIGN KEY ("pullRequestId") REFERENCES "PullRequest"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+
+-- CreateTable
+CREATE TABLE "LibraryLock" (
+    "key" TEXT NOT NULL,
+    "owner" TEXT NOT NULL,
+    "until" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "LibraryLock_pkey" PRIMARY KEY ("key")
+);

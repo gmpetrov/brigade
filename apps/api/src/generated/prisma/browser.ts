@@ -287,6 +287,12 @@ export type ListItemThread = Prisma.ListItemThreadModel
  */
 export type ListItemPull = Prisma.ListItemPullModel
 /**
+ * Model LibraryLock
+ * A library file being changed (withLibraryLock, src/library.ts): one change at a time. A lease,
+ * so that waiting holds no database connection and a holder that crashed frees it at `until`.
+ */
+export type LibraryLock = Prisma.LibraryLockModel
+/**
  * Model DocumentPin
  * A library file a member pinned: it stays at the top of their Library. Each member's own,
  * like a thread's pin. A file in the trash keeps its pin, which shows again once restored.
