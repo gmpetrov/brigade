@@ -28,10 +28,13 @@ test.after(async () => {
   await rm(home, { recursive: true, force: true })
 })
 
-type Outcome = { status: 'idle' | 'failed'; error?: string }
+type Outcome = { status: 'idle' | 'failed'; error?: string; memoryStop?: string }
 
-/** A thread whose teammate's turns end as `outcomes` say, in order (then idle). */
-function setup(sessionId: string, outcomes: Outcome[]) {
+/**
+ * A thread whose teammate's turns end as `outcomes` say, in order (then idle). `memoryRoom`:
+ * the computer's memory, as the runner reads it on a cloud computer.
+ */
+function setup(sessionId: string, outcomes: Outcome[], memoryRoom?: () => Promise<boolean>) {
   const events: AgentEvent[] = []
   const prompts: string[] = []
   const threads = new Threads({
@@ -46,6 +49,7 @@ function setup(sessionId: string, outcomes: Outcome[]) {
     previews: { threadBusy: async () => undefined },
     attachments: { deliver: async () => [] },
     context: { memoryFor: () => ({ workspace: '', teammate: '' }) },
+    ...(memoryRoom ? { memoryRoom } : {}),
   } as unknown as ConstructorParameters<typeof Threads>[0])
   made.push(threads)
   const harness = {
@@ -53,6 +57,8 @@ function setup(sessionId: string, outcomes: Outcome[]) {
     run: async (input: { kind: string; text?: string }, spec: ThreadSpec) => {
       prompts.push(input.text ?? '')
       const outcome = outcomes.shift() ?? { status: 'idle' }
+      // The memory guard stops the turn while it runs: its harness's process goes with it.
+      if (outcome.memoryStop) threads.stoppedForMemory(spec.sessionId, outcome.memoryStop)
       if (outcome.error)
         events.push({ at: new Date().toISOString(), type: 'error', message: outcome.error })
       else
@@ -152,4 +158,59 @@ test('a message sent before the try goes on instead of it', async () => {
   await sleep(400)
   assert.equal(turns(t.events), 2, 'the failed turn and the message, no try')
   assert.equal(t.prompts[1], 'Never mind, do this')
+})
+
+const BRIDGE_CLOSED = 'claude-code bridge closed before the turn finished.'
+
+test('a turn whose harness process went away is tried again on its own', async () => {
+  const t = setup('bridge', [{ status: 'failed', error: BRIDGE_CLOSED }])
+  t.message('Go')
+  await sleep(400)
+  assert.equal(turns(t.events), 2)
+  assert.match(t.notes().join('\n'), /Mark tries again in/)
+})
+
+test('a turn the memory guard stopped goes on once the computer has memory again', async () => {
+  // Room for the first turn, none at the first try, then room again.
+  const room = [true, false, true, true]
+  const t = setup(
+    'memory',
+    [
+      {
+        status: 'failed',
+        error: BRIDGE_CLOSED,
+        memoryStop: 'the computer is nearly out of memory, and it held the most (2.1 GB)',
+      },
+    ],
+    async () => room.shift() ?? true,
+  )
+  t.message('Go')
+  await sleep(600)
+  assert.equal(turns(t.events), 2, 'the turn, then once there is memory, the try')
+  const notes = t.notes()
+  assert.equal(notes.length, 2)
+  assert.match(
+    notes[0]!,
+    /^Mark goes on once the computer has memory again, in .+ at the earliest\.$/,
+  )
+  assert.match(notes[1]!, /^The computer is still short of memory\. Mark goes on once/)
+  assert.match(
+    t.prompts[1]!,
+    /^Your last turn in this thread stopped on an error: Stopped to give the computer memory back: the computer is nearly out of memory, and it held the most \(2\.1 GB\)\./,
+  )
+  assert.match(t.prompts[1]!, /one at a time/)
+})
+
+test('a turn waits for the computer to have memory before it starts', async () => {
+  let room = false
+  const t = setup('wait', [], async () => room)
+  t.message('Go')
+  await sleep(100)
+  assert.equal(turns(t.events), 0)
+  assert.deepEqual(t.notes(), [
+    'The computer is short of memory: Mark starts once it has some again.',
+  ])
+  room = true
+  await sleep(5_200)
+  assert.equal(turns(t.events), 1)
 })

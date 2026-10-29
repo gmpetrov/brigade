@@ -88,12 +88,13 @@ const OUT_OF_TURN = new Set<AgentEvent['type']>([
 ])
 
 /**
- * Errors that pass (a full disk, the network, Claude's API down or overloaded): a turn that
+ * Errors that pass (a full disk, the network, Claude's API down or overloaded, the harness's
+ * process gone, as the kernel kills it when the computer runs out of memory): a turn that
  * failed on one is tried again on its own, after RETRY_AFTER_MS. Out of usage is not one
  * of them: that turn moves to another account, or pauses (HarnessThread.run).
  */
 const PASSING_ERROR =
-  /ENOSPC|no space left|EAI_AGAIN|ENOTFOUND|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|socket hang up|fetch failed|network error|overloaded|internal server error|api_error|service unavailable|bad gateway|gateway time-?out|\b(500|502|503|504|529)\b/i
+  /ENOSPC|no space left|EAI_AGAIN|ENOTFOUND|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|socket hang up|fetch failed|network error|overloaded|internal server error|api_error|service unavailable|bad gateway|gateway time-?out|\b(500|502|503|504|529)\b|bridge closed before the turn finished/i
 /** A full disk: tried again only once this much is free on it. */
 const DISK_ERROR = /ENOSPC|no space left/i
 const FREE_BYTES = 1024 ** 3
@@ -101,9 +102,17 @@ const FREE_BYTES = 1024 ** 3
 const RETRY_AFTER_MS = Number(process.env.BRIGADE_RETRY_MS)
   ? Array<number>(3).fill(Number(process.env.BRIGADE_RETRY_MS))
   : [60_000, 5 * 60_000, 15 * 60_000]
+/** What a turn's error says once the memory guard stopped it (stoppedForMemory). */
+const memoryStopped = (why: string) => `Stopped to give the computer memory back: ${why}.`
+const MEMORY_STOPPED = /^Stopped to give the computer memory back/
+/** How long a turn waits for the computer to have memory for it (memoryRoom) before it starts anyway. */
+const MEMORY_WAIT_MS = 5 * 60_000
 /** What a teammate is told when its turn is tried again after it failed. */
 const retried = (error: string) =>
   `Your last turn in this thread stopped on an error: ${error.slice(0, 2_000)}\n\n` +
+  (MEMORY_STOPPED.test(error)
+    ? 'Run heavy commands (tests, typechecks, builds) one at a time, and only those you need.\n\n'
+    : '') +
   'Before you redo anything, check what is already done (files, commands you ran, messages you sent), then carry on where you left off.'
 
 /** A queued message's note while a person has control of its thread. */
@@ -289,6 +298,8 @@ type Thread = {
    * its own since a person last asked; with the timer of the next try (failed).
    */
   failed?: { spec: ThreadSpec; error: string; tries: number; timer?: NodeJS.Timeout }
+  /** The memory guard stopped its running turn, and why (stoppedForMemory). */
+  memoryStop?: string
 }
 
 export class Threads {
@@ -330,6 +341,11 @@ export class Threads {
       previews: Previews
       /** Put an image a reply shows in its thread's bucket folder (reply-images.ts). */
       storeImage: StoreImage
+      /**
+       * Whether the computer has memory for a turn now (memory-guard.ts): a turn waits for it
+       * before it starts, and a turn the guard stopped is tried again only once it does.
+       */
+      memoryRoom?: () => Promise<boolean>
       /** Thread folders archived to free disk, or moved here: put back before a turn. */
       folders: Pick<Folders, 'ready' | 'takeNote' | 'touch' | 'arrive' | 'release'>
       /**
@@ -907,6 +923,7 @@ export class Threads {
         })
         thread.slotWait = undefined
         acquired = true
+        await this.waitForMemory(spec)
         // The runner is stopping: the API still has the turn, and gives it to the next runner.
         if (this.stopping) return
         const upTo = prepare ? await prepare() : undefined
@@ -982,9 +999,12 @@ export class Threads {
         })
         seat.turn = []
         seat.spec = spec
+        thread.memoryStop = undefined
         const outcome = await seat.harness.run(turn, spec, controller.signal)
+        const memoryStop = thread.memoryStop
+        thread.memoryStop = undefined
         if (outcome.status === 'failed' && !controller.signal.aborted)
-          this.failed(thread, spec, outcome.error ?? '')
+          this.failed(thread, spec, memoryStop ? memoryStopped(memoryStop) : (outcome.error ?? ''))
         else this.settleFailure(thread)
         if (outcome.status === 'waiting' && outcome.error) {
           this.options.emit(spec.sessionId, {
@@ -1036,11 +1056,12 @@ export class Threads {
    * once there is room on it. Else, and after those tries, a person tries it again
    * (thread.retry) or writes.
    */
-  private failed(thread: Thread, spec: ThreadSpec, error: string, diskFull = false) {
+  private failed(thread: Thread, spec: ThreadSpec, error: string, still?: 'disk' | 'memory') {
     const tries = thread.failed?.tries ?? 0
     clearTimeout(thread.failed?.timer)
     thread.failed = { spec, error, tries }
-    if (!PASSING_ERROR.test(error) || this.stopping || thread.takeover) return
+    const memory = MEMORY_STOPPED.test(error)
+    if (!(memory || PASSING_ERROR.test(error)) || this.stopping || thread.takeover) return
     const name = spec.teammate.name
     const wait = RETRY_AFTER_MS[tries]
     if (wait === undefined)
@@ -1048,9 +1069,17 @@ export class Threads {
         spec.sessionId,
         `${name} tried again ${tries} times and the error came back. Try again once it is fixed.`,
       )
+    const why =
+      still === 'disk'
+        ? "The computer's disk is still full. "
+        : still === 'memory'
+          ? 'The computer is still short of memory. '
+          : ''
     this.say(
       spec.sessionId,
-      `${diskFull ? "The computer's disk is still full. " : ''}${name} tries again in ${minutes(wait)}.`,
+      memory
+        ? `${why}${name} goes on once the computer has memory again, in ${minutes(wait)} at the earliest.`
+        : `${why}${name} tries again in ${minutes(wait)}.`,
     )
     thread.failed.timer = setTimeout(() => void this.tryAgain(thread, tries + 1), wait)
   }
@@ -1062,7 +1091,12 @@ export class Threads {
     failed.timer = undefined
     failed.tries = tries
     if (DISK_ERROR.test(failed.error) && !(await roomOnDisk()))
-      return this.failed(thread, failed.spec, failed.error, true)
+      return this.failed(thread, failed.spec, failed.error, 'disk')
+    if (
+      MEMORY_STOPPED.test(failed.error) &&
+      !(await (this.options.memoryRoom?.() ?? Promise.resolve(true)))
+    )
+      return this.failed(thread, failed.spec, failed.error, 'memory')
     this.retryTurn(thread, failed)
   }
 
@@ -1679,6 +1713,9 @@ export class Threads {
         folder.workDir,
         paths.state,
         (event) => {
+          // Its harness's process gone when the memory guard stopped it: the error says so.
+          if (event.type === 'error' && thread.memoryStop)
+            event = { ...event, message: memoryStopped(thread.memoryStop) }
           // In a thread with several teammates, each event says whose it is.
           this.options.emit(spec.sessionId, { ...event, teammateId })
           if (event.type === 'message.done' && event.text.trim()) {
@@ -1774,6 +1811,35 @@ export class Threads {
       thread.harnesses.set(teammateId, seat)
     }
     return seat
+  }
+
+  /**
+   * The memory guard is about to stop the turn running in this thread: it fails, and is
+   * tried again on its own once the computer has memory again (failed).
+   */
+  stoppedForMemory(sessionId: string, why: string) {
+    const thread = this.threads.get(sessionId)
+    if (thread?.running) thread.memoryStop = why
+  }
+
+  /**
+   * Before a turn starts, the computer has memory for it: else it would only push the memory
+   * guard to stop another turn. It waits, said once in its thread, MEMORY_WAIT_MS at most.
+   */
+  private async waitForMemory(spec: ThreadSpec) {
+    const room = this.options.memoryRoom
+    if (!room || (await room())) return
+    this.options.emit(spec.sessionId, {
+      at: new Date().toISOString(),
+      type: 'raw',
+      source: 'runner',
+      value: `The computer is short of memory: ${spec.teammate.name} starts once it has some again.`,
+    })
+    const until = Date.now() + MEMORY_WAIT_MS
+    while (!this.stopping && Date.now() < until) {
+      await sleep(5_000)
+      if (await room()) return
+    }
   }
 
   /** A slot for a turn or a memory run; `waits` is told when there is none free now. */
