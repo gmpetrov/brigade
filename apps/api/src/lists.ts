@@ -382,13 +382,20 @@ export async function pinnedLists(db: ScopedDb, memberId: string) {
 
 /** The threads working on the lists this member pinned: the sidebar shows them under each. */
 export async function pinnedListThreads(db: ScopedDb, memberId: string) {
-  const links = await db.listItemThread.findMany({
-    where: { item: { document: { ...LIST_FILE, listPins: { some: { memberId } } } } },
-    select: { sessionId: true },
-    orderBy: { createdAt: 'desc' },
+  // The threads themselves, not their item links: one thread on many items takes one place.
+  const threads = await db.session.findMany({
+    where: {
+      archivedAt: null,
+      parentId: null,
+      listItems: {
+        some: { item: { document: { ...LIST_FILE, listPins: { some: { memberId } } } } },
+      },
+    },
+    select: { id: true },
+    orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
     take: 200,
   })
-  return [...new Set(links.map((l) => l.sessionId))]
+  return threads.map((t) => t.id)
 }
 
 /** Where a new pin goes under Pinned: after this member's pinned threads and lists alike. */

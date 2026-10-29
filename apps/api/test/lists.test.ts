@@ -223,6 +223,32 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     )
     assert.equal(await lists.nextPinPosition(db, ids.member), 2)
     assert.deepEqual(await lists.pinnedListThreads(db, ids.member), [threadId])
+    // A newer thread on 200 of its items takes one place, not 200: the older one stays.
+    const newer = await db.session.create({
+      data: {
+        teammateId: ids.riley,
+        startedByMemberId: ids.member,
+        computerId: ids.computer,
+        title: 'On many items',
+        status: 'idle',
+      },
+    } as never)
+    const many = Array.from({ length: 200 }, (_, i) => ({
+      ...scope,
+      id: `pinned-${suffix}-${i}`,
+      documentId: ids.file,
+      text: `Item ${i}`,
+    }))
+    await db.listItem.createMany({ data: many })
+    await db.listItemThread.createMany({
+      data: many.map((item) => ({ ...scope, itemId: item.id, sessionId: newer.id })),
+    })
+    assert.deepEqual(
+      (await lists.pinnedListThreads(db, ids.member)).sort(),
+      [newer.id, threadId].sort(),
+    )
+    await db.listItem.deleteMany({ where: { id: { in: many.map((i) => i.id) } } })
+    await db.session.deleteMany({ where: { id: newer.id } })
     await assert.rejects(lists.pinList(db, member, 'no-such-file'), /No Markdown file/)
     await db.threadPin.deleteMany({ where: { memberId: ids.member } })
     await db.listPin.deleteMany({ where: { memberId: ids.member } })
