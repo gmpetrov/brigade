@@ -2520,6 +2520,18 @@ model MailMessage {
   handedByMemberId   String?
   /// When it was handed over: the newest hand-over holds its conversation.
   handedAt           DateTime?
+  /// in: what its thread did with it without replying, said with email_no_reply: no_reply (it
+  /// chose not to answer: a person sees it To do) or handled (it did what it asked, no reply
+  /// needed). A reply sent after it says the rest; a person asking for a reply clears it.
+  outcome            String?
+  /// The thread's reason, in a line, shown in the Inbox.
+  outcomeNote        String?
+  outcomeAt          DateTime?
+  /// in: Brigade asked its thread what it did with it, once: a turn ended without a reply or an
+  /// outcome (src/mail/outcomes.ts).
+  outcomeAskedAt     DateTime?
+  /// out: a person wrote and sent it from the Inbox (Reply myself), not the teammate.
+  sentByMemberId     String?
   error              String?
   attempts           Int           @default(0)
   receivedAt         DateTime      @default(now())

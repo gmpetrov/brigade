@@ -72,6 +72,11 @@ export type MailMessageMinAggregateOutputType = {
   doneByMemberId: string | null
   handedByMemberId: string | null
   handedAt: Date | null
+  outcome: string | null
+  outcomeNote: string | null
+  outcomeAt: Date | null
+  outcomeAskedAt: Date | null
+  sentByMemberId: string | null
   error: string | null
   attempts: number | null
   receivedAt: Date | null
@@ -115,6 +120,11 @@ export type MailMessageMaxAggregateOutputType = {
   doneByMemberId: string | null
   handedByMemberId: string | null
   handedAt: Date | null
+  outcome: string | null
+  outcomeNote: string | null
+  outcomeAt: Date | null
+  outcomeAskedAt: Date | null
+  sentByMemberId: string | null
   error: string | null
   attempts: number | null
   receivedAt: Date | null
@@ -165,6 +175,11 @@ export type MailMessageCountAggregateOutputType = {
   doneByMemberId: number
   handedByMemberId: number
   handedAt: number
+  outcome: number
+  outcomeNote: number
+  outcomeAt: number
+  outcomeAskedAt: number
+  sentByMemberId: number
   error: number
   attempts: number
   receivedAt: number
@@ -218,6 +233,11 @@ export type MailMessageMinAggregateInputType = {
   doneByMemberId?: true
   handedByMemberId?: true
   handedAt?: true
+  outcome?: true
+  outcomeNote?: true
+  outcomeAt?: true
+  outcomeAskedAt?: true
+  sentByMemberId?: true
   error?: true
   attempts?: true
   receivedAt?: true
@@ -261,6 +281,11 @@ export type MailMessageMaxAggregateInputType = {
   doneByMemberId?: true
   handedByMemberId?: true
   handedAt?: true
+  outcome?: true
+  outcomeNote?: true
+  outcomeAt?: true
+  outcomeAskedAt?: true
+  sentByMemberId?: true
   error?: true
   attempts?: true
   receivedAt?: true
@@ -311,6 +336,11 @@ export type MailMessageCountAggregateInputType = {
   doneByMemberId?: true
   handedByMemberId?: true
   handedAt?: true
+  outcome?: true
+  outcomeNote?: true
+  outcomeAt?: true
+  outcomeAskedAt?: true
+  sentByMemberId?: true
   error?: true
   attempts?: true
   receivedAt?: true
@@ -448,6 +478,11 @@ export type MailMessageGroupByOutputType = {
   doneByMemberId: string | null
   handedByMemberId: string | null
   handedAt: Date | null
+  outcome: string | null
+  outcomeNote: string | null
+  outcomeAt: Date | null
+  outcomeAskedAt: Date | null
+  sentByMemberId: string | null
   error: string | null
   attempts: number
   receivedAt: Date
@@ -521,6 +556,11 @@ export type MailMessageWhereInput = {
   doneByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   handedByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   handedAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  outcome?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  outcomeNote?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  outcomeAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  outcomeAskedAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  sentByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   error?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   attempts?: Prisma.IntFilter<"MailMessage"> | number
   receivedAt?: Prisma.DateTimeFilter<"MailMessage"> | Date | string
@@ -577,6 +617,11 @@ export type MailMessageOrderByWithRelationInput = {
   doneByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   handedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   handedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  outcome?: Prisma.SortOrderInput | Prisma.SortOrder
+  outcomeNote?: Prisma.SortOrderInput | Prisma.SortOrder
+  outcomeAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  outcomeAskedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  sentByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   error?: Prisma.SortOrderInput | Prisma.SortOrder
   attempts?: Prisma.SortOrder
   receivedAt?: Prisma.SortOrder
@@ -638,6 +683,11 @@ export type MailMessageWhereUniqueInput = Prisma.AtLeast<{
   doneByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   handedByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   handedAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  outcome?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  outcomeNote?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  outcomeAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  outcomeAskedAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  sentByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   error?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   attempts?: Prisma.IntFilter<"MailMessage"> | number
   receivedAt?: Prisma.DateTimeFilter<"MailMessage"> | Date | string
@@ -694,6 +744,11 @@ export type MailMessageOrderByWithAggregationInput = {
   doneByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   handedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   handedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  outcome?: Prisma.SortOrderInput | Prisma.SortOrder
+  outcomeNote?: Prisma.SortOrderInput | Prisma.SortOrder
+  outcomeAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  outcomeAskedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  sentByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   error?: Prisma.SortOrderInput | Prisma.SortOrder
   attempts?: Prisma.SortOrder
   receivedAt?: Prisma.SortOrder
@@ -752,6 +807,11 @@ export type MailMessageScalarWhereWithAggregatesInput = {
   doneByMemberId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
   handedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
   handedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"MailMessage"> | Date | string | null
+  outcome?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
+  outcomeNote?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
+  outcomeAt?: Prisma.DateTimeNullableWithAggregatesFilter<"MailMessage"> | Date | string | null
+  outcomeAskedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"MailMessage"> | Date | string | null
+  sentByMemberId?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
   error?: Prisma.StringNullableWithAggregatesFilter<"MailMessage"> | string | null
   attempts?: Prisma.IntWithAggregatesFilter<"MailMessage"> | number
   receivedAt?: Prisma.DateTimeWithAggregatesFilter<"MailMessage"> | Date | string
@@ -796,6 +856,11 @@ export type MailMessageCreateInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -852,6 +917,11 @@ export type MailMessageUncheckedCreateInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -896,6 +966,11 @@ export type MailMessageUpdateInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -952,6 +1027,11 @@ export type MailMessageUncheckedUpdateInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1002,6 +1082,11 @@ export type MailMessageCreateManyInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1046,6 +1131,11 @@ export type MailMessageUpdateManyMutationInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1096,6 +1186,11 @@ export type MailMessageUncheckedUpdateManyInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1166,6 +1261,11 @@ export type MailMessageCountOrderByAggregateInput = {
   doneByMemberId?: Prisma.SortOrder
   handedByMemberId?: Prisma.SortOrder
   handedAt?: Prisma.SortOrder
+  outcome?: Prisma.SortOrder
+  outcomeNote?: Prisma.SortOrder
+  outcomeAt?: Prisma.SortOrder
+  outcomeAskedAt?: Prisma.SortOrder
+  sentByMemberId?: Prisma.SortOrder
   error?: Prisma.SortOrder
   attempts?: Prisma.SortOrder
   receivedAt?: Prisma.SortOrder
@@ -1213,6 +1313,11 @@ export type MailMessageMaxOrderByAggregateInput = {
   doneByMemberId?: Prisma.SortOrder
   handedByMemberId?: Prisma.SortOrder
   handedAt?: Prisma.SortOrder
+  outcome?: Prisma.SortOrder
+  outcomeNote?: Prisma.SortOrder
+  outcomeAt?: Prisma.SortOrder
+  outcomeAskedAt?: Prisma.SortOrder
+  sentByMemberId?: Prisma.SortOrder
   error?: Prisma.SortOrder
   attempts?: Prisma.SortOrder
   receivedAt?: Prisma.SortOrder
@@ -1256,6 +1361,11 @@ export type MailMessageMinOrderByAggregateInput = {
   doneByMemberId?: Prisma.SortOrder
   handedByMemberId?: Prisma.SortOrder
   handedAt?: Prisma.SortOrder
+  outcome?: Prisma.SortOrder
+  outcomeNote?: Prisma.SortOrder
+  outcomeAt?: Prisma.SortOrder
+  outcomeAskedAt?: Prisma.SortOrder
+  sentByMemberId?: Prisma.SortOrder
   error?: Prisma.SortOrder
   attempts?: Prisma.SortOrder
   receivedAt?: Prisma.SortOrder
@@ -1604,6 +1714,11 @@ export type MailMessageCreateWithoutWorkspaceInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1658,6 +1773,11 @@ export type MailMessageUncheckedCreateWithoutWorkspaceInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1737,6 +1857,11 @@ export type MailMessageScalarWhereInput = {
   doneByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   handedByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   handedAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  outcome?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  outcomeNote?: Prisma.StringNullableFilter<"MailMessage"> | string | null
+  outcomeAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  outcomeAskedAt?: Prisma.DateTimeNullableFilter<"MailMessage"> | Date | string | null
+  sentByMemberId?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   error?: Prisma.StringNullableFilter<"MailMessage"> | string | null
   attempts?: Prisma.IntFilter<"MailMessage"> | number
   receivedAt?: Prisma.DateTimeFilter<"MailMessage"> | Date | string
@@ -1781,6 +1906,11 @@ export type MailMessageCreateWithoutSessionInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1835,6 +1965,11 @@ export type MailMessageUncheckedCreateWithoutSessionInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1905,6 +2040,11 @@ export type MailMessageCreateWithoutConnectionInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -1959,6 +2099,11 @@ export type MailMessageUncheckedCreateWithoutConnectionInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2029,6 +2174,11 @@ export type MailMessageCreateWithoutAddressInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2083,6 +2233,11 @@ export type MailMessageUncheckedCreateWithoutAddressInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2153,6 +2308,11 @@ export type MailMessageCreateWithoutAliasInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2207,6 +2367,11 @@ export type MailMessageUncheckedCreateWithoutAliasInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2277,6 +2442,11 @@ export type MailMessageCreateWithoutContactInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2331,6 +2501,11 @@ export type MailMessageUncheckedCreateWithoutContactInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2406,6 +2581,11 @@ export type MailMessageCreateManyWorkspaceInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2450,6 +2630,11 @@ export type MailMessageUpdateWithoutWorkspaceInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2504,6 +2689,11 @@ export type MailMessageUncheckedUpdateWithoutWorkspaceInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2553,6 +2743,11 @@ export type MailMessageUncheckedUpdateManyWithoutWorkspaceInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2602,6 +2797,11 @@ export type MailMessageCreateManySessionInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2646,6 +2846,11 @@ export type MailMessageUpdateWithoutSessionInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2700,6 +2905,11 @@ export type MailMessageUncheckedUpdateWithoutSessionInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2749,6 +2959,11 @@ export type MailMessageUncheckedUpdateManyWithoutSessionInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2798,6 +3013,11 @@ export type MailMessageCreateManyConnectionInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -2842,6 +3062,11 @@ export type MailMessageUpdateWithoutConnectionInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2896,6 +3121,11 @@ export type MailMessageUncheckedUpdateWithoutConnectionInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2945,6 +3175,11 @@ export type MailMessageUncheckedUpdateManyWithoutConnectionInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2994,6 +3229,11 @@ export type MailMessageCreateManyAddressInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -3038,6 +3278,11 @@ export type MailMessageUpdateWithoutAddressInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3092,6 +3337,11 @@ export type MailMessageUncheckedUpdateWithoutAddressInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3141,6 +3391,11 @@ export type MailMessageUncheckedUpdateManyWithoutAddressInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3190,6 +3445,11 @@ export type MailMessageCreateManyAliasInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -3234,6 +3494,11 @@ export type MailMessageUpdateWithoutAliasInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3288,6 +3553,11 @@ export type MailMessageUncheckedUpdateWithoutAliasInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3337,6 +3607,11 @@ export type MailMessageUncheckedUpdateManyWithoutAliasInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3386,6 +3661,11 @@ export type MailMessageCreateManyContactInput = {
   doneByMemberId?: string | null
   handedByMemberId?: string | null
   handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
   error?: string | null
   attempts?: number
   receivedAt?: Date | string
@@ -3430,6 +3710,11 @@ export type MailMessageUpdateWithoutContactInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3484,6 +3769,11 @@ export type MailMessageUncheckedUpdateWithoutContactInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3533,6 +3823,11 @@ export type MailMessageUncheckedUpdateManyWithoutContactInput = {
   doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   attempts?: Prisma.IntFieldUpdateOperationsInput | number
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3585,6 +3880,11 @@ export type MailMessageSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   doneByMemberId?: boolean
   handedByMemberId?: boolean
   handedAt?: boolean
+  outcome?: boolean
+  outcomeNote?: boolean
+  outcomeAt?: boolean
+  outcomeAskedAt?: boolean
+  sentByMemberId?: boolean
   error?: boolean
   attempts?: boolean
   receivedAt?: boolean
@@ -3641,6 +3941,11 @@ export type MailMessageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   doneByMemberId?: boolean
   handedByMemberId?: boolean
   handedAt?: boolean
+  outcome?: boolean
+  outcomeNote?: boolean
+  outcomeAt?: boolean
+  outcomeAskedAt?: boolean
+  sentByMemberId?: boolean
   error?: boolean
   attempts?: boolean
   receivedAt?: boolean
@@ -3697,6 +4002,11 @@ export type MailMessageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   doneByMemberId?: boolean
   handedByMemberId?: boolean
   handedAt?: boolean
+  outcome?: boolean
+  outcomeNote?: boolean
+  outcomeAt?: boolean
+  outcomeAskedAt?: boolean
+  sentByMemberId?: boolean
   error?: boolean
   attempts?: boolean
   receivedAt?: boolean
@@ -3753,6 +4063,11 @@ export type MailMessageSelectScalar = {
   doneByMemberId?: boolean
   handedByMemberId?: boolean
   handedAt?: boolean
+  outcome?: boolean
+  outcomeNote?: boolean
+  outcomeAt?: boolean
+  outcomeAskedAt?: boolean
+  sentByMemberId?: boolean
   error?: boolean
   attempts?: boolean
   receivedAt?: boolean
@@ -3761,7 +4076,7 @@ export type MailMessageSelectScalar = {
   updatedAt?: boolean
 }
 
-export type MailMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "addressId" | "connectionId" | "sourceId" | "projectId" | "box" | "aliasId" | "direction" | "status" | "resendId" | "messageId" | "inReplyTo" | "references" | "conversationId" | "fromAddress" | "fromName" | "to" | "cc" | "replyTo" | "subject" | "text" | "headers" | "authentication" | "automatic" | "sender" | "memberId" | "contactId" | "attachments" | "route" | "routeNote" | "sessionId" | "triggerId" | "teammateId" | "approvedByMemberId" | "sendAt" | "doneAt" | "doneByMemberId" | "handedByMemberId" | "handedAt" | "error" | "attempts" | "receivedAt" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["mailMessage"]>
+export type MailMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "addressId" | "connectionId" | "sourceId" | "projectId" | "box" | "aliasId" | "direction" | "status" | "resendId" | "messageId" | "inReplyTo" | "references" | "conversationId" | "fromAddress" | "fromName" | "to" | "cc" | "replyTo" | "subject" | "text" | "headers" | "authentication" | "automatic" | "sender" | "memberId" | "contactId" | "attachments" | "route" | "routeNote" | "sessionId" | "triggerId" | "teammateId" | "approvedByMemberId" | "sendAt" | "doneAt" | "doneByMemberId" | "handedByMemberId" | "handedAt" | "outcome" | "outcomeNote" | "outcomeAt" | "outcomeAskedAt" | "sentByMemberId" | "error" | "attempts" | "receivedAt" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["mailMessage"]>
 export type MailMessageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   address?: boolean | Prisma.MailMessage$addressArgs<ExtArgs>
@@ -3906,6 +4221,26 @@ export type $MailMessagePayload<ExtArgs extends runtime.Types.Extensions.Interna
      * When it was handed over: the newest hand-over holds its conversation.
      */
     handedAt: Date | null
+    /**
+     * in: what its thread did with it without replying, said with email_no_reply: no_reply (it
+     * chose not to answer: a person sees it To do) or handled (it did what it asked, no reply
+     * needed). A reply sent after it says the rest; a person asking for a reply clears it.
+     */
+    outcome: string | null
+    /**
+     * The thread's reason, in a line, shown in the Inbox.
+     */
+    outcomeNote: string | null
+    outcomeAt: Date | null
+    /**
+     * in: Brigade asked its thread what it did with it, once: a turn ended without a reply or an
+     * outcome (src/mail/outcomes.ts).
+     */
+    outcomeAskedAt: Date | null
+    /**
+     * out: a person wrote and sent it from the Inbox (Reply myself), not the teammate.
+     */
+    sentByMemberId: string | null
     error: string | null
     attempts: number
     receivedAt: Date
@@ -4385,6 +4720,11 @@ export interface MailMessageFieldRefs {
   readonly doneByMemberId: Prisma.FieldRef<"MailMessage", 'String'>
   readonly handedByMemberId: Prisma.FieldRef<"MailMessage", 'String'>
   readonly handedAt: Prisma.FieldRef<"MailMessage", 'DateTime'>
+  readonly outcome: Prisma.FieldRef<"MailMessage", 'String'>
+  readonly outcomeNote: Prisma.FieldRef<"MailMessage", 'String'>
+  readonly outcomeAt: Prisma.FieldRef<"MailMessage", 'DateTime'>
+  readonly outcomeAskedAt: Prisma.FieldRef<"MailMessage", 'DateTime'>
+  readonly sentByMemberId: Prisma.FieldRef<"MailMessage", 'String'>
   readonly error: Prisma.FieldRef<"MailMessage", 'String'>
   readonly attempts: Prisma.FieldRef<"MailMessage", 'Int'>
   readonly receivedAt: Prisma.FieldRef<"MailMessage", 'DateTime'>

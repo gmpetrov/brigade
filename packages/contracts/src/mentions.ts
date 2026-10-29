@@ -8,7 +8,8 @@ import { previewElementsToText } from './preview-elements.js'
  * file (`document`) is labelled with its library path; a design's id and label are
  * its folder's library path ("acme/pricing.design"); a design system's id is its
  * library folder ("design-systems/acme") and its label its name. A project's id
- * is its Project id. Messages from before projects named a repository as
+ * is its Project id. An email's id is its mail's (email_read's), and its label its sender and
+ * subject. Messages from before projects named a repository as
  * `project` with an owner/name id; those still render as repositories.
  */
 export const MENTION_KINDS = [
@@ -23,6 +24,8 @@ export const MENTION_KINDS = [
   'design-system',
   'design',
   'project',
+  // A mail of the Inbox: its id is the MailMessage's, which email_read takes.
+  'email',
 ] as const
 export type MentionKind = (typeof MENTION_KINDS)[number]
 

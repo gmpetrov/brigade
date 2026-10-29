@@ -62,7 +62,10 @@ function useConnection(mention: Mention, known?: ConnectionKind) {
   return { kind: known ?? connection?.kind, connection }
 }
 
-/** A teammate reads as a name; everything else as a chip with its icon. A library file opens in the panel. */
+/**
+ * A teammate reads as a name; everything else as a chip with its icon. A library file opens in the
+ * panel, an email its conversation in the Inbox.
+ */
 export function MentionChip({
   mention,
   connectionKind,
@@ -92,6 +95,19 @@ export function MentionChip({
   const Tag = open ? 'button' : 'span'
   const chip =
     'mx-px inline-flex max-w-[28ch] items-center gap-1.5 overflow-hidden rounded-md border bg-card px-1.5 align-baseline leading-relaxed text-ellipsis whitespace-nowrap text-card-foreground [&>svg]:flex-none [&>svg]:text-muted-foreground'
+  // An email opens its conversation in the Inbox.
+  if (mention.kind === 'email')
+    return (
+      <Link
+        href={`/app/inbox?status=all&item=${encodeURIComponent(`mail:${mention.id}`)}`}
+        data-kind="email"
+        title={`Open ${mention.label} in the Inbox`}
+        className={cn(chip, 'max-w-[40ch] hover:bg-accent', className)}
+      >
+        <MentionIcon kind="email" />
+        <span className="min-w-0 truncate">{mention.label}</span>
+      </Link>
+    )
   // A project opens its page.
   if (mention.kind === 'project' && !isLegacyProjectMention(mention))
     return (
@@ -197,6 +213,14 @@ export function MentionIcon({
         <circle cx="7.5" cy="11.5" r="1" />
         <circle cx="10.5" cy="7.5" r="1" />
         <circle cx="15.5" cy="8.5" r="1" />
+      </svg>
+    )
+  if (kind === 'email')
+    // An envelope.
+    return (
+      <svg {...line}>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m3 7 9 6 9-6" />
       </svg>
     )
   if (kind === 'thread')

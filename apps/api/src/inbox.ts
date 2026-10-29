@@ -15,8 +15,10 @@ import {
   type InboxDraft,
   type InboxItem,
   type InboxNext,
+  type InboxOutcome,
   type MailRoute,
 } from '@brigade/contracts'
+import { randomUUID } from 'node:crypto'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { Prisma, prisma, type ScopedDb } from './db.js'
@@ -25,7 +27,8 @@ import { authorisedFetch } from './connector-calls.js'
 import { attachmentLink } from './connectors/email.js'
 import { gmailFile } from './connectors/gmail.js'
 import { addressOf } from './mail/names.js'
-import { UNDO_SECONDS } from './mail/outbound.js'
+import { clearOutcome } from './mail/outcomes.js'
+import { sendDraft, UNDO_SECONDS } from './mail/outbound.js'
 import { usableProject } from './projects.js'
 import { watchReplies } from './replies.js'
 import type { WorkspaceScope } from './scope.js'
@@ -152,7 +155,8 @@ const anyOf = (column: Prisma.Sql, ids: string[]) =>
 /** Each conversation's latest received mail, in these sources. */
 const heads = (scope: WorkspaceScope, sources: InboxSource[]) => sql`
   select distinct on (m.box, m."conversationId")
-    m.id, m.box, m."conversationId", m."receivedAt", m."doneAt", m."sessionId", m.route, m.status
+    m.id, m.box, m."conversationId", m."receivedAt", m."doneAt", m."sessionId", m.route, m.status,
+    m.outcome
   from "MailMessage" m
   where m."workspaceId" = ${scope.workspaceId} and m.direction = 'in'
     and (${anyOf(
@@ -166,6 +170,18 @@ const heads = (scope: WorkspaceScope, sources: InboxSource[]) => sql`
 /** Nobody took it, and no person marked it done (h: a head). */
 const WAITING = sql`(h."doneAt" is null and h."sessionId" is null
   and (coalesce(h.route, '') in (${Prisma.join(WAITING_ROUTES)}) or h.status in ('pending', 'failed')))`
+
+/**
+ * Its thread chose not to reply (email_no_reply), and nothing was sent in it since (h: a head):
+ * a person should look at it.
+ */
+const declinedSql = (
+  scope: WorkspaceScope,
+) => sql`(h."doneAt" is null and coalesce(h.outcome, '') = 'no_reply'
+  and not exists (select 1 from "MailMessage" o
+    where o."workspaceId" = ${scope.workspaceId} and o.box = h.box
+      and o."conversationId" = h."conversationId" and o.direction = 'out'
+      and o.status <> 'cancelled' and o."receivedAt" > h."receivedAt"))`
 
 /**
  * A teammate's reply in it waits for this member's approval (h: a head): an open email_send
@@ -189,14 +205,18 @@ const scheduledSql = (scope: WorkspaceScope) => sql`exists (select 1 from "MailM
 /** A mail leaving after this is one set for later, not one in its window to cancel. */
 const laterThan = () => new Date(Date.now() + UNDO_SECONDS * 1000)
 
-/** To do: nobody took it, or a reply waits for this member. With a teammate: neither, not done. */
+/**
+ * To do: nobody took it, its thread chose not to reply, or a reply waits for this member. With a
+ * teammate: none of these, not done.
+ */
 const statusSql = (scope: WorkspaceScope, status: InboxFilters['status']) =>
   status === 'waiting'
-    ? sql`(${WAITING} or (h."doneAt" is null and ${draftSql(scope)}))`
+    ? sql`(${WAITING} or ${declinedSql(scope)} or (h."doneAt" is null and ${draftSql(scope)}))`
     : status === 'done'
       ? sql`h."doneAt" is not null`
       : status === 'handled'
-        ? sql`(h."doneAt" is null and not ${WAITING} and not ${draftSql(scope)})`
+        ? sql`(h."doneAt" is null and not ${WAITING} and not ${declinedSql(scope)}
+            and not ${draftSql(scope)})`
         : status === 'scheduled'
           ? scheduledSql(scope)
           : sql`true`
@@ -372,6 +392,7 @@ async function toItems(
             direction: true,
             status: true,
             sendAt: true,
+            receivedAt: true,
           },
         })
       : [],
@@ -385,6 +406,7 @@ async function toItems(
         (x) => x.box === m.box && x.conversationId === m.conversationId && hidden(scope, x),
       )
     const projectId = m.projectId ?? m.address?.projectId ?? m.session?.projectId ?? null
+    const outcome = m.doneAt ? null : outcomeOf(m, mails)
     const teammateId = m.session?.teammateId ?? m.address?.teammateId ?? null
     // The address it came to as people know it: the mailbox's own on the workspace's domain,
     // unless it came to a sign-up's or a project's variant on Brigade's.
@@ -408,7 +430,11 @@ async function toItems(
       subject: masked ? 'Mail to a sign-up address' : m.subject,
       snippet: masked ? '' : m.text.replace(/\s+/g, ' ').slice(0, 160),
       at: m.receivedAt.toISOString(),
-      status: m.doneAt ? 'done' : waiting(m) ? 'waiting' : 'handled',
+      status: m.doneAt
+        ? 'done'
+        : waiting(m) || outcome?.kind === 'no_reply'
+          ? 'waiting'
+          : 'handled',
       route: (m.route as MailRoute | null) ?? null,
       thread: m.session ? { id: m.session.id, title: m.session.title } : null,
       rule: rules.find((r) => r.id === m.triggerId) ?? null,
@@ -421,8 +447,33 @@ async function toItems(
         counts.find((c) => c.box === m.box && c.conversationId === m.conversationId)?._count._all ??
         1,
       next: masked ? null : nextOf(m, mails, drafts, later, teammates),
+      outcome: masked ? null : outcome,
     }
   })
+}
+
+/**
+ * What its thread said it did with a conversation it did not answer (its head's), while nothing
+ * was sent in it since.
+ */
+function outcomeOf(
+  head: Pick<
+    Row,
+    'box' | 'conversationId' | 'receivedAt' | 'outcome' | 'outcomeNote' | 'outcomeAt'
+  >,
+  mails: ConversationMail[],
+): InboxOutcome | null {
+  if ((head.outcome !== 'no_reply' && head.outcome !== 'handled') || !head.outcomeAt) return null
+  const answered = mails.some(
+    (x) =>
+      x.box === head.box &&
+      x.conversationId === head.conversationId &&
+      x.direction === 'out' &&
+      x.receivedAt > head.receivedAt,
+  )
+  return answered
+    ? null
+    : { kind: head.outcome, note: head.outcomeNote ?? '', at: head.outcomeAt.toISOString() }
 }
 
 type ConversationMail = {
@@ -433,6 +484,7 @@ type ConversationMail = {
   direction: 'in' | 'out'
   status: string
   sendAt: Date | null
+  receivedAt: Date
 }
 type Draft = InboxDraft & { replyTo: string }
 
@@ -670,7 +722,59 @@ export async function readItem(
     handTo: await handableTeammates(db, head.address?.connectionId ?? head.connectionId),
     doneAt: head.doneAt?.toISOString() ?? null,
     drafts: item!.hidden ? [] : (await draftsOf(db, scope, mails)).map(({ replyTo: _, ...d }) => d),
+    mayPrompt: mayPrompt(scope, head),
+    // In its thread's name: by who may write in it, who may also cancel it before it leaves.
+    canReply: !item!.hidden && !!head.address && mayPrompt(scope, head),
+    replyRecipients: recipientsOf(head),
   }
+}
+
+/** Where a reply to a mail goes: its Reply-To, else its sender. */
+const recipientsOf = (m: { replyTo: string[]; fromAddress: string }) =>
+  m.replyTo.length ? m.replyTo : [m.fromAddress]
+
+/** Whether this member may write in the conversation's thread (thread-spec.ts, requireMayPrompt). */
+const mayPrompt = (scope: WorkspaceScope, head: Row) =>
+  !!head.session &&
+  (head.session.startedByMemberId === scope.memberId || head.session.othersMayPrompt)
+
+/**
+ * A person asked its thread to reply after all (their message went to the thread): the
+ * conversation is the teammate's again, no longer To do for what it chose.
+ */
+export async function askedToReply(db: ScopedDb, scope: WorkspaceScope, itemId: string) {
+  const { head } = await conversationOf(db, scope, itemId)
+  if (!mayPrompt(scope, head))
+    throw new HTTPException(403, { message: 'Only who may write in its thread can ask it' })
+  await clearOutcome(db, head)
+}
+
+/**
+ * A person's own reply, from the Inbox: from the conversation's mailbox, to its people, in its
+ * thread's name (the thread is told by the conversation, and does not answer twice: outbound.ts).
+ * Brigade's addresses only: Gmail's is answered in Gmail.
+ */
+export async function replyItem(db: ScopedDb, scope: WorkspaceScope, itemId: string, text: string) {
+  const { head } = await conversationOf(db, scope, itemId)
+  const detail = await readItem(db, scope, itemId)
+  if (!detail.canReply || !head.address || !head.session)
+    throw new HTTPException(403, { message: 'You cannot reply to this conversation from here' })
+  const thread = await db.session.findFirst({
+    where: { id: head.session.id },
+    select: { id: true, projectId: true, teammateId: true, origin: true, status: true },
+  })
+  if (!thread) throw new HTTPException(404, { message: 'Its thread is gone' })
+  // What the form showed: the same recipients, from the same mail.
+  const to = recipientsOf(head)
+  const sent = await sendDraft(db, scope, {
+    address: head.address,
+    thread,
+    teammateId: thread.teammateId,
+    draft: { to, subject: '', text, replyTo: head.id },
+    callId: `inbox:${randomUUID()}`,
+    sentByMemberId: scope.memberId,
+  })
+  return { id: `mail:${sent.id}`, sendAt: sent.sendAt.toISOString() }
 }
 
 /** Why nobody took a mail, in plain words. */
@@ -801,7 +905,7 @@ export async function handItem(
     }))
   const how = gmail
     ? `It is Gmail message ${m.sourceId} on ${detail.to}: read its conversation with gmail_read_thread, and answer with gmail_send and replyToMessageId "${m.sourceId}" if it needs one.`
-    : `Read it in full with email_read ("${m.id}"), and answer with email_send and replyTo "${m.id}" if it needs one.`
+    : `Read it in full with email_read ("${m.id}"), and answer with email_send and replyTo "${m.id}" if it needs one; if not, say why with email_no_reply ("${m.id}").`
   // The mail is untrusted: in this member's message, its mentions summon nobody and grant nothing.
   // Made plain once written out, since writing it (JSON) can turn its words into a mention.
   const mail = unmention(

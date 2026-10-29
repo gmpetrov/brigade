@@ -29,6 +29,7 @@ import type { SessionStatus } from '../generated/prisma/enums.js'
 import { bringBackFromLater } from '../later.js'
 import { handleLibraryCall, handleMemoryTidy, handleMemoryUpdate } from '../library-calls.js'
 import { endLogin, loginById, loginsOnComputer, updateLogin } from '../logins.js'
+import { noteMailLeft } from '../mail/outcomes.js'
 import { movesOn, onReleased } from '../move.js'
 import { noteFailure } from '../ops/failures.js'
 import { noteDryRunEvents } from '../playbook-dry-runs.js'
@@ -603,6 +604,12 @@ async function advance(hub: WorkspaceHub, conn: RunnerConn, session: Session) {
       void movesOn(conn.computerId, session.id).catch(console.error)
     // Not awaited: a merge under way may call GitHub and prompt the author.
     void noteTurnsEnded(session, fresh).catch(console.error)
+    // A turn that ended with the thread idle may have left mail without a reply or a word on it:
+    // it is asked once what it did with it (src/mail/outcomes.ts). Not awaited.
+    void noteMailLeft(
+      session,
+      status === 'idle' && fresh.some((e) => e.event.type === 'turn.completed'),
+    ).catch(console.error)
     // Product analytics (src/analytics.ts): the turns these events end. Not awaited.
     trackTurns(session, fresh)
     // Not awaited, nor tried again: the tokens a turn spent never hold its thread back.

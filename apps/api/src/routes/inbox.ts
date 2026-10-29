@@ -1,14 +1,17 @@
-// The Inbox (src/inbox.ts): the list across sources, one item, done, handed to a teammate.
-import { HandInboxItem, InboxQuery, SetInboxDone } from '@brigade/contracts'
+// The Inbox (src/inbox.ts): the list across sources, one item, done, handed to a teammate, its
+// thread asked to reply, a person's own reply.
+import { HandInboxItem, InboxQuery, ReplyInboxItem, SetInboxDone } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { attachmentKey, directUploads, presignGet, streamObject } from '../bucket.js'
 import {
+  askedToReply,
   handItem,
   listInbox,
   openFile,
   parseCursor,
   readItem,
+  replyItem,
   setDone,
   waitingCount,
 } from '../inbox.js'
@@ -83,6 +86,18 @@ export const inbox = new Hono<AppEnv>()
     const { done } = await parseBody(c.req.raw, SetInboxDone)
     await setDone(c.var.db, c.var.scope, c.req.param('id'), done)
     return c.json({ ok: true })
+  })
+
+  /** A person asked its thread to reply after all, in the thread: no longer To do for what it chose. */
+  .post('/items/:id/asked', async (c) => {
+    await askedToReply(c.var.db, c.var.scope, c.req.param('id'))
+    return c.json({ ok: true })
+  })
+
+  /** A person's own reply, from its mailbox (Reply myself). */
+  .post('/items/:id/reply', async (c) => {
+    const { text } = await parseBody(c.req.raw, ReplyInboxItem)
+    return c.json(await replyItem(c.var.db, c.var.scope, c.req.param('id'), text), 201)
   })
 
   .post('/items/:id/hand', async (c) => {

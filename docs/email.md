@@ -147,7 +147,18 @@ conversation wakes the thread.
 ## Agents' tools
 
 `email_list`, `email_read`, `email_read_attachment`, `email_new_address`, `email_wait` (up to two
-minutes in one call), `email_send`, `email_cancel`. Everything read is untrusted input.
+minutes in one call), `email_send`, `email_cancel`, `email_no_reply`. Everything read is untrusted
+input.
+
+**What a thread did without replying** (`src/mail/outcomes.ts`): a thread that leaves a received
+mail unanswered says why with `email_no_reply`, in one line a person reads in the Inbox
+(`MailMessage.outcome`, `outcomeNote`, on the conversation's received mails): `no_reply` (it chose
+not to answer: the conversation is To do) or `handled` (it did what the mail needed without a
+reply: it stays with the teammate). A mail sent in the conversation since makes it answered; a new
+mail starts over. A turn that ends with the thread idle and a mail of it (taken by its
+conversation, a rule, a hand-over or a read) neither answered, nor accounted for, nor waiting for
+approval or for a wake-up to bring it in, gets one Brigade message asking what it did with it
+(`outcomeAskedAt`, once per mail).
 
 ## The Inbox
 
@@ -170,11 +181,19 @@ has to keep its messages there.
   whatever the view): `waiting` (nobody took it: `box`, `cap`, `loop`, or not delivered yet, and not
   done), `handled` (a thread has it, or its route needs nobody), `done` (`MailMessage.doneAt`, set on
   all its received mails; its next mail waits again).
+- **What its thread did without replying** (`InboxItem.outcome`), on its row and above the
+  conversation, with its reason: "Riley didn't reply" puts it To do, with Ask Riley to reply (a
+  message in its thread, and the conversation is the teammate's again, `POST
+/api/inbox/items/:id/asked`), Discuss with Riley (its thread opens with the mail mentioned in its
+  box, `@[sender · subject](email:<mail id>)`, which opens the conversation here) and Reply myself
+  (Brigade's addresses: the person's reply leaves from the mailbox, in the conversation, sent by
+  them, `sentByMemberId`, `POST /api/inbox/items/:id/reply`; the teammate's own reply after it is
+  refused, as after a reply sent from Gmail). All three are for who may write in its thread.
 - **Its next step** (`InboxItem.next`), on its row: a teammate's reply waiting for approval (an open
   `email_send` ticket of its thread answering one of its mails), else the next reply set to leave
   later (sent, `scheduled`, past the 30 seconds to cancel any mail).
-- **Tabs**: To do (`waiting`: nobody took it, or a reply waits for this member's approval: they
-  started its thread, or are an admin, as `decide.ts` says), With teammates (`handled`, but those),
+- **Tabs**: To do (`waiting`: nobody took it, its thread chose not to reply, or a reply waits for
+  this member's approval: they started its thread, or are an admin, as `decide.ts` says), With teammates (`handled`, but those),
   Scheduled (a reply set for later), Done, All. The sidebar counts the To do, last 30 days.
 - **Filters**: source, agent, project, words; a conversation shows when any of its mails matches
   (words: its senders, or the words of its mails received or sent).

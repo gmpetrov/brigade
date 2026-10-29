@@ -1,16 +1,18 @@
 'use client'
 // The Inbox: every email the workspace's mailboxes received (Brigade's own addresses and
 // connected Gmail accounts), one row per conversation with its next step; read one, approve a
-// teammate's reply (now or for later), mark it done or hand it to a teammate. The list and the
-// open conversation are two columns, each the window's height. Filters and the open email live
-// in the address, so links and back work.
-import type {
-  InboxDetail,
-  InboxDraft,
-  InboxItem,
-  InboxMessage,
-  InboxSourceView,
-  InboxStatus,
+// teammate's reply (now or for later), mark it done or hand it to a teammate, and see what its
+// thread did when it did not reply (have it reply, discuss it there, or reply yourself). The
+// list and the open conversation are two columns, each the window's height. Filters and the
+// open email live in the address, so links and back work.
+import {
+  formatMention,
+  type InboxDetail,
+  type InboxDraft,
+  type InboxItem,
+  type InboxMessage,
+  type InboxSourceView,
+  type InboxStatus,
 } from '@brigade/contracts'
 import {
   ArrowLeft,
@@ -59,6 +61,7 @@ import {
   keptFilters,
   reloadsInboxList,
 } from '@/lib/inbox'
+import { addToReply } from '@/lib/reply-drafts'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -706,14 +709,22 @@ function NextStep({ item }: { item: InboxItem }) {
         <Clock aria-hidden className="size-3" />
         Leaves {leavingLabel(item.next.at)}
       </span>
+    ) : item.outcome?.kind === 'no_reply' ? (
+      <span className="min-w-0 truncate font-semibold text-warning" title={item.outcome.note}>
+        didn’t reply{item.outcome.note && `: ${item.outcome.note}`}
+      </span>
     ) : item.status === 'waiting' ? (
       <span className="font-semibold text-warning">
         {trouble ? destination(item) : 'No teammate on it'}
       </span>
+    ) : item.outcome?.kind === 'handled' ? (
+      <span className="min-w-0 truncate" title={item.outcome.note}>
+        handled it without a reply
+      </span>
     ) : null
   return (
     <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-      {item.status === 'waiting' && !item.next ? (
+      {item.status === 'waiting' && !item.next && !item.outcome ? (
         <span aria-hidden className="size-1.5 flex-none rounded-full bg-warning" />
       ) : (
         who && (
@@ -915,6 +926,8 @@ function Reader({
               )}
             </div>
           </div>
+        ) : d.outcome && d.thread && !done ? (
+          <OutcomeLine detail={d} about={about} onChanged={reload} />
         ) : (
           <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
             <span
@@ -1334,6 +1347,194 @@ function MailFiles({ m }: { m: InboxMessage }) {
         unavailable="This image can’t be shown: its mailbox no longer has it, or Brigade did not keep it."
       />
     </>
+  )
+}
+
+/** The conversation's latest mail, as a mention its thread can read (email_read takes its id). */
+const mailMention = (d: InboxDetail) =>
+  formatMention({
+    kind: 'email',
+    id: d.id.slice('mail:'.length),
+    label: `${d.fromName || d.from} · ${d.subject || '(No subject)'}`,
+  })
+
+/**
+ * What the thread did with a conversation it did not answer, in its own words, and what a person
+ * can do about it: have it reply after all, talk it over in the thread, or reply themselves.
+ */
+function OutcomeLine({
+  detail: d,
+  about,
+  onChanged,
+}: {
+  detail: InboxDetail
+  about: string
+  onChanged: () => Promise<void>
+}) {
+  const router = useRouter()
+  const [replying, setReplying] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+  const outcome = d.outcome!
+  const thread = d.thread!
+  const who = d.teammate?.name ?? 'The teammate'
+  const declined = outcome.kind === 'no_reply'
+
+  async function ask() {
+    setBusy(true)
+    setError(undefined)
+    try {
+      await api(`/threads/${thread.id}/messages`, {
+        body: { text: `Please reply to ${mailMention(d)} after all.` },
+      })
+      await api(`${itemPath(d.id)}/asked`, { body: {} })
+      await onChanged()
+    } catch (e) {
+      setError(message(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  // Its thread opens with the mail in its box, ready for what the person has to say.
+  function discuss() {
+    addToReply(thread.id, `${mailMention(d)} `)
+    router.push(`/app/threads/${thread.id}`)
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div
+        className={cn(
+          'flex flex-col gap-2 rounded-xl px-3.5 py-2.5',
+          declined ? 'border border-warning/30 bg-warning/10' : 'border bg-secondary/40',
+        )}
+      >
+        <p className="flex flex-wrap items-center gap-x-1.5 text-sm">
+          <span
+            aria-hidden
+            className={cn(
+              'size-1.5 flex-none rounded-full',
+              declined ? 'bg-warning' : 'bg-primary',
+            )}
+          />
+          <span className="font-medium">
+            {declined ? `${who} didn’t reply` : `${who} handled it without a reply`}
+          </span>
+          <time dateTime={outcome.at} className="text-muted-foreground">
+            · {timeAgo(outcome.at)}
+          </time>
+          {about && <span className="text-muted-foreground">· {about}</span>}
+        </p>
+        {outcome.note && (
+          <p className="text-sm text-muted-foreground wrap-anywhere">“{outcome.note}”</p>
+        )}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {declined && d.mayPrompt && (
+            <Button size="sm" disabled={busy} onClick={() => void ask()}>
+              Ask {who} to reply
+            </Button>
+          )}
+          {d.mayPrompt ? (
+            <Button
+              size="sm"
+              variant={declined ? 'outline' : 'ghost'}
+              className={cn(!declined && 'h-7 px-2')}
+              onClick={discuss}
+            >
+              Discuss with {who}
+            </Button>
+          ) : (
+            <Button asChild size="sm" variant="ghost" className="h-7 px-2">
+              <Link href={`/app/threads/${thread.id}`}>
+                Open its thread
+                <ArrowUpRight aria-hidden />
+              </Link>
+            </Button>
+          )}
+          {declined && d.canReply && (
+            <Button
+              size="sm"
+              variant="outline"
+              aria-expanded={replying}
+              onClick={() => setReplying((r) => !r)}
+            >
+              Reply myself
+            </Button>
+          )}
+        </div>
+      </div>
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+      {replying && (
+        <ReplyForm
+          detail={d}
+          onCancel={() => setReplying(false)}
+          onSent={async () => {
+            setReplying(false)
+            await onChanged()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+/** A person's own reply, from the conversation's mailbox, to its people. */
+function ReplyForm({
+  detail,
+  onCancel,
+  onSent,
+}: {
+  detail: InboxDetail
+  onCancel: () => void
+  onSent: () => Promise<void>
+}) {
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string>()
+  async function send() {
+    if (!text.trim()) return
+    setSending(true)
+    setError(undefined)
+    try {
+      await api(`${itemPath(detail.id)}/reply`, { body: { text } })
+      await onSent()
+    } catch (e) {
+      setError(message(e))
+      setSending(false)
+    }
+  }
+  return (
+    <form
+      className="flex flex-col gap-3 rounded-lg border p-4"
+      onSubmit={(e) => {
+        e.preventDefault()
+        void send()
+      }}
+    >
+      <p className="text-sm text-muted-foreground">
+        To {detail.replyRecipients.join(', ')}, from {detail.to}
+      </p>
+      <Textarea
+        aria-label="Your reply"
+        placeholder="Write your reply"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={5}
+        autoFocus
+      />
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" size="sm" disabled={!text.trim() || sending}>
+          {sending ? 'Sending…' : 'Send'}
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          It leaves in 30 seconds: you can cancel it until then.
+        </span>
+      </div>
+    </form>
   )
 }
 

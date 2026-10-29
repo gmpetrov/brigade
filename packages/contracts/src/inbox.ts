@@ -58,7 +58,15 @@ export type InboxItem = {
   /** Its mails, received and sent. */
   count: number
   next: InboxNext | null
+  /**
+   * What its thread said it did without replying (email_no_reply), while no reply went out
+   * since: no_reply puts it To do, with the thread's reason; handled leaves it with the teammate.
+   */
+  outcome: InboxOutcome | null
 }
+
+/** What a thread did with a mail it did not answer, in its own words. */
+export type InboxOutcome = { kind: 'no_reply' | 'handled'; note: string; at: string }
 
 /** One mail of a conversation. */
 export type InboxMessage = {
@@ -101,6 +109,12 @@ export type InboxDetail = InboxItem & {
   doneAt: string | null
   /** Its teammates' replies waiting for approval, oldest first. */
   drafts: InboxDraft[]
+  /** This member may write in its thread: ask its teammate to reply, discuss it there. */
+  mayPrompt: boolean
+  /** This member may reply from the Inbox, from its mailbox: Brigade's addresses, in a thread they may write in. */
+  canReply: boolean
+  /** Where a person's reply goes: its latest mail's Reply-To, else its sender. */
+  replyRecipients: string[]
 }
 
 export type InboxSourceView = {
@@ -127,6 +141,9 @@ export const InboxQuery = z.object({
 })
 
 export const SetInboxDone = z.object({ done: z.boolean() })
+
+/** A person's own reply, from the Inbox: to the conversation's people, from its mailbox. */
+export const ReplyInboxItem = z.object({ text: z.string().trim().min(1).max(100_000) })
 
 export const HandInboxItem = z.object({
   teammateId: z.string(),
