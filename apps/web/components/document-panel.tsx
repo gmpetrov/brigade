@@ -55,6 +55,12 @@ type DocumentPanel = {
   remove: (target: EditTarget) => void
   /** Closes every tab, and the panel. */
   closeAll: () => void
+  /**
+   * The document Ask stepped aside from, below xl: the reply that mentions it offers
+   * to open it again (AskedDocument), until the person dismisses that.
+   */
+  asked: OpenDocument | null
+  setAsked: (document: OpenDocument | null) => void
 }
 
 const Context = createContext<DocumentPanel | null>(null)
@@ -88,6 +94,7 @@ type Tabs = { tabs: OpenDocument[]; active: string | null }
 export function DocumentPanelProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<Tabs>({ tabs: [], active: null })
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set())
+  const [asked, setAsked] = useState<OpenDocument | null>(null)
 
   // What was open before a reload, in this tab.
   useEffect(() => {
@@ -158,8 +165,8 @@ export function DocumentPanelProvider({ children }: { children: ReactNode }) {
 
   const current = state.tabs.find((t) => keyOf(t.target) === state.active) ?? null
   const value = useMemo(
-    () => ({ current, tabs: state.tabs, changed, open, close, remove, closeAll }),
-    [current, state.tabs, changed, open, close, remove, closeAll],
+    () => ({ current, tabs: state.tabs, changed, open, close, remove, closeAll, asked, setAsked }),
+    [current, state.tabs, changed, open, close, remove, closeAll, asked],
   )
   // Kept while the panel is hidden, so what changed meanwhile still shows when it comes back.
   const stamps = useRef<Stamps>(new Map())
@@ -225,7 +232,7 @@ function WatchChanges({
 
 /** The open document, beside the page. Rendered once, by the dashboard. */
 export function DocumentPanel() {
-  const { current, tabs, close, closeAll } = useDocumentPanel()
+  const { current, tabs, close, closeAll, setAsked } = useDocumentPanel()
   const [history, setHistory] = useState(false)
   // The editor again after a restore, with what was restored.
   const [opened, setOpened] = useState(0)
@@ -241,15 +248,18 @@ export function DocumentPanel() {
   const askName = discussion?.teammate?.name
   const discuss = discussion?.ask
   // Below xl the panel lies over the page (the whole screen on a phone): it steps
-  // aside, so the thread Ask opens shows. Its tabs come back with the next document.
+  // aside, so the thread Ask opens shows, and the reply offers it again.
   const onAsk = useMemo(
     () =>
       discuss &&
+      current &&
       (async (passage?: string) => {
         await discuss(passage)
-        if (!window.matchMedia('(min-width: 1280px)').matches) close()
+        if (window.matchMedia('(min-width: 1280px)').matches) return
+        setAsked(current)
+        close()
       }),
-    [discuss, close],
+    [discuss, current, close, setAsked],
   )
   const ask = useMemo(
     () => (askName && onAsk ? { teammate: askName, onAsk } : undefined),
@@ -464,6 +474,43 @@ function DocumentTabs() {
           <DropdownMenuItem onSelect={closeAll}>Close all</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+    </div>
+  )
+}
+
+/**
+ * Above a reply that mentions the document Ask stepped aside from: a tap opens it
+ * again. Gone once the reply is sent (it no longer mentions it) or dismissed.
+ */
+export function AskedDocument({ text }: { text: string }) {
+  const documents = useOptionalDocumentPanel()
+  const asked = documents?.asked
+  if (!documents || asked?.target.kind !== 'library') return null
+  if (!text.includes(`(document:${asked.target.id})`)) return null
+  if (documents.current && keyOf(documents.current.target) === keyOf(asked.target)) return null
+  return (
+    <div className="flex items-center gap-2 pl-2 text-sm text-muted-foreground">
+      <FileText className="size-4 shrink-0" aria-hidden />
+      <button
+        type="button"
+        onClick={() => documents.open(asked)}
+        title={`Open ${asked.title}`}
+        className="flex min-w-0 flex-1 items-center gap-1.5 text-left outline-none hover:text-foreground focus-visible:underline"
+      >
+        <span className="min-w-0 truncate font-medium text-foreground">{asked.title}</span>
+        <span className="shrink-0">· Open</span>
+      </button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        className="shrink-0 rounded-full"
+        onClick={() => documents.setAsked(null)}
+        aria-label={`Don’t offer ${asked.title} again`}
+        title="Dismiss"
+      >
+        <X aria-hidden />
+      </Button>
     </div>
   )
 }

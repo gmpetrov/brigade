@@ -58,7 +58,7 @@ import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { useTouchScreen } from '@/components/desktop-touch'
 import { ComputerPanel, ExpandedComputer } from '@/components/computer-panel'
 import { TeachTask } from '@/components/teach-task'
-import { useDocumentPanel } from '@/components/document-panel'
+import { AskedDocument, useDocumentPanel } from '@/components/document-panel'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
 import { dropKeptPreview, KeepPreview } from '@/components/kept-previews'
@@ -1493,6 +1493,7 @@ export function ThreadConversation({
                       </span>
                     </div>
                   )}
+                  <AskedDocument text={text} />
                   <PreviewElementChips
                     elements={elements.map((e) => ({
                       element: e.element,

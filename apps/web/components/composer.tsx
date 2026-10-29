@@ -33,6 +33,7 @@ import { Suggestion, type SuggestionProps } from '@tiptap/suggestion'
 import { BookOpenText, GraduationCap, ImageIcon, Palette, Shapes } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, type ComponentType } from 'react'
 import { useDashboard } from '@/components/dashboard'
+import { libraryDocument, useOptionalDocumentPanel } from '@/components/document-panel'
 import {
   connectionMentionLabel,
   credentialHint,
@@ -250,10 +251,17 @@ function MentionMenu({ items, selected, query, onPick, onHover }: MenuProps) {
 
 function MentionView({ node, selected }: ReactNodeViewProps) {
   const { kind, id, label } = node.attrs as Mention
+  // A library file opens in the panel, as it does once sent.
+  const documents = useOptionalDocumentPanel()
+  const open =
+    kind === 'document' && documents
+      ? () => documents.open(libraryDocument({ id, path: label }))
+      : undefined
   return (
     <NodeViewWrapper as="span">
       <MentionChip
         mention={{ kind, id, label }}
+        onOpen={open}
         className={selected ? 'rounded-md outline-2 outline-offset-1 outline-primary' : undefined}
       />
     </NodeViewWrapper>
