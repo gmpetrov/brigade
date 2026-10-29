@@ -868,7 +868,7 @@ export function SidebarWork({
   // A child thread open: its parent, which shows it unfolded.
   const inView =
     !!openId &&
-    (pinned.some((t) => t.id === openId) ||
+    (pinned.some((t) => holds(t, openId)) ||
       waitingShown.some((t) => holds(t, openId)) ||
       ordered.slice(0, visible).some((t) => holds(t, openId)))
   const loaded = openId ? all.find((t) => holds(t, openId)) : undefined
