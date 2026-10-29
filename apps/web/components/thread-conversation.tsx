@@ -47,6 +47,7 @@ import {
 import {
   ComposerMenu,
   ComputerIcon,
+  SentAttachments,
   UploadList,
   useFileDrop,
   useUploads,
@@ -88,10 +89,16 @@ import { ChangesPanel } from '@/components/changes-panel'
 import { useThreadPanel } from '@/components/thread-panel'
 import { ThreadSkeleton } from '@/components/thread-skeleton'
 import { ThreadTimeline, useThreadPrompts } from '@/components/thread-timeline'
-import { ThreadItems, useThreadItems, type ComputerDown } from '@/components/thread-view'
+import {
+  MessageBubble,
+  ThreadItems,
+  useThreadItems,
+  type ComputerDown,
+} from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { pendingThreads, useOpenedMessage } from '@/lib/pending-threads'
 import {
   api,
   computerName,
@@ -234,6 +241,12 @@ export function ThreadConversation({
     if (thread.data && computer.id !== thread.data.computer.id) void thread.reload()
   })
   const { items, queued, seen, turnId, background } = useThreadItems(events, firstSeq, gaps)
+  // Opened at once (lib/pending-threads.ts): its first message shows until an event has it.
+  const opened = useOpenedMessage(id)
+  const delivered = events.some((e) => e.event.type === 'message.user')
+  useEffect(() => {
+    if (opened && delivered) pendingThreads.delivered(id)
+  }, [opened, delivered, id])
   const outputs = useThreadOutputs(events)
   const preview = useCheckedPreview(id, useThreadPreview(events))
   // Preview is offered once there is something to preview: a preview it had, or code it checked out.
@@ -1279,6 +1292,15 @@ export function ThreadConversation({
                       onLoad={loadEarlier}
                       auto={settled}
                     />
+                  )}
+                  {/* Opened at once: the message it started with, until its runner has it here. */}
+                  {opened && !delivered && (
+                    <div className="mb-4 ml-auto flex max-w-[85%] flex-col items-end gap-1.5">
+                      {opened.text && <MessageBubble text={opened.text} />}
+                      {opened.files.length > 0 && (
+                        <SentAttachments uploads={opened.files} className="justify-end" />
+                      )}
+                    </div>
                   )}
                   <ThreadItems
                     threadId={t.id}

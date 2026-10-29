@@ -541,9 +541,8 @@ export function NewThread({
             preloadSettled(`/threads/${id}`),
             preloadSettled(`/threads/${id}/events`),
           ])
+          // Its files' previews go once its conversation has the message (pendingThreads.delivered).
           pendingThreads.started(id)
-          // Its previews, once the conversation has taken over from the message that showed them.
-          setTimeout(taken.done, 5_000)
         },
         (error: unknown) => pendingThreads.failed(id, (error as Error).message),
       )

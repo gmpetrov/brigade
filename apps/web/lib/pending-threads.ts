@@ -33,6 +33,8 @@ export type ReturnedDraft = { from: string; message: SentMessage }
 export type KeptMessage = SentMessage & { key: string; error?: string }
 
 const pending = new Map<string, PendingThread>()
+// Started, their conversation showing: the message sent, until its runner has it in the thread.
+const opened = new Map<string, PendingThread>()
 // As sent, with its files and where it was to run: what goes back to the box.
 const messages = new Map<string, SentMessage>()
 let returned: ReturnedDraft | undefined
@@ -68,10 +70,20 @@ export const pendingThreads = {
     messages.set(id, message)
     changed()
   },
-  /** It started: its conversation shows from now on. */
+  /** It started: its conversation shows from now on, with the message until it has it. */
   started(id: string) {
+    const thread = pending.get(id)
+    if (thread) opened.set(id, thread)
     pending.delete(id)
     messages.delete(id)
+    changed()
+  },
+  /** Its conversation has the message: this browser's copy, and its files' previews, can go. */
+  delivered(id: string) {
+    const thread = opened.get(id)
+    if (!thread) return
+    opened.delete(id)
+    for (const f of thread.files) if (f.preview) URL.revokeObjectURL(f.preview)
     changed()
   },
   failed(id: string, error: string) {
@@ -104,6 +116,15 @@ export const pendingThreads = {
     returned = undefined
     return draft
   },
+}
+
+/** The message a thread opened at once was started with, until its conversation has it. */
+export function useOpenedMessage(id: string) {
+  return useSyncExternalStore(
+    subscribe,
+    () => opened.get(id),
+    () => undefined,
+  )
 }
 
 /** The thread with this id, while it is pending. */
