@@ -412,6 +412,8 @@ export type ThreadSummary = {
   children?: SidebarChild[]
   /** Its preview is starting or running, on a computer that is up. */
   previewRunning?: boolean
+  /** The list whose items it works on (docs/lists.md): the sidebar shows it under that list. */
+  list?: { documentId: string; title: string } | null
 }
 
 /** A child thread under its parent in the sidebar: newest activity first. */

@@ -111,6 +111,7 @@ import {
   startAt,
   threadPrompts,
 } from '../thread-history.js'
+import { threadLists } from '../lists.js'
 import { noteInThread } from '../thread-notes.js'
 import {
   parseBody,
@@ -432,6 +433,11 @@ export const threads = new Hono<AppEnv>()
           }),
         ])
       : [[], []]
+    // The list each works on (docs/lists.md): the sidebar shows them under it.
+    const lists = await threadLists(
+      c.var.db,
+      rows.map((r) => r.id),
+    )
     // Whose preview is up: the sidebar marks them. Not on a computer that is gone, whatever
     // the events say, as on the preview panel.
     const previews = await previewStates(
@@ -476,6 +482,7 @@ export const threads = new Hono<AppEnv>()
                 childReads.find((r) => r.sessionId === child.id)?.seenAt,
               ),
             })),
+          list: lists.get(row.id) ?? null,
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
           pinPosition: pins.find((p) => p.sessionId === row.id)?.position ?? null,
           laterAt: laters.get(row.id)?.toISOString() ?? null,

@@ -201,6 +201,11 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     )
     assert.match(String(prompt.text), /Please take these items of @\[Projects\/Acme\/launch\.md\]/)
     assert.match(String(prompt.text), /- Documented rollback/)
+    // The sidebar shows the thread under its list.
+    assert.deepEqual((await lists.threadLists(db, [threadId])).get(threadId), {
+      documentId: ids.file,
+      title: 'Launch',
+    })
   })
 
   test('a list shows its lines with their threads and where each stands', async () => {
