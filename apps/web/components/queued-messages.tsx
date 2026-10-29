@@ -193,16 +193,17 @@ export function QueuedMessages({
                       </form>
                     ) : (
                       <div className="flex items-center gap-2">
-                        {single && (
-                          <span
-                            className="shrink-0 self-start rounded-md border px-1.5 py-px text-xs text-muted-foreground"
-                            title={`${teammateName} reads it after the current turn`}
-                          >
-                            Queued
-                          </span>
-                        )}
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <span className="line-clamp-2 wrap-anywhere whitespace-pre-wrap">
+                            {/* Inline, so the chip stays on the first line of text */}
+                            {single && (
+                              <span
+                                className="mr-2 inline-block rounded-md border px-1.5 align-[1px] text-xs leading-[18px] text-muted-foreground"
+                                title={`${teammateName} reads it after the current turn`}
+                              >
+                                Queued
+                              </span>
+                            )}
                             {preview(m)}
                           </span>
                           {(from || m.waitingFor === 'person' || (files > 0 && m.text)) && (
@@ -223,8 +224,9 @@ export function QueuedMessages({
                           {canSteer && m.waitingFor === 'turn' && (
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
+                              className="h-7 text-muted-foreground"
                               disabled={busy === m.messageId}
                               onClick={() => void act(m.messageId, { action: 'steer' })}
                               title={`Give it to ${teammateName} now, during this turn`}
