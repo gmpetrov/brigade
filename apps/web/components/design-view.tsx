@@ -761,7 +761,7 @@ function DesignFrame({
       )}
 
       <div className="relative flex min-h-0 flex-1">
-        <div className="pointer-events-none absolute top-2 left-2 z-10 flex items-center gap-0.5 rounded-lg border bg-background/95 p-0.5 shadow-sm backdrop-blur [&>*]:pointer-events-auto">
+        <div className="pointer-events-none absolute top-2 left-2 z-10 flex items-center gap-0.5 rounded-lg border bg-background p-0.5 shadow-sm [&>*]:pointer-events-auto">
           <div role="radiogroup" aria-label="Mode" className="flex rounded-md bg-muted p-0.5">
             {(
               [
