@@ -330,6 +330,37 @@ export async function threadItems(
     })
 }
 
+/**
+ * The list each thread works on, for the sidebar, which shows the threads of a list under it:
+ * the list of its first item, when it has any (a thread may carry items of several lists).
+ */
+export async function threadLists(db: ScopedDb, sessionIds: string[]) {
+  if (!sessionIds.length) return new Map<string, { documentId: string; title: string }>()
+  const links = await db.listItemThread.findMany({
+    where: { sessionId: { in: sessionIds } },
+    select: { sessionId: true, item: { select: { documentId: true } } },
+    orderBy: { createdAt: 'asc' },
+  })
+  const first = new Map<string, string>()
+  for (const l of links) if (!first.has(l.sessionId)) first.set(l.sessionId, l.item.documentId)
+  const files = first.size
+    ? await db.document.findMany({
+        where: { id: { in: [...new Set(first.values())] }, ...LIST_FILE },
+        select: { id: true, path: true, text: true },
+      })
+    : []
+  // Its title is its first heading, near its top.
+  const titles = new Map(
+    files.map((f) => [f.id, titleOf(f.path, parseList(f.text.slice(0, 8_000)))]),
+  )
+  const out = new Map<string, { documentId: string; title: string }>()
+  for (const [sessionId, documentId] of first) {
+    const title = titles.get(documentId)
+    if (title) out.set(sessionId, { documentId, title })
+  }
+  return out
+}
+
 /** What a thread's teammate is told it works on (ThreadSpec.items). */
 export async function specItems(db: ScopedDb, sessionId: string) {
   const links = await db.listItemThread.findMany({

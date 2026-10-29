@@ -45,6 +45,7 @@ import { ProjectIcon } from '@/components/projects'
 import { RailPanel } from '@/components/rail-menu'
 import { useThreadPanel } from '@/components/thread-panel'
 import { FadeText } from '@/components/fade-text'
+import { ListGroupRow } from '@/components/list-group-row'
 import { ThreadRow } from '@/components/thread-row'
 import { StreamedTitle } from '@/components/streamed-title'
 import {
@@ -77,6 +78,7 @@ import {
   type ThreadSummary,
 } from '@/lib/api'
 import { latestSave } from '@/lib/latest-save'
+import { groupByList, isListRow } from '@/lib/list-groups'
 import { groupOf, holds, subThreadRows, type Group } from '@/lib/sub-threads'
 import { cn } from '@/lib/utils'
 
@@ -184,12 +186,15 @@ function SubThreads({
   onToggle,
   activeId,
   needsYou,
+  noun = 'sub-thread',
 }: {
   items: SidebarChild[]
   open: boolean
   onToggle: () => void
   activeId: string | null
   needsYou: Record<string, string>
+  /** What its rows are, for the keyboard's buttons: a list's threads are no sub-threads. */
+  noun?: string
 }) {
   const [all, setAll] = useState(false)
   // What waits on this member is more than its own status, as for the list's threads.
@@ -210,7 +215,7 @@ function SubThreads({
                 onClick={onToggle}
                 className={cn(SUB_ROW, 'text-muted-foreground')}
               >
-                Hide sub-threads
+                Hide {noun}s
               </button>
             </li>
             {shown.map((c) => {
@@ -260,7 +265,8 @@ function SubThreads({
               onClick={onToggle}
               className={cn(SUB_ROW, 'text-muted-foreground')}
             >
-              Show {items.length} sub-thread{items.length === 1 ? '' : 's'}
+              Show {items.length} {noun}
+              {items.length === 1 ? '' : 's'}
             </button>
           </li>
         )}
@@ -806,9 +812,11 @@ export function SidebarWork({
   )
   const groups = useMemo(() => {
     const by: Record<Group, ThreadSummary[]> = { waiting: [], working: [], rest: [] }
-    for (const t of shown) by[groupOf(t.status)].push(t)
+    // The threads on a list's items go under that list, one row for it (lib/list-groups.ts);
+    // the archived or later threads stay as they come.
+    for (const t of instead ? shown : groupByList(shown)) by[groupOf(t.status)].push(t)
     return by
-  }, [shown])
+  }, [shown, instead])
   // Another filter starts from the cap again.
   useEffect(() => {
     setExtra(0)
@@ -929,6 +937,34 @@ export function SidebarWork({
         ?.id ?? null
     const open = children.length > 0 && (childrenSet[t.id] ?? !!activeChild)
     const toggle = () => toggleChildren(t.id, open)
+    if (isListRow(t)) {
+      const listHref = `/app/lists/${t.list!.documentId}`
+      return (
+        <Fragment key={t.id}>
+          <ListGroupRow
+            title={t.title}
+            href={listHref}
+            active={pathname === listHref}
+            dot={state ? <ThreadStatusIcon {...status} /> : undefined}
+            working={working}
+            hint={
+              state
+                ? `${threadStatusLabel(status)} · ${shortAgo(t.updatedAt)}`
+                : shortAgo(t.updatedAt)
+            }
+            caret={{ open, count: children.length, onToggle: toggle }}
+          />
+          <SubThreads
+            items={children}
+            open={open}
+            onToggle={toggle}
+            activeId={activeChild}
+            needsYou={needsYou}
+            noun="thread"
+          />
+        </Fragment>
+      )
+    }
     return (
       <Fragment key={t.id}>
         <ThreadRow

@@ -71,6 +71,13 @@ mission; threads stay where the work happens.
 
 - **Lists** (`/app/lists`, under Library in the sidebar): every list of the library, last
   changed first, with its progress and what waits on a person.
+- **In the sidebar**, the threads working on a list's items fold under one row for the list,
+  where its first thread would be, as a thread's child threads do (`lib/list-groups.ts`). Its
+  title opens the list, its caret folds its threads, and its dot is its threads' most pressing
+  state (waiting on a person, then working), so a thread that needs someone is never hidden
+  behind a quiet row. A thread with items of several lists goes under the first it was given.
+  Lists group, sections do not: a list's page shows its sections. Pinned threads stay under
+  Pinned; the archived and Later views show threads as they come.
 - **A list** (`/app/lists/<documentId>`): the file in the document editor, its progress, and
   filters (All, Open, In progress, Needs you, Done) that hide the other lines (CSS over each
   line's state, `globals.css`). Each line with work on it shows its threads (state dot,
