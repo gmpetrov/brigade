@@ -13,7 +13,8 @@ import { parseEnv } from 'node:util'
 // with no saved version to put them back from. Here each comes back on the new model:
 // - a write that lands after a newer save, and its save crashing then, leaves the newer bytes;
 // - a large file's late write, with the newer save's version failing too, leaves them as well;
-// - a save too late to claim its object is refused, and changes nothing;
+// - a save too late to claim its object is refused, and changes nothing; its bytes, if they land
+//   after its object was swept, are found by listing and removed;
 // - objects nothing points to go from the bucket a grace period on, never one a row or a version
 //   points to; a file deleted for good leaves none;
 // - files from before keep their bytes at the legacy key until their next save, and an API from
@@ -280,6 +281,40 @@ describe('library objects', { skip: !database && 'no database answers' }, () => 
     }
     const after = await consistent(file.id, 'before')
     assert.equal(after.objectKey, file.objectKey)
+  })
+
+  test('a write landing after its object was swept is found and removed (review of #494)', async () => {
+    const file = await save('Late/orphan.txt', 'before')
+    const stall = await stallWrite(file.id, 'orphan after sweep')
+    try {
+      const late = library
+        .saveLibraryFile(db, scope, member(), {
+          path: 'Late/orphan.txt',
+          bytes: encode('orphan after sweep'),
+        })
+        .catch((error: unknown) => error)
+      await stall.reached
+      const pending = (
+        await prisma.libraryObject.findMany({
+          where: { documentId: file.id, key: { not: file.objectKey! } },
+        })
+      ).find((o) => !onDisk(o.key))!
+      assert.ok(pending)
+      // Paused past both grace periods: its object is swept, row and all, before it writes.
+      await sweepLater(file.id)
+      assert.equal(await prisma.libraryObject.count({ where: { key: pending.key } }), 0)
+      stall.release()
+      assert.match(String(await late), /took too long to save/)
+      assert.ok(onDisk(pending.key), 'the late bytes landed, with no row naming them')
+      await objects.sweepOrphanLibraryObjects()
+      assert.equal(onDisk(pending.key), false, 'found by listing, and deleted')
+    } finally {
+      stall.release()
+      stall.restore()
+    }
+    // Objects with a row stay, whatever their age.
+    const current = await consistent(file.id, 'before')
+    assert.ok(onDisk(current.objectKey!))
   })
 
   test('superseded objects go a grace period on, once no version points to them', async () => {

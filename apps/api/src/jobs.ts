@@ -30,7 +30,7 @@ import { dueSubscriptions, readSubscriptions } from './subscriptions/index.js'
 import { sweepDoneTasks } from './tasks.js'
 import { sweepListMerges } from './lists.js'
 import { repairStaleBytes } from './library.js'
-import { sweepLibraryObjects } from './library-objects.js'
+import { sweepLibraryObjects, sweepOrphanLibraryObjects } from './library-objects.js'
 import { sweepDeletedThreadFiles } from './thread-delete.js'
 import { sweepDeliveries } from './triggers.js'
 import { sweepFileUploads } from './uploads.js'
@@ -100,12 +100,14 @@ export const JOBS = {
   // Every 10 minutes: list items a merged pull request closes, not ticked yet (src/lists.ts).
   'list-merge-sweep': { every: 600, run: () => sweepListMerges() },
   // Each minute: library files at their legacy key whose bytes a save past its lease may have
-  // overwritten. Every 10 minutes: library objects no file or version points to (an hour on).
+  // overwritten. Every 10 minutes: library objects no file or version points to (an hour on);
+  // hourly, bytes in the library objects folder that no object's row names.
   'library-bytes-repair': { every: 60, run: () => repairStaleBytes() },
   'library-object-sweep': {
     every: 600,
     run: (_key, now) => sweepLibraryObjects(now).then(() => {}),
   },
+  'library-orphan-sweep': { every: 3600, run: () => sweepOrphanLibraryObjects().then(() => {}) },
   'deleted-thread-sweep': { every: 3600, run: () => sweepDeletedThreadFiles() },
   'runner-command-sweep': { every: 3600, run: () => sweepCommands() },
   'spec-part-sweep': { every: 3600, run: () => sweepSpecParts() },

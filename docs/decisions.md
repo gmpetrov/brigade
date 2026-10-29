@@ -305,7 +305,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   `apps/api/.bucket`). The file's row points to it (`Document.objectKey`), and that row update is the save's only
   commit, so a write that lands late (past its lock's lease, or from a save that crashed) is never read. A sweep every
   10 minutes finds objects at least an hour old that no file or version points to, and deletes them an hour later,
-  bytes before their row. Files not saved since keep their bytes at the legacy key,
+  bytes before their row; an hourly one lists each workspace's folder and deletes bytes no row names (a write that
+  landed after its object was swept), with no time bound. Files not saved since keep their bytes at the legacy key,
   `<organization>/<workspace>/library/<document id>`, until their next save. `Document` keeps path,
   type, size, SHA-256 and the text (UTF-8 files, PDFs and Word, Excel and PowerPoint files; others are kept but
   not searchable). Any member uploads (files or a whole folder, or by dropping them on the page), edits, moves and

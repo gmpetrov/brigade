@@ -10,15 +10,18 @@ import {
   documentKey,
   libraryObjectKey,
   libraryObjectsPrefix,
+  listObjects,
   versionKey,
+  workspacePrefix,
 } from './bucket.js'
 import { prisma, type Prisma, type Scope } from './db.js'
 
 /**
  * How long an object no row points to is kept: from its creation before it can be marked, then
- * from its mark before it is deleted. A save claims its object within its lease (seconds), and a
- * write to it lands within a request's lifetime, so neither can come after its deletion; a reader
- * that read a row just before a newer save still finds the bytes it points to.
+ * from its mark before it is deleted. A save claims its object within its lease (seconds); a
+ * reader that read a row just before a newer save still finds the bytes it points to. A write
+ * that lands after the deletion anyway (a process paused that long) is found by the listing
+ * sweep (sweepOrphanLibraryObjects), which needs no time bound.
  */
 const GRACE_MS = 60 * 60_000
 
@@ -123,4 +126,46 @@ export async function sweepLibraryObjects(now = new Date()) {
       AND NOT EXISTS (SELECT 1 FROM "DocumentVersion" v WHERE v."objectKey" = o."key")`
   if (deleted > 0) console.log(`library: deleted ${deleted} object(s) no file points to`)
   return deleted
+}
+
+/** A library object's key: `<org>/<ws>/library-objects/<document id>/<id>`. */
+const OBJECT_KEY = /\/library-objects\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_-]{1,64}$/
+
+/**
+ * Bytes in a workspace's library objects folder that no LibraryObject row names: a write that
+ * landed after its object was swept (its row goes only once its bytes did), or a delete that
+ * failed after. Found by listing each workspace's folder, so no time window bounds what is
+ * removed: a row is made before any write to its key, and kept until its bytes are deleted.
+ */
+export async function sweepOrphanLibraryObjects() {
+  const workspaces = await prisma.workspace.findMany({
+    select: { id: true, organizationId: true },
+  })
+  let removed = 0
+  for (const workspace of workspaces) {
+    const scope = { organizationId: workspace.organizationId, workspaceId: workspace.id }
+    const keys = (await listObjects(`${workspacePrefix(scope)}library-objects/`)).filter((key) =>
+      OBJECT_KEY.test(key),
+    )
+    for (let i = 0; i < keys.length; i += 1000) {
+      const batch = keys.slice(i, i + 1000)
+      const known = new Set(
+        (
+          await prisma.libraryObject.findMany({
+            where: { key: { in: batch } },
+            select: { key: true },
+          })
+        ).map((row) => row.key),
+      )
+      for (const key of batch) {
+        if (known.has(key)) continue
+        await deleteObject(key).then(
+          () => removed++,
+          (error: unknown) => console.warn(`library: ${key} not deleted: ${String(error)}`),
+        )
+      }
+    }
+  }
+  if (removed > 0) console.log(`library: removed ${removed} object(s) no row names`)
+  return removed
 }
