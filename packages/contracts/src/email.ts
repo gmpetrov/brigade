@@ -46,6 +46,18 @@ export type DomainLookup = {
   suggested: DomainReceiving
 }
 
+/** Who a domain's mail goes to now, by its MX. */
+export type MailProvider = 'google' | 'microsoft' | 'other'
+
+/**
+ * How a mailbox's address on a domain receiving by forwarding gets its mail here: the provider
+ * its mail is with, and Google's latest forwarding check mail, with its code, once one arrived.
+ */
+export type MailForwarding = { provider: MailProvider } & (
+  | { found: false }
+  | { found: true; at: string; subject: string; code: string | null; link: string | null }
+)
+
 /** Whether a domain's records can be added on Cloudflare, and with which of the workspace's accounts. */
 export type CloudflareDnsSetup = {
   /** Its DNS is served by Cloudflare (its zone's nameservers). */

@@ -3,7 +3,14 @@
 // shared, connected Gmail), Add a mailbox (an address on a domain, for an agent or a project), and
 // each mailbox's page: where its mail arrives and how it goes out, who handles it (its rules and
 // playbooks, in the order they apply), who reads and replies from it. Domains: mail-domains.tsx.
-import type { MailboxDetail, MailboxRule, MailboxSummary, MailDomainView } from '@brigade/contracts'
+import type {
+  MailboxDetail,
+  MailboxRule,
+  MailboxSummary,
+  MailDomainView,
+  MailForwarding,
+  MailProvider,
+} from '@brigade/contracts'
 import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -508,10 +515,6 @@ export function MailboxView({ id }: { id: string }) {
   )
 }
 
-type Forwarding =
-  | { found: false }
-  | { found: true; at: string; subject: string; code: string | null; link: string | null }
-
 /**
  * A Brigade mailbox's way in and out: its address (changed to one on another domain), whether it
  * receives (directly, or what to forward where) and sends (as its address only, once its domain's
@@ -532,11 +535,16 @@ function MailboxArrival({
     'mail.updated',
   ])
   const forward = m.domain?.receiving === 'forward'
-  const forwarding = useApi<Forwarding>(
+  const forwarding = useApi<MailForwarding>(
     m.manages && forward ? `/email/addresses/${m.addressId}/forwarding` : null,
   )
   const [changing, setChanging] = useState(false)
   const [note, setNote] = useState<string>()
+  // The last test's time, and whether it has had a minute to come through the forward.
+  const [testAt, setTestAt] = useState<number>()
+  const [late, setLate] = useState(false)
+  // At Google, what the address is: the steps differ for a group and a user's own mailbox.
+  const [kind, setKind] = useState<GoogleKind>()
   const save = useAction()
   const test = useAction()
   const off = useAction()
@@ -547,6 +555,15 @@ function MailboxArrival({
       e.route === 'test' &&
       e.to.some((to) => to.toLowerCase().includes(m.address)),
   )
+  const arrived =
+    testAt !== undefined &&
+    (journal.data ?? []).some(
+      (e) =>
+        e.direction === 'in' &&
+        e.route === 'test' &&
+        new Date(e.at).getTime() >= testAt - 60_000 &&
+        e.to.some((to) => to.toLowerCase().includes(m.address)),
+    )
   const brigadeDomain = email.data?.domain ?? ''
 
   async function sendTest() {
@@ -559,10 +576,13 @@ function MailboxArrival({
     )
     if (!done) return
     setNote(`Test mail sent to ${done.to}. It shows in the journal once it arrives.`)
-    for (const delay of [5000, 15000, 40000])
+    setTestAt(Date.now())
+    setLate(false)
+    for (const delay of [5000, 15000, 40000, 60000])
       setTimeout(() => {
         void journal.reload()
         void forwarding.reload()
+        if (delay === 60000) setLate(true)
       }, delay)
   }
 
@@ -614,15 +634,16 @@ function MailboxArrival({
                   ? 'Receives directly'
                   : `Receives once ${m.domain!.name}'s DNS records are in`}
             </span>
-            {forward && (
+            {forward && m.internalAddress && (
               <>
-                <p className="text-muted-foreground">
-                  Forward {m.address} to{' '}
-                  <span className="font-mono text-xs">{m.internalAddress}</span> where{' '}
-                  {m.domain!.name}&apos;s mail is (Google Workspace: add {m.address} as an alias or
-                  a group, then in its Gmail, Settings › Forwarding and POP/IMAP › Add a forwarding
-                  address).
-                </p>
+                <ForwardingGuide
+                  address={m.address}
+                  internal={m.internalAddress}
+                  provider={m.manages ? forwarding.data?.provider : 'other'}
+                  kind={kind}
+                  onKind={setKind}
+                  late={m.manages && late && !arrived}
+                />
                 {forwarding.data?.found && (
                   <div className="flex flex-col gap-1">
                     {forwarding.data.code ? (
@@ -697,6 +718,172 @@ function MailboxArrival({
       {note && <p className="text-muted-foreground">{note}</p>}
       <ErrorLine error={test.error ?? off.error} />
     </div>
+  )
+}
+
+type GoogleKind = 'group' | 'user'
+
+/**
+ * How to forward an address on a domain receiving by forwarding to the mailbox's own address on
+ * Brigade's domain, in the steps of the provider its mail is with (by its MX): at Google, for a
+ * group or for a user's mailbox or alias; at Microsoft 365; or anywhere else. When a test mail
+ * has not come through a minute after it was sent, what to check for that case.
+ */
+function ForwardingGuide({
+  address,
+  internal,
+  provider,
+  kind,
+  onKind,
+  late,
+}: {
+  address: string
+  internal: string
+  /** Unknown while it loads: nothing shows until it is. */
+  provider?: MailProvider
+  kind?: GoogleKind
+  onKind: (kind: GoogleKind) => void
+  late: boolean
+}) {
+  if (!provider) return null
+  const target = <Address value={internal} />
+  const steps: ReactNode[] = []
+  let checks: string[] = [`${address} forwards to ${internal}.`]
+  if (provider === 'google' && kind === 'group') {
+    steps.push(
+      <>
+        In the Google Admin console, open the group {address} in{' '}
+        <ExternalLink href="https://admin.google.com/ac/groups">Directory › Groups</ExternalLink>,
+        then Members › Add members, and add {target}.
+      </>,
+      <>
+        In the group&apos;s Access settings, turn on Allow members outside your organization and set
+        Who can post to Anyone on the web. If it cannot be turned on, allow it for your organization
+        first, in Apps › Google Workspace › Groups for Business.
+      </>,
+    )
+    checks = [
+      `${internal} is a member of the group.`,
+      'The group allows members outside your organization, and so does your organization.',
+      'Who can post is Anyone on the web.',
+    ]
+  } else if (provider === 'google' && kind === 'user') {
+    steps.push(
+      <>
+        Sign in to Gmail as the user {address} belongs to, then in{' '}
+        <ExternalLink href="https://mail.google.com/mail/u/0/#settings/fwdandpop">
+          Settings › Forwarding and POP/IMAP
+        </ExternalLink>
+        , Add a forwarding address: {target}.
+      </>,
+      <>
+        Google sends a confirmation code to that address: it shows here once it arrives. Enter it in
+        Gmail, or confirm it on Google.
+      </>,
+      <>
+        Forward a copy of incoming mail to it. For an alias only, make a filter instead: search to:
+        {address}, then Create filter › Forward it to {internal}.
+      </>,
+    )
+    checks = [
+      'Forwarding is confirmed in Gmail, and turned on (or a filter forwards the alias).',
+      `It forwards to ${internal}.`,
+    ]
+  } else if (provider === 'microsoft') {
+    steps.push(
+      <>
+        In the{' '}
+        <ExternalLink href="https://admin.exchange.microsoft.com">
+          Exchange admin center
+        </ExternalLink>
+        , open {address}. For a mailbox or a shared mailbox: Mail flow settings › Email forwarding,
+        forward all mail to {target}. For a distribution list or a group: add that address as a
+        contact, then as a member.
+      </>,
+      <>
+        Microsoft 365 blocks forwarding outside your organization by default: in Microsoft Defender,
+        Policies › Anti-spam › the outbound policy, set Automatic forwarding rules to On.
+      </>,
+    )
+    checks = [
+      `${address} forwards to ${internal}, or has it as a member.`,
+      'Automatic forwarding to outside addresses is allowed in Microsoft Defender.',
+    ]
+  } else if (provider === 'other') {
+    steps.push(
+      <>
+        Where {address.split('@')[1]}&apos;s mail is, forward {address} to {target}. Or, when{' '}
+        {address} is a group or a list, add that address as a member.
+      </>,
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {provider === 'google' && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-muted-foreground">
+            {address.split('@')[1]}&apos;s mail is with Google Workspace. At Google, {address} is:
+          </p>
+          <div role="radiogroup" aria-label="What the address is at Google" className="flex gap-1">
+            {(
+              [
+                ['group', 'A group'],
+                ['user', 'A user or an alias'],
+              ] as const
+            ).map(([id, label]) => (
+              <Button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={kind === id}
+                variant={kind === id ? 'secondary' : 'outline'}
+                size="xs"
+                onClick={() => onKind(id)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+      {provider === 'microsoft' && (
+        <p className="text-muted-foreground">
+          {address.split('@')[1]}&apos;s mail is with Microsoft 365.
+        </p>
+      )}
+      {steps.length > 0 && (
+        <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-muted-foreground">
+          {steps.map((step, i) => (
+            <li key={i}>{step}</li>
+          ))}
+          <li>Send a test mail: it shows in the journal once it comes through.</li>
+        </ol>
+      )}
+      {late && (
+        <div className="flex flex-col gap-1 rounded-lg border bg-muted/50 p-3">
+          <span className="font-medium">The test mail has not come through yet. Check that:</span>
+          <ul className="flex list-disc flex-col gap-0.5 pl-5 text-muted-foreground">
+            {checks.map((check) => (
+              <li key={check}>{check}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-medium text-primary hover:underline"
+    >
+      {children}
+    </a>
   )
 }
 
