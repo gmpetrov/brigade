@@ -330,32 +330,39 @@ const viewOf = (
 })
 
 /**
- * Remove a domain no mailbox has an address on: from Resend first. When Resend does not remove it,
- * it stays here too, so removing it can be tried again (Resend would refuse to add it again).
+ * Remove a domain: from Resend first. When Resend does not remove it, it stays here too, so
+ * removing it can be tried again (Resend would refuse to add it again). Then, in one transaction,
+ * the domain goes and its mailboxes lose their addresses on it: they keep Brigade's own address.
  */
 export async function removeDomain(db: ScopedDb, scope: WorkspaceScope, id: string) {
   const row = await db.mailDomain.findFirst({
     where: { id },
-    include: { addresses: { where: { releasedAt: null }, select: { id: true } } },
+    include: { addresses: { where: { releasedAt: null }, select: { publicAddress: true } } },
   })
   if (!row) throw new HTTPException(404, { message: 'No such domain' })
-  if (row.addresses.length > 0)
+  if (claimed(row))
     throw new HTTPException(409, {
-      message: `Mailboxes still have addresses on ${row.name}: change them first`,
+      message: `${row.name} is being taken over by a workspace on Brigade that added it after its three days`,
     })
   if (row.resendDomainId) await removeFromResend(row.name, row.resendDomainId)
-  // Turned-off mailboxes let it go too.
-  await db.mailAddress.updateMany({
-    where: { domainId: row.id },
-    data: { publicAddress: null, domainId: null },
-  })
-  await db.mailDomain.deleteMany({ where: { id: row.id } })
+  // The addresses first, so none is left on a domain that is gone; one given meanwhile is refused
+  // (its domain is no more). Turned-off mailboxes let it go too.
+  await prisma.$transaction([
+    prisma.mailAddress.updateMany({
+      where: { workspaceId: row.workspaceId, domainId: row.id },
+      data: { publicAddress: null, domainId: null },
+    }),
+    prisma.mailDomain.deleteMany({ where: { id: row.id, workspaceId: row.workspaceId } }),
+  ])
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
     action: 'email.domain.removed',
     target: { type: 'mail_domain', id: row.id },
-    data: { name: row.name },
+    data: {
+      name: row.name,
+      addresses: row.addresses.flatMap((a) => (a.publicAddress ? [a.publicAddress] : [])),
+    },
   })
 }
 

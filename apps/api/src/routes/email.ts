@@ -291,7 +291,7 @@ export const email = new Hono<AppEnv>()
     )
   })
 
-  /** Owners and admins: remove a domain no mailbox has an address on. */
+  /** Owners and admins: remove a domain; its mailboxes keep Brigade's own address. */
   .delete('/domains/:id', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
     await removeDomain(c.var.db, c.var.scope, c.req.param('id'))
