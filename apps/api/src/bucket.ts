@@ -393,13 +393,8 @@ export async function copyObject(
       },
     )
   }
-  return copied(await r2.client.fetch(url(to), copyRequest(from, contentType, options)))
-}
-
-/** CopyObject's request: the source, and the copy's type when given. */
-function copyRequest(from: string, contentType?: string, options: { ifMatch?: string } = {}) {
-  const bucket = new URL(r2!.base).pathname
-  return {
+  const bucket = new URL(r2.base).pathname
+  const response = await r2.client.fetch(url(to), {
     method: 'PUT',
     headers: {
       'x-amz-copy-source': `${bucket}/${from.split('/').map(encodeURIComponent).join('/')}`,
@@ -408,11 +403,7 @@ function copyRequest(from: string, contentType?: string, options: { ifMatch?: st
         ? { 'x-amz-metadata-directive': 'REPLACE', 'content-type': contentType }
         : {}),
     },
-  }
-}
-
-/** Whether CopyObject copied: false when its source is not there (or not the version asked for). */
-async function copied(response: Response) {
+  })
   if (response.status === 404 || response.status === 412) {
     await response.body?.cancel()
     return false
@@ -422,75 +413,6 @@ async function copied(response: Response) {
   if (!response.ok || body.includes('<Error>'))
     throw new Error(`bucket copy failed: ${response.status} ${body.slice(0, 200)}`)
   return true
-}
-
-/**
- * How long a write signed ahead (signPut, signCopy) can still land: R2 refuses a presigned PUT
- * once its URL expired (10 minutes), and a signed request dated longer ago than S3's allowed
- * clock skew (15 minutes). So however long the process sending it pauses, it lands within this
- * long of its signing, or never. The stand-in refuses it after this long too.
- */
-export const SIGNED_WRITE_MS = 15 * 60_000
-
-/** A write to one key, signed when made: `send` it within SIGNED_WRITE_MS, or the bucket refuses it. */
-export type SignedWrite = {
-  /** False when a copy's source is not there. */
-  send: () => Promise<boolean>
-}
-
-const refuseLate = (signedAt: number, what: string) => {
-  if (Date.now() - signedAt > SIGNED_WRITE_MS)
-    throw new Error(`bucket ${what} refused: signed too long ago`)
-}
-
-/** Put these bytes at a key, signed now (a presigned PUT): see SIGNED_WRITE_MS. */
-export async function signPut(
-  key: string,
-  body: Uint8Array,
-  contentType: string,
-): Promise<SignedWrite> {
-  if (!r2) {
-    const signedAt = Date.now()
-    return {
-      send: async () => {
-        refuseLate(signedAt, 'put')
-        await putObject(key, body, contentType)
-        return true
-      },
-    }
-  }
-  const signed = await presignPut(key, body.byteLength, contentType)
-  return {
-    send: async () => {
-      const response = await fetch(signed.url, {
-        method: 'PUT',
-        headers: signed.headers,
-        body: exactBytes(body),
-      })
-      if (!response.ok) throw new Error(`bucket put failed: ${response.status}`)
-      await response.body?.cancel()
-      return true
-    },
-  }
-}
-
-/** Copy an object to a key inside the bucket, signed now (its date is in the signature): see SIGNED_WRITE_MS. */
-export async function signCopy(
-  from: string,
-  to: string,
-  contentType?: string,
-): Promise<SignedWrite> {
-  if (!r2) {
-    const signedAt = Date.now()
-    return {
-      send: async () => {
-        refuseLate(signedAt, 'copy')
-        return copyObject(from, to, contentType)
-      },
-    }
-  }
-  const request = await r2.client.sign(url(to), copyRequest(from, contentType))
-  return { send: async () => copied(await fetch(request)) }
 }
 
 /** The stand-in's tag of a file: a PUT writes a new one (putLocalStream renames into place). */

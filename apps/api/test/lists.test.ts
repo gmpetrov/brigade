@@ -775,7 +775,7 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
         new TextDecoder().decode(bytes).includes('Slow stale edit')
       ) {
         entered()
-        await new Promise((resolve) => setTimeout(resolve, 700))
+        await new Promise((resolve) => setTimeout(resolve, 2500))
       }
       return original(...args)
     }
@@ -793,12 +793,17 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
             {},
             { lease },
           ),
-        { leaseMs: 300 },
+        { leaseMs: 1500 },
+      )
+      // Its failure is taken as it comes: the newer save may still be running then.
+      const failed = slow.then(
+        () => null,
+        (error: unknown) => error,
       )
       await stalled
-      await new Promise((resolve) => setTimeout(resolve, 400))
+      await new Promise((resolve) => setTimeout(resolve, 1600))
       await save('Lease/stall.md', '* [x] New winning edit\n')
-      await assert.rejects(slow, /took too long/)
+      assert.match(String(await failed), /took too long/)
     } finally {
       ;(fs as { writeFile: unknown }).writeFile = original
       syncBuiltinESMExports()
@@ -810,7 +815,7 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
     assert.equal(createHash('sha256').update(bytes).digest('hex'), row?.sha256)
   })
 
-  /** A save under a 300 ms lease whose bucket write stalls past it while a newer save lands. */
+  /** A save under a 1.5 s lease whose bucket write stalls past it while a newer save lands. */
   async function lateSave(path: string, padding: string) {
     const fs = (await import('node:fs/promises')).default
     const { syncBuiltinESMExports } = await import('node:module')
@@ -829,7 +834,7 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
         has(args[1], 'Slow stale edit')
       ) {
         entered()
-        await new Promise((resolve) => setTimeout(resolve, 700))
+        await new Promise((resolve) => setTimeout(resolve, 2500))
       }
       return original(...args)
     }
@@ -847,7 +852,7 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
             {},
             { lease },
           ),
-        { leaseMs: 300 },
+        { leaseMs: 1500 },
       )
       // Its failure is taken as it comes: the newer save may still be running then.
       const failed = slow.then(
@@ -855,7 +860,7 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
         (error: unknown) => error,
       )
       await stalled
-      await new Promise((resolve) => setTimeout(resolve, 400))
+      await new Promise((resolve) => setTimeout(resolve, 1600))
       await library.saveLibraryFile(db, scope, actor(), {
         path,
         bytes: encode('* [x] New winning edit\n'),

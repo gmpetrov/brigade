@@ -305,14 +305,12 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   `apps/api/.bucket`). The file's row points to it (`Document.objectKey`), and that row update is the save's only
   commit, so a write that lands late (past its lock's lease, or from a save that crashed) is never read. A sweep every
   10 minutes finds objects at least an hour old that no file or version points to, and deletes them an hour later,
-  bytes before their row. Each write is signed before its object's row is made, while its workspace is there, so the
-  bucket refuses it once 15 minutes have passed (an expired presigned PUT, a request dated too long ago), however long
-  the process sending it pauses; a deleted workspace's folder is emptied once that long has passed. An hourly sweep
-  also lists the folder of every workspace that has had library objects, deleted ones included (`LibraryObjectFolder`,
-  kept for good), and deletes bytes no row names, whenever a slow write lands. Files not saved since keep their bytes at the legacy key,
-  `<organization>/<workspace>/library/<document id>`, until their next save. `Document` keeps path,
-  type, size, SHA-256 and the text (UTF-8 files, PDFs and Word, Excel and PowerPoint files; others are kept but
-  not searchable). Any member uploads (files or a whole folder, or by dropping them on the page), edits, moves and
+  bytes before their row. An object's row is made before its bytes are written, and only while its workspace is
+  there; an hourly sweep lists the folder of every workspace that has had library objects, deleted ones included
+  (`LibraryObjectFolder`, kept for good), and deletes bytes no row names, however late a write landed. Files not
+  saved since keep their bytes at the legacy key, `<organization>/<workspace>/library/<document id>`, until their
+  next save. `Document` keeps path, type, size, SHA-256 and the text (UTF-8 files, PDFs and Word, Excel and
+  PowerPoint files; others are kept but not searchable). Any member uploads (files or a whole folder, or by dropping them on the page), edits, moves and
   deletes from the Library page; every change is audited. Folders exist through their files' paths, and as
   `LibraryFolder` rows when someone makes an empty one or sets access on it; moving a folder rewrites every path
   under it at once. Each file records who added it and who changed it last (a member, or a teammate and its

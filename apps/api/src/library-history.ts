@@ -6,7 +6,7 @@ import { TRASH_DAYS, VERSIONS_KEPT, type LibraryActor } from '@brigade/contracts
 import { HTTPException } from 'hono/http-exception'
 import { sweepAssets } from './assets.js'
 import { audit, type Actor } from './audit.js'
-import { deleteObject, documentKey, getObject, signCopy, versionKey } from './bucket.js'
+import { copyObject, deleteObject, documentKey, getObject, versionKey } from './bucket.js'
 import { notifyCollab } from './collab.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs } from './hub.js'
@@ -133,11 +133,8 @@ export async function ensureFirstVersion(
   // bucket: the API never holds the file).
   let key = row.objectKey
   if (!key) {
-    const made = await newLibraryObject(scope, row.id, (key) =>
-      signCopy(documentKey(scope, row.id), key, row.contentType),
-    )
-    if (!(await made.write.send())) return
-    key = made.key
+    key = await newLibraryObject(scope, row.id)
+    if (!(await copyObject(documentKey(scope, row.id), key, row.contentType))) return
   }
   await prisma.$transaction(async (tx) => {
     await claimObject(tx, key)

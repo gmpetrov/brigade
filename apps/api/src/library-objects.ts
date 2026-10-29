@@ -11,7 +11,6 @@ import {
   libraryObjectKey,
   libraryObjectsPrefix,
   listObjects,
-  type SignedWrite,
   versionKey,
   workspacePrefix,
 } from './bucket.js'
@@ -21,8 +20,8 @@ import { prisma, type Prisma, type Scope } from './db.js'
  * How long an object no row points to is kept: from its creation before it can be marked, then
  * from its mark before it is deleted. A save claims its object within its lease (seconds); a
  * reader that read a row just before a newer save still finds the bytes it points to. A write
- * lands within SIGNED_WRITE_MS of its object's making or never (newLibraryObject), long before
- * this; one that did anyway would be found by the listing sweep (sweepOrphanLibraryObjects).
+ * that lands after its object was deleted (a process paused that long, a body slow to come) is
+ * found by the listing sweep (sweepOrphanLibraryObjects), which needs no time bound.
  */
 const GRACE_MS = 60 * 60_000
 
@@ -55,19 +54,12 @@ function ownObject(scope: Scope, documentId: string, key: string) {
 }
 
 /**
- * A new object for one save of a file, with its write (signPut, signCopy). Recorded before its
- * bytes are written, so it is never lost track of; and the write is signed before that, while
- * the workspace is still there, so the bucket refuses it SIGNED_WRITE_MS on, however long the
- * process pauses before sending it. A write the bucket took in time but that lands later still
- * (its body slow to come) is found by the listing sweep, through the workspace's folder row.
+ * A new object for one save of a file, in a workspace that is still there. Recorded before its
+ * bytes are written, with its workspace's folder, so they are never lost track of: bytes that
+ * land after their object's row was swept, however late, are found by the listing sweep.
  */
-export async function newLibraryObject(
-  scope: Scope,
-  documentId: string,
-  sign: (key: string) => Promise<SignedWrite>,
-) {
+export async function newLibraryObject(scope: Scope, documentId: string) {
   const key = libraryObjectKey(scope, documentId, base36(20))
-  const write = await sign(key)
   // Its folder first: listed for bytes no row names, for good (sweepOrphanLibraryObjects).
   await prisma.$executeRaw`
     INSERT INTO "LibraryObjectFolder" ("workspaceId", "organizationId", "createdAt")
@@ -78,7 +70,7 @@ export async function newLibraryObject(
     SELECT ${key}, ${scope.organizationId}, ${scope.workspaceId}, ${documentId}, timezone('UTC', now())
     WHERE EXISTS (SELECT 1 FROM "Workspace" WHERE "id" = ${scope.workspaceId})`
   if (!made) throw new HTTPException(404, { message: 'Workspace not found' })
-  return { key, write }
+  return key
 }
 
 /** The save came too late: the sweep found its object unclaimed and will delete it. */

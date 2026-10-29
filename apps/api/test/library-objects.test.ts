@@ -14,8 +14,7 @@ import { parseEnv } from 'node:util'
 // - a write that lands after a newer save, and its save crashing then, leaves the newer bytes;
 // - a large file's late write, with the newer save's version failing too, leaves them as well;
 // - a save too late to claim its object is refused, and changes nothing; its bytes, if they land
-//   after its object was swept, are found by listing and removed; a write sent too long after its
-//   object was made is refused by the bucket, so nothing lands in a deleted workspace's folder;
+//   after its object was swept, are found by listing and removed, in a deleted workspace too;
 // - objects nothing points to go from the bucket a grace period on, never one a row or a version
 //   points to; a file deleted for good leaves none;
 // - files from before keep their bytes at the legacy key until their next save, and an API from
@@ -152,7 +151,7 @@ describe('library objects', { skip: !database && 'no database answers' }, () => 
 
   /**
    * A save under a lease whose bucket write is held until a newer save has landed, then lands.
-   * `lease`: a real one of 300 ms, or one that never returns from its commit: the process crashed
+   * `lease`: a real one of 1.5 s, or one that never returns from its commit: the process crashed
    * right after its late write.
    */
   async function lateWrite(
@@ -176,13 +175,13 @@ describe('library objects', { skip: !database && 'no database answers' }, () => 
         ? // Its lease is past (another save took the lock), then the process dies: nothing after
           // its write ever runs.
           write({ check: () => {}, fence: () => new Promise<never>(() => {}) })
-        : library.withLibraryLock(scope, file.id, write, { leaseMs: 300 })
+        : library.withLibraryLock(scope, file.id, write, { leaseMs: 1500 })
       const failed = slow.then(
         () => null,
         (error: unknown) => error,
       )
       await stall.reached
-      if (!options.crash) await new Promise((resolve) => setTimeout(resolve, 400))
+      if (!options.crash) await new Promise((resolve) => setTimeout(resolve, 1600))
       await library.saveLibraryFile(options.newer ?? db, scope, member(), {
         path,
         bytes: encode('* [x] New winning edit\n' + padding),
@@ -319,81 +318,20 @@ describe('library objects', { skip: !database && 'no database answers' }, () => 
     assert.ok(onDisk(current.objectKey!))
   })
 
-  /** Run `work` as if `ms` had passed since now: what a process paused that long sees. */
-  async function later<T>(ms: number, work: () => Promise<T>) {
-    const now = Date.now
-    Date.now = () => now() + ms
-    try {
-      return await work()
-    } finally {
-      Date.now = now
-    }
-  }
-
-  test('a write sent long after its object was made is refused by the bucket', async () => {
-    const file = await save('Late/paused.txt', 'before')
-    const { key, write } = await objects.newLibraryObject(scope, file.id, (key) =>
-      bucket.signPut(key, encode('paused'), 'text/plain'),
-    )
-    // Paused before sending, past both grace periods and the sweep: the bytes never land.
-    await sweepLater(file.id)
-    assert.equal(await prisma.libraryObject.count({ where: { key } }), 0)
-    await assert.rejects(
-      later(bucket.SIGNED_WRITE_MS + 1, () => write.send()),
-      /signed too long ago/,
-    )
-    assert.equal(onDisk(key), false)
-    // Sent in time, it lands.
-    const fresh = await objects.newLibraryObject(scope, file.id, (key) =>
-      bucket.signPut(key, encode('in time'), 'text/plain'),
-    )
-    assert.ok(await later(bucket.SIGNED_WRITE_MS - 60_000, () => fresh.write.send()))
-    assert.ok(onDisk(fresh.key))
-  })
-
-  test("nothing lands in a deleted workspace's folder once it is emptied (review of #494)", async () => {
-    const cleanup = await import('../src/workspace-delete.js')
+  test('no new object in a deleted workspace', async () => {
     const gone = {
       organizationId: ids.org,
       workspaceId: (
         await prisma.workspace.create({ data: { organizationId: ids.org, name: 'Gone' } })
       ).id,
     }
-    const goneDb = scoped(gone)
-    const file = await library.saveLibraryFile(goneDb, gone, member(), {
+    const file = await library.saveLibraryFile(scoped(gone), gone, member(), {
       path: 'Late/gone.txt',
       bytes: encode('before'),
     })
-    // A save signs its write, then pauses; meanwhile the workspace is deleted and emptied.
-    const { key, write } = await objects.newLibraryObject(gone, file.id, (key) =>
-      bucket.signPut(key, encode('after the deletion'), 'text/plain'),
-    )
-    const deletedAt = Date.now()
-    await prisma.workspaceCleanup.create({
-      data: { ...gone, prefix: bucket.workspacePrefix(gone), notBefore: new Date(deletedAt) },
-    })
     await prisma.workspace.delete({ where: { id: gone.workspaceId } })
-    await objects.sweepLibraryObjects()
-    const settled = deletedAt + cleanup.LATE_WRITES_MS + 1
-    await cleanup.sweepDeletedWorkspaces(gone.workspaceId, settled)
-    await cleanup.sweepDeletedWorkspaces(gone.workspaceId, settled)
-    assert.equal(
-      await prisma.workspaceCleanup.count({ where: { workspaceId: gone.workspaceId } }),
-      0,
-    )
-    // It resumes once the cleanup is done: refused, as is any new object in the workspace.
-    await assert.rejects(
-      later(settled - Date.now(), () => write.send()),
-      /signed too long ago/,
-    )
-    assert.equal(onDisk(key), false)
     const rows = await prisma.libraryObject.count({ where: { workspaceId: gone.workspaceId } })
-    await assert.rejects(
-      objects.newLibraryObject(gone, file.id, (key) =>
-        bucket.signPut(key, encode('x'), 'text/plain'),
-      ),
-      /Workspace not found/,
-    )
+    await assert.rejects(objects.newLibraryObject(gone, file.id), /Workspace not found/)
     assert.equal(
       await prisma.libraryObject.count({ where: { workspaceId: gone.workspaceId } }),
       rows,
@@ -436,7 +374,8 @@ describe('library objects', { skip: !database && 'no database answers' }, () => 
       await prisma.workspace.delete({ where: { id: gone.workspaceId } })
       await sweepLater(file.id)
       assert.equal(await prisma.libraryObject.count({ where: { key: pending.key } }), 0)
-      const settled = deletedAt + cleanup.LATE_WRITES_MS + 1
+      const { LATE_UPLOADS_MS } = await import('../src/thread-delete.js')
+      const settled = deletedAt + LATE_UPLOADS_MS + 1
       await cleanup.sweepDeletedWorkspaces(gone.workspaceId, settled)
       await cleanup.sweepDeletedWorkspaces(gone.workspaceId, settled)
       assert.equal(
