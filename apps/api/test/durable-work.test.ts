@@ -256,6 +256,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
       approvalId: ticketId,
       approved: true,
       memberId: ids.owner,
+      moved: null,
     })
 
     // Deciding again does nothing more.
@@ -405,6 +406,34 @@ describe('work kept in the database', { skip: !database && 'no database answers'
       )
     } finally {
       await db.teammate.updateMany({ where: { id: ids.sam }, data: { caps: {} } })
+    }
+  })
+
+  test('a thread whose commands are at their cap: the decision is still kept and sent', async () => {
+    const { decideTicket } = await import('../src/connector-calls.js')
+    const { keepCommand, PENDING_PER_THREAD } = await import('../src/runner-commands.js')
+    const conn = await connect(SETTLE_PROTOCOL)
+    const call = await send(conn)
+    const ticketId = await pendingOf(call)
+    await forgetWaiters()
+    // Up to the cap, with what earlier tests left waiting.
+    const waiting = await prisma.runnerCommand.count({
+      where: { computerId: ids.laptop, sessionId: ids.session, status: 'pending' },
+    })
+    for (let i = waiting; i < PENDING_PER_THREAD; i++)
+      await keepCommand({ id: ids.laptop, ...scope }, queuedCommand())
+    try {
+      await decideTicket({ ...scope, memberId: ids.owner }, ticketId, { approved: true })
+      await until(
+        async () => (await db.heldCall.findFirst({ where: { ticketId } }))?.status === 'done',
+        'the held call to be made',
+      )
+      assert.equal(await prisma.runnerCommand.count({ where: { id: `settle:${ticketId}` } }), 1)
+      await until(() => settleOf(call.conn, ticketId) !== undefined, 'the decision to the runner')
+    } finally {
+      await prisma.runnerCommand.deleteMany({
+        where: { computerId: ids.laptop, type: 'thread.queued' },
+      })
     }
   })
 

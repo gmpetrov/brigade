@@ -931,6 +931,8 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     approvalId: z.string(),
     approved: z.boolean(),
     memberId: z.string().nullable(),
+    /** The thread's latest arrival here (ThreadSpec.moved): taken in first, as a spec's is. */
+    moved: ThreadSpec.shape.moved,
   }),
   /** A person's answer to the harness's question. */
   z.object({

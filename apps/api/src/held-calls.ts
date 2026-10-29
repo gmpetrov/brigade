@@ -15,7 +15,8 @@ import type { ApiToRunner } from '@brigade/contracts'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { currentHub, runningHub } from './hub/context.js'
 import { noteFailure } from './ops/failures.js'
-import { keepCommand } from './runner-commands.js'
+import { isKept, keepCommand } from './runner-commands.js'
+import { movedOf } from './thread-spec.js'
 import { fireNow } from './wakeups.js'
 
 /**
@@ -312,7 +313,8 @@ function messageFor(title: string, decision: Decision, result: Result, note?: st
 /**
  * The thread's approval for the call (its id is the ticket's, connector.pending) shows decided:
  * no tool heard the decision, so the runner did not record it. Its own command, kept until the
- * runner takes it, apart from the wake-up: a cap that holds the wake-up does not hold this.
+ * runner takes it, apart from the wake-up: a cap that holds the wake-up does not hold this. Not
+ * kept, it throws, as the wake-up does: the call is then settled again (settleHeldCalls).
  */
 async function settleInThread(
   db: ScopedDb,
@@ -321,7 +323,12 @@ async function settleInThread(
 ) {
   const session = await db.session.findFirst({
     where: { id: held.sessionId },
-    select: { computer: { select: { id: true, kind: true } } },
+    select: {
+      movedAt: true,
+      movedFrom: true,
+      movedSeq: true,
+      computer: { select: { id: true, kind: true, name: true } },
+    },
   })
   if (!session) return
   const message = {
@@ -332,13 +339,17 @@ async function settleInThread(
     approvalId: held.ticketId,
     approved: decision.approved,
     memberId: decision.memberId ?? null,
+    moved: movedOf(session) ?? null,
   }
+  const computer = { id: session.computer.id, kind: session.computer.kind }
   try {
-    const sent = await (await hub(held.workspaceId)).dispatch(session.computer, message)
+    const sent = await (await hub(held.workspaceId)).dispatch(computer, message)
     // A member's computer asleep: it goes when its runner says hello.
-    if (sent === 'offline') await keepCommand(session.computer, message)
+    if (sent === 'offline') await keepCommand(computer, message)
   } catch (error) {
-    console.error(`held call on ${held.ticketId}: its approval not settled in the thread`, error)
+    // Kept before sending it failed: it goes when the runner is next sent what waits for it.
+    if (!(await isKept(message.commandId))) throw error
+    console.warn(`held call on ${held.ticketId}: its decision kept, sending it failed`, error)
   }
 }
 

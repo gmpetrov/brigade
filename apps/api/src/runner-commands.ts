@@ -73,7 +73,8 @@ export async function keepCommand(
         })
   const sessionId = sessionOf(message)
   if (await prisma.runnerCommand.count({ where: { id: message.commandId } })) return 'exists'
-  await checkCaps(computer.id, sessionId, message)
+  // A decision already taken, one per ticket and no turn: never refused, or it would be lost.
+  if (message.type !== 'thread.settle') await checkCaps(computer.id, sessionId, message)
   try {
     await prisma.runnerCommand.create({
       data: {
@@ -179,7 +180,11 @@ export async function asOfNow(computerId: string, message: DurableCommand) {
     return null
   }
   const moved = movedOf(session)
-  if (!('thread' in message) || !moved || message.thread.moved?.at === moved.at) return message
+  if (!('thread' in message)) {
+    if (!moved || message.moved?.at === moved.at) return message
+    return { ...message, moved }
+  }
+  if (!moved || message.thread.moved?.at === moved.at) return message
   if (message.type === 'thread.prompt')
     return {
       ...message,

@@ -119,3 +119,29 @@ test('a denial shows denied', async () => {
   const resolved = events.find((e) => e.type === 'approval.resolved')
   assert.equal(resolved?.type === 'approval.resolved' && resolved.approved, false)
 })
+
+test('a thread that moved here: the decision is numbered after its history', async () => {
+  // As the runner takes thread.settle (src/index.ts): its arrival first, then the decision.
+  const { Outbox } = await import('../src/outbox.js')
+  const outbox = new Outbox(join(home, 'moved-outbox'))
+  const { threads } = setup('moved-settle')
+  const emitted: { seq: number }[] = []
+  ;(threads as unknown as { options: { emit: unknown } }).options.emit = (
+    id: string,
+    e: AgentEvent,
+  ) => emitted.push(outbox.push(id, e))
+  const moved = { at: new Date().toISOString(), from: 'laptop', seq: 40 }
+  outbox.arrive('moved-settle', moved.at, moved.seq)
+  threads.settleApproval({
+    type: 'thread.settle',
+    commandId: 'settle:t',
+    sessionId: 'moved-settle',
+    teammateId: 'riley',
+    approvalId: 't',
+    approved: true,
+    memberId: 'm1',
+    moved,
+  })
+  assert.equal(emitted[0]?.seq, 41)
+  assert.equal(outbox.unacknowledgedFor('moved-settle').length, 1, 'kept to be sent')
+})
