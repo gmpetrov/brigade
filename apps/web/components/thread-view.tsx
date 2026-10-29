@@ -77,7 +77,7 @@ import {
   Reply,
   ShieldAlert,
 } from 'lucide-react'
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { MediaPreview, MessageAttachments } from '@/components/attachments'
 import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
@@ -1539,6 +1539,98 @@ function ToolOutput({ item }: { item: Extract<Item, { kind: 'tool' }> }) {
   )
 }
 
+/**
+ * A tool call's line, opening to what it was given and returned. Memoized: the thread's items
+ * are rebuilt at each event of a running turn, but a step's input and output keep their identity
+ * (they come from its events), so only the step that changed renders again.
+ */
+const ToolStep = memo(
+  function ToolStep({
+    threadId,
+    item,
+  }: {
+    threadId: string
+    item: Extract<Item, { kind: 'tool' }>
+  }) {
+    return (
+      <Collapsible className="min-w-0 text-sm">
+        <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 text-left text-muted-foreground hover:text-foreground">
+          <ToolLine toolName={item.toolName} input={item.input} />
+          <ChevronRight
+            className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
+            aria-hidden
+          />
+          {!item.finished ? (
+            <span
+              role="img"
+              aria-label="Running"
+              className="size-1.5 flex-none animate-pulse rounded-full bg-primary"
+            />
+          ) : item.isError ? (
+            // A failed call is common and the teammate goes on from it: said quietly, on the step only.
+            <span className="flex-none text-xs text-destructive-text">failed</span>
+          ) : null}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2 flex flex-col gap-2">
+          <ToolDetail threadId={threadId} item={item} />
+        </CollapsibleContent>
+      </Collapsible>
+    )
+  },
+  (a, b) =>
+    a.threadId === b.threadId &&
+    a.item.key === b.item.key &&
+    a.item.toolName === b.item.toolName &&
+    a.item.input === b.item.input &&
+    a.item.output === b.item.output &&
+    a.item.finished === b.item.finished &&
+    a.item.isError === b.item.isError,
+)
+
+/** What a teammate thought on its way, folded. */
+const ThinkingStep = memo(function ThinkingStep({ text }: { text: string }) {
+  return (
+    <Collapsible className="self-start">
+      <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        Thinking
+        <ChevronRight
+          className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
+          aria-hidden
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <Markdown
+          text={text}
+          className="mt-2 max-h-80 overflow-auto rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground"
+        />
+      </CollapsibleContent>
+    </Collapsible>
+  )
+})
+
+/** Steps an unfolded line shows at first: a long turn's earlier ones wait behind a button. */
+const RECENT_STEPS = 20
+
+/** The latest steps of a run, with a line that shows the earlier ones. */
+function RecentSteps({ children }: { children: React.ReactNode[] }) {
+  const [all, setAll] = useState(false)
+  const hidden = all ? 0 : Math.max(0, children.length - RECENT_STEPS)
+  return (
+    <>
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={() => setAll(true)}
+          className="self-start text-sm text-muted-foreground hover:text-foreground"
+        >
+          Show {plural(hidden, '1 earlier step', 'earlier steps')}
+        </button>
+      )}
+      {hidden ? children.slice(hidden) : children}
+    </>
+  )
+}
+
 /** Lines in a row folded under one that says what they were; it opens to each of them. */
 function Fold({
   label,
@@ -1546,7 +1638,7 @@ function Fold({
   children,
 }: {
   label: string
-  /** After the chevron: a count of failures, the step happening now. */
+  /** After the chevron: the step happening now. */
   after?: React.ReactNode
   children: React.ReactNode
 }) {
@@ -1578,26 +1670,20 @@ function ActivityGroup({
 }: {
   group: ActivityItem[]
   live: boolean
-  children: React.ReactNode
+  children: React.ReactNode[]
 }) {
-  const failed = group.filter((item) => item.kind === 'tool' && item.isError).length
   return (
     <Fold
       label={activityLabel(group)}
       after={
-        <>
-          {failed > 0 && (
-            <StatusBadge status="failed" label={failed === 1 ? '1 failed' : `${failed} failed`} />
-          )}
-          {live && (
-            <span className="min-w-0 shrink-[100] truncate font-mono text-xs opacity-70 group-data-[state=open]:hidden">
-              {stepText(group.at(-1)!)}
-            </span>
-          )}
-        </>
+        live && (
+          <span className="min-w-0 shrink-[100] truncate font-mono text-xs opacity-70 group-data-[state=open]:hidden">
+            {stepText(group.at(-1)!)}
+          </span>
+        )
       }
     >
-      {children}
+      <RecentSteps>{children}</RecentSteps>
     </Fold>
   )
 }
@@ -1708,7 +1794,7 @@ function WorkingLine({
   since?: number
   steps: ActivityItem[]
   background: BackgroundTask[]
-  children: React.ReactNode
+  children: React.ReactNode[]
 }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -1720,7 +1806,6 @@ function WorkingLine({
   if (!steps.length && !background.length && ms < 5_000) return null
   // Thinking is no step of its own: it shows under the line, uncounted.
   const count = steps.filter((item) => item.kind !== 'thinking').length
-  const failed = steps.filter((item) => item.kind === 'tool' && item.isError).length
   return (
     <Collapsible className="flex min-w-0 flex-col text-sm">
       <CollapsibleTrigger className="group flex max-w-full min-w-0 items-center gap-1.5 self-start text-left text-muted-foreground hover:text-foreground">
@@ -1739,12 +1824,9 @@ function WorkingLine({
           className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
           aria-hidden
         />
-        {failed > 0 && (
-          <StatusBadge status="failed" label={failed === 1 ? '1 failed' : `${failed} failed`} />
-        )}
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 ml-0.5 flex flex-col gap-2 border-l pl-3">
-        {children}
+        <RecentSteps>{children}</RecentSteps>
         {background.map((task) => (
           <div key={task.id} className="flex min-w-0 items-center gap-2 text-muted-foreground">
             <span
@@ -2174,23 +2256,7 @@ export function ThreadItems({
         )
       }
       case 'thinking':
-        return (
-          <Collapsible key={item.key} className="self-start">
-            <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-              Thinking
-              <ChevronRight
-                className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
-                aria-hidden
-              />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <Markdown
-                text={item.text}
-                className="mt-2 max-h-80 overflow-auto rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground"
-              />
-            </CollapsibleContent>
-          </Collapsible>
-        )
+        return <ThinkingStep key={item.key} text={item.text} />
       case 'tool': {
         const team = proposedTeam(item)
         if (
@@ -2277,29 +2343,7 @@ export function ThreadItems({
               mergeElsewhere={mergeOffered(i, opened)}
             />
           )
-        return (
-          <Collapsible key={item.key} className="min-w-0 text-sm">
-            <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 text-left text-muted-foreground hover:text-foreground">
-              <ToolLine toolName={item.toolName} input={item.input} />
-              <ChevronRight
-                className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
-                aria-hidden
-              />
-              {!item.finished ? (
-                <span
-                  role="img"
-                  aria-label="Running"
-                  className="size-1.5 flex-none animate-pulse rounded-full bg-primary"
-                />
-              ) : item.isError ? (
-                <StatusBadge status="failed" />
-              ) : null}
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2 flex flex-col gap-2">
-              <ToolDetail threadId={threadId} item={item} />
-            </CollapsibleContent>
-          </Collapsible>
-        )
+        return <ToolStep key={item.key} threadId={threadId} item={item} />
       }
       case 'approval': {
         // A trigger lets outside events start work: only an owner or admin allows one.
