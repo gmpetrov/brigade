@@ -45,6 +45,7 @@ import { TeammateAvatar } from '@/components/dashboard'
 import { TeammateTitle } from '@/components/teammate-title'
 import { ProjectIcon } from '@/components/projects'
 import { RailPanel } from '@/components/rail-menu'
+import { preloadOnPoint } from '@/components/thread-conversation'
 import { useThreadPanel } from '@/components/thread-panel'
 import { FadeText } from '@/components/fade-text'
 import { ListGroupRow } from '@/components/list-group-row'
@@ -83,6 +84,7 @@ import {
 import { latestSave } from '@/lib/latest-save'
 import { groupByList, isListRow, listRowId } from '@/lib/list-groups'
 import { groupOf, holds, subThreadRows, type Group } from '@/lib/sub-threads'
+import { clickInPlace } from '@/lib/thread-address'
 import { cn } from '@/lib/utils'
 
 /** How many threads show before the "+N" row. */
@@ -230,6 +232,8 @@ function SubThreads({
                   <Link
                     href={`/app/threads/${c.id}`}
                     data-active={c.id === activeId}
+                    {...preloadOnPoint(c.id, c.id === activeId)}
+                    onClick={(e) => clickInPlace(e, `/app/threads/${c.id}`)}
                     title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
                     className={SUB_ROW}
                   >

@@ -64,6 +64,7 @@ import { usePendingThread } from '@/lib/pending-threads'
 import { isMac } from '@/lib/platform'
 import { StreamedTitle } from '@/components/streamed-title'
 import { useLive } from '@/lib/use-live'
+import { openInPlace } from '@/lib/thread-address'
 import { cn } from '@/lib/utils'
 
 type ThreadPanel = {
@@ -216,6 +217,13 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const routed = routeThread(pathname)
   const expanded = routed !== undefined
+  // The panel's own addresses open in place, without a trip to the server (openInPlace).
+  const go = useCallback(
+    (href: string) => {
+      if (!openInPlace(href)) router.push(href)
+    },
+    [router],
+  )
   // As it was left, in this browser: read as it mounts (only in the browser, once the member
   // is in), so nothing can save the defaults over it first.
   const [saved] = useState(readSaved)
@@ -281,14 +289,14 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   }, [expanded, routed, router])
   const openThread = useCallback(
     (id: string) => {
-      if (expanded || !computerPage) router.push(`/app/threads/${id}`)
+      if (expanded || !computerPage) go(`/app/threads/${id}`)
       else {
         setDocked(id)
         setOpen(true)
         raisePanel(PANEL)
       }
     },
-    [expanded, computerPage, router],
+    [expanded, computerPage, go],
   )
   const [previewRequest, setPreviewRequest] = useState<{ threadId: string; key: number }>()
   const openPreview = useCallback(
@@ -303,25 +311,25 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   const showComputer = useCallback(
     (id: string) => {
       setComputerRequest({ threadId: id, key: Date.now() })
-      router.push(`/app/threads/${id}`)
+      go(`/app/threads/${id}`)
     },
-    [router],
+    [go],
   )
   const takeComputerRequest = useCallback(() => setComputerRequest(undefined), [])
   const back = useCallback(() => {
-    if (expanded) router.push('/app/threads')
+    if (expanded) go('/app/threads')
     else setDocked(null)
-  }, [expanded, router])
+  }, [expanded, go])
   const expand = useCallback(() => {
-    router.push(docked ? `/app/threads/${docked}` : '/app/threads')
-  }, [docked, router])
+    go(docked ? `/app/threads/${docked}` : '/app/threads')
+  }, [docked, go])
   const newThreadPage = useCallback(() => {
-    if (routed !== null) router.push('/app/threads')
+    if (routed !== null) go('/app/threads')
     setFocusKey((k) => k + 1)
-  }, [routed, router])
+  }, [routed, go])
   const startThread = useCallback(() => {
     if (expanded || !computerPage) {
-      if (routed !== null) router.push('/app/threads')
+      if (routed !== null) go('/app/threads')
     } else {
       setDocked(null)
       setOpen(true)
@@ -329,7 +337,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       raisePanel(PANEL)
     }
     setFocusKey((k) => k + 1)
-  }, [expanded, computerPage, routed, router])
+  }, [expanded, computerPage, routed, go])
   // Open behind another panel, it comes in front instead of closing. Away from a computer,
   // the threads are a page: to the one left last.
   const toggle = useCallback(() => {
@@ -431,10 +439,10 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
         ).catch(() => [])
         if (latest) href = `/app/threads/${latest.id}`
       }
-      router.push(href)
+      go(href)
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [teammateHref, router],
+    [teammateHref, go],
   )
 
   const value = useMemo(

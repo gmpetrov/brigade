@@ -41,6 +41,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentProps,
   type ReactNode,
   type RefObject,
 } from 'react'
@@ -161,6 +162,32 @@ const DRAWING_MS = 15_000
 export function preloadConversation(id: string) {
   preload(`/threads/${id}`)
   preloadThreadEvents(id)
+}
+
+/** How long the mouse rests on a thread's link before it is sent ahead: passing over a list sends nothing. */
+const HOVER_MS = 80
+let hovering: ReturnType<typeof setTimeout> | undefined
+
+/**
+ * A link to a thread sends it ahead (`preloadConversation`) as the mouse rests on it, and as
+ * it is pressed (a touch, or a click quicker than that): it has often come back by the click.
+ * None for the thread open already, which has it.
+ */
+export function preloadOnPoint(id: string, open = false): ComponentProps<'a'> {
+  if (open) return {}
+  return {
+    onPointerEnter: (e) => {
+      if (e.pointerType !== 'mouse') return
+      clearTimeout(hovering)
+      hovering = setTimeout(() => preloadConversation(id), HOVER_MS)
+    },
+    onPointerLeave: () => clearTimeout(hovering),
+    onPointerDown: (e) => {
+      if (e.button !== 0) return
+      clearTimeout(hovering)
+      preloadConversation(id)
+    },
+  }
 }
 
 export function ThreadConversation({
