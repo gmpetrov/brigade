@@ -12,6 +12,7 @@ import {
   DESIGN_ENTRY,
   DESIGN_FILES_MAX,
   DESIGN_MANIFEST,
+  DESIGN_OPTIONS_SUFFIX,
   DESIGN_SUFFIX,
   DESIGN_SYSTEM_FILES_MAX,
   DESIGN_SYSTEM_PREVIEW,
@@ -1041,7 +1042,20 @@ export function libraryTools(options: {
           toolName: 'save_design',
           input,
         })
-        return { path, files: saved }
+        // The design is settled: the options offered for it go to the trash, restorable there.
+        const offered = `${path.slice(0, -DESIGN_SUFFIX.length)}${DESIGN_OPTIONS_SUFFIX}`
+        const trashed = await options
+          .call({
+            operation: { name: 'delete', path: offered },
+            toolCallId,
+            toolName: 'save_design',
+            input,
+          })
+          .then(
+            () => true,
+            () => false,
+          )
+        return { path, files: saved, ...(trashed ? { optionsTrashed: offered } : {}) }
       },
     })
     tools.save_design_system = tool({
