@@ -79,9 +79,8 @@ import {
   type ThreadSummary,
 } from '@/lib/api'
 import { latestSave } from '@/lib/latest-save'
+import { groupOf, holds, subThreadRows, type Group } from '@/lib/sub-threads'
 import { cn } from '@/lib/utils'
-
-type Group = 'waiting' | 'working' | 'rest'
 
 /** How many threads show before the "+N" row. */
 const CAP = 5
@@ -206,20 +205,19 @@ function SubThreads({
       </SidebarMenuItem>
     )
   // What waits on this member is more than its own status, as for the list's threads.
-  const rows = items.map((c) => {
-    const ask = needsYou[c.id]
-    return ask && groupOf(c.status) === 'rest' ? { ...c, status: 'waiting', ask } : { ...c, ask }
-  })
-  const rank: Record<Group, number> = { waiting: 0, working: 1, rest: 2 }
-  const ordered = rows
-    .map((c, i) => ({ c, i }))
-    .sort((a, b) => rank[groupOf(a.c.status)] - rank[groupOf(b.c.status)] || a.i - b.i)
-    .map(({ c }) => c)
-  const shown = all ? ordered : ordered.filter((c, i) => i < CHILD_CAP || c.id === activeId)
-  const hidden = ordered.length - shown.length
+  const { shown, hidden } = subThreadRows(items, { needsYou, activeId, all, cap: CHILD_CAP })
   return (
     <SidebarMenuItem>
       <SidebarMenuSub className="mr-0 gap-0 pr-0">
+        {/* Folds them again from the keyboard: the caret is a mouse's only. Shown once
+            focused, so the list keeps no row for it. */}
+        <SidebarMenuSubItem className="sr-only has-focus-visible:not-sr-only">
+          <SidebarMenuSubButton asChild size="sm" className="text-muted-foreground rounded-[10px]">
+            <button type="button" aria-expanded onClick={onToggle}>
+              <span>Hide sub-threads</span>
+            </button>
+          </SidebarMenuSubButton>
+        </SidebarMenuSubItem>
         {shown.map((c) => {
           const status = { status: c.status, unread: c.unread, ask: c.ask }
           const group = groupOf(c.status)
@@ -360,14 +358,6 @@ export function useSidebarOrder() {
 
 /** The lists whose rows drag to another place. */
 type DragList = 'pinned' | SidebarList
-
-// Paused waits on a person too: one who took control of its computer, or usage to come back.
-const groupOf = (status: string): Group =>
-  status === 'waiting' || status === 'paused'
-    ? 'waiting'
-    : status === 'starting' || status === 'running'
-      ? 'working'
-      : 'rest'
 
 const LABELS: Record<string, string> = {
   waiting: 'needs you',
@@ -872,28 +862,33 @@ export function SidebarWork({
 
   // The thread open, when the list does not show it (older than its threads, behind a "+N",
   // filtered out or put away for later): first under Threads while it stays open, so the
-  // member sees where they are. Pinned, it is under Pinned already; a child thread stays out.
+  // member sees where they are. Pinned, it is under Pinned already; a child thread brings
+  // its parent, unfolded.
   const openId = expanded && !instead ? threadId : null
+  // A child thread open: its parent, which shows it unfolded.
   const inView =
     !!openId &&
     (pinned.some((t) => t.id === openId) ||
-      waitingShown.some((t) => t.id === openId) ||
-      ordered.slice(0, visible).some((t) => t.id === openId))
-  const loaded = openId ? all.find((t) => t.id === openId) : undefined
+      waitingShown.some((t) => holds(t, openId)) ||
+      ordered.slice(0, visible).some((t) => holds(t, openId)))
+  const loaded = openId ? all.find((t) => holds(t, openId)) : undefined
   // Not among those loaded: as the list has it, from the server, again as the list changes.
   const [fetched, setFetched] = useState<ThreadSummary>()
   useEffect(() => {
     if (!openId || inView || loaded) return
     let current = true
     api<ThreadSummary[]>(`/threads?id=${openId}`).then(
-      ([t]) => current && setFetched(t?.id === openId ? withAsks([t], needsYou).all[0] : undefined),
+      ([t]) =>
+        current && setFetched(t && holds(t, openId) ? withAsks([t], needsYou).all[0] : undefined),
       () => undefined,
     )
     return () => {
       current = false
     }
   }, [openId, inView, loaded, threads, needsYou])
-  const opened = inView ? undefined : (loaded ?? (fetched?.id === openId ? fetched : undefined))
+  const opened = inView
+    ? undefined
+    : (loaded ?? (fetched && holds(fetched, openId!) ? fetched : undefined))
 
   function changed() {
     void reloadThreads()

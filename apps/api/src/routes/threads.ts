@@ -311,11 +311,12 @@ export const threads = new Hono<AppEnv>()
       computer: { select: { kind: true, name: true } },
     }
     // One thread, as the list has it: the sidebar shows the one open when it is not among
-    // those it loaded. Archived or quiet, it is still the one open; a child thread is not listed.
+    // those it loaded. Archived or quiet, it is still the one open; a child thread is not
+    // listed, its parent is, which shows it among its children.
     const only = c.req.query('id')
     const rows = await c.var.db.session.findMany({
       where: only
-        ? { id: only, parentId: null }
+        ? { parentId: null, OR: [{ id: only }, { children: { some: { id: only } } }] }
         : {
             // A teammate's threads: those it started and those it joined.
             ...(teammateId ? { teammates: { some: { teammateId } } } : {}),
