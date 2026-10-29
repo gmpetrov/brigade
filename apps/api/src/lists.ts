@@ -94,9 +94,10 @@ async function editList(
 }
 
 /**
- * A list's text as last saved: its stored bytes, or what its row says they are (its full text, or
- * its saved version) when they differ, as after a save whose lease ended mid-write until its
- * bytes are put back. Never bytes the row does not vouch for: refused when nothing else is there.
+ * A list's text as last saved: the bytes its row points to. A file at the legacy key, from before
+ * objects per save, may hold bytes a save past its lease wrote over: then what its row says they
+ * are (its full text, or its saved version), until they are saved again (repairBytes). Never bytes
+ * the row does not vouch for: refused when nothing else is there.
  */
 async function storedText(scope: Scope, row: FileRow) {
   if (row.bytesStaleAt) {

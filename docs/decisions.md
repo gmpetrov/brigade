@@ -299,21 +299,27 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   swapped last) and is not retried for an hour. Runners started from source never update; `BRIGADE_AUTO_UPDATE=0`
   turns it off. Cloud runners from before self-update (protocol below 3) are reinstalled once per bundle through
   the provider while idle.
-- **Library** (`apps/api/src/library.ts`). Files go in the one bucket under `<organization>/<workspace>/library/<document id>`
-  (Cloudflare R2 through its S3 API; without `R2_*`, development uses `apps/api/.bucket`). `Document` keeps path,
+- **Library** (`apps/api/src/library.ts`). Each save of a file writes its bytes to an object of its own in the one
+  bucket, `<organization>/<workspace>/library-objects/<document id>/<object id>`, never changed after (`LibraryObject`,
+  `apps/api/src/library-objects.ts`; Cloudflare R2 through its S3 API; without `R2_*`, development uses
+  `apps/api/.bucket`). The file's row points to it (`Document.objectKey`), and that row update is the save's only
+  commit, so a write that lands late (past its lock's lease, or from a save that crashed) is never read. A sweep every
+  10 minutes finds objects at least an hour old that no file or version points to, and deletes them an hour later,
+  bytes before their row. Files not saved since keep their bytes at the legacy key,
+  `<organization>/<workspace>/library/<document id>`, until their next save. `Document` keeps path,
   type, size, SHA-256 and the text (UTF-8 files, PDFs and Word, Excel and PowerPoint files; others are kept but
   not searchable). Any member uploads (files or a whole folder, or by dropping them on the page), edits, moves and
   deletes from the Library page; every change is audited. Folders exist through their files' paths, and as
   `LibraryFolder` rows when someone makes an empty one or sets access on it; moving a folder rewrites every path
   under it at once. Each file records who added it and who changed it last (a member, or a teammate and its
-  thread). Every save leaves a `DocumentVersion`, its bytes under `<organization>/<workspace>/library-versions/<id>`;
-  saves by one author from one place within 10 minutes fold into one version, and the newest 50 are kept. A
-  restore saves the old bytes as a new version. Deleting moves a file to the trash: its path becomes
-  `.trash/<id>/<path>` (no live path starts with "."), so nothing else finds it; restore puts it back (beside a
-  file that took its place), and the hourly sweep deletes it 30 days on. A file is served inline only for types
-  that cannot run script (`Content-Security-Policy: sandbox` always); anything else downloads. Word documents,
-  spreadsheets and decks are read on the API (`apps/api/src/previews.ts`) for previews: Word as HTML in a frame
-  that runs no script, the first rows of each sheet, the text of each slide.
+  thread). Every save leaves a `DocumentVersion` pointing to the save's object (versions from before have their bytes
+  under `<organization>/<workspace>/library-versions/<id>`); saves by one author from one place within 10 minutes
+  fold into one version, and the newest 50 are kept. A restore saves the old bytes as a new version. Deleting moves a
+  file to the trash: its path becomes `.trash/<id>/<path>` (no live path starts with "."), so nothing else finds
+  it; restore puts it back (beside a file that took its place), and the hourly sweep deletes it 30 days on. A file
+  is served inline only for types that cannot run script (`Content-Security-Policy: sandbox` always); anything else
+  downloads. Word documents, spreadsheets and decks are read on the API (`apps/api/src/previews.ts`) for previews:
+  Word as HTML in a frame that runs no script, the first rows of each sheet, the text of each slide.
 - **Editing documents** (`apps/web/components/document-editor.tsx`, `apps/api/src/collab.ts`, `apps/collab`). Markdown
   library files and memory open in one BlockNote editor, live: everyone with a document open sees the others'
   edits and cursors, and edits save as people type. Each document is a room on the collab server (a Durable

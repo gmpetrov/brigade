@@ -32,14 +32,16 @@ mission; threads stay where the work happens.
   save lands in between and is lost. The lock is a lease row (`LibraryLock`, 30 s): waiting for it
   holds no database connection, a crashed holder frees it when its lease ends, and a holder past
   its lease writes nothing more: its row changes only while the lease is still its own (checked
-  atomically, `lease.fence`). Its bytes may still land late, over a newer save's (the bucket key is
-  shared): the file is then marked (`Document.bytesStaleAt`) and its bytes are put back from what its
-  row says (its full text, or the saved version with its sha), at once and else by a sweep every
-  minute until they are (`repairBytes`). Until then a list is read from that source, and an edit is
-  refused when there is none yet. Readers of the raw file (the runner's mirror, downloads) can see
-  the late bytes for that minute; immutable per-save keys would close it, a change of the whole
-  library's storage. A person's live save built on an older text is refused
-  (409) and the collab server reconciles first.
+  atomically, `lease.fence`). Its bytes may still land late: each save writes them to an object of
+  its own (`LibraryObject`, `src/library-objects.ts`), and pointing the file's row to it is the
+  save's only commit, so a late write, or a crash right after one, lands where nobody reads, and
+  the sweep deletes it. Readers (the editor, lists, the runner's mirror, downloads) all read the
+  object the row points to. A file not saved since this came keeps its bytes at its old key, which
+  saves overwrote; one marked then (`Document.bytesStaleAt`) is saved again from what its row says
+  (its full text, or the saved version with its sha) as an object of its own, by a sweep every
+  minute until it is (`repairBytes`), and a list's edit is refused while there is no such source.
+  A person's live save built on an older text is refused (409) and the collab server reconciles
+  first.
 - **Ticks are changes to the file, made by code.** Ticking marks the line's box (`[x]`) and may
   add a short note after its text (`*PR #491, 29 Oct*`), a save of its own credited to who did
   it. Brigade writes the file only to mark, tick or add a line; the collab server applies the
