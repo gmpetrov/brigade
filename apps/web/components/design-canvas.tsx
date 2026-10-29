@@ -748,12 +748,7 @@ function DesignCanvasInner({
   })
   // Live: the boards that fill most of the view, up to a few; a board kept small on screen shows its
   // picture once it has one; a selected one, or one being retyped or captured, stays live.
-  const keep = [
-    ...selection.map((x) => x.board),
-    ...(retyping ? [retyping.board] : []),
-    ...(opened ? [opened] : []),
-    ...pinned,
-  ]
+  const keep = [...selection.map((x) => x.board), ...(retyping ? [retyping.board] : []), ...pinned]
   const keepKey = keep.join(',')
   const live = useMemo(() => {
     const v = settled
@@ -771,8 +766,9 @@ function DesignCanvasInner({
       const across = Math.min(size.width + mx, left + w) - Math.max(-mx, left)
       const down = Math.min(size.height + my, top + h) - Math.max(-my, top)
       const inView = across > 0 && down > 0
-      // A tapped board stays live only while it is in view.
-      if (kept.has(b.key) && (b.key !== opened || inView)) return [{ key: b.key, rank: Infinity }]
+      if (kept.has(b.key)) return [{ key: b.key, rank: Infinity }]
+      // A tapped board stays live while it is in view.
+      if (b.key === opened && inView) return [{ key: b.key, rank: Infinity }]
       if (!inView) return []
       // Too small to use: its picture, unless that is out of date.
       if (w < small && pictures[b.key] && !stale.current.has(b.key)) return []
@@ -781,7 +777,7 @@ function DesignCanvasInner({
     return new Set(
       ranked
         .sort((x, y) => y.rank - x.rank)
-        .slice(0, Math.max(kept.size, touch ? LIVE_MAX_TOUCH : LIVE_MAX))
+        .slice(0, Math.max(kept.size + 1, touch ? LIVE_MAX_TOUCH : LIVE_MAX))
         .map((r) => r.key),
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps -- checks: a picture went out of date
