@@ -34,8 +34,7 @@ async function landingProof(phase: string) {
 // The public demo's build (docs/demo.md): the dashboard on recorded data, nothing else.
 const DEMO = process.env.NEXT_PUBLIC_DEMO === '1'
 
-// Where Mintlify serves the public docs (apps/docs): the subdomain of its project, with
-// "Host at /docs" on in its dashboard for www.brigade.lol.
+// Where Mintlify serves the public docs (apps/docs): its project's subdomain.
 const MINTLIFY = 'https://brigade.mintlify.site'
 
 const nextConfig = async (phase: string): Promise<NextConfig> => ({
@@ -131,15 +130,13 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
     ]
   },
   // The public docs (apps/docs), built and hosted by Mintlify, served at www.brigade.lol/docs
-  // as in https://www.mintlify.com/docs/deploy/vercel. Its pages ask for their scripts and
-  // styles at the root (/_mintlify, /mintlify-assets): pages load unstyled without those.
+  // as in its dashboard's Custom domain setup (Host at www.brigade.lol/docs): the pages load
+  // their scripts and styles under /docs too.
   async rewrites() {
     if (DEMO) return []
     return [
       { source: '/docs', destination: `${MINTLIFY}/docs` },
       { source: '/docs/:path*', destination: `${MINTLIFY}/docs/:path*` },
-      { source: '/_mintlify/:path*', destination: `${MINTLIFY}/_mintlify/:path*` },
-      { source: '/mintlify-assets/:path+', destination: `${MINTLIFY}/mintlify-assets/:path+` },
     ]
   },
 })
