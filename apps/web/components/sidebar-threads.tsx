@@ -13,8 +13,8 @@
 // browser remembers which are folded.
 // Inside Threads, the latest thread waiting on a person shows first, and the others behind a
 // "+N waiting on you".
-// A thread's child threads stay out of the list: folded under it behind an "N sub-threads"
-// row, and unfolded by its caret or that row (SubThreads). The thread already shows their
+// A thread's child threads stay out of the list: folded under it, unfolded by the caret
+// after its title (SubThreads). The thread already shows their
 // state: working while one it waits for works, waiting while one waits on a person.
 import {
   Archive,
@@ -174,7 +174,7 @@ const SUB_ROW =
   'flex h-8 w-full min-w-0 items-center gap-2 rounded-[10px] px-2 text-left text-sm text-sidebar-foreground outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground'
 
 /**
- * A thread's child threads, under it: folded, one "N sub-threads" row; unfolded, the first
+ * A thread's child threads, under it: folded, nothing but a button for the keyboard; unfolded, the first
  * of them (waiting on a person, then working, then the latest), the one open among them, and
  * a "+N more" for the rest. No dot on those rows: they are controls, not threads.
  */
@@ -195,14 +195,10 @@ function SubThreads({
   // What waits on this member is more than its own status, as for the list's threads.
   const { shown, hidden } = subThreadRows(items, { needsYou, activeId, all, cap: CHILD_CAP })
   return (
-    <SidebarMenuItem>
-      {/* Folded, a short row tucked under its parent: less height than a thread's. */}
-      <ul
-        className={cn(
-          'ml-[18px] flex min-w-0 flex-col group-data-[collapsible=icon]:hidden',
-          !open && '-mt-1',
-        )}
-      >
+    // Folded, it takes no room: the caret after the parent's title unfolds it, and from the
+    // keyboard a "Show N sub-threads" button, shown once focused.
+    <SidebarMenuItem className={cn(!open && 'sr-only has-focus-visible:not-sr-only')}>
+      <ul className="ml-[18px] flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
         {open ? (
           <>
             {/* Folds them again from the keyboard: the caret is a mouse's only. Shown once
@@ -262,13 +258,9 @@ function SubThreads({
               type="button"
               aria-expanded={false}
               onClick={onToggle}
-              className={cn(
-                SUB_ROW,
-                // Too short for a background: only its text lights up on hover.
-                'text-muted-foreground hover:text-sidebar-foreground h-5 text-[11px] hover:bg-transparent',
-              )}
+              className={cn(SUB_ROW, 'text-muted-foreground')}
             >
-              {items.length} sub-thread{items.length === 1 ? '' : 's'}
+              Show {items.length} sub-thread{items.length === 1 ? '' : 's'}
             </button>
           </li>
         )}
@@ -935,7 +927,7 @@ export function SidebarWork({
     return (
       <Fragment key={t.id}>
         <ThreadRow
-          caret={children.length ? { open, onToggle: toggle } : undefined}
+          caret={children.length ? { open, count: children.length, onToggle: toggle } : undefined}
           thread={t}
           href={href}
           active={threadId === t.id && (expanded || pathname === href)}

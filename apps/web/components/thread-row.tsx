@@ -54,7 +54,7 @@ export function ThreadRow({
   /** Under Pinned: the row's drag handlers and the drop line's class. */
   drag?: ComponentProps<'li'>
   /** It has child threads: a caret after its title folds them under it. */
-  caret?: { open: boolean; onToggle: () => void }
+  caret?: { open: boolean; count: number; onToggle: () => void }
 }) {
   const [renaming, setRenaming] = useState(false)
   const { openPreview } = useThreadPanel()
@@ -127,14 +127,18 @@ export function ThreadRow({
             <FadeText textClassName={cn(working && 'text-shimmer-dim')}>
               <StreamedTitle threadId={thread.id} text={title} />
             </FadeText>
-            {/* Right after the title: folds its child threads under it, without opening it. The
-                row below it ("N sub-threads") does the same from the keyboard. */}
+            {/* Right after the title: folds its child threads under it, without opening it. From
+                the keyboard, a button below it does the same (SubThreads). */}
             {caret && (
               <span
                 aria-hidden
                 // Folds in place: on a phone, the sidebar stays open (ui/sidebar.tsx).
                 data-keeps-sidebar
-                title={caret.open ? 'Hide sub-threads' : 'Show sub-threads'}
+                title={
+                  caret.open
+                    ? 'Hide sub-threads'
+                    : `Show ${caret.count} sub-thread${caret.count === 1 ? '' : 's'}`
+                }
                 className="text-muted-foreground hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
                 onClick={(e) => {
                   e.preventDefault()
