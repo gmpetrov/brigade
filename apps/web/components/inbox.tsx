@@ -1290,7 +1290,7 @@ function Message({
 }
 
 /**
- * A mail's files, like a thread message's: an image or a video opens over the page, any other
+ * A mail's files, like a thread message's: an image, a video or audio opens over the page, any other
  * file (a PDF, a text) in a new tab, where the browser shows what it can and downloads the rest.
  */
 function MailFiles({ m }: { m: InboxMessage }) {
@@ -1325,7 +1325,7 @@ function MailFiles({ m }: { m: InboxMessage }) {
               {kind ? (
                 <button
                   type="button"
-                  className={cn(chip, 'cursor-zoom-in')}
+                  className={cn(chip, kind === 'audio' ? 'cursor-pointer' : 'cursor-zoom-in')}
                   onClick={() => setViewing({ name: a.name, src, kind })}
                   aria-label={`Preview ${a.name}`}
                   title={a.name}

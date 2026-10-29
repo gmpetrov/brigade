@@ -21,7 +21,7 @@ import { serveObject } from '../serve-object.js'
 
 /** Types the browser may show inline from the API's origin; anything else downloads. */
 export const INLINE =
-  /^(text\/plain|text\/markdown|text\/csv|application\/json|application\/pdf|image\/(png|jpeg|gif|webp)|video\/(mp4|webm|quicktime))$/
+  /^(text\/plain|text\/markdown|text\/csv|application\/json|application\/pdf|image\/(png|jpeg|gif|webp)|video\/(mp4|webm|quicktime)|audio\/(mpeg|mp4|wav|ogg|webm))$/
 
 export const attachments = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
@@ -103,7 +103,7 @@ export const attachments = new Hono<AppEnv>()
     if (!row) throw new HTTPException(404, { message: 'File not found' })
     const inline = c.req.query('download') === undefined && INLINE.test(row.contentType)
     if (servedFromBucket(row)) {
-      // A large video: from the bucket's short-lived URL, which answers ranges itself.
+      // A large file, audio or video: from the bucket's short-lived URL, which answers ranges itself.
       const signed = await presignGet(attachmentKey(scope, row.id), {
         contentType: row.contentType,
         disposition: `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(row.name)}`,

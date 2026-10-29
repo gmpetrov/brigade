@@ -21,6 +21,7 @@ import { audit, type Actor } from './audit.js'
 import {
   attachmentKey,
   deleteObject,
+  directUploads,
   getObject,
   objectSize,
   presignPut,
@@ -382,8 +383,12 @@ export async function finishUpload(
   })
 }
 
-/** A file the API does not read whole: its bytes go straight from the bucket. */
-export const servedFromBucket = (row: { size: number }) => row.size > ATTACHMENT_MAX
+/**
+ * A file the API does not read whole: its bytes go straight from the bucket. Audio and video
+ * too, whatever their size: a player asks for many ranges, which the bucket answers itself.
+ */
+export const servedFromBucket = (row: { size: number; contentType: string }) =>
+  row.size > ATTACHMENT_MAX || (directUploads && /^(audio|video)\//.test(row.contentType))
 
 /**
  * Remove abandoned uploads, across workspaces: pending ones whose browser went
