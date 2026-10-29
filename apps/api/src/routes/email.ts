@@ -2,6 +2,7 @@
 // address and domain, their forwarding), the rules' order and a rule tried on past mail, each
 // address's journal, a test mail, and cancelling a mail in its window.
 import {
+  AddDomainRecords,
   CreateDomain,
   CreateInbox,
   EnableAgentAddress,
@@ -30,6 +31,7 @@ import {
   removeDomain,
   setPublicAddress,
 } from '../mail/domains.js'
+import { addRecordsOnCloudflare, cloudflareSetup } from '../mail/cloudflare-dns.js'
 import { addressOf, mailDomain } from '../mail/names.js'
 import { cancelMail } from '../mail/outbound.js'
 import { resendConfigured, sendEmail } from '../mail/resend.js'
@@ -298,6 +300,21 @@ export const email = new Hono<AppEnv>()
     requireRole(c.var.scope, 'owner', 'admin')
     await removeDomain(c.var.db, c.var.scope, c.req.param('id'))
     return c.body(null, 204)
+  })
+
+  /** Owners and admins: whether a domain's DNS is at Cloudflare, and the accounts to add its records with. */
+  .get('/domains/:id/cloudflare', async (c) => {
+    requireRole(c.var.scope, 'owner', 'admin')
+    return c.json(await cloudflareSetup(c.var.db, c.var.scope, c.req.param('id')))
+  })
+
+  /** Owners and admins: add a domain's records on Cloudflare with one of the workspace's accounts. */
+  .post('/domains/:id/cloudflare', async (c) => {
+    requireRole(c.var.scope, 'owner', 'admin')
+    const { connectionId } = await parseBody(c.req.raw, AddDomainRecords)
+    return c.json(
+      await addRecordsOnCloudflare(c.var.db, c.var.scope, c.req.param('id'), connectionId),
+    )
   })
 
   /** Read Resend's check of a domain's DNS records now (`checkDomain`). */
