@@ -142,6 +142,7 @@ import {
 import { useTicketReplies } from '@/lib/ticket-replies'
 import { slotWait } from '@/lib/slot-wait'
 import { inGap, type EventGap } from '@/lib/use-thread-events'
+import { messageRuns, type RunEntry } from '@/lib/message-runs'
 import { pauseLabel, pauses } from '@/lib/thread-times'
 import { cn } from '@/lib/utils'
 
@@ -2060,7 +2061,9 @@ export function ThreadItems({
   const closingTurn = (i: number) =>
     working &&
     !items.slice(i + 1).some((it) => it.kind === 'turn' || (it.kind === 'user' && !it.steeredTo))
-  const render = (item: Item, i: number): React.ReactNode => {
+  /** Its place in a run of one teammate's messages: see `messageRuns`. */
+  type Run = { follows: boolean; close: boolean; followed: boolean }
+  const render = (item: Item, i: number, run?: Run): React.ReactNode => {
     switch (item.kind) {
       case 'user': {
         // An email a trigger received: a mail, with the files that came with it.
@@ -2217,13 +2220,24 @@ export function ThreadItems({
         const named =
           several &&
           author &&
+          !run?.follows &&
           (!previous ||
             previous.teammateId !== item.teammateId ||
             items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
         return (
-          <div key={item.key} data-seq={item.seq} className="group/message flex items-start gap-3">
-            {author && <TeammateAvatar teammate={author} className="mt-0.5 size-8" />}
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
+          <div
+            key={item.key}
+            data-seq={item.seq}
+            className={cn('group/message flex items-start gap-3', run?.close && '-mt-3')}
+          >
+            {/* After its own message, no avatar again: the run shows it once, on its first. */}
+            {author &&
+              (run?.follows ? (
+                <div className="w-8 flex-none" aria-hidden />
+              ) : (
+                <TeammateAvatar teammate={author} className="mt-0.5 size-8" />
+              ))}
+            <div className="relative flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
               {named && <span className="text-sm font-semibold">{author.name}</span>}
               {/* A file it names opens from its own working folder first. */}
               <FileLinksProvider
@@ -2235,8 +2249,15 @@ export function ThreadItems({
                 {/* A card it ends with shows once the reply is done, without its markup. */}
                 <Markdown text={item.done ? item.text : withoutCard(item.text)} />
               </FileLinksProvider>
+              {/* With its next message close under it, they float over its corner, where a pointer shows them. */}
               {item.done && (
-                <div className="-ml-1.5 flex">
+                <div
+                  className={cn(
+                    '-ml-1.5 flex',
+                    run?.followed &&
+                      '[@media(hover:hover)]:absolute [@media(hover:hover)]:-top-3 [@media(hover:hover)]:right-0 [@media(hover:hover)]:ml-0 [@media(hover:hover)]:rounded-full [@media(hover:hover)]:bg-background [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:shadow-sm [@media(hover:hover)]:ring-1 [@media(hover:hover)]:ring-border [@media(hover:hover)]:pointer-events-none [@media(hover:hover)]:group-hover/message:pointer-events-auto [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100',
+                  )}
+                >
                   <MessageActions
                     text={item.text}
                     onReply={
@@ -2593,8 +2614,28 @@ export function ThreadItems({
     : lastUser >= 0
       ? (items[lastUser] as Extract<Item, { kind: 'user' }>).at
       : undefined
-  const show = (list: Node[]): React.ReactNode[] =>
-    list.map((node) =>
+  // What ends a run of one teammate's messages: anything shown but its steps.
+  const runEntry = (node: Node): RunEntry => {
+    if (node.type === 'activity') return 'step'
+    if (node.type !== 'item' || marks.has(items[node.i]!.key)) return 'break'
+    const item = items[node.i]!
+    if (item.kind === 'assistant') return { author: item.teammateId ?? '' }
+    return isActivity(item) ||
+      item.kind === 'start' ||
+      item.kind === 'woke' ||
+      item.kind === 'slot' ||
+      (item.kind === 'turn' && item.finishReason !== 'interrupted')
+      ? 'step'
+      : 'break'
+  }
+  const show = (list: Node[]): React.ReactNode[] => {
+    const runs = messageRuns(list.map(runEntry))
+    const runAt = (at: number): Run => ({
+      follows: runs.follows.has(at),
+      close: runs.close.has(at),
+      followed: runs.close.has(at + 1),
+    })
+    return list.map((node, at) =>
       node.type === 'item' ? (
         marks.has(items[node.i]!.key) ? (
           <Fragment key={items[node.i]!.key}>
@@ -2602,7 +2643,7 @@ export function ThreadItems({
             {render(items[node.i]!, node.i)}
           </Fragment>
         ) : (
-          render(items[node.i]!, node.i)
+          render(items[node.i]!, node.i, runAt(at))
         )
       ) : node.type === 'activity' ? (
         <ActivityGroup
@@ -2627,6 +2668,7 @@ export function ThreadItems({
         </WorkedFor>
       ),
     )
+  }
   return (
     <div className="flex flex-col gap-4">
       {show(nodes)}
