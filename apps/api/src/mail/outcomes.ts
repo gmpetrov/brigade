@@ -2,7 +2,7 @@
 // the thread: email_no_reply keeps its reason on the conversation's received mails. no_reply puts
 // the conversation To do, handled leaves it with the teammate. A turn that ends with a mail of the
 // thread neither answered nor accounted for gets asked once what it did with it.
-import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
+import { Prisma, prisma, scoped, type Scope, type ScopedDb } from '../db.js'
 import { fireNow } from '../wakeups.js'
 
 export type MailOutcome = 'no_reply' | 'handled'
@@ -39,53 +39,42 @@ export async function clearOutcome(db: ScopedDb, mail: { box: string; conversati
 /**
  * The mails of this thread its turn left without an answer or a word on them: the latest of each
  * conversation, delivered to it, not asked about yet, with nothing sent since, no reply waiting
- * for approval, and no wake-up still to bring it in (it would come in the next turn).
+ * for approval, and no wake-up still to bring it in (it would come in the next turn). In one
+ * query, so answered mail, however much, never hides one left unanswered.
  */
 export async function unaccounted(db: ScopedDb, sessionId: string) {
-  const mails = await db.mailMessage.findMany({
-    where: {
-      sessionId,
-      direction: 'in',
-      addressId: { not: null },
-      status: 'done',
-      route: { in: ANSWERABLE },
-      doneAt: null,
-      outcome: null,
-      outcomeAskedAt: null,
-      receivedAt: { gt: new Date(Date.now() - 7 * 86_400_000) },
-    },
-    orderBy: { receivedAt: 'desc' },
-    take: 20,
-  })
-  const found: typeof mails = []
-  for (const m of mails) {
-    if (found.some((x) => x.box === m.box && x.conversationId === m.conversationId)) continue
-    const conversation = { box: m.box, conversationId: m.conversationId }
-    const [newer, sent, wakeups, drafts] = await Promise.all([
-      db.mailMessage.count({
-        where: { ...conversation, direction: 'in', receivedAt: { gt: m.receivedAt } },
-      }),
-      db.mailMessage.count({
-        where: {
-          ...conversation,
-          direction: 'out',
-          status: { not: 'cancelled' },
-          receivedAt: { gt: m.receivedAt },
-        },
-      }),
-      db.wakeup.count({ where: { sessionId, sourceId: `email:${m.id}`, status: 'pending' } }),
-      db.ticket.count({
-        where: {
-          sessionId,
-          status: 'open',
-          type: 'approval',
-          payload: { path: ['input', 'replyTo'], equals: m.id },
-        },
-      }),
-    ])
-    if (!newer && !sent && !wakeups && !drafts) found.push(m)
-  }
-  return found
+  const session = await db.session.findFirst({ where: { id: sessionId }, select: { id: true } })
+  if (!session) return []
+  const since = new Date(Date.now() - 7 * 86_400_000)
+  return prisma.$queryRaw<
+    {
+      id: string
+      box: string
+      conversationId: string
+      fromAddress: string
+      fromName: string
+      subject: string
+    }[]
+  >`
+    select m.id, m.box, m."conversationId", m."fromAddress", m."fromName", m.subject
+    from "MailMessage" m
+    where m."sessionId" = ${session.id} and m.direction = 'in' and m."addressId" is not null
+      and m.status = 'done' and m.route in (${Prisma.join(ANSWERABLE)})
+      and m."doneAt" is null and m.outcome is null and m."outcomeAskedAt" is null
+      and m."receivedAt" > ${since}
+      and not exists (select 1 from "MailMessage" x
+        where x.box = m.box and x."conversationId" = m."conversationId"
+          and x."workspaceId" = m."workspaceId"
+          and ((x.direction = 'in' and x."receivedAt" > m."receivedAt")
+            or (x.direction = 'out' and x.status <> 'cancelled' and x."receivedAt" > m."receivedAt")))
+      and not exists (select 1 from "Wakeup" w
+        where w."sessionId" = m."sessionId" and w.status = 'pending'
+          and w."sourceId" = 'email:' || m.id)
+      and not exists (select 1 from "Ticket" t
+        where t."sessionId" = m."sessionId" and t.status = 'open' and t.type = 'approval'
+          and t.payload->'input'->>'replyTo' = m.id)
+    order by m."receivedAt" desc
+    limit 20`
 }
 
 /** What the thread is told, about the mails it left without a word. */
@@ -114,19 +103,23 @@ export function askText(
 export async function askOutcomes(scope: Scope, session: { id: string; teammateId: string }) {
   const db = scoped(scope)
   const found = await unaccounted(db, session.id)
-  // Each claimed first, so two ends of turn at once ask about it once.
-  const mails: typeof found = []
-  for (const m of found) {
-    const claimed = await db.mailMessage.updateMany({
-      where: { id: m.id, outcomeAskedAt: null },
-      data: { outcomeAskedAt: new Date() },
-    })
-    if (claimed.count) mails.push(m)
-  }
-  if (!mails.length) return
-  try {
-    const wakeup = await db.wakeup.create({
+  if (!found.length) return
+  // Each mail claimed and its question queued together: two ends of turn at once ask about it
+  // once, and a failure between the two loses neither (the wake-up is retried until it fires).
+  const wakeupId = await prisma.$transaction(async (tx) => {
+    const mails: typeof found = []
+    for (const m of found) {
+      const claimed = await tx.mailMessage.updateMany({
+        where: { id: m.id, workspaceId: scope.workspaceId, outcomeAskedAt: null },
+        data: { outcomeAskedAt: new Date() },
+      })
+      if (claimed.count) mails.push(m)
+    }
+    if (!mails.length) return null
+    const wakeup = await tx.wakeup.create({
       data: {
+        organizationId: scope.organizationId,
+        workspaceId: scope.workspaceId,
         sessionId: session.id,
         teammateId: session.teammateId,
         kind: 'reply',
@@ -134,12 +127,11 @@ export async function askOutcomes(scope: Scope, session: { id: string; teammateI
         wakeAt: new Date(),
         // Asked again after a person asked for a reply (clearOutcome): a new one.
         sourceId: `outcome:${Date.now()}:${mails.map((m) => m.id).join(',')}`.slice(0, 500),
-      } as never,
+      },
     })
-    await fireNow(wakeup.id)
-  } catch (error) {
-    if ((error as { code?: string }).code !== 'P2002') throw error
-  }
+    return wakeup.id
+  })
+  if (wakeupId) await fireNow(wakeupId)
 }
 
 /** Called once a thread's events are kept: a turn that ended with it idle may have left mail. */

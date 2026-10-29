@@ -113,6 +113,8 @@ export type InboxDetail = InboxItem & {
   mayPrompt: boolean
   /** This member may reply from the Inbox, from its mailbox: Brigade's addresses, in a thread they may write in. */
   canReply: boolean
+  /** Where a person's reply goes: its latest mail's Reply-To, else its sender. */
+  replyRecipients: string[]
 }
 
 export type InboxSourceView = {

@@ -2003,6 +2003,44 @@ describe('what a thread did without replying', { skip }, () => {
     )
   })
 
+  test('an older conversation left unanswered is not hidden by much answered mail', async () => {
+    const db = scoped(scope)
+    const { unaccounted } = await import('../src/mail/outcomes.js')
+    const handed = await thread(riley.id)
+    const left = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 60_000),
+    })
+    for (let i = 0; i < 25; i++) {
+      const answered = await mail(agent, {
+        route: 'handed',
+        sessionId: handed.id,
+        receivedAt: new Date(Date.now() - 30_000),
+      })
+      await sent(answered)
+    }
+    assert.deepEqual(
+      (await unaccounted(db, handed.id)).map((m) => m.id),
+      [left.id],
+    )
+  })
+
+  test('a question that could not be queued is not lost: its mail is asked about next time', async () => {
+    const db = scoped(scope)
+    const { askOutcomes, unaccounted } = await import('../src/mail/outcomes.js')
+    const handed = await thread(riley.id)
+    const left = await mail(agent, { route: 'handed', sessionId: handed.id })
+    // Its wake-up cannot be written (no such teammate): the claim goes back with it.
+    await assert.rejects(askOutcomes(scope, { id: handed.id, teammateId: 'no-such-teammate' }))
+    const row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: left.id } })
+    assert.equal(row.outcomeAskedAt, null)
+    assert.deepEqual(
+      (await unaccounted(db, handed.id)).map((m) => m.id),
+      [left.id],
+    )
+  })
+
   test('a person’s own reply leaves from the mailbox, and the teammate does not answer twice', async () => {
     const db = scoped(scope)
     const handed = await thread(riley.id)
@@ -2010,10 +2048,13 @@ describe('what a thread did without replying', { skip }, () => {
       route: 'handed',
       sessionId: handed.id,
       messageId: `<own-${id}@outside.test>`,
+      replyTo: ['desk@outside.test'],
     })
     const item = `mail:${received.id}`
     await call('email_no_reply', handed, { id: received.id, reason: 'Unsure what to say' })
     await assert.rejects(inbox.replyItem(db, as(1), item, 'Hi'), /cannot reply/)
+    // The form shows where it goes: its Reply-To, as it is sent.
+    assert.deepEqual((await inbox.readItem(db, as(0), item)).replyRecipients, ['desk@outside.test'])
 
     const requests: { to: string[]; text: string; headers?: Record<string, string> }[] = []
     const beforeFetch = globalThis.fetch
@@ -2028,7 +2069,7 @@ describe('what a thread did without replying', { skip }, () => {
     } finally {
       globalThis.fetch = beforeFetch
     }
-    assert.deepEqual(requests[0]!.to, ['client@outside.test'])
+    assert.deepEqual(requests[0]!.to, ['desk@outside.test'])
     assert.equal(requests[0]!.headers?.['In-Reply-To'], `<own-${id}@outside.test>`)
     const row = await prisma.mailMessage.findUniqueOrThrow({
       where: { id: reply.id.slice('mail:'.length) },
@@ -2041,7 +2082,7 @@ describe('what a thread did without replying', { skip }, () => {
 
     // The teammate's own reply afterwards is stopped before anyone is asked.
     const problem = await call('email_send', handed, {
-      to: ['client@outside.test'],
+      to: ['desk@outside.test'],
       subject: '',
       text: 'Hello again',
       replyTo: received.id,

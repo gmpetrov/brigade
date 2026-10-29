@@ -1512,7 +1512,7 @@ function ReplyForm({
       }}
     >
       <p className="text-sm text-muted-foreground">
-        To {detail.fromName || detail.from}, from {detail.to}
+        To {detail.replyRecipients.join(', ')}, from {detail.to}
       </p>
       <Textarea
         aria-label="Your reply"

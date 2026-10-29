@@ -725,8 +725,13 @@ export async function readItem(
     mayPrompt: mayPrompt(scope, head),
     // In its thread's name: by who may write in it, who may also cancel it before it leaves.
     canReply: !item!.hidden && !!head.address && mayPrompt(scope, head),
+    replyRecipients: recipientsOf(head),
   }
 }
+
+/** Where a reply to a mail goes: its Reply-To, else its sender. */
+const recipientsOf = (m: { replyTo: string[]; fromAddress: string }) =>
+  m.replyTo.length ? m.replyTo : [m.fromAddress]
 
 /** Whether this member may write in the conversation's thread (thread-spec.ts, requireMayPrompt). */
 const mayPrompt = (scope: WorkspaceScope, head: Row) =>
@@ -759,7 +764,8 @@ export async function replyItem(db: ScopedDb, scope: WorkspaceScope, itemId: str
     select: { id: true, projectId: true, teammateId: true, origin: true, status: true },
   })
   if (!thread) throw new HTTPException(404, { message: 'Its thread is gone' })
-  const to = head.replyTo.length ? head.replyTo : [head.fromAddress]
+  // What the form showed: the same recipients, from the same mail.
+  const to = recipientsOf(head)
   const sent = await sendDraft(db, scope, {
     address: head.address,
     thread,
