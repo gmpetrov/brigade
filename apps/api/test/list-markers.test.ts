@@ -3,7 +3,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { parseList } from '@brigade/contracts'
-import { normalizeMarkdown } from '../src/collab.js'
+
+process.env.DATABASE_URL ??= 'postgresql://localhost:1/none'
+process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
+process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
+const { normalizeMarkdown } = await import('../src/collab.js')
 
 test('a checklist line keeps its marker through the editor, and so does its text after it', async () => {
   const text = [

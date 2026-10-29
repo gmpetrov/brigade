@@ -718,6 +718,10 @@ type Handler = (params: [string, string], input: Json, url: URL) => Stored | unk
 const ok = { ok: true }
 const routes: [string, RegExp, Handler][] = [
   ['POST', /^\/threads$/, (_, input) => newThread(input as never)],
+  // Lists (docs/lists.md) were recorded before they existed: none, and handing lines over is off.
+  ['GET', /^\/lists$/, () => []],
+  ['POST', /^\/lists\/.+$/, () => ({ status: 403, body: { error: OFF } })],
+  ['PUT', /^\/lists\/.+$/, () => ({ status: 403, body: { error: OFF } })],
   [
     'POST',
     /^\/threads\/([^/]+)\/messages$/,

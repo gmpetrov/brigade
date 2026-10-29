@@ -339,7 +339,7 @@ type Picked = { id: string; text: string }
 /**
  * The picked lines as items of this file: each gets its row, and its marker in the file unless
  * it has one (the editor that picked it adds it too, and its save may be on its way). A line
- * that already has another id keeps it. Returns the items' ids, in the order picked.
+ * that already has another id keeps it. Returns each picked line's item id, in the order picked.
  */
 async function itemsFor(
   db: ScopedDb,
@@ -379,7 +379,7 @@ async function itemsFor(
     })) as never,
     skipDuplicates: true,
   })
-  return [...new Set(picked.map((p) => ids.get(p.id)!))]
+  return picked.map((p) => ids.get(p.id)!)
 }
 
 /** The lines as a bulleted list, for a thread's first message or a note. */
@@ -406,8 +406,14 @@ export async function handOff(
   const teammate = await db.teammate.findFirst({ where: { id: input.teammateId } })
   if (!teammate) throw new HTTPException(404, { message: 'Teammate not found' })
   const actor: Actor = { type: 'member', id: memberId }
-  const ids = await itemsFor(db, scope, actor, file, input.items)
-  const texts = new Map(input.items.map((p, i) => [ids[i]!, p.text]))
+  // Where it runs first: with no computer to run on, nothing is changed.
+  const [computer, projectId] = await Promise.all([
+    computerFor(db, memberId, teammate.harness),
+    input.projectId ?? projectOf(db, file.path),
+  ])
+  const picked = await itemsFor(db, scope, actor, file, input.items)
+  const texts = new Map(input.items.map((p, i) => [picked[i]!, p.text]))
+  const ids = [...texts.keys()]
   const mention = formatMention({ kind: 'document', id: file.id, label: file.path })
   const message = (group: string[]) =>
     [
@@ -418,10 +424,6 @@ export async function handOff(
       bullets(group.map((id) => texts.get(id)!)),
     ].join('\n\n')
   const groups = input.mode === 'each' ? ids.map((id) => [id]) : [ids]
-  const [computer, projectId] = await Promise.all([
-    computerFor(db, memberId, teammate.harness),
-    input.projectId ?? projectOf(db, file.path),
-  ])
   const threads: string[] = []
   for (const group of groups) {
     const first = plainItemText(texts.get(group[0]!)!)
@@ -457,7 +459,12 @@ export async function linkToThread(
   const file = await listFile(db, { id: documentId })
   const session = await db.session.findFirst({ where: { id: input.sessionId } })
   if (!session) throw new HTTPException(404, { message: 'Thread not found' })
-  const ids = await itemsFor(db, scope, { type: 'member', id: memberId }, file, input.items)
+  // Its teammate reads the lines at its next turn, on its starter's accounts: as a message would.
+  if (session.startedByMemberId !== memberId && !session.othersMayPrompt)
+    throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
+  const ids = [
+    ...new Set(await itemsFor(db, scope, { type: 'member', id: memberId }, file, input.items)),
+  ]
   await db.listItemThread.createMany({
     data: ids.map((itemId) => ({ itemId, sessionId: session.id })) as never,
     skipDuplicates: true,

@@ -49,6 +49,8 @@ export const LIST_LIVE = [
   'pulls.updated',
   'library.updated',
 ] as const
+/** Without threads to follow: any thread's change would only fetch the same again. */
+const QUIET_LIVE = ['lists.updated', 'pulls.updated', 'library.updated'] as const
 
 // ---- In the editor --------------------------------------------------------------------------
 
@@ -62,7 +64,13 @@ export function ListItemsProvider({
   documentId: string | null
   children: ReactNode
 }) {
-  const list = useApi<ListDetail>(documentId ? `/lists/${documentId}` : null, LIST_LIVE)
+  const [following, setFollowing] = useState(false)
+  const list = useApi<ListDetail>(
+    documentId ? `/lists/${documentId}` : null,
+    following ? LIST_LIVE : QUIET_LIVE,
+  )
+  const threaded = !!list.data?.items.some((i) => i.threads.length)
+  if (threaded !== following) setFollowing(threaded)
   const items = useMemo(() => new Map((list.data?.items ?? []).map((i) => [i.id, i])), [list.data])
   return <ListItemsContext.Provider value={items}>{children}</ListItemsContext.Provider>
 }
@@ -417,7 +425,7 @@ function ModeOption({
 
 /** The items a thread carries, at its top: ticked as the work lands, each tickable here too. */
 export function ThreadItemsCard({ threadId, className }: { threadId: string; className?: string }) {
-  const items = useApi<ThreadListItems>(`/lists/threads/${threadId}`, LIST_LIVE)
+  const items = useApi<ThreadListItems>(`/lists/threads/${threadId}`, QUIET_LIVE)
   const [open, setOpen] = useState(true)
   const [busy, setBusy] = useState<string>()
   const list = items.data ?? []

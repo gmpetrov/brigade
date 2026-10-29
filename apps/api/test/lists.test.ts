@@ -1,0 +1,362 @@
+import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
+import { after, before, describe, test } from 'node:test'
+import { parseEnv } from 'node:util'
+
+// Lists (src/lists.ts, docs/lists.md) against the API's development database (apps/api/.env), in
+// an organization of its own removed at the end; skipped when no database answers:
+// - lines handed to a teammate get their markers in the file, their rows, and one thread that
+//   carries them, whose teammate is told them (ThreadSpec.items);
+// - a list shows each line's threads and where it stands;
+// - a teammate reads a list, ticks a line by its text, adds one under another, attaches lines;
+// - a merged pull request ticks the items it closes, not those it is only part of;
+// - a person unticks one; a line removed from the file shows as gone, its thread still naming it.
+const envFile = new URL('../.env', import.meta.url)
+if (!process.env.DATABASE_URL && existsSync(envFile))
+  process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL || undefined
+process.env.DATABASE_URL ??= 'postgresql://localhost:1/none'
+process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
+process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
+
+const { prisma, scoped } = await import('../src/db.js')
+const database = await Promise.race([
+  prisma.$queryRaw`select 1 from "ListItem" limit 1`.then(() => true),
+  new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
+]).catch(() => false)
+
+type Sent = { type: string; [key: string]: unknown }
+
+const until = async (check: () => boolean | Promise<boolean>, what: string) => {
+  for (let i = 0; i < 200; i++) {
+    if (await check()) return
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  assert.fail(`timed out waiting for ${what}`)
+}
+
+const CHECKLIST = [
+  '# Launch',
+  '',
+  '## Tech',
+  '',
+  '* [ ] Neon backups: 7 days and a tested restore',
+  '* [ ] Documented rollback',
+  '* [ ] Light load test',
+  '',
+  '## Security',
+  '',
+  '* [ ] SECURITY.md and security.txt',
+  '* [x] Secret scan of the whole history',
+  '',
+].join('\n')
+
+describe('lists', { skip: !database && 'no database answers' }, () => {
+  const suffix = randomUUID().slice(0, 8)
+  const ids = {} as Record<
+    'org' | 'user' | 'member' | 'workspace' | 'computer' | 'runner' | 'riley' | 'file',
+    string
+  >
+  let db: ReturnType<typeof scoped>
+  let scope: { organizationId: string; workspaceId: string }
+  let sent: Sent[]
+  let close: () => void
+  let lists: typeof import('../src/lists.js')
+  let library: typeof import('../src/library.js')
+  let riley: { id: string; name: string; libraryAccess: 'read_write' }
+  let threadId: string
+
+  const text = async () => {
+    const row = await db.document.findFirst({ where: { id: ids.file } })
+    return library.documentText(scope, row!)
+  }
+
+  before(async () => {
+    lists = await import('../src/lists.js')
+    library = await import('../src/library.js')
+    ids.org = `org-lists-${suffix}`
+    ids.user = `user-lists-${suffix}`
+    ids.member = `m-lists-${suffix}`
+    await prisma.organization.create({
+      data: { id: ids.org, name: 'Lists', slug: `lists-${suffix}` },
+    })
+    await prisma.user.create({
+      data: { id: ids.user, name: 'Ada', email: `${ids.user}@test.local` },
+    })
+    await prisma.member.create({
+      data: { id: ids.member, organizationId: ids.org, userId: ids.user, role: 'owner' },
+    })
+    ids.workspace = (
+      await prisma.workspace.create({ data: { organizationId: ids.org, name: 'Lists' } })
+    ).id
+    scope = { organizationId: ids.org, workspaceId: ids.workspace }
+    db = scoped(scope)
+    ids.computer = (
+      await db.computer.create({
+        data: { kind: 'member_machine', memberId: ids.member, name: 'Laptop', status: 'running' },
+      } as never)
+    ).id
+    ids.runner = (
+      await db.runner.create({
+        data: { computerId: ids.computer, tokenHash: `hash-${suffix}` },
+      } as never)
+    ).id
+    await db.account.create({
+      data: {
+        memberId: ids.member,
+        computerId: ids.computer,
+        provider: 'claude_code',
+        label: 'Claude',
+        status: 'ready',
+      },
+    } as never)
+    const teammate = await db.teammate.create({ data: { name: `Riley ${suffix}` } } as never)
+    ids.riley = teammate.id
+    riley = { id: teammate.id, name: teammate.name, libraryAccess: 'read_write' }
+    ids.file = (
+      await library.saveLibraryFile(
+        db,
+        scope,
+        { type: 'member', id: ids.member },
+        { path: 'Projects/Acme/launch.md', bytes: new TextEncoder().encode(CHECKLIST) },
+      )
+    ).id
+    sent = []
+    close = await connect()
+  })
+
+  /** Ada's computer, its runner connected: what it is sent goes in `sent`. */
+  async function connect() {
+    const { runnerSocket } = await import('../src/hub.js')
+    const { PROTOCOL_VERSION } = await import('@brigade/contracts')
+    const handle = runnerSocket({ id: ids.runner, computerId: ids.computer, ...scope })
+    const ws = { send: (raw: string) => sent.push(JSON.parse(raw)), close: () => {} }
+    handle.onMessage(
+      JSON.stringify({
+        type: 'hello',
+        protocolVersion: PROTOCOL_VERSION,
+        version: '0.0.0',
+        platform: 'linux-x64',
+      }),
+      ws as never,
+    )
+    await until(() => sent.some((m) => m.type === 'welcome'), 'the welcome')
+    return () => handle.onClose()
+  }
+
+  after(async () => {
+    close?.()
+    if (ids.workspace) await prisma.workspace.deleteMany({ where: { id: ids.workspace } })
+    await prisma.member.deleteMany({ where: { organizationId: ids.org } })
+    await prisma.organization.deleteMany({ where: { id: ids.org } })
+    await prisma.user.deleteMany({ where: { id: ids.user } })
+  })
+
+  test('lines handed over get their markers, their rows, and one thread that carries them', async () => {
+    const picked = [
+      { id: 'aaaaaaaaaaaaaaaa', text: 'Neon backups: 7 days and a tested restore' },
+      { id: 'bbbbbbbbbbbbbbbb', text: 'Documented rollback' },
+    ]
+    const { threadIds } = await lists.handOff(db, scope, ids.member, ids.file, {
+      teammateId: ids.riley,
+      items: picked,
+      mode: 'together',
+    })
+    assert.equal(threadIds.length, 1)
+    threadId = threadIds[0]!
+    const lines = (await text()).split('\n')
+    assert.equal(
+      lines[4],
+      '* [ ] Neon backups: 7 days and a tested restore <!-- item:aaaaaaaaaaaaaaaa -->',
+    )
+    assert.equal(lines[5], '* [ ] Documented rollback <!-- item:bbbbbbbbbbbbbbbb -->')
+    assert.equal(lines[6], '* [ ] Light load test', 'lines not picked keep no marker')
+    const links = await db.listItemThread.findMany({ where: { sessionId: threadId } })
+    assert.deepEqual(links.map((l) => l.itemId).sort(), ['aaaaaaaaaaaaaaaa', 'bbbbbbbbbbbbbbbb'])
+    // The teammate is told them with its first prompt, and the message names them.
+    await until(
+      () =>
+        sent.some(
+          (m) =>
+            m.type === 'thread.prompt' &&
+            (m.thread as { sessionId?: string }).sessionId === threadId,
+        ),
+      'the first prompt',
+    )
+    const prompt = sent.find(
+      (m) =>
+        m.type === 'thread.prompt' && (m.thread as { sessionId?: string }).sessionId === threadId,
+    )!
+    const items = (prompt.thread as { items?: { id: string; text: string; done: boolean }[] }).items
+    assert.deepEqual(
+      items?.map((i) => [i.id, i.text, i.done]),
+      [
+        ['aaaaaaaaaaaaaaaa', 'Neon backups: 7 days and a tested restore', false],
+        ['bbbbbbbbbbbbbbbb', 'Documented rollback', false],
+      ],
+    )
+    assert.match(String(prompt.text), /Please take these items of @\[Projects\/Acme\/launch\.md\]/)
+    assert.match(String(prompt.text), /- Documented rollback/)
+  })
+
+  test('a list shows its lines with their threads and where each stands', async () => {
+    const detail = await lists.listDetail(db, scope, ids.file)
+    assert.equal(detail.title, 'Launch')
+    assert.equal(detail.total, 5)
+    assert.equal(detail.done, 1)
+    assert.deepEqual(
+      detail.items.map((i) => [i.id, i.section, i.threads.map((t) => t.id)]),
+      [
+        ['aaaaaaaaaaaaaaaa', 'Tech', [threadId]],
+        ['bbbbbbbbbbbbbbbb', 'Tech', [threadId]],
+      ],
+    )
+    await db.session.updateMany({ where: { id: threadId }, data: { status: 'waiting' } })
+    const waiting = await lists.listDetail(db, scope, ids.file)
+    assert.deepEqual(
+      waiting.items.map((i) => i.state),
+      ['needs_you', 'needs_you'],
+    )
+    assert.equal(waiting.needsYou, 2)
+    const [summary] = await lists.listSummaries(db, scope)
+    assert.equal(summary?.documentId, ids.file)
+    assert.equal(summary?.next.length, 2)
+    await db.session.updateMany({ where: { id: threadId }, data: { status: 'idle' } })
+  })
+
+  test('a teammate reads a list, ticks a line by its text, adds one under another, attaches lines', async () => {
+    const session = { id: threadId }
+    const read = (await lists.handleListCall(db, scope, session, riley, {
+      name: 'list_items',
+      path: 'Projects/Acme/launch.md',
+    })) as { lines: { id: string | null; text: string; threads?: string[] }[] }
+    assert.equal(read.lines.length, 5)
+    assert.equal(read.lines[0]!.id, 'aaaaaaaaaaaaaaaa')
+    assert.equal(read.lines[2]!.id, null)
+
+    const ticked = (await lists.handleListCall(db, scope, session, riley, {
+      name: 'complete_item',
+      item: 'SECURITY.md',
+      path: 'Projects/Acme/launch.md',
+      note: 'Published, 29 Oct',
+    })) as { ticked: { id: string; done: boolean } }
+    assert.equal(ticked.ticked.done, true)
+    const line = (await text()).split('\n')[10]!
+    assert.match(
+      line,
+      /^\* \[x\] SECURITY\.md and security\.txt \*Published, 29 Oct\* <!-- item:[a-z0-9]{16} -->$/,
+    )
+    const row = await db.listItem.findFirst({ where: { id: ticked.ticked.id } })
+    assert.equal(row?.doneByType, 'teammate')
+    assert.equal(row?.doneById, ids.riley)
+
+    const added = (await lists.handleListCall(db, scope, session, riley, {
+      name: 'add_item',
+      path: 'Projects/Acme/launch.md',
+      text: 'Restore drill on a throwaway branch',
+      after: 'aaaaaaaaaaaaaaaa',
+      nested: true,
+    })) as { added: { id: string } }
+    assert.equal(
+      (await text()).split('\n')[5],
+      `  * [ ] Restore drill on a throwaway branch <!-- item:${added.added.id} -->`,
+    )
+    assert.ok(
+      await db.listItemThread.findFirst({ where: { itemId: added.added.id, sessionId: threadId } }),
+    )
+
+    const linked = (await lists.handleListCall(db, scope, session, riley, {
+      name: 'link_items',
+      path: 'Projects/Acme/launch.md',
+      items: ['light load'],
+    })) as { linked: { id: string }[] }
+    assert.equal(linked.linked.length, 1)
+    assert.match((await text()).split('\n')[7]!, /^\* \[ \] Light load test <!-- item:/)
+
+    const unknown = (await lists.handleListCall(db, scope, session, riley, {
+      name: 'complete_item',
+      item: 'Nothing like this',
+      path: 'Projects/Acme/launch.md',
+    })) as { error: string }
+    assert.match(unknown.error, /No checklist line matches/)
+
+    // A teammate kept from the folder reads nothing of it.
+    await db.libraryFolder.create({ data: { path: 'Projects/Acme', restricted: true } } as never)
+    const kept = (await lists.handleListCall(
+      db,
+      scope,
+      session,
+      { ...riley, id: 'someone' },
+      {
+        name: 'list_items',
+        path: 'Projects/Acme/launch.md',
+      },
+    )) as { error: string }
+    assert.match(kept.error, /may not read/)
+    await db.libraryFolder.deleteMany({ where: { path: 'Projects/Acme' } })
+  })
+
+  test('a merged pull request ticks the items it closes, not those it is only part of', async () => {
+    const pull = await db.pullRequest.create({
+      data: {
+        repository: 'acme/app',
+        number: 491,
+        title: 'Rollback runbook',
+        headRef: 'rollback',
+        baseRef: 'main',
+        sessionId: threadId,
+        authorTeammateId: ids.riley,
+      },
+    } as never)
+    await lists.linkPullItems(db, pull.id, threadId, {
+      closes: ['bbbbbbbbbbbbbbbb'],
+      partOf: ['aaaaaaaaaaaaaaaa', 'not-an-item'],
+    })
+    const before = await lists.listDetail(db, scope, ids.file)
+    assert.deepEqual(
+      before.items.find((i) => i.id === 'bbbbbbbbbbbbbbbb')?.pulls.map((p) => [p.number, p.closes]),
+      [[491, true]],
+    )
+    assert.equal(before.items.find((i) => i.id === 'bbbbbbbbbbbbbbbb')?.state, 'in_progress')
+    await db.pullRequest.updateMany({ where: { id: pull.id }, data: { state: 'merged' } })
+    await lists.settleItemsOnMerge(db, scope, { id: pull.id, number: 491, sessionId: threadId })
+    const lines = (await text()).split('\n')
+    assert.match(
+      lines[6]!,
+      /^\* \[x\] Documented rollback \*PR #491, \d+ \w+\* <!-- item:bbbbbbbbbbbbbbbb -->$/,
+    )
+    assert.match(lines[4]!, /^\* \[ \] Neon backups/, 'only part of it: still open')
+  })
+
+  test('a person unticks an item; a line removed from the file shows as gone', async () => {
+    await lists.setItemDone(
+      db,
+      scope,
+      { type: 'member', id: ids.member },
+      'bbbbbbbbbbbbbbbb',
+      false,
+    )
+    assert.match((await text()).split('\n')[6]!, /^\* \[ \] Documented rollback/)
+    const row = await db.listItem.findFirst({ where: { id: 'bbbbbbbbbbbbbbbb' } })
+    assert.equal(row?.doneAt, null)
+
+    const without = (await text())
+      .split('\n')
+      .filter((l) => !l.includes('item:aaaaaaaaaaaaaaaa'))
+      .join('\n')
+    await library.saveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: ids.member },
+      { path: 'Projects/Acme/launch.md', bytes: new TextEncoder().encode(without) },
+    )
+    const items = await lists.threadItems(db, scope, threadId)
+    const gone = items.find((i) => i.id === 'aaaaaaaaaaaaaaaa')
+    assert.equal(gone?.missing, true)
+    assert.equal(gone?.text, 'Neon backups: 7 days and a tested restore')
+    await assert.rejects(
+      lists.setItemDone(db, scope, { type: 'member', id: ids.member }, 'aaaaaaaaaaaaaaaa', true),
+      /no longer in its list/,
+    )
+  })
+})

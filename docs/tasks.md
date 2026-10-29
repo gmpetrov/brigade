@@ -36,6 +36,9 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
   requests waiting on a person push and count in the badge from the pull
   requests themselves (`waitingNow`), not from tasks. If nobody misses the board
   after two weeks, tasks and missions go.
+- **Lists replace the board in the navigation (2026-10-29).** A person organizes a mission as a
+  checklist in a library file and hands its lines to teammates (docs/lists.md); the board is set
+  aside, still at /app/tasks with its data, not removed.
 - **A thread to do later is put away, not made a task.** Its ⋮ menu's Do later
   takes it out of the member's list and of what waits on them (Home, sidebar,
   app badge, notifications), for them only, like a pin; the sidebar filter's
