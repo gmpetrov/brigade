@@ -3,20 +3,19 @@
 // new-thread box in a dialog. It is the threads panel's box: the same draft and
 // teammate, so closing it by mistake loses nothing. Sending closes it at once and
 // says so in the corner; Open there goes to the thread once it has started. A message
-// whose thread did not start is kept aside, never mixed with what the box holds since:
-// Back to message swaps it with that, which is kept aside in its turn.
+// whose thread did not start, here or from a box that opened its thread at once, is kept
+// aside (lib/pending-threads.ts), never mixed with what the box holds since: Back to message
+// swaps it with that, which is kept aside in its turn.
 import { ArrowRight, CircleAlert, CircleCheck, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useDashboard } from '@/components/dashboard'
-import { NewThread, type SentMessage } from '@/components/new-thread'
+import { NewThread } from '@/components/new-thread'
 import { useThreadPanel } from '@/components/thread-panel'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { keptMessages, useKeptMessages, type KeptMessage } from '@/lib/pending-threads'
 import { isMac } from '@/lib/platform'
 import { cn } from '@/lib/utils'
-
-/** A message out of the box: one whose thread did not start, or one swapped out for it. */
-type Aside = SentMessage & { key: number; error?: string }
 
 export function QuickThread() {
   const [open, onOpenChange] = useState(false)
@@ -31,16 +30,18 @@ export function QuickThread() {
   // Only the last send's outcome updates that note.
   const last = useRef(0)
   // Newest last: the note offers it first.
-  const [aside, setAside] = useState<Aside[]>([])
-  const kept = aside.at(-1)
+  const kept = useKeptMessages().at(-1)
 
   /** The message kept aside in the box, and what the box held kept aside instead. */
-  function backToMessage(message: Aside) {
+  function backToMessage(message: KeptMessage) {
     const files = draft.files
-    const held =
+    // A file still uploading in the box would lose its upload on the way aside: the box opens,
+    // and the note offers the message once it has uploaded.
+    if (files.busy) return onOpenChange(true)
+    const held: KeptMessage | undefined =
       draft.text.trim() || files.uploads.length > 0
         ? {
-            key: Date.now(),
+            key: `aside-${Date.now()}`,
             teammateId: teammateId ?? teammate!.id,
             text: draft.text,
             uploads: files.take().uploads,
@@ -57,10 +58,15 @@ export function QuickThread() {
     draft.setAccountId(message.accountId)
     files.put(message.uploads)
     if (teammates.some((t) => t.id === message.teammateId)) chooseTeammate(message.teammateId)
-    setAside((list) => [...list.filter((m) => m.key !== message.key), ...(held ? [held] : [])])
+    keptMessages.drop(message.key)
+    if (held) keptMessages.keep(held)
     setStarted(undefined)
     onOpenChange(true)
   }
+  // A thread opened at once elsewhere did not start: Edit message there brings it here.
+  const takeUp = useRef(backToMessage)
+  takeUp.current = backToMessage
+  useEffect(() => keptMessages.handle((message) => takeUp.current(message)), [])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -127,7 +133,7 @@ export function QuickThread() {
                 },
                 (error: Error) => {
                   if (send === last.current) setStarted(undefined)
-                  setAside((list) => [...list, { ...sent, key: send, error: error.message }])
+                  keptMessages.keep({ ...sent, key: `quick-${send}`, error: error.message })
                 },
               )
             }}
@@ -163,7 +169,7 @@ export function QuickThread() {
               size="icon-sm"
               aria-label="Dismiss"
               title="Dismiss: the message is gone"
-              onClick={() => setAside((list) => list.filter((m) => m.key !== kept.key))}
+              onClick={() => keptMessages.drop(kept.key)}
             >
               <X aria-hidden />
             </Button>

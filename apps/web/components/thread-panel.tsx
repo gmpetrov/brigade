@@ -978,6 +978,7 @@ function TeammateStart({ teammate, top }: { teammate: Teammate; top?: ReactNode 
             typeToFocus
             placeholder={`Chat with ${teammate.name}`}
             onStarted={(thread) => openThread(thread.id)}
+            openAtOnce
           />
         </div>
       </div>
@@ -1084,6 +1085,7 @@ function TeammateThreads({ teammate }: { teammate: Teammate }) {
           typeToFocus
           placeholder={`Chat with ${teammate.name}`}
           onStarted={(thread) => openThread(thread.id)}
+          openAtOnce
         />
       </div>
     </div>

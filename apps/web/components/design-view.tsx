@@ -1065,6 +1065,7 @@ function StartThreadDialog({ start, onClose }: { start: Starting; onClose: () =>
             draft={draft}
             rows={6}
             autoFocus
+            openAtOnce
           />
         ) : (
           <p className="text-sm text-muted-foreground">Add a teammate first.</p>

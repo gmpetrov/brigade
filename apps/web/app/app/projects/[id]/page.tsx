@@ -106,6 +106,7 @@ export default function ProjectOverview() {
           rows={2}
           typeToFocus
           openAtOnce
+          giveBackHere
           projectId={project.id}
           picker={teammates.length > 1 ? { teammates, onChange: choose } : undefined}
           placeholder={`Ask ${teammate.name} something for ${project.name}…`}

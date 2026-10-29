@@ -15,6 +15,12 @@ export type PendingThread = {
   files: string[]
   /** Where it was sent from, to go back to with the message. */
   from: string
+  /**
+   * Where the message goes should it not start: back to the page's own box (`box`: Home, a
+   * project's), or aside, for the new-thread dialog to take up (`dialog`: a box gone with its
+   * dialog, or one sharing its draft with the dialog's).
+   */
+  giveBack: 'box' | 'dialog'
   /** Why it did not start; unset while it starts. */
   error?: string
 }
@@ -22,10 +28,16 @@ export type PendingThread = {
 /** A message on its way back to the box it came from, after its thread did not start. */
 export type ReturnedDraft = { from: string; message: SentMessage }
 
+/** A message kept aside: one whose thread did not start, or one swapped out of the box for it. */
+export type KeptMessage = SentMessage & { key: string; error?: string }
+
 const pending = new Map<string, PendingThread>()
 // As sent, with its files and where it was to run: what goes back to the box.
 const messages = new Map<string, SentMessage>()
 let returned: ReturnedDraft | undefined
+// Newest last. Kept until taken up or dismissed: never put in a box that may hold another.
+let kept: KeptMessage[] = []
+let takeUp: ((message: KeptMessage) => void) | undefined
 const listeners = new Set<() => void>()
 const changed = () => {
   for (const listener of listeners) listener()
@@ -65,6 +77,11 @@ export const pendingThreads = {
     const thread = pending.get(id)
     if (!thread) return
     pending.set(id, { ...thread, error })
+    const message = messages.get(id)
+    if (thread.giveBack === 'dialog' && message) {
+      messages.delete(id)
+      keptMessages.keep({ ...message, key: id, error })
+    }
     changed()
   },
   /** Gives up on it: its message and files go back to the box it was sent from. */
@@ -94,5 +111,38 @@ export function usePendingThread(id: string | null | undefined) {
     subscribe,
     () => (id ? pending.get(id) : undefined),
     () => undefined,
+  )
+}
+
+/** Messages kept aside, which the new-thread dialog (components/quick-thread.tsx) takes up. */
+export const keptMessages = {
+  keep(message: KeptMessage) {
+    kept = [...kept.filter((m) => m.key !== message.key), message]
+    changed()
+  },
+  drop(key: string) {
+    kept = kept.filter((m) => m.key !== key)
+    changed()
+  },
+  /** Into the new-thread dialog's box, which opens with it (what it held is kept aside). */
+  takeUp(key: string) {
+    const message = kept.find((m) => m.key === key)
+    if (message && takeUp) takeUp(message)
+  },
+  /** The dialog, which takes them up: one at a time. */
+  handle(handler: (message: KeptMessage) => void) {
+    takeUp = handler
+    return () => {
+      if (takeUp === handler) takeUp = undefined
+    }
+  },
+}
+
+/** The messages kept aside, newest last. */
+export function useKeptMessages() {
+  return useSyncExternalStore(
+    subscribe,
+    () => kept,
+    () => kept,
   )
 }
