@@ -58,6 +58,18 @@ Both sign with the first "Developer ID Application" identity in the keychain (or
 hoc, in which case macOS asks for the helper's permissions again after each rebuild. To try Brigade.app without
 touching your real runner, run its binary with `BRIGADE_HOME` set to another folder.
 
+## Public docs
+
+The user docs at [www.brigade.lol/docs](https://www.brigade.lol/docs) are a Mintlify site in `apps/docs`
+(`docs.json`, one `.mdx` file per page). Mintlify builds it from `main` and hosts it at `brigade.mintlify.site`;
+the dashboard's Worker serves it under `/docs` with the rewrites in `apps/web/next.config.ts`. The pages describe
+what the code does: change them in the same pull request as a change they describe.
+
+```bash
+pnpm docs                                    # http://localhost:3333, reloads as you edit
+pnpm --filter @brigade/docs check            # Mintlify's validation and broken links
+```
+
 ## Theme
 
 The web app uses [shadcn/ui](https://ui.shadcn.com) on Tailwind v4. Its palette, fonts, radius, spacing and shadows

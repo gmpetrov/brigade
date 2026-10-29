@@ -34,6 +34,9 @@ async function landingProof(phase: string) {
 // The public demo's build (docs/demo.md): the dashboard on recorded data, nothing else.
 const DEMO = process.env.NEXT_PUBLIC_DEMO === '1'
 
+// Where Mintlify serves the public docs (apps/docs): its project's subdomain.
+const MINTLIFY = 'https://brigade.mintlify.site'
+
 const nextConfig = async (phase: string): Promise<NextConfig> => ({
   env: {
     NEXT_PUBLIC_BUILD_ID: buildId,
@@ -124,6 +127,16 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
         destination: '/app/projects/:id/routines',
         permanent: false,
       },
+    ]
+  },
+  // The public docs (apps/docs), built and hosted by Mintlify, served at www.brigade.lol/docs
+  // as in its dashboard's Custom domain setup (Host at www.brigade.lol/docs): the pages load
+  // their scripts and styles under /docs too.
+  async rewrites() {
+    if (DEMO) return []
+    return [
+      { source: '/docs', destination: `${MINTLIFY}/docs` },
+      { source: '/docs/:path*', destination: `${MINTLIFY}/docs/:path*` },
     ]
   },
 })

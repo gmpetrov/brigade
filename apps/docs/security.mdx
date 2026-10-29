@@ -1,0 +1,111 @@
+---
+title: 'Security and your data'
+description: 'What Brigade stores, where it goes, who can see it, and how to delete it.'
+---
+
+Brigade is open source: everything on this page can be checked in the
+[code on GitHub](https://github.com/gmpetrov/brigade). The legal side is in the
+[Privacy policy](https://www.brigade.lol/privacy), the [DPA](https://www.brigade.lol/dpa) and the
+[list of subprocessors](https://www.brigade.lol/subprocessors).
+
+## Where your data goes
+
+```
+  You (web, phone) ──► Brigade: dashboard, API, database, files   ──► Apps you connect
+                            │                                          (Gmail, GitHub, Stripe…)
+                            ▼
+                     A computer: yours, or Brigade Cloud
+                     runs Claude Code or Codex ──► Anthropic or OpenAI,
+                                                  on your own plan
+```
+
+- **Brigade's service** runs on Cloudflare. The API runs in Europe (Frankfurt), the database on Neon in Frankfurt,
+  and files (the library, attachments, backups) in Cloudflare R2 in Western Europe.
+- **Cloud computers** run at Boat, in the EU.
+- **Your AI provider** gets the work a teammate does, because the teammate _is_ Claude Code or Codex running on your
+  account. Your data goes to the provider you picked, under the terms of your plan. Brigade's servers never call an
+  AI model themselves: even thread titles are written on your computer, on your plan.
+- **Apps** get what a teammate sends them, through Brigade, as you allowed.
+
+## What Brigade stores
+
+| What                                        | Where                                                        | How                                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Threads, tasks, memory, settings            | Database (Neon)                                              | Encrypted at rest by the provider                                                            |
+| Library files and attachments               | Cloudflare R2                                                | Encrypted at rest by the provider                                                            |
+| Secrets, App sign-ins and API keys          | Database                                                     | Encrypted by Brigade (AES-256-GCM), with a key per organization kept apart from the database |
+| Cloud computer backups                      | Cloudflare R2                                                | Encrypted by the computer before upload (AES-256-GCM), with a key per workspace              |
+| Your Claude or Codex sign-in, own computer  | Only on that computer                                        | Brigade never reads it                                                                       |
+| Your Claude or Codex sign-in, Brigade Cloud | On the cloud computer, and an encrypted copy in the database | So a replaced computer comes back signed in                                                  |
+
+Nobody, teammate or member, can read a secret back from the dashboard or the API once it is saved. Brigade's
+operators hold the encryption key, as any hosted service does; if that matters to you, run Brigade yourself.
+
+## How secrets reach a teammate
+
+- **App accounts**: an App's key stays in Brigade. The computer asks Brigade to make the call, and Brigade adds the
+  key. The key never reaches a computer or the model.
+- **Website logins** (on a cloud computer): when a teammate signs in to a website, Brigade types the username and
+  password into its browser, only on that site's own domain. The teammate never sees the password, and it never ends
+  up in a thread.
+- **Other secrets** (API keys, database URLs): Brigade puts them in a private file on the computer that the
+  teammate's commands can read, and removes it when the thread goes idle. The teammate can read them: a command that prints the file puts the secret in the thread. Give these
+  only to teammates that need them, and prefer keys with narrow permissions. A teammate gets one only when someone
+  mentioned it in the thread, approved its use, or allowed it without asking, and each use is recorded.
+
+## Your computers
+
+- **Linking** uses a one-time code that expires after 10 minutes. The computer then holds its own token, which Brigade
+  stores only as a hash.
+- **On your own computer**, the runner works as your user: a teammate can reach what your user can, like Claude Code
+  or Codex in your terminal. Give it a machine, or a user account, set up for the work.
+- **The runner removes API keys** (`ANTHROPIC_*`, `OPENAI_API_KEY` and the like) before it starts Claude Code or
+  Codex, so the work runs on your plan.
+- **Computer use on a Mac** goes through a separate helper app that holds macOS's Screen Recording and Accessibility
+  permissions. While a teammate acts, a pill on screen shows its name with a **Stop** button.
+- **On a cloud computer**, each teammate runs as its own Linux user with a private home folder, and each thread has
+  its own network, temporary files and processes. Each teammate has its own Docker, without root. Teammates on one
+  cloud computer share its Codex sign-in.
+
+## Who can do what
+
+- **Members** are owners, admins or members. Billing, teammates, Apps' triggers, skills, computers and workspace
+  settings are for owners and admins. Only an owner deletes a workspace.
+- **Teammates** reach only the Apps, accounts and secrets you give them, read-only or read-write, teammate by
+  teammate. A member's personal account is used only in that member's threads unless they share it.
+- **Approvals**: set a teammate to **Ask a person first** and each write it makes in an App (sending, editing,
+  deleting) waits for a person's **Allow**. Email to people outside your workspace waits by default. Approvals cover
+  Apps only: on its computer, a teammate runs commands, edits files and uses its browser without asking. See
+  [Apps](/apps#read-write-and-approvals).
+- **Caps**: daily limits per teammate on threads started, computer hours and writes to each App.
+- **Every step is logged**: each thread shows what the teammate read, ran and changed, and each App account has a
+  call log. Owners and admins see who used, granted, changed or approved what in **Settings → Security →
+  Activity**.
+
+## Previews
+
+The live preview of an app a teammate builds opens on its own site (`*.brigade.surf`), at an address that can't be
+guessed and that stops working when the preview stops. Only people who can see the thread get in, through a link
+that is valid for 5 minutes.
+
+## Sign-in
+
+Sign in with Google, or with a 6-digit code sent by email that works for 10 minutes and for 5 tries. There are no
+passwords to leak, and sign-in attempts are rate-limited.
+
+## Analytics and training
+
+- Brigade doesn't use your content to train AI models.
+- The website counts visits without cookies. Brigade records only product events (a thread started, an App
+  connected), with no content and no email addresses.
+
+## Delete your data
+
+An owner deletes a workspace in **Settings → Workspace**: Brigade stops and destroys its cloud computer, disconnects
+its Apps at the vendor, removes its email domains, then deletes its threads, files and secrets. You can also delete
+your own account in **Settings → Preferences**. Files go within hours, and backups expire within 30 days. Invoices are kept as the law requires.
+
+## Report a vulnerability
+
+Write to [support@brigade.lol](mailto:support@brigade.lol) with "Security" in the subject. Please don't open a public
+GitHub issue for it.

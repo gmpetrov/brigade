@@ -1,0 +1,9 @@
+{
+  "name": "@brigade/docs",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm dlx mint@4.2.1167 dev --port 3333",
+    "check": "pnpm dlx mint@4.2.1167 validate && pnpm dlx mint@4.2.1167 broken-links"
+  }
+}

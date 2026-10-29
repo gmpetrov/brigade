@@ -7,7 +7,8 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=!@brigade/docs",
+    "docs": "pnpm --filter @brigade/docs dev",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "format": "prettier --write .",
