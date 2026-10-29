@@ -1636,13 +1636,19 @@ describe('the workspace’s own domains, and mailboxes’ addresses on them', { 
         null,
       )
 
-      // A domain goes only once no mailbox has an address on it.
+      // A domain goes with addresses on it: its mailboxes keep only Brigade's own address.
       const domains = (await (await call('/domains')).json()) as { id: string; name: string }[]
       const directRow = domains.find((d) => d.name === direct)!
-      assert.equal((await call(`/domains/${directRow.id}`, 'DELETE')).status, 409)
-      assert.equal((await setAddress(null)).status, 200)
+      assert.equal(
+        (await db.mailAddress.findFirstOrThrow({ where: { id: rileys.id } })).publicAddress,
+        `riley@${direct}`,
+      )
       assert.equal((await call(`/domains/${directRow.id}`, 'DELETE')).status, 204)
       assert.deepEqual(removed, [`/domains/dom-${direct}`])
+      const kept = await db.mailAddress.findFirstOrThrow({ where: { id: rileys.id } })
+      assert.equal(kept.publicAddress, null)
+      assert.equal(kept.domainId, null)
+      assert.equal(await db.mailDomain.count({ where: { id: directRow.id } }), 0)
     } finally {
       ;(auth.api as any).getSession = realSession
       globalThis.fetch = previousFetch

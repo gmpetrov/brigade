@@ -278,6 +278,14 @@ function Choice({
   )
 }
 
+/** What removing a domain does, its mailboxes' addresses on it named. */
+const removeQuestion = (d: Pick<MailDomainView, 'name' | 'addresses'>) =>
+  d.addresses.length === 0
+    ? `Remove ${d.name}? Mail stops going out as it.`
+    : `Remove ${d.name}? Mail stops going out as it, and ${d.addresses.join(', ')} ${
+        d.addresses.length === 1 ? 'stops' : 'stop'
+      } working. Mailboxes keep their address on Brigade's domain.`
+
 function DomainCard({
   domain: d,
   admin,
@@ -319,21 +327,19 @@ function DomainCard({
                 Check now
               </Button>
             )}
-            {d.addresses.length === 0 && (
-              <Button
-                variant="ghost"
-                size="xs"
-                disabled={remove.busy}
-                onClick={() =>
-                  confirm(`Remove ${d.name}? Mail stops going out as it.`) &&
-                  void remove
-                    .run(() => api(`/email/domains/${d.id}`, { method: 'DELETE' }))
-                    .then(() => reload())
-                }
-              >
-                Remove
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="xs"
+              disabled={remove.busy}
+              onClick={() =>
+                confirm(removeQuestion(d)) &&
+                void remove
+                  .run(() => api(`/email/domains/${d.id}`, { method: 'DELETE' }))
+                  .then(() => reload())
+              }
+            >
+              Remove
+            </Button>
           </div>
         )}
       </div>
