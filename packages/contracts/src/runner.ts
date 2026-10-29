@@ -62,6 +62,12 @@ export const AccountRef = z.object({
 export type AccountRef = z.infer<typeof AccountRef>
 
 /** A connection the teammate is granted, as tools. Never its credential. */
+/**
+ * Set on a catalog the API could not list now (an MCP server down or signed out): empty for this
+ * turn, and not to be kept, so the next turn asks again.
+ */
+export const CATALOG_INCOMPLETE_HEADER = 'x-brigade-catalog-incomplete'
+
 export const ConnectorGrant = z.object({
   connectionId: z.string(),
   /** gmail, google_calendar, google_drive, google_docs, google_sheets, google_search_console, google_analytics, stripe, github, or an MCP App's kind such as cloudflare (MCP_PROTOCOL). */

@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { parseEnv } from 'node:util'
 import { Hono } from 'hono'
 
@@ -268,6 +270,81 @@ describe("an App's catalog", { skip: !database && 'no database answers' }, () =>
     assert.equal(grant.catalog, undefined)
     assert.deepEqual(grant.operations, operationSpecs('gmail', 'read'))
     assert.ok(CATALOG_PROTOCOL > 0)
+  })
+
+  test('an MCP server that cannot list its tools now is asked again at the next fetch', async () => {
+    const { CATALOG_INCOMPLETE_HEADER } = await import('@brigade/contracts')
+    let up = false
+    let listings = 0
+    let asked = 0
+    const server = createServer((req, res) => {
+      let body = ''
+      req.on('data', (chunk) => (body += chunk))
+      req.on('end', () => {
+        const message = JSON.parse(body || '{}') as { id?: number; method: string }
+        asked++
+        if (message.method === 'tools/list') listings++
+        if (!up) return res.writeHead(503).end()
+        if (message.id === undefined) return res.writeHead(202).end()
+        const result =
+          message.method === 'initialize'
+            ? {
+                protocolVersion: '2025-06-18',
+                capabilities: { tools: {} },
+                serverInfo: { name: 'notes' },
+              }
+            : message.method === 'tools/list'
+              ? {
+                  tools: [
+                    { name: 'search', description: 'Search', inputSchema: { type: 'object' } },
+                  ],
+                }
+              : {}
+        res.writeHead(200, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ jsonrpc: '2.0', id: message.id, result }))
+      })
+    })
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/mcp`
+    try {
+      const app = await db.app.create({
+        data: {
+          key: `notes-${suffix}`,
+          createdByMemberId: ids.member,
+          mcp: { url, transport: 'streamable', auth: 'none', prefix: 'notes' },
+        },
+      } as never)
+      const connection = await db.connection.create({
+        data: { appId: app.id, kind: 'mcp', label: 'Notes', createdByMemberId: ids.member },
+      } as never)
+      const get = () => fetchCatalog(connection.id, 'scope=read_write&version=v')
+
+      // Down: empty, said incomplete, and asked again next time rather than kept.
+      const down = await get()
+      assert.equal(down.status, 200)
+      assert.equal(down.headers.get(CATALOG_INCOMPLETE_HEADER), '1')
+      assert.deepEqual(await down.json(), [])
+      const once = asked
+      await get()
+      assert.ok(once > 0 && asked > once, 'asked again')
+
+      // Back: its tools, complete, and kept for this version.
+      up = true
+      const back = await get()
+      assert.equal(back.headers.get(CATALOG_INCOMPLETE_HEADER), null)
+      assert.deepEqual(
+        ((await back.json()) as { name: string }[]).map((o) => o.name),
+        ['notes_search'],
+      )
+      const listed = listings
+      up = false
+      const kept = await get()
+      assert.equal(kept.headers.get(CATALOG_INCOMPLETE_HEADER), null)
+      assert.equal(((await kept.json()) as unknown[]).length, 1)
+      assert.equal(listings, listed, 'not listed again')
+    } finally {
+      server.close()
+    }
   })
 })
 

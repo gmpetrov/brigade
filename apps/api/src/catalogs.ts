@@ -59,8 +59,11 @@ export function catalogVersion(connection: CatalogConnection, now = Date.now()) 
   return createHash('sha256').update(JSON.stringify(made)).digest('hex').slice(0, 32)
 }
 
-/** The operations a grant gives on a connection: reads always, writes with read_write, none switched off. */
-export async function grantOperations(
+/**
+ * The operations a grant gives on a connection: reads always, writes with read_write, none
+ * switched off. An MCP server that could not list them (signed out, down) throws.
+ */
+async function listOperations(
   db: ScopedDb,
   scope: Scope,
   connection: CatalogConnection,
@@ -71,8 +74,17 @@ export async function grantOperations(
     return connectors[connection.kind]
       ? operationSpecs(connection.kind as Parameters<typeof operationSpecs>[0], grant, disabled)
       : []
-  return mcpOperationSpecs(db, scope, connection, grant, disabled).catch((error: unknown) => {
-    // Signed out or the server is down: the thread runs without its tools.
+  return mcpOperationSpecs(db, scope, connection, grant, disabled)
+}
+
+/** The operations a grant gives, or none when its MCP server could not list them: the thread runs without them. */
+export async function grantOperations(
+  db: ScopedDb,
+  scope: Scope,
+  connection: CatalogConnection,
+  grant: Grant,
+): Promise<CatalogOperation[]> {
+  return listOperations(db, scope, connection, grant).catch((error: unknown) => {
     console.warn(`mcp tools of ${connection.id}: ${String(error)}`)
     return []
   })
@@ -112,21 +124,28 @@ const made = new Map<string, string>()
 const KEPT_CHARS = 16_000_000
 let keptChars = 0
 
-/** A connection's catalog for a grant, as JSON, made once per version in this isolate. */
+/**
+ * A connection's catalog for a grant, as JSON, made once per version in this isolate. One its
+ * MCP server could not list now is empty and incomplete: never kept, here or by the runner, so the
+ * next turn asks again rather than going without the App's tools until the version turns over.
+ */
 export async function catalogFor(
   db: ScopedDb,
   scope: Scope,
   connection: CatalogConnection,
   grant: Grant,
-) {
+): Promise<{ text: string; complete: boolean }> {
   const key = `${connection.id}:${grant}:${catalogVersion(connection)}`
   const hit = made.get(key)
-  if (hit !== undefined) return hit
-  const text = catalogText(
-    connection.id,
-    connection.kind,
-    await grantOperations(db, scope, connection, grant),
-  )
+  if (hit !== undefined) return { text: hit, complete: true }
+  let operations: CatalogOperation[]
+  try {
+    operations = await listOperations(db, scope, connection, grant)
+  } catch (error) {
+    console.warn(`mcp tools of ${connection.id}: ${String(error)}`)
+    return { text: '[]', complete: false }
+  }
+  const text = catalogText(connection.id, connection.kind, operations)
   made.set(key, text)
   keptChars += text.length
   for (const [oldest, kept] of made) {
@@ -134,7 +153,7 @@ export async function catalogFor(
     made.delete(oldest)
     keptChars -= kept.length
   }
-  return text
+  return { text, complete: true }
 }
 
 /**
@@ -162,7 +181,7 @@ export async function inlineCatalogs<T extends ApiToRunner>(workspaceId: string,
       spec.connectors.map(async ({ catalog, ...grant }) => {
         const connection = byId.get(grant.connectionId)
         if (!catalog || !connection) return grant
-        const text = await catalogFor(db, scope, connection, grant.scope)
+        const { text } = await catalogFor(db, scope, connection, grant.scope)
         return { ...grant, operations: JSON.parse(text) as CatalogOperation[] }
       }),
     )

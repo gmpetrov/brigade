@@ -7,7 +7,12 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readdir, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { ConnectorGrant, ThreadSpec, type ApiToRunner } from '@brigade/contracts'
+import {
+  CATALOG_INCOMPLETE_HEADER,
+  ConnectorGrant,
+  ThreadSpec,
+  type ApiToRunner,
+} from '@brigade/contracts'
 import { HOME, type RunnerConfig } from './config.js'
 import { NotTaken } from './connection.js'
 
@@ -114,9 +119,9 @@ export class SpecParts {
     const pending = this.cataloging.get(key)
     if (pending) return pending
     const read = this.readCatalog(grant, key)
-      .then((operations) => {
+      .then(({ operations, keep }) => {
         if (this.catalogs.size > 200) this.catalogs.clear()
-        this.catalogs.set(key, operations)
+        if (keep) this.catalogs.set(key, operations)
         return operations
       })
       .finally(() => this.cataloging.delete(key))
@@ -132,22 +137,30 @@ export class SpecParts {
     if (Array.isArray(kept)) {
       const now = new Date()
       await utimes(file, now, now).catch(() => undefined)
-      return ConnectorGrant.shape.operations.parse(kept)
+      return { operations: ConnectorGrant.shape.operations.parse(kept), keep: true }
     }
     const path = `/runner/catalogs/${encodeURIComponent(grant.connectionId)}?scope=${grant.scope}&version=${encodeURIComponent(grant.catalog!.version)}`
     let text: string
+    let complete = true
     try {
-      text = await this.fetch(path)
+      text = await this.fetch(path, (_, response) => {
+        complete = response.headers.get(CATALOG_INCOMPLETE_HEADER) !== '1'
+      })
     } catch (error) {
       if (!(error instanceof Refused)) throw error
       console.warn(`${grant.kind} (${grant.connectionId}): no tools in this turn: ${error.message}`)
-      return []
+      return { operations: [], keep: false }
     }
     const operations = ConnectorGrant.shape.operations.parse(JSON.parse(text))
+    // Not listed now (its server down): for this turn only, asked again at the next.
+    if (!complete) {
+      console.warn(`${grant.kind} (${grant.connectionId}): its tools could not be listed now`)
+      return { operations, keep: false }
+    }
     await mkdir(this.dir, { recursive: true, mode: 0o700 })
       .then(() => writeFile(file, text, { mode: 0o600 }))
       .catch((error: unknown) => console.warn(`catalog ${key} not kept: ${String(error)}`))
-    return operations
+    return { operations, keep: true }
   }
 
   private part(hash: string): Promise<unknown> {
@@ -192,7 +205,7 @@ export class SpecParts {
   }
 
   /** A path of the API, tried again while the API may answer otherwise; Refused once it will not. */
-  private async fetch(path: string, check?: (body: string) => void) {
+  private async fetch(path: string, check?: (body: string, response: Response) => void) {
     for (let attempt = 0; ; attempt++) {
       try {
         const response = await fetch(new URL(path, this.config.apiUrl), {
@@ -204,7 +217,7 @@ export class SpecParts {
           throw new Refused(`the API answered ${response.status}`)
         if (!response.ok) throw new Error(`the API answered ${response.status}`)
         const text = await response.text()
-        check?.(text)
+        check?.(text, response)
         return text
       } catch (error) {
         const wait = error instanceof Refused ? undefined : this.retriesMs[attempt]

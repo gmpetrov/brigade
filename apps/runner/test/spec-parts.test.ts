@@ -6,7 +6,7 @@ import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
-import { ThreadSpec } from '@brigade/contracts'
+import { CATALOG_INCOMPLETE_HEADER, ThreadSpec } from '@brigade/contracts'
 import { NotTaken } from '../src/connection.js'
 import { SpecParts } from '../src/spec-parts.js'
 
@@ -66,6 +66,12 @@ before(async () => {
       catalogRequests.push(req.url!)
       if (catalog[1] === 'c1') return res.end(JSON.stringify(catalogOperations))
       if (catalog[1] === 'busy') return res.writeHead(503).end()
+      if (catalog[1] === 'later') {
+        // Its server could not list the tools the first time; it can the next.
+        if (catalogRequests.filter((u) => u.startsWith('/runner/catalogs/later')).length === 1)
+          return res.writeHead(200, { [CATALOG_INCOMPLETE_HEADER]: '1' }).end('[]')
+        return res.end(JSON.stringify(catalogOperations))
+      }
     }
     res.writeHead(404).end()
   })
@@ -260,5 +266,19 @@ test('a catalog the API refuses leaves its App without tools; one it cannot give
   assert.deepEqual(gone.connectors[0]!.operations, [])
   assert.deepEqual(gone.connectors[1]!.operations, catalogOperations)
   await assert.rejects(parts.spec({ ...spec(), connectors: [named('busy', 'v1')] }), /answered 503/)
+  await rm(fresh, { recursive: true, force: true })
+})
+
+test('a catalog its server could not list now is used once, not kept', async () => {
+  catalogRequests.length = 0
+  const fresh = await mkdtemp(join(tmpdir(), 'spec-parts-'))
+  const parts = new SpecParts({ apiUrl, token: 'token' }, fresh)
+  const withCatalog = { ...spec(), connectors: [named('later', 'v1')] }
+  const first = await parts.spec(withCatalog)
+  assert.deepEqual(first.connectors[0]!.operations, [])
+  assert.deepEqual(await readdir(fresh).catch(() => []), [], 'nothing kept on disk')
+  const next = await parts.spec(withCatalog)
+  assert.deepEqual(next.connectors[0]!.operations, catalogOperations)
+  assert.equal(catalogRequests.length, 2, 'asked again')
   await rm(fresh, { recursive: true, force: true })
 })
