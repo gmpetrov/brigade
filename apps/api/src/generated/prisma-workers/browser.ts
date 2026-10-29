@@ -315,6 +315,15 @@ export type MemoryLine = Prisma.MemoryLineModel
  */
 export type DocumentVersion = Prisma.DocumentVersionModel
 /**
+ * Model LibraryObjectFolder
+ * A workspace that has had library objects (LibraryObject): made before its first one, and kept
+ * for good, even once the workspace is deleted. The listing sweep (sweepOrphanLibraryObjects)
+ * goes over its folder, <organization>/<workspace>/library-objects/, through these rows, so bytes
+ * a write left after their object's row was swept are found whenever they land, in a live
+ * workspace or a deleted one. No relation.
+ */
+export type LibraryObjectFolder = Prisma.LibraryObjectFolderModel
+/**
  * Model LibraryObject
  * An object in the bucket holding one save of a library file's bytes, at
  * <organization>/<workspace>/library-objects/<document id>/<id>. Made before its bytes are

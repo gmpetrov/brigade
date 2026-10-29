@@ -58,8 +58,8 @@ function ownObject(scope: Scope, documentId: string, key: string) {
  * A new object for one save of a file, with its write (signPut, signCopy). Recorded before its
  * bytes are written, so it is never lost track of; and the write is signed before that, while
  * the workspace is still there, so the bucket refuses it SIGNED_WRITE_MS on, however long the
- * process pauses before sending it. Nothing can land after that: not once its object was swept,
- * nor once its deleted workspace's folder was emptied (workspace-delete.ts waits longer).
+ * process pauses before sending it. A write the bucket took in time but that lands later still
+ * (its body slow to come) is found by the listing sweep, through the workspace's folder row.
  */
 export async function newLibraryObject(
   scope: Scope,
@@ -68,6 +68,11 @@ export async function newLibraryObject(
 ) {
   const key = libraryObjectKey(scope, documentId, base36(20))
   const write = await sign(key)
+  // Its folder first: listed for bytes no row names, for good (sweepOrphanLibraryObjects).
+  await prisma.$executeRaw`
+    INSERT INTO "LibraryObjectFolder" ("workspaceId", "organizationId", "createdAt")
+    VALUES (${scope.workspaceId}, ${scope.organizationId}, timezone('UTC', now()))
+    ON CONFLICT ("workspaceId") DO NOTHING`
   const made = await prisma.$executeRaw`
     INSERT INTO "LibraryObject" ("key", "organizationId", "workspaceId", "documentId", "createdAt")
     SELECT ${key}, ${scope.organizationId}, ${scope.workspaceId}, ${documentId}, timezone('UTC', now())
@@ -141,18 +146,19 @@ export async function sweepLibraryObjects(now = new Date()) {
 const OBJECT_KEY = /\/library-objects\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_-]{1,64}$/
 
 /**
- * Bytes in a workspace's library objects folder that no LibraryObject row names: a write that
- * landed after its object was swept (its row goes only once its bytes did), or a delete that
- * failed after. Found by listing each workspace's folder, so no time window bounds what is
- * removed: a row is made before any write to its key, and kept until its bytes are deleted.
+ * Bytes in a library objects folder that no LibraryObject row names: a write that landed after
+ * its object was swept (its row goes only once its bytes did), or a delete that failed after.
+ * Found by listing the folder of every workspace that has had library objects, deleted ones
+ * included (LibraryObjectFolder, kept for good), so no time window bounds what is removed: a row
+ * is made before any write to its key, and kept until its bytes are deleted.
  */
 export async function sweepOrphanLibraryObjects() {
-  const workspaces = await prisma.workspace.findMany({
-    select: { id: true, organizationId: true },
+  const folders = await prisma.libraryObjectFolder.findMany({
+    select: { workspaceId: true, organizationId: true },
   })
   let removed = 0
-  for (const workspace of workspaces) {
-    const scope = { organizationId: workspace.organizationId, workspaceId: workspace.id }
+  for (const folder of folders) {
+    const scope = { organizationId: folder.organizationId, workspaceId: folder.workspaceId }
     const keys = (await listObjects(`${workspacePrefix(scope)}library-objects/`)).filter((key) =>
       OBJECT_KEY.test(key),
     )

@@ -143,6 +143,7 @@ describe('library objects', { skip: !database && 'no database answers' }, () => 
 
   after(async () => {
     await prisma.workspace.deleteMany({ where: { id: ids.workspace } })
+    await prisma.libraryObjectFolder.deleteMany({ where: { organizationId: ids.org } })
     await prisma.libraryObject.deleteMany({ where: { organizationId: ids.org } })
     await prisma.member.deleteMany({ where: { organizationId: ids.org } })
     await prisma.organization.deleteMany({ where: { id: ids.org } })
@@ -398,6 +399,60 @@ describe('library objects', { skip: !database && 'no database answers' }, () => 
       rows,
       'no row for it',
     )
+  })
+
+  test("a write in flight that lands in a deleted workspace's emptied folder is found and removed (review of #494)", async () => {
+    const cleanup = await import('../src/workspace-delete.js')
+    const gone = {
+      organizationId: ids.org,
+      workspaceId: (
+        await prisma.workspace.create({ data: { organizationId: ids.org, name: 'Gone 2' } })
+      ).id,
+    }
+    const file = await library.saveLibraryFile(scoped(gone), gone, member(), {
+      path: 'Late/in-flight.txt',
+      bytes: encode('before'),
+    })
+    // Taken by the bucket in time, its body then slow to come: it lands after everything.
+    const stall = await stallWrite(file.id, 'in flight')
+    try {
+      const late = library
+        .saveLibraryFile(scoped(gone), gone, member(), {
+          path: 'Late/in-flight.txt',
+          bytes: encode('in flight'),
+        })
+        .catch((error: unknown) => error)
+      await stall.reached
+      const pending = (
+        await prisma.libraryObject.findMany({
+          where: { documentId: file.id, key: { not: file.objectKey! } },
+        })
+      ).find((o) => !onDisk(o.key))!
+      assert.ok(pending)
+      const deletedAt = Date.now()
+      await prisma.workspaceCleanup.create({
+        data: { ...gone, prefix: bucket.workspacePrefix(gone), notBefore: new Date(deletedAt) },
+      })
+      await prisma.workspace.delete({ where: { id: gone.workspaceId } })
+      await sweepLater(file.id)
+      assert.equal(await prisma.libraryObject.count({ where: { key: pending.key } }), 0)
+      const settled = deletedAt + cleanup.LATE_WRITES_MS + 1
+      await cleanup.sweepDeletedWorkspaces(gone.workspaceId, settled)
+      await cleanup.sweepDeletedWorkspaces(gone.workspaceId, settled)
+      assert.equal(
+        await prisma.workspaceCleanup.count({ where: { workspaceId: gone.workspaceId } }),
+        0,
+      )
+      stall.release()
+      assert.ok(await late, 'its save fails')
+      assert.ok(onDisk(pending.key), 'the late bytes landed in the emptied folder')
+      // The folder is still listed, the workspace gone: nothing there is kept.
+      await objects.sweepOrphanLibraryObjects()
+      assert.equal(onDisk(pending.key), false, 'found by listing, and deleted')
+    } finally {
+      stall.release()
+      stall.restore()
+    }
   })
 
   test('superseded objects go a grace period on, once no version points to them', async () => {

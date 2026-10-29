@@ -102,6 +102,7 @@ export const ModelName = {
   DocumentPin: 'DocumentPin',
   MemoryLine: 'MemoryLine',
   DocumentVersion: 'DocumentVersion',
+  LibraryObjectFolder: 'LibraryObjectFolder',
   LibraryObject: 'LibraryObject',
   LibraryFolder: 'LibraryFolder',
   LibraryFolderGrant: 'LibraryFolderGrant',
@@ -1032,6 +1033,15 @@ export const DocumentVersionScalarFieldEnum = {
 } as const
 
 export type DocumentVersionScalarFieldEnum = (typeof DocumentVersionScalarFieldEnum)[keyof typeof DocumentVersionScalarFieldEnum]
+
+
+export const LibraryObjectFolderScalarFieldEnum = {
+  workspaceId: 'workspaceId',
+  organizationId: 'organizationId',
+  createdAt: 'createdAt'
+} as const
+
+export type LibraryObjectFolderScalarFieldEnum = (typeof LibraryObjectFolderScalarFieldEnum)[keyof typeof LibraryObjectFolderScalarFieldEnum]
 
 
 export const LibraryObjectScalarFieldEnum = {

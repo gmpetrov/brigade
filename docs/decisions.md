@@ -308,7 +308,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   bytes before their row. Each write is signed before its object's row is made, while its workspace is there, so the
   bucket refuses it once 15 minutes have passed (an expired presigned PUT, a request dated too long ago), however long
   the process sending it pauses; a deleted workspace's folder is emptied once that long has passed. An hourly sweep
-  also lists each workspace's folder and deletes bytes no row names. Files not saved since keep their bytes at the legacy key,
+  also lists the folder of every workspace that has had library objects, deleted ones included (`LibraryObjectFolder`,
+  kept for good), and deletes bytes no row names, whenever a slow write lands. Files not saved since keep their bytes at the legacy key,
   `<organization>/<workspace>/library/<document id>`, until their next save. `Document` keeps path,
   type, size, SHA-256 and the text (UTF-8 files, PDFs and Word, Excel and PowerPoint files; others are kept but
   not searchable). Any member uploads (files or a whole folder, or by dropping them on the page), edits, moves and

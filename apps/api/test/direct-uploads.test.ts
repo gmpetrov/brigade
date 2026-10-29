@@ -192,6 +192,7 @@ after(async () => {
   if (skip) return
   await prisma.upload.deleteMany({ where: { organizationId: ids.organization } })
   await prisma.libraryObject.deleteMany({ where: { organizationId: ids.organization } })
+  await prisma.libraryObjectFolder.deleteMany({ where: { organizationId: ids.organization } })
   await prisma.organization.deleteMany({ where: { id: ids.organization } })
   await prisma.user.deleteMany({ where: { id: ids.user } })
   await prisma.$disconnect()
