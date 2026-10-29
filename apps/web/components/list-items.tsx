@@ -181,6 +181,8 @@ const markerOf = (content: Inline[]) =>
 /** Lines picked in the editor, given their ids only once they are handed over. */
 export type PickedLines = {
   lines: { text: string; id?: string }[]
+  /** Ticked lines in the selection, left out: their work is done. */
+  ticked: number
   /** Gives each line without a marker its own, in the document, and returns them all. */
   assign: () => { id: string; text: string }[]
 }
@@ -192,9 +194,11 @@ type MarkableEditor = {
 
 /** The checklist lines among `blocks`, ready to hand over; null when there are none. */
 export function pickLines(editor: MarkableEditor, blocks: LineBlock[]): PickedLines | null {
-  const checks = blocks.filter(
+  const all = blocks.filter(
     (b) => b.type === 'checkListItem' && Array.isArray(b.content) && textOf(b.content as Inline[]),
   )
+  // A ticked line is done: nothing to hand over.
+  const checks = all.filter((b) => !b.props?.checked)
   if (!checks.length) return null
   const lines = checks.map((b) => ({
     blockId: b.id,
@@ -203,6 +207,7 @@ export function pickLines(editor: MarkableEditor, blocks: LineBlock[]): PickedLi
   }))
   return {
     lines: lines.map(({ text, id }) => ({ text, ...(id ? { id } : {}) })),
+    ticked: all.length - checks.length,
     assign: () =>
       lines.map((line) => {
         if (line.id) return { id: line.id, text: line.text }
@@ -318,6 +323,13 @@ function HandOffDialog({
             <li className="text-muted-foreground">and {count - shown.length} more</li>
           )}
         </ul>
+        {picked.ticked > 0 && (
+          <p className="-mt-2 text-[13px] text-muted-foreground">
+            {picked.ticked === 1
+              ? '1 ticked line left out: it is done.'
+              : `${picked.ticked} ticked lines left out: they are done.`}
+          </p>
+        )}
         <RadioGroup value={mode} onValueChange={(v) => setMode(v as Mode)} className="gap-3">
           <ModeOption value="together" title={count > 1 ? 'One thread' : 'A new thread'}>
             {count > 1
