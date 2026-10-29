@@ -1,7 +1,7 @@
 'use client'
 // Files for a message: picked, dropped or pasted into the composer, uploaded
 // right away, and sent with the message by their ids. In the thread, the files
-// a message came with show under it: images and videos open over the page,
+// a message came with show under it: images, videos and audio open over the page,
 // other files in the file panel.
 import {
   ATTACHMENTS_PER_MESSAGE,
@@ -13,6 +13,7 @@ import {
 } from '@brigade/contracts'
 import {
   ArrowRightLeft,
+  AudioLines,
   Ban,
   Check,
   CircleDot,
@@ -51,12 +52,20 @@ import { cn } from '@/lib/utils'
 
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
 const VIDEO = /^video\/(mp4|webm|quicktime)$/
+// Browsers name some files by older types (x-m4a, x-wav) before the API records its own.
+const AUDIO = /^audio\/(mpeg|mp3|mp4|x-m4a|aac|wav|x-wav|wave|ogg|webm|flac|x-flac)$/
 
-export type Media = { name: string; src: string; kind: 'image' | 'video' }
+export type Media = { name: string; src: string; kind: 'image' | 'video' | 'audio' }
 
 /** How a file of this type shows over the page, if it does. */
-export const mediaKind = (contentType: string) =>
-  IMAGE.test(contentType) ? 'image' : VIDEO.test(contentType) ? 'video' : undefined
+export const mediaKind = (contentType: string): Media['kind'] | undefined =>
+  IMAGE.test(contentType)
+    ? 'image'
+    : VIDEO.test(contentType)
+      ? 'video'
+      : AUDIO.test(contentType)
+        ? 'audio'
+        : undefined
 
 export function fileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -73,7 +82,7 @@ export type Upload = {
   info?: AttachmentInfo
   error?: string
   controller: AbortController
-  /** An image's or video's own bytes, shown before it finishes uploading (an object URL). */
+  /** An image's, video's or audio's own bytes, shown before it finishes uploading (an object URL). */
   preview?: string
   media?: Media['kind']
 }
@@ -450,7 +459,8 @@ const extension = (name: string) => /\.([a-z0-9]{1,5})$/i.exec(name)?.[1]?.toUpp
 
 /**
  * The files of the message being written, as tiles like Claude's: an image or video
- * shows itself and opens larger on a click (Esc closes it), any other file its name and kind.
+ * shows itself and opens larger on a click (Esc closes it), audio opens a player there too,
+ * any other file its name and kind.
  */
 export function UploadList({
   uploads,
@@ -478,12 +488,15 @@ export function UploadList({
               {src && kind && !u.error ? (
                 <button
                   type="button"
-                  className="relative block size-full cursor-zoom-in"
+                  className={cn(
+                    'relative block size-full',
+                    kind === 'audio' ? 'cursor-pointer' : 'cursor-zoom-in',
+                  )}
                   onClick={() => setViewing({ name: u.name, src, kind })}
                   aria-label={`Preview ${u.name}`}
                   title={u.name}
                 >
-                  <Thumbnail src={src} kind={kind} />
+                  <Thumbnail src={src} kind={kind} name={u.name} />
                 </button>
               ) : (
                 <div className="flex size-full flex-col justify-between gap-1 p-2" title={u.name}>
@@ -532,16 +545,30 @@ export function UploadList({
   )
 }
 
-/** An image or a video's first frame, filling its tile; a video has a play mark. */
+/**
+ * An image or a video's first frame, filling its tile; a video has a play mark. Audio
+ * shows a sound mark, and in a large tile its name.
+ */
 export function Thumbnail({
   src,
   kind,
+  name,
   small = false,
 }: {
   src: string
   kind: Media['kind']
+  name?: string
   small?: boolean
 }) {
+  if (kind === 'audio')
+    return (
+      <span className="flex size-full flex-col items-center justify-center gap-1 bg-secondary p-2 text-muted-foreground">
+        <AudioLines aria-hidden className={small ? 'size-4' : 'size-6'} />
+        {!small && name && (
+          <span className="line-clamp-2 w-full text-center text-[0.625rem] break-all">{name}</span>
+        )}
+      </span>
+    )
   if (kind === 'image')
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={src} alt="" className="size-full object-cover" />
@@ -569,7 +596,10 @@ export function Thumbnail({
   )
 }
 
-/** An image or a video at full size over the page; Esc, a click outside or × closes it. */
+/**
+ * An image or a video at full size over the page, or audio in a player; Esc, a click outside
+ * or × closes it.
+ */
 export function MediaPreview({
   media,
   onClose,
@@ -625,6 +655,17 @@ export function MediaPreview({
             className="max-h-[calc(100vh-4rem)] max-w-[calc(100vw-4rem)] bg-black"
           />
         )}
+        {media?.kind === 'audio' && (
+          <div className="flex w-[min(28rem,calc(100vw-4rem))] flex-col gap-3 p-4">
+            <p className="flex min-w-0 items-center gap-2 pr-10 text-sm font-medium">
+              <AudioLines aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              <span className="truncate" title={media.name}>
+                {media.name}
+              </span>
+            </p>
+            <audio src={media.src} aria-label={media.name} controls autoPlay className="w-full" />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -667,7 +708,7 @@ export function SentAttachments({
 }
 
 /**
- * The files a message came with, under it: an image or video opens over the page
+ * The files a message came with, under it: an image, video or audio opens over the page
  * like in the composer, any other file in the file panel.
  */
 export function MessageAttachments({
@@ -714,7 +755,11 @@ export function MessageAttachments({
               ) : kind ? (
                 <button
                   type="button"
-                  className={cn(chip, 'cursor-zoom-in hover:border-ring')}
+                  className={cn(
+                    chip,
+                    kind === 'audio' ? 'cursor-pointer' : 'cursor-zoom-in',
+                    'hover:border-ring',
+                  )}
                   onClick={() => setViewing({ name: a.name, src: attachmentUrl(a.id), kind })}
                   aria-label={`Preview ${a.name}`}
                   title={a.name}

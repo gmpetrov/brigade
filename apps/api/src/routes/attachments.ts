@@ -21,7 +21,7 @@ import { serveObject } from '../serve-object.js'
 
 /** Types the browser may show inline from the API's origin; anything else downloads. */
 export const INLINE =
-  /^(text\/plain|text\/markdown|text\/csv|application\/json|application\/pdf|image\/(png|jpeg|gif|webp)|video\/(mp4|webm|quicktime))$/
+  /^(text\/plain|text\/markdown|text\/csv|application\/json|application\/pdf|image\/(png|jpeg|gif|webp)|video\/(mp4|webm|quicktime)|audio\/(mpeg|mp4|wav|ogg|webm))$/
 
 export const attachments = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
