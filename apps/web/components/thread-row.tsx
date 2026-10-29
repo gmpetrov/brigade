@@ -1,10 +1,11 @@
 'use client'
 // A thread in the sidebar, with its menu (thread-menu.tsx): ⋮ on hover in place of its status
-// dot, or a right-click on the row. The dot shows only while the thread has a state; how old it
+// dot, or a right-click on the row. A title too long for the row fades out (FadeText). The dot shows only while the thread has a state; how old it
 // is and what the dot means show on hover, in the row's tooltip. Rename, or a double-click on the title, edits the title in the
 // row itself. Under Pinned, a row can be dragged to another place (`drag`). A thread whose
 // preview is up shows its icon, which opens the preview on hover (and in the menu on phones).
-import { EllipsisVertical, Laptop, Eye } from 'lucide-react'
+// One with child threads has a caret after its title, which folds them under it (SubThreads).
+import { EllipsisVertical, Laptop, Eye, Play } from 'lucide-react'
 import Link from 'next/link'
 import { useState, type ComponentProps, type ReactNode } from 'react'
 import {
@@ -13,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import { FadeText } from '@/components/fade-text'
 import { StreamedTitle } from '@/components/streamed-title'
 import { renameThread, useThreadMenu } from '@/components/thread-menu'
 import { useThreadPanel } from '@/components/thread-panel'
@@ -32,6 +34,7 @@ export function ThreadRow({
   onChanged,
   onDeleted,
   drag,
+  caret,
 }: {
   thread: ThreadSummary
   href: string
@@ -50,6 +53,8 @@ export function ThreadRow({
   onDeleted: (id: string) => void
   /** Under Pinned: the row's drag handlers and the drop line's class. */
   drag?: ComponentProps<'li'>
+  /** It has child threads: a caret after its title folds them under it. */
+  caret?: { open: boolean; onToggle: () => void }
 }) {
   const [renaming, setRenaming] = useState(false)
   const { openPreview } = useThreadPanel()
@@ -118,8 +123,31 @@ export function ThreadRow({
             setRenaming(true)
           }}
         >
-          <span className={cn('flex-1 truncate', working && 'text-shimmer-dim')}>
-            <StreamedTitle threadId={thread.id} text={title} />
+          <span className="flex min-w-0 flex-1 items-center gap-1.5">
+            <FadeText textClassName={cn(working && 'text-shimmer-dim')}>
+              <StreamedTitle threadId={thread.id} text={title} />
+            </FadeText>
+            {/* Right after the title: folds its child threads under it, without opening it. The
+                row below it ("N sub-threads") does the same from the keyboard. */}
+            {caret && (
+              <span
+                aria-hidden
+                title={caret.open ? 'Hide sub-threads' : 'Show sub-threads'}
+                className="text-muted-foreground hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  caret.onToggle()
+                }}
+              >
+                <Play
+                  className={cn(
+                    'size-2 fill-current transition-transform',
+                    caret.open && 'rotate-90',
+                  )}
+                />
+              </span>
+            )}
           </span>
           <span
             className={cn(

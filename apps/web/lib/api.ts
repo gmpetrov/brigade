@@ -408,8 +408,20 @@ export type ThreadSummary = {
   eventsWaitingSince?: string | null
   /** Its child threads it waits for, at work: it shows as working. */
   childrenWorking?: number
+  /** Its child threads a teammate started (not a schedule's runs): the sidebar shows them under it. */
+  children?: SidebarChild[]
   /** Its preview is starting or running, on a computer that is up. */
   previewRunning?: boolean
+}
+
+/** A child thread under its parent in the sidebar: newest activity first. */
+export type SidebarChild = {
+  id: string
+  title: string
+  status: string
+  updatedAt: string
+  /** A teammate replied since this member last looked at it. */
+  unread: boolean
 }
 
 /** A thread started from another (start_child, or a schedule's run that reports there), shown in it. */
