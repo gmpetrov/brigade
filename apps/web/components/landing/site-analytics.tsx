@@ -88,7 +88,9 @@ export function SiteAnalytics() {
   const pathname = usePathname()
   useEffect(() => {
     if (KEY && isPublicPage(pathname))
-      void load(KEY).then((capture) => capture('$pageview', { $current_url: location.href }))
+      // posthog-js fills in the address itself, masked (mask_personal_data_properties): click
+      // ids such as gclid never leave the browser.
+      void load(KEY).then((capture) => capture('$pageview', {}))
   }, [pathname])
   useEffect(() => {
     // Where this visit came from, read before any of the site's pages changes the address.
