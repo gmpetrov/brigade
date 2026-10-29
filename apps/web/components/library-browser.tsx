@@ -179,11 +179,11 @@ export function LibraryBrowser({
   const [access, setAccess] = useState<string>()
   const [error, setError] = useState<string>()
   const [over, setOver] = useState<string | null>(null)
-  const [sort, setSort] = useState<'name' | 'updated'>('name')
+  const [sort, setSort] = useState<'name' | 'updated'>('updated')
   // Each member's choice, kept in this browser.
   useEffect(() => {
     try {
-      if (localStorage.getItem(SORT_KEY) === 'updated') setSort('updated')
+      if (localStorage.getItem(SORT_KEY) === 'name') setSort('name')
     } catch {}
   }, [])
   function chooseSort(next: 'name' | 'updated') {
@@ -581,9 +581,9 @@ export function LibraryBrowser({
           })}
         </nav>
         <Tabs value={sort} onValueChange={(v) => chooseSort(v as 'name' | 'updated')}>
-          <TabsList aria-label="Sort">
-            <TabsTrigger value="name">Name</TabsTrigger>
+          <TabsList aria-label="View">
             <TabsTrigger value="updated">Recent</TabsTrigger>
+            <TabsTrigger value="name">Folders</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
