@@ -377,12 +377,15 @@ export const waitingOnPerson = {
   ],
 } satisfies Prisma.PullRequestWhereInput
 
-/** A thread status while its teammate is at work: its pull requests wait once it stops. */
-const AT_WORK: Prisma.SessionWhereInput['status'] = { in: ['starting', 'running'] }
+/**
+ * A thread status while its teammate is at work, or stopped on an error before it was done:
+ * its pull requests wait once it stops.
+ */
+const AT_WORK: Prisma.SessionWhereInput['status'] = { in: ['starting', 'running', 'failed'] }
 
 /**
  * Waiting on a person now: not while the thread that opened it is still at work on
- * it, as in the sidebar and on Tasks, nor once that thread is archived. Home lists
+ * it (or failed at it), as in the sidebar and on Tasks, nor once that thread is archived. Home lists
  * these; notifications push and count them.
  */
 export const waitingNow = {

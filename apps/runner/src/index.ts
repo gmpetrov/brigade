@@ -58,7 +58,7 @@ import { Outbox } from './outbox.js'
 import { SeenCommands } from './seen-commands.js'
 import { imageStore } from './reply-images.js'
 import { bundleStore, libraryMessage } from './uploads.js'
-import { MemoryGuard } from './memory-guard.js'
+import { MemoryGuard, memoryRoom } from './memory-guard.js'
 import { runnerCgroups } from './preview-cgroup.js'
 import { Previews } from './previews.js'
 import { processGroups } from './process-groups.js'
@@ -335,10 +335,13 @@ async function start() {
       })
     : undefined
   if (backups) startBrowsersAfter(() => backups.ready())
+  // On a cloud computer, the memory guard's (below): a turn waits for memory before it starts.
+  const memoryGuard = CLOUD && process.env.BRIGADE_MEMORY_GUARD !== '0'
   const threads = new Threads({
     concurrency: Number(values.concurrency),
     previews,
     folders,
+    ...(memoryGuard ? { memoryRoom } : {}),
     ...(backups
       ? {
           restored: {
@@ -408,7 +411,7 @@ async function start() {
   if (CLOUD) stopIdleBrowsers(controlled)
   // On a cloud computer, the computer running out of memory as a whole: an idle browser, a preview
   // or a turn is stopped, with the reason, before it stops answering at all.
-  if (CLOUD && process.env.BRIGADE_MEMORY_GUARD !== '0') {
+  if (memoryGuard) {
     new MemoryGuard({
       candidates: async () => [
         ...(await previews.memoryCandidates()),
@@ -419,17 +422,11 @@ async function start() {
             return {
               kind: 'turn' as const,
               memory,
+              // Its turn fails, and goes on by itself once the computer has memory again.
               stop: async (why: string) => {
+                const held = `${why}, and it held the most (${(memory / 1024 ** 3).toFixed(1)} GB)`
+                if (turn.thread) threads.stoppedForMemory(turn.thread, held)
                 await turn.cgroup.kill()
-                if (turn.thread)
-                  connection.sendEvent(
-                    outbox.push(turn.thread, {
-                      at: new Date().toISOString(),
-                      type: 'raw',
-                      source: 'runner',
-                      value: `The teammate's session in this thread was stopped to give the computer memory back: ${why}, and it held the most (${(memory / 1024 ** 3).toFixed(1)} GB). Send a message to go on.`,
-                    }),
-                  )
               },
             }
           }),

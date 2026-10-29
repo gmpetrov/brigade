@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { MemoryGuard, parseMemory, type Candidate, type Reading } from '../src/memory-guard.js'
+import {
+  MemoryGuard,
+  parseMemory,
+  roomFor,
+  type Candidate,
+  type Reading,
+} from '../src/memory-guard.js'
 
 const MB = 1024 ** 2
 const calm: Reading = { full: 2, available: 0.4, swapUsed: 0.1, swapTotal: 8 * 1024 * MB }
@@ -167,4 +173,10 @@ test('after the kernel killed something for memory, the guard waits instead of a
     )?.oomKills,
     7,
   )
+})
+
+test('room for a turn: some memory available, hardly any waiting on it', () => {
+  assert.equal(roomFor(calm), true)
+  assert.equal(roomFor({ ...calm, available: 0.1 }), false)
+  assert.equal(roomFor({ ...calm, full: 25 }), false)
 })

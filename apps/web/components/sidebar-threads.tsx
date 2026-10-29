@@ -547,9 +547,14 @@ function saveFilter(saved: SavedFilter) {
 function withAsks(threads: ThreadSummary[], needsYou: Record<string, string>) {
   const asks = new Map<string, string>()
   const all = threads.map((t) => {
+    // A failed thread's pull request is not ready for a person: its red dot says what to do.
     const ask =
       needsYou[t.id] ??
-      (t.pullsWaiting ? 'review PR' : t.status === 'waiting' ? 'needs you' : undefined)
+      (t.pullsWaiting && t.status !== 'failed'
+        ? 'review PR'
+        : t.status === 'waiting'
+          ? 'needs you'
+          : undefined)
     // Children it waits for at work: it shows as working, as for its own background work.
     if (!ask)
       return t.childrenWorking && groupOf(t.status) === 'rest' ? { ...t, status: 'running' } : t
