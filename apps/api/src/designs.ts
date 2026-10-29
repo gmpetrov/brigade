@@ -688,13 +688,20 @@ export async function findDesign(db: ScopedDb, path: string): Promise<DesignWher
   const live = { kind: 'library' as const, deletedAt: null }
   if (await db.document.findFirst({ where: { ...live, path: `${folder}/${DESIGN_ENTRY}` } }))
     return here
+  const to = pickedDesignPath(options)
   const last = await db.auditEntry.findFirst({
-    where: { action: 'design.picked', targetId: pickedDesignPath(options) },
+    where: { action: 'design.picked', targetId: to },
     orderBy: { at: 'desc' },
   })
   const pick = last?.data as { from?: string; to?: string } | undefined
-  if (!pick?.to) {
-    const to = pickedDesignPath(options)
+  // Trashed after the last pick (a pick trashes the other options before it is
+  // recorded): a later round, settled by saving the design itself.
+  const trashed = await db.document.findFirst({
+    where: { kind: 'library', path: `${folder}/${DESIGN_ENTRY}`, deletedAt: { not: null } },
+    orderBy: { deletedAt: 'desc' },
+    select: { deletedAt: true },
+  })
+  if (!last || !pick?.to || (trashed?.deletedAt && trashed.deletedAt > last.at)) {
     const settled = await db.document.findFirst({
       where: { ...live, path: `${to}/${DESIGN_ENTRY}` },
     })

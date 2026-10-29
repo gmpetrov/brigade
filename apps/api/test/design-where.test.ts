@@ -10,19 +10,25 @@ type Db = Parameters<typeof findDesign>[0]
 
 const OPTIONS = 'Projects/Acme/designs/landing.options'
 
-/** A library holding these files, after these picks (oldest first). */
-function db(files: string[], picks: { from: string; to: string }[] = []) {
+type Pick = { from: string; to: string; at?: Date }
+
+/** A library holding these files (and these in its trash, by when), after these picks (oldest first). */
+function db(files: string[], picks: Pick[] = [], trashed: Record<string, Date> = {}) {
   return {
     document: {
-      findFirst: async ({ where }: { where: { path: string } }) =>
-        files.includes(where.path) ? { path: where.path } : null,
+      findFirst: async ({ where }: { where: { path: string; deletedAt: unknown } }) => {
+        if (where.deletedAt === null)
+          return files.includes(where.path) ? { path: where.path } : null
+        const at = trashed[where.path]
+        return at ? { path: where.path, deletedAt: at } : null
+      },
     },
     auditEntry: {
       findFirst: async ({ where }: { where: { action: string; targetId: string } }) => {
         const pick = picks
           .filter((p) => where.action === 'design.picked' && p.to === where.targetId)
           .at(-1)
-        return pick ? { data: pick } : null
+        return pick ? { data: { from: pick.from, to: pick.to }, at: pick.at ?? new Date(0) } : null
       },
     },
   } as unknown as Db
@@ -60,4 +66,27 @@ test('an option cleared when the design itself was saved leads to that design', 
   const a = `${OPTIONS}/a-bold.design`
   const to = 'Projects/Acme/designs/landing.design'
   assert.deepEqual(await findDesign(db([`${to}/index.html`]), a), { path: to, trashed: false })
+})
+
+test('an option of a later round, settled by saving the design, leads to it despite an older pick', async () => {
+  const to = 'Projects/Acme/designs/landing.design'
+  const old = { from: `${OPTIONS}/a-old.design`, to, at: new Date('2026-10-01') }
+  const b = `${OPTIONS}/b-new.design`
+  const later = { [`${b}/index.html`]: new Date('2026-10-20') }
+  assert.deepEqual(await findDesign(db([`${to}/index.html`], [old], later), b), {
+    path: to,
+    trashed: false,
+  })
+})
+
+test('an option trashed by a pick, before it was recorded, stays in the trash', async () => {
+  const to = 'Projects/Acme/designs/landing.design'
+  const at = new Date('2026-10-20T10:00:00Z')
+  const a = `${OPTIONS}/a-bold.design`
+  const before = { [`${a}/index.html`]: new Date('2026-10-20T09:59:59Z') }
+  const pick = { from: `${OPTIONS}/b-the-pass.design`, to, at }
+  assert.deepEqual(await findDesign(db([`${to}/index.html`], [pick], before), a), {
+    path: a,
+    trashed: true,
+  })
 })
