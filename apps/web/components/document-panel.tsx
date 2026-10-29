@@ -239,7 +239,18 @@ export function DocumentPanel() {
   )
   const discussion = useDocumentDiscussion(file)
   const askName = discussion?.teammate?.name
-  const onAsk = discussion?.ask
+  const discuss = discussion?.ask
+  // Below xl the panel lies over the page (the whole screen on a phone): it steps
+  // aside, so the thread Ask opens shows. Its tabs come back with the next document.
+  const onAsk = useMemo(
+    () =>
+      discuss &&
+      (async (passage?: string) => {
+        await discuss(passage)
+        if (!window.matchMedia('(min-width: 1280px)').matches) close()
+      }),
+    [discuss, close],
+  )
   const ask = useMemo(
     () => (askName && onAsk ? { teammate: askName, onAsk } : undefined),
     [askName, onAsk],
@@ -275,7 +286,7 @@ export function DocumentPanel() {
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => void discussion.ask()}
+            onClick={() => void onAsk?.()}
             title={`Talk about this file with ${discussion.teammate.name}`}
           >
             <MessageSquare aria-hidden />
