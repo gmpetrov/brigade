@@ -53,6 +53,13 @@ const preflights = new Hono<{ Bindings: Env }>().options('/api/*', (c, next) =>
   apiCors(origins(c.env.WEB_URL))(c, next),
 )
 
+/**
+ * Reads that always run in brigade-api's own isolates, whatever STATELESS_ROUTES says: an App's
+ * catalog can weigh megabytes (src/catalogs.ts), which the Api object, which runs the whole API,
+ * must not hold.
+ */
+const ALWAYS_STATELESS = '/runner/catalogs'
+
 /** Where each workspace's sockets went lately, in this isolate: so most go there at once. */
 const ROUTE_MS = 30_000
 const routes = new Map<string, { to: 'api' | 'object'; at: number }>()
@@ -114,7 +121,7 @@ async function socket(
 }
 
 export default {
-  fetch(request, env) {
+  async fetch(request, env) {
     const { pathname } = new URL(request.url)
     if (request.method === 'OPTIONS' && pathname.startsWith('/api/'))
       return preflights.fetch(request, env)
@@ -126,10 +133,15 @@ export default {
       return socket(request, { ...env, HUBS: env.HUBS })
     // Reads that need no socket run in brigade-api's own isolates, next to the database: not
     // through the one Api object (docs/workspace-hubs-plan.md, Phase 4).
-    if (env.API_WORKER && statelessRoute(request, env.STATELESS_ROUTES)) {
+    const always = statelessRoute(request, ALWAYS_STATELESS)
+    if (env.API_WORKER && (always || statelessRoute(request, env.STATELESS_ROUTES))) {
       const forwarded = new Request(request)
       forwarded.headers.set(STATELESS_HEADER, '1')
-      return env.API_WORKER.fetch(forwarded)
+      if (!always) return env.API_WORKER.fetch(forwarded)
+      // Should the isolates fail it, the Api object answers: a runner without its Apps' tools
+      // is worse than the object holding a catalog for once.
+      const answer = await env.API_WORKER.fetch(forwarded).catch(() => null)
+      return answer && answer.status < 500 ? answer : apiObject(env.API).fetch(request)
     }
     // Only the front says so.
     if (request.headers.has(STATELESS_HEADER)) {

@@ -69,6 +69,13 @@ export const ConnectorGrant = z.object({
   label: z.string(),
   externalAccount: z.string().nullable(),
   scope: z.enum(['read', 'read_write']),
+  /**
+   * CATALOG_PROTOCOL: `operations` is left empty and the runner fetches them, the App's catalog
+   * for this scope (GET /runner/catalogs/<connectionId>?scope=<scope>&version=<version>), then
+   * keeps them while `version` is the same. An MCP App's tools come from its server: what it
+   * lists can change without any version here, so its version also turns over each hour.
+   */
+  catalog: z.object({ version: z.string().min(1).max(200) }).optional(),
   operations: z.array(
     z.object({
       name: z.string(),
