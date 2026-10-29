@@ -3,11 +3,11 @@ import type { ListDetail } from '@brigade/contracts'
 import { ChevronRight, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useDocumentDiscussion } from '@/components/document-discussion'
 import { DocumentEditor } from '@/components/document-editor'
 import { LIST_LIVE, useHandOff } from '@/components/list-items'
-import { ListProgress, type ListFilter, LIST_FILTERS } from '@/components/lists'
+import { ListProgress, type ListFilter, LIST_FILTERS, useListFilter } from '@/components/lists'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useApi } from '@/lib/api'
@@ -26,7 +26,7 @@ export default function ListPage() {
   )
   const discussion = useDocumentDiscussion(file)
   const handOff = useHandOff(file, discussion?.teammate ?? null)
-  const [filter, setFilter] = useState<ListFilter>('all')
+  const [filter, setFilter] = useListFilter()
   const ask = useMemo(
     () =>
       discussion?.teammate
