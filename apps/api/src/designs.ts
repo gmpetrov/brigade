@@ -677,7 +677,8 @@ export async function checkPick(db: ScopedDb, threadId: string, path: string) {
 
 /**
  * Where a design is now: itself while it is there; for an option of an options
- * folder that has been picked from, the design it became, or the trash.
+ * folder that has been picked from, the design it became, or the trash. Options
+ * a teammate cleared by saving the design itself (no pick) lead to that design.
  */
 export async function findDesign(db: ScopedDb, path: string): Promise<DesignWhere> {
   const folder = path.replace(/\/+$/, '')
@@ -692,7 +693,13 @@ export async function findDesign(db: ScopedDb, path: string): Promise<DesignWher
     orderBy: { at: 'desc' },
   })
   const pick = last?.data as { from?: string; to?: string } | undefined
-  if (!pick?.to) return here
+  if (!pick?.to) {
+    const to = pickedDesignPath(options)
+    const settled = await db.document.findFirst({
+      where: { ...live, path: `${to}/${DESIGN_ENTRY}` },
+    })
+    return settled ? { path: to, trashed: false } : here
+  }
   return pick.from === folder ? { path: pick.to, trashed: false } : { ...here, trashed: true }
 }
 

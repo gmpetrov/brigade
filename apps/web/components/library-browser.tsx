@@ -4,8 +4,10 @@
 // who made it and who changed it last; its versions and a preview open beside
 // the page. Admins decide which teammates reach a folder.
 import {
+  DESIGN_OPTIONS_SUFFIX,
   designFolderOf,
   designName,
+  designOptionsOf,
   folderAccessFor,
   type FolderAccess,
   type FolderRule,
@@ -338,7 +340,10 @@ export function LibraryBrowser({
     const inside = tree.files.filter((file) => file.path.startsWith(`${f.path}/`)).length
     const guarded = f.restricted || f.grants.length > 0
     const isDesign = designFolderOf(f.path) === f.path
-    const Icon = isDesign ? Palette : guarded ? FolderLock : Folder
+    // The options offered for a design: one row, opening them side by side.
+    const set = isDesign ? [] : optionsIn(tree.files, f.path)
+    const isSet = set.length > 0
+    const Icon = isDesign || isSet ? Palette : guarded ? FolderLock : Folder
     return (
       <div key={f.path}>
         <div
@@ -358,17 +363,27 @@ export function LibraryBrowser({
           </span>
           <button
             type="button"
-            onClick={() => (isDesign ? openDesign(f.path) : setFolder(f.path))}
+            onClick={() =>
+              isDesign ? openDesign(f.path) : isSet ? openDesign(set[0]!) : setFolder(f.path)
+            }
             className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
           >
             <span className="truncate text-sm font-semibold hover:underline">
-              {isDesign ? designName(f.path) : nameOf(f.path)}
+              {isDesign
+                ? designName(f.path)
+                : isSet
+                  ? nameOf(f.path).slice(0, -DESIGN_OPTIONS_SUFFIX.length)
+                  : nameOf(f.path)}
             </span>
             <span className="text-xs text-muted-foreground">
               {flat && `${parentOf(f.path) || 'Library'} · `}
               {isDesign && 'Design · '}
-              {inside === 0 ? 'Empty' : `${inside} file${inside === 1 ? '' : 's'}`}
-              {isDesign && updatedIn(tree.files, f.path)}
+              {isSet
+                ? `${set.length} design option${set.length === 1 ? '' : 's'}`
+                : inside === 0
+                  ? 'Empty'
+                  : `${inside} file${inside === 1 ? '' : 's'}`}
+              {(isDesign || isSet) && updatedIn(tree.files, f.path)}
             </span>
           </button>
           {f.restricted ? (
@@ -377,15 +392,15 @@ export function LibraryBrowser({
             f.grants.length > 0 && <Badge variant="secondary">Custom access</Badge>
           )}
           <RowMenu label={`Actions for folder ${nameOf(f.path)}`}>
-            {isDesign && (
-              <DropdownMenuItem onSelect={() => openDesign(f.path)}>
+            {(isDesign || isSet) && (
+              <DropdownMenuItem onSelect={() => openDesign(isSet ? set[0]! : f.path)}>
                 <Palette aria-hidden />
-                View design
+                {isSet ? 'View options' : 'View design'}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={() => setFolder(f.path)}>
               <Folder aria-hidden />
-              {isDesign ? 'Its files' : 'Open'}
+              {isDesign || isSet ? 'Its files' : 'Open'}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setRenaming(`folder:${f.path}`)}>
               <Pencil aria-hidden />
@@ -639,6 +654,9 @@ export function LibraryBrowser({
           version={designFiles?.reduce((v, f) => (f.updatedAt > v ? f.updatedAt : v), '')}
           libraryLink={false}
           onClose={() => setDesign(undefined)}
+          {...(designOptionsOf(design)
+            ? { options: optionsIn(tree.files, designOptionsOf(design)!) }
+            : {})}
         />
       )}
       {opened && panel && (
@@ -669,10 +687,21 @@ const SORT_KEY = 'brigade.library.sort'
 
 type Entry = { kind: 'folder'; folder: LibraryFolder } | { kind: 'file'; file: LibraryFile }
 
+/** The designs offered in an options folder ("a/x.options"), in the order offered. */
+function optionsIn(files: LibraryFile[], folder: string) {
+  const designs = new Set<string>()
+  for (const file of files) {
+    const design = designFolderOf(file.path)
+    if (design && designOptionsOf(design) === folder) designs.add(design)
+  }
+  return [...designs].sort()
+}
+
 /**
  * Everything under the folder, at any depth, newest change first: so a file is found
  * without opening each folder on the way. A design counts as one entry, as of its
- * newest file, unless the folder shown is inside it.
+ * newest file, unless the folder shown is inside it; the options offered for a
+ * design count as one, unless the folder shown is theirs.
  */
 function recentIn(
   tree: LibraryTree | undefined,
@@ -686,7 +715,9 @@ function recentIn(
     if (!file.path.startsWith(under)) continue
     const design = designFolderOf(file.path)
     if (design && design.startsWith(under) && design !== folder) {
-      if ((designs.get(design) ?? '') < file.updatedAt) designs.set(design, file.updatedAt)
+      const options = designOptionsOf(design)
+      const entry = options && options.startsWith(under) && options !== folder ? options : design
+      if ((designs.get(entry) ?? '') < file.updatedAt) designs.set(entry, file.updatedAt)
     } else entries.push({ kind: 'file', file, at: file.updatedAt })
   }
   for (const [path, at] of designs)

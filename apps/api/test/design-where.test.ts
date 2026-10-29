@@ -55,3 +55,9 @@ test('an option missing with no pick stays where it was', async () => {
   const a = `${OPTIONS}/a-bold.design`
   assert.deepEqual(await findDesign(db([]), a), { path: a, trashed: false })
 })
+
+test('an option cleared when the design itself was saved leads to that design', async () => {
+  const a = `${OPTIONS}/a-bold.design`
+  const to = 'Projects/Acme/designs/landing.design'
+  assert.deepEqual(await findDesign(db([`${to}/index.html`]), a), { path: to, trashed: false })
+})
