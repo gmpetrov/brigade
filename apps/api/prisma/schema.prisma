@@ -1639,6 +1639,9 @@ model ListItemPull {
   pullRequestId  String
   pullRequest    PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
   closes         Boolean     @default(false)
+  /// When its merge was dealt with for this item (ticked, or nothing to tick); while unset after a
+  /// merge, the item is tried again (sweepListMerges).
+  settledAt      DateTime?
   createdAt      DateTime    @default(now())
 
   @@id([itemId, pullRequestId])

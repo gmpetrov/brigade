@@ -15,7 +15,9 @@ mission; threads stay where the work happens.
 - **A line work is attached to carries a marker**, `<!-- item:<id> -->` at its end, hidden in
   the editor (where it renders as the line's chips) and in any Markdown viewer. Its id names
   the line across edits: rewording or moving it keeps the id. A line
-  nobody handed over has no marker. The editor and the API keep markers through every
+  nobody handed over has no marker. A line copied with its marker is a new line: the first one
+  keeps the id, and the copy gets one of its own when it is handed over. An id is never taken
+  over from another list or workspace: a line whose editor marker names one gets a new id. The editor and the API keep markers through every
   conversion (`packages/editor/src/markdown.ts`).
 - **`ListItem` keeps what the file cannot**, by that id: the threads on the line
   (`ListItemThread`), the pull requests on it (`ListItemPull`, `closes` or not), who ticked it
@@ -25,6 +27,10 @@ mission; threads stay where the work happens.
 - **A line is not a thread.** A thread can carry several lines and a line several threads.
   Handing lines over starts one thread for them all, or one each; lines can also be added to
   a thread that runs already (its teammate is told at its next turn, `thread.note`).
+- **One change of a list's file at a time.** Every save of a Markdown library file takes the
+  file's lock (`withLibraryLock`), and Brigade reads, changes and writes a list under it, so no
+  save lands in between and is lost. A person's live save built on an older text is refused
+  (409) and the collab server reconciles first.
 - **Ticks are changes to the file, made by code.** Ticking marks the line's box (`[x]`) and may
   add a short note after its text (`*PR #491, 29 Oct*`), a save of its own credited to who did
   it. Brigade writes the file only to mark, tick or add a line; the collab server applies the
@@ -32,7 +38,9 @@ mission; threads stay where the work happens.
 - **A merged pull request ticks only what it closes.** A teammate names the items a pull request
   works on when it opens it (`github_create_pull_request`'s `items`): `closes` for those it
   finishes, ticked on merge (`settleItemsOnMerge`), `partOf` for those it only advances, shown
-  on the line and left open. A merged pull request does not prove an item done (a deploy may
+  on the line and left open. Each item a merge closes is settled once ticked (or for good, gone
+  from its list or out of its author's reach); one that failed otherwise is tried again every 10
+  minutes (`sweepListMerges`). A merged pull request does not prove an item done (a deploy may
   remain). Work without a pull request is ticked by the teammate (`complete_item`), with a note.
 - **What remains becomes a line.** A teammate adds what an item still needs as a line of its own
   (`add_item`, after or under the item), attached to its thread, rather than ticking what is
@@ -42,7 +50,9 @@ mission; threads stay where the work happens.
   open. The list's counts and filters read the same.
 - **Within the library's access.** Members read every list. A teammate reads and changes a list
   only as its folder's access lets it (`teammateLibraryAccess`); marking a line counts as
-  changing the file.
+  changing the file. A thread's items reach its teammate (spec, `list_items`) only from lists it
+  may read, and a pull request closes only items of lists its author may change, checked when
+  it is opened and again when it merges; elsewhere it is only part of the work.
 - **The Tasks board is set aside, not removed.** Lists replace it in the navigation; the board
   stays at `/app/tasks` and its data is kept. A line nobody has started is the backlog.
 

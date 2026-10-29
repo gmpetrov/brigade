@@ -31,6 +31,7 @@ export type ListItemPullMinAggregateOutputType = {
   itemId: string | null
   pullRequestId: string | null
   closes: boolean | null
+  settledAt: Date | null
   createdAt: Date | null
 }
 
@@ -40,6 +41,7 @@ export type ListItemPullMaxAggregateOutputType = {
   itemId: string | null
   pullRequestId: string | null
   closes: boolean | null
+  settledAt: Date | null
   createdAt: Date | null
 }
 
@@ -49,6 +51,7 @@ export type ListItemPullCountAggregateOutputType = {
   itemId: number
   pullRequestId: number
   closes: number
+  settledAt: number
   createdAt: number
   _all: number
 }
@@ -60,6 +63,7 @@ export type ListItemPullMinAggregateInputType = {
   itemId?: true
   pullRequestId?: true
   closes?: true
+  settledAt?: true
   createdAt?: true
 }
 
@@ -69,6 +73,7 @@ export type ListItemPullMaxAggregateInputType = {
   itemId?: true
   pullRequestId?: true
   closes?: true
+  settledAt?: true
   createdAt?: true
 }
 
@@ -78,6 +83,7 @@ export type ListItemPullCountAggregateInputType = {
   itemId?: true
   pullRequestId?: true
   closes?: true
+  settledAt?: true
   createdAt?: true
   _all?: true
 }
@@ -160,6 +166,7 @@ export type ListItemPullGroupByOutputType = {
   itemId: string
   pullRequestId: string
   closes: boolean
+  settledAt: Date | null
   createdAt: Date
   _count: ListItemPullCountAggregateOutputType | null
   _min: ListItemPullMinAggregateOutputType | null
@@ -190,6 +197,7 @@ export type ListItemPullWhereInput = {
   itemId?: Prisma.StringFilter<"ListItemPull"> | string
   pullRequestId?: Prisma.StringFilter<"ListItemPull"> | string
   closes?: Prisma.BoolFilter<"ListItemPull"> | boolean
+  settledAt?: Prisma.DateTimeNullableFilter<"ListItemPull"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ListItemPull"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   item?: Prisma.XOR<Prisma.ListItemScalarRelationFilter, Prisma.ListItemWhereInput>
@@ -202,6 +210,7 @@ export type ListItemPullOrderByWithRelationInput = {
   itemId?: Prisma.SortOrder
   pullRequestId?: Prisma.SortOrder
   closes?: Prisma.SortOrder
+  settledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   item?: Prisma.ListItemOrderByWithRelationInput
@@ -218,6 +227,7 @@ export type ListItemPullWhereUniqueInput = Prisma.AtLeast<{
   itemId?: Prisma.StringFilter<"ListItemPull"> | string
   pullRequestId?: Prisma.StringFilter<"ListItemPull"> | string
   closes?: Prisma.BoolFilter<"ListItemPull"> | boolean
+  settledAt?: Prisma.DateTimeNullableFilter<"ListItemPull"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ListItemPull"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   item?: Prisma.XOR<Prisma.ListItemScalarRelationFilter, Prisma.ListItemWhereInput>
@@ -230,6 +240,7 @@ export type ListItemPullOrderByWithAggregationInput = {
   itemId?: Prisma.SortOrder
   pullRequestId?: Prisma.SortOrder
   closes?: Prisma.SortOrder
+  settledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.ListItemPullCountOrderByAggregateInput
   _max?: Prisma.ListItemPullMaxOrderByAggregateInput
@@ -245,12 +256,14 @@ export type ListItemPullScalarWhereWithAggregatesInput = {
   itemId?: Prisma.StringWithAggregatesFilter<"ListItemPull"> | string
   pullRequestId?: Prisma.StringWithAggregatesFilter<"ListItemPull"> | string
   closes?: Prisma.BoolWithAggregatesFilter<"ListItemPull"> | boolean
+  settledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ListItemPull"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ListItemPull"> | Date | string
 }
 
 export type ListItemPullCreateInput = {
   organizationId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutListItemPullsInput
   item: Prisma.ListItemCreateNestedOneWithoutPullsInput
@@ -263,12 +276,14 @@ export type ListItemPullUncheckedCreateInput = {
   itemId: string
   pullRequestId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
 }
 
 export type ListItemPullUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutListItemPullsNestedInput
   item?: Prisma.ListItemUpdateOneRequiredWithoutPullsNestedInput
@@ -281,6 +296,7 @@ export type ListItemPullUncheckedUpdateInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   pullRequestId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -290,12 +306,14 @@ export type ListItemPullCreateManyInput = {
   itemId: string
   pullRequestId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
 }
 
 export type ListItemPullUpdateManyMutationInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -305,6 +323,7 @@ export type ListItemPullUncheckedUpdateManyInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   pullRequestId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -329,6 +348,7 @@ export type ListItemPullCountOrderByAggregateInput = {
   itemId?: Prisma.SortOrder
   pullRequestId?: Prisma.SortOrder
   closes?: Prisma.SortOrder
+  settledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -338,6 +358,7 @@ export type ListItemPullMaxOrderByAggregateInput = {
   itemId?: Prisma.SortOrder
   pullRequestId?: Prisma.SortOrder
   closes?: Prisma.SortOrder
+  settledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -347,6 +368,7 @@ export type ListItemPullMinOrderByAggregateInput = {
   itemId?: Prisma.SortOrder
   pullRequestId?: Prisma.SortOrder
   closes?: Prisma.SortOrder
+  settledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -479,6 +501,7 @@ export type ListItemPullUncheckedUpdateManyWithoutItemNestedInput = {
 export type ListItemPullCreateWithoutWorkspaceInput = {
   organizationId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
   item: Prisma.ListItemCreateNestedOneWithoutPullsInput
   pullRequest: Prisma.PullRequestCreateNestedOneWithoutListItemsInput
@@ -489,6 +512,7 @@ export type ListItemPullUncheckedCreateWithoutWorkspaceInput = {
   itemId: string
   pullRequestId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -527,12 +551,14 @@ export type ListItemPullScalarWhereInput = {
   itemId?: Prisma.StringFilter<"ListItemPull"> | string
   pullRequestId?: Prisma.StringFilter<"ListItemPull"> | string
   closes?: Prisma.BoolFilter<"ListItemPull"> | boolean
+  settledAt?: Prisma.DateTimeNullableFilter<"ListItemPull"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ListItemPull"> | Date | string
 }
 
 export type ListItemPullCreateWithoutPullRequestInput = {
   organizationId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutListItemPullsInput
   item: Prisma.ListItemCreateNestedOneWithoutPullsInput
@@ -543,6 +569,7 @@ export type ListItemPullUncheckedCreateWithoutPullRequestInput = {
   workspaceId: string
   itemId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -575,6 +602,7 @@ export type ListItemPullUpdateManyWithWhereWithoutPullRequestInput = {
 export type ListItemPullCreateWithoutItemInput = {
   organizationId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutListItemPullsInput
   pullRequest: Prisma.PullRequestCreateNestedOneWithoutListItemsInput
@@ -585,6 +613,7 @@ export type ListItemPullUncheckedCreateWithoutItemInput = {
   workspaceId: string
   pullRequestId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -619,12 +648,14 @@ export type ListItemPullCreateManyWorkspaceInput = {
   itemId: string
   pullRequestId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
 }
 
 export type ListItemPullUpdateWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   item?: Prisma.ListItemUpdateOneRequiredWithoutPullsNestedInput
   pullRequest?: Prisma.PullRequestUpdateOneRequiredWithoutListItemsNestedInput
@@ -635,6 +666,7 @@ export type ListItemPullUncheckedUpdateWithoutWorkspaceInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   pullRequestId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -643,6 +675,7 @@ export type ListItemPullUncheckedUpdateManyWithoutWorkspaceInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   pullRequestId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -651,12 +684,14 @@ export type ListItemPullCreateManyPullRequestInput = {
   workspaceId: string
   itemId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
 }
 
 export type ListItemPullUpdateWithoutPullRequestInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutListItemPullsNestedInput
   item?: Prisma.ListItemUpdateOneRequiredWithoutPullsNestedInput
@@ -667,6 +702,7 @@ export type ListItemPullUncheckedUpdateWithoutPullRequestInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -675,6 +711,7 @@ export type ListItemPullUncheckedUpdateManyWithoutPullRequestInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -683,12 +720,14 @@ export type ListItemPullCreateManyItemInput = {
   workspaceId: string
   pullRequestId: string
   closes?: boolean
+  settledAt?: Date | string | null
   createdAt?: Date | string
 }
 
 export type ListItemPullUpdateWithoutItemInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutListItemPullsNestedInput
   pullRequest?: Prisma.PullRequestUpdateOneRequiredWithoutListItemsNestedInput
@@ -699,6 +738,7 @@ export type ListItemPullUncheckedUpdateWithoutItemInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   pullRequestId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -707,6 +747,7 @@ export type ListItemPullUncheckedUpdateManyWithoutItemInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   pullRequestId?: Prisma.StringFieldUpdateOperationsInput | string
   closes?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -718,6 +759,7 @@ export type ListItemPullSelect<ExtArgs extends runtime.Types.Extensions.Internal
   itemId?: boolean
   pullRequestId?: boolean
   closes?: boolean
+  settledAt?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   item?: boolean | Prisma.ListItemDefaultArgs<ExtArgs>
@@ -730,6 +772,7 @@ export type ListItemPullSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   itemId?: boolean
   pullRequestId?: boolean
   closes?: boolean
+  settledAt?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   item?: boolean | Prisma.ListItemDefaultArgs<ExtArgs>
@@ -742,6 +785,7 @@ export type ListItemPullSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   itemId?: boolean
   pullRequestId?: boolean
   closes?: boolean
+  settledAt?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   item?: boolean | Prisma.ListItemDefaultArgs<ExtArgs>
@@ -754,10 +798,11 @@ export type ListItemPullSelectScalar = {
   itemId?: boolean
   pullRequestId?: boolean
   closes?: boolean
+  settledAt?: boolean
   createdAt?: boolean
 }
 
-export type ListItemPullOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"organizationId" | "workspaceId" | "itemId" | "pullRequestId" | "closes" | "createdAt", ExtArgs["result"]["listItemPull"]>
+export type ListItemPullOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"organizationId" | "workspaceId" | "itemId" | "pullRequestId" | "closes" | "settledAt" | "createdAt", ExtArgs["result"]["listItemPull"]>
 export type ListItemPullInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   item?: boolean | Prisma.ListItemDefaultArgs<ExtArgs>
@@ -787,6 +832,11 @@ export type $ListItemPullPayload<ExtArgs extends runtime.Types.Extensions.Intern
     itemId: string
     pullRequestId: string
     closes: boolean
+    /**
+     * When its merge was dealt with for this item (ticked, or nothing to tick); while unset after a
+     * merge, the item is tried again (sweepListMerges).
+     */
+    settledAt: Date | null
     createdAt: Date
   }, ExtArgs["result"]["listItemPull"]>
   composites: {}
@@ -1219,6 +1269,7 @@ export interface ListItemPullFieldRefs {
   readonly itemId: Prisma.FieldRef<"ListItemPull", 'String'>
   readonly pullRequestId: Prisma.FieldRef<"ListItemPull", 'String'>
   readonly closes: Prisma.FieldRef<"ListItemPull", 'Boolean'>
+  readonly settledAt: Prisma.FieldRef<"ListItemPull", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ListItemPull", 'DateTime'>
 }
     

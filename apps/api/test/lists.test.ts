@@ -110,7 +110,9 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
         status: 'ready',
       },
     } as never)
-    const teammate = await db.teammate.create({ data: { name: `Riley ${suffix}` } } as never)
+    const teammate = await db.teammate.create({
+      data: { name: `Riley ${suffix}`, libraryAccess: 'read_write' },
+    } as never)
     ids.riley = teammate.id
     riley = { id: teammate.id, name: teammate.name, libraryAccess: 'read_write' }
     ids.file = (
@@ -308,7 +310,7 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
         authorTeammateId: ids.riley,
       },
     } as never)
-    await lists.linkPullItems(db, pull.id, threadId, {
+    await lists.linkPullItems(db, pull.id, threadId, ids.riley, {
       closes: ['bbbbbbbbbbbbbbbb'],
       partOf: ['aaaaaaaaaaaaaaaa', 'not-an-item'],
     })
@@ -358,5 +360,301 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
       lists.setItemDone(db, scope, { type: 'member', id: ids.member }, 'aaaaaaaaaaaaaaaa', true),
       /no longer in its list/,
     )
+  })
+})
+
+// What a review found (PR #487), each through the code that was fixed:
+// - two ticks at once in one file both land (the file's lock);
+// - an id the editor gives that another workspace's item has is never taken over;
+// - a thread's items and a pull request's closes keep to the teammate's folder access;
+// - a tick a merge could not make is tried again;
+// - a line copied with its marker is a new line, not the same item.
+describe('lists, under review', { skip: !database && 'no database answers' }, () => {
+  const suffix = randomUUID().slice(0, 8)
+  const ids = {} as Record<'org' | 'user' | 'member' | 'workspace' | 'other', string>
+  let db: ReturnType<typeof scoped>
+  let scope: { organizationId: string; workspaceId: string }
+  let lists: typeof import('../src/lists.js')
+  let library: typeof import('../src/library.js')
+  let teammate: { id: string; name: string; libraryAccess: 'read_write' }
+  let sessionId: string
+  const actor = () => ({ type: 'member' as const, id: ids.member })
+  const save = (path: string, text: string, inScope = scope, inDb = db) =>
+    library.saveLibraryFile(inDb, inScope, actor(), {
+      path,
+      bytes: new TextEncoder().encode(text),
+    })
+  const read = async (id: string, inScope = scope, inDb = db) =>
+    library.documentText(inScope, (await inDb.document.findFirst({ where: { id } }))!)
+
+  before(async () => {
+    lists = await import('../src/lists.js')
+    library = await import('../src/library.js')
+    ids.org = `org-lists-review-${suffix}`
+    ids.user = `user-lists-review-${suffix}`
+    ids.member = `m-lists-review-${suffix}`
+    await prisma.organization.create({
+      data: { id: ids.org, name: 'Review', slug: `lists-review-${suffix}` },
+    })
+    await prisma.user.create({
+      data: { id: ids.user, name: 'Ada', email: `${ids.user}@test.local` },
+    })
+    await prisma.member.create({
+      data: { id: ids.member, organizationId: ids.org, userId: ids.user, role: 'owner' },
+    })
+    ids.workspace = (
+      await prisma.workspace.create({ data: { organizationId: ids.org, name: 'Review' } })
+    ).id
+    ids.other = (
+      await prisma.workspace.create({ data: { organizationId: ids.org, name: 'Other' } })
+    ).id
+    scope = { organizationId: ids.org, workspaceId: ids.workspace }
+    db = scoped(scope)
+    const made = await db.teammate.create({
+      data: { name: `Riley ${suffix}`, libraryAccess: 'read_write' },
+    } as never)
+    teammate = { id: made.id, name: made.name, libraryAccess: 'read_write' }
+    const computer = await db.computer.create({
+      data: { kind: 'member_machine', memberId: ids.member, name: 'Laptop', status: 'running' },
+    } as never)
+    sessionId = (
+      await db.session.create({
+        data: {
+          teammateId: made.id,
+          computerId: computer.id,
+          startedByMemberId: ids.member,
+          title: 'Review',
+        },
+      } as never)
+    ).id
+  })
+
+  after(async () => {
+    await prisma.workspace.deleteMany({ where: { id: { in: [ids.workspace, ids.other] } } })
+    await prisma.member.deleteMany({ where: { organizationId: ids.org } })
+    await prisma.organization.deleteMany({ where: { id: ids.org } })
+    await prisma.user.deleteMany({ where: { id: ids.user } })
+  })
+
+  test('two ticks at once in one file both land', async () => {
+    const a = 'raceaaaaaaaaaaaa'
+    const b = 'racebbbbbbbbbbbb'
+    const file = await save(
+      'Race/list.md',
+      `* [ ] First <!-- item:${a} -->\n* [ ] Second <!-- item:${b} -->\n`,
+    )
+    await db.listItem.createMany({
+      data: [
+        { id: a, documentId: file.id, text: 'First' },
+        { id: b, documentId: file.id, text: 'Second' },
+      ],
+    } as never)
+    // Each tick's read of the file waits for the other's, or a second at most: without the lock
+    // both read the same text, and the second write loses the first tick.
+    let arrivals = 0
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const racing = new Proxy(db, {
+      get(target, key) {
+        if (key !== 'document') return Reflect.get(target, key)
+        return new Proxy(target.document, {
+          get(delegate, op) {
+            if (op !== 'findFirst') return Reflect.get(delegate, op)
+            return async (args: { where?: { id?: string; kind?: string } }) => {
+              const found = await delegate.findFirst(args as never)
+              if (args.where?.id === file.id && args.where.kind === 'library') {
+                if (++arrivals === 2) release()
+                await Promise.race([gate, new Promise((resolve) => setTimeout(resolve, 1_000))])
+              }
+              return found
+            }
+          },
+        })
+      },
+    }) as typeof db
+    await Promise.all([
+      lists.setItemDone(racing, scope, actor(), a, true),
+      lists.setItemDone(racing, scope, actor(), b, true),
+    ])
+    assert.equal(((await read(file.id)).match(/\[x\]/g) ?? []).length, 2)
+  })
+
+  test("an id another workspace's item has is never taken over", async () => {
+    const secret = await save(
+      'Restricted/release.md',
+      '* [ ] Confidential release <!-- item:secretitem123456 -->\n',
+    )
+    await db.listItem.create({
+      data: { id: 'secretitem123456', documentId: secret.id, text: 'Confidential release' },
+    } as never)
+    const otherScope = { organizationId: ids.org, workspaceId: ids.other }
+    const otherDb = scoped(otherScope)
+    const otherTeammate = await otherDb.teammate.create({ data: { name: 'Other' } } as never)
+    const otherComputer = await otherDb.computer.create({
+      data: { kind: 'member_machine', memberId: ids.member, name: 'Other' },
+    } as never)
+    const otherThread = await otherDb.session.create({
+      data: {
+        teammateId: otherTeammate.id,
+        computerId: otherComputer.id,
+        startedByMemberId: ids.member,
+        title: 'Other',
+      },
+    } as never)
+    const copy = await save('Copied.md', '* [ ] A public copy\n', otherScope, otherDb)
+    const linked = await lists.linkToThread(otherDb, otherScope, ids.member, copy.id, {
+      sessionId: otherThread.id,
+      items: [{ id: 'secretitem123456', text: 'A public copy' }],
+    })
+    assert.notEqual(linked.itemIds[0], 'secretitem123456')
+    const items = await lists.specItems(otherDb, otherThread.id)
+    assert.deepEqual(
+      items.map((i) => [i.path, i.text]),
+      [['Copied.md', 'A public copy']],
+    )
+    assert.match(await read(copy.id, otherScope, otherDb), new RegExp(`item:${linked.itemIds[0]}`))
+    // The first workspace's item is as it was.
+    const original = await prisma.listItem.findFirst({ where: { id: 'secretitem123456' } })
+    assert.equal(original?.documentId, secret.id)
+  })
+
+  test("a thread's items and a pull request's closes keep to the teammate's folder access", async () => {
+    const file = await save('Restricted/plan.md', '* [ ] Ship it <!-- item:planitem12345678 -->\n')
+    await db.listItem.create({
+      data: { id: 'planitem12345678', documentId: file.id, text: 'Ship it' },
+    } as never)
+    await db.listItemThread.create({
+      data: { itemId: 'planitem12345678', sessionId },
+    } as never)
+    // Readable, not writable: a pull request is only part of the work there.
+    const folder = await db.libraryFolder.create({
+      data: { path: 'Restricted', restricted: true },
+    } as never)
+    await db.libraryFolderGrant.create({
+      data: { folderId: folder.id, teammateId: teammate.id, access: 'read' },
+    } as never)
+    const readOnly = await db.pullRequest.create({
+      data: {
+        repository: 'acme/app',
+        number: 11,
+        title: 'Ship',
+        headRef: 'ship',
+        baseRef: 'main',
+        sessionId,
+        authorTeammateId: teammate.id,
+      },
+    } as never)
+    await lists.linkPullItems(db, readOnly.id, sessionId, teammate.id, {
+      closes: ['planitem12345678'],
+    })
+    const link = await db.listItemPull.findFirst({ where: { pullRequestId: readOnly.id } })
+    assert.equal(link?.closes, false)
+    // Writable when the pull request was opened, not when it merged: nothing is ticked.
+    await db.libraryFolderGrant.updateMany({
+      where: { folderId: folder.id },
+      data: { access: 'read_write' },
+    })
+    const revoked = await db.pullRequest.create({
+      data: {
+        repository: 'acme/app',
+        number: 12,
+        title: 'Ship again',
+        headRef: 'ship-2',
+        baseRef: 'main',
+        sessionId,
+        authorTeammateId: teammate.id,
+        state: 'merged',
+      },
+    } as never)
+    await lists.linkPullItems(db, revoked.id, sessionId, teammate.id, {
+      closes: ['planitem12345678'],
+    })
+    assert.equal(
+      (await db.listItemPull.findFirst({ where: { pullRequestId: revoked.id } }))?.closes,
+      true,
+    )
+    await db.libraryFolderGrant.deleteMany({ where: { folderId: folder.id } })
+    await lists.settleItemsOnMerge(db, scope, { id: revoked.id, number: 12, sessionId })
+    assert.match(await read(file.id), /^\* \[ \] Ship it/)
+    // Out of its reach now: neither its tools nor its instructions name the item.
+    const out = (await lists.handleListCall(
+      db,
+      scope,
+      { id: sessionId },
+      { ...teammate, libraryAccess: 'read_write' },
+      {
+        name: 'list_items',
+      },
+    )) as { items: unknown[] }
+    assert.deepEqual(out.items, [])
+    await db.libraryFolder.deleteMany({ where: { path: 'Restricted' } })
+  })
+
+  test('a tick a merge could not make is tried again', async () => {
+    const file = await save('Retry/list.md', '* [ ] Deploy <!-- item:retryitem1234567 -->\n')
+    await db.listItem.create({
+      data: { id: 'retryitem1234567', documentId: file.id, text: 'Deploy' },
+    } as never)
+    const pull = await db.pullRequest.create({
+      data: {
+        repository: 'acme/app',
+        number: 21,
+        title: 'Deploy',
+        headRef: 'deploy',
+        baseRef: 'main',
+        sessionId,
+        authorTeammateId: teammate.id,
+        state: 'merged',
+      },
+    } as never)
+    await lists.linkPullItems(db, pull.id, sessionId, teammate.id, { closes: ['retryitem1234567'] })
+    const failing = new Proxy(db, {
+      get(target, key) {
+        if (key !== 'document') return Reflect.get(target, key)
+        return new Proxy(target.document, {
+          get(delegate, op) {
+            if (op !== 'findFirst') return Reflect.get(delegate, op)
+            return async (args: { where?: { id?: string } }) => {
+              if (args.where?.id === file.id) throw new Error('storage is out')
+              return delegate.findFirst(args as never)
+            }
+          },
+        })
+      },
+    }) as typeof db
+    await lists.settleItemsOnMerge(failing, scope, { id: pull.id, number: 21, sessionId })
+    assert.match(await read(file.id), /^\* \[ \] Deploy/)
+    assert.equal(
+      (await db.listItemPull.findFirst({ where: { pullRequestId: pull.id } }))?.settledAt,
+      null,
+    )
+    await lists.sweepListMerges()
+    assert.match(await read(file.id), /^\* \[x\] Deploy \*PR #21, /)
+    assert.ok((await db.listItemPull.findFirst({ where: { pullRequestId: pull.id } }))?.settledAt)
+  })
+
+  test('a line copied with its marker is a new line, and gets an id of its own when handed over', async () => {
+    const file = await save(
+      'Copy/list.md',
+      '* [ ] Original <!-- item:dupitem123456789 -->\n* [ ] Copied and reworded <!-- item:dupitem123456789 -->\n',
+    )
+    await db.listItem.create({
+      data: { id: 'dupitem123456789', documentId: file.id, text: 'Original' },
+    } as never)
+    await lists.setItemDone(db, scope, actor(), 'dupitem123456789', true)
+    const detail = await lists.listDetail(db, scope, file.id)
+    assert.deepEqual(
+      detail.items.map((i) => [i.text, i.done]),
+      [['Original', true]],
+    )
+    // The editor hands the copy over with the marker it carries.
+    const linked = await lists.linkToThread(db, scope, ids.member, file.id, {
+      sessionId,
+      items: [{ id: 'dupitem123456789', text: 'Copied and reworded' }],
+    })
+    assert.notEqual(linked.itemIds[0], 'dupitem123456789')
+    const lines = (await read(file.id)).split('\n')
+    assert.equal(lines[0], '* [x] Original <!-- item:dupitem123456789 -->')
+    assert.equal(lines[1], `* [ ] Copied and reworded <!-- item:${linked.itemIds[0]} -->`)
   })
 })

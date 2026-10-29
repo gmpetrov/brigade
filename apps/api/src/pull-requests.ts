@@ -649,7 +649,7 @@ export async function notePullRequestCall(
     // The list items it finishes, or works on (docs/lists.md).
     const items = call.input.items as { closes?: string[]; partOf?: string[] } | undefined
     if (items)
-      await linkPullItems(db, row.id, call.sessionId, items).catch((error) =>
+      await linkPullItems(db, row.id, call.sessionId, call.teammateId, items).catch((error) =>
         console.warn(`lists: items of pull request ${row.id} not kept: ${String(error)}`),
       )
     return

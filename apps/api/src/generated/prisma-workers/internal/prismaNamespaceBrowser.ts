@@ -958,6 +958,7 @@ export const ListItemPullScalarFieldEnum = {
   itemId: 'itemId',
   pullRequestId: 'pullRequestId',
   closes: 'closes',
+  settledAt: 'settledAt',
   createdAt: 'createdAt'
 } as const
 

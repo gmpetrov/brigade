@@ -28,6 +28,7 @@ import { dueSchedules, fireDueSchedules } from './schedules.js'
 import { sweepSpecParts } from './spec-parts.js'
 import { dueSubscriptions, readSubscriptions } from './subscriptions/index.js'
 import { sweepDoneTasks } from './tasks.js'
+import { sweepListMerges } from './lists.js'
 import { sweepDeletedThreadFiles } from './thread-delete.js'
 import { sweepDeliveries } from './triggers.js'
 import { sweepFileUploads } from './uploads.js'
@@ -94,6 +95,8 @@ export const JOBS = {
   'file-upload-sweep': { every: 3600, run: () => sweepFileUploads() },
   'trash-sweep': { every: 3600, run: () => sweepTrash() },
   'done-task-sweep': { every: 3600, run: () => sweepDoneTasks() },
+  // Every 10 minutes: list items a merged pull request closes, not ticked yet (src/lists.ts).
+  'list-merge-sweep': { every: 600, run: () => sweepListMerges() },
   'deleted-thread-sweep': { every: 3600, run: () => sweepDeletedThreadFiles() },
   'runner-command-sweep': { every: 3600, run: () => sweepCommands() },
   'spec-part-sweep': { every: 3600, run: () => sweepSpecParts() },

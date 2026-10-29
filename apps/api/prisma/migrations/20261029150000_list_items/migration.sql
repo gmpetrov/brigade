@@ -32,6 +32,7 @@ CREATE TABLE "ListItemPull" (
     "itemId" TEXT NOT NULL,
     "pullRequestId" TEXT NOT NULL,
     "closes" BOOLEAN NOT NULL DEFAULT false,
+    "settledAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ListItemPull_pkey" PRIMARY KEY ("itemId","pullRequestId")

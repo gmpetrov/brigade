@@ -107,3 +107,26 @@ test('new ids are 16 characters of [a-z0-9]', () => {
   assert.match(id, /^[a-z0-9]{16}$/)
   assert.notEqual(id, newListItemId())
 })
+
+test('a line copied with its marker is a new line: the first keeps the id', () => {
+  const copied = [
+    '* [x] Original <!-- item:aaaaaaaaaaaaaaaa -->',
+    '* [ ] Copied and reworded <!-- item:aaaaaaaaaaaaaaaa -->',
+  ].join('\n')
+  const list = parseList(copied)
+  assert.deepEqual(
+    list.lines.map((l) => [l.id, l.marker]),
+    [
+      ['aaaaaaaaaaaaaaaa', 'aaaaaaaaaaaaaaaa'],
+      [null, 'aaaaaaaaaaaaaaaa'],
+    ],
+  )
+  assert.equal(findLine(list, 'aaaaaaaaaaaaaaaa').line, 0)
+  // Marked, the copy gets an id of its own in place of the one it carried.
+  const marked = markLine(copied, list.lines[1], 'bbbbbbbbbbbbbbbb')
+  assert.equal(marked.split('\n')[1], '* [ ] Copied and reworded <!-- item:bbbbbbbbbbbbbbbb -->')
+  assert.deepEqual(
+    parseList(marked).lines.map((l) => l.id),
+    ['aaaaaaaaaaaaaaaa', 'bbbbbbbbbbbbbbbb'],
+  )
+})

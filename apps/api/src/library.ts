@@ -207,7 +207,48 @@ export async function saveLibraryFile(
     fromCollab?: boolean
     /** Set when the save brings back an older version. */
     restoredFromId?: string
+    /** The stored text it builds on: when the file changed since, nothing is written (StaleMemory). */
+    baseSha?: string
+    /** Its caller holds the file's lock already (withLibraryLock). */
+    locked?: boolean
   } = {},
+): Promise<Awaited<ReturnType<typeof writeLibraryFile>>> {
+  // A Markdown file is changed one save at a time: a list's lines are read, changed and written
+  // back (src/lists.ts), and a save landing in between would be lost.
+  if (!options.locked && contentTypeFor(input.path, input.contentType) === 'text/markdown') {
+    const existing = await db.document.findFirst({
+      where: { kind: 'library', path: input.path, deletedAt: null },
+      select: { id: true },
+    })
+    if (existing)
+      return withLibraryLock(scope, existing.id, () =>
+        writeLibraryFile(db, scope, actor, input, context, options),
+      )
+  }
+  return writeLibraryFile(db, scope, actor, input, context, options)
+}
+
+/**
+ * Run `work` holding a library file's lock, which every save of a Markdown file takes: what it
+ * reads of the file stays what it writes over.
+ */
+export function withLibraryLock<T>(scope: Scope, documentId: string, work: () => Promise<T>) {
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${scope.workspaceId}:library:${documentId}`}))`
+      return work()
+    },
+    { maxWait: 10_000, timeout: 30_000 },
+  )
+}
+
+async function writeLibraryFile(
+  db: ScopedDb,
+  scope: Scope,
+  actor: Actor,
+  input: Parameters<typeof saveLibraryFile>[3],
+  context: Record<string, string>,
+  options: Parameters<typeof saveLibraryFile>[5] & {},
 ) {
   const size = 'bytes' in input ? input.bytes.byteLength : input.upload.size
   if (size > LIBRARY_FILE_MAX)
@@ -217,6 +258,7 @@ export async function saveLibraryFile(
   const existing = await db.document.findFirst({
     where: { kind: 'library', path: input.path, deletedAt: null },
   })
+  if (options.baseSha && existing && existing.sha256 !== options.baseSha) throw new StaleMemory()
   // The same bytes again: nothing changed, nothing to record.
   if (
     existing &&
@@ -422,7 +464,10 @@ export async function saveDocumentText(
       actor,
       { path: row.path, bytes: new TextEncoder().encode(text), contentType: row.contentType },
       {},
-      { fromCollab: options.fromCollab },
+      {
+        fromCollab: options.fromCollab,
+        ...(options.baseSha ? { baseSha: options.baseSha } : {}),
+      },
     )
   if (text.length > MEMORY_MAX)
     throw new HTTPException(413, {
@@ -431,7 +476,10 @@ export async function saveDocumentText(
   return writeMemory(db, scope, actor, memoryTarget(row), text, options)
 }
 
-/** A person's save built on a memory file's text that a thread or a tidy run changed since. */
+/**
+ * A person's save built on a document's text that changed since: a memory file a thread or a
+ * tidy run wrote to, a library file a teammate or a list's change wrote to.
+ */
 export class StaleMemory extends Error {
   constructor() {
     super('The memory changed since this edit started')

@@ -8,7 +8,8 @@ import {
   insertLine,
   ListItemId,
   listCounts,
-  markLine,
+  sameItemText,
+  setMarker,
   newListItemId,
   parseList,
   plainItemText,
@@ -29,11 +30,11 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import type { z } from 'zod'
 import { audit, type Actor } from './audit.js'
-import type { Scope, ScopedDb } from './db.js'
+import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs } from './hub.js'
 import { teammateLibraryAccess } from './library-folders.js'
 import { actorNames } from './library-history.js'
-import { documentText, saveLibraryFile } from './library.js'
+import { documentText, saveLibraryFile, withLibraryLock } from './library.js'
 import { computerFor } from './tasks.js'
 import { noteInThread } from './thread-notes.js'
 import { startThread } from './work.js'
@@ -63,8 +64,9 @@ const titleOf = (path: string, list: ParsedList) =>
 
 /**
  * Change a list's file: `edit` gets its text as stored now and gives the new one (the same when
- * there is nothing to do), and runs again if the file changed meanwhile. People's live edits are
- * kept: the collab server applies the change to the lines it touches only.
+ * there is nothing to do), holding the file's lock, which every save of it takes: no save lands
+ * between what it reads and what it writes. People's live edits are kept: the collab server
+ * applies the change to the lines it touches only.
  */
 async function editList(
   db: ScopedDb,
@@ -74,26 +76,20 @@ async function editList(
   context: Record<string, string>,
   edit: (text: string, list: ParsedList) => string,
 ) {
-  for (let attempt = 0; attempt < 3; attempt++) {
+  return withLibraryLock(scope, documentId, async () => {
     const row = await listFile(db, { id: documentId })
     const text = await documentText(scope, row)
     const next = edit(text, parseList(text))
     if (next === text) return row
-    // Another save since it was read: read it again rather than lose that one.
-    const now = await db.document.findFirst({
-      where: { id: documentId },
-      select: { sha256: true },
-    })
-    if (now?.sha256 !== row.sha256) continue
     return saveLibraryFile(
       db,
       scope,
       actor,
       { path: row.path, bytes: new TextEncoder().encode(next), contentType: row.contentType },
       context,
+      { locked: true },
     )
-  }
-  throw new HTTPException(409, { message: 'The list kept changing meanwhile; try again' })
+  })
 }
 
 // ---- Reading --------------------------------------------------------------------------------
@@ -338,8 +334,10 @@ type Picked = { id: string; text: string }
 
 /**
  * The picked lines as items of this file: each gets its row, and its marker in the file unless
- * it has one (the editor that picked it adds it too, and its save may be on its way). A line
- * that already has another id keeps it. Returns each picked line's item id, in the order picked.
+ * it has one (the editor that picked it adds it too, and its save may be on its way). A line that
+ * already has an item keeps it. An id the editor gave that anything else has (another list's
+ * line, another workspace's, a line above it copied with its marker) is never taken over: the
+ * line gets an id of its own. Returns each picked line's item id, in the order picked.
  */
 async function itemsFor(
   db: ScopedDb,
@@ -349,37 +347,53 @@ async function itemsFor(
   picked: Picked[],
   context: Record<string, string> = {},
 ) {
-  const taken = await db.listItem.findMany({
-    where: { id: { in: picked.map((p) => p.id) }, documentId: { not: file.id } },
-    select: { id: true },
-  })
-  if (taken.length) throw new HTTPException(409, { message: 'Those lines belong to another list' })
-  const ids = new Map(picked.map((p) => [p.id, p.id]))
+  // Across workspaces: ids are the rows' keys, and an editor can be handed any marker.
+  const elsewhere = new Set(
+    (
+      await prisma.listItem.findMany({
+        where: { id: { in: picked.map((p) => p.id) }, documentId: { not: file.id } },
+        select: { id: true },
+      })
+    ).map((r) => r.id),
+  )
+  const ids = picked.map((p) => (elsewhere.has(p.id) ? newListItemId() : p.id))
   await editList(db, scope, actor, file.id, context, (text, list) => {
     let next = text
-    for (const p of picked) {
-      if (list.lines.some((l) => l.id === p.id)) continue
-      const line = findLine(list, p.text)
+    picked.forEach((p, i) => {
+      // The line the editor marked, when its marker is stored already; else the line by its text.
+      const marked = list.lines.find((l) => l.id === ids[i] && sameItemText(l.text, p.text))
+      const line = marked ?? findLine(list, p.text)
       // Not in the stored file yet (typed just now): the editor's save brings its marker.
-      if (typeof line === 'string') continue
-      if (line.id) ids.set(p.id, line.id)
-      else next = markLine(next, line, p.id)
-    }
+      if (typeof line === 'string') return
+      if (line.id) {
+        ids[i] = line.id
+        return
+      }
+      // Its own id, unless another line of the file has that one.
+      if (list.lines.some((l) => l.id === ids[i])) ids[i] = newListItemId()
+      next = setMarker(next, line, ids[i]!)
+    })
     return next
   }).catch((error) => {
     // The rows still hold the work; a marker the file lacks shows as a line gone from it.
     console.warn(`lists: lines of ${file.id} not marked: ${String(error)}`)
   })
-  const byId = new Map(picked.map((p) => [ids.get(p.id)!, p.text]))
+  const texts = new Map(ids.map((id, i) => [id, picked[i]!.text]))
   await db.listItem.createMany({
-    data: [...byId].map(([id, text]) => ({
+    data: [...texts].map(([id, text]) => ({
       id,
       documentId: file.id,
       text: plainItemText(text).slice(0, 2_000),
     })) as never,
     skipDuplicates: true,
   })
-  return picked.map((p) => ids.get(p.id)!)
+  // Made by another list meanwhile (skipped above): never this list's.
+  const mine = await db.listItem.count({
+    where: { id: { in: [...texts.keys()] }, documentId: file.id },
+  })
+  if (mine !== texts.size)
+    throw new HTTPException(409, { message: 'Those lines changed meanwhile; try again' })
+  return ids
 }
 
 /** The lines as a bulleted list, for a thread's first message or a note. */
@@ -389,9 +403,9 @@ const bullets = (texts: string[]) => texts.map((t) => `- ${plainItemText(t)}`).j
 async function projectOf(db: ScopedDb, path: string) {
   const projects = await db.project.findMany({
     where: { archivedAt: null },
-    select: { id: true, name: true },
+    select: { id: true, name: true, folder: true },
   })
-  return projects.find((p) => path.startsWith(`${projectFolder(p.name)}/`))?.id ?? null
+  return projects.find((p) => path.startsWith(`${p.folder ?? projectFolder(p.name)}/`))?.id ?? null
 }
 
 /** Hand lines to a teammate: one thread for them all, or one each. */
@@ -489,6 +503,7 @@ export async function setItemDone(
   const item = await db.listItem.findFirst({ where: { id: itemId } })
   if (!item) throw new HTTPException(404, { message: 'Item not found' })
   let text = item.text
+  let changed = false
   await editList(
     db,
     scope,
@@ -503,6 +518,7 @@ export async function setItemDone(
         })
       text = line.text
       if (line.done === done) return current
+      changed = true
       return setLineDone(current, line, done, done ? options.note : undefined)
     },
   )
@@ -517,16 +533,21 @@ export async function setItemDone(
         }
       : { doneByType: null, doneById: null, doneAt: null },
   })
-  return { id: itemId, done, text: plainItemText(text) }
+  return { id: itemId, done, text: plainItemText(text), changed }
 }
 
 // ---- Pull requests --------------------------------------------------------------------------
 
-/** The items a pull request finishes (`closes`) or works on (`partOf`), by id; also its thread's. */
+/**
+ * The items a pull request finishes (`closes`) or works on (`partOf`), by id; also its thread's.
+ * Only lists its author may read; and it closes only items of lists it may change, as ticking
+ * one itself would need: elsewhere, a pull request is only part of the work.
+ */
 export async function linkPullItems(
   db: ScopedDb,
   pullRequestId: string,
   sessionId: string,
+  teammateId: string,
   items: { closes?: string[]; partOf?: string[] },
 ) {
   const closes = new Set((items.closes ?? []).filter((id) => ListItemId.safeParse(id).success))
@@ -535,15 +556,22 @@ export async function linkPullItems(
   )
   const wanted = [...closes, ...partOf]
   if (!wanted.length) return
-  const known = new Set(
-    (await db.listItem.findMany({ where: { id: { in: wanted } }, select: { id: true } })).map(
-      (r) => r.id,
-    ),
-  )
-  const ids = wanted.filter((id) => known.has(id))
+  const teammate = await db.teammate.findFirst({ where: { id: teammateId } })
+  if (!teammate) return
+  const access = await teammateLibraryAccess(db, teammate)
+  const rows = await db.listItem.findMany({
+    where: { id: { in: wanted }, document: { deletedAt: null } },
+    select: { id: true, document: { select: { path: true } } },
+  })
+  const level = new Map(rows.map((r) => [r.id, access.of(r.document.path)]))
+  const ids = wanted.filter((id) => (level.get(id) ?? 'none') !== 'none')
   if (!ids.length) return
   await db.listItemPull.createMany({
-    data: ids.map((itemId) => ({ itemId, pullRequestId, closes: closes.has(itemId) })) as never,
+    data: ids.map((itemId) => ({
+      itemId,
+      pullRequestId,
+      closes: closes.has(itemId) && level.get(itemId) === 'read_write',
+    })) as never,
     skipDuplicates: true,
   })
   await db.listItemThread.createMany({
@@ -557,7 +585,9 @@ const shortDate = (at: Date) =>
 
 /**
  * A pull request was merged: the items it closes are ticked, with its number, credited to the
- * teammate that opened it. Its thread is told. Once per merge (its callers fire on the change).
+ * teammate that opened it, where it may still change their list. Its thread is told. Each item
+ * is settled once ticked (or for good: gone from its list, or out of its author's reach); one
+ * that failed otherwise (storage, the database) is tried again by sweepListMerges.
  */
 export async function settleItemsOnMerge(
   db: ScopedDb,
@@ -566,27 +596,48 @@ export async function settleItemsOnMerge(
 ) {
   try {
     const links = await db.listItemPull.findMany({
-      where: { pullRequestId: pull.id, closes: true },
-      select: { itemId: true },
+      where: { pullRequestId: pull.id, closes: true, settledAt: null },
+      select: { itemId: true, item: { select: { document: { select: { path: true } } } } },
     })
     if (!links.length) return
     const row = await db.pullRequest.findFirst({
       where: { id: pull.id },
-      select: { authorTeammateId: true },
+      select: { authorTeammateId: true, mergedAt: true },
     })
-    const actor: Actor = row?.authorTeammateId
-      ? { type: 'teammate', id: row.authorTeammateId }
-      : { type: 'system', id: 'pull-request' }
+    const author = row?.authorTeammateId
+      ? await db.teammate.findFirst({ where: { id: row.authorTeammateId } })
+      : null
+    const access = author ? await teammateLibraryAccess(db, author) : null
     const ticked: string[] = []
-    for (const { itemId } of links) {
-      const done = await setItemDone(db, scope, actor, itemId, true, {
-        note: `PR #${pull.number}, ${shortDate(new Date())}`,
-        ...(pull.sessionId ? { sessionId: pull.sessionId } : {}),
-      }).catch((error) => {
-        console.warn(`lists: item ${itemId} not ticked on merge: ${String(error)}`)
-        return null
-      })
-      if (done) ticked.push(done.text)
+    for (const link of links) {
+      const settle = () =>
+        db.listItemPull.updateMany({
+          where: { itemId: link.itemId, pullRequestId: pull.id },
+          data: { settledAt: new Date() },
+        })
+      if (!author || access?.of(link.item.document.path) !== 'read_write') {
+        await settle()
+        continue
+      }
+      try {
+        const done = await setItemDone(
+          db,
+          scope,
+          { type: 'teammate', id: author.id },
+          link.itemId,
+          true,
+          {
+            note: `PR #${pull.number}, ${shortDate(row?.mergedAt ?? new Date())}`,
+            ...(pull.sessionId ? { sessionId: pull.sessionId } : {}),
+          },
+        )
+        await settle()
+        if (done.changed) ticked.push(done.text)
+      } catch (error) {
+        // Gone from its list: nothing to tick, for good. Else the sweep tries again.
+        if (error instanceof HTTPException && error.status === 404) await settle()
+        else console.warn(`lists: item ${link.itemId} not ticked on merge: ${String(error)}`)
+      }
     }
     if (ticked.length && pull.sessionId)
       await noteInThread(
@@ -596,6 +647,24 @@ export async function settleItemsOnMerge(
       )
   } catch (error) {
     console.warn(`lists: items of pull request ${pull.id} not settled: ${String(error)}`)
+  }
+}
+
+/** Merged pull requests whose items are not all settled: tried again (jobs.ts). */
+export async function sweepListMerges() {
+  const pending = await prisma.listItemPull.findMany({
+    where: { closes: true, settledAt: null, pullRequest: { state: 'merged' } },
+    select: {
+      organizationId: true,
+      workspaceId: true,
+      pullRequest: { select: { id: true, number: true, sessionId: true } },
+    },
+    distinct: ['pullRequestId'],
+    take: 200,
+  })
+  for (const p of pending) {
+    const scope = { organizationId: p.organizationId, workspaceId: p.workspaceId }
+    await settleItemsOnMerge(scoped(scope), scope, p.pullRequest)
   }
 }
 
@@ -645,7 +714,7 @@ export async function handleListCall(
   try {
     if (op.name === 'list_items') {
       if (!op.path) {
-        const items = await specItems(db, session.id)
+        const items = (await specItems(db, session.id)).filter((i) => access.of(i.path) !== 'none')
         return {
           items,
           hint: items.length

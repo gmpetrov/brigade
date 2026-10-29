@@ -1,4 +1,10 @@
-import { Effort, folderExceptions, MCP_PROTOCOL, type ThreadSpec } from '@brigade/contracts'
+import {
+  Effort,
+  folderExceptions,
+  libraryAccessFor,
+  MCP_PROTOCOL,
+  type ThreadSpec,
+} from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { usableIn } from './apps.js'
 import { hubs } from './hub.js'
@@ -299,7 +305,12 @@ export async function specFor(
     task: thread.task
       ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }
       : null,
-    items,
+    // Only those of lists this teammate may read: the thread's items are anyone's who joins it.
+    items: items.filter(
+      (i) =>
+        libraryAccessFor(i.path, { id: teammate.id, library: teammate.libraryAccess }, rules) !==
+        'none',
+    ),
     designSystems,
     skills,
     project,

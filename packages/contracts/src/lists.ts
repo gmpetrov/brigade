@@ -30,7 +30,13 @@ export type ListLine = {
   done: boolean
   /** Its text as written (Markdown), without box nor marker. */
   text: string
+  /**
+   * Its item's id: its marker's, unless a line above has the same marker (a line copied with
+   * its marker is a new line, not the same item again).
+   */
   id: string | null
+  /** The id in its marker as written, a copy's included. */
+  marker: string | null
   /** The heading it is under, as written. */
   section: string | null
 }
@@ -47,6 +53,7 @@ export function parseList(markdown: string): ParsedList {
   let title: string | null = null
   let section: string | null = null
   let fence: string | null = null
+  const seen = new Set<string>()
   markdown.split('\n').forEach((raw, line) => {
     const open = raw.match(FENCE)
     if (open) {
@@ -65,13 +72,16 @@ export function parseList(markdown: string): ParsedList {
     const check = raw.match(CHECK)
     if (!check) return
     const rest = check[4] ?? ''
-    const marker = rest.match(MARKER)
+    const marker = rest.match(MARKER)?.[1] ?? null
+    const copy = !!marker && seen.has(marker)
+    if (marker) seen.add(marker)
     lines.push({
       line,
       indent: check[1]!.replace(/\t/g, '    ').length,
       done: check[3] !== ' ',
       text: rest.replace(MARKERS, '').trim(),
-      id: marker?.[1] ?? null,
+      id: copy ? null : marker,
+      marker,
       section,
     })
   })
@@ -98,6 +108,9 @@ const normal = (text: string) =>
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()
+
+/** Whether two texts are the same line's, case, spaces and Markdown aside. */
+export const sameItemText = (a: string, b: string) => normal(a) === normal(b)
 
 /**
  * The line `ref` names: its id, or its text (the whole of it, or its start when only one line
@@ -126,7 +139,17 @@ function withLine(markdown: string, line: number, edit: (raw: string) => string)
 /** The line given a marker, unless it has one. */
 export function markLine(markdown: string, line: ListLine, id: string) {
   if (line.id) return markdown
-  return withLine(markdown, line.line, (raw) => `${raw.replace(/\s+$/, '')} ${itemMarker(id)}`)
+  return setMarker(markdown, line, id)
+}
+
+/** The line's marker set to `id`: added, or put in place of the one it has (a copy's). */
+export function setMarker(markdown: string, line: ListLine, id: string) {
+  if (line.marker === id && line.id === id) return markdown
+  return withLine(
+    markdown,
+    line.line,
+    (raw) => `${raw.replace(MARKERS, '').replace(/\s+$/, '')} ${itemMarker(id)}`,
+  )
 }
 
 /** The line ticked or unticked, with a short note after its text when given (e.g. "PR #12, 29 Oct"). */
