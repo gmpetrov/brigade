@@ -5053,6 +5053,127 @@ svg.i {
   text-decoration: underline;
 }
 
+/* =================== /changelog =================== */
+.log {
+  padding: 72px 0 96px;
+}
+.log .wrap {
+  max-width: 760px;
+}
+.log h1 {
+  font-size: 56px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+}
+.log-lead {
+  margin-top: 20px;
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  letter-spacing: -0.02em;
+  text-wrap: pretty;
+}
+.log-lead a {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+.log-list {
+  margin-top: 48px;
+  border-top: 1px solid var(--border);
+}
+.log-row {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 24px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--border);
+}
+.log-row time {
+  padding-top: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.log-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.log-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.log-sum {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+.log-row .link {
+  margin-top: 4px;
+  font-size: 15px;
+}
+.log-row:hover .log-title {
+  text-decoration: underline;
+}
+.log-back {
+  display: inline-block;
+  margin-bottom: 32px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.log-back:hover {
+  color: var(--foreground);
+}
+.release h2 {
+  margin-top: 48px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.release ul {
+  padding-left: 20px;
+  list-style: disc;
+}
+.release li {
+  margin-top: 14px;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--muted-foreground);
+}
+.release li strong {
+  color: var(--foreground);
+}
+.log-prs {
+  margin-left: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.log-prs a {
+  margin-right: 8px;
+  color: var(--muted-foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+.log-prs a:hover {
+  color: var(--primary);
+}
+@media (max-width: 640px) {
+  .log h1 {
+    font-size: 40px;
+  }
+  .log-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
 /* =================== Not in the design: what the code adds =================== */
 /* The iPhone card's way in is a step to take in Safari, not a link. */
 /* Rows of the merged-PR log are links to the pull requests. */
