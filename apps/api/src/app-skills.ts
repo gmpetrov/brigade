@@ -3,13 +3,7 @@
 // teammates that can use one of the App's accounts (threadSkills).
 import type { Actor } from './audit.js'
 import type { Scope, ScopedDb } from './db.js'
-import {
-  fetchGitHubZip,
-  githubSourceKey,
-  parseGitHubUrl,
-  readSkills,
-  zipballRoot,
-} from './skill-import.js'
+import { githubSourceKey, parseGitHubUrl, readGitHubSkills } from './skill-import.js'
 import { previewImport, savePack } from './skills.js'
 
 /**
@@ -26,14 +20,7 @@ export async function installAppSkills(
 ) {
   const source = parseGitHubUrl(repository)
   if (!source) throw new Error(`Not a GitHub address: ${repository}`)
-  const bytes = await fetchGitHubZip(source)
-  const root = zipballRoot(bytes)
-  const found = readSkills(
-    `${source.repo}.zip`,
-    bytes,
-    [root, source.path].filter(Boolean).join('/'),
-  )
-    .map((f) => ({ ...f, folder: f.folder.slice(root.length + 1) }))
+  const found = (await readGitHubSkills(source))
     // A repository may keep an older copy of a skill deeper down (Atlassian's skills/v1):
     // of skills with the same name, only the shallowest is the App's.
     .filter((f, _, all) => {
