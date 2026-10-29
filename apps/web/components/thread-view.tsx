@@ -1723,7 +1723,7 @@ function WorkingLine({
   const failed = steps.filter((item) => item.kind === 'tool' && item.isError).length
   return (
     <Collapsible className="flex min-w-0 flex-col text-sm">
-      <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-1.5 text-left text-muted-foreground hover:text-foreground">
+      <CollapsibleTrigger className="group flex max-w-full min-w-0 items-center gap-1.5 self-start text-left text-muted-foreground hover:text-foreground">
         <span
           className="mr-0.5 size-1.5 flex-none animate-pulse rounded-full bg-primary"
           aria-hidden
@@ -1733,16 +1733,15 @@ function WorkingLine({
         {background.length > 0 && (
           <span className="min-w-0 truncate">· {background.length} in background</span>
         )}
+        {/* How long it has worked, then the chevron, right after what it says: not at the far edge. */}
+        {ms >= 5_000 && <span className="flex-none">· {duration(ms)}</span>}
+        <ChevronRight
+          className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
+          aria-hidden
+        />
         {failed > 0 && (
           <StatusBadge status="failed" label={failed === 1 ? '1 failed' : `${failed} failed`} />
         )}
-        <span className="ml-auto flex flex-none items-center gap-1.5 pl-2">
-          {ms >= 5_000 && duration(ms)}
-          <ChevronRight
-            className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
-            aria-hidden
-          />
-        </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 ml-0.5 flex flex-col gap-2 border-l pl-3">
         {children}
