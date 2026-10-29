@@ -48,6 +48,8 @@ const { prisma } = await import('../src/db.js')
 const billing = await import('../src/billing.js')
 const { HTTPException } = await import('hono/http-exception')
 const { auth } = await import('../src/auth.js')
+const analytics = await import('../src/analytics.js')
+const { env } = await import('../src/config.js')
 
 const row = (status: string, periodStart: string | null) => ({
   status,
@@ -254,6 +256,8 @@ before(async () => {
     'paid',
     'replaced',
     'fenced',
+    'tracked',
+    'rolledBack',
   ])
     ws[name] = (
       await prisma.workspace.create({ data: { organizationId: ids.organization, name } })
@@ -606,4 +610,68 @@ test("two deletions at once: the one that fails leaves the other's closing", { s
   } finally {
     await prisma.organization.deleteMany({ where: { id: organizationId } })
   }
+})
+
+// --- Analytics, after the plan is saved ----------------------------------------------------
+
+/** Events PostHog would have got while `run` ran, with POSTHOG_KEY on. */
+async function postedDuring(run: () => Promise<unknown>) {
+  const posted: Fake[] = []
+  const realFetch = globalThis.fetch
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (!String(input).includes('posthog')) return realFetch(input, init)
+    posted.push(...JSON.parse(String(init?.body)).batch)
+    return new Response('{}')
+  }) as typeof fetch
+  env.POSTHOG_KEY = 'phc_test_key'
+  try {
+    await run().catch(() => undefined)
+    // The workspace's group is read after the event is queued: give it a moment.
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    await analytics.flushAnalytics()
+  } finally {
+    env.POSTHOG_KEY = undefined
+    globalThis.fetch = realFetch
+  }
+  return posted
+}
+
+test('a subscription saved is sent once committed, with the plan as saved', { skip }, async () => {
+  const started = subscription({
+    customer: 'cus_tracked',
+    metadata: { workspaceId: ws.tracked!, userId: ids.owner },
+  })
+  const posted = await postedDuring(async () => {
+    const { committed } = await prisma.$transaction(async (tx) => {
+      const saved = await billing.savePlan(tx, ws.tracked!, started as never)
+      // Still open a while: what is read meanwhile is the plan before.
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      return saved
+    })
+    committed()
+  })
+  const event = posted.find((e) => e.event === 'subscription_started')
+  assert.ok(event, 'subscription_started sent')
+  assert.equal(event.distinct_id, ids.owner)
+  const group = posted.find((e) => e.event === '$groupidentify')
+  assert.equal(group?.properties.$group_set.plan, 'cloud', 'the plan read after the commit')
+})
+
+test('a subscription rolled back sends nothing', { skip }, async () => {
+  const started = subscription({
+    customer: 'cus_rolled_back',
+    metadata: { workspaceId: ws.rolledBack!, userId: ids.owner },
+  })
+  const posted = await postedDuring(() =>
+    prisma.$transaction(async (tx) => {
+      await billing.savePlan(tx, ws.rolledBack!, started as never)
+      throw new Error('rolled back')
+    }),
+  )
+  assert.equal(await statusOf(ws.rolledBack!), undefined, 'nothing saved')
+  assert.deepEqual(
+    posted.filter((e) => e.event.startsWith('subscription_')),
+    [],
+    'no event for a change rolled back',
+  )
 })

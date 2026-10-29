@@ -111,8 +111,10 @@ const fromUnix = (seconds: number | null | undefined) => (seconds ? new Date(sec
 /**
  * A Stripe subscription, as Stripe has it now, on the workspace's row: the row already naming
  * it, else the one its Checkout was for (`rowId`, from Brigade's own metadata), else a new one.
+ * `committed` sends its analytics: the caller runs it once the transaction has committed, so
+ * nothing is sent for a change rolled back, and the workspace's plan is read as saved.
  */
-async function savePlan(
+export async function savePlan(
   tx: Prisma.TransactionClient,
   workspaceId: string,
   subscription: Stripe.Subscription,
@@ -145,8 +147,8 @@ async function savePlan(
   const saved = await (row
     ? tx.billingSubscription.update({ where: { id: row.id }, data: state })
     : tx.billingSubscription.create({ data: { workspaceId, plan: CLOUD_PLAN.name, ...state } }))
-  trackPlanChange(workspaceId, row?.status ?? null, subscription)
-  return saved
+  const before = row?.status ?? null
+  return { saved, committed: () => trackPlanChange(workspaceId, before, subscription) }
 }
 
 /**
@@ -224,11 +226,12 @@ export async function reconcile(target: {
   }
   const saved = await withWorkspaceLock(workspaceId, async (tx) => {
     const subscription = await stripeClient!.subscriptions.retrieve(target.subscriptionId)
-    if (subscription.metadata?.workspaceId !== workspaceId) return false
-    await savePlan(tx, workspaceId, subscription, target.rowId)
-    return true
+    if (subscription.metadata?.workspaceId !== workspaceId) return null
+    return (await savePlan(tx, workspaceId, subscription, target.rowId)).committed
   })
-  if (saved) await applyPlan(workspaceId)
+  if (!saved) return
+  saved()
+  await applyPlan(workspaceId)
 }
 
 /** What a webhook event is about, from Brigade's metadata: its workspace and subscription. */
@@ -430,7 +433,7 @@ export async function startCheckout(input: {
   const stripe = stripeClient!
   const { workspaceId, user } = input
   let made: string | undefined
-  let outcome: { url: string } | { adopted: Stripe.Subscription }
+  let outcome: { url: string } | { adopted: Stripe.Subscription; committed: () => void }
   try {
     outcome = await withWorkspaceLock(workspaceId, async (tx) => {
       const { organizationId } = await tx.workspace.findUniqueOrThrow({
@@ -445,8 +448,8 @@ export async function startCheckout(input: {
       await closeOpenCheckouts(customer)
       const known = await liveSubscription(customer, workspaceId)
       if (known) {
-        await savePlan(tx, workspaceId, known, known.metadata.rowId)
-        return { adopted: known }
+        const { committed } = await savePlan(tx, workspaceId, known, known.metadata.rowId)
+        return { adopted: known, committed }
       }
       const [price] = (
         await stripe.prices.list({ lookup_keys: [CLOUD_PLAN.lookupKey], active: true, limit: 1 })
@@ -501,6 +504,7 @@ export async function startCheckout(input: {
     throw error
   }
   if ('url' in outcome) return outcome.url
+  outcome.committed()
   await applyPlan(workspaceId)
   const status = outcome.adopted.status
   throw new HTTPException(409, {
