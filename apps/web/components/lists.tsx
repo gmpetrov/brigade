@@ -1,6 +1,7 @@
 'use client'
 // What the Lists pages share (docs/lists.md): a list's progress, and its filters.
 import type { ListSummary } from '@brigade/contracts'
+import { useCallback, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 export type ListFilter = 'all' | 'open' | 'in_progress' | 'needs_you' | 'done'
@@ -13,6 +14,26 @@ export const LIST_FILTERS: { value: ListFilter; label: string; dot?: string }[] 
   { value: 'needs_you', label: 'Needs you', dot: 'bg-warning' },
   { value: 'done', label: 'Done' },
 ]
+
+const FILTER_KEY = 'brigade.lists.filter'
+
+/** The filter the member last chose, kept in this browser for every list; `all` until it is read. */
+export function useListFilter() {
+  const [filter, setFilter] = useState<ListFilter>('all')
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(FILTER_KEY)
+      if (LIST_FILTERS.some((f) => f.value === saved)) setFilter(saved as ListFilter)
+    } catch {}
+  }, [])
+  const choose = useCallback((next: ListFilter) => {
+    setFilter(next)
+    try {
+      localStorage.setItem(FILTER_KEY, next)
+    } catch {}
+  }, [])
+  return [filter, choose] as const
+}
 
 /** How far a list is: ticked of all, what waits on a person, what is in progress. */
 export function ListProgress({
