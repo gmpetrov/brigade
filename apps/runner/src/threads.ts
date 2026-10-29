@@ -429,6 +429,16 @@ export class Threads {
     if (command.type === 'thread.prompt') {
       const thread = this.thread(spec.sessionId)
       thread.handoffs = 0
+      // It tells of a decision taken once the call no longer waited: its approval shows decided.
+      if (command.settles)
+        this.options.emit(spec.sessionId, {
+          at,
+          type: 'approval.resolved',
+          teammateId: spec.teammate.id,
+          approvalId: command.settles.approvalId,
+          approved: command.settles.approved,
+          memberId: command.settles.memberId,
+        })
       const message: Message = {
         id: command.messageId ?? randomUUID(),
         specs,

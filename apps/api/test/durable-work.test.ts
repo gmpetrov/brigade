@@ -197,6 +197,9 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     await until(() => call.heard.some((m) => m.type === 'connector.pending'), 'the call to wait')
     return call.heard.find((m) => m.type === 'connector.pending')!.ticketId as string
   }
+  /** The message a wake-up sent the runner on a connection. */
+  const promptOf = (conn: { sent: Sent[] }, wakeupId: string) =>
+    conn.sent.find((m) => m.type === 'thread.prompt' && m.commandId === `wakeup:${wakeupId}`)
   /** As a restart of the workspace's hub leaves it: no tool waits on a connection any more. */
   const forgetWaiters = async () => {
     const { forgetWaiters } = await import('../src/held-calls.js')
@@ -243,6 +246,13 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     assert.match(wakeup.note, /approved/)
     assert.match(wakeup.note, /do not make it again/)
     assert.match(wakeup.note, /m-\d+/, 'with its result')
+    // Its message carries the decision, so the thread's approval card shows it decided.
+    await until(() => promptOf(call.conn, wakeup.id) !== undefined, 'the message to the runner')
+    assert.deepEqual(promptOf(call.conn, wakeup.id)?.settles, {
+      approvalId: ticketId,
+      approved: true,
+      memberId: ids.owner,
+    })
 
     // Deciding again does nothing more.
     assert.equal(
@@ -354,6 +364,12 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     const wakeup = await db.wakeup.findFirstOrThrow({ where: { sourceId: `held:${ticketId}` } })
     assert.match(wakeup.note, /denied/)
     assert.match(wakeup.note, /Not this customer/)
+    await until(() => promptOf(call.conn, wakeup.id) !== undefined, 'the message to the runner')
+    assert.deepEqual(promptOf(call.conn, wakeup.id)?.settles, {
+      approvalId: ticketId,
+      approved: false,
+      memberId: ids.owner,
+    })
   })
 
   test('a credential allowed for good: the waiting tool hears the decision, and it is kept', async () => {

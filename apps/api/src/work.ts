@@ -6,6 +6,7 @@ import {
   mentionedIds,
   type ReplyTo,
   type ThreadAttachmentRef,
+  type ThreadPrompt,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { attachToThread, detach } from './attachments.js'
@@ -42,6 +43,8 @@ type Prompt = {
   steer?: boolean
   /** The earlier message it replies to. */
   replyTo?: ReplyTo
+  /** A held call's decision it tells of: its approval shows decided (src/held-calls.ts). */
+  settles?: ThreadPrompt['settles']
 }
 
 const MAX_TEAMMATES_PER_MESSAGE = 5
@@ -196,6 +199,7 @@ export async function promptThread(
       ...(prompt.steer ? { steer: true } : {}),
       ...(prompt.replyTo ? { replyTo: prompt.replyTo } : {}),
       ...(options.nameThread ? { nameThread: options.nameThread } : {}),
+      ...(prompt.settles ? { settles: prompt.settles } : {}),
     })
   } catch (error) {
     // Kept before it failed (a hub object reset as it sent it, say): it goes when the runner

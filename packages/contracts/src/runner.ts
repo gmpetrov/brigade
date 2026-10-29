@@ -694,6 +694,13 @@ export const ThreadPrompt = z.object({
    * runner suggests a better one with a short harness run (thread.title).
    */
   nameThread: z.string().optional(),
+  /**
+   * A held call's decision this message tells of (src/held-calls.ts in the API): taken on its
+   * ticket once the call no longer waited, so no tool heard it. Its approval shows decided.
+   */
+  settles: z
+    .object({ approvalId: z.string(), approved: z.boolean(), memberId: z.string().nullable() })
+    .optional(),
 })
 export type ThreadPrompt = z.infer<typeof ThreadPrompt>
 
