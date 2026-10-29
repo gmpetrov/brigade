@@ -1,11 +1,12 @@
 import { notFound } from 'next/navigation'
-import { LegalPage, legalMetadata } from '@/components/landing/legal'
+import { LegalPage } from '@/components/landing/legal'
 import { OPERATOR } from '@/components/landing/operator'
+import { pageMetadata } from '@/lib/page-metadata'
 
 export const dynamic = 'force-static'
 export const revalidate = false
 
-export const metadata = legalMetadata(
+export const metadata = pageMetadata(
   '/legal',
   'Legal notice · Brigade',
   'Who publishes www.brigade.lol, and who hosts it.',
