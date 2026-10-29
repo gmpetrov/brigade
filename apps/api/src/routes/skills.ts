@@ -17,12 +17,11 @@ import { installationToken } from '../connectors/github-app.js'
 import { workspaceGitHub } from '../git.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import {
-  fetchGitHubZip,
   githubSourceKey,
   parseGitHubUrl,
+  readGitHubSkills,
   readSkills,
   readSkillsStream,
-  zipballRoot,
 } from '../skill-import.js'
 import {
   deletePack,
@@ -112,13 +111,7 @@ export const skills = new Hono<AppEnv>()
       })
     const reach = await workspaceGitHub(db, scope, `${source.owner}/${source.repo}`.toLowerCase())
     const token = reach ? await installationToken(reach.installationId) : undefined
-    const bytes = await fetchGitHubZip(source, token)
-    const root = zipballRoot(bytes)
-    const found = readSkills(
-      `${source.repo}.zip`,
-      bytes,
-      [root, source.path].filter(Boolean).join('/'),
-    ).map((f) => ({ ...f, folder: f.folder.slice(root.length + 1) }))
+    const found = await readGitHubSkills(source, token)
     const label = source.path ? `${source.repo}/${source.path}` : `${source.owner}/${source.repo}`
     return c.json(await previewImport(db, scope, githubSourceKey(source), label, found))
   })

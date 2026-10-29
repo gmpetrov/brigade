@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { strToU8, zipSync } from 'fflate'
 import { HTTPException } from 'hono/http-exception'
-import { githubSourceKey, parseGitHubUrl, readSkills, zipballRoot } from '../src/skill-import.js'
+import { githubSourceKey, parseGitHubUrl, readSkills, readTarball } from '../src/skill-import.js'
 
 const SKILL =
   '---\nname: Release Notes\ndescription: Write release notes from merged PRs\n---\n\nSteps.\n'
@@ -97,10 +97,72 @@ test('reads GitHub addresses: a repository, a folder, a SKILL.md', () => {
   )
 })
 
-test('finds the folder a GitHub zipball holds everything in', () => {
-  const zip = zipSync({
-    'anthropics-skills-abc123/': new Uint8Array(),
-    'anthropics-skills-abc123/pdf/SKILL.md': strToU8(SKILL),
+/** A tarball as GitHub makes one: a pax global header, then everything under one folder. */
+function tarball(files: Record<string, Uint8Array>) {
+  const block = (name: string, size: number, type: string) => {
+    const header = new Uint8Array(512)
+    header.set(strToU8(name.slice(0, 100)))
+    header.set(strToU8(`${size.toString(8).padStart(11, '0')}\0`), 124)
+    header[156] = type.charCodeAt(0)
+    header.set(strToU8('ustar\0'), 257)
+    return header
+  }
+  const pad = (data: Uint8Array) => {
+    const out = new Uint8Array(Math.ceil(data.byteLength / 512) * 512)
+    out.set(data)
+    return out
+  }
+  const parts = [block('pax_global_header', 52, 'g'), pad(strToU8('52 comment=abc\n'.padEnd(52)))]
+  parts.push(block('acme-kit-abc123/', 0, '5'))
+  for (const [name, data] of Object.entries(files)) {
+    const path = `acme-kit-abc123/${name}`
+    if (path.length > 100) {
+      const record = strToU8(` path=${path}\n`)
+      let length = record.byteLength + 1
+      while (String(length).length + record.byteLength > length) length++
+      const line = new Uint8Array([...strToU8(String(length)), ...record])
+      parts.push(block('PaxHeader', line.byteLength, 'x'), pad(line))
+    }
+    parts.push(block(path, data.byteLength, '0'), pad(data))
+  }
+  parts.push(new Uint8Array(1024))
+  return new Blob(parts).stream()
+}
+
+test('reads only a folder of a GitHub tarball, its paths from the repository root', async () => {
+  const long = `skills/pdf/${'deep/'.repeat(20)}note.md`
+  // A path may hold a newline: it must not end the pax record early.
+  const tricky = `skills/pdf/SKILL.md\n${'x'.repeat(100)}`
+  const entries = await readTarball(
+    tarball({
+      'README.md': strToU8('# Kit'),
+      'skills/pdf/SKILL.md': strToU8(SKILL),
+      'skills/pdf/form.md': strToU8('fill it'),
+      [long]: strToU8('far down'),
+      [tricky]: strToU8('not the SKILL.md'),
+      'skills/pdf/.cache/x': strToU8('x'),
+      'skills/other/SKILL.md': strToU8(SKILL),
+      'assets/video.bin': new Uint8Array(4096),
+    }),
+    'skills/pdf',
+  )
+  assert.deepEqual(
+    Object.keys(entries).sort(),
+    ['skills/pdf/SKILL.md', long, 'skills/pdf/form.md', tricky].sort(),
+  )
+  assert.equal(new TextDecoder().decode(entries['skills/pdf/form.md']!), 'fill it')
+  assert.equal(new TextDecoder().decode(entries['skills/pdf/SKILL.md']!), SKILL)
+})
+
+test('a GitHub folder keeps its files to 50 MB, whatever the repository holds besides', async () => {
+  const big = new Uint8Array(9 * 1024 * 1024)
+  const files: Record<string, Uint8Array> = { 'skills/pdf/SKILL.md': strToU8(SKILL) }
+  for (let i = 0; i < 8; i++) files[`assets/big-${i}.bin`] = big
+  const entries = await readTarball(tarball(files), 'skills/pdf')
+  assert.deepEqual(Object.keys(entries), ['skills/pdf/SKILL.md'])
+  for (let i = 0; i < 6; i++) files[`skills/pdf/part-${i}.bin`] = big
+  await assert.rejects(readTarball(tarball(files), 'skills/pdf'), (error: HTTPException) => {
+    assert.equal(error.status, 413)
+    return true
   })
-  assert.equal(zipballRoot(zip), 'anthropics-skills-abc123')
 })

@@ -268,21 +268,27 @@ export const githubSourceKey = (s: GitHubSource) =>
   `https://github.com/${s.owner}/${s.repo}`.toLowerCase() +
   (s.ref ? `/tree/${s.ref}${s.path ? `/${s.path}` : ''}` : s.path ? `/tree/HEAD/${s.path}` : '')
 
+/** At most this much of a repository's archive is read, compressed, to find a folder in it. */
+const GITHUB_ARCHIVE_MAX = 2 * 1024 ** 3
+
 /**
- * The repository's zip at that ref (its default branch when unset). A public
- * one comes from codeload.github.com, as a browser's "Download ZIP" does: the
- * API allows 60 requests an hour per address without a login, which a server
- * many people share uses up. A private one comes through the API, with the
- * workspace's GitHub connection.
+ * The skills in a GitHub repository, or in a folder of one, at that ref (its default
+ * branch when unset), their folders from the repository's root. The repository's
+ * tarball is read as it streams, keeping only the files under the folder, so a large
+ * repository holding a small skill imports: at most SKILL_PACK_MAX bytes are kept.
+ * A public one comes from codeload.github.com, as a browser's "Download ZIP" does: the
+ * API allows 60 requests an hour per address without a login, which a server many
+ * people share uses up. A private one comes through the API, with the workspace's
+ * GitHub connection.
  */
-export async function fetchGitHubZip(source: GitHubSource, token?: string) {
+export async function readGitHubSkills(source: GitHubSource, token?: string) {
   const ref = source.ref ?? 'HEAD'
   if (!/^[A-Za-z0-9._/-]{1,200}$/.test(ref) || ref.split('/').includes('..'))
     throw new HTTPException(400, { message: 'That branch or tag name is not one GitHub uses' })
   const response = await fetch(
     token
-      ? `https://api.github.com/repos/${source.owner}/${source.repo}/zipball/${ref}`
-      : `https://codeload.github.com/${source.owner}/${source.repo}/zip/${ref}`,
+      ? `https://api.github.com/repos/${source.owner}/${source.repo}/tarball/${ref}`
+      : `https://codeload.github.com/${source.owner}/${source.repo}/tar.gz/${ref}`,
     {
       headers: {
         'user-agent': 'Brigade',
@@ -303,25 +309,174 @@ export async function fetchGitHubZip(source: GitHubSource, token?: string) {
     throw new HTTPException(503, {
       message: 'GitHub is limiting downloads from Brigade right now. Try again in a few minutes.',
     })
-  if (!response.ok)
+  if (!response.ok || !response.body)
     throw new HTTPException(502, { message: `GitHub did not send it (${response.status})` })
-  if (Number(response.headers.get('content-length') ?? 0) > SKILL_PACK_MAX)
-    throw new HTTPException(413, { message: 'That repository is too large to import (50 MB)' })
-  const bytes = new Uint8Array(await response.arrayBuffer())
-  if (bytes.byteLength > SKILL_PACK_MAX)
-    throw new HTTPException(413, { message: 'That repository is too large to import (50 MB)' })
-  return bytes
-}
-
-/** A repository's zip holds everything under one folder: `<repo>-<ref>/`, or `<owner>-<repo>-<sha>/`. */
-export function zipballRoot(bytes: Uint8Array) {
-  let root = ''
-  // Names only: nothing is unpacked.
-  unzipSync(bytes, {
-    filter: (file) => {
-      root ||= file.name.split('/')[0] ?? ''
-      return false
+  const tooLarge = new HTTPException(413, { message: 'That repository is too large to import' })
+  if (Number(response.headers.get('content-length') ?? 0) > GITHUB_ARCHIVE_MAX) {
+    void response.body.cancel().catch(() => undefined)
+    throw tooLarge
+  }
+  let downloaded = 0
+  const capped = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      downloaded += chunk.byteLength
+      if (downloaded > GITHUB_ARCHIVE_MAX) controller.error(tooLarge)
+      else controller.enqueue(chunk)
     },
   })
-  return root
+  const tar = response.body
+    .pipeThrough(capped)
+    .pipeThrough(
+      new DecompressionStream('gzip') as unknown as TransformStream<Uint8Array, Uint8Array>,
+    )
+  let entries: Record<string, Uint8Array | null>
+  try {
+    entries = await readTarball(tar, source.path)
+  } catch (error) {
+    if (downloaded > GITHUB_ARCHIVE_MAX) throw tooLarge
+    if (error instanceof HTTPException) throw error
+    throw new HTTPException(502, { message: "GitHub's copy of that repository could not be read" })
+  }
+  return skillsIn(source.repo, entries, source.path)
+}
+
+/**
+ * The files of a repository's tarball under `within` (all when empty), by their path
+ * from the repository's root (a tarball holds everything under one folder,
+ * `<owner>-<repo>-<sha>/`), read as it streams. Null: one too large to keep.
+ */
+export async function readTarball(
+  stream: ReadableStream<Uint8Array>,
+  within = '',
+): Promise<Record<string, Uint8Array | null>> {
+  const prefix = within ? `${within.replace(/^\/+|\/+$/g, '')}/` : ''
+  const input = blocks(stream)
+  const entries: Record<string, Uint8Array | null> = {}
+  let kept = 0
+  let longPath: string | undefined
+  try {
+    for (;;) {
+      const header = await input.read(512)
+      if (!header || header.every((b) => b === 0)) break
+      const size = tarNumber(header.subarray(124, 136))
+      const padded = Math.ceil(size / 512) * 512
+      const type = String.fromCharCode(header[156] ?? 0)
+      if (type === 'x' || type === 'L') {
+        // A long path: a pax record (`<length> path=<path>\n`) or GNU's own.
+        const data = await input.read(padded)
+        if (!data) break
+        const body = data.subarray(0, size)
+        longPath = type === 'L' ? tarString(body) : (paxPath(body) ?? longPath)
+        continue
+      }
+      const ustar = tarString(header.subarray(257, 262)) === 'ustar'
+      const name = tarString(header.subarray(0, 100))
+      const prefixField = ustar ? tarString(header.subarray(345, 500)) : ''
+      const full = longPath ?? (prefixField ? `${prefixField}/${name}` : name)
+      longPath = undefined
+      // The repository's own path: past its top folder.
+      const path = full.slice(full.indexOf('/') + 1)
+      const regular = type === '0' || type === '\0'
+      if (!regular || !full.includes('/') || !path.startsWith(prefix) || ignored(path)) {
+        if (!(await input.skip(padded))) break
+        continue
+      }
+      const isEntry = path === SKILL_ENTRY || path.endsWith(`/${SKILL_ENTRY}`)
+      if (!isEntry && size > SKILL_FILE_MAX) {
+        entries[path] = null
+        if (!(await input.skip(padded))) break
+        continue
+      }
+      kept += size
+      if (kept > SKILL_PACK_MAX)
+        throw new HTTPException(413, {
+          message: within
+            ? 'That folder is too large to import (50 MB)'
+            : 'That repository is too large to import (50 MB): give the address of the folder its skills are in',
+        })
+      const data = await input.read(padded)
+      if (!data) break
+      entries[path] = data.slice(0, size)
+    }
+  } finally {
+    input.cancel()
+  }
+  return entries
+}
+
+/** A stream read by exact lengths. */
+function blocks(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader()
+  let chunk: Uint8Array = new Uint8Array(0)
+  let offset = 0
+  const fill = async () => {
+    while (offset >= chunk.byteLength) {
+      const next = await reader.read()
+      if (next.done) return false
+      chunk = next.value
+      offset = 0
+    }
+    return true
+  }
+  return {
+    /** The next `length` bytes, or null when the stream ends first. */
+    async read(length: number) {
+      const parts: Uint8Array[] = []
+      let left = length
+      while (left > 0) {
+        if (!(await fill())) return null
+        const take = Math.min(left, chunk.byteLength - offset)
+        parts.push(chunk.subarray(offset, offset + take))
+        offset += take
+        left -= take
+      }
+      return parts.length === 1 ? parts[0]! : Buffer.concat(parts)
+    },
+    /** Past the next `length` bytes, unread; false when the stream ends first. */
+    async skip(length: number) {
+      let left = length
+      while (left > 0) {
+        if (!(await fill())) return false
+        const take = Math.min(left, chunk.byteLength - offset)
+        offset += take
+        left -= take
+      }
+      return true
+    },
+    cancel: () => void reader.cancel().catch(() => undefined),
+  }
+}
+
+const latin = new TextDecoder('utf-8')
+const tarString = (bytes: Uint8Array) => {
+  const end = bytes.indexOf(0)
+  return latin.decode(end < 0 ? bytes : bytes.subarray(0, end))
+}
+
+/**
+ * The path in pax records, each `<length> <key>=<value>\n` with its length in bytes
+ * counting itself: read by length, since a path may hold a newline.
+ */
+function paxPath(bytes: Uint8Array) {
+  let path: string | undefined
+  let at = 0
+  while (at < bytes.byteLength) {
+    const space = bytes.indexOf(0x20, at)
+    const length = space < 0 ? Number.NaN : Number(latin.decode(bytes.subarray(at, space)))
+    if (!Number.isInteger(length) || length <= space - at || at + length > bytes.byteLength) break
+    const record = latin.decode(bytes.subarray(space + 1, at + length - 1))
+    if (record.startsWith('path=')) path = record.slice(5)
+    at += length
+  }
+  return path
+}
+
+/** A size: octal text, or base-256 when its first bit is set. */
+function tarNumber(bytes: Uint8Array) {
+  if ((bytes[0] ?? 0) & 0x80) {
+    let n = (bytes[0] ?? 0) & 0x7f
+    for (const b of bytes.subarray(1)) n = n * 256 + b
+    return n
+  }
+  return Number.parseInt(tarString(bytes).trim() || '0', 8)
 }
