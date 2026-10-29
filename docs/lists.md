@@ -31,7 +31,10 @@ mission; threads stay where the work happens.
   file's lock (`withLibraryLock`), and Brigade reads, changes and writes a list under it, so no
   save lands in between and is lost. The lock is a lease row (`LibraryLock`, 30 s): waiting for it
   holds no database connection, a crashed holder frees it when its lease ends, and a holder past
-  its lease writes nothing more. A person's live save built on an older text is refused
+  its lease writes nothing more: its row changes only while the lease is still its own (checked
+  atomically, `lease.fence`), and when its bytes landed after the lease ended, the stored bytes
+  are put back to what the row says, so a newer save is never undone. A list is read from its row
+  while its bytes and its row disagree. A person's live save built on an older text is refused
   (409) and the collab server reconciles first.
 - **Ticks are changes to the file, made by code.** Ticking marks the line's box (`[x]`) and may
   add a short note after its text (`*PR #491, 29 Oct*`), a save of its own credited to who did

@@ -233,8 +233,22 @@ const LEASE_MS = 30_000
 /** What a holder keeps in hand of its lease before it stops writing: clocks and a slow write. */
 const LEASE_MARGIN_MS = 10_000
 
-/** A held lock of a library file: `check` throws once too little of it is left to write safely. */
-export type LibraryLease = { check: () => void }
+/**
+ * A held lock of a library file. `check` throws once too little of it is left to start a write;
+ * `fence` runs a database write only while the lease is still this holder's, atomically (it locks
+ * the lease's row, so no one can take the lease meanwhile), else throws LeaseLost.
+ */
+export type LibraryLease = {
+  check: () => void
+  fence: <T>(write: (tx: Prisma.TransactionClient) => Promise<T>) => Promise<T>
+}
+
+/** The lease ended before a holder's write: someone else may have saved since. */
+export class LeaseLost extends HTTPException {
+  constructor() {
+    super(409, { message: 'The file took too long to change; try again' })
+  }
+}
 
 /**
  * Run `work` holding a library file's lock, which every save of a Markdown file takes: what it
@@ -269,9 +283,17 @@ export async function withLibraryLock<T>(
   const margin = Math.min(LEASE_MARGIN_MS, leaseMs / 3)
   const lease: LibraryLease = {
     check: () => {
-      if (Date.now() - started > leaseMs - margin)
-        throw new HTTPException(409, { message: 'The file took too long to change; try again' })
+      if (Date.now() - started > leaseMs - margin) throw new LeaseLost()
     },
+    fence: (write) =>
+      prisma.$transaction(async (tx) => {
+        const held = await tx.$queryRaw<unknown[]>`
+          SELECT 1 FROM "LibraryLock"
+          WHERE "key" = ${key} AND "owner" = ${owner} AND "until" > timezone('UTC', now())
+          FOR UPDATE`
+        if (!held.length) throw new LeaseLost()
+        return write(tx)
+      }),
   }
   try {
     return await work(lease)
@@ -280,6 +302,26 @@ export async function withLibraryLock<T>(
       .deleteMany({ where: { key, owner } })
       .catch((error) => console.warn(`library: lock ${key} not released: ${String(error)}`))
   }
+}
+
+/**
+ * A text file's stored bytes put back to what its row says (its full text, when the row holds
+ * all of it): after a save whose lease ended mid-write, which may have overwritten a newer one's.
+ */
+async function restoreBytes(scope: Scope, documentId: string) {
+  await withLibraryLock(scope, documentId, async (lease) => {
+    const row = await prisma.document.findFirst({ where: { id: documentId } })
+    if (!row) return
+    const bytes = new TextEncoder().encode(row.text)
+    if (sha256(bytes) !== row.sha256) return
+    lease.check()
+    await putObject(documentKey(scope, documentId), bytes, row.contentType)
+    await lease.fence(async () => undefined)
+  }).catch((error) =>
+    console.warn(
+      `library: ${documentId}'s bytes not restored after a lost lease: ${String(error)}`,
+    ),
+  )
 }
 
 async function writeLibraryFile(
@@ -329,10 +371,22 @@ async function writeLibraryFile(
   if (existing) {
     // A file from before versions keeps what it was as its first.
     await ensureFirstVersion(db, scope, existing)
-    options.lease?.check()
-    await keep(documentKey(scope, existing.id))
-    options.lease?.check()
-    row = await db.document.update({ where: { id: existing.id }, data: fields })
+    if (options.lease) {
+      const lease = options.lease
+      lease.check()
+      await keep(documentKey(scope, existing.id))
+      // Its row changes only while the lease is still this save's. Past it, another save may
+      // have landed: its bytes, which this one's may have just overwritten, are put back.
+      row = await lease
+        .fence((tx) => tx.document.update({ where: { id: existing.id }, data: fields }))
+        .catch(async (error: unknown) => {
+          if (error instanceof LeaseLost) await restoreBytes(scope, existing.id)
+          throw error
+        })
+    } else {
+      await keep(documentKey(scope, existing.id))
+      row = await db.document.update({ where: { id: existing.id }, data: fields })
+    }
   } else {
     row = await db.document.create({
       data: {

@@ -3,6 +3,7 @@
 // and `ListItem` keeps by that id what the file cannot: the threads on it, the pull requests
 // that finish it, who ticked it from Brigade. Brigade changes the file only to mark, tick or
 // add a line, each a save of its own credited to who did it.
+import { createHash } from 'node:crypto'
 import {
   findLine,
   insertLine,
@@ -78,7 +79,7 @@ async function editList(
 ) {
   return withLibraryLock(scope, documentId, async (lease) => {
     const row = await listFile(db, { id: documentId })
-    const text = await documentText(scope, row)
+    const text = await storedText(scope, row)
     const next = edit(text, parseList(text))
     if (next === text) return row
     return saveLibraryFile(
@@ -91,6 +92,18 @@ async function editList(
     )
   })
 }
+
+/**
+ * A list's text as last saved: its stored bytes, or its row's text when the bytes are not what
+ * the row says (a save whose lease ended mid-write, until its bytes are put back).
+ */
+async function storedText(scope: Scope, row: FileRow) {
+  const text = await documentText(scope, row)
+  if (sha256(text) === row.sha256) return text
+  return sha256(row.text) === row.sha256 ? row.text : text
+}
+
+const sha256 = (text: string) => createHash('sha256').update(text).digest('hex')
 
 // ---- Reading --------------------------------------------------------------------------------
 

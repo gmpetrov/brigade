@@ -750,4 +750,59 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
       source.id,
     )
   })
+
+  test("a write that outlives its lease does not undo a newer save's bytes", async () => {
+    const fs = (await import('node:fs/promises')).default
+    const { syncBuiltinESMExports } = await import('node:module')
+    const { createHash } = await import('node:crypto')
+    const encode = (text: string) => new TextEncoder().encode(text)
+    const file = await save('Lease/stall.md', '* [ ] Initial\n')
+    const original = fs.writeFile
+    let entered!: () => void
+    const stalled = new Promise<void>((resolve) => (entered = resolve))
+    // The slow save's bucket write starts within its lease, then stalls past it.
+    ;(fs as { writeFile: unknown }).writeFile = async (
+      ...args: Parameters<typeof fs.writeFile>
+    ) => {
+      const bytes = args[1]
+      if (
+        String(args[0]).endsWith(`/library/${file.id}`) &&
+        bytes instanceof Uint8Array &&
+        new TextDecoder().decode(bytes).includes('Slow stale edit')
+      ) {
+        entered()
+        await new Promise((resolve) => setTimeout(resolve, 700))
+      }
+      return original(...args)
+    }
+    syncBuiltinESMExports()
+    try {
+      const slow = library.withLibraryLock(
+        scope,
+        file.id,
+        (lease) =>
+          library.saveLibraryFile(
+            db,
+            scope,
+            actor(),
+            { path: 'Lease/stall.md', bytes: encode('* [x] Slow stale edit\n') },
+            {},
+            { lease },
+          ),
+        { leaseMs: 300 },
+      )
+      await stalled
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      await save('Lease/stall.md', '* [x] New winning edit\n')
+      await assert.rejects(slow, /took too long/)
+    } finally {
+      ;(fs as { writeFile: unknown }).writeFile = original
+      syncBuiltinESMExports()
+    }
+    const row = await db.document.findFirst({ where: { id: file.id } })
+    const bytes = await read(file.id)
+    assert.equal(row?.text, '* [x] New winning edit\n')
+    assert.equal(bytes, '* [x] New winning edit\n')
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), row?.sha256)
+  })
 })
