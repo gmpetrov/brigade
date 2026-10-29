@@ -14,6 +14,7 @@ import {
 import { Composer } from '@/components/composer'
 import { EffortButton, type EffortPick } from '@/components/effort'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
+import { AskedDocument } from '@/components/document-panel'
 import { StatusDot } from '@/components/status-badge'
 import { ProjectIcon } from '@/components/projects'
 import { TeachTask } from '@/components/teach-task'
@@ -592,7 +593,12 @@ export function NewThread({
   const form = useRef<HTMLFormElement>(null)
   const focusMessage = () =>
     form.current?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus()
-  const uploads = <UploadList uploads={files.uploads} onRemove={files.remove} />
+  const uploads = (
+    <>
+      <AskedDocument text={text} />
+      <UploadList uploads={files.uploads} onRemove={files.remove} />
+    </>
+  )
   const composer = (
     <Composer
       bare

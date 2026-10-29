@@ -70,10 +70,13 @@ export function MentionChip({
   mention,
   connectionKind,
   className,
+  onOpen,
 }: {
   mention: Mention
   connectionKind?: ConnectionKind
   className?: string
+  /** What a click does, in place of the thread's file links. */
+  onOpen?: () => void
 }) {
   const { kind, connection } = useConnection(mention, connectionKind)
   const links = useFileLinks()
@@ -86,7 +89,7 @@ export function MentionChip({
       : mention.kind === 'document' || mention.kind === 'design'
         ? mention.label
         : undefined
-  const open = path !== undefined && links
+  const open = onOpen ?? (path !== undefined && links ? () => links.open({ path }) : undefined)
   // Older messages name a connection by its App alone: add its account.
   const label =
     connection && mention.label === connection.label
@@ -125,7 +128,7 @@ export function MentionChip({
       data-kind={mention.kind}
       {...(open && {
         type: 'button' as const,
-        onClick: () => links.open({ path }),
+        onClick: open,
       })}
       title={open ? `Open ${label}` : label}
       className={cn(
