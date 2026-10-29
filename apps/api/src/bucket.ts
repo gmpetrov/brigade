@@ -34,14 +34,30 @@ if (!r2) {
 
 const SAFE = /^[A-Za-z0-9_-]{1,64}$/
 
-/** The bucket key of a library file's bytes. */
+/**
+ * The legacy bucket key of a library file's bytes, which every save overwrote: still where a file
+ * not saved since objects per save came keeps them (`Document.objectKey` null).
+ */
 export function documentKey(scope: Scope, documentId: string) {
   for (const part of [scope.organizationId, scope.workspaceId, documentId])
     if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
   return `${scope.organizationId}/${scope.workspaceId}/library/${documentId}`
 }
 
-/** The bucket key of a saved version of a library file. */
+/** The bucket folder of a library file's objects, one per save (LibraryObject). */
+export function libraryObjectsPrefix(scope: Scope, documentId: string) {
+  for (const part of [scope.organizationId, scope.workspaceId, documentId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/library-objects/${documentId}/`
+}
+
+/** The bucket key of one save of a library file's bytes: written once, never changed. */
+export function libraryObjectKey(scope: Scope, documentId: string, objectId: string) {
+  if (!SAFE.test(objectId)) throw new Error('Invalid bucket key part')
+  return `${libraryObjectsPrefix(scope, documentId)}${objectId}`
+}
+
+/** The legacy bucket key of a saved version of a library file (`DocumentVersion.objectKey` null). */
 export function versionKey(scope: Scope, versionId: string) {
   for (const part of [scope.organizationId, scope.workspaceId, versionId])
     if (!SAFE.test(part)) throw new Error('Invalid bucket key part')

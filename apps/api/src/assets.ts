@@ -204,7 +204,7 @@ async function holder(row: {
       if (own.text.includes(reference)) return own.id
       // A long library file: its stored text stops short; read the file itself.
       if (own.kind === 'library' && own.text.length >= INDEXED_CHARS) {
-        const bytes = await readLibraryFile(scope, own.id).catch(() => null)
+        const bytes = await readLibraryFile(scope, own).catch(() => null)
         if (!bytes || new TextDecoder().decode(bytes).includes(reference)) return own.id
       }
     }

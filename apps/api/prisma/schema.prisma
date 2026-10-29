@@ -1563,8 +1563,14 @@ model Document {
   updatedById        String?
   /// The thread a teammate last changed it from.
   updatedInSessionId String?
-  /// Set when a save whose lease ended mid-write may have overwritten its stored bytes: they are
-  /// put back from what its row says (repairBytes, src/library.ts), retried until they are.
+  /// A library file's bytes: the bucket object of its last save (LibraryObject), written once and
+  /// never changed. Null for a file not saved since objects per save came: its bytes are then at
+  /// the legacy key, `<organization>/<workspace>/library/<id>`, which every save overwrote. A save
+  /// by an API from before (a database trigger) sets it back to null, as its bytes go there.
+  objectKey          String?
+  /// Legacy key only (objectKey null): set when a save whose lease ended mid-write may have
+  /// overwritten its stored bytes. They are saved again from what its row says, as an object of
+  /// their own (repairBytes, src/library.ts), retried until they are.
   bytesStaleAt       DateTime?
   /// A memory file: when a tidy run last laid it out (core within budget, topics, archive).
   memoryTidiedAt     DateTime?
@@ -1587,6 +1593,7 @@ model Document {
   @@unique([workspaceId, kind, path])
   @@index([search], type: Gin)
   @@index([workspaceId, deletedAt])
+  @@index([objectKey])
 }
 
 /// A checklist line of a library Markdown file that work is attached to (docs/lists.md). The file
@@ -1677,9 +1684,6 @@ model DocumentPin {
   @@index([documentId])
 }
 
-/// A saved state of a library file. Its bytes are in the bucket under
-/// <organization>/<workspace>/library-versions/<id>; the newest is also the file itself.
-/// Saves by the same author from the same thread within minutes update one version.
 /// One line of a memory file, known by its text (memoryLineKey): when and where
 /// it was learned and, once it left the file, why. Lines that left (replaced,
 /// merged, outdated, removed by a person) are the memory's archive: search finds
@@ -1721,6 +1725,10 @@ model MemoryLine {
   @@index([search], type: Gin)
 }
 
+/// A saved state of a library file: the object of the save it records (objectKey), the same one
+/// the file pointed to then. Versions from before objects per save have their bytes under
+/// <organization>/<workspace>/library-versions/<id>. Saves by the same author from the same thread
+/// within minutes update one version.
 model DocumentVersion {
   id             String    @id @default(cuid())
   organizationId String
@@ -1737,10 +1745,47 @@ model DocumentVersion {
   sessionId      String?
   /// Set when this version brought back an older one.
   restoredFromId String?
+  /// Its bytes: a LibraryObject's key. Null for a version from before: versionKey(id). An API from
+  /// before that changes the version (a database trigger) sets it back to null.
+  objectKey      String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   @@index([documentId, createdAt])
+  @@index([objectKey])
+}
+
+/// A workspace that has had library objects (LibraryObject): made before its first one, and kept
+/// for good, even once the workspace is deleted. The listing sweep (sweepOrphanLibraryObjects)
+/// goes over its folder, <organization>/<workspace>/library-objects/, through these rows, so bytes
+/// a write left after their object's row was swept are found whenever they land, in a live
+/// workspace or a deleted one. No relation.
+model LibraryObjectFolder {
+  workspaceId    String   @id
+  organizationId String
+  createdAt      DateTime @default(now())
+}
+
+/// An object in the bucket holding one save of a library file's bytes, at
+/// <organization>/<workspace>/library-objects/<document id>/<id>. Made before its bytes are
+/// written, so none is ever lost track of; written once, never changed. A file's row or a
+/// version points to it once the save commits, which claims it (claimObject, src/library-objects.ts);
+/// one no row points to (superseded, or its save failed or came too late) is found by the sweep,
+/// marked, and an hour on deleted from the bucket, then its row. A marked one can no longer be
+/// claimed. No relation: kept when its file or workspace goes, until the sweep deletes its bytes.
+model LibraryObject {
+  /// Its bucket key.
+  key            String    @id
+  organizationId String
+  workspaceId    String
+  documentId     String
+  createdAt      DateTime  @default(now())
+  /// When the sweep found no row pointing to it.
+  unreferencedAt DateTime?
+
+  @@index([createdAt])
+  @@index([unreferencedAt])
+  @@index([workspaceId])
 }
 
 /// A library folder someone made, or one with access rules. Folders also exist

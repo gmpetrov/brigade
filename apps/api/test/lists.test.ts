@@ -149,6 +149,8 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
   after(async () => {
     close?.()
     if (ids.workspace) await prisma.workspace.deleteMany({ where: { id: ids.workspace } })
+    await prisma.libraryObject.deleteMany({ where: { organizationId: ids.org } })
+    await prisma.libraryObjectFolder.deleteMany({ where: { organizationId: ids.org } })
     await prisma.member.deleteMany({ where: { organizationId: ids.org } })
     await prisma.organization.deleteMany({ where: { id: ids.org } })
     await prisma.user.deleteMany({ where: { id: ids.user } })
@@ -431,6 +433,8 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
 
   after(async () => {
     await prisma.workspace.deleteMany({ where: { id: { in: [ids.workspace, ids.other] } } })
+    await prisma.libraryObject.deleteMany({ where: { organizationId: ids.org } })
+    await prisma.libraryObjectFolder.deleteMany({ where: { organizationId: ids.org } })
     await prisma.member.deleteMany({ where: { organizationId: ids.org } })
     await prisma.organization.deleteMany({ where: { id: ids.org } })
     await prisma.user.deleteMany({ where: { id: ids.user } })
@@ -766,12 +770,12 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
     ) => {
       const bytes = args[1]
       if (
-        String(args[0]).endsWith(`/library/${file.id}`) &&
+        String(args[0]).includes(`/library-objects/${file.id}/`) &&
         bytes instanceof Uint8Array &&
         new TextDecoder().decode(bytes).includes('Slow stale edit')
       ) {
         entered()
-        await new Promise((resolve) => setTimeout(resolve, 700))
+        await new Promise((resolve) => setTimeout(resolve, 2500))
       }
       return original(...args)
     }
@@ -789,12 +793,17 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
             {},
             { lease },
           ),
-        { leaseMs: 300 },
+        { leaseMs: 1500 },
+      )
+      // Its failure is taken as it comes: the newer save may still be running then.
+      const failed = slow.then(
+        () => null,
+        (error: unknown) => error,
       )
       await stalled
-      await new Promise((resolve) => setTimeout(resolve, 400))
+      await new Promise((resolve) => setTimeout(resolve, 1600))
       await save('Lease/stall.md', '* [x] New winning edit\n')
-      await assert.rejects(slow, /took too long/)
+      assert.match(String(await failed), /took too long/)
     } finally {
       ;(fs as { writeFile: unknown }).writeFile = original
       syncBuiltinESMExports()
@@ -806,8 +815,8 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
     assert.equal(createHash('sha256').update(bytes).digest('hex'), row?.sha256)
   })
 
-  /** A save under a 300 ms lease whose bucket write stalls past it while a newer save lands. */
-  async function lateSave(path: string, padding: string, stallVersion = 0) {
+  /** A save under a 1.5 s lease whose bucket write stalls past it while a newer save lands. */
+  async function lateSave(path: string, padding: string) {
     const fs = (await import('node:fs/promises')).default
     const { syncBuiltinESMExports } = await import('node:module')
     const encode = (text: string) => new TextEncoder().encode(text + padding)
@@ -820,16 +829,13 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
     ;(fs as { writeFile: unknown }).writeFile = async (
       ...args: Parameters<typeof fs.writeFile>
     ) => {
-      if (String(args[0]).endsWith(`/library/${file.id}`) && has(args[1], 'Slow stale edit')) {
-        entered()
-        await new Promise((resolve) => setTimeout(resolve, 700))
-      }
       if (
-        stallVersion &&
-        String(args[0]).includes('/library-versions/') &&
-        has(args[1], 'New winning edit')
-      )
-        await new Promise((resolve) => setTimeout(resolve, stallVersion))
+        String(args[0]).includes(`/library-objects/${file.id}/`) &&
+        has(args[1], 'Slow stale edit')
+      ) {
+        entered()
+        await new Promise((resolve) => setTimeout(resolve, 2500))
+      }
       return original(...args)
     }
     syncBuiltinESMExports()
@@ -846,7 +852,7 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
             {},
             { lease },
           ),
-        { leaseMs: 300 },
+        { leaseMs: 1500 },
       )
       // Its failure is taken as it comes: the newer save may still be running then.
       const failed = slow.then(
@@ -854,7 +860,7 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
         (error: unknown) => error,
       )
       await stalled
-      await new Promise((resolve) => setTimeout(resolve, 400))
+      await new Promise((resolve) => setTimeout(resolve, 1600))
       await library.saveLibraryFile(db, scope, actor(), {
         path,
         bytes: encode('* [x] New winning edit\n'),
@@ -876,27 +882,8 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
     assert.equal(row?.bytesStaleAt, null)
   }
 
-  test("a late write to a file larger than the row's text is put back from its saved version", async () => {
+  test("a late write to a file larger than the row's text leaves the newer save's bytes", async () => {
     const file = await lateSave('Lease/large.md', '\n' + 'x'.repeat(400_001))
     await consistent(file.id)
   })
-
-  test(
-    'a late write whose repair waits too long is put back by the sweep',
-    { timeout: 60_000 },
-    async () => {
-      // The newer save holds its lease past the 20 s the late save's repair waits for it.
-      const file = await lateSave('Lease/version.md', '', 22_000)
-      const marked = await db.document.findFirst({ where: { id: file.id } })
-      assert.ok(marked?.bytesStaleAt, 'marked for repair')
-      // Before the repair, a teammate reads the list as its row says, not the late bytes.
-      const listed = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
-        name: 'list_items',
-        path: 'Lease/version.md',
-      })) as { lines: { text: string }[] }
-      assert.equal(listed.lines[0]?.text, 'New winning edit')
-      await library.repairStaleBytes()
-      await consistent(file.id)
-    },
-  )
 })

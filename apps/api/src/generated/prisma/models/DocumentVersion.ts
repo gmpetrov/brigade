@@ -14,7 +14,10 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model DocumentVersion
- * 
+ * A saved state of a library file: the object of the save it records (objectKey), the same one
+ * the file pointed to then. Versions from before objects per save have their bytes under
+ * <organization>/<workspace>/library-versions/<id>. Saves by the same author from the same thread
+ * within minutes update one version.
  */
 export type DocumentVersionModel = runtime.Types.Result.DefaultSelection<Prisma.$DocumentVersionPayload>
 
@@ -47,6 +50,7 @@ export type DocumentVersionMinAggregateOutputType = {
   actorId: string | null
   sessionId: string | null
   restoredFromId: string | null
+  objectKey: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -64,6 +68,7 @@ export type DocumentVersionMaxAggregateOutputType = {
   actorId: string | null
   sessionId: string | null
   restoredFromId: string | null
+  objectKey: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -81,6 +86,7 @@ export type DocumentVersionCountAggregateOutputType = {
   actorId: number
   sessionId: number
   restoredFromId: number
+  objectKey: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -108,6 +114,7 @@ export type DocumentVersionMinAggregateInputType = {
   actorId?: true
   sessionId?: true
   restoredFromId?: true
+  objectKey?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -125,6 +132,7 @@ export type DocumentVersionMaxAggregateInputType = {
   actorId?: true
   sessionId?: true
   restoredFromId?: true
+  objectKey?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -142,6 +150,7 @@ export type DocumentVersionCountAggregateInputType = {
   actorId?: true
   sessionId?: true
   restoredFromId?: true
+  objectKey?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -246,6 +255,7 @@ export type DocumentVersionGroupByOutputType = {
   actorId: string
   sessionId: string | null
   restoredFromId: string | null
+  objectKey: string | null
   createdAt: Date
   updatedAt: Date
   _count: DocumentVersionCountAggregateOutputType | null
@@ -286,6 +296,7 @@ export type DocumentVersionWhereInput = {
   actorId?: Prisma.StringFilter<"DocumentVersion"> | string
   sessionId?: Prisma.StringNullableFilter<"DocumentVersion"> | string | null
   restoredFromId?: Prisma.StringNullableFilter<"DocumentVersion"> | string | null
+  objectKey?: Prisma.StringNullableFilter<"DocumentVersion"> | string | null
   createdAt?: Prisma.DateTimeFilter<"DocumentVersion"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"DocumentVersion"> | Date | string
   document?: Prisma.XOR<Prisma.DocumentScalarRelationFilter, Prisma.DocumentWhereInput>
@@ -304,6 +315,7 @@ export type DocumentVersionOrderByWithRelationInput = {
   actorId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   restoredFromId?: Prisma.SortOrderInput | Prisma.SortOrder
+  objectKey?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   document?: Prisma.DocumentOrderByWithRelationInput
@@ -325,6 +337,7 @@ export type DocumentVersionWhereUniqueInput = Prisma.AtLeast<{
   actorId?: Prisma.StringFilter<"DocumentVersion"> | string
   sessionId?: Prisma.StringNullableFilter<"DocumentVersion"> | string | null
   restoredFromId?: Prisma.StringNullableFilter<"DocumentVersion"> | string | null
+  objectKey?: Prisma.StringNullableFilter<"DocumentVersion"> | string | null
   createdAt?: Prisma.DateTimeFilter<"DocumentVersion"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"DocumentVersion"> | Date | string
   document?: Prisma.XOR<Prisma.DocumentScalarRelationFilter, Prisma.DocumentWhereInput>
@@ -343,6 +356,7 @@ export type DocumentVersionOrderByWithAggregationInput = {
   actorId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   restoredFromId?: Prisma.SortOrderInput | Prisma.SortOrder
+  objectKey?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.DocumentVersionCountOrderByAggregateInput
@@ -368,6 +382,7 @@ export type DocumentVersionScalarWhereWithAggregatesInput = {
   actorId?: Prisma.StringWithAggregatesFilter<"DocumentVersion"> | string
   sessionId?: Prisma.StringNullableWithAggregatesFilter<"DocumentVersion"> | string | null
   restoredFromId?: Prisma.StringNullableWithAggregatesFilter<"DocumentVersion"> | string | null
+  objectKey?: Prisma.StringNullableWithAggregatesFilter<"DocumentVersion"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"DocumentVersion"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"DocumentVersion"> | Date | string
 }
@@ -384,6 +399,7 @@ export type DocumentVersionCreateInput = {
   actorId: string
   sessionId?: string | null
   restoredFromId?: string | null
+  objectKey?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   document: Prisma.DocumentCreateNestedOneWithoutVersionsInput
@@ -402,6 +418,7 @@ export type DocumentVersionUncheckedCreateInput = {
   actorId: string
   sessionId?: string | null
   restoredFromId?: string | null
+  objectKey?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -418,6 +435,7 @@ export type DocumentVersionUpdateInput = {
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   restoredFromId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  objectKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   document?: Prisma.DocumentUpdateOneRequiredWithoutVersionsNestedInput
@@ -436,6 +454,7 @@ export type DocumentVersionUncheckedUpdateInput = {
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   restoredFromId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  objectKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -453,6 +472,7 @@ export type DocumentVersionCreateManyInput = {
   actorId: string
   sessionId?: string | null
   restoredFromId?: string | null
+  objectKey?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -469,6 +489,7 @@ export type DocumentVersionUpdateManyMutationInput = {
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   restoredFromId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  objectKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -486,6 +507,7 @@ export type DocumentVersionUncheckedUpdateManyInput = {
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   restoredFromId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  objectKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -513,6 +535,7 @@ export type DocumentVersionCountOrderByAggregateInput = {
   actorId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   restoredFromId?: Prisma.SortOrder
+  objectKey?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -534,6 +557,7 @@ export type DocumentVersionMaxOrderByAggregateInput = {
   actorId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   restoredFromId?: Prisma.SortOrder
+  objectKey?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -551,6 +575,7 @@ export type DocumentVersionMinOrderByAggregateInput = {
   actorId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   restoredFromId?: Prisma.SortOrder
+  objectKey?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -617,6 +642,7 @@ export type DocumentVersionCreateWithoutDocumentInput = {
   actorId: string
   sessionId?: string | null
   restoredFromId?: string | null
+  objectKey?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -633,6 +659,7 @@ export type DocumentVersionUncheckedCreateWithoutDocumentInput = {
   actorId: string
   sessionId?: string | null
   restoredFromId?: string | null
+  objectKey?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -679,6 +706,7 @@ export type DocumentVersionScalarWhereInput = {
   actorId?: Prisma.StringFilter<"DocumentVersion"> | string
   sessionId?: Prisma.StringNullableFilter<"DocumentVersion"> | string | null
   restoredFromId?: Prisma.StringNullableFilter<"DocumentVersion"> | string | null
+  objectKey?: Prisma.StringNullableFilter<"DocumentVersion"> | string | null
   createdAt?: Prisma.DateTimeFilter<"DocumentVersion"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"DocumentVersion"> | Date | string
 }
@@ -695,6 +723,7 @@ export type DocumentVersionCreateManyDocumentInput = {
   actorId: string
   sessionId?: string | null
   restoredFromId?: string | null
+  objectKey?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -711,6 +740,7 @@ export type DocumentVersionUpdateWithoutDocumentInput = {
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   restoredFromId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  objectKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -727,6 +757,7 @@ export type DocumentVersionUncheckedUpdateWithoutDocumentInput = {
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   restoredFromId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  objectKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -743,6 +774,7 @@ export type DocumentVersionUncheckedUpdateManyWithoutDocumentInput = {
   actorId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   restoredFromId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  objectKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -762,6 +794,7 @@ export type DocumentVersionSelect<ExtArgs extends runtime.Types.Extensions.Inter
   actorId?: boolean
   sessionId?: boolean
   restoredFromId?: boolean
+  objectKey?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   document?: boolean | Prisma.DocumentDefaultArgs<ExtArgs>
@@ -780,6 +813,7 @@ export type DocumentVersionSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   actorId?: boolean
   sessionId?: boolean
   restoredFromId?: boolean
+  objectKey?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   document?: boolean | Prisma.DocumentDefaultArgs<ExtArgs>
@@ -798,6 +832,7 @@ export type DocumentVersionSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   actorId?: boolean
   sessionId?: boolean
   restoredFromId?: boolean
+  objectKey?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   document?: boolean | Prisma.DocumentDefaultArgs<ExtArgs>
@@ -816,11 +851,12 @@ export type DocumentVersionSelectScalar = {
   actorId?: boolean
   sessionId?: boolean
   restoredFromId?: boolean
+  objectKey?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type DocumentVersionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "documentId" | "path" | "contentType" | "size" | "sha256" | "actorType" | "actorId" | "sessionId" | "restoredFromId" | "createdAt" | "updatedAt", ExtArgs["result"]["documentVersion"]>
+export type DocumentVersionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "documentId" | "path" | "contentType" | "size" | "sha256" | "actorType" | "actorId" | "sessionId" | "restoredFromId" | "objectKey" | "createdAt" | "updatedAt", ExtArgs["result"]["documentVersion"]>
 export type DocumentVersionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   document?: boolean | Prisma.DocumentDefaultArgs<ExtArgs>
 }
@@ -855,6 +891,11 @@ export type $DocumentVersionPayload<ExtArgs extends runtime.Types.Extensions.Int
      * Set when this version brought back an older one.
      */
     restoredFromId: string | null
+    /**
+     * Its bytes: a LibraryObject's key. Null for a version from before: versionKey(id). An API from
+     * before that changes the version (a database trigger) sets it back to null.
+     */
+    objectKey: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["documentVersion"]>
@@ -1293,6 +1334,7 @@ export interface DocumentVersionFieldRefs {
   readonly actorId: Prisma.FieldRef<"DocumentVersion", 'String'>
   readonly sessionId: Prisma.FieldRef<"DocumentVersion", 'String'>
   readonly restoredFromId: Prisma.FieldRef<"DocumentVersion", 'String'>
+  readonly objectKey: Prisma.FieldRef<"DocumentVersion", 'String'>
   readonly createdAt: Prisma.FieldRef<"DocumentVersion", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"DocumentVersion", 'DateTime'>
 }

@@ -50,8 +50,9 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 const { prisma, scoped } = await import('../src/db.js')
 const { auth } = await import('../src/auth.js')
 const { hashToken } = await import('../src/hub.js')
-const { documentKey, objectSize, putObject, skillFileKey, uploadKey, workspaceLogoKey } =
+const { objectSize, putObject, skillFileKey, uploadKey, workspaceLogoKey } =
   await import('../src/bucket.js')
+const { fileKey } = await import('../src/library-objects.js')
 const { localBucket } = await import('../src/routes/bucket.js')
 const { uploads } = await import('../src/routes/uploads.js')
 const { library } = await import('../src/routes/library.js')
@@ -190,6 +191,8 @@ after(async () => {
   ;(auth.api as { getSession: unknown }).getSession = realGetSession
   if (skip) return
   await prisma.upload.deleteMany({ where: { organizationId: ids.organization } })
+  await prisma.libraryObject.deleteMany({ where: { organizationId: ids.organization } })
+  await prisma.libraryObjectFolder.deleteMany({ where: { organizationId: ids.organization } })
   await prisma.organization.deleteMany({ where: { id: ids.organization } })
   await prisma.user.deleteMany({ where: { id: ids.user } })
   await prisma.$disconnect()
@@ -250,15 +253,13 @@ test('the library saves an upload, with a version, once for the same bytes', { s
   assert.equal(file.size, bytes.byteLength)
   const doc = await prisma.document.findUniqueOrThrow({ where: { id: file.id } })
   assert.equal(doc.sha256, sha(bytes))
-  assert.equal(await objectSize(documentKey(scope, file.id)), bytes.byteLength)
-  // A version, copied inside the bucket.
+  assert.equal(await objectSize(fileKey(scope, doc)), bytes.byteLength)
+  // A version, pointing to the object the upload was copied to inside the bucket.
   const versions = await prisma.documentVersion.findMany({ where: { documentId: file.id } })
   assert.equal(versions.length, 1)
-  const versionFile = join(
-    process.env.BUCKET_DIR!,
-    `${scope.organizationId}/${scope.workspaceId}/library-versions/${versions[0]!.id}`,
-  )
-  assert.ok(existsSync(versionFile))
+  assert.ok(doc.objectKey)
+  assert.equal(versions[0]!.objectKey, doc.objectKey)
+  assert.ok(existsSync(join(process.env.BUCKET_DIR!, doc.objectKey)))
   // The upload is gone once used.
   assert.equal(await usable(first), false)
   assert.equal(await objectSize(uploadKey(scope, first)), null)
@@ -539,7 +540,7 @@ test(
     const row = await scoped(scope).document.findFirstOrThrow({ where: { path: 'replay.txt' } })
     const { getObject } = await import('../src/bucket.js')
     assert.equal(row.sha256, sha(original))
-    assert.equal(sha((await getObject(documentKey(scope, row.id)))!), sha(original))
+    assert.equal(sha((await getObject(fileKey(scope, row)))!), sha(original))
     // Used: its row stays, refused for another use, until its URL no longer works.
     const used = await scoped(scope).upload.findFirstOrThrow({ where: { id: ticket.id } })
     assert.equal(used.status, 'blocked')
@@ -579,7 +580,8 @@ test('bytes changed between their check and their copy are refused', { skip }, a
 
 test('saves that overlap keep each version the bytes its hash names', { skip }, async () => {
   const { saveLibraryFile } = await import('../src/library.js')
-  const { getObject, versionKey } = await import('../src/bucket.js')
+  const { getObject } = await import('../src/bucket.js')
+  const { versionBytesKey } = await import('../src/library-objects.js')
   const { readyUpload, uploadBytesKey } = await import('../src/uploads.js')
   const db = scoped(scope)
   const actor = { type: 'member' as const, id: ids.member }
@@ -596,20 +598,23 @@ test('saves that overlap keep each version the bytes its hash names', { skip }, 
     await ready('library', 'race.txt', strToU8('version B')),
     'library',
   )
-  // B is saved between A's write and A's version.
+  // B is saved between A's commit and A's version.
+  let raced = false
   const racing = new Proxy(db, {
     get(target, prop) {
-      if (prop !== 'document') return Reflect.get(target, prop)
-      return new Proxy(target.document, {
+      if (prop !== 'documentVersion') return Reflect.get(target, prop)
+      return new Proxy(target.documentVersion, {
         get(model, key) {
-          if (key !== 'update') return Reflect.get(model, key)
-          return async (args: never) => {
-            const row = await model.update(args)
-            await saveLibraryFile(db, scope, actor, {
-              path: 'race.txt',
-              upload: { key: uploadBytesKey(scope, b), ...b },
-            })
-            return row
+          if (key !== 'findFirst') return Reflect.get(model, key)
+          return async (args: { orderBy?: unknown }) => {
+            if (args.orderBy && !raced) {
+              raced = true
+              await saveLibraryFile(db, scope, actor, {
+                path: 'race.txt',
+                upload: { key: uploadBytesKey(scope, b), ...b },
+              })
+            }
+            return model.findFirst(args as never)
           }
         },
       })
@@ -621,8 +626,11 @@ test('saves that overlap keep each version the bytes its hash names', { skip }, 
   })
   const row = await db.document.findFirstOrThrow({ where: { path: 'race.txt' } })
   const versions = await db.documentVersion.findMany({ where: { documentId: row.id } })
+  assert.ok(raced)
   assert.ok(versions.length >= 1)
-  for (const v of versions) assert.equal(sha((await getObject(versionKey(scope, v.id)))!), v.sha256)
+  for (const v of versions)
+    assert.equal(sha((await getObject(versionBytesKey(scope, v)))!), v.sha256)
+  assert.equal(sha((await getObject(fileKey(scope, row)))!), row.sha256)
 })
 
 test(

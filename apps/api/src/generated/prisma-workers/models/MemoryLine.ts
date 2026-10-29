@@ -14,9 +14,6 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model MemoryLine
- * A saved state of a library file. Its bytes are in the bucket under
- * <organization>/<workspace>/library-versions/<id>; the newest is also the file itself.
- * Saves by the same author from the same thread within minutes update one version.
  * One line of a memory file, known by its text (memoryLineKey): when and where
  * it was learned and, once it left the file, why. Lines that left (replaced,
  * merged, outdated, removed by a person) are the memory's archive: search finds
