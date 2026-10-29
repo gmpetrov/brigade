@@ -514,7 +514,7 @@ export function NewThread({
         {
           teammate,
           text,
-          files: taken.uploads.map((u) => u.name),
+          files: taken.uploads,
           from: pathname,
           giveBack: giveBackHere ? 'box' : 'dialog',
         },
@@ -542,7 +542,8 @@ export function NewThread({
             preloadSettled(`/threads/${id}/events`),
           ])
           pendingThreads.started(id)
-          taken.done()
+          // Its previews, once the conversation has taken over from the message that showed them.
+          setTimeout(taken.done, 5_000)
         },
         (error: unknown) => pendingThreads.failed(id, (error as Error).message),
       )

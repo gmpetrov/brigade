@@ -11,7 +11,9 @@ import { Hono } from 'hono'
 // - a new id starts the thread under it, and its first message reaches the runner;
 // - an id a thread has already is refused, and that thread gets nothing: else a member could
 //   write in another's thread, a private one too, by its id;
-// - an id not shaped as a thread's is refused before anything is made: it names storage folders.
+// - an id not shaped as a thread's is refused before anything is made: it names storage folders;
+// - files sent with a thread that did not start (its computer offline) leave it, so that the
+//   message, given back to the member, can be sent again with them.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL || undefined
@@ -118,12 +120,17 @@ describe('a thread id chosen by the browser', { skip: !database && 'no database 
     })
     restore = () => ((auth.api as { getSession: unknown }).getSession = getSession)
     app = new Hono().route('/api/threads', threads)
-    // Ada's computer, its runner connected: what it is sent.
-    const { runnerSocket } = await import('../src/hub.js')
-    const handle = runnerSocket({ id: ids.runner, computerId: ids.computer, ...scope })
     sent = []
-    const ws = { send: (raw: string) => sent.push(JSON.parse(raw)), close: () => {} }
+    close = await connect()
+  })
+
+  /** Ada's computer, its runner connected: what it is sent goes in `sent`. */
+  async function connect() {
+    const { runnerSocket } = await import('../src/hub.js')
     const { PROTOCOL_VERSION } = await import('@brigade/contracts')
+    const handle = runnerSocket({ id: ids.runner, computerId: ids.computer, ...scope })
+    const ws = { send: (raw: string) => sent.push(JSON.parse(raw)), close: () => {} }
+    const welcomed = sent.filter((m) => m.type === 'welcome').length
     handle.onMessage(
       JSON.stringify({
         type: 'hello',
@@ -133,9 +140,9 @@ describe('a thread id chosen by the browser', { skip: !database && 'no database 
       }),
       ws as never,
     )
-    await until(() => sent.some((m) => m.type === 'welcome'), 'the welcome')
-    close = () => handle.onClose()
-  })
+    await until(() => sent.filter((m) => m.type === 'welcome').length > welcomed, 'the welcome')
+    return () => handle.onClose()
+  }
 
   after(async () => {
     close?.()
@@ -199,6 +206,37 @@ describe('a thread id chosen by the browser', { skip: !database && 'no database 
     assert.deepEqual(
       prompts(sent, id).map((m) => m.text),
       ['Once'],
+    )
+  })
+
+  test('files of a thread that did not start can be sent again', async () => {
+    const file = await db.attachment.create({
+      data: {
+        name: 'brief.pdf',
+        contentType: 'application/pdf',
+        size: 10,
+        status: 'ready',
+        source: 'upload',
+        uploadedByMemberId: ids.member,
+      },
+    } as never)
+    // Its computer offline: the thread is made, its files linked, then it fails.
+    close()
+    try {
+      const offline = await start({ id: newId(), text: 'With a file', attachmentIds: [file.id] })
+      assert.equal(offline.status, 409, await offline.clone().text())
+      assert.match(await offline.text(), /offline/)
+      assert.equal(await db.threadAttachment.count({ where: { attachmentId: file.id } }), 0)
+    } finally {
+      close = await connect()
+    }
+    const id = newId()
+    const again = await start({ id, text: 'With a file', attachmentIds: [file.id] })
+    assert.equal(again.status, 201, await again.clone().text())
+    const links = await db.threadAttachment.findMany({ where: { attachmentId: file.id } })
+    assert.deepEqual(
+      links.map((l) => l.sessionId),
+      [id],
     )
   })
 

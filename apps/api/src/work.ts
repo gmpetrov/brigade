@@ -479,7 +479,7 @@ export async function startThread(
       } as never,
     }))
   // Each step below is a trip to the database: what does not wait on another goes with it.
-  const [, { refs: attachments }] = await Promise.all([
+  const [, { refs: attachments, created: links }] = await Promise.all([
     joinThread(db, created.id, teammateIds),
     attachToThread(
       db,
@@ -541,12 +541,19 @@ export async function startThread(
       ...(input.commandId ? { commandId: input.commandId } : {}),
     },
   ).catch(async (error: unknown) => {
-    // E.g. a mentioned teammate's harness has no account: the thread never ran.
-    await db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } })
+    // E.g. a mentioned teammate's harness has no account: the thread never ran. Its files leave
+    // it, as a message's do (promptWithAttachments): they can be sent again.
+    await Promise.all([
+      db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } }),
+      detach(db, links),
+    ])
     throw error
   })
   if (outcome === 'offline')
-    await db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } })
+    await Promise.all([
+      db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } }),
+      detach(db, links),
+    ])
   return { thread, outcome }
 }
 

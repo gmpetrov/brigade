@@ -4,6 +4,7 @@
 // starts it. Once it has, the thread's own conversation takes over; should it not, the thread
 // says why and the message goes back to the box it came from.
 import { useSyncExternalStore } from 'react'
+import type { Upload } from '@/components/attachments'
 import type { SentMessage } from '@/components/new-thread'
 import type { Teammate } from '@/lib/api'
 import { DEMO, DEMO_THREAD } from '@/lib/demo/flag'
@@ -11,8 +12,8 @@ import { DEMO, DEMO_THREAD } from '@/lib/demo/flag'
 export type PendingThread = {
   teammate: Teammate
   text: string
-  /** Its files' names, as the message shows them. */
-  files: string[]
+  /** Its files, shown from this browser's copies until its conversation shows them. */
+  files: Pick<Upload, 'key' | 'name' | 'size' | 'preview' | 'media'>[]
   /** Where it was sent from, to go back to with the message. */
   from: string
   /**
