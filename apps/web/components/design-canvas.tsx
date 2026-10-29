@@ -188,7 +188,7 @@ function DesignCanvasInner({
   const shas = useRef(new Map<string, string>())
   /** Boards kept live whatever the view: one being captured for an export. */
   const [pinned, setPinned] = useState<string[]>([])
-  const [, recheck] = useState(0)
+  const [checks, recheck] = useState(0)
   const [heights, setHeights] = useState<Record<string, number>>({})
   // Boards whose page is wider than they are: drawn as wide as the page, not cut at their edge.
   const [widths, setWidths] = useState<Record<string, number>>({})
@@ -621,6 +621,33 @@ function DesignCanvasInner({
     [post],
   )
 
+  /** Keeps a board live, its page loaded and ready, while `work` runs. */
+  const pinnedWhile = useCallback(async <T,>(board: string, work: () => Promise<T>): Promise<T> => {
+    setPinned((all) => [...all, board])
+    try {
+      if (!readyRef.current[board])
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(
+            () => reject(new Error('The page did not load. Reload it and try again.')),
+            60_000,
+          )
+          waiting.current.set(board, [
+            ...(waiting.current.get(board) ?? []),
+            () => {
+              clearTimeout(timer)
+              resolve()
+            },
+          ])
+        })
+      return await work()
+    } finally {
+      setPinned((all) => {
+        const i = all.indexOf(board)
+        return i < 0 ? all : [...all.slice(0, i), ...all.slice(i + 1)]
+      })
+    }
+  }, [])
+
   useImperativeHandle(
     handle,
     () => ({
@@ -637,37 +664,13 @@ function DesignCanvasInner({
           sizing.current.delete(key)
           stale.current.add(key)
         }
+        recheck((n) => n + 1)
         setReloads((all) => ({
           ...all,
           ...Object.fromEntries(keys.map((k) => [k, (all[k] ?? 0) + 1])),
         }))
       },
-      capture: async (board, options = {}) => {
-        if (readyRef.current[board]) return captureBoard(board, options)
-        // A board showing its picture: its page loads for the capture, then goes.
-        setPinned((all) => [...all, board])
-        try {
-          await new Promise<void>((resolve, reject) => {
-            const timer = setTimeout(
-              () => reject(new Error('The page did not load. Reload it and try again.')),
-              60_000,
-            )
-            waiting.current.set(board, [
-              ...(waiting.current.get(board) ?? []),
-              () => {
-                clearTimeout(timer)
-                resolve()
-              },
-            ])
-          })
-          return await captureBoard(board, options)
-        } finally {
-          setPinned((all) => {
-            const i = all.indexOf(board)
-            return i < 0 ? all : [...all.slice(0, i), ...all.slice(i + 1)]
-          })
-        }
-      },
+      capture: (board, options = {}) => pinnedWhile(board, () => captureBoard(board, options)),
       retype: (selected) => {
         setRetyping(selected)
         frames.current.get(selected.board)?.focus()
@@ -677,7 +680,7 @@ function DesignCanvasInner({
         fitTo(what === 'selection' ? (selectionBounds() ?? allBounds()) : allBounds()),
       boards: () => layoutRef.current.boards,
     }),
-    [post, fitTo, selectionBounds, allBounds, captureBoard],
+    [post, fitTo, selectionBounds, allBounds, captureBoard, pinnedWhile],
   )
 
   // -- Pointer over a board in Select -----------------------------------------
@@ -750,6 +753,8 @@ function DesignCanvasInner({
     const mx = size.width * margin
     const my = size.height * margin
     const kept = new Set(keepKey ? keepKey.split(',') : [])
+    // On a phone a board fitted to the view is narrower than PICTURE_BELOW, and still worth its page.
+    const small = Math.min(PICTURE_BELOW, size.width / 2)
     const ranked = layout.boards.flatMap((b) => {
       if (kept.has(b.key)) return [{ key: b.key, rank: Infinity }]
       const left = v.x + b.x * v.zoom
@@ -759,7 +764,8 @@ function DesignCanvasInner({
       const across = Math.min(size.width + mx, left + w) - Math.max(-mx, left)
       const down = Math.min(size.height + my, top + h) - Math.max(-my, top)
       if (across <= 0 || down <= 0) return []
-      if (w < PICTURE_BELOW && pictures[b.key]) return []
+      // Too small to use: its picture, unless that is out of date.
+      if (w < small && pictures[b.key] && !stale.current.has(b.key)) return []
       return [{ key: b.key, rank: across * down }]
     })
     return new Set(
@@ -768,7 +774,8 @@ function DesignCanvasInner({
         .slice(0, Math.max(kept.size, touch ? LIVE_MAX_TOUCH : LIVE_MAX))
         .map((r) => r.key),
     )
-  }, [settled, touch, size.width, size.height, layout.boards, pictures, keepKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checks: a picture went out of date
+  }, [settled, touch, size.width, size.height, layout.boards, pictures, keepKey, checks])
 
   // A live board whose page is ready and has no picture of this version: its picture is taken,
   // one board at a time, once the view holds still.
@@ -789,10 +796,12 @@ function DesignCanvasInner({
       stale.current.delete(key)
       const sha = shas.current.get(key) ?? ''
       try {
-        const [image] = await captureBoard(key, {
-          ratio: Math.min(1, PICTURE_WIDTH / board.width),
-          maxHeight: board.frame,
-        })
+        const [image] = await pinnedWhile(key, () =>
+          captureBoard(key, {
+            ratio: Math.min(1, PICTURE_WIDTH / board.width),
+            maxHeight: board.frame,
+          }),
+        )
         if (image) {
           const url = URL.createObjectURL(blobOfDataUrl(image.data))
           const before = picturesRef.current[key]
