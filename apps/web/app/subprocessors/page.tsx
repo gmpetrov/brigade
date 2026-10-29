@@ -1,11 +1,12 @@
 import Link from 'next/link'
-import { LegalPage, legalMetadata } from '@/components/landing/legal'
+import { LegalPage } from '@/components/landing/legal'
 import { OPERATOR } from '@/components/landing/operator'
+import { pageMetadata } from '@/lib/page-metadata'
 
 export const dynamic = 'force-static'
 export const revalidate = false
 
-export const metadata = legalMetadata(
+export const metadata = pageMetadata(
   '/subprocessors',
   'Subprocessors · Brigade',
   'The companies that process data for Brigade, what each does, and where.',

@@ -1,5 +1,6 @@
 // The changelog as an RSS feed, one item per release, built with the site.
-import { FEED_PATH, SITE } from '@/components/landing/changelog'
+import { FEED_PATH } from '@/components/landing/changelog'
+import { SITE_URL } from '@/lib/page-metadata'
 import { RELEASES } from '@/lib/changelog'
 
 export const dynamic = 'force-static'
@@ -12,7 +13,7 @@ const pubDate = (slug: string) => new Date(`${slug}T00:00:00Z`).toUTCString()
 
 export function GET() {
   const items = RELEASES.map((r) => {
-    const url = `${SITE}/changelog/${r.slug}`
+    const url = `${SITE_URL}/changelog/${r.slug}`
     return `    <item>
       <title>${escape(r.title)}</title>
       <link>${url}</link>
@@ -25,8 +26,8 @@ export function GET() {
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Brigade changelog</title>
-    <link>${SITE}/changelog</link>
-    <atom:link href="${SITE}${FEED_PATH}" rel="self" type="application/rss+xml" />
+    <link>${SITE_URL}/changelog</link>
+    <atom:link href="${SITE_URL}${FEED_PATH}" rel="self" type="application/rss+xml" />
     <description>What's new in Brigade, week by week.</description>
     <language>en</language>
 ${RELEASES[0] ? `    <lastBuildDate>${pubDate(RELEASES[0].slug)}</lastBuildDate>\n` : ''}${items}

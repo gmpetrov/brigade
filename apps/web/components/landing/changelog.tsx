@@ -1,16 +1,13 @@
 import type { Metadata } from 'next'
+import { pageMetadata, SITE_URL } from '@/lib/page-metadata'
 
-export const SITE = 'https://www.brigade.lol'
 export const FEED_PATH = '/changelog/rss.xml'
 
 /** A changelog page's metadata, with its RSS feed for readers to find. */
 export function changelogMetadata(path: string, title: string, description: string): Metadata {
-  const url = `${SITE}${path}`
+  const page = pageMetadata(path, title, description)
   return {
-    title,
-    description,
-    alternates: { canonical: url, types: { 'application/rss+xml': `${SITE}${FEED_PATH}` } },
-    openGraph: { type: 'article', url, siteName: 'Brigade', title, description },
-    twitter: { card: 'summary', title, description },
+    ...page,
+    alternates: { ...page.alternates, types: { 'application/rss+xml': `${SITE_URL}${FEED_PATH}` } },
   }
 }

@@ -4,22 +4,16 @@ import { Footer } from '@/components/landing/closing'
 import { Header } from '@/components/landing/hero'
 import { c, SIGN_UP } from '@/components/landing/parts'
 import { UnderTheHood } from '@/components/landing/under-the-hood'
+import { pageMetadata } from '@/lib/page-metadata'
 
-const URL = 'https://www.brigade.lol/how-it-works'
 const title = 'How Brigade works'
 const description =
-  'Brigade runs the real Claude Code and Codex on your own plans, stacks several accounts, moves threads between your Mac and the cloud, and gives every teammate computer use.'
+  'Brigade runs the real Claude Code and Codex on your own plans, stacks several accounts, moves threads between your own computer and the cloud, and gives every teammate computer use.'
 
 export const dynamic = 'force-static'
 export const revalidate = false
 
-export const metadata: Metadata = {
-  title,
-  description,
-  alternates: { canonical: URL },
-  openGraph: { type: 'website', url: URL, siteName: 'Brigade', title, description },
-  twitter: { card: 'summary', title, description },
-}
+export const metadata: Metadata = pageMetadata('/how-it-works', title, description)
 
 export default function HowItWorks() {
   return (
