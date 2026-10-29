@@ -203,9 +203,12 @@ function Sidebar({
             } as React.CSSProperties
           }
           side={side}
-          // A link to the page already open changes no path: close on the tap itself.
+          // A link to the page already open changes no path: close on the tap itself. Not for
+          // a control inside a link that does not follow it (a thread's sub-threads caret).
           onClickCapture={(event) => {
-            const link = (event.target as HTMLElement).closest('a[href]')
+            const target = event.target as HTMLElement
+            if (target.closest('[data-keeps-sidebar]')) return
+            const link = target.closest('a[href]')
             if (link && link.getAttribute('target') !== '_blank') setOpenMobile(false)
           }}
         >
