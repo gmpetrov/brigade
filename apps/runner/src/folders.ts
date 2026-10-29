@@ -40,6 +40,12 @@ const TRIM_AT = 0.6
 const TRIM_TO = 0.5
 /** A thread active more recently than this keeps its dependencies until the disk is full. */
 const TRIM_QUIET_MS = 3 * 60 * 60_000
+/**
+ * On a cloud computer, a thread quiet this long loses its dependency and build folders
+ * however empty the disk. Each of boat's snapshots (one every minute or two) goes over every
+ * path on the disk, and node_modules are most of them: about 100,000 per Brigade checkout.
+ */
+const CLOUD_TRIM_QUIET_MS = 6 * 60 * 60_000
 /** Folders git ignores that a reinstall or rebuild makes again. Others (local databases, say) stay. */
 const REGENERABLE = new Set([
   'node_modules',
@@ -103,7 +109,7 @@ const RESTORED =
   'build output, local databases) and node_modules folders are gone, and so are the containers and Docker volumes ' +
   'this thread had: reinstall, rebuild or start again what you need before running anything.'
 const TRIMMED =
-  'Note from Brigade: to free disk on this computer while this thread was quiet, its dependency and build folders ' +
+  'Note from Brigade: to keep this computer light while this thread was quiet, its dependency and build folders ' +
   '(node_modules, .next, dist and the like, where git ignores them) were removed. Your files, checkouts, ' +
   'uncommitted work and local databases are as you left them: reinstall or rebuild what you need before running anything.'
 const MEMBER_TRIMMED =
@@ -598,6 +604,16 @@ export class Folders {
         )
       }
 
+      // However empty the disk: what a thread quiet for hours needs again, an install makes again.
+      for (const candidate of candidates) {
+        if (now - candidate.active < CLOUD_TRIM_QUIET_MS) break
+        if (!quiet(candidate)) continue
+        if ((this.state.trimmedAt[candidate.workDir] ?? 0) >= candidate.active) continue
+        await this.trim(candidate).catch((error) =>
+          console.warn(`could not trim ${candidate.workDir}: ${String(error)}`),
+        )
+      }
+
       // Nearly full: caches are cleared even while their teammate works, and the reserve
       // stays given back.
       // Given back, it stays nearly full until there is room to set it aside again.
@@ -816,9 +832,7 @@ export class Folders {
         this.state.trimmed.push(workDir)
       this.save()
       if (paths.length > 0)
-        console.log(
-          `trimmed ${workDir} to free disk: ${paths.map((p) => relativeTo(workDir, p)).join(', ')}`,
-        )
+        console.log(`trimmed ${workDir}: ${paths.map((p) => relativeTo(workDir, p)).join(', ')}`)
       return paths.length > 0
     })
   }
