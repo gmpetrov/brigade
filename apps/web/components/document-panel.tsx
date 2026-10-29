@@ -5,7 +5,15 @@
 // a teammate changed since you last looked. The panel stays open while you
 // move between pages, and its tabs across a reload.
 import type { EditTarget, LibraryFile } from '@brigade/contracts'
-import { ArrowUpRight, BookOpen, ChevronDown, FileText, History, MessageSquare, X } from 'lucide-react'
+import {
+  ArrowUpRight,
+  BookOpen,
+  ChevronDown,
+  FileText,
+  History,
+  MessageSquare,
+  X,
+} from 'lucide-react'
 import {
   createContext,
   useCallback,
@@ -17,6 +25,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useDocumentDiscussion } from '@/components/document-discussion'
+import { useHandOff } from '@/components/list-items'
 import { DocumentEditor } from '@/components/document-editor'
 import { FileHistory } from '@/components/library-history'
 import { PanelExpandButton, SidePanel } from '@/components/side-panel'
@@ -261,9 +270,11 @@ export function DocumentPanel() {
       }),
     [discuss, current, close, setAsked],
   )
+  // Checklist lines picked in it go to a teammate (docs/lists.md).
+  const handOff = useHandOff(file, discussion?.teammate ?? null)
   const ask = useMemo(
-    () => (askName && onAsk ? { teammate: askName, onAsk } : undefined),
-    [askName, onAsk],
+    () => (askName && onAsk ? { teammate: askName, onAsk, onHandOff: handOff.start } : undefined),
+    [askName, onAsk, handOff.start],
   )
   if (!current) return null
   const Icon = current.target.kind === 'library' ? FileText : BookOpen
@@ -349,6 +360,7 @@ export function DocumentPanel() {
           />
         </div>
       )}
+      {handOff.dialog}
     </SidePanel>
   )
 }

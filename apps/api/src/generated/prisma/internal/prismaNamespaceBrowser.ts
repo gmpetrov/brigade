@@ -95,6 +95,9 @@ export const ModelName = {
   Subscription: 'Subscription',
   Ticket: 'Ticket',
   Document: 'Document',
+  ListItem: 'ListItem',
+  ListItemThread: 'ListItemThread',
+  ListItemPull: 'ListItemPull',
   DocumentPin: 'DocumentPin',
   MemoryLine: 'MemoryLine',
   DocumentVersion: 'DocumentVersion',
@@ -920,6 +923,45 @@ export const DocumentScalarFieldEnum = {
 } as const
 
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
+
+
+export const ListItemScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  documentId: 'documentId',
+  text: 'text',
+  doneByType: 'doneByType',
+  doneById: 'doneById',
+  doneAt: 'doneAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ListItemScalarFieldEnum = (typeof ListItemScalarFieldEnum)[keyof typeof ListItemScalarFieldEnum]
+
+
+export const ListItemThreadScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  itemId: 'itemId',
+  sessionId: 'sessionId',
+  createdAt: 'createdAt'
+} as const
+
+export type ListItemThreadScalarFieldEnum = (typeof ListItemThreadScalarFieldEnum)[keyof typeof ListItemThreadScalarFieldEnum]
+
+
+export const ListItemPullScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  itemId: 'itemId',
+  pullRequestId: 'pullRequestId',
+  closes: 'closes',
+  createdAt: 'createdAt'
+} as const
+
+export type ListItemPullScalarFieldEnum = (typeof ListItemPullScalarFieldEnum)[keyof typeof ListItemPullScalarFieldEnum]
 
 
 export const DocumentPinScalarFieldEnum = {

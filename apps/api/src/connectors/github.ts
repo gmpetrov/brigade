@@ -724,10 +724,21 @@ export const github: ConnectorDefinition = {
             'another teammate reviews this one before it reaches the person (wanted), and why, in a ' +
             'few words the person reads on it (reason). Brigade starts the review and wakes you with it.',
         ),
+        items: z
+          .object({
+            closes: z.array(z.string().max(64)).max(50).optional(),
+            partOf: z.array(z.string().max(64)).max(50).optional(),
+          })
+          .optional()
+          .describe(
+            "The list items this pull request works on, by id (list_items, or your thread's items): " +
+              'closes, those it finishes, which Brigade ticks once it is merged; partOf, those it is ' +
+              'only part of, which stay open.',
+          ),
       }),
       target: (i) => `pull request ${i.head} → ${i.base ?? 'default branch'} in ${i.repository}`,
-      // The review is Brigade's (src/reviews.ts), not GitHub's.
-      run: async (ctx, { repository: r, review: _review, ...fields }) =>
+      // The review and the items are Brigade's (src/reviews.ts, src/lists.ts), not GitHub's.
+      run: async (ctx, { repository: r, review: _review, items: _items, ...fields }) =>
         pull(
           await send<PullRequest>(ctx, 'POST', `${repoPath(r)}/pulls`, {
             ...fields,

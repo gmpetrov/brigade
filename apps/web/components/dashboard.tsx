@@ -12,6 +12,7 @@ import {
   Keyboard,
   KeyRound,
   Library,
+  ListChecks,
   LogOut,
   Mail,
   Moon,
@@ -148,6 +149,7 @@ const WORK_NAV = [
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },
+  { href: '/app/lists', label: 'Lists', icon: ListChecks },
   { href: '/app/routines', label: 'Routines', icon: CalendarClock },
 ]
 
@@ -529,6 +531,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         <Link href="/app/library">
                           <Library />
                           <span>Library</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip="Lists"
+                        isActive={pathname.startsWith('/app/lists')}
+                      >
+                        <Link href="/app/lists">
+                          <ListChecks />
+                          <span>Lists</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

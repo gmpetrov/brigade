@@ -83,7 +83,12 @@ export type ComputerPresence = {
 
 /** Lists a dashboard refetches when told (notifyList). */
 export type ListType =
-  'tickets.updated' | 'pulls.updated' | 'mail.updated' | 'teammates.updated' | 'connections.updated'
+  | 'tickets.updated'
+  | 'pulls.updated'
+  | 'mail.updated'
+  | 'teammates.updated'
+  | 'connections.updated'
+  | 'lists.updated'
 
 export class WorkspaceHub {
   /** Runners that said hello, by computer: each computer's one connection. */

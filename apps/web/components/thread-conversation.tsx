@@ -113,6 +113,7 @@ import {
   type Thread,
   type Ticket,
 } from '@/lib/api'
+import { ThreadItemsCard } from '@/components/list-items'
 import { useChangesCount } from '@/lib/code-changes'
 import { openCodeTab, setCodePanel } from '@/lib/code-tabs'
 import { useReplyDraft } from '@/lib/reply-drafts'
@@ -1272,6 +1273,7 @@ export function ThreadConversation({
                 reportDueAt={t.mayPrompt ? t.reportDueAt : null}
               />
             )}
+            <ThreadItemsCard threadId={t.id} />
 
             {notices.length > 0 && ticketCard(notices, 'mb-4')}
 

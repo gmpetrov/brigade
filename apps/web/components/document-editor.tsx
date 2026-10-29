@@ -1,6 +1,7 @@
 'use client'
 import dynamic from 'next/dynamic'
 import type { EditTarget } from '@brigade/contracts'
+import type { PickedLines } from '@/components/list-items'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export type DocumentEditorProps = {
@@ -15,7 +16,12 @@ export type DocumentEditorProps = {
   ask?: DocumentAsk
 }
 
-export type DocumentAsk = { teammate: string; onAsk: (passage: string) => void | Promise<void> }
+export type DocumentAsk = {
+  teammate: string
+  onAsk: (passage: string) => void | Promise<void>
+  /** Checklist lines picked: hand them to a teammate (docs/lists.md). */
+  onHandOff?: ((picked: PickedLines) => void) | null
+}
 
 /**
  * A document edited as rich text, Notion-style, and together: everyone who

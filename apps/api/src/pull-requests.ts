@@ -24,6 +24,7 @@ import { audit, type Actor } from './audit.js'
 import { GITHUB_API, githubHeaders, installationToken } from './connectors/github-app.js'
 import { ConnectorError, json } from './connectors/types.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
+import { linkPullItems, settleItemsOnMerge } from './lists.js'
 import { teammateGitHub, workspaceGitHub } from './git.js'
 import { projectOfRepository } from './projects.js'
 import { REVIEW_DONE, REVIEW_THREAD, reviewUnderWay } from './review-state.js'
@@ -242,6 +243,7 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
     await stopThreadPreview(db, row.sessionId, `Stopped: the pull request was ${state}`)
     await noteInThread(db, row.sessionId, await pullNote(row, state))
   }
+  if (state === 'merged' && row.state !== state) await settleItemsOnMerge(db, scope, row)
   // Closed without merging, it needs no verdict. A merged one's review goes on: what it finds
   // after the merge is still worth a follow-up.
   if (state === 'closed' && row.state !== state) await cancelReview(scope, row.id)
@@ -630,19 +632,26 @@ export async function notePullRequestCall(
           where: { id: existing.id },
           data: { sessionId: call.sessionId, authorTeammateId: call.teammateId },
         })
-      return
     }
-    await db.pullRequest.create({
-      data: {
-        repository: repo,
-        number: out.number,
-        title: out.title,
-        headRef: out.head,
-        baseRef: out.base,
-        sessionId: call.sessionId,
-        authorTeammateId: call.teammateId,
-      } as never,
-    })
+    const row =
+      existing ??
+      (await db.pullRequest.create({
+        data: {
+          repository: repo,
+          number: out.number,
+          title: out.title,
+          headRef: out.head,
+          baseRef: out.base,
+          sessionId: call.sessionId,
+          authorTeammateId: call.teammateId,
+        } as never,
+      }))
+    // The list items it finishes, or works on (docs/lists.md).
+    const items = call.input.items as { closes?: string[]; partOf?: string[] } | undefined
+    if (items)
+      await linkPullItems(db, row.id, call.sessionId, items).catch((error) =>
+        console.warn(`lists: items of pull request ${row.id} not kept: ${String(error)}`),
+      )
     return
   }
   if (call.operation === 'github_review_pull_request') {
@@ -1168,6 +1177,7 @@ async function recordMerge(
     const by = actor.type === 'member' ? actor.id : undefined
     await noteInThread(db, row.sessionId, await pullNote(row, 'merged', by))
   }
+  await settleItemsOnMerge(db, scope, row)
 }
 
 /** An owner or admin merges now. */

@@ -7,9 +7,10 @@
 //   [demo.mp4](asset:ck456 "video")          a video, audio or file block
 //   [report.pdf](asset:ck789 "file: Q3")     ... with a caption
 //   @[faq/support.md](document:ck012)        a mention, as messages write them
+//   * [ ] Ship it <!-- item:k3f9q2… -->       a list item's marker (docs/lists.md)
 //
 // `asset:<id>` is a file uploaded to the document (GET /api/library/assets/:id).
-import { formatMention, MENTION_KINDS, type Mention } from '@brigade/contracts'
+import { formatMention, itemMarker, MENTION_KINDS, type Mention } from '@brigade/contracts'
 
 /** What both editors offer: the dashboard's (sync) and the API's ServerBlockNoteEditor (async). */
 export type MarkdownEditor = {
@@ -30,9 +31,11 @@ const OPEN = ''
 const CLOSE = ''
 /** Between top-level blocks, to convert many at once and split them after. */
 const SPLIT = ''
-const TOKEN = /([mi])(\d+)/g
+const TOKEN = /([mik])(\d+)/g
 const MEDIA_LINE = /^\s*(!?)\[([^\]\n]*)\]\(([^\s)]+)(?:\s+"([^"\n]*)")?\)\s*$/
 const MENTION = new RegExp(`@\\[([^\\]\\n]+)\\]\\((${MENTION_KINDS.join('|')}):([^)\\s]+)\\)`, 'g')
+/** A list item's marker, as `itemMarker` writes it. */
+const ITEM = /<!--\s*item:([a-z0-9]+)\s*-->/g
 const FENCE = /^\s*(`{3,}|~{3,})/
 
 const text = (value: string) => ({ type: 'text', text: value, styles: {} })
@@ -51,15 +54,17 @@ function mediaMarkdown(block: Block) {
   return `[${name}](${url} "${block.type}${caption ? `: ${caption}` : ''}")`
 }
 
-/** Inline content with mentions as tokens, for BlockNote's conversion. */
-function tokenizeInline(content: any, mentions: string[]): any {
+/** Inline content with mentions and list items' markers as tokens, for BlockNote's conversion. */
+function tokenizeInline(content: any, mentions: string[], items: string[]): any {
   if (!Array.isArray(content)) return content
   return content.map((item) =>
     item.type === 'mention'
       ? text(`${OPEN}i${mentions.push(formatMention(item.props as Mention)) - 1}${CLOSE}`)
-      : item.type === 'link'
-        ? { ...item, content: tokenizeInline(item.content, mentions) }
-        : item,
+      : item.type === 'item'
+        ? text(`${OPEN}k${items.push(itemMarker(String(item.props.id))) - 1}${CLOSE}`)
+        : item.type === 'link'
+          ? { ...item, content: tokenizeInline(item.content, mentions, items) }
+          : item,
   )
 }
 
@@ -80,9 +85,9 @@ function mapContent(content: any, inline: (c: any) => any) {
   }
 }
 
-function tokenize(blocks: Block[], media: string[], mentions: string[]): Block[] {
+function tokenize(blocks: Block[], media: string[], mentions: string[], items: string[]): Block[] {
   return blocks.map((block) => {
-    const children = tokenize(block.children ?? [], media, mentions)
+    const children = tokenize(block.children ?? [], media, mentions, items)
     if (MEDIA.has(block.type) && block.props?.url)
       return {
         type: 'paragraph',
@@ -92,19 +97,20 @@ function tokenize(blocks: Block[], media: string[], mentions: string[]): Block[]
     const { id: _id, ...rest } = block
     return {
       ...rest,
-      content: mapContent(block.content, (c) => tokenizeInline(c, mentions)),
+      content: mapContent(block.content, (c) => tokenizeInline(c, mentions, items)),
       children,
     }
   })
 }
 
-/** The blocks as Markdown, media and mentions included. */
+/** The blocks as Markdown, media, mentions and list items' markers included. */
 export async function blocksToMarkdown(editor: MarkdownEditor, blocks: Block[]) {
   const media: string[] = []
   const mentions: string[] = []
-  const markdown = await editor.blocksToMarkdownLossy(tokenize(blocks, media, mentions))
+  const items: string[] = []
+  const markdown = await editor.blocksToMarkdownLossy(tokenize(blocks, media, mentions, items))
   return markdown.replace(TOKEN, (_, kind: string, n: string) =>
-    kind === 'm' ? media[+n]! : mentions[+n]!,
+    kind === 'm' ? media[+n]! : kind === 'k' ? items[+n]! : mentions[+n]!,
   )
 }
 
@@ -135,18 +141,19 @@ function mediaBlock(match: RegExpMatchArray): Block | undefined {
   return { type: kind[1]!, props: { url, name, caption: kind[2] ?? '' } }
 }
 
-/** Inline content with its tokens back as mentions (or, for a stray media token, a link). */
-function restoreInline(content: any, media: Block[], mentions: any[]): any {
+/** Inline content with its tokens back as mentions and list items (a stray media token, a link). */
+function restoreInline(content: any, media: Block[], mentions: any[], items: any[]): any {
   if (!Array.isArray(content)) return content
   return content.flatMap((item) => {
     if (item.type === 'link')
-      return [{ ...item, content: restoreInline(item.content, media, mentions) }]
+      return [{ ...item, content: restoreInline(item.content, media, mentions, items) }]
     if (item.type !== 'text' || !item.text.includes(OPEN)) return [item]
     const out: any[] = []
     let last = 0
     for (const m of item.text.matchAll(TOKEN) as IterableIterator<RegExpMatchArray>) {
       if (m.index! > last) out.push({ ...item, text: item.text.slice(last, m.index) })
       if (m[1] === 'i') out.push(mentions[+m[2]!])
+      else if (m[1] === 'k') out.push(items[+m[2]!])
       else {
         const block = media[+m[2]!]!
         out.push({
@@ -162,9 +169,9 @@ function restoreInline(content: any, media: Block[], mentions: any[]): any {
   })
 }
 
-function restore(blocks: Block[], media: Block[], mentions: any[]): Block[] {
+function restore(blocks: Block[], media: Block[], mentions: any[], items: any[]): Block[] {
   return blocks.map((block) => {
-    const children = restore(block.children ?? [], media, mentions)
+    const children = restore(block.children ?? [], media, mentions, items)
     const only =
       Array.isArray(block.content) && block.content.length === 1 ? block.content[0] : null
     const token = only?.type === 'text' ? only.text.trim().match(/^m(\d+)$/) : null
@@ -172,16 +179,17 @@ function restore(blocks: Block[], media: Block[], mentions: any[]): Block[] {
       return { ...media[+token[1]!]!, id: block.id, children }
     return {
       ...block,
-      content: mapContent(block.content, (c) => restoreInline(c, media, mentions)),
+      content: mapContent(block.content, (c) => restoreInline(c, media, mentions, items)),
       children,
     }
   })
 }
 
-/** Markdown as blocks, media and mentions included. Code blocks are left as written. */
+/** Markdown as blocks, media, mentions and list items included. Code blocks are left as written. */
 export async function markdownToBlocks(editor: MarkdownEditor, markdown: string) {
   const media: Block[] = []
   const mentions: any[] = []
+  const items: any[] = []
   let fence: string | null = null
   const lines = markdown.split('\n').map((line) => {
     const f = line.match(FENCE)?.[1]
@@ -195,13 +203,18 @@ export async function markdownToBlocks(editor: MarkdownEditor, markdown: string)
     const block = match && mediaBlock(match)
     // Its own paragraph, so it becomes its own block.
     if (block) return `\n${OPEN}m${media.push(block) - 1}${CLOSE}\n`
-    return line.replace(MENTION, (_, label: string, kind: string, id: string) => {
-      const n = mentions.push({ type: 'mention', props: { kind, id, label } }) - 1
-      return `${OPEN}i${n}${CLOSE}`
-    })
+    return line
+      .replace(MENTION, (_, label: string, kind: string, id: string) => {
+        const n = mentions.push({ type: 'mention', props: { kind, id, label } }) - 1
+        return `${OPEN}i${n}${CLOSE}`
+      })
+      .replace(ITEM, (_, id: string) => {
+        const n = items.push({ type: 'item', props: { id } }) - 1
+        return `${OPEN}k${n}${CLOSE}`
+      })
   })
   const blocks = await editor.tryParseMarkdownToBlocks(lines.join('\n'))
-  return restore(blocks, media, mentions)
+  return restore(blocks, media, mentions, items)
 }
 
 /** Ids of the uploaded files (`asset:<id>`) a Markdown text refers to. */

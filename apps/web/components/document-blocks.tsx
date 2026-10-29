@@ -2,7 +2,7 @@
 // What a document's editor holds beyond text: files people upload or drop in,
 // and `@` mentions of library files, teammates, threads. The schema matches
 // the API's (@brigade/editor), which writes both to Markdown teammates read.
-import { mentionConfig } from '@brigade/editor'
+import { itemConfig, mentionConfig } from '@brigade/editor'
 import { BlockNoteSchema, defaultInlineContentSpecs, type BlockNoteEditor } from '@blocknote/core'
 import {
   createReactInlineContentSpec,
@@ -13,12 +13,13 @@ import {
   useBlockNoteEditor,
   useComponentsContext,
   useDictionary,
+  useSelectedBlocks,
   type DefaultReactSuggestionItem,
   type SuggestionMenuProps,
 } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import { isLegacyProjectMention, type Mention } from '@brigade/contracts'
-import { MessageSquare } from 'lucide-react'
+import { ListChecks, MessageSquare } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
@@ -30,6 +31,7 @@ import {
 } from '@/components/composer'
 import type { DocumentAsk } from '@/components/document-editor'
 import { libraryDocument, useOptionalDocumentPanel } from '@/components/document-panel'
+import { ItemChips, ListItemsProvider, pickLines } from '@/components/list-items'
 import { MentionChip, MentionIcon } from '@/components/mention'
 import { documentFileUrl, uploadDocumentAsset } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -68,9 +70,14 @@ const mentionSpec = createReactInlineContentSpec(mentionConfig, {
   ),
 })
 
-/** The dashboard's side of @brigade/editor's documentSchema: the same nodes, its own chip. */
+/** A list item's marker (docs/lists.md): the line's threads and pull requests. */
+const itemSpec = createReactInlineContentSpec(itemConfig, {
+  render: ({ inlineContent }) => <ItemChips id={String(inlineContent.props.id)} />,
+})
+
+/** The dashboard's side of @brigade/editor's documentSchema: the same nodes, its own chips. */
 export const editorSchema = BlockNoteSchema.create({
-  inlineContentSpecs: { ...defaultInlineContentSpecs, mention: mentionSpec },
+  inlineContentSpecs: { ...defaultInlineContentSpecs, mention: mentionSpec, item: itemSpec },
 })
 
 /**
@@ -117,12 +124,15 @@ export function DocumentBlockNoteView({
   label,
   onChange,
   ask,
+  list = false,
 }: {
   editor: DocumentBlockEditor
   documentId: string
   label: string
   onChange?: () => void
   ask?: DocumentAsk
+  /** A library file: its checklist lines show their threads and pull requests (docs/lists.md). */
+  list?: boolean
 }) {
   const { resolvedTheme } = useTheme()
   const options = useMentionOptions()
@@ -186,26 +196,28 @@ export function DocumentBlockNoteView({
         void appendFiles(editor, Array.from(e.dataTransfer.files))
       }}
     >
-      <BlockNoteView
-        editor={editor}
-        theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
-        aria-label={label}
-        className="document-editor"
-        onChange={onChange}
-        // With Ask, BlockNote's toolbar with Ask first; else BlockNote's own.
-        formattingToolbar={!ask}
-      >
-        {ask && (
-          <AskContext.Provider value={ask}>
-            <FormattingToolbarController formattingToolbar={AskToolbar} />
-          </AskContext.Provider>
-        )}
-        <SuggestionMenuController
-          triggerCharacter="@"
-          getItems={getItems}
-          suggestionMenuComponent={MentionMenu}
-        />
-      </BlockNoteView>
+      <ListItemsProvider documentId={list ? documentId : null}>
+        <BlockNoteView
+          editor={editor}
+          theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+          aria-label={label}
+          className="document-editor"
+          onChange={onChange}
+          // With Ask, BlockNote's toolbar with Ask first; else BlockNote's own.
+          formattingToolbar={!ask}
+        >
+          {ask && (
+            <AskContext.Provider value={ask}>
+              <FormattingToolbarController formattingToolbar={AskToolbar} />
+            </AskContext.Provider>
+          )}
+          <SuggestionMenuController
+            triggerCharacter="@"
+            getItems={getItems}
+            suggestionMenuComponent={MentionMenu}
+          />
+        </BlockNoteView>
+      </ListItemsProvider>
     </div>
   )
 }
@@ -221,6 +233,7 @@ function AskToolbar() {
   const ask = useContext(AskContext)
   return (
     <FormattingToolbar>
+      {ask?.onHandOff && <HandOffButton key="hand-off" ask={ask} />}
       {ask && <AskButton key="ask" ask={ask} />}
       {getFormattingToolbarItems()}
     </FormattingToolbar>
@@ -244,6 +257,30 @@ function AskButton({ ask }: { ask: DocumentAsk }) {
       </Components.FormattingToolbar.Button>
       <span aria-hidden className="mx-0.5 h-5 w-px self-center bg-border" />
     </>
+  )
+}
+
+/**
+ * First in the toolbar over checklist lines (docs/lists.md): hand them to a teammate, who
+ * works on them in a thread and ticks them as the work lands.
+ */
+function HandOffButton({ ask }: { ask: DocumentAsk }) {
+  const Components = useComponentsContext()!
+  const editor = useBlockNoteEditor()
+  const blocks = useSelectedBlocks(editor)
+  const picked = useMemo(() => pickLines(editor as never, blocks as never), [editor, blocks])
+  if (!picked) return null
+  const count = picked.lines.length
+  return (
+    <Components.FormattingToolbar.Button
+      className="bn-button document-hand-off"
+      mainTooltip={`Hand ${count === 1 ? 'this item' : `these ${count} items`} to a teammate`}
+      icon={<ListChecks aria-hidden className="size-4" />}
+      label={`Hand to ${ask.teammate}`}
+      onClick={() => ask.onHandOff?.(picked)}
+    >
+      Hand to {ask.teammate}
+    </Components.FormattingToolbar.Button>
   )
 }
 

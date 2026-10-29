@@ -1494,6 +1494,137 @@ const TIMEZONE =
   'IANA timezone the hours are in, e.g. "Europe/Paris". Use the person\'s if you know it.'
 
 /**
+ * Lists (docs/lists.md): checklist lines of library Markdown files that work is attached to.
+ * A line work is attached to has an id, in a marker at its end (`<!-- item:<id> -->`); the API
+ * changes the file itself, credited to this thread, within the teammate's library access.
+ */
+export function listTools(call: ScheduleCaller): Record<string, Tool> {
+  const item = {
+    type: 'string',
+    description: "A line's id, or its text (all of it, or enough of its start to be the only one)",
+  } as const
+  return {
+    list_items: tool({
+      description:
+        'Read a list: the checklist lines of a Markdown file of the library, each ticked or not, with its id when ' +
+        'work is attached to it, and the threads and pull requests on it. Without a path: the items this thread ' +
+        'works on.',
+      inputSchema: jsonSchema<{ path?: string }>({
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'The file\'s library path, e.g. "Projects/Acme/launch.md"',
+          },
+        },
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'list_items', ...(input.path ? { path: input.path } : {}) },
+          toolCallId,
+          toolName: 'list_items',
+          input,
+        }),
+    }),
+    link_items: tool({
+      description:
+        'Attach lines of a list to this thread, as the items you work on: they show this thread on their line, ' +
+        'and you get their ids for complete_item and for the items of the pull request you open. Use it when you ' +
+        'take on lines the person named that are not yet your items.',
+      inputSchema: jsonSchema<{ path: string; items: string[] }>({
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: "The list's library path" },
+          items: { type: 'array', items: item, minItems: 1 },
+        },
+        required: ['path', 'items'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'link_items', path: input.path, items: input.items },
+          toolCallId,
+          toolName: 'link_items',
+          input,
+        }),
+    }),
+    complete_item: tool({
+      description:
+        'Tick a line of a list once its work is really done, with a short note after it (what did it, e.g. ' +
+        '"Neon PITR set to 7 days, 29 Oct"). Brigade changes the file, credited to you. For work a pull request ' +
+        "finishes, name the item in that pull request's items.closes instead: it is ticked when merged. Never tick " +
+        'what is only partly done: add_item what remains instead.',
+      inputSchema: jsonSchema<{ item: string; path?: string; note?: string }>({
+        type: 'object',
+        properties: {
+          item,
+          path: {
+            type: 'string',
+            description: "The list's library path; needed when naming the line by its text",
+          },
+          note: {
+            type: 'string',
+            description: 'A few words after the line, e.g. "PR #12, 29 Oct"',
+          },
+        },
+        required: ['item'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'complete_item',
+            item: input.item,
+            ...(input.path ? { path: input.path } : {}),
+            ...(input.note ? { note: input.note } : {}),
+          },
+          toolCallId,
+          toolName: 'complete_item',
+          input,
+        }),
+    }),
+    add_item: tool({
+      description:
+        'Add a line to a list, attached to this thread: what remains of an item, a follow-up the work showed. ' +
+        'After a line (nested under it with nested: true), at the end of a section by its heading, or at the end ' +
+        "of the file. Write it as the list's other lines are written, in their language.",
+      inputSchema: jsonSchema<{
+        path: string
+        text: string
+        after?: string
+        nested?: boolean
+        section?: string
+      }>({
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: "The list's library path" },
+          text: { type: 'string', description: 'The line, without its checkbox' },
+          after: { ...item, description: `The line it follows. ${item.description}` },
+          nested: { type: 'boolean', description: 'Under the line `after`, as part of it' },
+          section: {
+            type: 'string',
+            description: 'A heading of the file, to add it at the end of that section',
+          },
+        },
+        required: ['path', 'text'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'add_item',
+            path: input.path,
+            text: input.text,
+            ...(input.after ? { after: input.after } : {}),
+            ...(input.nested ? { nested: true } : {}),
+            ...(input.section ? { section: input.section } : {}),
+          },
+          toolCallId,
+          toolName: 'add_item',
+          input,
+        }),
+    }),
+  }
+}
+
+/**
  * Schedules: the teammate prompted with the same instructions on a cron
  * schedule, on the thread starter's accounts. The API checks the thread (a
  * member's, not a trigger's or a schedule's) and whose schedules they are.

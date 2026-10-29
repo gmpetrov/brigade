@@ -26,6 +26,7 @@ import { hubs, scheduleUpdated } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate, loadThread } from './thread-spec.js'
 import { projectWhere, usableProject } from './projects.js'
+import { handleListCall, isListOperation } from './lists.js'
 import { handleWakeup, isWakeupOperation } from './wakeups.js'
 import { startThread } from './work.js'
 
@@ -497,6 +498,11 @@ export async function handleScheduleCall(
   const teammate = await actingTeammate(db, session, call.teammateId)
   if (!teammate) return fail('That teammate is not in this thread')
   const op: ScheduleOperation = call.operation
+  // Lists' items too (docs/lists.md), within the library access of the teammate.
+  if (isListOperation(op)) {
+    const output = await handleListCall(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
   // Wake-ups come with the schedule tools; they check the thread themselves.
   if (isWakeupOperation(op)) {
     const output = await handleWakeup(db, scope, session, teammate, op)

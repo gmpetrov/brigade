@@ -399,6 +399,8 @@ export async function startThread(
     connectorFiles?: boolean
     /** The task this thread works on, linked before its first turn so the teammate knows. */
     taskId?: string
+    /** The list items it works on (docs/lists.md), linked before its first turn so the teammate knows. */
+    listItemIds?: string[]
     /** The project it works in; its context comes with the first turn. */
     projectId?: string | null
     /** How hard its teammates think; none: the harness's default. */
@@ -490,8 +492,14 @@ export async function startThread(
       } as never,
     }))
   // Each step below is a trip to the database: what does not wait on another goes with it.
-  const [, { refs: attachments, created: links }] = await Promise.all([
+  const [, , { refs: attachments, created: links }] = await Promise.all([
     joinThread(db, created.id, teammateIds),
+    input.listItemIds?.length
+      ? db.listItemThread.createMany({
+          data: input.listItemIds.map((itemId) => ({ itemId, sessionId: created.id })) as never,
+          skipDuplicates: true,
+        })
+      : null,
     attachToThread(
       db,
       scope,

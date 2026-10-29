@@ -102,6 +102,7 @@ export function instructions(
     PREVIEWS,
     skills(spec),
     tasks(spec),
+    lists(spec),
     // A playbook's run sets up none: its runs would be threads outside it.
     !spec.playbook && schedules(spec),
     children(spec),
@@ -472,6 +473,32 @@ const playbookBoard = (playbook: NonNullable<ThreadSpec['playbook']>) =>
     : '`list_tasks` shows the Tasks board. `create_task` puts a task in Backlog, assigned to nobody, for a person ' +
       "to pick up (a customer's idea, say), and `update_task` adds to one already in Backlog. A playbook's run " +
       'never hands work to a teammate or writes in another thread: start a child thread for what must be done.')
+
+/** Lists (docs/lists.md): the library's checklists, and the items this thread works on. */
+function lists(spec: ThreadSpec) {
+  const items = spec.items ?? []
+  const general =
+    'A checklist in a Markdown file of the library is a list people organize work with: each line ' +
+    '(`* [ ] …`) is an item, ticked when done. A line work is attached to ends with a hidden marker, ' +
+    '`<!-- item:<id> -->`: keep markers as they are when you edit such a file, and never write one yourself. ' +
+    '`list_items` reads a list with its ids, `link_items` attaches lines to this thread, `complete_item` ticks ' +
+    'one, `add_item` adds one. When you open a pull request for items, name them by id in its `items`: ' +
+    '`closes` for those it finishes, which Brigade ticks once it is merged, `partOf` for those it only ' +
+    'advances. Tick an item yourself (`complete_item`, with a short note) only when it is done without a pull ' +
+    'request, such as a setting changed or a document written; add what remains as a line of its own ' +
+    '(`add_item`) rather than ticking what is half done.'
+  if (!items.length) return `## Lists\n\n${general}`
+  const lines = items.map(
+    (i) => `- [${i.done ? 'x' : ' '}] ${i.text} (id \`${i.id}\`, in ${i.path})`,
+  )
+  return [
+    '## Your list items',
+    "This thread works on these items of the library's lists. Their lines show this thread, and its pull " +
+      'requests, to the people who follow the list.',
+    lines.join('\n'),
+    general,
+  ].join('\n\n')
+}
 
 /** The Tasks board: this thread's task, or when to make one. */
 function tasks(spec: ThreadSpec) {
