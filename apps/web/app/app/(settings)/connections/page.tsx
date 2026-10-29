@@ -2,10 +2,8 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
 import { CircleCheck, ShieldCheck } from 'lucide-react'
-import { isAdmin, useDashboard } from '@/components/dashboard'
 import { AppSheet } from '@/components/app-sheet'
 import { ConnectApps, type Open } from '@/components/connect-apps'
-import { Skills } from '@/components/skills'
 import { useApi, type ConnectionsResponse, type Trigger, type TriggerCatalog } from '@/lib/api'
 import { tellSignIn } from '@/lib/sign-in-window'
 
@@ -61,7 +59,6 @@ function SignedIn({ connected, error }: { connected: string | null; error: strin
 }
 
 function AppsList() {
-  const { me } = useDashboard()
   const params = useSearchParams()
   const router = useRouter()
   const data = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
@@ -144,8 +141,6 @@ function AppsList() {
           }
         />
       </div>
-
-      <Skills admin={isAdmin(me)} />
 
       {open && data.data && (
         <AppSheet

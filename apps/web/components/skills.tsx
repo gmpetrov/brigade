@@ -21,6 +21,7 @@ import {
   Upload,
   X,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useRef, useState } from 'react'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -278,16 +279,21 @@ export function Skills({ admin }: { admin: boolean }) {
   )
 
   return (
-    <section aria-labelledby="skills" className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h2 id="skills" className="text-lg font-bold tracking-tight">
-            Skills <span className="font-semibold text-muted-foreground">{list.length}</span>
-          </h2>
-          <p className="max-w-prose text-sm text-muted-foreground">
+    <div className="flex flex-col gap-7">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-extrabold tracking-tight">
+            Skills{' '}
+            {skills.data && <span className="font-bold text-muted-foreground">{list.length}</span>}
+          </h1>
+          <p className="max-w-prose text-muted-foreground">
             How your teammates do certain work. A teammate reads a skill when the work matches its
             description, or when a message starts with its <span className="font-mono">/name</span>.
-            A skill gives no access: that stays with the Apps above.
+            A skill gives no access: that stays with{' '}
+            <Link href="/app/connections" className="font-medium text-primary hover:underline">
+              Apps
+            </Link>
+            .
           </p>
         </div>
         {admin && (
@@ -306,7 +312,7 @@ export function Skills({ admin }: { admin: boolean }) {
             </Button>
           </div>
         )}
-      </div>
+      </header>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       {skills.data && list.length === 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -398,7 +404,7 @@ export function Skills({ admin }: { admin: boolean }) {
       )}
       {draft && <EditDialog draft={draft} onClose={() => setDraft(undefined)} onSaved={reload} />}
       {viewing && <ViewDialog skill={viewing} onClose={() => setViewing(undefined)} />}
-    </section>
+    </div>
   )
 }
 
