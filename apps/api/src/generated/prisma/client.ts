@@ -324,9 +324,6 @@ export type LibraryLock = Prisma.LibraryLockModel
 export type DocumentPin = Prisma.DocumentPinModel
 /**
  * Model MemoryLine
- * A saved state of a library file. Its bytes are in the bucket under
- * <organization>/<workspace>/library-versions/<id>; the newest is also the file itself.
- * Saves by the same author from the same thread within minutes update one version.
  * One line of a memory file, known by its text (memoryLineKey): when and where
  * it was learned and, once it left the file, why. Lines that left (replaced,
  * merged, outdated, removed by a person) are the memory's archive: search finds
@@ -335,9 +332,23 @@ export type DocumentPin = Prisma.DocumentPinModel
 export type MemoryLine = Prisma.MemoryLineModel
 /**
  * Model DocumentVersion
- * 
+ * A saved state of a library file: the object of the save it records (objectKey), the same one
+ * the file pointed to then. Versions from before objects per save have their bytes under
+ * <organization>/<workspace>/library-versions/<id>. Saves by the same author from the same thread
+ * within minutes update one version.
  */
 export type DocumentVersion = Prisma.DocumentVersionModel
+/**
+ * Model LibraryObject
+ * An object in the bucket holding one save of a library file's bytes, at
+ * <organization>/<workspace>/library-objects/<document id>/<id>. Made before its bytes are
+ * written, so none is ever lost track of; written once, never changed. A file's row or a
+ * version points to it once the save commits, which claims it (claimObject, src/library-objects.ts);
+ * one no row points to (superseded, or its save failed or came too late) is found by the sweep,
+ * marked, and an hour on deleted from the bucket, then its row. A marked one can no longer be
+ * claimed. No relation: kept when its file or workspace goes, until the sweep deletes its bytes.
+ */
+export type LibraryObject = Prisma.LibraryObjectModel
 /**
  * Model LibraryFolder
  * A library folder someone made, or one with access rules. Folders also exist

@@ -22,7 +22,7 @@ import {
 } from '@brigade/contracts'
 import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { directUploads, documentKey, versionKey } from '../bucket.js'
+import { directUploads } from '../bucket.js'
 import { collabEnabled, COLLAB_PARTY, cursorColor, editToken } from '../collab.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
@@ -62,6 +62,7 @@ import {
   search,
   writeMemory,
 } from '../library.js'
+import { fileKey, versionBytesKey } from '../library-objects.js'
 import { libraryPreview } from '../previews.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import { serveObject } from '../serve-object.js'
@@ -490,12 +491,7 @@ export const library = new Hono<AppEnv>()
   /** The file's bytes. Shown inline only for types that cannot run script on this origin. */
   .get('/:id/content', async (c) => {
     const row = await libraryFile(c.var.db, c.req.param('id'))
-    return fileResponse(
-      c,
-      documentKey(c.var.scope, row.id),
-      row,
-      c.req.query('download') !== undefined,
-    )
+    return fileResponse(c, fileKey(c.var.scope, row), row, c.req.query('download') !== undefined)
   })
 
   /** A Word document, spreadsheet or deck, readable in the dashboard. `?version=` for an older one. */
@@ -507,9 +503,7 @@ export const library = new Hono<AppEnv>()
       ? await db.documentVersion.findFirst({ where: { id: versionId, documentId: row.id } })
       : null
     if (versionId && !version) throw new HTTPException(404, { message: 'Version not found' })
-    const bytes = version
-      ? await readVersion(scope, version.id)
-      : await readLibraryFile(scope, row.id)
+    const bytes = version ? await readVersion(scope, version) : await readLibraryFile(scope, row)
     return c.json(await libraryPreview(bytes, version?.contentType ?? row.contentType))
   })
 
@@ -551,7 +545,7 @@ export const library = new Hono<AppEnv>()
     if (!version) throw new HTTPException(404, { message: 'Version not found' })
     return fileResponse(
       c,
-      versionKey(scope, version.id),
+      versionBytesKey(scope, version),
       version,
       c.req.query('download') !== undefined,
     )
@@ -571,7 +565,7 @@ export const library = new Hono<AppEnv>()
       { type: 'member', id: scope.memberId },
       {
         path: row.path,
-        bytes: await readVersion(scope, version.id),
+        bytes: await readVersion(scope, version),
         contentType: version.contentType,
       },
       { restoredFrom: version.id },

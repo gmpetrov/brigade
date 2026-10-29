@@ -242,12 +242,12 @@ const libraryRow = (db: ScopedDb, path: string) =>
 /** A JSON file of the library, parsed by `schema`; null when missing or unreadable. */
 async function readJson<T>(
   scope: Scope,
-  row: { id: string } | null,
+  row: { id: string; objectKey: string | null } | null,
   schema: { safeParse: (v: unknown) => { data?: T } },
 ) {
   if (!row) return null
   try {
-    const text = new TextDecoder().decode(await readLibraryFile(scope, row.id))
+    const text = new TextDecoder().decode(await readLibraryFile(scope, row))
     return schema.safeParse(JSON.parse(text)).data ?? null
   } catch {
     // Not JSON: the design still shows.
@@ -384,7 +384,7 @@ export async function designZip(db: ScopedDb, scope: Scope, path: string) {
   for (const row of rows) {
     total += row.size
     if (total > ZIP_MAX) throw new HTTPException(413, { message: 'The design is too large to zip' })
-    let bytes = await readLibraryFile(scope, row.id)
+    let bytes = await readLibraryFile(scope, row)
     if (row.contentType === 'text/html')
       bytes = new TextEncoder().encode(
         await withKnobs(scope, db, folder, new TextDecoder().decode(bytes)),
@@ -461,7 +461,7 @@ export const designFiles = new Hono().get('/:token/*', async (c) => {
   const db = scoped(scope)
   const row = await libraryRow(db, [claim.p, ...rest].join('/'))
   if (!row) return c.text('Not found', 404)
-  let bytes = await readLibraryFile(scope, row.id)
+  let bytes = await readLibraryFile(scope, row)
   const html = row.contentType === 'text/html'
   if (html)
     bytes = new TextEncoder().encode(
@@ -528,7 +528,7 @@ export async function editDesign(
       throw new HTTPException(409, {
         message: `Someone saved ${input.file} meanwhile: it was reloaded, make the change again`,
       })
-    const html = new TextDecoder().decode(await readLibraryFile(scope, row.id))
+    const html = new TextDecoder().decode(await readLibraryFile(scope, row))
     let next: string
     try {
       next = applyEdits(html, input.ops)

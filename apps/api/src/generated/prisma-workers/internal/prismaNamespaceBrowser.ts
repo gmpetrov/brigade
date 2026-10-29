@@ -102,6 +102,7 @@ export const ModelName = {
   DocumentPin: 'DocumentPin',
   MemoryLine: 'MemoryLine',
   DocumentVersion: 'DocumentVersion',
+  LibraryObject: 'LibraryObject',
   LibraryFolder: 'LibraryFolder',
   LibraryFolderGrant: 'LibraryFolderGrant',
   DocumentAsset: 'DocumentAsset',
@@ -915,6 +916,7 @@ export const DocumentScalarFieldEnum = {
   updatedByType: 'updatedByType',
   updatedById: 'updatedById',
   updatedInSessionId: 'updatedInSessionId',
+  objectKey: 'objectKey',
   bytesStaleAt: 'bytesStaleAt',
   memoryTidiedAt: 'memoryTidiedAt',
   deletedAt: 'deletedAt',
@@ -1024,11 +1026,24 @@ export const DocumentVersionScalarFieldEnum = {
   actorId: 'actorId',
   sessionId: 'sessionId',
   restoredFromId: 'restoredFromId',
+  objectKey: 'objectKey',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type DocumentVersionScalarFieldEnum = (typeof DocumentVersionScalarFieldEnum)[keyof typeof DocumentVersionScalarFieldEnum]
+
+
+export const LibraryObjectScalarFieldEnum = {
+  key: 'key',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  documentId: 'documentId',
+  createdAt: 'createdAt',
+  unreferencedAt: 'unreferencedAt'
+} as const
+
+export type LibraryObjectScalarFieldEnum = (typeof LibraryObjectScalarFieldEnum)[keyof typeof LibraryObjectScalarFieldEnum]
 
 
 export const LibraryFolderScalarFieldEnum = {

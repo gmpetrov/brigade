@@ -23,12 +23,13 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
-import { copyObject, documentKey, getObject, putObject } from './bucket.js'
+import { copyObject, getObject, putObject } from './bucket.js'
 import { notifyCollab } from './collab.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs } from './hub.js'
 import { folderRules, teammateLibraryAccess } from './library-folders.js'
 import { actorNames, ensureFirstVersion, readVersion, recordVersion } from './library-history.js'
+import { claimObject, fileKey, newDocumentId, newLibraryObject } from './library-objects.js'
 import {
   applyMemoryEdit,
   applyMemoryLayout,
@@ -182,9 +183,12 @@ export const isMarkdown = (row: { kind?: string; contentType: string; size: numb
   row.kind !== 'thread_summary' && row.contentType === 'text/markdown' && row.size <= EDITABLE_BYTES
 
 /** A document's whole text: a library file's bytes (its `text` is cut for search), or memory. */
-export async function documentText(scope: Scope, row: { id: string; kind: string; text: string }) {
+export async function documentText(
+  scope: Scope,
+  row: { id: string; kind: string; text: string; objectKey: string | null },
+) {
   if (row.kind !== 'library') return row.text
-  return new TextDecoder().decode(await readLibraryFile(scope, row.id))
+  return new TextDecoder().decode(await readLibraryFile(scope, row))
 }
 
 /**
@@ -305,61 +309,64 @@ export async function withLibraryLock<T>(
 }
 
 /**
- * A file's bytes as its row says they are (its sha): its full text when the row holds all of
- * it, else the saved version with that sha. Null when neither is there yet.
+ * A file's bytes as its row says they are (its sha): its object's, its full text when the row
+ * holds all of it, else the saved version with that sha. Null when none is there yet.
  */
 export async function committedBytes(
   scope: Scope,
-  row: { id: string; text: string; sha256: string },
+  row: { id: string; text: string; sha256: string; objectKey: string | null },
 ) {
+  if (row.objectKey) {
+    // Written once by the save that pointed the row to it: never other bytes.
+    const bytes = await getObject(fileKey(scope, row)).catch(() => null)
+    if (bytes && sha256(bytes) === row.sha256) return bytes
+  }
   const text = new TextEncoder().encode(row.text)
   if (sha256(text) === row.sha256) return text
   const version = await prisma.documentVersion.findFirst({
     where: { documentId: row.id, sha256: row.sha256 },
     orderBy: { createdAt: 'desc' },
-    select: { id: true },
+    select: { id: true, documentId: true, objectKey: true },
   })
-  const bytes = version ? await readVersion(scope, version.id).catch(() => null) : null
+  const bytes = version ? await readVersion(scope, version).catch(() => null) : null
   return bytes && sha256(bytes) === row.sha256 ? bytes : null
 }
 
 /**
- * Put a file's stored bytes back to what its row says, once a save whose lease ended mid-write
- * may have overwritten them (`bytesStaleAt`). Under the file's lock; clears the mark only once
- * its bytes match. False when it could not yet: the sweep tries again (repairStaleBytes).
+ * A file at the legacy key that a save past its lease may have overwritten (`bytesStaleAt`, from
+ * before objects per save): its bytes saved again from what its row says, as an object of its own
+ * the row then points to. Nothing is written over. False when they could not be yet: the sweep
+ * tries again (repairStaleBytes).
  */
 export async function repairBytes(scope: Scope, documentId: string) {
   return withLibraryLock(scope, documentId, async (lease) => {
     const row = await prisma.document.findFirst({ where: { id: documentId } })
     if (!row?.bytesStaleAt) return true
-    const stored = await getObject(documentKey(scope, documentId)).catch(() => null)
-    if (!stored || sha256(stored) !== row.sha256) {
+    if (!row.objectKey) {
       const bytes = await committedBytes(scope, row)
       if (!bytes) return false
+      const key = await newLibraryObject(scope, documentId)
       lease.check()
-      await putObject(documentKey(scope, documentId), bytes, row.contentType)
-    }
-    try {
-      await lease.fence((tx) =>
-        tx.document.updateMany({
-          where: { id: documentId, sha256: row.sha256, bytesStaleAt: row.bytesStaleAt },
-          data: { bytesStaleAt: null },
-        }),
-      )
-    } catch (error) {
-      // Its own write landed past its lease, maybe over a newer save's: marked again, anew.
-      if (error instanceof LeaseLost)
-        await prisma.document.updateMany({
-          where: { id: documentId },
-          data: { bytesStaleAt: new Date() },
+      await putObject(key, bytes, row.contentType)
+      return lease.fence(async (tx) => {
+        await claimObject(tx, key)
+        const moved = await tx.document.updateMany({
+          where: { id: documentId, sha256: row.sha256, objectKey: null },
+          data: { objectKey: key, bytesStaleAt: null },
         })
-      throw error
+        return moved.count > 0
+      })
     }
+    // Saved since, to an object of its own: the legacy key is no longer read.
+    await prisma.document.updateMany({
+      where: { id: documentId, bytesStaleAt: row.bytesStaleAt },
+      data: { bytesStaleAt: null },
+    })
     return true
   })
 }
 
-/** Files whose bytes a late save may have overwritten, put back (jobs.ts). */
+/** Files whose legacy bytes a late save may have overwritten, saved again (jobs.ts). */
 export async function repairStaleBytes() {
   const rows = await prisma.document.findMany({
     where: { bytesStaleAt: { not: null } },
@@ -401,86 +408,54 @@ async function writeLibraryFile(
     return existing
   const text = 'bytes' in input ? await extractText(input.bytes, contentType) : input.upload.text
   const sessionId = context.sessionId ?? null
-  // Its bytes where they belong: written, or copied from the upload inside the bucket.
-  const keep = async (key: string) => {
-    if ('bytes' in input) return putObject(key, input.bytes, contentType)
-    if (!(await copyObject(input.upload.key, key, contentType)))
-      throw new HTTPException(409, { message: 'The upload is gone; upload it again' })
-  }
+  // A new file's id comes first: its bytes go in before its row.
+  const id = existing?.id ?? newDocumentId()
+  // A file from before versions keeps what it was as its first.
+  if (existing) await ensureFirstVersion(db, scope, existing)
+  // Its bytes in an object of this save's own, written or copied from the upload inside the
+  // bucket. Never read until the row points to it: if this save fails or comes too late, it
+  // lands where nobody looks, and the sweep deletes it.
+  const key = await newLibraryObject(scope, id)
+  options.lease?.check()
+  if ('bytes' in input) await putObject(key, input.bytes, contentType)
+  else if (!(await copyObject(input.upload.key, key, contentType)))
+    throw new HTTPException(409, { message: 'The upload is gone; upload it again' })
   const fields = {
     contentType,
     size,
     sha256: hash,
     text,
     indexed: text.trim().length > 0,
+    objectKey: key,
     updatedByType: actor.type,
     updatedById: actor.id,
     updatedInSessionId: sessionId,
   }
-  let row
-  if (existing) {
-    // A file from before versions keeps what it was as its first.
-    await ensureFirstVersion(db, scope, existing)
-    if (options.lease) {
-      const lease = options.lease
-      lease.check()
-      await keep(documentKey(scope, existing.id))
-      // Its row changes only while the lease is still this save's. Past it, another save may
-      // have landed, whose bytes this one's may have just overwritten: the file is marked, so
-      // they are put back from what its row says (now, else by the sweep until they are).
-      row = await lease
-        .fence(async (tx) => {
-          const saved = await tx.document.update({ where: { id: existing.id }, data: fields })
-          // Bytes a late save overwrote before this one's: this save's replaced them.
-          if (existing.bytesStaleAt)
-            await tx.document.updateMany({
-              where: { id: existing.id, bytesStaleAt: existing.bytesStaleAt },
-              data: { bytesStaleAt: null },
-            })
-          return saved
-        })
-        .catch(async (error: unknown) => {
-          if (error instanceof LeaseLost) {
-            await prisma.document.updateMany({
-              where: { id: existing.id },
-              data: { bytesStaleAt: new Date() },
-            })
-            await repairBytes(scope, existing.id).catch((failed) =>
-              console.warn(`library: ${existing.id}'s bytes not put back yet: ${String(failed)}`),
-            )
-          }
-          throw error
-        })
-    } else {
-      await keep(documentKey(scope, existing.id))
-      row = await db.document.update({ where: { id: existing.id }, data: fields })
-    }
-  } else {
-    row = await db.document.create({
+  // The save's one commit: the row points to its object. Under a lease, only while the lease is
+  // still this save's (a save past it changes nothing, and its object is never read).
+  const commit = async (tx: Prisma.TransactionClient) => {
+    await claimObject(tx, key)
+    if (existing)
+      // Bytes a late save may have overwritten at the legacy key: no longer read.
+      return tx.document.update({ where: { id }, data: { ...fields, bytesStaleAt: null } })
+    return tx.document.create({
       data: {
+        id,
+        organizationId: scope.organizationId,
+        workspaceId: scope.workspaceId,
         kind: 'library',
         path: input.path,
         ...fields,
         createdByType: actor.type,
         createdById: actor.id,
-      } as never,
-    })
-    await keep(documentKey(scope, row.id)).catch(async (error) => {
-      await db.document.delete({ where: { id: row!.id } })
-      throw error
+      },
     })
   }
-  await recordVersion(
-    db,
-    scope,
-    row,
-    'bytes' in input ? input.bytes : { key: input.upload.key },
-    actor,
-    {
-      sessionId,
-      ...(options.restoredFromId ? { restoredFromId: options.restoredFromId } : {}),
-    },
-  ).catch((error) => console.warn(`library: no version kept of ${row.id}: ${String(error)}`))
+  const row = options.lease ? await options.lease.fence(commit) : await prisma.$transaction(commit)
+  await recordVersion(db, scope, { ...row, objectKey: key }, actor, {
+    sessionId,
+    ...(options.restoredFromId ? { restoredFromId: options.restoredFromId } : {}),
+  }).catch((error) => console.warn(`library: no version kept of ${row.id}: ${String(error)}`))
   await audit({
     ...scope,
     actor,
@@ -499,8 +474,9 @@ export async function libraryFile(db: ScopedDb, id: string) {
   return row
 }
 
-export async function readLibraryFile(scope: Scope, id: string) {
-  const bytes = await getObject(documentKey(scope, id))
+/** A library file's bytes: those its row points to. */
+export async function readLibraryFile(scope: Scope, row: { id: string; objectKey: string | null }) {
+  const bytes = await getObject(fileKey(scope, row))
   if (!bytes) throw new HTTPException(404, { message: 'The file is missing from storage' })
   return bytes
 }

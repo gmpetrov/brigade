@@ -21,7 +21,7 @@ export const runnerLibrary = new Hono<{
   .get('/files/:id', async (c) => {
     const { runner } = c.var
     const row = await libraryFile(scoped(runner), c.req.param('id'))
-    const bytes = await readLibraryFile(runner, row.id)
+    const bytes = await readLibraryFile(runner, row)
     return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
       'content-type': 'application/octet-stream',
       'x-sha256': row.sha256,
