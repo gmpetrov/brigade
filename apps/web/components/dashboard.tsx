@@ -920,7 +920,9 @@ function Inset({ children }: { children: ReactNode }) {
           expanded && 'hidden',
         )}
       >
-        {children}
+        {/* Not kept behind it: a thread opens in place (lib/thread-address.ts), over the page
+            it was opened from, which would go on loading and listening unseen. */}
+        {!expanded && children}
       </div>
     </SidebarInset>
   )

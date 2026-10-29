@@ -17,8 +17,10 @@ import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/compone
 import { FadeText } from '@/components/fade-text'
 import { StreamedTitle } from '@/components/streamed-title'
 import { renameThread, useThreadMenu } from '@/components/thread-menu'
+import { preloadOnPoint } from '@/components/thread-conversation'
 import { useThreadPanel } from '@/components/thread-panel'
 import { type ThreadSummary } from '@/lib/api'
+import { clickInPlace } from '@/lib/thread-address'
 import { cn } from '@/lib/utils'
 
 export function ThreadRow({
@@ -112,6 +114,8 @@ export function ThreadRow({
         <Link
           href={href}
           title={hint ? `${title} · ${hint}` : title}
+          {...preloadOnPoint(thread.id, active)}
+          onClick={(e) => clickInPlace(e, href)}
           onContextMenu={(e) => {
             e.preventDefault()
             setOpen(true)
