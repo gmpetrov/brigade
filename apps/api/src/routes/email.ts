@@ -9,6 +9,7 @@ import {
   OrderRules,
   PreviewRule,
   UpdateInbox,
+  type MailForwarding,
   type MailJournalEntry,
 } from '@brigade/contracts'
 import { Hono } from 'hono'
@@ -25,6 +26,7 @@ import {
   domainFor,
   listDomains,
   lookupDomain,
+  mailProviderOf,
   removeDomain,
   setPublicAddress,
 } from '../mail/domains.js'
@@ -355,13 +357,16 @@ export const email = new Hono<AppEnv>()
   })
 
   /**
-   * An inbox's latest mail from Google's forwarding check, with its code: what a person types in
-   * Gmail's settings to confirm forwarding support@ here.
+   * How an address on a domain receiving by forwarding gets here: the provider its domain's mail
+   * is with (its MX), and the latest mail from Google's forwarding check, with its code: what a
+   * person types in Gmail's settings to confirm forwarding support@ here.
    */
   .get('/addresses/:id/forwarding', async (c) => {
     const { db, scope } = c.var
     requireRole(scope, 'owner', 'admin')
     const address = await loadAddress(db, c.req.param('id'))
+    const domain = address.publicAddress?.split('@')[1]
+    const provider = domain ? await mailProviderOf(domain) : 'other'
     const row = await db.mailMessage.findFirst({
       where: {
         addressId: address.id,
@@ -370,18 +375,19 @@ export const email = new Hono<AppEnv>()
       },
       orderBy: { receivedAt: 'desc' },
     })
-    if (!row) return c.json({ found: false })
+    if (!row) return c.json({ provider, found: false } satisfies MailForwarding)
     const code =
       row.text.match(/(?:confirmation code|code de confirmation)\D{0,20}(\d{6,12})/i)?.[1] ?? null
     const link =
       row.text.match(/https:\/\/mail(?:-settings)?\.google\.com\/mail\/[^\s<>)]+/)?.[0] ?? null
     return c.json({
+      provider,
       found: true,
       at: row.receivedAt.toISOString(),
       subject: row.subject,
       code,
       link,
-    })
+    } satisfies MailForwarding)
   })
 
   /**

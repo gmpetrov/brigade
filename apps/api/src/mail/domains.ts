@@ -5,7 +5,12 @@
 // mail stays with its provider, Google's say, and each address is forwarded to its mailbox's own
 // address on Brigade's domain). One workspace per domain across Brigade, so nobody sends or
 // receives as another's.
-import type { DomainLookup, DomainReceiving, MailDomainView } from '@brigade/contracts'
+import type {
+  DomainLookup,
+  DomainReceiving,
+  MailDomainView,
+  MailProvider,
+} from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { prisma, scoped, type ScopedDb } from '../db.js'
@@ -82,6 +87,18 @@ export async function mxOf(name: string): Promise<string[]> {
     .filter((m) => m.host)
     .sort((a, b) => a.priority - b.priority)
     .map((m) => m.host)
+}
+
+/**
+ * Who a domain's mail goes to now, from its MX: Google Workspace, Microsoft 365 or another
+ * provider, so a mailbox's page can say how to forward an address there. Other when DNS cannot
+ * be read: the general steps still apply.
+ */
+export async function mailProviderOf(name: string): Promise<MailProvider> {
+  const mx = await mxOf(name).catch(() => [])
+  if (mx.some((host) => /(^|\.)(google\.com|googlemail\.com)$/.test(host))) return 'google'
+  if (mx.some((host) => /(^|\.)(outlook\.com|office365\.us)$/.test(host))) return 'microsoft'
+  return 'other'
 }
 
 const checkName = (given: string) => {

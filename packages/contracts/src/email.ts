@@ -43,6 +43,18 @@ export type DomainLookup = {
   suggested: DomainReceiving
 }
 
+/** Who a domain's mail goes to now, by its MX. */
+export type MailProvider = 'google' | 'microsoft' | 'other'
+
+/**
+ * How a mailbox's address on a domain receiving by forwarding gets its mail here: the provider
+ * its mail is with, and Google's latest forwarding check mail, with its code, once one arrived.
+ */
+export type MailForwarding = { provider: MailProvider } & (
+  | { found: false }
+  | { found: true; at: string; subject: string; code: string | null; link: string | null }
+)
+
 /** A domain of the workspace, as Inbox › Mail settings › Domains shows it. */
 export type MailDomainView = {
   id: string
