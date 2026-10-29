@@ -202,7 +202,7 @@ export function SearchDialog({
 
   const pages = useMemo<Item[]>(() => {
     const all = [
-      ...NAV.map((n) => ({ href: n.href, title: n.label })),
+      ...NAV.map((n) => ({ href: n.href, title: n.search ?? n.label })),
       ...projects
         .filter((p) => !p.archivedAt)
         .map((p) => ({ href: `/app/projects/${p.id}`, title: p.name })),
