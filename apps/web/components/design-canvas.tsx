@@ -188,6 +188,8 @@ function DesignCanvasInner({
   const shas = useRef(new Map<string, string>())
   /** Boards kept live whatever the view: one being captured for an export. */
   const [pinned, setPinned] = useState<string[]>([])
+  /** A board tapped while it showed its picture: live, however small, while it is in view. */
+  const [opened, setOpened] = useState<string | null>(null)
   const [checks, recheck] = useState(0)
   const [heights, setHeights] = useState<Record<string, number>>({})
   // Boards whose page is wider than they are: drawn as wide as the page, not cut at their edge.
@@ -708,6 +710,7 @@ function DesignCanvasInner({
       const b = boardOf(board)
       if (b) fitTo({ x: b.x, y: b.y, width: b.width, height: b.frame })
       fitted.current = true
+      setOpened(board)
       return
     }
     const seq = seqs.current.next++
@@ -745,7 +748,12 @@ function DesignCanvasInner({
   })
   // Live: the boards that fill most of the view, up to a few; a board kept small on screen shows its
   // picture once it has one; a selected one, or one being retyped or captured, stays live.
-  const keep = [...selection.map((x) => x.board), ...(retyping ? [retyping.board] : []), ...pinned]
+  const keep = [
+    ...selection.map((x) => x.board),
+    ...(retyping ? [retyping.board] : []),
+    ...(opened ? [opened] : []),
+    ...pinned,
+  ]
   const keepKey = keep.join(',')
   const live = useMemo(() => {
     const v = settled
@@ -756,14 +764,16 @@ function DesignCanvasInner({
     // On a phone a board fitted to the view is narrower than PICTURE_BELOW, and still worth its page.
     const small = Math.min(PICTURE_BELOW, size.width / 2)
     const ranked = layout.boards.flatMap((b) => {
-      if (kept.has(b.key)) return [{ key: b.key, rank: Infinity }]
       const left = v.x + b.x * v.zoom
       const top = v.y + b.y * v.zoom
       const w = b.width * v.zoom
       const h = b.frame * v.zoom
       const across = Math.min(size.width + mx, left + w) - Math.max(-mx, left)
       const down = Math.min(size.height + my, top + h) - Math.max(-my, top)
-      if (across <= 0 || down <= 0) return []
+      const inView = across > 0 && down > 0
+      // A tapped board stays live only while it is in view.
+      if (kept.has(b.key) && (b.key !== opened || inView)) return [{ key: b.key, rank: Infinity }]
+      if (!inView) return []
       // Too small to use: its picture, unless that is out of date.
       if (w < small && pictures[b.key] && !stale.current.has(b.key)) return []
       return [{ key: b.key, rank: across * down }]
@@ -775,7 +785,12 @@ function DesignCanvasInner({
         .map((r) => r.key),
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps -- checks: a picture went out of date
-  }, [settled, touch, size.width, size.height, layout.boards, pictures, keepKey, checks])
+  }, [settled, touch, size.width, size.height, layout.boards, pictures, keepKey, opened, checks])
+
+  // A tapped board that left the view goes back to its picture when small.
+  useEffect(() => {
+    if (opened && !live.has(opened)) setOpened(null)
+  }, [opened, live])
 
   // A live board whose page is ready and has no picture of this version: its picture is taken,
   // one board at a time, once the view holds still.
