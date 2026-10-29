@@ -483,7 +483,12 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   preview started from the dashboard, a takeover, a terminal, a file read) puts it back first and deletes the
   archive; the teammate's next turn fetches the caches its checkouts borrow from if they were swept, and is told to
   reinstall dependencies. A folder that cannot be put back stops the turn rather than start over in an empty one.
-  Disk then grows with the threads active at once, not with all threads.
+  Disk then grows with the threads active at once, not with all threads. However empty the disk, a thread quiet
+  for 6 hours (not in use, no preview) loses its dependency and build folders (`node_modules`, `.next`, `dist`…
+  where git ignores them), and its teammate's next turn is told to reinstall: boat snapshots a computer every minute
+  or two and goes over every path on its disk each time, and on our first cloud computer `node_modules` were about
+  1.6M of its 2.4M paths (about 100,000 per Brigade checkout), while the snapshot agent took close to a core and
+  2–3 GB of memory.
 - **Containers by thread** (`apps/runner/src/containers.ts`, cloud computers). Each teammate's rootless Docker is shared
   by its threads, so each thread gets its own Compose project (`COMPOSE_PROJECT_NAME=t<thread id>`, for the harness,
   previews and takeover terminals): two threads on one repository no longer share containers or a database volume. A
