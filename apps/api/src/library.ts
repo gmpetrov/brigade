@@ -23,7 +23,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
-import { copyObject, getObject, putObject } from './bucket.js'
+import { getObject, signCopy, signPut } from './bucket.js'
 import { notifyCollab } from './collab.js'
 import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs } from './hub.js'
@@ -345,9 +345,11 @@ export async function repairBytes(scope: Scope, documentId: string) {
     if (!row.objectKey) {
       const bytes = await committedBytes(scope, row)
       if (!bytes) return false
-      const key = await newLibraryObject(scope, documentId)
+      const { key, write } = await newLibraryObject(scope, documentId, (key) =>
+        signPut(key, bytes, row.contentType),
+      )
       lease.check()
-      await putObject(key, bytes, row.contentType)
+      await write.send()
       return lease.fence(async (tx) => {
         await claimObject(tx, key)
         const moved = await tx.document.updateMany({
@@ -415,10 +417,13 @@ async function writeLibraryFile(
   // Its bytes in an object of this save's own, written or copied from the upload inside the
   // bucket. Never read until the row points to it: if this save fails or comes too late, it
   // lands where nobody looks, and the sweep deletes it.
-  const key = await newLibraryObject(scope, id)
+  const { key, write } = await newLibraryObject(scope, id, (key) =>
+    'bytes' in input
+      ? signPut(key, input.bytes, contentType)
+      : signCopy(input.upload.key, key, contentType),
+  )
   options.lease?.check()
-  if ('bytes' in input) await putObject(key, input.bytes, contentType)
-  else if (!(await copyObject(input.upload.key, key, contentType)))
+  if (!(await write.send()))
     throw new HTTPException(409, { message: 'The upload is gone; upload it again' })
   const fields = {
     contentType,

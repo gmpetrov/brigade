@@ -50,7 +50,8 @@ const { prisma, Prisma, scoped } = await import('../src/db.js')
 const billing = await import('../src/billing.js')
 const { auth } = await import('../src/auth.js')
 const { getObject, putObject, threadFileKey, workspacePrefix } = await import('../src/bucket.js')
-const { deleteWorkspace, sweepDeletedWorkspaces } = await import('../src/workspace-delete.js')
+const { deleteWorkspace, LATE_WRITES_MS, sweepDeletedWorkspaces } =
+  await import('../src/workspace-delete.js')
 const { LATE_UPLOADS_MS } = await import('../src/thread-delete.js')
 const { workspaces } = await import('../src/routes/workspaces.js')
 const { BEING_DELETED, lowerFence, raiseFence } = await import('../src/deletion-fence.js')
@@ -321,13 +322,19 @@ test(
     assert.equal(await sweepDeletedWorkspaces(scope.workspaceId, deletedAt, 2), 2)
     assert.equal(await sweepDeletedWorkspaces(scope.workspaceId, deletedAt, 2), 1)
     assert.equal(await left(), 0)
-    // Empty, but an upload URL issued before the deletion may still land: the row stays.
+    // Empty, but an upload URL or a library write signed before the deletion may still land:
+    // the row stays.
     assert.ok(await row())
     const late = `${prefix}uploads/late`
     await putObject(late, new Uint8Array([9]), 'text/plain')
-    const settled = deletedAt + LATE_UPLOADS_MS + 1
-    assert.equal(await sweepDeletedWorkspaces(scope.workspaceId, settled, 2), 1)
+    assert.equal(
+      await sweepDeletedWorkspaces(scope.workspaceId, deletedAt + LATE_UPLOADS_MS + 1, 2),
+      1,
+    )
     assert.equal(await getObject(late), null)
+    assert.ok(await row(), 'a library write signed before the deletion may land later still')
+    const settled = deletedAt + LATE_WRITES_MS + 1
+    assert.equal(await sweepDeletedWorkspaces(scope.workspaceId, settled, 2), 0)
     // Listed empty after the margin: the promise is kept, the row goes.
     assert.equal(await row(), null)
   },

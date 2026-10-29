@@ -8,7 +8,7 @@ import { DELETE_PROTOCOL } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { guardWorkspaceDeletion } from './billing.js'
-import { deleteObject, listObjects, workspacePrefix } from './bucket.js'
+import { deleteObject, listObjects, SIGNED_WRITE_MS, workspacePrefix } from './bucket.js'
 import { cloudAvailable, destroyComputerVm, forgetPreviewAddress } from './cloud.js'
 import { notifyCollab } from './collab.js'
 import { Prisma, prisma, scoped } from './db.js'
@@ -19,6 +19,9 @@ import { removeFromResend } from './mail/domains.js'
 import { enqueue } from './platform/node.js'
 import type { WorkspaceScope } from './scope.js'
 import { LATE_UPLOADS_MS } from './thread-delete.js'
+
+/** How long after a workspace's deletion a write signed before it may land: an upload's, a library object's. */
+export const LATE_WRITES_MS = Math.max(LATE_UPLOADS_MS, SIGNED_WRITE_MS) + 15 * 60_000
 
 /** While a teammate works in it, a thread's computer is still writing to it. */
 const BUSY: SessionStatus[] = ['starting', 'running']
@@ -357,8 +360,9 @@ export async function sweepDeletedWorkspaces(
         await prisma.workspaceCleanup.deleteMany({ where: { id: row.id } })
         continue
       }
-      // Upload URLs issued before the deletion work until then.
-      const settled = now >= row.notBefore.getTime() + LATE_UPLOADS_MS
+      // Upload URLs issued before the deletion work until then, and library writes signed before
+      // it (SIGNED_WRITE_MS), with a margin.
+      const settled = now >= row.notBefore.getTime() + LATE_WRITES_MS
       while (left > 0) {
         const keys = await listObjects(row.prefix, { limit: left })
         if (keys.length === 0) {
