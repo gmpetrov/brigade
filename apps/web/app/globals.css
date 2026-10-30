@@ -925,6 +925,53 @@
   --level: 1.15em;
 }
 
+/* Checklist lines (Projects/Brigade/designs/editor-lists.design): a round box, filled
+ * violet once done; a done line fades rather than being struck through. Its priority dot
+ * is hidden and its closing note sits under it, smaller and grey (components/document-checklist.ts). */
+.document-editor .bn-block-content[data-content-type='checkListItem'] > div > input {
+  appearance: none;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 4px 10px 0 2px;
+  border: 1.5px solid var(--muted-foreground);
+  border-radius: 9999px;
+  background: transparent center / 10px 10px no-repeat;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.document-editor .bn-block-content[data-content-type='checkListItem'] > div > input:hover {
+  border-color: var(--primary);
+}
+.document-editor .bn-block-content[data-content-type='checkListItem'] > div > input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.document-editor .bn-block-content[data-content-type='checkListItem'] > div > input:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+.document-editor
+  .bn-block-content[data-content-type='checkListItem'][data-checked='true']
+  .bn-inline-content {
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.document-editor .bn-priority {
+  display: none;
+}
+.document-editor .bn-note-break {
+  display: block;
+}
+.document-editor .bn-note-break ~ :not([data-inline-content-type='item']) {
+  color: var(--muted-foreground);
+  font-size: 0.9em;
+  font-style: normal;
+}
+
 /* A list's filters (app/app/lists/[id]): only its lines that stand so, under their headings.
  * Where a line stands comes from its marker's chips (components/list-items.tsx). */
 .list-filter-open

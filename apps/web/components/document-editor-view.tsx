@@ -14,6 +14,7 @@ import {
   type DocumentBlockEditor,
 } from '@/components/document-blocks'
 import type { DocumentEditorProps } from '@/components/document-editor'
+import { checklistLookExtension } from '@/components/document-checklist'
 import { agentTyping, typeNextUpdate, type Writer } from '@/components/document-typing'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -121,7 +122,7 @@ function LiveEditor({
     withCollaboration({
       schema: editorSchema,
       ...editorFiles(documentId, self),
-      extensions: [agentTyping(setTyping)],
+      extensions: [agentTyping(setTyping), checklistLookExtension()],
       collaboration: {
         provider,
         fragment: doc.getXmlFragment(DOCUMENT_FRAGMENT),
@@ -280,6 +281,7 @@ function SavedDocument({
   const editor = useCreateBlockNote({
     schema: editorSchema,
     ...editorFiles(session.documentId, self),
+    extensions: [checklistLookExtension()],
   })
   self.current = editor
   const [saved, setSaved] = useState(session.text)
