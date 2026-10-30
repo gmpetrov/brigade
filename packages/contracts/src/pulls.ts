@@ -147,3 +147,35 @@ export type PullRequestDetail = PullRequestSummary & {
   /** Reviews people left on GitHub. */
   githubReviews: { author: string | null; state: string; body: string; at: string | null }[]
 }
+
+/** What a merge asks a pull request's author when it conflicts (src/pull-requests.ts in the API). */
+export function resolveConflictsMessage(r: {
+  number: number
+  title: string
+  repository: string
+  url: string
+  base: string
+  head: string
+  author: string
+  method: MergeMethod
+}) {
+  return [
+    `Pull request #${r.number} "${r.title}" in ${r.repository} conflicts with \`${r.base}\`, ` +
+      `and a person asked to merge it once that is resolved: ${r.url}`,
+    '',
+    `${r.author}, fetch \`${r.base}\` and merge it into \`${r.head}\`. Resolve each conflict so ` +
+      `both sides' changes still work, run the typecheck and tests, then commit and push to ` +
+      `\`${r.head}\`. Do not rebase or force-push. When you are done, Brigade merges it ` +
+      `(${r.method === 'rebase' ? 'rebase, or squashed when GitHub cannot rebase it' : r.method}) once GitHub allows it. If a conflict needs a person to decide, say so in your ` +
+      'reply and do not push. Do not mention other teammates in your reply.',
+  ].join('\n')
+}
+
+const RESOLVE_MESSAGE =
+  /^Pull request #(\d+) "(.*)" in (\S+) conflicts with `([^`\n]+)`, and a person asked to merge it once that is resolved: \S+\n\n\S[^\n]*, fetch `/
+
+/** A resolveConflictsMessage read back, for the dashboard's note; null for any other text. */
+export function resolveConflictsNote(text: string) {
+  const m = RESOLVE_MESSAGE.exec(text)
+  return m ? { number: Number(m[1]), title: m[2]!, repository: m[3]!, base: m[4]! } : null
+}

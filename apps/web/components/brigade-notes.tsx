@@ -8,6 +8,7 @@ import {
   fromTaskBrief,
   fromTaskComment,
   mentionsToText,
+  resolveConflictsNote,
   scheduledRunNote,
   triggerEvent,
   wakeupNote,
@@ -16,6 +17,7 @@ import {
   AlarmClock,
   CalendarClock,
   ChevronRight,
+  GitMerge,
   Info,
   ListTodo,
   MessageSquare,
@@ -71,6 +73,13 @@ export function brigadeNote(text: string, fromBrigade: boolean): BrigadeNote | n
       icon: ListTodo,
       label: `${brief.from} started this task from “${brief.threadTitle}”`,
       body: brief.text,
+    }
+  const resolve = resolveConflictsNote(text)
+  if (resolve)
+    return {
+      icon: GitMerge,
+      label: `Resolve the conflicts of #${resolve.number} with ${resolve.base}, then merge`,
+      body: text,
     }
   const event = triggerEvent(text)
   if (event)

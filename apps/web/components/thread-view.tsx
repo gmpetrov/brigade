@@ -18,6 +18,7 @@ import {
   OFFER_CHOICES_TOOL,
   PREVIEW_REPLACED,
   PROPOSE_TEAM_TOOL,
+  resolveConflictsNote,
   SHOW_WIDGET_TOOL,
   splitPreviewElements,
   STORED_FILE,
@@ -345,6 +346,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           // Not steered into a turn: one still open never ended.
           if (!e.steered) turnStartedAt = undefined
           else if (idle) idle = 'steered'
+          // Brigade wrote it, even when sent in the name of the person who asked (resolving a
+          // pull request's conflicts did, before it was sent as Brigade's).
+          const fromBrigade = e.memberId === null || resolveConflictsNote(e.text) !== null
           const handback = e.memberId !== null ? handbackNote(e.text) : null
           const handedOver = e.memberId !== null ? handedEmail(e.text) : null
           // Its card takes the place of the hand back's line, and of what that line held.
@@ -360,7 +364,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             ...(e.steered && turnTeammate ? { steeredTo: turnTeammate } : {}),
             ...(e.memberId === null && childNote(e.text) ? { brigade: childNote(e.text)! } : {}),
             ...(e.memberId === null ? receivedEmail(e.text) : {}),
-            ...userNote(e.text, e.memberId === null),
+            ...userNote(e.text, fromBrigade),
             ...(handback ? { handback: { ...handback, commands: handed?.commands ?? [] } } : {}),
             ...(handedOver ? { handed: handedOver } : {}),
           })
