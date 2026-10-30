@@ -390,6 +390,8 @@ function DesignCanvasInner({
     }
     const onGesture = (e: Event) => {
       e.preventDefault()
+      // Fingers on a screen: the touch handler below pinches, with the pointers.
+      if (touching.current) return
       const g = e as Event & { scale: number; clientX: number; clientY: number }
       const r = element.getBoundingClientRect()
       zoomAt(g.clientX - r.left, g.clientY - r.top, g.scale / last)
@@ -404,6 +406,101 @@ function DesignCanvasInner({
       element.removeEventListener('gesturechange', onGesture)
     }
   }, [wheel, zoomAt])
+
+  // Fingers, on a board or not: one drags the view, two pinch it. A finger that barely moves is
+  // a tap, left to the board (it selects); once it moves, the view takes it and the tap is off.
+  const touching = useRef(false)
+  useEffect(() => {
+    const element = box.current
+    if (!element) return
+    const points = new Map<number, { x: number; y: number }>()
+    let base: { view: typeof view; mid: { x: number; y: number }; dist: number } | null = null
+    let moved = false
+    const local = (e: PointerEvent) => {
+      const r = element.getBoundingClientRect()
+      return { x: e.clientX - r.left, y: e.clientY - r.top }
+    }
+    const measure = () => {
+      const [a, b] = [...points.values()]
+      if (!a) return null
+      if (!b) return { mid: a, dist: 0 }
+      return {
+        mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+        dist: Math.hypot(a.x - b.x, a.y - b.y),
+      }
+    }
+    // From the fingers as they are now: what follows moves the view from here.
+    const rebase = () => {
+      const m = measure()
+      base = m && { view: viewRef.current, ...m }
+    }
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
+      // A page in Play takes its own touches; a frame's events never reach here anyway.
+      points.set(e.pointerId, local(e))
+      touching.current = true
+      if (points.size === 1) moved = false
+      if (points.size > 1) {
+        moved = true
+        for (const id of points.keys()) element.setPointerCapture?.(id)
+      }
+      rebase()
+    }
+    const move = (e: PointerEvent) => {
+      if (!points.has(e.pointerId) || !base) return
+      points.set(e.pointerId, local(e))
+      const m = measure()
+      if (!m) return
+      if (!moved) {
+        if (Math.hypot(m.mid.x - base.mid.x, m.mid.y - base.mid.y) < 8) return
+        moved = true
+        element.setPointerCapture?.(e.pointerId)
+      }
+      e.preventDefault()
+      fitted.current = true
+      const v = base.view
+      const zoom =
+        base.dist > 0 && m.dist > 0
+          ? clamp((v.zoom * m.dist) / base.dist, ZOOM_MIN, ZOOM_MAX)
+          : v.zoom
+      // The point of the world under the fingers stays under them.
+      const k = zoom / v.zoom
+      setView({
+        zoom,
+        x: m.mid.x - (base.mid.x - v.x) * k,
+        y: m.mid.y - (base.mid.y - v.y) * k,
+      })
+    }
+    const up = (e: PointerEvent) => {
+      if (!points.delete(e.pointerId)) return
+      if (points.size === 0) {
+        touching.current = false
+        base = null
+        // A tap on the canvas itself clears the selection, as a click does.
+        const own = e.target === element || (e.target as HTMLElement).dataset?.world !== undefined
+        if (!moved && own && selectionRef.current.length) onSelectRef.current([])
+      } else rebase()
+    }
+    // After a drag, the click the lifted finger makes is not a tap.
+    const click = (e: MouseEvent) => {
+      if (!moved || touching.current) return
+      moved = false
+      e.stopPropagation()
+      e.preventDefault()
+    }
+    element.addEventListener('pointerdown', down, true)
+    element.addEventListener('pointermove', move, { capture: true, passive: false })
+    element.addEventListener('pointerup', up, true)
+    element.addEventListener('pointercancel', up, true)
+    element.addEventListener('click', click, true)
+    return () => {
+      element.removeEventListener('pointerdown', down, true)
+      element.removeEventListener('pointermove', move, true)
+      element.removeEventListener('pointerup', up, true)
+      element.removeEventListener('pointercancel', up, true)
+      element.removeEventListener('click', click, true)
+    }
+  }, [])
 
   // Space + drag pans, wherever the pointer is.
   useEffect(() => {
@@ -881,6 +978,8 @@ function DesignCanvasInner({
       aria-label="Design canvas"
       onKeyDown={onKey}
       onPointerDown={(e) => {
+        // Fingers: the touch handler, whatever they are on.
+        if (e.pointerType === 'touch') return
         // Drag on the canvas itself, or with the middle button anywhere: pan.
         const own =
           e.target === e.currentTarget || (e.target as HTMLElement).dataset.world !== undefined
