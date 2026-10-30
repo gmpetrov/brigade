@@ -41,7 +41,15 @@ import {
   Upload,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { timeAgo } from '@/components/dashboard'
 import { DesignPanel } from '@/components/design-view'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
@@ -86,6 +94,7 @@ import {
   type Teammate,
 } from '@/lib/api'
 import { API_URL } from '@/lib/config'
+import { folderSuggestions, splitTyped } from '@/lib/library-path'
 import { cn } from '@/lib/utils'
 
 export const contentUrl = (id: string, download = false) =>
@@ -195,6 +204,14 @@ export function LibraryBrowser({
     [tree],
   )
   const rules = useMemo(() => (tree ? rulesOf(tree.folders) : []), [tree])
+  /** The folders a new file or folder can go in: not a design's own, nor its options'. */
+  const places = useMemo(
+    () =>
+      [...folders.keys()].filter(
+        (p) => !designFolderOf(p) && !p.split('/').some((s) => s.endsWith(DESIGN_OPTIONS_SUFFIX)),
+      ),
+    [folders],
+  )
   const subfolders = [...folders.values()]
     .filter((f) => parentOf(f.path) === folder)
     .sort((a, b) => a.path.localeCompare(b.path))
@@ -613,6 +630,7 @@ export function LibraryBrowser({
         <NewItem
           kind={creating}
           folder={folder}
+          folders={places}
           onCancel={() => setCreating(null)}
           onCreated={async (made) => {
             setCreating(null)
@@ -849,15 +867,22 @@ function Rename({
   )
 }
 
-/** A new folder, or a new file named here and written in the editor (Markdown without an extension). */
+/**
+ * A new folder, or a new file named here and written in the editor (Markdown without an extension).
+ * Its place is typed with the name: each folder gone into shows as a chip, the
+ * folders matching what is typed are offered below, and it starts in the folder shown.
+ */
 function NewItem({
   kind,
   folder,
+  folders,
   onCancel,
   onCreated,
 }: {
   kind: 'file' | 'folder'
   folder: string
+  /** Every folder a new item can go in. */
+  folders: string[]
   onCancel: () => void
   onCreated: (
     made: { kind: 'folder'; path: string } | { kind: 'file'; file: LibraryFile },
@@ -865,21 +890,68 @@ function NewItem({
 }) {
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  const [segments, setSegments] = useState(() => (folder ? folder.split('/') : []))
+  const [text, setText] = useState('')
+  /** Folders are offered once the member types or goes into one, until Esc or leaving the field. */
+  const [offering, setOffering] = useState(false)
+  const [active, setActive] = useState(0)
+  /** Moved to a folder with the arrows: Enter goes into it rather than creating. */
+  const [picked, setPicked] = useState(false)
+  const input = useRef<HTMLInputElement>(null)
 
-  async function create(form: FormData) {
+  const base = segments.join('/')
+  const offered = offering ? folderSuggestions(folders, base, text) : []
+  // The folder it starts in exists, even when it is not offered (a design's files).
+  const known = new Set([
+    ...folders,
+    ...(folder ? folder.split('/') : []).map((_, i, all) => all.slice(0, i + 1).join('/')),
+  ])
+  const isNew = (i: number) => !known.has(segments.slice(0, i + 1).join('/'))
+  const name = text.trim()
+  const named = kind === 'file' && name && !/\.[a-z0-9]+$/i.test(name) ? `${name}.md` : name
+  const made = segments.filter((_, i) => isNew(i))
+
+  function show(next: string[], typed: string) {
+    setSegments(next)
+    setText(typed)
+    setOffering(true)
+    setActive(0)
+    setPicked(false)
+    input.current?.focus()
+  }
+
+  function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && offered.length) {
+      e.preventDefault()
+      const step = e.key === 'ArrowDown' ? 1 : -1
+      setActive((active + step + offered.length) % offered.length)
+      setPicked(true)
+    } else if (
+      offered.length &&
+      ((e.key === 'Tab' && !e.shiftKey && text) || (e.key === 'Enter' && picked))
+    ) {
+      e.preventDefault()
+      show([...segments, offered[active]!], '')
+    } else if (e.key === 'Backspace' && segments.length && e.currentTarget.selectionEnd === 0) {
+      e.preventDefault()
+      show(segments.slice(0, -1), text)
+    } else if (e.key === 'Escape' && offered.length) {
+      e.preventDefault()
+      setOffering(false)
+    }
+  }
+
+  async function create() {
     setBusy(true)
     setError(undefined)
-    const name = String(form.get('name') ?? '')
-      .trim()
-      .replace(/^\/+|\/+$/g, '')
     try {
       if (kind === 'folder') {
-        const path = join(folder, name)
+        const path = join(base, name)
         await api('/library/folders', { body: { path } })
         await onCreated({ kind: 'folder', path })
       } else {
         const file = await api<LibraryFile>('/library/text', {
-          body: { path: join(folder, /\.[a-z0-9]+$/i.test(name) ? name : `${name}.md`), text: '' },
+          body: { path: join(base, named), text: '' },
         })
         await onCreated({ kind: 'file', file })
       }
@@ -892,25 +964,101 @@ function NewItem({
   return (
     <form action={create} className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="new-name">
-          {kind === 'folder' ? 'Folder name' : 'File name'}
-          {folder && <span className="font-normal text-muted-foreground"> in {folder}/</span>}
-        </Label>
-        <Input
-          id="new-name"
-          name="name"
-          required
-          autoFocus
-          placeholder={kind === 'folder' ? 'policies' : 'refunds.md'}
-          className="font-mono text-sm"
-        />
+        <Label htmlFor="new-name">{kind === 'folder' ? 'Folder name' : 'File name'}</Label>
+        <div
+          className="flex min-h-9 w-full flex-wrap items-center gap-1 rounded-md border border-input px-3 py-1 font-mono text-sm shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30"
+          onClick={() => input.current?.focus()}
+        >
+          {segments.map((s, i) => (
+            <span key={i} className="flex items-center gap-1">
+              <button
+                type="button"
+                title={isNew(i) ? 'New folder: go back to it' : 'Go back to this folder'}
+                onClick={() => show(segments.slice(0, i + 1), '')}
+                className={cn(
+                  'rounded-md bg-muted px-2 py-0.5 font-sans hover:bg-accent',
+                  isNew(i) && 'border border-dashed border-muted-foreground/50 bg-transparent',
+                )}
+              >
+                {s}
+              </button>
+              <span className="text-muted-foreground">/</span>
+            </span>
+          ))}
+          <input
+            ref={input}
+            id="new-name"
+            required
+            autoFocus
+            autoComplete="off"
+            role="combobox"
+            aria-expanded={offered.length > 0}
+            aria-controls="new-name-folders"
+            aria-activedescendant={offered.length ? `new-name-folder-${active}` : undefined}
+            value={text}
+            onChange={(e) => {
+              const next = splitTyped(folders, segments, e.target.value)
+              show(next.segments, next.text)
+            }}
+            onKeyDown={onKeyDown}
+            onBlur={() => setOffering(false)}
+            placeholder={kind === 'folder' ? 'policies' : 'refunds.md'}
+            className="h-7 min-w-24 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+          />
+        </div>
+        {offered.length > 0 && (
+          <ul
+            id="new-name-folders"
+            role="listbox"
+            aria-label="Folders"
+            className="flex flex-col rounded-md border bg-background p-1 text-sm"
+          >
+            {offered.map((f, i) => (
+              <li
+                key={f}
+                id={`new-name-folder-${i}`}
+                role="option"
+                aria-selected={i === active}
+                // Keep the field focused: leaving it would close the list before the click.
+                onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => setActive(i)}
+                onClick={() => show([...segments, f], '')}
+                className={cn(
+                  'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5',
+                  i === active && 'bg-accent text-accent-foreground',
+                )}
+              >
+                <Folder className="size-4 text-muted-foreground" aria-hidden />
+                <span className="flex-1 truncate">{f}</span>
+                {i === active && (
+                  <kbd className="rounded border px-1 font-mono text-xs text-muted-foreground">
+                    {picked ? 'Enter' : 'Tab'}
+                  </kbd>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-xs text-muted-foreground">
+          {name ? (
+            <>
+              Creates <span className="font-mono text-foreground">{join(base, named)}</span>
+              {made.length > 0 &&
+                ` and the new folder${made.length === 1 ? '' : 's'} ${made.join(', ')}`}
+            </>
+          ) : (
+            'Type a folder name to go into it, or / after a new one. ⌫ goes back up.'
+          )}
+        </p>
       </div>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button disabled={busy}>{kind === 'folder' ? 'Create folder' : 'Create and open'}</Button>
+        <Button disabled={busy || !name}>
+          {kind === 'folder' ? 'Create folder' : 'Create and open'}
+        </Button>
       </div>
     </form>
   )
