@@ -33,7 +33,7 @@ const SUBPROCESSORS = [
   },
   {
     name: 'PostHog, Inc.',
-    does: 'Product analytics: visits to the website and feature usage, without content',
+    does: 'Product analytics: visits to the website and feature usage, without content; error reports',
     where: 'EU (Frankfurt)',
   },
   {

@@ -22,6 +22,12 @@ const failures: Failure[] = []
 /** Where failures go from code that does not run the checks itself: a hub object's. */
 const sinks = new AsyncLocalStorage<(failure: Failure) => void>()
 
+/** Who hears of a failure that carries an error, with its stack: error tracking (src/error-tracking.ts). */
+const errorListeners: ((kind: string, error: Error, workspaceId?: string) => void)[] = []
+
+export const onFailureError = (hear: (kind: string, error: Error, workspaceId?: string) => void) =>
+  void errorListeners.push(hear)
+
 /** Run `fn` with its failures sent to `sink` rather than counted here. */
 export const withFailureSink = <T>(sink: (failure: Failure) => void, fn: () => T): T =>
   sinks.run(sink, fn)
@@ -31,6 +37,13 @@ export function noteFailure(
   error: unknown,
   extra: { workspaceId?: string; at?: number } = {},
 ) {
+  if (error instanceof Error)
+    for (const hear of errorListeners)
+      try {
+        hear(kind, error, extra.workspaceId)
+      } catch {
+        // Hearing of a failure never fails the code that had it.
+      }
   const at = extra.at ?? Date.now()
   const message = (error instanceof Error ? error.message : String(error))
     .replace(/\s+/g, ' ')

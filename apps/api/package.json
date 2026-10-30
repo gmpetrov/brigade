@@ -24,6 +24,7 @@
     "@brigade/editor": "workspace:^",
     "@brigade/providers": "workspace:*",
     "@hono/node-server": "2.1.5",
+    "@posthog/core": "1.61.2",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "aws4fetch": "1.0.20",

@@ -11,7 +11,7 @@ import { designFiles, sandboxHostOnlyDesigns } from './designs.js'
 import { desktopProxy } from './desktop-proxy.js'
 import { hubIsElsewhere, moveHub, upgradeWebSocket } from './platform/node.js'
 import { HUB_HEADER, MISDIRECTED, WORKSPACE_HEADER } from './hub/route.js'
-import { authenticateRunner, browserSocket, runnerSocket } from './hub.js'
+import { authenticateRunner, browserSocket, HubOpError, runnerSocket } from './hub.js'
 import { accounts } from './routes/accounts.js'
 import { documentAssets } from './routes/assets.js'
 import { attachments } from './routes/attachments.js'
@@ -22,6 +22,7 @@ import { collab } from './routes/collab.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
 import { email } from './routes/email.js'
+import { errors } from './routes/errors.js'
 import { inbox } from './routes/inbox.js'
 import { credentials } from './routes/credentials.js'
 import { designs, designSystems } from './routes/designs.js'
@@ -61,6 +62,7 @@ import { workspaces } from './routes/workspaces.js'
 import { mcpClientDocument } from './connectors/mcp.js'
 import { resolveScope, signInFirst } from './scope.js'
 import { serverTiming } from './timing.js'
+import { captureError } from './error-tracking.js'
 import { noteFailure } from './ops/failures.js'
 import { openAlerts } from './ops/alerts.js'
 import { safeEqual } from './ops/send.js'
@@ -150,6 +152,7 @@ app.get('/api/mcp/client.json', (c) => c.json(mcpClientDocument()))
 app.use('/api/connections/oauth/*', signInFirst)
 // The bucket's stand-in for uploads without R2 (development): signed paths, no session.
 app.route('/api/bucket', localBucket)
+app.route('/api/errors', errors)
 app.route('/api', workspaces)
 app.route('/api/teammates', teammates)
 app.route('/api/computers', computers)
@@ -277,6 +280,9 @@ app.get(
 app.onError((error, c) => {
   if (error instanceof HTTPException) return c.json({ error: error.message }, error.status)
   console.error(`${c.req.method} ${c.req.path} failed:`, error)
+  // A hub's operation that failed in another object was sent there, with its own stack.
+  if (!(error instanceof HubOpError))
+    captureError(error, { kind: `api:${c.req.method} ${c.req.routePath}` })
   noteFailure(
     'api',
     `${c.req.method} ${c.req.routePath}: ${error instanceof Error ? error.message : String(error)}`,
