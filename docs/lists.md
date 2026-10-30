@@ -18,7 +18,11 @@ mission; threads stay where the work happens.
   nobody handed over has no marker. A line copied with its marker is a new line: the first one
   keeps the id, and the copy gets one of its own when it is handed over. An id is never taken
   over from another list or workspace: a line whose editor marker names one gets a new id. The editor and the API keep markers through every
-  conversion (`packages/editor/src/markdown.ts`).
+  conversion (`packages/editor/src/markdown.ts`). A line whose text goes on below its box (a
+  line break typed in it, saved as `\` at the end of the row) is one line with all its rows
+  (`ListLine.end`), and its marker counts on any of them: a line break typed before the chips
+  moves the marker to the next row. Its rows end at a blank row or a block of its own (a list
+  line, a heading, a quote, a thematic break, HTML other than a row holding only its marker).
 - **`ListItem` keeps what the file cannot**, by that id: the threads on the line
   (`ListItemThread`), the pull requests on it (`ListItemPull`, `closes` or not), who ticked it
   from Brigade (`doneBy*`) and its text when last seen. A line or marker removed from the file
@@ -26,7 +30,10 @@ mission; threads stay where the work happens.
   it. Brigade never guesses which line it became.
 - **A line is not a thread.** A thread can carry several lines and a line several threads.
   Handing lines over starts one thread for them all, or one each; lines can also be added to
-  a thread that runs already (its teammate is told at its next turn, `thread.note`).
+  a thread that runs already, which the person then hands them over in as a message of theirs
+  (`handOffMessage`), so its teammate starts on them at once. A note telling it at its next turn
+  (`thread.note`) only stands in when that message can't go (the thread waits on a decision or a
+  daily cap, its computer is off), with the person's note in it (`apps/web/lib/hand-off.ts`).
 - **One change of a list's file at a time.** Every save of a Markdown library file takes the
   file's lock (`withLibraryLock`), and Brigade reads, changes and writes a list under it, so no
   save lands in between and is lost. The lock is a lease row (`LibraryLock`, 30 s): waiting for it
@@ -44,7 +51,8 @@ mission; threads stay where the work happens.
   first.
 - **Ticks are changes to the file, made by code.** Ticking marks the line's box (`[x]`) and may
   add a short note after its text (`*PR #491, 29 Oct*`), a save of its own credited to who did
-  it. Brigade writes the file only to mark, tick or add a line; the collab server applies the
+  it. A note holding a link goes without italics (`— Live at www.example.com`): the editor
+  saves italics around a link back broken, with more asterisks each time. Brigade writes the file only to mark, tick or add a line; the collab server applies the
   change to the lines it touches, so people's live edits elsewhere stay.
 - **A merged pull request ticks only what it closes.** A teammate names the items a pull request
   works on when it opens it (`github_create_pull_request`'s `items`): `closes` for those it
