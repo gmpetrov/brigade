@@ -1,7 +1,8 @@
 'use client'
 // Child threads, shown in their parent: they are out of the sidebar. A line each
-// where a teammate started one, the runs of a schedule that reports here, the
-// asks of a child waiting on a person, and in a child, the way back to its parent.
+// where a teammate started one, the runs of a schedule that reports here, those at
+// work and the asks of a child waiting on a person at the end of the conversation,
+// and in a child, the way back to its parent.
 import {
   childNote,
   type NoteThread,
@@ -341,6 +342,39 @@ export function StartedChild({
         working
       </span>
     </Link>
+  )
+}
+
+const working = (c: ThreadChild) =>
+  (c.status === 'starting' || c.status === 'running') && !c.tickets.length
+
+/**
+ * The children at work, at the end of the conversation: a review run again, a child told
+ * one more thing, a schedule's run. Each line goes once it stops, and its report follows.
+ */
+export function ChildrenWorking({ children }: { children: ThreadChild[] }) {
+  const busy = children.filter(working)
+  if (!busy.length) return null
+  return (
+    <div className="mt-4 -mx-2 flex flex-col">
+      {busy.map((child) => (
+        <Link
+          key={child.id}
+          href={`/app/threads/${child.id}`}
+          className="flex min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent"
+        >
+          <span className="flex size-4 shrink-0 items-center justify-center">
+            <span aria-hidden className="size-2 animate-pulse rounded-full bg-primary" />
+          </span>
+          <span className="shrink-0 text-muted-foreground">{child.teammate.name}</span>
+          <span className="min-w-0 flex-1 truncate font-medium">{child.title}</span>
+          <span className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs leading-none font-medium text-primary">
+            working
+          </span>
+          <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
+      ))}
+    </div>
   )
 }
 
