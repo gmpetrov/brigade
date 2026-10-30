@@ -649,12 +649,21 @@ export async function setItemDone(
   actor: Actor,
   itemId: string,
   done: boolean,
-  options: { note?: string; sessionId?: string } = {},
+  options: {
+    note?: string
+    sessionId?: string
+    /**
+     * Ticks it only if this holds of the list as it is under the file's lock, read again there:
+     * else nothing changes, and it comes back not done.
+     */
+    when?: (list: ParsedList) => boolean
+  } = {},
 ) {
   const item = await db.listItem.findFirst({ where: { id: itemId } })
   if (!item) throw new HTTPException(404, { message: 'Item not found' })
   let text = item.text
   let changed = false
+  let refused = false
   await editList(
     db,
     scope,
@@ -669,10 +678,15 @@ export async function setItemDone(
         })
       text = line.text
       if (line.done === done) return current
+      if (done && options.when && !options.when(list)) {
+        refused = true
+        return current
+      }
       changed = true
       return setLineDone(current, line, done, done ? options.note : undefined)
     },
   )
+  if (refused) return { id: itemId, done: false, text: plainItemText(text), changed }
   await db.listItem.updateMany({
     where: { id: itemId },
     data: done
@@ -774,9 +788,11 @@ async function addRemainder(
 
 /**
  * An item's remaining lines, looked at: once all are ticked the item is ticked too, by Brigade,
- * unless a pull request on it is still open or it is ticked already; then each ticked or gone
- * from the file is settled (after the tick: a tick that failed leaves them to the sweep). A line
- * gone from the file never counts as done: the item then waits for a person.
+ * unless work on it is still on its way (a pull request open, or one merged whose remaining line
+ * is not added yet), checked again under the file's lock. Its remaining lines are settled, no
+ * longer looked at, once the item is done (or gone), or for good when one of them was removed
+ * from the file: a line gone never counts as done, and the item then waits for a person. Until
+ * then they are looked at again, so that a pull request closed later lets the item be ticked.
  */
 export async function settleRemainders(db: ScopedDb, scope: Scope, itemId: string) {
   const remainders = await db.listItem.findMany({
@@ -797,21 +813,31 @@ export async function settleRemainders(db: ScopedDb, scope: Scope, itemId: strin
           data: { remainderSettledAt: new Date() },
         })
       : null
-  // Its own line gone: nothing to tick, for good.
-  if (!lines || !line) return void (await settle(remainders.map((r) => r.id)))
-  if (
-    !line.done &&
-    remainders.every((r) => lines.get(r.id)?.done) &&
-    !(await db.listItemPull.count({ where: { itemId, pullRequest: { state: 'open' } } }))
-  )
-    await setItemDone(db, scope, BRIGADE, itemId, true, {
-      note: `what remained is done, ${shortDate(new Date())}`,
-    })
-  await settle(
-    remainders
-      .filter((r) => !r.remainderSettledAt && (lines.get(r.id)?.done ?? true))
-      .map((r) => r.id),
-  )
+  const all = () => settle(remainders.map((r) => r.id))
+  // Its own line gone, ticked already, or one of its remaining lines removed: for good.
+  if (!lines || !line || line.done || remainders.some((r) => !lines.get(r.id)))
+    return void (await all())
+  if (!remainders.every((r) => lines.get(r.id)!.done)) return
+  const coming = await db.listItemPull.count({
+    where: {
+      itemId,
+      OR: [
+        { pullRequest: { state: 'open' } },
+        { remains: { not: null }, settledAt: null, pullRequest: { state: 'merged' } },
+      ],
+    },
+  })
+  if (coming) return
+  const ids = new Set(remainders.map((r) => r.id))
+  const ticked = await setItemDone(db, scope, BRIGADE, itemId, true, {
+    note: `what remained is done, ${shortDate(new Date())}`,
+    // A remaining line unticked meanwhile keeps it open.
+    when: (list) => {
+      const mine = list.lines.filter((l) => l.id && ids.has(l.id))
+      return mine.length === ids.size && mine.every((l) => l.done)
+    },
+  })
+  if (ticked.done) await all()
 }
 
 /**

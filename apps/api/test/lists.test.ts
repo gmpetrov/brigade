@@ -967,6 +967,8 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
 //   merge is dealt with again, and the item is ticked once its remaining lines are;
 // - a person ticking a remaining line in the file ticks its item;
 // - a remaining line removed from the file, or a pull request still open on the item, keeps it open;
+// - an item waits for work on its way (a pull request open, or merged with its remaining line not
+//   added yet), and is ticked once it closes; a remaining line unticked meanwhile keeps it open;
 // - an item's tick that failed once its remaining lines are done is tried again;
 // - a teammate adds what remains of an item with add_item, and ticks a line only saying what shows
 //   it is done;
@@ -1228,6 +1230,92 @@ describe('lists, what remains', { skip: !database && 'no database answers' }, ()
     assert.match((await read(file.id)).split('\n')[0]!, /^\* \[x\] Launch email \*what remained/)
     assert.ok(
       (await db.listItem.findFirst({ where: { id: 'copyitem12345678' } }))?.remainderSettledAt,
+    )
+  })
+
+  test('an item waits for a pull request still open on it, and is ticked once it closes', async () => {
+    await listOf('Remains/closed.md', [['revclosed1234567', 'Launch service']])
+    const added = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
+      name: 'add_item',
+      path: 'Remains/closed.md',
+      text: 'Run acceptance check',
+      remainsOf: 'revclosed1234567',
+    })) as { added: { id: string } }
+    const pull = await pullRequest('open')
+    await lists.linkPullItems(db, pull.id, sessionId, teammate.id, {
+      partOf: [{ item: 'revclosed1234567', remains: 'Optional enhancement check' }],
+    })
+    await lists.setItemDone(db, scope, member(), added.added.id, true)
+    assert.equal((await db.listItem.findFirst({ where: { id: 'revclosed1234567' } }))?.doneAt, null)
+    // Closed without merging: nothing more is coming.
+    await db.pullRequest.updateMany({ where: { id: pull.id }, data: { state: 'closed' } })
+    await lists.sweepListMerges()
+    assert.ok((await db.listItem.findFirst({ where: { id: 'revclosed1234567' } }))?.doneAt)
+  })
+
+  test('a merged pull request whose remaining line is not added yet keeps the item open', async () => {
+    const file = await listOf('Remains/pending.md', [['revpending123456', 'Launch billing']])
+    const added = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
+      name: 'add_item',
+      path: 'Remains/pending.md',
+      text: 'Test checkout',
+      remainsOf: 'revpending123456',
+    })) as { added: { id: string } }
+    const pull = await pullRequest('merged')
+    await lists.linkPullItems(db, pull.id, sessionId, teammate.id, {
+      partOf: [{ item: 'revpending123456', remains: 'Enable live webhook' }],
+    })
+    // Its merge not dealt with yet (the webhook on its way, or a retry): the other line ticked.
+    await lists.setItemDone(db, scope, member(), added.added.id, true)
+    assert.match((await read(file.id)).split('\n')[0]!, /^\* \[ \] Launch billing/)
+    await lists.settleItemsOnMerge(db, scope, pull)
+    assert.match(await read(file.id), /\* \[ \] Enable live webhook/)
+  })
+
+  test('a remaining line unticked while its item is being ticked keeps the item open', async () => {
+    const file = await save(
+      'Remains/race.md',
+      '* [ ] Launch docs <!-- item:revrace123456789 -->\n' +
+        '  * [x] Check links <!-- item:revchild12345678 -->\n',
+    )
+    await db.listItem.createMany({
+      data: [
+        { id: 'revrace123456789', documentId: file.id, text: 'Launch docs' },
+        {
+          id: 'revchild12345678',
+          documentId: file.id,
+          text: 'Check links',
+          remainderOfId: 'revrace123456789',
+        },
+      ],
+    } as never)
+    // Unticked by a person right after the item's remaining lines were read, before its tick.
+    let unticked = false
+    const meanwhile = new Proxy(db, {
+      get(target, key) {
+        if (key !== 'listItemPull') return Reflect.get(target, key)
+        return new Proxy(target.listItemPull, {
+          get(delegate, op) {
+            if (op !== 'count') return Reflect.get(delegate, op)
+            return async (args: Parameters<typeof delegate.count>[0]) => {
+              const count = await delegate.count(args)
+              if (!unticked) {
+                unticked = true
+                await lists.setItemDone(db, scope, member(), 'revchild12345678', false)
+              }
+              return count
+            }
+          },
+        })
+      },
+    }) as typeof db
+    await lists.settleRemainders(meanwhile, scope, 'revrace123456789')
+    assert.ok(unticked)
+    assert.match((await read(file.id)).split('\n')[0]!, /^\* \[ \] Launch docs/)
+    assert.equal(
+      (await db.listItem.findFirst({ where: { id: 'revchild12345678' } }))?.remainderSettledAt,
+      null,
+      'looked at again',
     )
   })
 

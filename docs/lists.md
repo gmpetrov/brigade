@@ -65,9 +65,12 @@ mission; threads stay where the work happens.
   request, a teammate adds it itself (`add_item` with `remainsOf`). Once all of an item's
   remaining lines are ticked, by anyone and anywhere (a teammate, the thread's card, the editor),
   Brigade ticks the item, credited to Brigade (`settleRemainders`): right away for a tick made
-  through Brigade or a save of the file, else by the 10-minute sweep. Not while a pull request on
-  the item is open, and never when a remaining line was removed from the file: that one waits for
-  a person.
+  through Brigade or a save of the file, else by the 10-minute sweep. Not while work on it is on
+  its way (a pull request open, or one merged whose remaining line is not added yet), and never
+  when a remaining line was removed from the file: that one waits for a person. The remaining
+  lines are read again under the file's lock before the tick, so one unticked meanwhile keeps
+  the item open; and they are looked at again until the item is done, so a pull request closed
+  later still lets it be ticked.
 - **Work without a pull request is ticked by the teammate** (`complete_item`), only with what
   shows it is done in its note (the tool refuses a tick without one). When done is a matter of
   judgment (a video, copy, a design), the teammate shows it and leaves the tick to the person,
