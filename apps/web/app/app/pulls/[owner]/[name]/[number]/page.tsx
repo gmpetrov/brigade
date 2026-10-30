@@ -215,7 +215,7 @@ export default function PullRequestPage() {
                   className="rounded-r-none"
                   disabled={busy || !mergeable}
                   onClick={merge}
-                  title={mergeable ? undefined : blockedBecause[p.mergeableState]}
+                  tooltip={mergeable ? undefined : blockedBecause[p.mergeableState]}
                 >
                   <GitMerge />
                   Merge
@@ -471,7 +471,7 @@ function Review({
           size="sm"
           disabled={busy}
           onClick={() => onReviewAgain(review.reviewer?.id)}
-          title={`${who} reviews its latest commits, in a new review`}
+          tooltip={`${who} reviews its latest commits, in a new review`}
         >
           Review again
         </Button>

@@ -33,6 +33,7 @@ import type { DocumentAsk } from '@/components/document-editor'
 import { libraryDocument, useOptionalDocumentPanel } from '@/components/document-panel'
 import { ItemChips, ListItemsProvider, pickLines } from '@/components/list-items'
 import { MentionChip, MentionIcon } from '@/components/mention'
+import { Hint } from '@/components/ui/tooltip'
 import { documentFileUrl, uploadDocumentAsset } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -52,15 +53,16 @@ function DocumentMention({ mention }: { mention: Mention }) {
       window.open(`https://github.com/${mention.id}`, '_blank', 'noopener')
   }
   return (
-    <span
-      role="link"
-      tabIndex={-1}
-      title={`Open ${mention.label}`}
-      onClick={open}
-      className="cursor-pointer rounded-md hover:bg-accent [&>*]:cursor-pointer"
-    >
-      <MentionChip mention={mention} />
-    </span>
+    <Hint label={`Open ${mention.label}`}>
+      <span
+        role="link"
+        tabIndex={-1}
+        onClick={open}
+        className="cursor-pointer rounded-md hover:bg-accent [&>*]:cursor-pointer"
+      >
+        <MentionChip mention={mention} />
+      </span>
+    </Hint>
   )
 }
 

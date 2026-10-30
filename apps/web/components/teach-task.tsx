@@ -321,7 +321,7 @@ export function TeachTask({
                 size="sm"
                 variant="outline"
                 onClick={pause}
-                title="Leave out what you do until you resume, such as signing in"
+                tooltip="Leave out what you do until you resume, such as signing in"
               >
                 <Pause aria-hidden />
                 Pause
@@ -332,7 +332,7 @@ export function TeachTask({
                 Resume
               </Button>
             )}
-            <Button size="sm" onClick={done} title={`Stop and send it to ${name}`}>
+            <Button size="sm" onClick={done} tooltip={`Stop and send it to ${name}`}>
               <Square aria-hidden className="fill-current" />
               Done
             </Button>

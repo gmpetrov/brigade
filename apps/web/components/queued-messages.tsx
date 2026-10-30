@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 /** A message sent from this tab that the thread has not shown yet. */
@@ -109,29 +110,30 @@ export function QueuedMessages({
           className="overflow-hidden rounded-xl border bg-card text-sm shadow-sm"
         >
           {!single && (
-            <button
-              type="button"
-              aria-expanded={open}
-              onClick={() => setOpen(!open)}
-              className="flex w-full items-center gap-2 px-5 py-2.5 text-left"
-              title={`${teammateName} reads them in order, after the current turn`}
-            >
-              <span className="shrink-0 font-medium">
-                {queued.length} message{queued.length === 1 ? '' : 's'} queued
-              </span>
-              {!open && (
-                <span className="min-w-0 truncate text-muted-foreground">
-                  Next: {preview(queued[0]!)}
+            <Hint label={`${teammateName} reads them in order, after the current turn`}>
+              <button
+                type="button"
+                aria-expanded={open}
+                onClick={() => setOpen(!open)}
+                className="flex w-full items-center gap-2 px-5 py-2.5 text-left"
+              >
+                <span className="shrink-0 font-medium">
+                  {queued.length} message{queued.length === 1 ? '' : 's'} queued
                 </span>
-              )}
-              <ChevronDown
-                aria-hidden
-                className={cn(
-                  'ml-auto size-4 shrink-0 text-muted-foreground transition-transform',
-                  open && 'rotate-180',
+                {!open && (
+                  <span className="min-w-0 truncate text-muted-foreground">
+                    Next: {preview(queued[0]!)}
+                  </span>
                 )}
-              />
-            </button>
+                <ChevronDown
+                  aria-hidden
+                  className={cn(
+                    'ml-auto size-4 shrink-0 text-muted-foreground transition-transform',
+                    open && 'rotate-180',
+                  )}
+                />
+              </button>
+            </Hint>
           )}
           {shown && (
             <ul className={cn('divide-y', single ? 'mx-4' : 'mx-5 border-t')}>
@@ -197,12 +199,11 @@ export function QueuedMessages({
                           <span className="line-clamp-2 wrap-anywhere whitespace-pre-wrap">
                             {/* Inline, so the chip stays on the first line of text */}
                             {single && (
-                              <span
-                                className="mr-2 inline-block rounded-md border px-1.5 align-[1px] text-xs leading-[18px] text-muted-foreground"
-                                title={`${teammateName} reads it after the current turn`}
-                              >
-                                Queued
-                              </span>
+                              <Hint label={`${teammateName} reads it after the current turn`}>
+                                <span className="mr-2 inline-block rounded-md border px-1.5 align-[1px] text-xs leading-[18px] text-muted-foreground">
+                                  Queued
+                                </span>
+                              </Hint>
                             )}
                             {preview(m)}
                           </span>
@@ -229,7 +230,7 @@ export function QueuedMessages({
                               className="h-7 text-muted-foreground"
                               disabled={busy === m.messageId}
                               onClick={() => void act(m.messageId, { action: 'steer' })}
-                              title={`Give it to ${teammateName} now, during this turn`}
+                              tooltip={`Give it to ${teammateName} now, during this turn`}
                             >
                               <CornerDownRight aria-hidden />
                               Steer
@@ -237,14 +238,15 @@ export function QueuedMessages({
                           )}
                           {(parallel || editable || removable) && (
                             <DropdownMenu>
-                              <DropdownMenuTrigger
-                                aria-label="More actions"
-                                title="More"
-                                disabled={busy === m.messageId}
-                                className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-[state=open]:bg-accent data-[state=open]:text-foreground [&>svg]:size-4"
-                              >
-                                <Ellipsis aria-hidden />
-                              </DropdownMenuTrigger>
+                              <Hint label="More">
+                                <DropdownMenuTrigger
+                                  aria-label="More actions"
+                                  disabled={busy === m.messageId}
+                                  className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-[state=open]:bg-accent data-[state=open]:text-foreground [&>svg]:size-4"
+                                >
+                                  <Ellipsis aria-hidden />
+                                </DropdownMenuTrigger>
+                              </Hint>
                               <DropdownMenuContent
                                 align="end"
                                 className="min-w-44"
@@ -252,13 +254,17 @@ export function QueuedMessages({
                                 onCloseAutoFocus={(e) => e.preventDefault()}
                               >
                                 {parallel && (
-                                  <DropdownMenuItem
-                                    onSelect={() => void act(m.messageId, { action: 'parallel' })}
-                                    title={`${teammateName} starts a child thread for it now and carries on with this turn`}
+                                  <Hint
+                                    side="left"
+                                    label={`${teammateName} starts a child thread for it now and carries on with this turn`}
                                   >
-                                    <Split aria-hidden />
-                                    Run in parallel
-                                  </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onSelect={() => void act(m.messageId, { action: 'parallel' })}
+                                    >
+                                      <Split aria-hidden />
+                                      Run in parallel
+                                    </DropdownMenuItem>
+                                  </Hint>
                                 )}
                                 {editable && (
                                   <DropdownMenuItem
@@ -274,14 +280,15 @@ export function QueuedMessages({
                                   </DropdownMenuItem>
                                 )}
                                 {removable && (
-                                  <DropdownMenuItem
-                                    variant="destructive"
-                                    onSelect={() => void act(m.messageId, { action: 'cancel' })}
-                                    title="It will not be sent"
-                                  >
-                                    <X aria-hidden />
-                                    Remove
-                                  </DropdownMenuItem>
+                                  <Hint side="left" label="It will not be sent">
+                                    <DropdownMenuItem
+                                      variant="destructive"
+                                      onSelect={() => void act(m.messageId, { action: 'cancel' })}
+                                    >
+                                      <X aria-hidden />
+                                      Remove
+                                    </DropdownMenuItem>
+                                  </Hint>
                                 )}
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -359,7 +366,7 @@ export function QueuedMessages({
                   size="icon-sm"
                   onClick={() => onDiscard(m.messageId)}
                   aria-label="Discard message"
-                  title="Discard"
+                  tooltip="Discard"
                 >
                   <X aria-hidden />
                 </Button>

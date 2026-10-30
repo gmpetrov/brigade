@@ -395,7 +395,7 @@ export function CodeFile({
           variant="ghost"
           size="icon-xs"
           aria-label="Find in the file"
-          title={`Find in the file (${MOD}F)`}
+          tooltip={`Find in the file (${MOD}F)`}
           onClick={() => editor.current?.search()}
         >
           <Search aria-hidden />
@@ -405,7 +405,7 @@ export function CodeFile({
             type="button"
             variant="ghost"
             size="xs"
-            title={
+            tooltip={
               status === 'A'
                 ? `Delete it: it is new ${comparedTo({ base }).since}`
                 : `Put it back ${comparedTo({ base }).as}`
@@ -425,7 +425,7 @@ export function CodeFile({
             size="xs"
             variant={edit.dirty ? 'default' : 'ghost'}
             disabled={!edit.dirty || edit.saving}
-            title={`Save it on the computer (${MOD}S)`}
+            tooltip={`Save it on the computer (${MOD}S)`}
             onClick={() => void edit.save()}
           >
             {edit.saving ? 'Saving…' : edit.saved ? 'Saved' : 'Save'}

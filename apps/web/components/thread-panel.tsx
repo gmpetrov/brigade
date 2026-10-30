@@ -50,6 +50,7 @@ import {
 import { TeammateTitle } from '@/components/teammate-title'
 import { ThreadChannel } from '@/components/thread-list'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import {
   api,
   preload,
@@ -594,7 +595,7 @@ export function ThreadPanel() {
                 className="size-8 shrink-0"
                 onClick={panel.back}
                 aria-label={teammate ? `Back to ${teammate.name}'s threads` : 'Back to threads'}
-                title={teammate ? `${teammate.name}'s threads` : 'Threads'}
+                tooltip={teammate ? `${teammate.name}'s threads` : 'Threads'}
               >
                 <ArrowLeft aria-hidden />
               </Button>
@@ -661,7 +662,7 @@ export function ThreadPanel() {
             className="size-8"
             onClick={panel.expand}
             aria-label="Expand"
-            title="Expand"
+            tooltip="Expand"
           >
             <Maximize2 aria-hidden />
           </Button>
@@ -672,7 +673,7 @@ export function ThreadPanel() {
             className="size-8"
             onClick={panel.close}
             aria-label="Close threads"
-            title="Close (Esc)"
+            tooltip="Close (Esc)"
           >
             <X aria-hidden />
           </Button>
@@ -768,45 +769,46 @@ function DetailsPill({
   const Label = heading ? 'h1' : 'span'
   const pill = useSlideAcross<HTMLButtonElement>()
   return (
-    <button
-      ref={pill}
-      type="button"
-      className="group pointer-events-auto flex h-11 max-w-full min-w-0 items-center gap-2.5 rounded-full bg-card/90 pr-4 pl-2.5 text-[0.9375rem] font-semibold shadow-sm backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-accent"
-      aria-pressed={shown}
-      title={shown ? 'Hide details' : `Details: ${details}`}
-      onClick={() => {
-        if (shown) return setDetails(false)
-        documents.close()
-        setDetails(true)
-      }}
-    >
-      {project && (
-        <span title={project.name} className="flex">
-          <ProjectIcon project={project} className="size-6 rounded-md text-xs" />
-          <span className="sr-only">{project.name}: </span>
-        </span>
-      )}
-      {teammate && <TeammateAvatar teammate={teammate} className="size-6 shrink-0" />}
-      {/* Capped, so a long title keeps it a pill: the whole of it on hover. */}
-      <Label className="max-w-72 min-w-0 truncate" title={label}>
-        {threadId ? <StreamedTitle threadId={threadId} text={label} /> : label}
-      </Label>
-      {machine && (
-        <span title={`Runs on ${machine}`} className="-ml-0.5 flex shrink-0">
-          <Laptop aria-hidden className="size-4 text-muted-foreground" />
-          <span className="sr-only">, runs on {machine}</span>
-        </span>
-      )}
-      {reconnecting && <Reconnecting />}
-      {/* The pill grows to show it on hover and while open; always there on touch screens,
-          which have no hover. */}
-      <span
-        aria-hidden
-        className="-ml-1 flex w-[1.125rem] shrink-0 overflow-hidden text-muted-foreground transition-[width,margin,opacity] duration-200 ease-out [@media(hover:hover)]:-ml-2.5 [@media(hover:hover)]:w-0 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:-ml-1 [@media(hover:hover)]:group-hover:w-[1.125rem] [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-visible:-ml-1 [@media(hover:hover)]:group-focus-visible:w-[1.125rem] [@media(hover:hover)]:group-focus-visible:opacity-100 [@media(hover:hover)]:group-aria-pressed:-ml-1 [@media(hover:hover)]:group-aria-pressed:w-[1.125rem] [@media(hover:hover)]:group-aria-pressed:opacity-100"
+    <Hint label={shown ? 'Hide details' : `Details: ${details}`}>
+      <button
+        ref={pill}
+        type="button"
+        className="group pointer-events-auto flex h-11 max-w-full min-w-0 items-center gap-2.5 rounded-full bg-card/90 pr-4 pl-2.5 text-[0.9375rem] font-semibold shadow-sm backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-accent"
+        aria-pressed={shown}
+        onClick={() => {
+          if (shown) return setDetails(false)
+          documents.close()
+          setDetails(true)
+        }}
       >
-        <ChevronRight className="size-[1.125rem] shrink-0" />
-      </span>
-    </button>
+        {project && (
+          <span title={project.name} className="flex">
+            <ProjectIcon project={project} className="size-6 rounded-md text-xs" />
+            <span className="sr-only">{project.name}: </span>
+          </span>
+        )}
+        {teammate && <TeammateAvatar teammate={teammate} className="size-6 shrink-0" />}
+        {/* Capped, so a long title keeps it a pill: the whole of it on hover. */}
+        <Label className="max-w-72 min-w-0 truncate" title={label}>
+          {threadId ? <StreamedTitle threadId={threadId} text={label} /> : label}
+        </Label>
+        {machine && (
+          <span title={`Runs on ${machine}`} className="-ml-0.5 flex shrink-0">
+            <Laptop aria-hidden className="size-4 text-muted-foreground" />
+            <span className="sr-only">, runs on {machine}</span>
+          </span>
+        )}
+        {reconnecting && <Reconnecting />}
+        {/* The pill grows to show it on hover and while open; always there on touch screens,
+          which have no hover. */}
+        <span
+          aria-hidden
+          className="-ml-1 flex w-[1.125rem] shrink-0 overflow-hidden text-muted-foreground transition-[width,margin,opacity] duration-200 ease-out [@media(hover:hover)]:-ml-2.5 [@media(hover:hover)]:w-0 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:-ml-1 [@media(hover:hover)]:group-hover:w-[1.125rem] [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-visible:-ml-1 [@media(hover:hover)]:group-focus-visible:w-[1.125rem] [@media(hover:hover)]:group-focus-visible:opacity-100 [@media(hover:hover)]:group-aria-pressed:-ml-1 [@media(hover:hover)]:group-aria-pressed:w-[1.125rem] [@media(hover:hover)]:group-aria-pressed:opacity-100"
+        >
+          <ChevronRight className="size-[1.125rem] shrink-0" />
+        </span>
+      </button>
+    </Hint>
   )
 }
 

@@ -41,6 +41,7 @@ import { relativeFile, type OpenFile } from '@/components/file-links'
 import { pullStatus, ReviewLink, reviewLine } from '@/components/pull-status'
 import { usePull } from '@/components/pull-card'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -396,14 +397,15 @@ export function ThreadOutputs({
     return (
       <li key={output.key}>
         {output.file ? (
-          <button
-            type="button"
-            className={`${row} hover:bg-secondary/60`}
-            title={output.file.path}
-            onClick={() => onOpen(output.file!)}
-          >
-            {body}
-          </button>
+          <Hint label={output.file.path}>
+            <button
+              type="button"
+              className={`${row} hover:bg-secondary/60`}
+              onClick={() => onOpen(output.file!)}
+            >
+              {body}
+            </button>
+          </Hint>
         ) : output.href ? (
           <Link href={output.href} className={`${row} hover:bg-secondary/60`}>
             {body}
@@ -464,19 +466,20 @@ function ChangedFilesRow({ data, error, onOpen }: ChangedFiles) {
         : 'Since the last commit'
   return (
     <li>
-      <button
-        type="button"
-        className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-secondary/60"
-        title="See the files changed and what changed in each, without a preview"
-        onClick={onOpen}
-      >
-        <FileDiff className="size-4 flex-none text-muted-foreground" aria-hidden />
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium">{label}</span>
-          {detail && <span className="truncate text-xs text-muted-foreground">{detail}</span>}
-        </span>
-        {count > 0 && <span aria-hidden className="size-1.5 flex-none rounded-full bg-primary" />}
-      </button>
+      <Hint label="See the files changed and what changed in each, without a preview">
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-secondary/60"
+          onClick={onOpen}
+        >
+          <FileDiff className="size-4 flex-none text-muted-foreground" aria-hidden />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm font-medium">{label}</span>
+            {detail && <span className="truncate text-xs text-muted-foreground">{detail}</span>}
+          </span>
+          {count > 0 && <span aria-hidden className="size-1.5 flex-none rounded-full bg-primary" />}
+        </button>
+      </Hint>
     </li>
   )
 }
@@ -565,7 +568,7 @@ function PullOutput({
               variant="ghost"
               className="relative z-10 flex-none text-muted-foreground"
               aria-label={`#${number}: more`}
-              title="More"
+              tooltip="More"
             >
               <EllipsisVertical />
             </Button>
@@ -593,7 +596,7 @@ function PullOutput({
           className={pill}
           disabled={busy}
           onClick={resolve}
-          title={`It conflicts with ${p.base}. ${p.tracking?.author?.name} resolves the conflicts, then it merges.`}
+          tooltip={`It conflicts with ${p.base}. ${p.tracking?.author?.name} resolves the conflicts, then it merges.`}
         >
           <GitCompareArrows />
           {busy ? 'Asking…' : 'Resolve conflicts'}
@@ -617,7 +620,7 @@ function PullOutput({
         className={`${pill} px-2.5`}
         disabled={busy || !mergeable}
         onClick={merge}
-        title={mergeable ? undefined : blockedBecause[p.mergeableState]}
+        tooltip={mergeable ? undefined : blockedBecause[p.mergeableState]}
       >
         {busy ? 'Merging…' : 'Merge'}
       </Button>

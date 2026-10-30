@@ -133,7 +133,7 @@ export function PdfPreview({
               variant="outline"
               size="icon-sm"
               aria-label="Close"
-              title="Close (Esc)"
+              tooltip="Close (Esc)"
               className="rounded-full"
             >
               <X aria-hidden />

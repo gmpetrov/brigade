@@ -2,6 +2,7 @@
 // Where a pull request stands, in one badge: GitHub's state, a merge Brigade is making, then its review.
 import Link from 'next/link'
 import { StatusBadge, type StatusTone } from '@/components/status-badge'
+import { Hint } from '@/components/ui/tooltip'
 import type { PullRequestSummary } from '@/lib/api'
 
 /** mergeableState, when known (one pull request's state, not a list), shows its conflicts. */
@@ -73,12 +74,13 @@ export function ReviewLink({ pull }: { pull: { tracking: PullRequestSummary['tra
   if (!line) return null
   if (!thread) return <>{line}</>
   return (
-    <Link
-      href={`/app/threads/${thread}`}
-      className="relative z-10 hover:text-foreground hover:underline"
-      title="Open the review"
-    >
-      {line}
-    </Link>
+    <Hint label="Open the review">
+      <Link
+        href={`/app/threads/${thread}`}
+        className="relative z-10 hover:text-foreground hover:underline"
+      >
+        {line}
+      </Link>
+    </Hint>
   )
 }

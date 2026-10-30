@@ -134,7 +134,7 @@ function LibraryView() {
             size="icon"
             className="rounded-full"
             aria-label="New folder"
-            title="New folder"
+            tooltip="New folder"
             onClick={() => (
               setTab('files'),
               setQuery(''),
@@ -148,7 +148,7 @@ function LibraryView() {
             size="icon"
             className="rounded-full"
             aria-label="New file"
-            title="New file"
+            tooltip="New file"
             onClick={() => (
               setTab('files'),
               setQuery(''),
@@ -164,7 +164,7 @@ function LibraryView() {
                 className="rounded-full"
                 disabled={Boolean(uploading)}
                 aria-label="Upload"
-                title="Upload"
+                tooltip="Upload"
               >
                 <Upload />
               </Button>

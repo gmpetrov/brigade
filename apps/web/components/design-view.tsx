@@ -69,6 +69,7 @@ import { DesignProperties, hex } from '@/components/design-properties'
 import { NewThread, useLastTeammate, useThreadDraft } from '@/components/new-thread'
 import { SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import {
   Dialog,
   DialogContent,
@@ -628,7 +629,7 @@ function DesignFrame({
               variant="ghost"
               size="sm"
               className="min-w-0 shrink justify-start gap-1.5 px-1.5"
-              title={
+              tooltip={
                 picker ? 'Switch options, export, hand off' : 'About this design, export, hand off'
               }
             >
@@ -727,7 +728,7 @@ function DesignFrame({
               type="button"
               variant={tab === 'ask' ? 'secondary' : 'ghost'}
               size={compact ? 'icon-sm' : 'sm'}
-              title="Comment"
+              tooltip="Comment"
               aria-label={compact ? 'Comment' : undefined}
               aria-pressed={tab === 'ask'}
               disabled={!view}
@@ -741,7 +742,7 @@ function DesignFrame({
                 type="button"
                 variant={tab === 'knobs' ? 'secondary' : 'ghost'}
                 size={compact ? 'icon-sm' : 'sm'}
-                title="Knobs"
+                tooltip="Knobs"
                 aria-label={compact ? 'Knobs' : undefined}
                 aria-pressed={tab === 'knobs'}
                 onClick={() => setTab(tab === 'knobs' ? null : 'knobs')}
@@ -755,7 +756,7 @@ function DesignFrame({
                 type="button"
                 variant="ghost"
                 size={compact ? 'icon-sm' : 'sm'}
-                title="Edit by hand: expand the design"
+                tooltip="Edit by hand: expand the design"
                 // The panel already takes the whole screen there.
                 className="max-xl:hidden"
                 aria-label={compact ? 'Edit' : undefined}
@@ -800,33 +801,33 @@ function DesignFrame({
                 ['play', Play, 'Play: use the pages'],
               ] as const
             ).map(([m, Icon, title]) => (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                aria-checked={mode === m}
-                title={title}
-                onClick={() => {
-                  setMode(m)
-                  if (m === 'play') setSelection([])
-                }}
-                className={cn(
-                  'flex size-7 items-center justify-center rounded',
-                  mode === m
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                <Icon aria-hidden className="size-3.5" />
-                <span className="sr-only">{m}</span>
-              </button>
+              <Hint key={m} label={title}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={mode === m}
+                  onClick={() => {
+                    setMode(m)
+                    if (m === 'play') setSelection([])
+                  }}
+                  className={cn(
+                    'flex size-7 items-center justify-center rounded',
+                    mode === m
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <Icon aria-hidden className="size-3.5" />
+                  <span className="sr-only">{m}</span>
+                </button>
+              </Hint>
             ))}
           </div>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            title="Fit everything (⇧1)"
+            tooltip="Fit everything (⇧1)"
             aria-label="Fit everything"
             onClick={() => canvas.current?.fit()}
           >
@@ -836,7 +837,7 @@ function DesignFrame({
             type="button"
             variant="ghost"
             size="icon-sm"
-            title="Undo (⌘Z)"
+            tooltip="Undo (⌘Z)"
             aria-label="Undo"
             disabled={!edits.current.canUndo}
             onClick={() => applyUndo(edits.current!.undo())}
@@ -847,7 +848,7 @@ function DesignFrame({
             type="button"
             variant="ghost"
             size="icon-sm"
-            title="Redo (⇧⌘Z)"
+            tooltip="Redo (⇧⌘Z)"
             aria-label="Redo"
             disabled={!edits.current.canRedo}
             onClick={() => applyUndo(edits.current!.redo())}
@@ -882,7 +883,7 @@ function DesignFrame({
             type="button"
             variant="outline"
             size="icon-sm"
-            title="Show the panel"
+            tooltip="Show the panel"
             aria-label="Show the panel"
             className="absolute top-2 right-2 z-10 bg-background shadow-sm"
             onClick={() => fold(false)}
@@ -921,7 +922,7 @@ function DesignFrame({
                 type="button"
                 variant="ghost"
                 size="icon-xs"
-                title="Hide the panel"
+                tooltip="Hide the panel"
                 aria-label="Hide the panel"
                 className="text-muted-foreground"
                 onClick={() => fold(true)}
@@ -1031,20 +1032,20 @@ function CommentBox({
       <div className="flex flex-col rounded-lg border bg-card transition-[box-shadow,border-color] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
         {on && (
           <div className="flex px-2 pt-2">
-            <span
-              className="flex min-w-0 items-center gap-1 rounded-md bg-muted py-0.5 pr-0.5 pl-2 text-xs"
-              title={target?.element?.path}
-            >
-              <span className="truncate">{on}</span>
-              <button
-                type="button"
-                aria-label="On the whole design instead"
-                title="On the whole design instead"
-                className="flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                onClick={onClear}
-              >
-                <X aria-hidden className="size-3" />
-              </button>
+            <span className="flex min-w-0 items-center gap-1 rounded-md bg-muted py-0.5 pr-0.5 pl-2 text-xs">
+              <Hint label={target?.element?.path}>
+                <span className="truncate">{on}</span>
+              </Hint>
+              <Hint label="On the whole design instead">
+                <button
+                  type="button"
+                  aria-label="On the whole design instead"
+                  className="flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                  onClick={onClear}
+                >
+                  <X aria-hidden className="size-3" />
+                </button>
+              </Hint>
             </span>
           </div>
         )}
@@ -1075,7 +1076,7 @@ function CommentBox({
           </span>
           <Button
             size="icon-sm"
-            title="Send (⌘↵)"
+            tooltip="Send (⌘↵)"
             aria-label="Send"
             disabled={!body.trim() || sending}
             onClick={() => void send()}
@@ -1116,9 +1117,11 @@ function Knobs({
         const label = k.label ?? k.var
         return (
           <div key={k.var} className="grid grid-cols-[8rem_minmax(0,1fr)] items-center gap-3">
-            <label htmlFor={id} className="truncate text-xs font-medium" title={k.var}>
-              {label}
-            </label>
+            <Hint label={k.var}>
+              <label htmlFor={id} className="truncate text-xs font-medium">
+                {label}
+              </label>
+            </Hint>
             {k.type === 'color' ? (
               <div className="flex items-center gap-2">
                 <input
@@ -1404,7 +1407,7 @@ export function DesignPanel({
               type="button"
               variant="ghost"
               size="icon-sm"
-              title={expanded ? 'Back to the panel' : 'Expand'}
+              tooltip={expanded ? 'Back to the panel' : 'Expand'}
               aria-label={expanded ? 'Back to the panel' : 'Expand'}
               // Below xl the panel is the whole screen already.
               className="max-xl:hidden"

@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { Hint } from '@/components/ui/tooltip'
 import { api, useApi, type Computer, type ComputersResponse } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 import { MAC_APP_URL } from '@/lib/mac-app'
@@ -251,29 +252,30 @@ export default function Computers() {
         </div>
 
         {mine.map((c) => (
-          <div
+          <Hint
             key={c.id}
-            className="flex items-center gap-4 px-5 py-4"
-            title={[c.runner?.platform, c.runner?.version && `runner ${c.runner.version}`]
+            label={[c.runner?.platform, c.runner?.version && `runner ${c.runner.version}`]
               .filter(Boolean)
               .join(' · ')}
           >
-            <Tile>
-              <Laptop />
-            </Tile>
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="truncate font-semibold">{c.name}</span>
-              {status(
-                c.online,
-                c.online
-                  ? online(c)
-                  : c.runner?.lastSeenAt
-                    ? `Last seen ${timeAgo(c.runner.lastSeenAt)}`
-                    : 'Offline',
-                'only you',
-              )}
+            <div className="flex items-center gap-4 px-5 py-4">
+              <Tile>
+                <Laptop />
+              </Tile>
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate font-semibold">{c.name}</span>
+                {status(
+                  c.online,
+                  c.online
+                    ? online(c)
+                    : c.runner?.lastSeenAt
+                      ? `Last seen ${timeAgo(c.runner.lastSeenAt)}`
+                      : 'Offline',
+                  'only you',
+                )}
+              </div>
             </div>
-          </div>
+          </Hint>
         ))}
 
         <div className="flex flex-col gap-4 px-5 py-4">

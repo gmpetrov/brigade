@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { timeAgo } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
@@ -212,13 +213,11 @@ export function SecurityActivity({ teammates }: { teammates: AccessOverview['tea
                 key={item.id}
                 className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-4 py-3 sm:px-5"
               >
-                <time
-                  dateTime={item.at}
-                  title={new Date(item.at).toLocaleString()}
-                  className="w-20 shrink-0 text-xs text-muted-foreground"
-                >
-                  {timeAgo(item.at)}
-                </time>
+                <Hint label={new Date(item.at).toLocaleString()}>
+                  <time dateTime={item.at} className="w-20 shrink-0 text-xs text-muted-foreground">
+                    {timeAgo(item.at)}
+                  </time>
+                </Hint>
                 <span className="min-w-0 flex-[1_1_16rem] text-sm">
                   {describe(item, page.names)}
                 </span>

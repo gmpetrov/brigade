@@ -1139,7 +1139,7 @@ export function ThreadConversation({
           if (preview) openPreview()
           void previewStart.start()
         }}
-        title={
+        tooltip={
           previewStart.busy || previewing
             ? previewLabel
             : live
@@ -1516,7 +1516,7 @@ export function ThreadConversation({
                         className="shrink-0 rounded-full"
                         onClick={() => setReplyTo(undefined)}
                         aria-label="Don’t reply to this message"
-                        title="Don’t reply to this message"
+                        tooltip="Don’t reply to this message"
                       >
                         <X aria-hidden />
                       </Button>
@@ -1539,7 +1539,7 @@ export function ThreadConversation({
                           className="shrink-0 rounded-full"
                           onClick={() => setMoveTo(undefined)}
                           aria-label={`Don’t move to ${moveTo.name}`}
-                          title="Stay on this computer"
+                          tooltip="Stay on this computer"
                         >
                           <X aria-hidden />
                         </Button>
@@ -1618,7 +1618,7 @@ export function ThreadConversation({
                           )
                         }}
                         aria-label={`Stop ${answering.name}`}
-                        title={
+                        tooltip={
                           stopping === (turnId ?? '')
                             ? 'Stopping…'
                             : queued.length
@@ -1655,7 +1655,7 @@ export function ThreadConversation({
                               ? 'Queue for after this turn'
                               : 'Send'
                         }
-                        title={
+                        tooltip={
                           deciding
                             ? 'Approve or deny the request above first'
                             : moveTo
@@ -1763,7 +1763,7 @@ export function JumpToEnd({ onClick }: { onClick: () => void }) {
       size="icon"
       onClick={onClick}
       aria-label="Scroll to the latest"
-      title="Scroll to the latest"
+      tooltip="Scroll to the latest"
       className="absolute -top-8 left-1/2 z-10 size-8 -translate-x-1/2 rounded-full bg-background shadow-md"
     >
       <ArrowDown aria-hidden />

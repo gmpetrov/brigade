@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import { Hint } from '@/components/ui/tooltip'
 import { FadeText } from '@/components/fade-text'
 import { StreamedTitle } from '@/components/streamed-title'
 import { renameThread, useThreadMenu } from '@/components/thread-menu'
@@ -189,27 +190,29 @@ export function ThreadRow({
       </SidebarMenuButton>
       {/* Its preview, in reach on hover beside ⋮ where the icon was; on a phone, in ⋮. */}
       {thread.previewRunning && (
-        <SidebarMenuAction
-          aria-label={`${title}: open preview`}
-          title="Open preview"
-          onClick={() => openPreview(thread.id)}
-          className="right-7 group-hover/menu-item:opacity-100 focus-visible:opacity-100 max-md:hidden md:opacity-0"
-        >
-          <Eye />
-        </SidebarMenuAction>
+        <Hint label="Open preview">
+          <SidebarMenuAction
+            aria-label={`${title}: open preview`}
+            onClick={() => openPreview(thread.id)}
+            className="right-7 group-hover/menu-item:opacity-100 focus-visible:opacity-100 max-md:hidden md:opacity-0"
+          >
+            <Eye />
+          </SidebarMenuAction>
+        </Hint>
       )}
       <DropdownMenu open={open} onOpenChange={setOpen}>
         {/* Only on the hovered row, or while its menu is open: not left behind on a row that
             keeps the focus after a click or a shortcut. Always there on a phone. */}
-        <SidebarMenuAction asChild>
-          <DropdownMenuTrigger
-            aria-label={`${title}: more`}
-            title="More"
-            className="data-[state=open]:bg-sidebar-accent group-hover/menu-item:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0"
-          >
-            <EllipsisVertical />
-          </DropdownMenuTrigger>
-        </SidebarMenuAction>
+        <Hint label="More">
+          <SidebarMenuAction asChild>
+            <DropdownMenuTrigger
+              aria-label={`${title}: more`}
+              className="data-[state=open]:bg-sidebar-accent group-hover/menu-item:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0"
+            >
+              <EllipsisVertical />
+            </DropdownMenuTrigger>
+          </SidebarMenuAction>
+        </Hint>
         <DropdownMenuContent
           align="start"
           side="right"

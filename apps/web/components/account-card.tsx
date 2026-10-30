@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { Hint } from '@/components/ui/tooltip'
 import { api, harnessLabel, type Account, type AccountLogin } from '@/lib/api'
 
 export const resetLabel = (iso: string | null) =>
@@ -51,30 +52,32 @@ export function UsageMeters({
         const [short, long] = windowLabel(l.window)
         const title = `${long} limit: ${percent}% used${l.resetsAt ? `, resets ${resetLabel(l.resetsAt)}` : ''}`
         return (
-          <div key={l.window} title={title} className="flex items-center gap-2 text-xs">
-            <span className="min-w-6 shrink-0 truncate text-muted-foreground">{short}</span>
-            <div
-              role="meter"
-              aria-label={title}
-              aria-valuenow={percent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              className="h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10"
-            >
+          <Hint key={l.window} label={title}>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="min-w-6 shrink-0 truncate text-muted-foreground">{short}</span>
               <div
-                className={cn('h-full rounded-full', percent >= 80 ? 'bg-warning' : 'bg-primary')}
-                style={{ width: `${percent}%` }}
-              />
+                role="meter"
+                aria-label={title}
+                aria-valuenow={percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10"
+              >
+                <div
+                  className={cn('h-full rounded-full', percent >= 80 ? 'bg-warning' : 'bg-primary')}
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+              <span
+                className={cn(
+                  'w-7 shrink-0 text-right tabular-nums',
+                  percent >= 80 ? 'text-warning' : 'text-muted-foreground',
+                )}
+              >
+                {percent}%
+              </span>
             </div>
-            <span
-              className={cn(
-                'w-7 shrink-0 text-right tabular-nums',
-                percent >= 80 ? 'text-warning' : 'text-muted-foreground',
-              )}
-            >
-              {percent}%
-            </span>
-          </div>
+          </Hint>
         )
       })}
     </div>
@@ -156,12 +159,13 @@ export function AccountRow({
           </div>
           {a.lastUsage && a.lastUsage.length > 0 && <UsageMeters usage={a.lastUsage} />}
         </div>
-        <span
-          role="img"
-          aria-label={status.text}
-          title={status.text}
-          className={cn('size-2 shrink-0 rounded-full', status.tone)}
-        />
+        <Hint label={status.text}>
+          <span
+            role="img"
+            aria-label={status.text}
+            className={cn('size-2 shrink-0 rounded-full', status.tone)}
+          />
+        </Hint>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

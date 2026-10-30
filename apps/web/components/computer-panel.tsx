@@ -21,6 +21,7 @@ import { ProviderLogo } from '@/components/provider-logo'
 import { PanelResizeHandle, useEscapeToClose, usePanelStack } from '@/components/side-panel'
 import { ChildrenList } from '@/components/thread-children'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import {
   api,
   teammateModelLabel,
@@ -351,13 +352,12 @@ function AwaitedReplies({ thread, onChange }: { thread: Thread; onChange: () => 
               <span className="truncate text-sm font-medium" title={w.subject}>
                 {w.subject}
               </span>
-              <span
-                className="truncate text-xs text-muted-foreground"
-                title={`Sent from ${w.connection.externalAccount ?? w.connection.label}`}
-              >
-                {names.size > 1 && `${names.get(w.teammateId) ?? 'A teammate'} · `}
-                To {w.to} · until <time dateTime={w.until}>{wakeTime(w.until)}</time>
-              </span>
+              <Hint label={`Sent from ${w.connection.externalAccount ?? w.connection.label}`}>
+                <span className="truncate text-xs text-muted-foreground">
+                  {names.size > 1 && `${names.get(w.teammateId) ?? 'A teammate'} · `}
+                  To {w.to} · until <time dateTime={w.until}>{wakeTime(w.until)}</time>
+                </span>
+              </Hint>
             </span>
             {thread.mayPrompt && (
               <Button
@@ -450,18 +450,19 @@ function SentMail({ thread, onChange }: { thread: Thread; onChange: () => void }
                 <span className="truncate text-sm font-medium" title={m.subject}>
                   {m.subject || '(no subject)'}
                 </span>
-                <span
-                  className={`truncate text-xs ${m.status === 'bounced' ? 'text-destructive' : 'text-muted-foreground'}`}
-                  title={m.error ?? `From ${m.fromAddress}`}
-                >
-                  To {m.to.join(', ')} ·{' '}
-                  {left > 120
-                    ? // Set to leave later: its day and time.
-                      `Leaves ${new Date(m.sendAt!).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                    : left > 0
-                      ? `Leaves in ${left} s`
-                      : (SENT_STATUS[m.status] ?? (m.status === 'scheduled' ? 'Sent' : m.status))}
-                </span>
+                <Hint label={m.error ?? `From ${m.fromAddress}`}>
+                  <span
+                    className={`truncate text-xs ${m.status === 'bounced' ? 'text-destructive' : 'text-muted-foreground'}`}
+                  >
+                    To {m.to.join(', ')} ·{' '}
+                    {left > 120
+                      ? // Set to leave later: its day and time.
+                        `Leaves ${new Date(m.sendAt!).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                      : left > 0
+                        ? `Leaves in ${left} s`
+                        : (SENT_STATUS[m.status] ?? (m.status === 'scheduled' ? 'Sent' : m.status))}
+                  </span>
+                </Hint>
               </span>
               {left > 0 && thread.mayPrompt && (
                 <Button
@@ -617,7 +618,7 @@ export function ComputerScreen({
       className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
       onClick={() => onShell(!shellOpen)}
       aria-label={shellOpen ? 'Close the shell' : 'Shell'}
-      title={shellOpen ? 'Close the shell' : `A shell on the computer, as ${teammate.name}`}
+      tooltip={shellOpen ? 'Close the shell' : `A shell on the computer, as ${teammate.name}`}
     >
       <SquareTerminal aria-hidden />
     </Button>
@@ -628,7 +629,7 @@ export function ComputerScreen({
         size="sm"
         disabled={busy}
         onClick={control.handBack}
-        title={`Give the computer back to ${teammate.name}`}
+        tooltip={`Give the computer back to ${teammate.name}`}
       >
         <Hand aria-hidden />
         Hand back
@@ -640,7 +641,7 @@ export function ComputerScreen({
         disabled={busy}
         onClick={control.openBrowser}
         aria-label={`Open ${teammate.name}'s browser`}
-        title={`Open ${teammate.name}'s browser`}
+        tooltip={`Open ${teammate.name}'s browser`}
       >
         <Globe aria-hidden />
       </Button>
@@ -654,7 +655,7 @@ export function ComputerScreen({
         size="sm"
         disabled={busy}
         onClick={control.takeOver}
-        title={`Use the mouse and keyboard. ${teammate.name} waits until you hand back`}
+        tooltip={`Use the mouse and keyboard. ${teammate.name} waits until you hand back`}
       >
         Take control
       </Button>
@@ -694,7 +695,7 @@ export function ComputerScreen({
                 size="icon-sm"
                 onClick={() => onShell(false)}
                 aria-label="Close the shell"
-                title="Close the shell"
+                tooltip="Close the shell"
               >
                 <X aria-hidden />
               </Button>

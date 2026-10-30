@@ -30,6 +30,7 @@ import { DocumentEditor } from '@/components/document-editor'
 import { FileHistory } from '@/components/library-history'
 import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -308,7 +309,7 @@ export function DocumentPanel() {
             variant="ghost"
             size="sm"
             onClick={() => void onAsk?.()}
-            title={`Talk about this file with ${discussion.teammate.name}`}
+            tooltip={`Talk about this file with ${discussion.teammate.name}`}
           >
             <MessageSquare aria-hidden />
             Ask {discussion.teammate.name}
@@ -322,7 +323,7 @@ export function DocumentPanel() {
             onClick={() => setHistory((h) => !h)}
             aria-pressed={history}
             aria-label="History"
-            title="History"
+            tooltip="History"
           >
             <History aria-hidden />
           </Button>
@@ -334,7 +335,7 @@ export function DocumentPanel() {
           size="icon-sm"
           onClick={closeAll}
           aria-label={tabbed ? 'Close all documents' : 'Close document'}
-          title={tabbed ? 'Close all' : 'Close'}
+          tooltip={tabbed ? 'Close all' : 'Close'}
         >
           <X aria-hidden />
         </Button>
@@ -404,44 +405,46 @@ function DocumentTabs() {
                   : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
               )}
             >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                title={t.subtitle ? `${t.subtitle}/${t.title}` : t.title}
-                onClick={() => open(t)}
-                // A middle click closes it, as in a browser.
-                onAuxClick={(e) => {
-                  if (e.button === 1) remove(t.target)
-                }}
-                className="flex min-w-0 items-center gap-1.5 outline-none focus-visible:underline"
-              >
-                <Icon aria-hidden className="size-3.5 shrink-0" />
-                <span className="max-w-40 truncate">{t.title}</span>
-                {changed && <span className="sr-only">, changed</span>}
-              </button>
-              <button
-                type="button"
-                aria-label={`Close ${t.title}`}
-                title="Close"
-                onClick={() => remove(t.target)}
-                className="grid size-4 shrink-0 place-items-center rounded-sm hover:bg-foreground/10"
-              >
-                {/* Changed: a dot, which turns into the close button under the pointer. */}
-                {changed ? (
-                  <>
-                    <span className="flex group-hover:hidden">
-                      <ChangedDot />
-                    </span>
-                    <X aria-hidden className="hidden size-3 group-hover:block" />
-                  </>
-                ) : (
-                  <X
-                    aria-hidden
-                    className={cn('size-3', !selected && 'opacity-0 group-hover:opacity-100')}
-                  />
-                )}
-              </button>
+              <Hint label={t.subtitle ? `${t.subtitle}/${t.title}` : t.title}>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => open(t)}
+                  // A middle click closes it, as in a browser.
+                  onAuxClick={(e) => {
+                    if (e.button === 1) remove(t.target)
+                  }}
+                  className="flex min-w-0 items-center gap-1.5 outline-none focus-visible:underline"
+                >
+                  <Icon aria-hidden className="size-3.5 shrink-0" />
+                  <span className="max-w-40 truncate">{t.title}</span>
+                  {changed && <span className="sr-only">, changed</span>}
+                </button>
+              </Hint>
+              <Hint label="Close">
+                <button
+                  type="button"
+                  aria-label={`Close ${t.title}`}
+                  onClick={() => remove(t.target)}
+                  className="grid size-4 shrink-0 place-items-center rounded-sm hover:bg-foreground/10"
+                >
+                  {/* Changed: a dot, which turns into the close button under the pointer. */}
+                  {changed ? (
+                    <>
+                      <span className="flex group-hover:hidden">
+                        <ChangedDot />
+                      </span>
+                      <X aria-hidden className="hidden size-3 group-hover:block" />
+                    </>
+                  ) : (
+                    <X
+                      aria-hidden
+                      className={cn('size-3', !selected && 'opacity-0 group-hover:opacity-100')}
+                    />
+                  )}
+                </button>
+              </Hint>
             </div>
           )
         })}
@@ -453,7 +456,7 @@ function DocumentTabs() {
             variant="ghost"
             size="icon-sm"
             aria-label="All open documents"
-            title="All open documents"
+            tooltip="All open documents"
             className="relative"
           >
             <ChevronDown aria-hidden />
@@ -503,16 +506,17 @@ export function AskedDocument({ text }: { text: string }) {
   return (
     <div className="flex items-center gap-2 pl-2 text-sm text-muted-foreground">
       <FileText className="size-4 shrink-0" aria-hidden />
-      <button
-        type="button"
-        onClick={() => documents.open(asked)}
-        title={`Open ${asked.title}`}
-        aria-label={`Open ${asked.title}`}
-        className="flex min-w-0 flex-1 items-center gap-1.5 text-left outline-none hover:text-foreground focus-visible:underline"
-      >
-        <span className="min-w-0 truncate font-medium text-foreground">{asked.title}</span>
-        <ArrowUpRight aria-hidden className="size-4 shrink-0" />
-      </button>
+      <Hint label={`Open ${asked.title}`}>
+        <button
+          type="button"
+          onClick={() => documents.open(asked)}
+          aria-label={`Open ${asked.title}`}
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-left outline-none hover:text-foreground focus-visible:underline"
+        >
+          <span className="min-w-0 truncate font-medium text-foreground">{asked.title}</span>
+          <ArrowUpRight aria-hidden className="size-4 shrink-0" />
+        </button>
+      </Hint>
       <Button
         type="button"
         variant="ghost"
@@ -520,7 +524,7 @@ export function AskedDocument({ text }: { text: string }) {
         className="shrink-0 rounded-full"
         onClick={() => documents.setAsked(null)}
         aria-label={`Don’t offer ${asked.title} again`}
-        title="Dismiss"
+        tooltip="Dismiss"
       >
         <X aria-hidden />
       </Button>

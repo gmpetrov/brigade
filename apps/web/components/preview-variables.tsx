@@ -289,7 +289,7 @@ export function VariablesAsk({
                       <Button
                         size="sm"
                         variant="outline"
-                        title="For a session or signing secret the app only needs to keep"
+                        tooltip="For a session or signing secret the app only needs to keep"
                         onClick={() => set(v.name, { mode: 'generate' })}
                       >
                         <Sparkles aria-hidden />
@@ -437,7 +437,7 @@ export function PreviewVariables({
                       size="icon-sm"
                       disabled={busy}
                       aria-label={`Remove ${v.name}`}
-                      title={`Remove ${v.name}`}
+                      tooltip={`Remove ${v.name}`}
                       onClick={() => {
                         if (
                           !confirm(
@@ -712,7 +712,7 @@ function DraftRows({
                   variant="ghost"
                   size="icon-sm"
                   aria-label={row.name ? `Remove ${row.name}` : 'Remove this row'}
-                  title="Remove this row"
+                  tooltip="Remove this row"
                   onClick={() => onChange(rows.filter((r) => r.key !== row.key))}
                 >
                   <X aria-hidden />

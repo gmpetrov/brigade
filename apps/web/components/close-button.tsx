@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Hint } from '@/components/ui/tooltip'
 
 /** Round and outlined, as the sidebar's search and new thread buttons. */
 export function CloseButton({
@@ -14,17 +15,18 @@ export function CloseButton({
   className?: string
 }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={title}
-      onClick={onClick}
-      className={cn(
-        'flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring [&>svg]:size-4',
-        className,
-      )}
-    >
-      <X aria-hidden />
-    </button>
+    <Hint label={title}>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        className={cn(
+          'flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring [&>svg]:size-4',
+          className,
+        )}
+      >
+        <X aria-hidden />
+      </button>
+    </Hint>
   )
 }

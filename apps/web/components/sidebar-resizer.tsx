@@ -12,6 +12,7 @@ import {
   type PointerEvent,
 } from 'react'
 import { useSidebar } from '@/components/ui/sidebar'
+import { Hint } from '@/components/ui/tooltip'
 
 const KEY = 'brigade:sidebar-width'
 export const SIDEBAR_DEFAULT = 288
@@ -99,31 +100,32 @@ export function SidebarResizer({
 
   if (isMobile) return null
   return (
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="Resize the sidebar"
-      aria-valuemin={MIN}
-      aria-valuemax={MAX}
-      aria-valuenow={open ? width : 0}
-      tabIndex={0}
-      title="Drag to resize, double-click for the default width"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      onDoubleClick={() => {
-        if (!open) setOpen(true)
-        onWidth(SIDEBAR_DEFAULT)
-      }}
-      onKeyDown={onKeyDown}
-      data-dragging={dragging || undefined}
-      className="group/resizer absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none outline-none"
-    >
-      <span
-        aria-hidden
-        className="bg-primary absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 opacity-0 transition-opacity group-hover/resizer:opacity-60 group-focus-visible/resizer:opacity-100 group-data-[dragging]/resizer:opacity-100"
-      />
-    </div>
+    <Hint side="right" label="Drag to resize, double-click for the default width">
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize the sidebar"
+        aria-valuemin={MIN}
+        aria-valuemax={MAX}
+        aria-valuenow={open ? width : 0}
+        tabIndex={0}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onDoubleClick={() => {
+          if (!open) setOpen(true)
+          onWidth(SIDEBAR_DEFAULT)
+        }}
+        onKeyDown={onKeyDown}
+        data-dragging={dragging || undefined}
+        className="group/resizer absolute inset-y-0 -right-1.5 z-20 w-3 cursor-col-resize touch-none outline-none"
+      >
+        <span
+          aria-hidden
+          className="bg-primary absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 opacity-0 transition-opacity group-hover/resizer:opacity-60 group-focus-visible/resizer:opacity-100 group-data-[dragging]/resizer:opacity-100"
+        />
+      </div>
+    </Hint>
   )
 }

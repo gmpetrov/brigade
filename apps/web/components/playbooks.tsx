@@ -55,6 +55,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Hint } from '@/components/ui/tooltip'
 import { api, projectQuery, useApi } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
@@ -480,21 +481,22 @@ function Dot({
   label: string
 }) {
   return (
-    <span
-      role="img"
-      aria-label={label}
-      title={label}
-      className={cn(
-        'size-2 shrink-0 rounded-full',
-        tone === 'success'
-          ? 'bg-success'
-          : tone === 'warning'
-            ? 'bg-warning'
-            : tone === 'destructive'
-              ? 'bg-destructive'
-              : 'bg-muted-foreground',
-      )}
-    />
+    <Hint label={label}>
+      <span
+        role="img"
+        aria-label={label}
+        className={cn(
+          'size-2 shrink-0 rounded-full',
+          tone === 'success'
+            ? 'bg-success'
+            : tone === 'warning'
+              ? 'bg-warning'
+              : tone === 'destructive'
+                ? 'bg-destructive'
+                : 'bg-muted-foreground',
+        )}
+      />
+    </Hint>
   )
 }
 
