@@ -67,3 +67,19 @@ test('the marker of attached work after the note leaves the note as it is', () =
   })
   assert.equal(checklistLook([plain('Anti-abus.'), marker]).note, null)
 })
+
+test('several notes, each on its own line, make one note', () => {
+  const pieces = [
+    plain('Gateway redéployée. '),
+    italic('Depuis la PR #414 (table '),
+    code('previews'),
+    italic('). Ensuite, redémarrer.'),
+    plain('\n'),
+    italic('Deuxième commentaire'),
+  ]
+  const text = pieces.map((p) => p.text).join('')
+  assert.deepEqual(checklistLook(pieces).note, {
+    from: 'Gateway redéployée. '.length,
+    to: text.length,
+  })
+})

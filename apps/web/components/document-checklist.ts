@@ -24,7 +24,12 @@ function decorate(doc: Node) {
     node.forEach((child) => {
       const marks = child.marks.map((m) => m.type.name)
       pieces.push({
-        text: child.isText ? child.text! : LEAF.repeat(child.nodeSize),
+        // A line break (Shift+Enter) is space between two notes, not text of the line.
+        text: child.isText
+          ? child.text!
+          : child.type.name === 'hardBreak'
+            ? '\n'
+            : LEAF.repeat(child.nodeSize),
         italic: marks.includes('italic'),
         code: marks.includes('code'),
         aside: child.type.name === 'item',
