@@ -30,9 +30,12 @@ import {
   MessageSquarePlus,
   Minimize2,
   MousePointer2,
+  PanelRightClose,
+  PanelRightOpen,
   Palette,
   Pencil,
   Play,
+  Send,
   Redo2,
   RotateCw,
   SlidersHorizontal,
@@ -60,7 +63,7 @@ import {
   type Selected,
 } from '@/components/design-canvas'
 import { DesignEdits, type DesignChange } from '@/components/design-edits'
-import { DesignProperties } from '@/components/design-properties'
+import { DesignProperties, hex } from '@/components/design-properties'
 import { NewThread, useLastTeammate, useThreadDraft } from '@/components/new-thread'
 import { SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
@@ -99,6 +102,9 @@ type Starting = { title: string; description: string; text: string; teammateId?:
 
 /** Wide enough for the properties beside the canvas. */
 const WIDE = 900
+
+/** Whether the member folded the panel beside the canvas, kept across designs. */
+const FOLDED = 'brigade:design-panel-folded'
 
 const mention = (folder: string) => formatMention({ kind: 'design', id: folder, label: folder })
 
@@ -206,6 +212,13 @@ function DesignFrame({
   const [selection, setSelection] = useState<Selected[]>([])
   const [inspected, setInspected] = useState<Record<string, Inspected>>({})
   const [tab, setTab] = useState<'properties' | 'ask' | 'knobs' | null>(null)
+  const [folded, setFolded] = useState(false)
+  useEffect(() => setFolded(localStorage.getItem(FOLDED) === '1'), [])
+  const fold = (next: boolean) => {
+    setFolded(next)
+    if (next) localStorage.setItem(FOLDED, '1')
+    else localStorage.removeItem(FOLDED)
+  }
   const [values, setValues] = useState<Record<string, string>>({})
   const [notice, setNotice] = useState<{ text: string; href?: string; error?: boolean }>()
   const [busy, setBusy] = useState<string>()
@@ -853,9 +866,22 @@ function DesignFrame({
           />
         )}
 
-        {wide && view && (
+        {wide && view && folded && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            title="Show the panel"
+            aria-label="Show the panel"
+            className="absolute top-2 right-2 z-10 bg-background shadow-sm"
+            onClick={() => fold(false)}
+          >
+            <PanelRightOpen aria-hidden />
+          </Button>
+        )}
+        {wide && view && !folded && (
           <aside aria-label="Properties" className="flex w-[300px] shrink-0 flex-col border-l">
-            <div role="tablist" className="flex gap-1 border-b px-2 py-1.5">
+            <div role="tablist" className="flex items-center gap-1 border-b px-2 py-1.5">
               {(
                 [
                   ['properties', 'Properties'],
@@ -879,6 +905,18 @@ function DesignFrame({
                   {label}
                 </button>
               ))}
+              <span className="flex-1" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                title="Hide the panel"
+                aria-label="Hide the panel"
+                className="text-muted-foreground"
+                onClick={() => fold(true)}
+              >
+                <PanelRightClose aria-hidden />
+              </Button>
             </div>
             {panel === 'knobs' ? (
               knobsPanel
@@ -971,58 +1009,69 @@ function CommentBox({
     setSending(false)
   }
 
+  const on = target
+    ? target.element
+      ? target.element.label || target.element.dataId || target.element.tag
+      : (target.board.title ?? target.board.file)
+    : null
+
   return (
-    <div className="flex flex-col gap-2 border-t px-3 py-2.5">
-      <div className="flex min-w-0 items-center gap-2 text-xs">
-        {target ? (
-          <>
-            <span className="text-muted-foreground">On</span>
-            <code
-              className="min-w-0 truncate rounded bg-muted px-1.5 py-0.5"
-              title={target.element?.path}
+    <div className="p-3">
+      <div className="flex flex-col rounded-lg border bg-card transition-[box-shadow,border-color] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+        {on && (
+          <div className="flex px-2 pt-2">
+            <span
+              className="flex min-w-0 items-center gap-1 rounded-md bg-muted py-0.5 pr-0.5 pl-2 text-xs"
+              title={target?.element?.path}
             >
-              {target.element
-                ? (target.element.dataId ?? target.element.tag)
-                : (target.board.title ?? target.board.file)}
-            </code>
-            {target.element?.label && (
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                “{target.element.label}”
-              </span>
-            )}
-            <button
-              type="button"
-              className="shrink-0 font-medium text-primary hover:underline"
-              onClick={onClear}
-            >
-              The whole design
-            </button>
-          </>
-        ) : (
-          <span className="flex-1 text-muted-foreground">
-            On the whole design. Select an element to point at it.
-          </span>
+              <span className="truncate">{on}</span>
+              <button
+                type="button"
+                aria-label="On the whole design instead"
+                title="On the whole design instead"
+                className="flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                onClick={onClear}
+              >
+                <X aria-hidden className="size-3" />
+              </button>
+            </span>
+          </div>
         )}
-      </div>
-      <Textarea
-        aria-label="Comment"
-        value={body}
-        rows={3}
-        placeholder="What should change?"
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            e.preventDefault()
-            void send()
+        <Textarea
+          aria-label="Comment"
+          value={body}
+          rows={3}
+          placeholder={
+            on
+              ? 'What should change here?'
+              : 'What should change? Select an element to point at it.'
           }
-        }}
-        className="bg-card text-sm"
-      />
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-xs text-muted-foreground">To {to}</span>
-        <Button size="sm" disabled={!body.trim() || sending} onClick={() => void send()}>
-          Send
-        </Button>
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault()
+              void send()
+            }
+          }}
+          className="max-h-60 min-h-20 resize-none rounded-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
+        />
+        <div className="flex items-center gap-2 py-1.5 pr-1.5 pl-3">
+          <span
+            className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
+            title={`To ${to}`}
+          >
+            To {to}
+          </span>
+          <Button
+            size="icon-sm"
+            title="Send (⌘↵)"
+            aria-label="Send"
+            disabled={!body.trim() || sending}
+            onClick={() => void send()}
+          >
+            <Send aria-hidden />
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -1064,7 +1113,7 @@ function Knobs({
                 <input
                   id={id}
                   type="color"
-                  value={/^#[0-9a-f]{6}$/i.test(value) ? value : '#000000'}
+                  value={hex(value)}
                   onChange={(e) => onChange(k, e.target.value)}
                   className="h-7 w-10 cursor-pointer rounded border bg-transparent"
                 />

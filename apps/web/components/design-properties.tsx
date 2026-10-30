@@ -29,12 +29,28 @@ const valueOf = (element: Inspected, property: string) =>
 const length = (value: string) =>
   /^-?\d+(\.\d+)?$/.test(value.trim()) ? `${value.trim()}px` : value.trim()
 
-/** `rgb(…)` as `#rrggbb`, for the colour picker (which shows no transparency). */
-function hex(color: string) {
-  const m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(color)
-  if (m)
-    return `#${[m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`
-  return /^#[0-9a-f]{6}$/i.test(color) ? color : '#000000'
+const hexes = new Map<string, string>()
+
+/**
+ * Any CSS colour (`oklch(…)`, `rgb(…)`, a name…) as `#rrggbb`, for the colour
+ * picker, which takes nothing else and shows no transparency: the browser
+ * paints it on a pixel and reads it back in sRGB.
+ */
+export function hex(color: string) {
+  const value = color.trim()
+  if (/^#[0-9a-f]{6}$/i.test(value)) return value.toLowerCase()
+  const known = hexes.get(value)
+  if (known) return known
+  if (typeof document === 'undefined' || !value) return '#000000'
+  const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true })
+  if (!context) return '#000000'
+  context.fillStyle = '#000'
+  context.fillStyle = value
+  context.fillRect(0, 0, 1, 1)
+  const [r, g, b] = context.getImageData(0, 0, 1, 1).data
+  const result = `#${[r, g, b].map((n) => (n ?? 0).toString(16).padStart(2, '0')).join('')}`
+  hexes.set(value, result)
+  return result
 }
 
 /** A short display for a computed value: `24px`, `1.5`, `0.8`. */
