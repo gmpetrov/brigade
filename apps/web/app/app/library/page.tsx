@@ -1,5 +1,5 @@
 'use client'
-import { ChevronDown, FilePlus, FolderPlus, FolderUp, Search, Upload } from 'lucide-react'
+import { FilePlus, FolderPlus, FolderUp, Plus, Search, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
@@ -117,43 +117,49 @@ function LibraryView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-extrabold tracking-tight">Library</h1>
-          <p className="max-w-2xl text-muted-foreground">
-            Shared files and memory. Teammates read the folders they have access to on their
-            computer and search them; when a thread goes quiet, what it taught goes into memory.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => (
-              setTab('files'),
-              setQuery(''),
-              setCreating(creating === 'folder' ? null : 'folder')
-            )}
-          >
-            <FolderPlus />
-            New folder
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => (
-              setTab('files'),
-              setQuery(''),
-              setCreating(creating === 'file' ? null : 'file')
-            )}
-          >
-            <FilePlus />
-            New file
-          </Button>
+      <header className="flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-extrabold tracking-tight">Library</h1>
+        <div className="flex items-center gap-2">
+          {uploading && (
+            <span className="truncate text-sm text-muted-foreground">Uploading {uploading}…</span>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button disabled={Boolean(uploading)}>
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full"
+                aria-label="New"
+                title="New"
+              >
+                <Plus />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onSelect={() => (setTab('files'), setQuery(''), setCreating('folder'))}
+              >
+                <FolderPlus aria-hidden />
+                New folder
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => (setTab('files'), setQuery(''), setCreating('file'))}
+              >
+                <FilePlus aria-hidden />
+                New file
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                className="rounded-full"
+                disabled={Boolean(uploading)}
+                aria-label="Upload"
+                title="Upload"
+              >
                 <Upload />
-                {uploading ? `Uploading ${uploading}…` : 'Upload'}
-                <ChevronDown aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
