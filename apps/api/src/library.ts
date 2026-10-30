@@ -224,10 +224,15 @@ export async function saveLibraryFile(
       where: { kind: 'library', path: input.path, deletedAt: null },
       select: { id: true },
     })
-    if (existing)
-      return withLibraryLock(scope, existing.id, (lease) =>
+    if (existing) {
+      const saved = await withLibraryLock(scope, existing.id, (lease) =>
         writeLibraryFile(db, scope, actor, input, context, { ...options, lease }),
       )
+      // A list's line of what remains of an item, ticked in this save: that item may be done.
+      const { settleRemaindersIn } = await import('./lists.js')
+      await settleRemaindersIn(db, scope, existing.id)
+      return saved
+    }
   }
   return writeLibraryFile(db, scope, actor, input, context, options)
 }

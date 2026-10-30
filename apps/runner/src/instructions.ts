@@ -482,11 +482,17 @@ function lists(spec: ThreadSpec) {
     '(`* [ ] …`) is an item, ticked when done. A line work is attached to ends with a hidden marker, ' +
     '`<!-- item:<id> -->`: keep markers as they are when you edit such a file, and never write one yourself. ' +
     '`list_items` reads a list with its ids, `link_items` attaches lines to this thread, `complete_item` ticks ' +
-    'one, `add_item` adds one. When you open a pull request for items, name them by id in its `items`: ' +
-    '`closes` for those it finishes, which Brigade ticks once it is merged, `partOf` for those it only ' +
-    'advances. Tick an item yourself (`complete_item`, with a short note) only when it is done without a pull ' +
-    'request, such as a setting changed or a document written; add what remains as a line of its own ' +
-    '(`add_item`) rather than ticking what is half done.'
+    'one, `add_item` adds one. When you take on an item, say in a line what done means for it, as points ' +
+    'anyone can check ("Done when: …"), unless the line says it already; the person corrects you if needed. ' +
+    'When you open a pull request for items, its description goes through those points, each done or left, and ' +
+    'you name the items by id in its `items`: `closes` for those every point of which holds once it is merged, ' +
+    'which Brigade ticks then; `partOf` for the others, each with what `remains` of it (a deploy to check, a ' +
+    'setting to change, a step only a person can do), which Brigade adds under it on merge. Without a pull ' +
+    'request, tick an item yourself (`complete_item`) once each point is checked, with what shows it in the ' +
+    'note; when whether it is done is a matter of judgment (a video, copy, a design), show it and end your reply ' +
+    'with "Tick it" in its `replies` block rather than ticking it. Add what remains as a line of its own (`add_item` with ' +
+    '`remainsOf`) rather than ticking what is half done: Brigade ticks the item once all its remaining lines are, ' +
+    'whoever does them.'
   if (!items.length) return `## Lists\n\n${general}`
   const lines = items.map(
     (i) => `- [${i.done ? 'x' : ' '}] ${i.text} (id \`${i.id}\`, in ${i.path})`,

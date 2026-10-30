@@ -36,6 +36,8 @@ export type ListItemMinAggregateOutputType = {
   doneByType: $Enums.ActorType | null
   doneById: string | null
   doneAt: Date | null
+  remainderOfId: string | null
+  remainderSettledAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -49,6 +51,8 @@ export type ListItemMaxAggregateOutputType = {
   doneByType: $Enums.ActorType | null
   doneById: string | null
   doneAt: Date | null
+  remainderOfId: string | null
+  remainderSettledAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -62,6 +66,8 @@ export type ListItemCountAggregateOutputType = {
   doneByType: number
   doneById: number
   doneAt: number
+  remainderOfId: number
+  remainderSettledAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -77,6 +83,8 @@ export type ListItemMinAggregateInputType = {
   doneByType?: true
   doneById?: true
   doneAt?: true
+  remainderOfId?: true
+  remainderSettledAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -90,6 +98,8 @@ export type ListItemMaxAggregateInputType = {
   doneByType?: true
   doneById?: true
   doneAt?: true
+  remainderOfId?: true
+  remainderSettledAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -103,6 +113,8 @@ export type ListItemCountAggregateInputType = {
   doneByType?: true
   doneById?: true
   doneAt?: true
+  remainderOfId?: true
+  remainderSettledAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -189,6 +201,8 @@ export type ListItemGroupByOutputType = {
   doneByType: $Enums.ActorType | null
   doneById: string | null
   doneAt: Date | null
+  remainderOfId: string | null
+  remainderSettledAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: ListItemCountAggregateOutputType | null
@@ -223,6 +237,8 @@ export type ListItemWhereInput = {
   doneByType?: Prisma.EnumActorTypeNullableFilter<"ListItem"> | $Enums.ActorType | null
   doneById?: Prisma.StringNullableFilter<"ListItem"> | string | null
   doneAt?: Prisma.DateTimeNullableFilter<"ListItem"> | Date | string | null
+  remainderOfId?: Prisma.StringNullableFilter<"ListItem"> | string | null
+  remainderSettledAt?: Prisma.DateTimeNullableFilter<"ListItem"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ListItem"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ListItem"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -240,6 +256,8 @@ export type ListItemOrderByWithRelationInput = {
   doneByType?: Prisma.SortOrderInput | Prisma.SortOrder
   doneById?: Prisma.SortOrderInput | Prisma.SortOrder
   doneAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  remainderOfId?: Prisma.SortOrderInput | Prisma.SortOrder
+  remainderSettledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
@@ -260,6 +278,8 @@ export type ListItemWhereUniqueInput = Prisma.AtLeast<{
   doneByType?: Prisma.EnumActorTypeNullableFilter<"ListItem"> | $Enums.ActorType | null
   doneById?: Prisma.StringNullableFilter<"ListItem"> | string | null
   doneAt?: Prisma.DateTimeNullableFilter<"ListItem"> | Date | string | null
+  remainderOfId?: Prisma.StringNullableFilter<"ListItem"> | string | null
+  remainderSettledAt?: Prisma.DateTimeNullableFilter<"ListItem"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ListItem"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ListItem"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -277,6 +297,8 @@ export type ListItemOrderByWithAggregationInput = {
   doneByType?: Prisma.SortOrderInput | Prisma.SortOrder
   doneById?: Prisma.SortOrderInput | Prisma.SortOrder
   doneAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  remainderOfId?: Prisma.SortOrderInput | Prisma.SortOrder
+  remainderSettledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ListItemCountOrderByAggregateInput
@@ -296,6 +318,8 @@ export type ListItemScalarWhereWithAggregatesInput = {
   doneByType?: Prisma.EnumActorTypeNullableWithAggregatesFilter<"ListItem"> | $Enums.ActorType | null
   doneById?: Prisma.StringNullableWithAggregatesFilter<"ListItem"> | string | null
   doneAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ListItem"> | Date | string | null
+  remainderOfId?: Prisma.StringNullableWithAggregatesFilter<"ListItem"> | string | null
+  remainderSettledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ListItem"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ListItem"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ListItem"> | Date | string
 }
@@ -307,6 +331,8 @@ export type ListItemCreateInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutListItemsInput
@@ -324,6 +350,8 @@ export type ListItemUncheckedCreateInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   threads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutItemInput
@@ -337,6 +365,8 @@ export type ListItemUpdateInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutListItemsNestedInput
@@ -354,6 +384,8 @@ export type ListItemUncheckedUpdateInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   threads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutItemNestedInput
@@ -369,6 +401,8 @@ export type ListItemCreateManyInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -380,6 +414,8 @@ export type ListItemUpdateManyMutationInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -393,6 +429,8 @@ export type ListItemUncheckedUpdateManyInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -416,6 +454,8 @@ export type ListItemCountOrderByAggregateInput = {
   doneByType?: Prisma.SortOrder
   doneById?: Prisma.SortOrder
   doneAt?: Prisma.SortOrder
+  remainderOfId?: Prisma.SortOrder
+  remainderSettledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -429,6 +469,8 @@ export type ListItemMaxOrderByAggregateInput = {
   doneByType?: Prisma.SortOrder
   doneById?: Prisma.SortOrder
   doneAt?: Prisma.SortOrder
+  remainderOfId?: Prisma.SortOrder
+  remainderSettledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -442,6 +484,8 @@ export type ListItemMinOrderByAggregateInput = {
   doneByType?: Prisma.SortOrder
   doneById?: Prisma.SortOrder
   doneAt?: Prisma.SortOrder
+  remainderOfId?: Prisma.SortOrder
+  remainderSettledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -570,6 +614,8 @@ export type ListItemCreateWithoutWorkspaceInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   document: Prisma.DocumentCreateNestedOneWithoutListItemsInput
@@ -585,6 +631,8 @@ export type ListItemUncheckedCreateWithoutWorkspaceInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   threads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutItemInput
@@ -629,6 +677,8 @@ export type ListItemScalarWhereInput = {
   doneByType?: Prisma.EnumActorTypeNullableFilter<"ListItem"> | $Enums.ActorType | null
   doneById?: Prisma.StringNullableFilter<"ListItem"> | string | null
   doneAt?: Prisma.DateTimeNullableFilter<"ListItem"> | Date | string | null
+  remainderOfId?: Prisma.StringNullableFilter<"ListItem"> | string | null
+  remainderSettledAt?: Prisma.DateTimeNullableFilter<"ListItem"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ListItem"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ListItem"> | Date | string
 }
@@ -640,6 +690,8 @@ export type ListItemCreateWithoutDocumentInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutListItemsInput
@@ -655,6 +707,8 @@ export type ListItemUncheckedCreateWithoutDocumentInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   threads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutItemInput
@@ -694,6 +748,8 @@ export type ListItemCreateWithoutThreadsInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutListItemsInput
@@ -710,6 +766,8 @@ export type ListItemUncheckedCreateWithoutThreadsInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   pulls?: Prisma.ListItemPullUncheckedCreateNestedManyWithoutItemInput
@@ -738,6 +796,8 @@ export type ListItemUpdateWithoutThreadsInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutListItemsNestedInput
@@ -754,6 +814,8 @@ export type ListItemUncheckedUpdateWithoutThreadsInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   pulls?: Prisma.ListItemPullUncheckedUpdateManyWithoutItemNestedInput
@@ -766,6 +828,8 @@ export type ListItemCreateWithoutPullsInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutListItemsInput
@@ -782,6 +846,8 @@ export type ListItemUncheckedCreateWithoutPullsInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   threads?: Prisma.ListItemThreadUncheckedCreateNestedManyWithoutItemInput
@@ -810,6 +876,8 @@ export type ListItemUpdateWithoutPullsInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutListItemsNestedInput
@@ -826,6 +894,8 @@ export type ListItemUncheckedUpdateWithoutPullsInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   threads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutItemNestedInput
@@ -839,6 +909,8 @@ export type ListItemCreateManyWorkspaceInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -850,6 +922,8 @@ export type ListItemUpdateWithoutWorkspaceInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   document?: Prisma.DocumentUpdateOneRequiredWithoutListItemsNestedInput
@@ -865,6 +939,8 @@ export type ListItemUncheckedUpdateWithoutWorkspaceInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   threads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutItemNestedInput
@@ -879,6 +955,8 @@ export type ListItemUncheckedUpdateManyWithoutWorkspaceInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -891,6 +969,8 @@ export type ListItemCreateManyDocumentInput = {
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
   doneAt?: Date | string | null
+  remainderOfId?: string | null
+  remainderSettledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -902,6 +982,8 @@ export type ListItemUpdateWithoutDocumentInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutListItemsNestedInput
@@ -917,6 +999,8 @@ export type ListItemUncheckedUpdateWithoutDocumentInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   threads?: Prisma.ListItemThreadUncheckedUpdateManyWithoutItemNestedInput
@@ -931,6 +1015,8 @@ export type ListItemUncheckedUpdateManyWithoutDocumentInput = {
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  remainderOfId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  remainderSettledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -984,6 +1070,8 @@ export type ListItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   doneByType?: boolean
   doneById?: boolean
   doneAt?: boolean
+  remainderOfId?: boolean
+  remainderSettledAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1002,6 +1090,8 @@ export type ListItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   doneByType?: boolean
   doneById?: boolean
   doneAt?: boolean
+  remainderOfId?: boolean
+  remainderSettledAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1017,6 +1107,8 @@ export type ListItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   doneByType?: boolean
   doneById?: boolean
   doneAt?: boolean
+  remainderOfId?: boolean
+  remainderSettledAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1032,11 +1124,13 @@ export type ListItemSelectScalar = {
   doneByType?: boolean
   doneById?: boolean
   doneAt?: boolean
+  remainderOfId?: boolean
+  remainderSettledAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ListItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "documentId" | "text" | "doneByType" | "doneById" | "doneAt" | "createdAt" | "updatedAt", ExtArgs["result"]["listItem"]>
+export type ListItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "documentId" | "text" | "doneByType" | "doneById" | "doneAt" | "remainderOfId" | "remainderSettledAt" | "createdAt" | "updatedAt", ExtArgs["result"]["listItem"]>
 export type ListItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   document?: boolean | Prisma.DocumentDefaultArgs<ExtArgs>
@@ -1080,6 +1174,16 @@ export type $ListItemPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     doneByType: $Enums.ActorType | null
     doneById: string | null
     doneAt: Date | null
+    /**
+     * The item this line is what remains of (a merged pull request's `remains`, or add_item's
+     * `remainsOf`), nested under it: that item is ticked once all its remaining lines are.
+     */
+    remainderOfId: string | null
+    /**
+     * When this remaining line was dealt with for its item (seen ticked, or gone from the file);
+     * while unset, settleRemainders looks at it again.
+     */
+    remainderSettledAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["listItem"]>
@@ -1517,6 +1621,8 @@ export interface ListItemFieldRefs {
   readonly doneByType: Prisma.FieldRef<"ListItem", 'ActorType'>
   readonly doneById: Prisma.FieldRef<"ListItem", 'String'>
   readonly doneAt: Prisma.FieldRef<"ListItem", 'DateTime'>
+  readonly remainderOfId: Prisma.FieldRef<"ListItem", 'String'>
+  readonly remainderSettledAt: Prisma.FieldRef<"ListItem", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ListItem", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ListItem", 'DateTime'>
 }

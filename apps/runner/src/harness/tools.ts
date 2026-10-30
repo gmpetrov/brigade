@@ -1549,11 +1549,13 @@ export function listTools(call: ScheduleCaller): Record<string, Tool> {
     }),
     complete_item: tool({
       description:
-        'Tick a line of a list once its work is really done, with a short note after it (what did it, e.g. ' +
-        '"Neon PITR set to 7 days, 29 Oct"). Brigade changes the file, credited to you. For work a pull request ' +
-        "finishes, name the item in that pull request's items.closes instead: it is ticked when merged. Never tick " +
-        'what is only partly done: add_item what remains instead.',
-      inputSchema: jsonSchema<{ item: string; path?: string; note?: string }>({
+        'Tick a line of a list once its work is really done: each point of what done means for it checked, ' +
+        'with what shows it in the note after it (e.g. "Sitemap read by Google, 7 URLs, 31 Oct"). Brigade ' +
+        'changes the file, credited to you. For work a pull request finishes, name the item in that pull ' +
+        "request's items.closes instead: it is ticked when merged. When whether it is done is a matter of " +
+        'judgment (a video, copy, a design), do not tick it: show it to the person and let them tick it. Never ' +
+        'tick what is only partly done: add_item what remains of it (remainsOf) instead.',
+      inputSchema: jsonSchema<{ item: string; path?: string; note: string }>({
         type: 'object',
         properties: {
           item,
@@ -1563,10 +1565,11 @@ export function listTools(call: ScheduleCaller): Record<string, Tool> {
           },
           note: {
             type: 'string',
-            description: 'A few words after the line, e.g. "PR #12, 29 Oct"',
+            description:
+              'What shows it is done, in a few words after the line, e.g. "Neon PITR set to 7 days, 29 Oct"',
           },
         },
-        required: ['item'],
+        required: ['item', 'note'],
       }),
       execute: (input, { toolCallId }) =>
         call({
@@ -1574,7 +1577,7 @@ export function listTools(call: ScheduleCaller): Record<string, Tool> {
             name: 'complete_item',
             item: input.item,
             ...(input.path ? { path: input.path } : {}),
-            ...(input.note ? { note: input.note } : {}),
+            note: input.note,
           },
           toolCallId,
           toolName: 'complete_item',
@@ -1583,15 +1586,17 @@ export function listTools(call: ScheduleCaller): Record<string, Tool> {
     }),
     add_item: tool({
       description:
-        'Add a line to a list, attached to this thread: what remains of an item, a follow-up the work showed. ' +
-        'After a line (nested under it with nested: true), at the end of a section by its heading, or at the end ' +
-        "of the file. Write it as the list's other lines are written, in their language.",
+        'Add a line to a list, attached to this thread: what remains of an item (remainsOf: nested under it, ' +
+        'which Brigade ticks once all its remaining lines are ticked), or a follow-up the work showed (after a ' +
+        'line, nested under it with nested: true, at the end of a section by its heading, or at the end of the ' +
+        "file). Write it as the list's other lines are written, in their language.",
       inputSchema: jsonSchema<{
         path: string
         text: string
         after?: string
         nested?: boolean
         section?: string
+        remainsOf?: string
       }>({
         type: 'object',
         properties: {
@@ -1602,6 +1607,10 @@ export function listTools(call: ScheduleCaller): Record<string, Tool> {
           section: {
             type: 'string',
             description: 'A heading of the file, to add it at the end of that section',
+          },
+          remainsOf: {
+            ...item,
+            description: `The item this line is what remains of, in the same list. ${item.description}`,
           },
         },
         required: ['path', 'text'],
@@ -1615,6 +1624,7 @@ export function listTools(call: ScheduleCaller): Record<string, Tool> {
             ...(input.after ? { after: input.after } : {}),
             ...(input.nested ? { nested: true } : {}),
             ...(input.section ? { section: input.section } : {}),
+            ...(input.remainsOf ? { remainsOf: input.remainsOf } : {}),
           },
           toolCallId,
           toolName: 'add_item',
