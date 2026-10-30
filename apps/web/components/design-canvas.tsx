@@ -151,7 +151,8 @@ function DesignCanvasInner({
   className,
 }: {
   groups: CanvasGroup[]
-  mode: 'select' | 'play'
+  /** Select: pick elements; Hand: drag anywhere to move the view; Play: the pages work. */
+  mode: 'select' | 'hand' | 'play'
   selection: Selected[]
   onSelect: (selection: Selected[]) => void
   onMessage: (board: CanvasBoard, message: PageMessage) => void
@@ -792,6 +793,7 @@ function DesignCanvasInner({
   }
   const hoverFrame = useRef(0)
   function onOverlayMove(e: React.MouseEvent, board: string) {
+    if (modeRef.current === 'hand') return
     if (!frames.current.has(board)) return
     const point = pagePoint(e)
     cancelAnimationFrame(hoverFrame.current)
@@ -802,6 +804,7 @@ function DesignCanvasInner({
     })
   }
   function onOverlayClick(e: React.MouseEvent, board: string) {
+    if (modeRef.current === 'hand') return
     // A board showing its picture: brought close, where its page loads.
     if (!frames.current.has(board)) {
       const b = boardOf(board)
@@ -956,6 +959,7 @@ function DesignCanvasInner({
   const onDoubleClickRef = useRef(onDoubleClick)
   onDoubleClickRef.current = onDoubleClick
   const onBoardDoubleClick = useCallback((key: string) => {
+    if (modeRef.current === 'hand') return
     const last = selectionRef.current.at(-1)
     if (last?.board === key) onDoubleClickRef.current?.(last)
   }, [])
@@ -983,16 +987,18 @@ function DesignCanvasInner({
         // Drag on the canvas itself, or with the middle button anywhere: pan.
         const own =
           e.target === e.currentTarget || (e.target as HTMLElement).dataset.world !== undefined
-        if (panning === 'space' || e.button === 1 || (own && e.button === 0)) {
+        const hand = mode === 'hand' && e.button === 0
+        if (panning === 'space' || hand || e.button === 1 || (own && e.button === 0)) {
           e.preventDefault()
-          if (own && e.button === 0 && panning !== 'space' && selection.length) onSelect([])
+          if (own && e.button === 0 && !hand && panning !== 'space' && selection.length)
+            onSelect([])
           setPanning((p) => p ?? 'drag')
           startDrag(e)
         }
       }}
       className={cn(
         'relative min-h-0 flex-1 overflow-hidden bg-muted/40 outline-none select-none',
-        panning ? 'cursor-grabbing' : 'cursor-default',
+        panning ? 'cursor-grabbing' : mode === 'hand' ? 'cursor-grab' : 'cursor-default',
         className,
       )}
       style={{ touchAction: 'none' }}
@@ -1011,7 +1017,8 @@ function DesignCanvasInner({
             ready={Boolean(ready[b.key])}
             picture={pictures[b.key]?.url}
             reload={reloads[b.key] ?? 0}
-            select={mode === 'select' && !panning && !(retyping && retyping.board === b.key)}
+            // In Hand too: the layer keeps the pages from taking the drag.
+            select={mode !== 'play' && !panning && !(retyping && retyping.board === b.key)}
             onFrame={onFrame}
             onMove={onBoardMove}
             onLeave={onBoardLeave}
@@ -1161,7 +1168,8 @@ const BoardView = memo(function BoardView({
       {select && (
         <div
           data-board={key}
-          className="absolute inset-0 cursor-default"
+          // The canvas's cursor: an arrow in Select, a hand in Hand.
+          className="absolute inset-0"
           onMouseMove={(e) => onMove(e, key)}
           onMouseLeave={() => onLeave(key)}
           onClick={(e) => onClick(e, key)}
