@@ -425,8 +425,11 @@ test('one payable Checkout per workspace, even started twice at once', { skip },
   assert.equal(rows.length, 1)
   const customer = await billing.workspaceCustomerId(ws.checkout!)
   assert.equal(rows[0]!.stripeCustomerId, customer)
-  for (const session of fake.sessions.filter((s) => s.customer === customer))
+  for (const session of fake.sessions.filter((s) => s.customer === customer)) {
     assert.equal(session.metadata.rowId, rows[0]!.id)
+    // Shown as Brigade, not the Stripe account's name it shares with Papers.
+    assert.equal(session.branding_settings?.display_name, 'Brigade')
+  }
 })
 
 test("whoever pays, the plan is the workspace's, on its own customer", { skip }, async () => {
