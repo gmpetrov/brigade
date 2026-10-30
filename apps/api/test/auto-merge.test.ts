@@ -421,4 +421,20 @@ describe('auto-merge', { skip: !database && 'no database answers' }, () => {
     )
     assert.ok(merged.has(12))
   })
+
+  test('another 403 on check runs, such as a rate limit, is not a missing permission', async () => {
+    const thread = await opened(13)
+    await withGitHub(
+      (pathname) =>
+        pathname.endsWith('/check-runs')
+          ? Response.json(
+              { message: 'You have exceeded a secondary rate limit. Please wait a few minutes.' },
+              { status: 403 },
+            )
+          : undefined,
+      () => turnEnded(thread),
+    )
+    assert.equal((await row(13)).mergeStatus, 'none')
+    assert.ok(!merged.has(13))
+  })
 })

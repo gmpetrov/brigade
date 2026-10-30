@@ -457,6 +457,12 @@ function checkStatus(status: string, conclusion: string | null): CheckRun['statu
 }
 
 /**
+ * GitHub's answer to an app without a permission. Its other 403s, such as a secondary rate
+ * limit, say nothing about whether there are checks.
+ */
+const NO_PERMISSION = /^403: Resource not accessible by integration/
+
+/**
  * Check runs and commit statuses on a commit. Without the Checks permission, statuses only.
  * strict: GitHub failing to say throws, rather than reading as no checks (what an auto-merge
  * must never take for checks that passed); only a missing Checks permission still reads as none.
@@ -470,7 +476,7 @@ export async function checksOf(
   const lenient = <T>(empty: T, permission = false) =>
     options.strict
       ? (error: unknown): T => {
-          if (permission && error instanceof ConnectorError && error.message.startsWith('403'))
+          if (permission && error instanceof ConnectorError && NO_PERMISSION.test(error.message))
             return empty
           throw error
         }
