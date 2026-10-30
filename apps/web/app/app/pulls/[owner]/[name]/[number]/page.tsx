@@ -406,7 +406,9 @@ function Merging({ pull: p }: { pull: PullRequestDetail }) {
     t.mergeStatus === 'resolving'
       ? `${t.author?.name ?? 'The author'} is resolving the conflicts. It merges after.`
       : t.mergeStatus === 'merging'
-        ? 'It merges once GitHub allows it.'
+        ? t.autoMerge
+          ? 'Auto-merge: it merges once GitHub allows it.'
+          : 'It merges once GitHub allows it.'
         : 'The merge stopped and needs you.'
   return (
     <Card

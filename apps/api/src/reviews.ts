@@ -53,7 +53,7 @@ const WORKFLOWS_READ = 20
 /** Pages of a pull request's files read for workflows that filter on paths (100 a page). */
 const CHANGED_PAGES = 3
 /** How long one request's claim to start a review holds before another may take it over. */
-const CLAIM_MS = 5 * 60_000
+export const REVIEW_CLAIM_MS = 5 * 60_000
 
 type Teammate = { id: string; name: string; harness: 'claude_code' | 'codex'; kind: string }
 
@@ -398,7 +398,7 @@ export async function startReview(
 
 /**
  * Claim a pull request to start its review, one request at a time: when, which is the claim's
- * mark, or null while another request holds it. A claim older than CLAIM_MS, left by a crash,
+ * mark, or null while another request holds it. A claim older than REVIEW_CLAIM_MS, left by a crash,
  * may be taken over.
  */
 export async function claimReview(db: ScopedDb, id: string, now = new Date()) {
@@ -407,7 +407,7 @@ export async function claimReview(db: ScopedDb, id: string, now = new Date()) {
       id,
       OR: [
         { reviewClaimedAt: null },
-        { reviewClaimedAt: { lt: new Date(now.getTime() - CLAIM_MS) } },
+        { reviewClaimedAt: { lt: new Date(now.getTime() - REVIEW_CLAIM_MS) } },
       ],
     },
     data: { reviewClaimedAt: now },

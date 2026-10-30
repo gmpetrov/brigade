@@ -201,6 +201,7 @@ function make(spec: Spec): DemoPull {
     updatedAt: spec.merged ?? spec.updatedAt,
     tracking: {
       mergeStatus: 'none',
+      autoMerge: false,
       note: null,
       sessionId: spec.session?.id ?? null,
       author: spec.author,

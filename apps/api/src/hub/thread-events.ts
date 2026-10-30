@@ -7,7 +7,7 @@ import { noteAccountState } from '../account-health.js'
 import { prisma, scoped, type Prisma } from '../db.js'
 import type { Session } from '../generated/prisma/client.js'
 import type { SessionStatus } from '../generated/prisma/enums.js'
-import { resolveTurnEnded } from '../pull-requests.js'
+import { autoMergeTurnEnded, resolveTurnEnded } from '../pull-requests.js'
 import type { QueuedMessage } from '../recovery.js'
 import { currentHub } from './context.js'
 
@@ -90,7 +90,10 @@ export async function queuedMessagesOn(computerId: string): Promise<QueuedMessag
   return [...open.values()]
 }
 
-/** Each teammate whose turn ended: a pull request whose conflicts it resolved in the thread merges next. */
+/**
+ * Each teammate whose turn ended: a pull request whose conflicts it resolved in the thread merges
+ * next. Then those the thread may have readied for Auto-merge merge on their own.
+ */
 export async function noteTurnsEnded(
   session: { id: string; organizationId: string; workspaceId: string; teammateId: string },
   events: SequencedEvent[],
@@ -118,6 +121,11 @@ export async function noteTurnsEnded(
       teammateId,
     )
   }
+  if (events.some((e) => e.event.type === 'turn.completed'))
+    await autoMergeTurnEnded(
+      { organizationId: session.organizationId, workspaceId: session.workspaceId },
+      session.id,
+    )
 }
 
 /** A thread's status follows from its events, so it survives disconnects and replays. */

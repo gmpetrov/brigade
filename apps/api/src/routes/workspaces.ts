@@ -2,6 +2,7 @@ import {
   CreateWorkspace,
   DeleteAccount,
   DeleteWorkspace,
+  SetAutoMerge,
   SetSuggestions,
   SwitchWorkspace,
   UpdateWorkspace,
@@ -102,6 +103,7 @@ export const workspaces = new Hono<AppEnv>()
       activeWorkspaceId: scope?.workspaceId ?? null,
       memberId: scope?.memberId ?? null,
       suggestions: membership?.suggestions ?? true,
+      autoMerge: membership?.autoMerge ?? false,
     })
   })
 
@@ -109,6 +111,25 @@ export const workspaces = new Hono<AppEnv>()
   .put('/me/suggestions', requireWorkspace, async (c) => {
     const { suggestions } = await parseBody(c.req.raw, SetSuggestions)
     await prisma.member.update({ where: { id: c.var.scope.memberId }, data: { suggestions } })
+    return c.body(null, 204)
+  })
+
+  /**
+   * Brigade merges the pull requests teammates open in this member's threads once ready, or
+   * stops (Member.autoMerge). Only those who may merge: owners and admins.
+   */
+  .put('/me/auto-merge', requireWorkspace, async (c) => {
+    const { autoMerge } = await parseBody(c.req.raw, SetAutoMerge)
+    const { scope } = c.var
+    if (autoMerge && scope.role !== 'owner' && scope.role !== 'admin')
+      throw new HTTPException(403, { message: 'Only owners and admins can merge pull requests' })
+    await prisma.member.update({ where: { id: scope.memberId }, data: { autoMerge } })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: autoMerge ? 'member.auto_merge_on' : 'member.auto_merge_off',
+      target: { type: 'member', id: scope.memberId },
+    })
     return c.body(null, 204)
   })
 

@@ -17,6 +17,12 @@ export type MergeStatus = z.infer<typeof MergeStatus>
 export const MergeMethod = z.enum(['squash', 'merge', 'rebase'])
 export type MergeMethod = z.infer<typeof MergeMethod>
 
+/**
+ * A member turns Auto-merge on or off (Member.autoMerge): Brigade merges the pull requests
+ * teammates open in their threads once no review is under way or asked for and checks passed.
+ */
+export const SetAutoMerge = z.object({ autoMerge: z.boolean() })
+
 /** A member asks a teammate to review a pull request. */
 export const RequestReview = z.object({
   /** Who reviews it; unset: Brigade picks another teammate, on another model when it can. */
@@ -58,6 +64,8 @@ export type ResolvePullRequest = MergePullRequest
 /** Brigade's side of a pull request: who wrote it, its review, and a merge a person asked for. */
 export type PullRequestTracking = {
   mergeStatus: MergeStatus
+  /** Brigade set it merging on its own, for its member's Auto-merge. */
+  autoMerge: boolean
   /** Why a merge waits or stopped. */
   note: string | null
   sessionId: string | null

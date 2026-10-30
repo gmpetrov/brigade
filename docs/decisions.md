@@ -520,10 +520,22 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   live from GitHub, every repository where a teammate opened a pull request; a person's pull request elsewhere is
   not listed. A pull request's page shows its description, checks, reviews and diff. Until the workspace has a
   working GitHub connection, the page shows how to connect one. Any member asks a teammate to review a pull
-  request; only owners and admins merge. Teammates merge only when a person asks. A pull request that conflicts
+  request; only owners and admins merge. Teammates merge only when a person asks, or Brigade does for Auto-merge. A pull request that conflicts
   goes back to the teammate that wrote it (Resolve conflicts): when its turn ends, Brigade merges it once GitHub
   allows it, checked every minute; failed checks and new conflicts go back to the author, three turns at most,
   then a ticket. Merges are squash by default, audited as `pull_request.merged`.
+- **Auto-merge** (`autoMerge` in `apps/api/src/pull-requests.ts`, Preferences). An owner or admin may turn it on
+  for themselves (`Member.autoMerge`, off by default). When a teammate's turn ends, Brigade looks at the pull
+  requests teammates opened in that member's threads (that thread, its children, or reviewed there): once the
+  thread is done with nothing asked (a child's, once its report reached its parent and the parent is done too), no
+  review is starting or under way, its latest review (if any) approved its head, and on GitHub it is open, no draft,
+  without conflicts or a failed check, it is set merging (`PullRequest.autoMergeAt`) and merges once its checks
+  pass, as a merge a person asked for. Unlike one, it never goes back to the author nor opens a ticket: failed
+  checks, conflicts, a rule GitHub enforces, its thread back at work or two hours without GitHub allowing it, and
+  it waits on a person again (`pull_request.auto_merge_stopped`). It does not reach pull requests that already
+  waited when it was turned on, until their thread's next turn ends. Checks it cannot read are never taken for
+  checks that passed: GitHub failing to list them, it tries again; without the GitHub app's Checks permission, it
+  never merges on its own.
 - **Reviews** (`apps/api/src/reviews.ts`). Another teammate reviews a pull request in a child thread of the thread
   that opened it, which Brigade starts with a standard brief rather than the author's: the pull request, how that
   thread started, and whether the repository runs checks (then the reviewer reads the logic and leaves the rest to
