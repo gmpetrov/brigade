@@ -4,7 +4,8 @@
 // admin merges it from here, after a word while its review is under way, asked for
 // changes or did not read its latest commits (then Review again has them read). One that
 // conflicts has Resolve conflicts instead: its teammate resolves them, then it merges by
-// itself. A thread's outputs show the same pull request as a row (thread-outputs).
+// itself. In its thread, its review's child thread shows under it as a line, like a child a
+// teammate started. A thread's outputs show the same pull request as a row (thread-outputs).
 import {
   ExternalLink,
   GitCompareArrows,
@@ -16,9 +17,10 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { PullStatus, ReviewLink, reviewLine, reviewThread } from '@/components/pull-status'
+import { ChildLine } from '@/components/thread-children'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
-import { api, pullHref, useApi, type PullRequestState } from '@/lib/api'
+import { api, pullHref, useApi, type PullRequestState, type ThreadChild } from '@/lib/api'
 import {
   blockedBecause,
   canMerge,
@@ -105,6 +107,7 @@ export function PullCard({
   title,
   open,
   mergeElsewhere,
+  childThreads = [],
 }: {
   repository: string
   number: number
@@ -113,6 +116,8 @@ export function PullCard({
   open?: boolean
   /** A teammate's merge button under it does the merging: the card shows where it stands instead. */
   mergeElsewhere?: boolean
+  /** The thread's children: its review, when it runs in one of them, shows as its line. */
+  childThreads?: ThreadChild[]
 }) {
   const { me } = useDashboard()
   const { pull, busy, asking, error, merge, resolve, reviewAgain } = usePull(repository, number)
@@ -187,7 +192,10 @@ export function PullCard({
     </Button>
   )
 
-  return (
+  const reviewThreadId = p ? reviewThread(p) : null
+  const review = reviewThreadId ? childThreads.find((c) => c.id === reviewThreadId) : undefined
+
+  const card = (
     <div className="relative flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm hover:bg-secondary/50">
       <Icon
         className={cn(
@@ -235,6 +243,13 @@ export function PullCard({
         {error && <span className="text-xs text-destructive-text">{error}</span>}
       </span>
       {action()}
+    </div>
+  )
+  if (!review) return card
+  return (
+    <div className="flex flex-col gap-1">
+      {card}
+      <ChildLine child={review} className="-mx-2" />
     </div>
   )
 }

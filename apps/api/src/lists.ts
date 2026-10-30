@@ -25,7 +25,7 @@ import {
   type ListSummary,
   type ParsedList,
   type ThreadListItems,
-  formatMention,
+  handOffMessage,
   projectFolder,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -561,15 +561,12 @@ export async function handOff(
   const picked = await itemsFor(db, scope, actor, file, input.items)
   const texts = new Map(input.items.map((p, i) => [picked[i]!, p.text]))
   const ids = [...texts.keys()]
-  const mention = formatMention({ kind: 'document', id: file.id, label: file.path })
   const message = (group: string[]) =>
-    [
-      input.note?.trim() ||
-        (group.length > 1
-          ? `Please take these items of ${mention}:`
-          : `Please take this item of ${mention}:`),
-      bullets(group.map((id) => texts.get(id)!)),
-    ].join('\n\n')
+    handOffMessage(
+      file,
+      group.map((id) => texts.get(id)!),
+      input.note,
+    )
   const groups = input.mode === 'each' ? ids.map((id) => [id]) : [ids]
   const threads: string[] = []
   for (const group of groups) {
@@ -595,7 +592,10 @@ export async function handOff(
   return { threadIds: threads }
 }
 
-/** Attach lines to a thread that runs already; its teammate is told at its next turn. */
+/**
+ * Attach lines to a thread that runs already. Its teammate is told by a note at its next turn,
+ * unless `quiet`: the person sends the hand-off as a message right after, which starts it.
+ */
 export async function linkToThread(
   db: ScopedDb,
   scope: Scope,
@@ -616,11 +616,13 @@ export async function linkToThread(
     data: ids.map((itemId) => ({ itemId, sessionId: session.id })) as never,
     skipDuplicates: true,
   })
-  await noteInThread(
-    db,
-    session.id,
-    `Items of ${file.path} were added to this thread:\n${bullets(input.items.map((p) => p.text))}`,
-  )
+  if (!input.quiet)
+    await noteInThread(
+      db,
+      session.id,
+      `Items of ${file.path} were added to this thread:\n${bullets(input.items.map((p) => p.text))}` +
+        (input.note ? `\n\nWith this note from the person who added them:\n${input.note}` : ''),
+    )
   return { sessionId: session.id, itemIds: ids }
 }
 

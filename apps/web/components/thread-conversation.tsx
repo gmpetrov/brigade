@@ -80,6 +80,7 @@ import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
 import { Takeover } from '@/components/takeover'
 import {
   ChildrenWaiting,
+  ChildrenWorking,
   isQueuedReport,
   ParentLink,
   QueuedReports,
@@ -1409,6 +1410,7 @@ export function ThreadConversation({
                     />
                   )}
                   {proposals.length > 0 && ticketCard(proposals, 'mt-4')}
+                  <ChildrenWorking children={t.children} />
                   <ChildrenWaiting children={t.children} />
                 </FileLinksProvider>
               </div>

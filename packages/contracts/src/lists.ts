@@ -4,6 +4,7 @@
 // in the editor and in any Markdown viewer; Brigade keeps the rest (the threads on it, the pull
 // requests that finish it) by that id. Lines nobody handed to a teammate have no marker.
 import { z } from 'zod'
+import { formatMention } from './mentions.js'
 
 /** An item's id, in its marker. */
 export const ListItemId = z.string().regex(/^[a-z0-9]{10,32}$/)
@@ -21,10 +22,26 @@ const MARKERS = /\s*<!--\s*item:[a-z0-9]+\s*-->/g
 const CHECK = /^(\s*)([*+-]|\d+[.)])\s+\[( |x|X)\](?:\s+(.*))?$/
 const HEADING = /^(#{1,6})\s+(.*?)\s*#*\s*$/
 const FENCE = /^\s*(`{3,}|~{3,})/
+/** Any list line, a checkbox or not: it starts a block of its own, never continues a line above. */
+const BULLET = /^\s*([*+-]|\d+[.)])(\s|$)/
+/**
+ * Rows that start a block of their own and so end a line's text above them (CommonMark): a quote,
+ * a thematic break, HTML. A row holding only a marker is not one: the editor writes a marker there
+ * when a line break was typed before it, and reads it back as the line's.
+ */
+const BLOCK = /^ {0,3}(>|([-*_])( *\2){2,} *$|<(\/?[a-zA-Z]|!--))/
+const MARKER_ROW = /^\s*<!--\s*item:[a-z0-9]+\s*-->\s*\\?\s*$/
+/** A hard line break at the end of a line (a backslash, or two spaces): its text goes on below. */
+const BREAK = /(\\| {2,})$/
 
 export type ListLine = {
-  /** Its line in the file, from 0. */
+  /** Its line in the file, from 0: the one with its box. */
   line: number
+  /**
+   * Its last line in the file: past `line` when its text goes on below it (a line break typed in
+   * it), where its marker may then be.
+   */
+  end: number
   /** Spaces before its bullet: a deeper line is nested under the one above. */
   indent: number
   done: boolean
@@ -54,37 +71,66 @@ export function parseList(markdown: string): ParsedList {
   let section: string | null = null
   let fence: string | null = null
   const seen = new Set<string>()
-  markdown.split('\n').forEach((raw, line) => {
-    const open = raw.match(FENCE)
-    if (open) {
-      if (!fence) fence = open[1]!
-      else if (open[1]!.startsWith(fence[0]!) && open[1]!.length >= fence.length) fence = null
+  const rows = markdown.split('\n')
+  // The checklist line whose text the next row may go on with: until a blank row or a new block.
+  let open: { item: ListLine; parts: string[] } | null = null
+  const close = () => {
+    if (!open) return
+    const { item, parts } = open
+    const all = parts.join(' ')
+    // Its marker, wherever in its text: a line break typed before it moves it to a row below.
+    const marker = all.match(MARKER)?.[1] ?? null
+    const copy = !!marker && seen.has(marker)
+    if (marker) seen.add(marker)
+    item.marker = marker
+    item.id = copy ? null : marker
+    item.text = parts
+      .map((p) => p.replace(MARKERS, '').replace(BREAK, '').trim())
+      .filter(Boolean)
+      .join(' ')
+    open = null
+  }
+  rows.forEach((raw, line) => {
+    const fenced = raw.match(FENCE)
+    if (fenced) {
+      close()
+      if (!fence) fence = fenced[1]!
+      else if (fenced[1]!.startsWith(fence[0]!) && fenced[1]!.length >= fence.length) fence = null
       return
     }
     if (fence) return
     const heading = raw.match(HEADING)
     if (heading) {
+      close()
       const text = heading[2]!.replace(/\\(.)/g, '$1')
       if (heading[1] === '#' && title === null) title = text
       else section = text
       return
     }
     const check = raw.match(CHECK)
-    if (!check) return
-    const rest = check[4] ?? ''
-    const marker = rest.match(MARKER)?.[1] ?? null
-    const copy = !!marker && seen.has(marker)
-    if (marker) seen.add(marker)
-    lines.push({
+    if (!check) {
+      // Its text going on (a paragraph's next row), unless a blank row or another block ends it.
+      if (open && raw.trim() && !BULLET.test(raw) && (MARKER_ROW.test(raw) || !BLOCK.test(raw))) {
+        open.parts.push(raw.trim())
+        open.item.end = line
+      } else close()
+      return
+    }
+    close()
+    const item: ListLine = {
       line,
+      end: line,
       indent: check[1]!.replace(/\t/g, '    ').length,
       done: check[3] !== ' ',
-      text: rest.replace(MARKERS, '').trim(),
-      id: copy ? null : marker,
-      marker,
+      text: '',
+      id: null,
+      marker: null,
       section,
-    })
+    }
+    lines.push(item)
+    open = { item, parts: [check[4] ?? ''] }
   })
+  close()
   return { title, lines }
 }
 
@@ -142,17 +188,39 @@ export function markLine(markdown: string, line: ListLine, id: string) {
   return setMarker(markdown, line, id)
 }
 
-/** The line's marker set to `id`: added, or put in place of the one it has (a copy's). */
+/**
+ * The line's marker set to `id`: put in place of the one it has (a copy's), on whichever of its
+ * rows that is, else added at the end of its first row.
+ */
 export function setMarker(markdown: string, line: ListLine, id: string) {
   if (line.marker === id && line.id === id) return markdown
-  return withLine(
-    markdown,
-    line.line,
-    (raw) => `${raw.replace(MARKERS, '').replace(/\s+$/, '')} ${itemMarker(id)}`,
-  )
+  const rows = markdown.split('\n')
+  for (let row = line.line; row <= line.end; row++)
+    if (MARKER.test(rows[row]!)) {
+      rows[row] = rows[row]!.replace(MARKER, ` ${itemMarker(id)}`)
+      return rows.join('\n')
+    }
+  return withLine(markdown, line.line, (raw) => {
+    const { head, brk } = splitBreak(raw, line.end > line.line)
+    return `${head} ${itemMarker(id)}${brk}`
+  })
 }
 
-/** The line ticked or unticked, with a short note after its text when given (e.g. "PR #12, 29 Oct"). */
+/** A line's first row without the line break that ends it when its text goes on below, and that break. */
+function splitBreak(raw: string, goesOn: boolean) {
+  const brk = goesOn ? raw.match(/(\s*\\| {2,})$/) : null
+  const head = (brk ? raw.slice(0, brk.index) : raw).replace(/\s+$/, '')
+  return { head, brk: brk ? (brk[1]!.includes('\\') ? ' \\' : '  ') : '' }
+}
+
+/** A link in a note: italics around it come back from the editor broken, a little more each save. */
+const LINKISH = /(https?:\/\/|www\.|\]\()/i
+
+/**
+ * The line ticked or unticked, with a short note after its text when given (e.g. "PR #12, 29
+ * Oct"), in italics unless it holds a link. On its first row, before its marker and any line
+ * break there.
+ */
 export function setLineDone(markdown: string, line: ListLine, done: boolean, note?: string) {
   return withLine(markdown, line.line, (raw) => {
     let next = raw.replace(/\[( |x|X)\]/, done ? '[x]' : '[ ]')
@@ -162,10 +230,12 @@ export function setLineDone(markdown: string, line: ListLine, done: boolean, not
       .trim()
     if (clean) {
       const marker = next.match(MARKER)
-      const head = marker
-        ? next.slice(0, marker.index).replace(/\s+$/, '')
-        : next.replace(/\s+$/, '')
-      next = `${head} *${clean}*${marker ? ` ${marker[0].trim()}` : ''}`
+      const { head, brk } = splitBreak(
+        marker ? next.replace(MARKER, '') : next,
+        line.end > line.line,
+      )
+      const text = LINKISH.test(clean) ? `— ${clean}` : `*${clean}*`
+      next = `${head} ${text}${marker ? ` ${marker[0].trim()}` : ''}${brk}`
     }
     return next
   })
@@ -190,13 +260,13 @@ export function insertLine(
     const after = at.after
     indent = after.indent + (at.nested ? 2 : 0)
     // After the lines nested under it (and the text continuing it), unless going under it first.
-    index = after.line + 1
+    index = after.end + 1
     if (!at.nested) {
       const nextSibling = list.lines.find((l) => l.line > after.line && l.indent <= after.indent)
       const lastNested = [...list.lines]
         .filter((l) => l.line > after.line && (!nextSibling || l.line < nextSibling.line))
         .pop()
-      if (lastNested) index = lastNested.line + 1
+      if (lastNested) index = lastNested.end + 1
     }
   } else if (at.section) {
     const want = normal(at.section)
@@ -208,7 +278,7 @@ export function insertLine(
       const end = rows.findIndex((r, i) => i > start && HEADING.test(r))
       const inSection = list.lines.filter((l) => l.line > start && (end < 0 || l.line < end))
       const last = inSection.at(-1)
-      index = last ? last.line + 1 : start + 1
+      index = last ? last.end + 1 : start + 1
       if (!last) rows.splice(index++, 0, '')
     }
   }
@@ -308,9 +378,37 @@ export const HandOffItems = z.object({
 })
 export type HandOffItems = z.infer<typeof HandOffItems>
 
-/** Attach lines to a thread that runs already. */
-export const LinkItems = z.object({ sessionId: z.string(), items: PickedLines })
+/**
+ * Attach lines to a thread that runs already. `quiet`: its teammate is not told by a note, as the
+ * person sends the hand-off as a message of theirs right after (handOffMessage); else the note
+ * carries what the person adds (`note`).
+ */
+export const LinkItems = z.object({
+  sessionId: z.string(),
+  items: PickedLines,
+  quiet: z.boolean().optional(),
+  note: z.string().trim().max(4_000).optional(),
+})
 export type LinkItems = z.infer<typeof LinkItems>
+
+/**
+ * The message that hands lines to a teammate, in a new thread or one that runs already: the
+ * person's note, or a request naming the list, then the lines.
+ */
+export function handOffMessage(
+  file: { id: string; path: string },
+  texts: string[],
+  note?: string | null,
+) {
+  const mention = formatMention({ kind: 'document', id: file.id, label: file.path })
+  return [
+    note?.trim() ||
+      (texts.length > 1
+        ? `Please take these items of ${mention}:`
+        : `Please take this item of ${mention}:`),
+    texts.map((t) => `- ${plainItemText(t)}`).join('\n'),
+  ].join('\n\n')
+}
 
 export const SetItemDone = z.object({ done: z.boolean() })
 

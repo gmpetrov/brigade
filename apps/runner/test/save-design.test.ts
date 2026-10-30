@@ -34,29 +34,17 @@ async function save(path: string, library: string[]) {
     toolCallId: 'c1',
     messages: [],
   } as never)
-  return { asked, result: result as { path: string; files: number; optionsTrashed?: string } }
+  return { asked, result: result as { path: string; files: number } }
 }
 
-test('saving a design sends the options offered for it to the trash', async () => {
+test('saving a design leaves the options offered for it in the library', async () => {
   const { asked, result } = await save('acme/landing.design', ['acme/landing.options'])
-  assert.deepEqual(asked.at(-1), { name: 'delete', path: 'acme/landing.options' })
+  assert.ok(!asked.some((o) => o.name === 'delete'))
   assert.equal(asked.filter((o) => o.name === 'save').length, 3)
-  assert.deepEqual(result, {
-    path: 'acme/landing.design',
-    files: 3,
-    optionsTrashed: 'acme/landing.options',
-  })
-})
-
-test('a design with no options left is saved as before', async () => {
-  const { result } = await save('acme/landing.design', [])
   assert.deepEqual(result, { path: 'acme/landing.design', files: 3 })
 })
 
 test('saving an option leaves the other options alone', async () => {
-  const { asked, result } = await save('acme/landing.options/a-bold.design', [
-    'acme/landing.options',
-  ])
-  assert.ok(!asked.some((o) => o.name === 'delete' && o.path === 'acme/landing.options'))
-  assert.equal(result.optionsTrashed, undefined)
+  const { asked } = await save('acme/landing.options/a-bold.design', ['acme/landing.options'])
+  assert.ok(!asked.some((o) => o.name === 'delete'))
 })
