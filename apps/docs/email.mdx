@@ -52,13 +52,13 @@ A conversation that sends mail to threads 8 times within an hour is stopped as a
 newest first. It also shows Gmail accounts: all mail of a shared account when its menu has **Show all its mail in
 the Inbox**, otherwise only mail that went to a thread. A member's own Gmail shows to them alone.
 
-| Tab                | What it holds                                                                     |
-| ------------------ | --------------------------------------------------------------------------------- |
+| Tab                | What it holds                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------- |
 | **To do**          | Nobody took it, its teammate chose not to reply, or a reply waits for your approval |
-| **With teammates** | A thread has it                                                                   |
-| **Scheduled**      | A reply set to leave later                                                        |
-| **Done**           | Marked done; the next mail in the conversation waits again                        |
-| **All**            | Everything                                                                        |
+| **With teammates** | A thread has it                                                                     |
+| **Scheduled**      | A reply set to leave later                                                          |
+| **Done**           | Marked done; the next mail in the conversation waits again                          |
+| **All**            | Everything                                                                          |
 
 Filter by source, agent, project or words. From a conversation you can:
 
@@ -109,9 +109,10 @@ Cloudflare, **Add them on Cloudflare** adds them for you, without replacing any 
 every ten minutes, or at once with **Check now**.
 
 <Warning>
-  Add the records within 3 days. After that, while they are not in, another workspace on Brigade can add the domain
-  instead. A mailbox on a domain whose records aren't in yet sends nothing: Brigade never falls back to its
-  `mails.brigade.lol` address, so replies always come from the address people wrote to.
+  Add the records within 3 days. After that, while they are not in, another workspace on Brigade can
+  add the domain instead. A mailbox on a domain whose records aren't in yet sends nothing: Brigade
+  never falls back to its `mails.brigade.lol` address, so replies always come from the address
+  people wrote to.
 </Warning>
 
 A domain belongs to one workspace. Removing it stops mail going out as it; its mailboxes keep their address on
@@ -119,14 +120,14 @@ Brigade's domain.
 
 ## Limits
 
-| Limit                       | Value                                      |
-| --------------------------- | ------------------------------------------ |
-| Mail sent per address       | 100 a day                                  |
-| Recipients per mail         | 50 (To and Cc)                             |
-| Files per mail              | 10, up to 25 MB in all                     |
-| Send later                  | Up to 30 days ahead                        |
-| Threads a rule starts       | 50 a day                                   |
-| Unassigned mail in the Inbox | Kept 30 days, then deleted                |
+| Limit                        | Value                      |
+| ---------------------------- | -------------------------- |
+| Mail sent per address        | 100 a day                  |
+| Recipients per mail          | 50 (To and Cc)             |
+| Files per mail               | 10, up to 25 MB in all     |
+| Send later                   | Up to 30 days ahead        |
+| Threads a rule starts        | 50 a day                   |
+| Unassigned mail in the Inbox | Kept 30 days, then deleted |
 
 Mail a thread has is kept with that thread. Gmail mail you didn't share with the Inbox, and that went to no thread,
 is never stored.

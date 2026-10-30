@@ -10,13 +10,13 @@ For work at set times, use a [routine](/routines) instead.
 
 ## Events you can use
 
-| App                 | Events                                                                                                   | Options                                                                          |
-| ------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| **Gmail**           | **Email received**                                                                                       | **Only emails matching** (a Gmail search), **Automatic mail** (`skip` leaves out out-of-office replies and other machine mail) |
-| **GitHub**          | **Issue opened**, **Pull request opened**, **Review requested**, **New comment**, **Push to a branch**   | **Repository** (`owner/name`); a reviewer for review requests; a **Branch** for pushes |
-| **Stripe**          | **Payment received**, **Payment failed**, **New subscription**, **Subscription canceled**, **Dispute opened**, **Refund issued** |                                                                                  |
-| **Google Calendar** | **Event created**, **Event changed or canceled**, **Invited to an event**                                | **Calendar** (empty: the account's own)                                          |
-| **Email**           | **Email received**, on a teammate's own address                                                          | Senders, subject words, automatic mail, threads a day                            |
+| App                 | Events                                                                                                                           | Options                                                                                                                        |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Gmail**           | **Email received**                                                                                                               | **Only emails matching** (a Gmail search), **Automatic mail** (`skip` leaves out out-of-office replies and other machine mail) |
+| **GitHub**          | **Issue opened**, **Pull request opened**, **Review requested**, **New comment**, **Push to a branch**                           | **Repository** (`owner/name`); a reviewer for review requests; a **Branch** for pushes                                         |
+| **Stripe**          | **Payment received**, **Payment failed**, **New subscription**, **Subscription canceled**, **Dispute opened**, **Refund issued** |                                                                                                                                |
+| **Google Calendar** | **Event created**, **Event changed or canceled**, **Invited to an event**                                                        | **Calendar** (empty: the account's own)                                                                                        |
+| **Email**           | **Email received**, on a teammate's own address                                                                                  | Senders, subject words, automatic mail, threads a day                                                                          |
 
 Options left empty match everything. With Gmail, a reply in an email conversation that already has a thread
 continues that thread rather than starting a new one. The Email App's rules are set up with its addresses: see
@@ -41,8 +41,8 @@ The trigger's threads run on the accounts of the admin who set it up. You can mo
 or delete it from the same panel.
 
 <Warning>
-  An event can contain anything its sender writes, including instructions aimed at your teammate. Give the
-  teammate only the access it needs, or set it to **Ask a person first** for writes. See
+  An event can contain anything its sender writes, including instructions aimed at your teammate.
+  Give the teammate only the access it needs, or set it to **Ask a person first** for writes. See
   [Apps](/apps#read-write-and-approvals).
 </Warning>
 

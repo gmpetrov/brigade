@@ -1,0 +1,72 @@
+---
+title: 'Needs you and tickets'
+description: 'Everything a teammate needs a person for, in one list: approvals, questions, access and limits.'
+---
+
+When a teammate needs a person, it opens a **ticket**: an approval, a question, a request for access, or a notice
+that something stopped. The thread waits until you answer, then the teammate carries on.
+
+## Where tickets show
+
+- **Home → Waiting on you**: one ticket at a time, with the whole card, and **Previous** / **Next** to move between
+  them. Answer it right there. Pull requests waiting on you show here too.
+- **The sidebar**: threads waiting on you come first in the list, with an orange dot and what they ask ("approve",
+  "answer", "sign in"…). The **Needs you** filter shows only those.
+- **Tickets** (in search, or **N more tickets** on Home): every ticket of the workspace, with filters **Approvals**,
+  **Reached caps**, **Expired logins**, **Out of usage**, **Disk full**, **Questions** and **From teammates**, by
+  project, and **Show resolved**.
+- **In the thread**, as a card where it was asked.
+- **On your phone**, as a push, if you turned [notifications](/notifications) on. A push opens the ticket in the
+  dashboard: you answer it there.
+
+## Kinds of tickets
+
+### Approvals
+
+A teammate wants to do something that waits for a yes: a write in an App when its policy is **Ask a person first**,
+an email to someone outside the workspace, merging a pull request. The card shows what it wants to do and why.
+
+- **Allow** / **Deny**. An approval covers that one action. An email can be edited, or scheduled, before you allow
+  it.
+- **Secrets**: a teammate asking to use a secret gets **Allow in this thread**, **Always allow** (from now on, in any
+  thread, without asking) or **Deny**.
+- **Skills, triggers and playbooks** a teammate proposes: **Add the skill**, **Add the trigger** or **Activate**, or
+  **Decline**. Owners and admins only.
+
+On a denial, the action isn't done, and the teammate is told not to ask again unless someone says so.
+
+### Questions and requests from teammates
+
+A teammate can ask a question with options, ask for a decision, or ask for something only a person can give:
+
+- **Access to an App or a repository**: the card says what it needs, read or read-write. **Give … access**,
+  **Connect …** or **Reconnect …** does it in one click.
+- **A secret**: **Add the key** or **Add the login** opens a form. The secret is encrypted as you save it, and the
+  teammate uses it in this thread at once.
+- **An action in its browser** (a CAPTCHA, a sign-in only you can do): **Take over …'s browser**, do it, then
+  **Done, hand back**.
+- **A draft to sign off**: **Approve** or **Request changes**, with a note, optionally sent to another teammate.
+
+Every card also has **Something else**, to answer in your own words, and **Decline**. When a ticket has several
+asks, your answers go to the teammate once each is answered.
+
+### Limits and notices
+
+| Ticket            | What it means                                                          | What you can do                                                                                    |
+| ----------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Reached cap**   | The teammate hit one of its [daily caps](/usage-and-limits#daily-caps) | **Allow once**, **Deny**, or change the caps (admins)                                              |
+| **Out of usage**  | All your AI accounts for that provider ran out                         | Wait for the reset, or add an [account](/ai-accounts); it closes when someone writes in the thread |
+| **Expired login** | An AI account's sign-in stopped working                                | **Sign in** again                                                                                  |
+| **Disk full**     | The cloud computer's disk is full                                      | It closes by itself once there is room                                                             |
+
+Notices also tell you when a routine or trigger couldn't start, or a merge stopped. **Dismiss** closes them.
+
+## Who can answer
+
+- Most tickets: the member who started the thread, or an owner or admin. A thread runs on its starter's accounts, so
+  it waits on them first.
+- Caps, skills, triggers and activating a playbook: owners and admins only.
+- Giving access to an App account: the member who connected it, or an owner or admin.
+- A secret: its creator or an admin decides who may use it.
+
+Rows you can't decide show who they wait for, such as **Waiting for an admin**.

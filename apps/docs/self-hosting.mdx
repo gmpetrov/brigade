@@ -78,8 +78,9 @@ Brigade deploys two ways from one codebase. Both are described in
 - **Migrate and start**: `deploy.sh` shows the steps (pull, `prisma migrate deploy`, `docker compose up`).
 
 <Note>
-  Brigade's team ran this setup from October 14 to October 20, 2026, and now runs on Cloudflare. The files stay in
-  the repository to build the images by hand: treat them as a starting point, not a turnkey installer.
+  Brigade's team ran this setup from October 14 to October 20, 2026, and now runs on Cloudflare. The
+  files stay in the repository to build the images by hand: treat them as a starting point, not a
+  turnkey installer.
 </Note>
 
 ### Cloudflare Workers
@@ -101,16 +102,17 @@ for the WebSockets, R2 for files and Neon for PostgreSQL.
 The API reads its settings from environment variables. The full list, with a comment on each, is in
 [apps/api/.env.example](https://github.com/gmpetrov/brigade/blob/main/apps/api/.env.example).
 
-| Setting                | What it is                                       | Why it matters                                                                                                     |
-| ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `DATABASE_URL`         | Your PostgreSQL                                  | Everything lives there                                                                                             |
-| `API_URL`, `WEB_URL`   | Where the API and the dashboard answer           | Used in links, sign-in and the runner install command                                                              |
-| `BETTER_AUTH_SECRET`   | Signs sessions (at least 32 characters)          | Changing it signs everyone out                                                                                     |
-| `VAULT_KEY`            | The vault's master key (32 bytes, base64)        | Secrets, App sign-ins and API keys are encrypted with keys derived from it. Lose it and they can't be read anymore |
-| `R2_*`                 | A Cloudflare R2 bucket for the library and files | Required in production; locally, files go to a folder                                                              |
+| Setting              | What it is                                       | Why it matters                                                                                                     |
+| -------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`       | Your PostgreSQL                                  | Everything lives there                                                                                             |
+| `API_URL`, `WEB_URL` | Where the API and the dashboard answer           | Used in links, sign-in and the runner install command                                                              |
+| `BETTER_AUTH_SECRET` | Signs sessions (at least 32 characters)          | Changing it signs everyone out                                                                                     |
+| `VAULT_KEY`          | The vault's master key (32 bytes, base64)        | Secrets, App sign-ins and API keys are encrypted with keys derived from it. Lose it and they can't be read anymore |
+| `R2_*`               | A Cloudflare R2 bucket for the library and files | Required in production; locally, files go to a folder                                                              |
 
 <Warning>
-  Back up `VAULT_KEY` somewhere other than the server and the database. Without it, every saved secret is lost.
+  Back up `VAULT_KEY` somewhere other than the server and the database. Without it, every saved
+  secret is lost.
 </Warning>
 
 Optional settings turn on more:

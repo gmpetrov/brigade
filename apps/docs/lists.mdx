@@ -78,7 +78,7 @@ Then:
 
 ## Ticks when a pull request merges
 
-When a pull request is merged, Brigade ticks the lines it closes, with a short note such as *PR #491, 29 Oct*,
+When a pull request is merged, Brigade ticks the lines it closes, with a short note such as _PR #491, 29 Oct_,
 credited to the teammate that opened it.
 
 Brigade never ticks a line a pull request is only part of. Instead, what remains becomes a new line, nested under it
@@ -90,18 +90,18 @@ What remains of a line (a deploy to check, a setting to change, a step only a pe
 A teammate also adds one itself when work without a pull request leaves something open.
 
 Once every remaining line under a line is ticked, by anyone and from anywhere (a teammate, the thread's card, the
-editor), Brigade ticks the line too, with the note *what remained is done*. This happens right away, or within 10
+editor), Brigade ticks the line too, with the note _what remained is done_. This happens right away, or within 10
 minutes for some edits. It waits while a pull request on the line is still open. If someone deletes a remaining line
 from the file, Brigade doesn't tick the line: a person decides.
 
 ## Where each line stands
 
-| State                   | When                                                                         |
-| ----------------------- | ---------------------------------------------------------------------------- |
-| **Done**                | The line is ticked                                                           |
-| **Needs you**           | One of its threads waits on a person                                         |
-| **In progress**         | One of its threads is working, or a pull request on it is open              |
-| **Open**                | Nobody has started it                                                        |
+| State                   | When                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| **Done**                | The line is ticked                                                              |
+| **Needs you**           | One of its threads waits on a person                                            |
+| **In progress**         | One of its threads is working, or a pull request on it is open                  |
+| **Open**                | Nobody has started it                                                           |
 | **Stopped, still open** | Its threads stopped and nothing else will tick it: tick it, or add what remains |
 
 The list's counts and filters use the same states.

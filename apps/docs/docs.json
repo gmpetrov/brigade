@@ -18,75 +18,39 @@
     "groups": [
       {
         "group": "Get started",
-        "pages": [
-          "index",
-          "quickstart",
-          "computers",
-          "concepts"
-        ]
+        "pages": ["index", "quickstart", "computers", "concepts"]
       },
       {
         "group": "Teammates",
-        "pages": [
-          "teammates",
-          "threads",
-          "needs-you",
-          "ai-accounts"
-        ]
+        "pages": ["teammates", "threads", "needs-you", "ai-accounts"]
       },
       {
         "group": "Organize work",
-        "pages": [
-          "projects",
-          "tasks",
-          "lists",
-          "library",
-          "memory",
-          "skills"
-        ]
+        "pages": ["projects", "tasks", "lists", "library", "memory", "skills"]
       },
       {
         "group": "Automate",
-        "pages": [
-          "routines",
-          "triggers",
-          "playbooks"
-        ]
+        "pages": ["routines", "triggers", "playbooks"]
       },
       {
         "group": "Apps",
-        "pages": [
-          "apps",
-          "email",
-          "code-and-previews"
-        ]
+        "pages": ["apps", "email", "code-and-previews"]
       },
       {
         "group": "Workspace",
-        "pages": [
-          "members",
-          "notifications",
-          "usage-and-limits",
-          "billing"
-        ]
+        "pages": ["members", "notifications", "usage-and-limits", "billing"]
       },
       {
         "group": "Trust",
-        "pages": [
-          "security"
-        ]
+        "pages": ["security"]
       },
       {
         "group": "Open source",
-        "pages": [
-          "self-hosting"
-        ]
+        "pages": ["self-hosting"]
       },
       {
         "group": "Help",
-        "pages": [
-          "faq"
-        ]
+        "pages": ["faq"]
       }
     ]
   },

@@ -1,0 +1,52 @@
+---
+title: 'Usage and limits'
+description: 'What your teammates spent from your AI plans, the caps you can set, and the fixed limits you may meet.'
+---
+
+Brigade runs on your own Claude and ChatGPT plans, so there is no Brigade bill for AI usage. What you watch is how
+much of each plan's window your teammates use, and the caps you set so a teammate can't run away with it.
+
+## Usage
+
+**Settings → Usage** shows the tokens your Claude and Codex subscriptions spent over **24 hours**, **7 days** or **30
+days**, and what for: by thread, routine, teammate, account and model, and what started the work (messages from
+people, triggers, routines, child threads, reviews, playbooks, and Brigade's own small jobs such as thread titles and
+memory). Brigade keeps only the counts, never what was said.
+
+Owners and admins see the whole workspace. Members see what their own accounts spent.
+
+Your plan limits usage over time windows rather than tokens. The **Usage** row of your avatar menu shows how much of
+each window is gone (5-hour and weekly, for each of your accounts) and when it resets. It updates after each
+teammate's turn. See [AI accounts](/ai-accounts) for what happens when an account runs out.
+
+## Daily caps
+
+Each teammate can have daily caps, on its **Limits** tab:
+
+| Cap                            | What counts                                     |
+| ------------------------------ | ----------------------------------------------- |
+| **Threads started**            | New threads for this teammate                   |
+| **Computer hours**             | Time the teammate spends working (up to 24)     |
+| **Write calls per connection** | Writes to each App account, counted per account |
+
+Days start at midnight UTC. An empty field means no cap, which is the default. Owners and admins set them with
+**Edit caps**.
+
+When a teammate reaches a cap, its new work pauses and a **Reached cap** ticket opens for the admins. **Allow once**
+lets that one piece of work through; **Deny** stops it. See [Needs you and tickets](/needs-you).
+
+## Fixed limits
+
+| What                                   | Limit                                                                                   |
+| -------------------------------------- | --------------------------------------------------------------------------------------- |
+| Files in one message                   | 10 files, 25 MB each, 50 MB in all (videos up to 500 MB each, not counted in the total) |
+| A message                              | 100,000 characters; up to 5 teammates mentioned                                         |
+| A file uploaded to the library         | 25 MB                                                                                   |
+| A file a teammate saves to the library | 10 MB                                                                                   |
+| A teammate's role instructions         | 20,000 characters                                                                       |
+| Turns running at once on a computer    | 8; more wait their turn                                                                 |
+| Email App                              | See [Email](/email)                                                                     |
+| Routines                               | At least 5 minutes between runs                                                         |
+
+When more turns are waiting than a computer runs at once, the thread says it is waiting for a turn on that
+computer to end.
