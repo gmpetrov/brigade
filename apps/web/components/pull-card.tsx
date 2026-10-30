@@ -17,7 +17,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { PullStatus, ReviewLink, reviewLine, reviewThread } from '@/components/pull-status'
-import { ChildLine } from '@/components/thread-children'
+import { atEnd, ChildLine } from '@/components/thread-children'
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/tooltip'
 import { api, pullHref, useApi, type PullRequestState, type ThreadChild } from '@/lib/api'
@@ -134,7 +134,7 @@ export function PullCard({
   open?: boolean
   /** A teammate's merge button under it does the merging: the card shows where it stands instead. */
   mergeElsewhere?: boolean
-  /** The thread's children: its review, when it runs in one of them, shows as its line. */
+  /** The thread's children: its review, when it ran in one of them, shows as its line once stopped. */
   childThreads?: ThreadChild[]
 }) {
   const { me } = useDashboard()
@@ -263,7 +263,8 @@ export function PullCard({
       {action()}
     </div>
   )
-  if (!review) return card
+  // At work or waiting on a person, the review's line is at the end of the conversation.
+  if (!review || atEnd(review)) return card
   return (
     <div className="flex flex-col gap-1">
       {card}

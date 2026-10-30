@@ -332,6 +332,8 @@ export function StartedChild({
   children: ThreadChild[]
 }) {
   const child = children.find((c) => c.id === threadId)
+  // At work or waiting on a person, its line is at the end of the conversation: only there.
+  if (child && atEnd(child)) return null
   if (child) return <ChildLine child={child} className="-mx-2" />
   return (
     <Link
@@ -349,6 +351,9 @@ export function StartedChild({
 
 const working = (c: ThreadChild) =>
   (c.status === 'starting' || c.status === 'running') && !c.tickets.length
+
+/** Shown at the end of the conversation, by ChildrenWorking or ChildrenWaiting. */
+export const atEnd = (c: ThreadChild) => working(c) || c.tickets.length > 0
 
 /**
  * The children at work, at the end of the conversation: a review run again, a child told
