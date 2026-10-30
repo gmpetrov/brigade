@@ -1,14 +1,16 @@
 'use client'
-import { ArrowUp, Check, ChevronDown, FolderKanban, List, Monitor, Plus } from 'lucide-react'
+import { ArrowUp, Check, ChevronDown, CircleUser, FolderKanban, List, Plus, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { defaultEffort, type Effort } from '@brigade/contracts'
 import {
   ComposerMenu,
+  ComputerIcon,
   UploadList,
   useFileDrop,
   useUploads,
+  type ComposerSetting,
   type Upload,
 } from '@/components/attachments'
 import { Composer } from '@/components/composer'
@@ -62,6 +64,40 @@ import { cn } from '@/lib/utils'
 
 const quietSelect =
   'h-8 border-transparent bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent/50'
+
+/** Where a new thread runs, when it is not the default: shown in the row, one click from the default. */
+function NotDefault({
+  icon,
+  label,
+  title,
+  onReset,
+}: {
+  icon: React.ReactNode
+  label: string
+  title: string
+  onReset: () => void
+}) {
+  return (
+    <span
+      title={title}
+      className="flex h-8 max-w-44 min-w-0 items-center gap-1.5 rounded-md pr-0.5 pl-2 text-sm text-muted-foreground [&_svg:not([class*='size-'])]:size-4"
+    >
+      {icon}
+      <span className="truncate text-foreground">{label}</span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="size-6 shrink-0"
+        aria-label={`Back to the default instead of ${label}`}
+        title="Back to the default"
+        onClick={onReset}
+      >
+        <X aria-hidden />
+      </Button>
+    </span>
+  )
+}
 
 /** What a teammate is doing: working, or waiting on a person. */
 export type TeammateActivity = 'busy' | 'waiting'
@@ -672,37 +708,60 @@ export function NewThread({
       </SelectContent>
     </Select>
   )
+  // Where it runs is rarely changed: picked in the + menu, and shown in the row only when it
+  // is not the default, so a thread does not go to another computer or account unnoticed.
+  const settings: ComposerSetting[] = [
+    ...(online.length > 1
+      ? [
+          {
+            id: 'computer',
+            label: 'Run on',
+            icon: <ComputerIcon cloud={computer?.kind === 'cloud'} />,
+            value: computer?.id,
+            options: online.map((c) => ({
+              id: c.id,
+              label: computerName(c),
+              icon: <ComputerIcon cloud={c.kind === 'cloud'} />,
+            })),
+            onPick: setComputerId,
+          },
+        ]
+      : []),
+    ...(usable.length > 1
+      ? [
+          {
+            id: 'account',
+            label: 'Account',
+            icon: <CircleUser aria-hidden />,
+            value: account?.id,
+            options: usable.map((a) => ({
+              id: a.id,
+              label: a.label,
+              ...(a.email && { detail: a.email }),
+            })),
+            onPick: setAccountId,
+          },
+        ]
+      : []),
+  ]
+  const defaultAccount = usable.find((a) => a.isDefault) ?? usable[0]
   const where = (
     <>
-      {online.length > 1 && (
-        <Select value={computer?.id} onValueChange={setComputerId}>
-          <SelectTrigger size="sm" aria-label="Run on" className={quietSelect}>
-            <Monitor aria-hidden />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {online.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {computerName(c)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {computer && computer !== online[0] && (
+        <NotDefault
+          icon={<ComputerIcon cloud={computer.kind === 'cloud'} />}
+          label={computerName(computer)}
+          title={`Runs on ${computerName(computer)}`}
+          onReset={() => setComputerId(undefined)}
+        />
       )}
-      {usable.length > 1 && (
-        <Select key={computer?.id} value={account?.id} onValueChange={setAccountId}>
-          <SelectTrigger size="sm" aria-label="Account" className={cn(quietSelect, 'max-w-60')}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {usable.map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.label}
-                {a.email ? ` (${a.email})` : ''}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {account && defaultAccount && account !== defaultAccount && (
+        <NotDefault
+          icon={<CircleUser aria-hidden />}
+          label={account.label}
+          title={account.email ? `${account.label} (${account.email})` : account.label}
+          onReset={() => setAccountId(undefined)}
+        />
       )}
     </>
   )
@@ -711,6 +770,7 @@ export function NewThread({
   const add = (
     <ComposerMenu
       onFiles={files.add}
+      settings={settings}
       effort={effort}
       {...(phone || layout === 'dialog' ? {} : { teach })}
     />

@@ -32,6 +32,7 @@ import {
   useState,
   useSyncExternalStore,
   type DragEvent,
+  type ReactNode,
 } from 'react'
 import { EffortBars, type EffortPick, EffortSlider } from '@/components/effort'
 import { useFileLinks } from '@/components/file-links'
@@ -290,6 +291,16 @@ export type MoveTarget = {
   offline?: boolean
 }
 
+/** A setting the + menu offers, such as where a new thread runs: one submenu, one pick. */
+export type ComposerSetting = {
+  id: string
+  label: string
+  icon: ReactNode
+  value: string | undefined
+  options: { id: string; label: string; detail?: string; icon?: ReactNode }[]
+  onPick: (id: string) => void
+}
+
 /** A computer's icon: a laptop for a member's machine, a cloud for the cloud computer. */
 export function ComputerIcon({ cloud, className }: { cloud: boolean; className?: string }) {
   return cloud ? (
@@ -302,7 +313,8 @@ export function ComputerIcon({ cloud, className }: { cloud: boolean; className?:
 /**
  * The composer's +, like Claude's: attach files, teach the teammate a task by
  * recording it on its computer, continue the thread on another computer, or
- * change how hard its teammates think. `teach` is unset where teaching is not
+ * change how hard its teammates think, or settings rarely changed (where a new
+ * thread runs, on which account). `teach` is unset where teaching is not
  * offered (phones), and a reason where it is not possible yet; `move` is unset
  * where the thread cannot move.
  */
@@ -310,12 +322,14 @@ export function ComposerMenu({
   onFiles,
   teach,
   move,
+  settings = [],
   effort,
   effortLater,
 }: {
   onFiles: (files: File[]) => void
   teach?: (() => void) | string
   move?: { targets: MoveTarget[]; onPick: (target: MoveTarget) => void }
+  settings?: ComposerSetting[]
   effort?: EffortPick
   /** A turn is running: a new effort waits for the next one. */
   effortLater?: boolean
@@ -418,9 +432,47 @@ export function ComposerMenu({
                   </DropdownMenuSub>
                 </>
               )}
+              {settings.length > 0 && <DropdownMenuSeparator />}
+              {settings.map((setting) => (
+                <DropdownMenuSub key={setting.id}>
+                  <DropdownMenuSubTrigger>
+                    {setting.icon}
+                    {setting.label}
+                    <span className="ml-auto max-w-32 truncate pl-3 text-xs text-muted-foreground">
+                      {setting.options.find((o) => o.id === setting.value)?.label}
+                    </span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="max-w-80 min-w-56">
+                    {setting.options.map((option) => (
+                      <DropdownMenuItem
+                        key={option.id}
+                        onSelect={() => {
+                          picked.current = true
+                          setting.onPick(option.id)
+                        }}
+                      >
+                        {option.icon}
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="truncate">{option.label}</span>
+                          {option.detail && (
+                            <span className="truncate text-xs text-muted-foreground">
+                              {option.detail}
+                            </span>
+                          )}
+                        </span>
+                        {option.id === setting.value && (
+                          <Check aria-label="Picked" className="ml-auto" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              ))}
               {effort && (
                 <>
-                  {!(move && move.targets.length > 1) && <DropdownMenuSeparator />}
+                  {!(move && move.targets.length > 1) && settings.length === 0 && (
+                    <DropdownMenuSeparator />
+                  )}
                   <DropdownMenuItem
                     onSelect={(e) => {
                       // Stay open: the slider takes the menu's place.
