@@ -410,6 +410,15 @@ export const DesignWhere = z.object({
 })
 export type DesignWhere = z.infer<typeof DesignWhere>
 
+/** One of the options offered for a design, as its panel lists them to switch between. */
+export const DesignOption = z.object({
+  /** Its folder: `a/x.options/b.design`. */
+  path: z.string(),
+  /** Its `design.json` title, when it has one. */
+  title: z.string().nullable(),
+})
+export type DesignOption = z.infer<typeof DesignOption>
+
 /** A design system as a thread's teammate sees it, in its instructions. */
 export const ThreadDesignSystem = z.object({
   name: z.string(),
