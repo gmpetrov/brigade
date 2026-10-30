@@ -14,6 +14,7 @@ import {
   type DocumentBlockEditor,
 } from '@/components/document-blocks'
 import type { DocumentEditorProps } from '@/components/document-editor'
+import { checkboxTapExtension } from '@/components/document-checkbox'
 import { checklistLookExtension } from '@/components/document-checklist'
 import { agentTyping, typeNextUpdate, type Writer } from '@/components/document-typing'
 import { Button } from '@/components/ui/button'
@@ -122,7 +123,7 @@ function LiveEditor({
     withCollaboration({
       schema: editorSchema,
       ...editorFiles(documentId, self),
-      extensions: [agentTyping(setTyping), checklistLookExtension()],
+      extensions: [agentTyping(setTyping), checklistLookExtension(), checkboxTapExtension()],
       collaboration: {
         provider,
         fragment: doc.getXmlFragment(DOCUMENT_FRAGMENT),
@@ -281,7 +282,7 @@ function SavedDocument({
   const editor = useCreateBlockNote({
     schema: editorSchema,
     ...editorFiles(session.documentId, self),
-    extensions: [checklistLookExtension()],
+    extensions: [checklistLookExtension(), checkboxTapExtension()],
   })
   self.current = editor
   const [saved, setSaved] = useState(session.text)
