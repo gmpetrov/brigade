@@ -289,6 +289,35 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     assert.equal(grouped?.projectId, acme.id)
     await db.project.delete({ where: { id: acme.id } })
     await db.session.updateMany({ where: { id: threadId }, data: { status: 'idle' } })
+    // A thread stopped at a pull request a person merges needs you, as in the sidebar; while
+    // its teammate still works on it, it is in progress.
+    const pull = await db.pullRequest.create({
+      data: {
+        repository: 'acme/app',
+        number: 531,
+        title: 'Docs',
+        headRef: 'docs',
+        baseRef: 'main',
+        sessionId: threadId,
+        authorTeammateId: ids.riley,
+      },
+    } as never)
+    const toMerge = await lists.listDetail(db, scope, ids.file)
+    assert.deepEqual(
+      toMerge.items.map((i) => i.state),
+      ['needs_you', 'needs_you'],
+    )
+    await db.session.updateMany({ where: { id: threadId }, data: { status: 'running' } })
+    const atWork = await lists.listDetail(db, scope, ids.file)
+    assert.equal(atWork.needsYou, 0)
+    await db.pullRequest.delete({ where: { id: pull.id } })
+    // An open ticket in it needs you too.
+    const ticket = await db.ticket.create({
+      data: { ...scope, sessionId: threadId, type: 'question', title: 'Which one?' },
+    } as never)
+    assert.equal((await lists.listDetail(db, scope, ids.file)).needsYou, 2)
+    await db.ticket.delete({ where: { id: ticket.id } })
+    await db.session.updateMany({ where: { id: threadId }, data: { status: 'idle' } })
   })
 
   test('a teammate reads a list, ticks a line by its text, adds one under another, attaches lines', async () => {
@@ -387,7 +416,8 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
       before.items.find((i) => i.id === 'bbbbbbbbbbbbbbbb')?.pulls.map((p) => [p.number, p.closes]),
       [[491, true]],
     )
-    assert.equal(before.items.find((i) => i.id === 'bbbbbbbbbbbbbbbb')?.state, 'in_progress')
+    // Its thread stopped at it: a person merges it.
+    assert.equal(before.items.find((i) => i.id === 'bbbbbbbbbbbbbbbb')?.state, 'needs_you')
     await db.pullRequest.updateMany({ where: { id: pull.id }, data: { state: 'merged' } })
     await lists.settleItemsOnMerge(db, scope, { id: pull.id, number: 491, sessionId: threadId })
     const lines = (await text()).split('\n')
@@ -1529,6 +1559,11 @@ describe('lists, what remains', { skip: !database && 'no database answers' }, ()
 
   test('a line whose threads stopped, with nothing else carrying it, is stalled', async () => {
     const file = await listOf('Remains/stalled.md', [['stallitem1234567', 'Refund policy']])
+    // Earlier tests' pull requests, closed: one open in the thread waits on a person.
+    await db.pullRequest.updateMany({
+      where: { sessionId, state: 'open' },
+      data: { state: 'closed' },
+    })
     const stalled = async () =>
       (await lists.listDetail(db, scope, file.id)).items.find((i) => i.id === 'stallitem1234567')
         ?.stalled
