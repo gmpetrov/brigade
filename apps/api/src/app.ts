@@ -278,7 +278,12 @@ app.get(
 )
 
 app.onError((error, c) => {
-  if (error instanceof HTTPException) return c.json({ error: error.message }, error.status)
+  if (error instanceof HTTPException) {
+    // A failure said on purpose (a provider that did not answer…): sent too, as handled.
+    if (error.status >= 500)
+      captureError(error, { kind: `api:${c.req.method} ${c.req.routePath}`, handled: true })
+    return c.json({ error: error.message }, error.status)
+  }
   console.error(`${c.req.method} ${c.req.path} failed:`, error)
   // A hub's operation that failed in another object was sent there, with its own stack.
   if (!(error instanceof HubOpError))

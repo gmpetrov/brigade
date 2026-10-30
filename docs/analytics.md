@@ -137,6 +137,8 @@ PostHog's error tracking gets the errors Brigade meets, as `$exception` events
 They feed the backlog's daily triage (the library's `Projects/Brigade/backlog.md`).
 
 - **The API's**: a request that failed with a 500 (`app.onError`, `kind` `api:<method> <route>`),
+  or with a 5xx it threw on purpose (an `HTTPException`, such as a provider that did not answer,
+  sent as handled; refusals under 500 are not sent),
   a hub's operation that threw (`hub-op:<name>`, sent from the object it ran in, not again where
   it was asked), and every failure the ops checks count that carries an error (`noteFailure`
   with an `Error`: `job:<name>`, `resend-webhook`, `held-calls`…). With its stack and causes,
@@ -149,10 +151,14 @@ They feed the backlog's daily triage (the library's `Projects/Brigade/backlog.md
   and failures (`ApiError`, reported by the API), the network gone, cancelled requests, a script
   of an older build gone after a deploy (`ChunkLoadError`) and cross-origin `Script error.`; the
   same message once per page load, 20 at most. The API drops a report whose stack holds none of
-  the dashboard's scripts (a browser extension's), and takes 30 a minute per person at most.
+  the dashboard's scripts (a browser extension's), and takes 30 a minute per person at most:
+  past that, it answers without reading the body. It reads a body only up to 32 KB, however it
+  comes (a length or chunks): the API's object holds every workspace's requests.
   `source: 'dashboard'`, `how` (`uncaught`, `unhandled_rejection`, `boundary`), `build`, `path`.
 
-**No content, as far as an error allows.** A message loses its email addresses and keeps only the
+**No content, as far as an error allows.** A message, and each of its causes, loses its keys and
+tokens, even masked as Stripe's errors show them (`redact()`, `src/connectors/types.ts`, and JWTs),
+its email addresses, and keeps only the
 site of each link (`https://api.github.com/…`), a page only its first two segments
 (`/app/pulls`, never a repository's name), a stack frame its file's query. The same error goes at
 most 5 times a minute from one process, so a loop that fails cannot spend PostHog's quota. The

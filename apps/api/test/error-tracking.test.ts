@@ -2,9 +2,10 @@ import assert from 'node:assert/strict'
 import { afterEach, after, test } from 'node:test'
 
 // Error tracking (src/error-tracking.ts): the API's errors and the dashboard's reports, sent to
-// PostHog as `$exception` events with their frames, scrubbed of addresses, links' paths and
-// pages' ids, a few times a minute at most, and nothing without POSTHOG_KEY. PostHog is a stub of
-// fetch here. No database.
+// PostHog as `$exception` events with their frames, scrubbed of keys, addresses, links' paths and
+// pages' ids, a few times a minute at most, and nothing without POSTHOG_KEY; the dashboard's
+// reports read only up to their size limit, and not at all past a person's limit. PostHog is a
+// stub of fetch here, the session a stub of better-auth's. No database.
 process.env.DATABASE_URL ??= 'postgresql://test@127.0.0.1:1/none'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
@@ -15,6 +16,10 @@ const tracking = await import('../src/error-tracking.js')
 const { flushAnalytics } = await import('../src/analytics.js')
 const { noteFailure } = await import('../src/ops/failures.js')
 const { env } = await import('../src/config.js')
+const { auth } = await import('../src/auth.js')
+const { app } = await import('../src/app.js')
+const { errors, REPORT_MAX_BYTES } = await import('../src/routes/errors.js')
+const { HTTPException } = await import('hono/http-exception')
 
 type Batch = { api_key: string; batch: Record<string, any>[] }
 const sent: Batch[] = []
@@ -35,8 +40,10 @@ afterEach(async () => {
   env.POSTHOG_KEY = undefined
   sent.length = 0
 })
+const realSession = auth.api.getSession
 after(() => {
   globalThis.fetch = realFetch
+  auth.api.getSession = realSession
 })
 
 let n = 0
@@ -193,4 +200,97 @@ test("a report whose stack holds none of the dashboard's scripts is dropped: an 
   const sent = await exceptions()
   assert.equal(sent.length, 1)
   assert.equal(sent[0]!.properties.$exception_list[0].mechanism.type, 'onunhandledrejection')
+})
+
+test('keys and tokens leave no trace, even masked, in a message or its causes', async () => {
+  assert.equal(
+    tracking.scrubMessage('Invalid API Key provided: sk_live_****ABCD'),
+    'Invalid API Key provided: [redacted key]',
+  )
+  assert.equal(
+    tracking.scrubMessage('auth: Bearer abc.def-123 and eyJhbGciOi.eyJzdWIiOi.c2lnbmF0dXJl'),
+    'auth: Bearer [redacted] and [redacted token]',
+  )
+  env.POSTHOG_KEY = 'phc_test_key'
+  const error = new Error(unique('billing failed'), {
+    cause: new Error('Invalid API Key provided: rk_live_1234****WXYZ'),
+  })
+  tracking.captureError(error, { kind: 'api:GET /api/billing' })
+  const [event] = await exceptions()
+  const text = JSON.stringify(event!.properties.$exception_list)
+  assert.ok(!text.includes('rk_live'), text)
+  assert.ok(!text.includes('WXYZ'), text)
+})
+
+test('a refusal is not sent; a failure said on purpose (5xx) is, as handled', async () => {
+  env.POSTHOG_KEY = 'phc_test_key'
+  const tag = unique('upstream')
+  app.get(`/test-refused-${n}`, () => {
+    throw new HTTPException(404, { message: 'No such thing' })
+  })
+  app.get(`/test-upstream-${n}`, () => {
+    throw new HTTPException(502, { message: `GitHub did not answer ${tag}` })
+  })
+  assert.equal((await app.request(`/test-refused-${n}`)).status, 404)
+  assert.equal((await app.request(`/test-upstream-${n}`)).status, 502)
+  const sent = await exceptions()
+  assert.equal(sent.length, 1)
+  assert.equal(sent[0]!.properties.$exception_list[0].mechanism.handled, true)
+  assert.match(sent[0]!.properties.kind, /^api:GET \/test-upstream-/)
+})
+
+/** A request body in chunks of 64 KB, pulled only as read, counting what the route read of it. */
+function chunked(prefix: string, chunks: number) {
+  const chunk = new Uint8Array(65_536).fill(120)
+  const parts = [new TextEncoder().encode(prefix), ...Array.from({ length: chunks }, () => chunk)]
+  const read = { bytes: 0 }
+  const body = new ReadableStream<Uint8Array>(
+    {
+      pull(controller) {
+        const part = parts.shift()
+        if (!part) return controller.close()
+        read.bytes += part.byteLength
+        controller.enqueue(part)
+      },
+    },
+    { highWaterMark: 0 },
+  )
+  return { body, read }
+}
+
+const post = (body: BodyInit, headers: Record<string, string> = {}) =>
+  errors.fetch(
+    new Request('http://localhost/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...headers },
+      body,
+      duplex: 'half',
+    } as RequestInit),
+  )
+
+test("a report is read only up to its limit, and a person's 31st in a minute not at all", async () => {
+  env.POSTHOG_KEY = 'phc_test_key'
+  const userId = `user-${unique('limits')}`
+  auth.api.getSession = (async () => ({
+    user: { id: userId },
+    session: { id: 'session-1' },
+  })) as unknown as typeof auth.api.getSession
+
+  // 4 MB in chunks, with no length said: refused once past the limit, the rest never pulled.
+  const big = chunked('{"type":"Error","how":"uncaught","value":"', 64)
+  assert.equal((await post(big.body)).status, 413)
+  assert.ok(big.read.bytes <= REPORT_MAX_BYTES + 65_536 + 64, `read ${big.read.bytes} bytes`)
+  // A length said over the limit: refused before reading anything.
+  const said = chunked('{', 1)
+  assert.equal((await post(said.body, { 'content-length': String(1_000_000) })).status, 413)
+  assert.equal(said.read.bytes, 0)
+
+  const report = (value: string) => JSON.stringify({ type: 'Error', value, how: 'uncaught' })
+  assert.equal((await post(report(unique('fine')))).status, 204)
+  assert.equal((await exceptions()).length, 1)
+  for (let i = 0; i < 27; i++) await post(report(unique('more')))
+  // The 31st in this minute (two refused, one sent, 27 more): dropped, its body never pulled.
+  const over = chunked(report(unique('over')), 0)
+  assert.equal((await post(over.body)).status, 204)
+  assert.equal(over.read.bytes, 0)
 })

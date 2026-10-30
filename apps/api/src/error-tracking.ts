@@ -18,6 +18,7 @@ import {
 import type { ErrorReport } from '@brigade/contracts'
 import { analyticsOn, enqueue } from './analytics.js'
 import { env } from './config.js'
+import { redact } from './connectors/types.js'
 import { onFailureError } from './ops/failures.js'
 
 const apiStack = createStackParser('node:javascript', nodeStackLineParser)
@@ -34,9 +35,13 @@ const CAUSES_MAX = 3
 const SAME_PER_MINUTE = 5
 const KEPT = 1_000
 
-/** A message without email addresses, with only the site of each link, on one line, short. */
+/**
+ * A message without keys or tokens, even masked (`sk_live_****ABCD`, as Stripe's errors say),
+ * email addresses, or more of a link than its site, on one line, short.
+ */
 export function scrubMessage(text: string) {
-  return text
+  return redact(text)
+    .replace(/\beyJ[\w-]+\.[\w-]+\.[\w-]*/g, '[redacted token]')
     .replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, '[email]')
     .replace(/\b(https?:\/\/[^\s/?#'"`)]+)([^\s'"`)]*)/g, (_, site: string, rest: string) =>
       rest.length > 1 ? `${site}/…` : `${site}${rest}`,
