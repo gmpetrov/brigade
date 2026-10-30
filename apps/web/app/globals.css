@@ -926,8 +926,8 @@
 }
 
 /* Checklist lines (Projects/Brigade/designs/editor-lists.design): a round box, filled
- * violet once done; a done line fades rather than being struck through. Its closing
- * note sits under it, smaller and grey (components/document-checklist.ts). */
+ * violet once done; a done line fades rather than being struck through. Notes on
+ * lines of their own at its end are smaller and grey (components/document-checklist.ts). */
 .document-editor .bn-block-content[data-content-type='checkListItem'] > div > input {
   appearance: none;
   flex: none;
@@ -963,9 +963,6 @@
 /* Sub-lines show by their indent alone: no guide line down from their parent's box. */
 .document-editor .bn-editor .bn-block-group .bn-block-group .bn-block-outer::before {
   display: none;
-}
-.document-editor .bn-note-break {
-  display: block;
 }
 .document-editor .bn-note {
   color: var(--muted-foreground);
@@ -1038,7 +1035,6 @@
   > .bn-block-content {
   & > div:has(> input),
   & [data-list-item],
-  & .bn-note-break,
   & .bn-note {
     display: none;
   }
