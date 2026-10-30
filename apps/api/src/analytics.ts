@@ -27,7 +27,12 @@ export const analyticsOn = () => Boolean(env.POSTHOG_KEY)
 // Sending
 // ---------------------------------------------------------------------------
 
-type Message = { event: string; distinct_id: string; timestamp: string; properties: object }
+export type Message = {
+  event: string
+  distinct_id: string
+  timestamp: string
+  properties: object
+}
 
 const queue: Message[] = []
 let scheduled = false
@@ -86,7 +91,7 @@ export type TrackInput = {
 /** Queue one event. A no-op without POSTHOG_KEY. */
 export function track(event: string, input: TrackInput) {
   if (!analyticsOn()) return
-  queue.push({
+  enqueue({
     event,
     distinct_id: input.distinctId,
     timestamp: new Date().toISOString(),
@@ -100,6 +105,14 @@ export function track(event: string, input: TrackInput) {
       $lib: 'brigade-api',
     },
   })
+}
+
+/**
+ * Queue one message as PostHog takes it, sent with the others a moment later. Only what
+ * `track` and src/error-tracking.ts built: nothing here checks its properties.
+ */
+export function enqueue(message: Message) {
+  queue.push(message)
   if (queue.length >= BATCH) return send()
   if (scheduled) return
   scheduled = true

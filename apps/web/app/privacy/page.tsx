@@ -81,7 +81,9 @@ export default function Privacy() {
         We use PostHog, in the EU, to measure visits and how Brigade is used. On this website it
         runs without cookies or any storage in your browser, and it doesn&apos;t record your screen.
         From Brigade itself we send it only pseudonymous ids, counts and the kind of each action
-        (such as &ldquo;a thread started&rdquo;), never your content, names or email address.
+        (such as &ldquo;a thread started&rdquo;), never your content, names or email address. When
+        Brigade hits an error, we also send it the error&apos;s message, with email addresses and
+        links removed, and the place in Brigade&apos;s code where it happened, so we can fix it.
       </p>
 
       <h2>How we use it</h2>
@@ -168,7 +170,7 @@ export default function Privacy() {
         </li>
         <li>
           <strong>PostHog:</strong> measures visits and feature usage, in the EU, without your
-          content or email address.
+          content or email address, and collects reports of the errors Brigade hits.
         </li>
         <li>
           <strong>Google:</strong> when you sign in with Google or connect a Google App.

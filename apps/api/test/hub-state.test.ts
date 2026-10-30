@@ -44,6 +44,10 @@ const ALLOWED: Record<string, string> = {
   'src/analytics.ts:underWay': "analytics sends under way, so a Worker's run can wait for them",
   'src/analytics.ts:people': "whose a member's or thread's events are: a cache of data",
   'src/analytics.ts:harnesses': "teammates' harnesses, for turn_completed: a cache of data",
+  'src/error-tracking.ts:recent':
+    "errors sent in the last minute, so one that repeats cannot spend PostHog's quota: a limit per process",
+  'src/routes/errors.ts:counts':
+    "the dashboard's error reports per person in the last minute: a limit per process",
 }
 
 const root = new URL('../', import.meta.url).pathname

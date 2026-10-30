@@ -12,6 +12,7 @@ import { onScopedWrite, prisma } from './db.js'
 import { inHub, runningHub } from './hub/context.js'
 import { localHub } from './hub/memory-host.js'
 import { NOTIFY, runOperation, type Hub, type OperationName } from './hub/operations.js'
+import { captureError } from './error-tracking.js'
 import { noteFailure } from './ops/failures.js'
 import { hubElsewhere } from './platform/node.js'
 
@@ -73,6 +74,7 @@ export async function outcomeHere(
     // Said here, with its stack: the caller in another object gets only a line.
     console.error(`hub ${workspaceId}: ${name} failed`, error)
     noteFailure('hub-op', `${name}: ${describeError(error)}`, { workspaceId })
+    captureError(error, { kind: `hub-op:${name}`, workspaceId })
     return { ok: false, error: { message: `${name} failed in the hub: ${describeError(error)}` } }
   }
 }
@@ -82,7 +84,12 @@ export function valueOf(outcome: Outcome) {
   if (outcome.ok) return outcome.value
   const { message, status } = outcome.error
   if (status) throw new HTTPException(status as ContentfulStatusCode, { message })
-  throw new Error(message)
+  throw new HubOpError(message)
+}
+
+/** A hub's operation that failed in another object, thrown again here (valueOf). */
+export class HubOpError extends Error {
+  override name = 'HubOpError'
 }
 
 async function call(workspaceId: string, name: OperationName, args: unknown[]) {
