@@ -104,8 +104,8 @@ for the WebSockets, R2 for files and Neon for PostgreSQL.
    pnpm --filter @brigade/api exec wrangler secret put BETTER_AUTH_SECRET
    pnpm --filter @brigade/collab exec wrangler secret put COLLAB_SECRET
    ```
-   The API's secrets are the settings below. The collab Worker needs `COLLAB_SECRET` (at least 32 characters), the same value as the API's,
-   or it refuses every request.
+   The API's secrets are the settings below. The collab Worker needs `COLLAB_SECRET` (at least 32 characters), the
+   same value as the API's, or it refuses every request.
 6. Build and deploy each Worker with `pnpm run cf:build:<worker>` and `pnpm run cf:deploy:<worker>` (`api`,
    `api-front`, `web`, `collab`). The API's deploy migrates the database first, so it needs `DATABASE_URL` set.
 
