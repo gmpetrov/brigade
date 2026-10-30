@@ -36,6 +36,7 @@ import { hubs } from './hub.js'
 import { teammateLibraryAccess } from './library-folders.js'
 import { actorNames } from './library-history.js'
 import { committedBytes, documentText, saveLibraryFile, withLibraryLock } from './library.js'
+import { pullWaitsOnPerson, REVIEW_THREAD } from './review-state.js'
 import { computerFor } from './tasks.js'
 import { noteInThread } from './thread-notes.js'
 import { startThread } from './work.js'
@@ -135,6 +136,10 @@ const itemInclude = {
           status: true,
           archivedAt: true,
           teammate: { select: { id: true, name: true } },
+          _count: { select: { tickets: { where: { status: 'open' as const } } } },
+          pullRequests: {
+            select: { state: true, mergeStatus: true, reviewSession: { select: REVIEW_THREAD } },
+          },
         },
       },
     },
@@ -153,11 +158,24 @@ const itemRows = (
   where: { documentId: { in: string[] } } | { id: { in: string[] } },
 ) => db.listItem.findMany({ where, include: itemInclude })
 
-/** Where an item stands: ticked, else from its threads and pull requests. */
+/**
+ * Where an item stands: ticked, else from its threads and pull requests. A thread needs you as
+ * on Tasks and in the sidebar (columnOf): an open ticket, waiting, or stopped at a pull request
+ * a person merges.
+ */
 function stateOf(done: boolean, row: ItemRow | undefined): ItemState {
   if (done) return 'done'
   const live = row?.threads.filter((t) => !t.session.archivedAt) ?? []
-  if (live.some((t) => t.session.status === 'waiting' || t.session.status === 'paused'))
+  if (
+    live.some(
+      ({ session: s }) =>
+        s._count.tickets > 0 ||
+        s.status === 'waiting' ||
+        s.status === 'paused' ||
+        (!['starting', 'running', 'failed'].includes(s.status) &&
+          s.pullRequests.some(pullWaitsOnPerson)),
+    )
+  )
     return 'needs_you'
   if (
     live.some((t) => t.session.status === 'starting' || t.session.status === 'running') ||
