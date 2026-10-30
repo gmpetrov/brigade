@@ -11,10 +11,13 @@ const PRIORITY = /^\s*[🔴🟠🟡🟢]️?\s*/u
 
 /**
  * `hide`: how many characters the priority dot takes at the start of the line (0 for none).
- * `note`: where the closing note starts, or null: the line ends in italics (code may sit
- * inside), after text of its own.
+ * `note`: where the closing note starts and ends (before any marker beside it), or null:
+ * the line ends in italics (code may sit inside), after text of its own.
  */
-export function checklistLook(pieces: Piece[]): { hide: number; note: number | null } {
+export function checklistLook(pieces: Piece[]): {
+  hide: number
+  note: { from: number; to: number } | null
+} {
   const text = pieces.map((p) => p.text).join('')
   const hide = PRIORITY.exec(text)?.[0].length ?? 0
 
@@ -28,6 +31,9 @@ export function checklistLook(pieces: Piece[]): { hide: number; note: number | n
   while (start < pieces.length && !(pieces[start]!.italic && pieces[start]!.text.trim())) start++
   if (start === pieces.length) return { hide, note: null }
 
-  const at = pieces.slice(0, start).reduce((n, p) => n + p.text.length, 0)
-  return { hide, note: text.slice(hide, at).trim() ? at : null }
+  const offset = (i: number) => pieces.slice(0, i).reduce((n, p) => n + p.text.length, 0)
+  let end = pieces.length
+  while (pieces[end - 1]!.aside) end--
+  const from = offset(start)
+  return { hide, note: text.slice(hide, from).trim() ? { from, to: offset(end) } : null }
 }

@@ -966,7 +966,7 @@
 .document-editor .bn-note-break {
   display: block;
 }
-.document-editor .bn-note-break ~ :not([data-inline-content-type='item']) {
+.document-editor .bn-note {
   color: var(--muted-foreground);
   font-size: 0.9em;
   font-style: normal;
