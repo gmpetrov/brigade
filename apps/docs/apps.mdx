@@ -83,6 +83,8 @@ aren't an owner of the organization, GitHub sends the request to its owners.
 - Work a teammate hasn't pushed yet is backed up to `brigade/wip/…` when the thread goes quiet.
 - They merge a pull request only when someone asks them to.
 
+More in [Code, pull requests and previews](/code-and-previews).
+
 ## Any MCP server
 
 Choose **MCP server** in the catalog and paste its address (`https://…`). Brigade checks how it signs in:
@@ -101,27 +103,24 @@ its own address; every event posted to it starts a thread with the teammate and 
 that events come from your sender, have Brigade generate a signing secret: the sender signs the body with
 HMAC-SHA256 in an `X-Brigade-Signature: sha256=<hex>` header.
 
-Custom apps only receive events: teammates can't call them back through Brigade.
+Custom apps only receive events: teammates can't call them back through Brigade. More in [Triggers](/triggers).
 
 ## Triggers and routines
 
 - A **trigger** starts a thread when something happens in an App (a failed payment, a new issue, an email) or a
-  webhook arrives. Owners and admins create them from the App's account menu. A teammate can propose one from a
-  thread, and an owner or admin approves it.
-- A **routine** starts a thread on a schedule, from every hour to once a week or any cron schedule, in your time zone.
-  Create them in **Routines**. Each run is a fresh thread, with the teammate's access, policy and caps.
+  webhook arrives. See [Triggers](/triggers).
+- A **routine** starts a thread on a schedule. See [Routines](/routines).
 
 ## The Email App
 
-Turn on **Email** (owners and admins) and give each teammate an address of its own, on `mails.brigade.lol` or on
-your own domain once its DNS records check out. A teammate sends from its address, and replies come back to the
-teammate that started the conversation, not to your inbox. Each address sends up to 100 emails a day.
+Turn on **Email** and each teammate gets an address of its own. Replies come back to the teammate that started the
+conversation, not to your inbox. See [Email](/email).
 
 ## When a teammate lacks access
 
 A teammate that needs an App, a repository or a secret it can't reach doesn't stop to explain. It opens a ticket
 under **Needs you** saying what it needs, and you give the access, connect the account or save the secret right in
-the ticket. When an account's sign-in expires, it shows **Reconnect** and the teammate asks its owner to reconnect
+the ticket (see [Needs you and tickets](/needs-you)). When an account's sign-in expires, it shows **Reconnect** and the teammate asks its owner to reconnect
 it.
 
 ## Secrets
