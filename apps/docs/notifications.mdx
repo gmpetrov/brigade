@@ -1,0 +1,100 @@
+---
+title: 'Notifications'
+description: 'Get a push on your phone or computer when something waits on you, and nothing otherwise.'
+---
+
+Brigade sends web push notifications to the dashboard, in a browser or installed as an app. The rule is simple: a
+push means something waits on you. Everything else stays in the dashboard.
+
+There is no email, SMS or other channel for notifications, and no inbox, banner or toast inside the app.
+
+## Turn them on
+
+Notifications are set per device. On each phone or computer where you want them:
+
+1. Open **Settings → Preferences**.
+2. Under **Notifications**, in **This device**, choose **Turn on**.
+3. Allow notifications when your browser asks.
+4. Choose **Send a test** to check that one arrives.
+
+**Turn off** stops them on that device only. If the panel says **Notifications are blocked for Brigade**, allow them in
+your browser's site settings, then come back.
+
+## Install Brigade on your phone
+
+### iPhone and iPad
+
+Notifications need iOS 16.4 or later, and Brigade added to your Home Screen. Safari doesn't show them for a regular
+tab.
+
+<Steps>
+  <Step title="Open Brigade in Safari">Sign in to the dashboard.</Step>
+  <Step title="Add it to your Home Screen">Tap **Share**, then **Add to Home Screen**.</Step>
+  <Step title="Open it from the Home Screen">Go to **Settings → Preferences** and choose **Turn on**.</Step>
+</Steps>
+
+### Android
+
+Open the dashboard in Chrome. You can install it as an app from Chrome's menu, or stay in the browser tab. Then go to
+**Settings → Preferences** and choose **Turn on**.
+
+On a computer, notifications work in a browser tab. Chrome and Edge can also install the dashboard as an app.
+
+## Choose what you hear about
+
+Under **Notify me about**, pick one preset. It applies to every device you turned on.
+
+| Preset                       | You get a push for                                                  |
+| ---------------------------- | ------------------------------------------------------------------- |
+| **Only when I'm needed**     | Approvals, questions, sign-ins and pull requests waiting on you.    |
+| **Needed + finished work**   | The above, plus each task done and each pull request merged.        |
+| **Everything**               | The above, plus teammates' replies in threads you started.          |
+
+**Only when I'm needed** is the default.
+
+"Waiting on you" means the ticket is yours to answer: you started the thread, or it asks something only an owner or
+admin decides, such as a spending cap. See [Needs you and tickets](/needs-you) for who answers what.
+
+## When a push is sent
+
+Brigade keeps notifications sparse:
+
+- **It waits a minute.** Something that needs you is sent once it has waited a minute, so a burst arrives as one
+  notification and anything settled within the minute never notifies.
+- **It stays quiet while you look.** Nothing is sent while you have Brigade open and in front of you, or had it in the
+  last 2 minutes.
+- **One reminder at most.** If something still waits 4 hours after its push, you get one reminder, never a second.
+- **At most 4 an hour.** Past that, what is due waits and goes out together.
+- **Fresh news only.** Finished work and replies are sent only while they are recent (15 minutes).
+
+Several things due at once arrive as one notification, such as "3 things need you".
+
+## What a push shows and opens
+
+A notification names the teammate and what it needs, for example "Riley needs your approval" or "Riley has a
+question", with the thread's title below. Tapping it opens:
+
+- **The thread** when it is about one thread. You answer the ticket there.
+- **Tickets** when the ticket has no thread.
+- **Tasks** when one push groups several things.
+
+Brigade keeps one notification per thread: a new one replaces the old. Once the thing no longer waits, its notification
+closes with your next push, and all of them close when you open the dashboard.
+
+<Warning>
+  You can't approve or answer from the notification or the lock screen. A push opens Brigade, and you decide in
+  the thread.
+</Warning>
+
+## The app icon badge
+
+When Brigade is installed as an app, its icon shows a badge with the number of things that need you, the same count as
+**Needs you** in the sidebar. It updates with each push and whenever the dashboard is open.
+
+## Troubleshooting
+
+- **"Notifications are not set up on this Brigade yet"**: the server has no push keys. This only happens when you
+  [host Brigade yourself](/self-hosting).
+- **"This browser can't show notifications"**: use another browser, or on iPhone, open Brigade from the Home Screen.
+- **A test says Brigade has no device of yours**: choose **Turn off**, then **Turn on** again on that device.
+- **Nothing arrives while you work**: that's expected. Brigade doesn't push while you're looking at the dashboard.

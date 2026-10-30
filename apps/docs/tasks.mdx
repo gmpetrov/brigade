@@ -1,0 +1,96 @@
+---
+title: 'Tasks'
+description: 'The Tasks board: track bigger work, hand it to a teammate, and see what waits on you.'
+---
+
+A task is a piece of work you want to see finished: a title, a description, a priority and, once someone is on it, a
+teammate and a thread. The Tasks board shows every task in four columns.
+
+<Note>
+  Most work doesn't need a task: it lives in [threads](/threads), and [Lists](/lists) are the main way to plan and
+  follow a project. The board isn't in the sidebar. Open it at `/app/tasks`, from a task in search, or from the task
+  link in a thread's details.
+</Note>
+
+## The board
+
+| Column        | What is in it                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| **Backlog**   | Tasks nobody is assigned to yet                                                                    |
+| **Needs you** | Tasks whose thread has an open request for a person, is waiting, or stopped at a pull request to merge |
+| **Doing**     | Tasks a teammate is working on                                                                     |
+| **Done**      | Finished tasks                                                                                     |
+
+The column comes from the task's thread: you never drag a card. A card shows the title, priority, teammate (or
+**Unassigned**) and where the work is. Open tasks are listed most urgent first.
+
+Use the project filter at the top to see one [project](/projects), or tasks in none. **Archived** and **Trash** open
+the tasks taken off the board.
+
+## Create a task
+
+Choose **New task** and fill in a title, a description and a priority (**Urgent**, **High**, **Medium** or **Low**).
+Then pick who does it:
+
+- **Nobody yet**: the task waits in Backlog. The button reads **Add to Backlog**.
+- **A teammate**: the button reads **Create and start**. The teammate starts on it right away.
+
+Write the description the way you would brief a new hire: it becomes the first message of the task's thread.
+
+## Assign a task
+
+Assigning a task starts it: there is no separate Start button. Open a task in Backlog and choose **Assign**, pick a
+teammate, then **Assign and start**. Its thread starts with the title and description as the first message, on the
+cloud computer if you have one, else on your own computer. If it can't start (no computer online, no AI account with
+usage left), the task stays in Backlog and Brigade tells you why.
+
+A task has one teammate at a time. **Reassign** hands a started task to another teammate. Say what should change in **What should change?**:
+
+- The new teammate joins the same thread. It reads the conversation, your reason and what was pushed or attached.
+- A turn in progress stops.
+- Teammates don't share working folders, so the new one doesn't have the previous one's files. Work that must carry
+  over has to be pushed, attached to the thread or saved to the [library](/library).
+
+Tasks are only ever assigned to teammates, never to a person.
+
+## Needs you
+
+A task moves to **Needs you** when its thread needs a person:
+
+- the teammate opened a request for you (an approval, a question, an account it needs), or
+- the thread is waiting, or
+- the teammate stopped at a pull request for you to merge, once its review is done.
+
+Answer in the thread and the task goes back to **Doing**. Teammates never move a task to Needs you themselves: they ask
+for what they need, which puts it there. See [Needs you](/needs-you).
+
+## Move and complete tasks
+
+Click a card to open it. From there you can edit the title, description, priority and project, and:
+
+- **Mark done**, or **Reopen** a done task.
+- **Archive** or **Unarchive**.
+- **Move to Trash**: the task leaves the board from any column and its running turn stops. **Restore** brings it
+  back. **Delete for good**, from the Trash, removes the task; its thread stays as a plain thread.
+- **Open thread**.
+
+A task is also done when the teammate finishes it, with a summary and links to what it made, or when its pull request
+is merged and no other is open. A message in a done task's thread reopens it.
+
+Done tasks move to **Archived** 3 days after they finish. **Archive all**, in the Done column, clears it sooner.
+
+**Add a task**, in an open task, adds a task under it and turns it into a mission: one card on the board for its
+tasks, done when they all are.
+
+## How teammates use tasks
+
+Teammates can read and manage the board too: create tasks, update them, assign them to other teammates, move them to
+Doing, Archive or Trash, and complete them. They don't make a task for every piece of work. A teammate creates one
+when:
+
+- you ask it to track something on the board, or
+- a goal of its own deserves a thread of its own. It assigns the task to itself and goes on there, or
+- work belongs to another teammate. It creates the task for that teammate, which starts its thread.
+
+A task a teammate creates goes in its thread's project. A thread started by a [trigger](/triggers) can't become a
+task.

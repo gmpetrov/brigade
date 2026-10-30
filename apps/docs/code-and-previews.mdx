@@ -1,0 +1,131 @@
+---
+title: 'Code, pull requests and previews'
+description: 'How teammates work in your GitHub repositories, open pull requests you review and merge, and run your app for you to try.'
+---
+
+Teammates write code in your GitHub repositories, on branches of their own, and propose each change with a pull
+request. You try the change in a live preview, have another teammate review it, and merge it from Brigade.
+
+## Connect GitHub
+
+Connect the **GitHub** App in **Settings → Apps** and pick the repositories Brigade may reach, then give it to the
+teammates who code, with **Read and write** to let them push. See [Apps](/apps#github).
+
+A teammate that needs a repository it can't reach asks for it in a ticket under [Needs you](/needs-you).
+
+## Repositories in a project
+
+On a project's **Repos and previews** tab, add the repositories where its code lives (`owner/name`). The project's
+threads work in them when a message names no repository, and their pull requests show on the project's **Pull
+requests** tab. A repository can be in several projects. One marked **not reachable** has lost its GitHub access:
+reconnect GitHub, or add it to the installation again. See [Projects](/projects).
+
+## Branches and backups
+
+- Each thread gets its own branch, named `brigade/<teammate>-<id>`, the same in every repository it checks out.
+- Teammates push only to branches under `brigade/`. Everything else, including your default branch, changes through
+  a pull request.
+- When a thread goes quiet, Brigade backs up commits and changes to tracked files that weren't pushed, to
+  `brigade/wip/…` on GitHub. New files the teammate never committed are not backed up.
+
+## Pull requests
+
+**Pull requests** in the sidebar lists your teammates' pull requests, **Open** or **Merged and closed**, with a
+filter by repository. Open one to see its checks, **Files changed**, its review and **Open the thread**.
+
+An owner or admin can:
+
+- **Merge** it, with the method picked next to the button: **Squash** (the default), **Merge commit** or
+  **Rebase**. Your browser remembers the last one you picked.
+- **Resolve conflicts**: when it conflicts with its base branch, the teammate that wrote it resolves them in its
+  thread, then Brigade merges it once GitHub allows it, after any checks pass. A pull request opened outside Brigade
+  shows **Resolve on GitHub** instead.
+- **Close** it without merging, or **Reopen** it.
+
+When a teammate suggests merging, its reply ends with a merge button, shown to owners and admins while the pull
+request can merge. GitHub has the last word: a draft or a branch rule can still stop the merge, and Brigade
+says why.
+
+Once a pull request merges, the thread is told and its preview stops. Pull requests can also tick items on your
+[lists](/lists) when they merge.
+
+## Reviews by another teammate
+
+A second teammate reads the pull request with a fresh context, in a child thread of the thread that opened it,
+and posts its verdict on GitHub. The author fixes what it finds, for up to 8 looks.
+
+Who decides is a project setting, on the project's **Settings** tab under **Code review**:
+
+- **The teammate decides** (the default): when it opens a pull request, the teammate says whether it needs a review,
+  and why. Small changes go without one.
+- **Only when someone asks**: a review starts when a person asks the teammate in the thread, or chooses **Ask for a
+  review** on the pull request's page.
+
+On the pull request's page, choose **Ask for a review**, pick a reviewer or **Pick one for me**, then **Start the
+review**. A pull request opened outside Brigade is reviewed in a thread of its own. If you merge while a review is under way,
+asked for changes or hasn't read the latest commits, Brigade asks you to confirm first.
+
+## Live previews
+
+A preview runs the app a teammate works on, usually its dev server, so you can click through the change before you
+merge it. It opens in a panel beside the thread.
+
+<Steps>
+  <Step title="Ask for it">
+    Ask the teammate to let you try the app, or choose **Start preview**, the eye button at the top of the thread.
+    On a pull request's page, choose **Start preview**. When a teammate offers a preview, its reply ends with a
+    button that starts it.
+  </Step>
+  <Step title="The first time, the teammate sets it up">
+    It installs the app, starts its services (a database in Docker, sample data), opens its pages to check they
+    load, and fixes what doesn't. This takes a few minutes, up to ten, and uses one of its turns.
+  </Step>
+  <Step title="After that, one click">
+    Once the pages pass their check, the teammate saves how the app starts for that repository. From then on,
+    **Start preview** starts it in any thread that has the repository checked out, without a turn.
+  </Step>
+</Steps>
+
+The panel reads **Setting up**, **Starting**, **Checking**, then **Ready** once its pages passed the check.
+If the check finds problems, the status is **Needs a fix** and the panel lists the pages; **Ask … to fix it** puts
+the request in your message to the teammate.
+
+In the panel you can also **Open in a new tab**, **Copy link**, **Select an element** to mention it in your message,
+and **Show the code** to read and edit the copy the preview runs.
+
+### On a cloud computer
+
+A preview on a cloud computer gets a private address on `brigade.surf`, the same for the whole thread. The address
+alone lets nobody in: Brigade opens it with a short-lived token for people who can see the thread.
+
+**Copy link** makes a link that works for whoever opens it in the next 5 minutes. They can then use the preview while
+it runs, for 12 hours at most.
+
+A preview nobody uses pauses after 5 minutes and wakes on the next visit. It stops after 4 hours without use, sooner
+if the computer runs short of memory.
+
+### On your own computer
+
+On your own Mac or Linux machine, the preview runs there and opens there only, at
+`http://<thread>.localhost:<port>`, so each thread's preview keeps its own cookies. If the panel stays blank, use
+**Open in a new tab**. A preview nobody uses pauses after 5 minutes and stops after 30.
+
+### Preview variables
+
+Some apps need values only you have, such as a third-party API key. A teammate asks for them with a ticket, and you
+save them there, or under **Environment Variables** in a repository's saved preview (**Repos and previews**, or the
+repository's page under **Pull requests**). Each is a **Secret**, a **Setting** or **Generated** (a random value
+Brigade makes). The app gets them each time it starts.
+
+The teammate sees their names, not the values, though the app runs as its user, so a teammate that went looking
+could read them. Prefer test keys: whoever you share the preview with uses them. Any member sets or replaces a variable; whoever set it last, an owner or an admin
+removes it.
+
+## What isn't supported
+
+- **Other Git hosts**: GitHub only, no GitLab or Bitbucket.
+- **Pushing to your other branches**: teammates push only under `brigade/`.
+- **Signing in to the app in the panel**: Safari, and every browser on an iPhone, blocks the app's cookies in the
+  panel, and Google, GitHub and Microsoft sign-in refuse to load in it. Use **Open in a new tab**.
+- **The app calling its own preview address from its server**: the address lets in only browsers that came with a
+  token. Have the server call itself at `localhost`.

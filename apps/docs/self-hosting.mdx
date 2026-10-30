@@ -1,0 +1,136 @@
+---
+title: 'Self-hosting'
+description: 'Run Brigade yourself, from a laptop to your own server or Cloudflare account.'
+---
+
+Brigade is open source under the [MIT license](https://github.com/gmpetrov/brigade/blob/main/LICENSE). The whole
+product is in the [GitHub repository](https://github.com/gmpetrov/brigade): you can run it on your laptop, on one
+server, or on your own Cloudflare account. Your teammates still run on your own Claude or ChatGPT plan.
+
+## Run it locally
+
+You need **Node.js 24**, **pnpm** and **Docker** (for PostgreSQL).
+
+```bash
+git clone https://github.com/gmpetrov/brigade.git
+cd brigade
+pnpm install
+docker compose up -d                       # PostgreSQL on localhost:5433
+cp apps/api/.env.example apps/api/.env     # then set BETTER_AUTH_SECRET and VAULT_KEY
+pnpm --filter @brigade/api db:migrate
+pnpm dev                                   # API :3001, dashboard :3000, collab :8787
+```
+
+Generate the two secrets with `openssl rand -hex 32` (for `BETTER_AUTH_SECRET`) and `openssl rand -base64 32` (for
+`VAULT_KEY`). Then open http://localhost:3000, create an account, an organization and a workspace, then a
+teammate.
+
+### Without Docker
+
+Two scripts run everything on an embedded PostgreSQL, with a sample workspace to sign in to:
+
+```bash
+scripts/preview/setup.sh   # once, and again after pulling: Node 24, dependencies, .env, database, sample data
+scripts/preview/start.sh   # PostgreSQL, the API and the dashboard at one address, port 3000
+```
+
+`setup.sh` writes `apps/api/.env` with fresh secrets for you. Sign in as `ada@example.com` with the password
+`correct-horse-battery` to explore the sample workspace. Its secrets are placeholders and no computer is linked, so
+a message to one of its teammates does not run. `scripts/preview/start-built.sh` does the same with production
+builds, lighter but without reload as you edit. Details are in
+[AGENTS.md](https://github.com/gmpetrov/brigade/blob/main/AGENTS.md).
+
+## Link a computer to your own API
+
+A teammate's threads run on a computer linked by the **runner**. A runner talks to one API, so point it at yours
+with `--api`. In the dashboard, open **Computers** and choose **Link your machine** (or **Link this Mac**) to get a
+one-time code. Then, in a shell where `claude` (or `codex`) is signed in:
+
+```bash
+pnpm --filter @brigade/runner build
+node apps/runner/dist/index.js link <CODE> --api http://localhost:3001
+node apps/runner/dist/index.js start
+```
+
+Without `--api`, the runner uses `http://localhost:3001`. On a deployed instance, the command the dashboard shows
+already installs the runner from your API and passes `--api` with your API's address. A computer linked to
+brigade.lol is not linked to your instance: accounts, workspaces and computers belong to one API. More options are
+in [docs/development.md](https://github.com/gmpetrov/brigade/blob/main/docs/development.md).
+
+## Deploy it
+
+Brigade deploys two ways from one codebase. Both are described in
+[docs/deployment-plan.md](https://github.com/gmpetrov/brigade/blob/main/docs/deployment-plan.md).
+
+### One server with Docker Compose
+
+[`deploy/vps`](https://github.com/gmpetrov/brigade/tree/main/deploy/vps) holds a Dockerfile for three images (`api`,
+`web`, `collab`) and a Compose file to run them.
+
+- **Build the images** with `docker buildx bake -f deploy/vps/docker-bake.hcl`. The defaults are Brigade's own:
+  ARM (`linux/arm64`), the `ghcr.io/gmpetrov` registry, and Brigade's API address built into the dashboard. Set your
+  own, for example `--set web.args.NEXT_PUBLIC_API_URL=https://api.example.com`.
+- **Edit `compose.yml`**: it expects a Traefik proxy on an external `coolify` network, with Brigade's own host names
+  in its labels. Replace them with yours, or put your own proxy in front.
+- **Bring PostgreSQL**: the Compose file has no database. Any PostgreSQL works, such as a Neon project or your own
+  container.
+- **Put your settings** in `api.env` and `collab.env` next to `compose.yml`.
+- **Migrate and start**: `deploy.sh` shows the steps (pull, `prisma migrate deploy`, `docker compose up`).
+
+<Note>
+  Brigade's team ran this setup from October 14 to October 20, 2026, and now runs on Cloudflare. The files stay in
+  the repository to build the images by hand: treat them as a starting point, not a turnkey installer.
+</Note>
+
+### Cloudflare Workers
+
+This is how brigade.lol runs: the API, the dashboard and live document editing are Workers, with Durable Objects
+for the WebSockets, R2 for files and Neon for PostgreSQL.
+
+1. Sign in with `wrangler login`.
+2. Change the domains in `apps/api/wrangler.front.jsonc` (and its `WEB_URL`), `apps/web/wrangler.jsonc` and
+   `apps/collab/wrangler.jsonc`: they name brigade.lol.
+3. Create an R2 bucket and set its CORS rules from `scripts/deploy/r2-cors.json`, with your dashboard's origin in
+   place of Brigade's.
+4. Set each Worker's settings as secrets, with `pnpm --filter @brigade/api exec wrangler secret put <NAME>`.
+5. Build and deploy each Worker with `pnpm run cf:build:<worker>` and `pnpm run cf:deploy:<worker>` (`api`,
+   `api-front`, `web`, `collab`). The API's deploy migrates the database first, so it needs `DATABASE_URL` set.
+
+## Settings you must set and keep
+
+The API reads its settings from environment variables. The full list, with a comment on each, is in
+[apps/api/.env.example](https://github.com/gmpetrov/brigade/blob/main/apps/api/.env.example).
+
+| Setting                | What it is                                       | Why it matters                                                                                                     |
+| ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`         | Your PostgreSQL                                  | Everything lives there                                                                                             |
+| `API_URL`, `WEB_URL`   | Where the API and the dashboard answer           | Used in links, sign-in and the runner install command                                                              |
+| `BETTER_AUTH_SECRET`   | Signs sessions (at least 32 characters)          | Changing it signs everyone out                                                                                     |
+| `VAULT_KEY`            | The vault's master key (32 bytes, base64)        | Secrets, App sign-ins and API keys are encrypted with keys derived from it. Lose it and they can't be read anymore |
+| `R2_*`                 | A Cloudflare R2 bucket for the library and files | Required in production; locally, files go to a folder                                                              |
+
+<Warning>
+  Back up `VAULT_KEY` somewhere other than the server and the database. Without it, every saved secret is lost.
+</Warning>
+
+Optional settings turn on more:
+
+- **Google sign-in, Gmail and Google Calendar**: a Google OAuth client (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`).
+  Without it, people sign in with a code sent by email.
+- **GitHub**: a GitHub App of your own (`GITHUB_APP_*`), for GitHub as an App and code work on your repositories.
+- **Live document editing**: `COLLAB_SECRET`, the same on the API and the collab server. Without it, documents are
+  edited without live sync.
+- **Push notifications**: a key pair from `pnpm --filter @brigade/api vapid`. Keep it once set: a new pair
+  unsubscribes every device.
+
+## Features that need another account
+
+| Feature                                          | Service | Without it                                                                                     |
+| ------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------- |
+| [Email](/email) addresses, sign-in codes by mail | Resend  | The Email App is unavailable, and sign-in codes are printed in the API's log instead of mailed |
+| [Billing](/billing)                              | Stripe  | Billing is off, and every workspace gets the cloud computer when a provider is configured      |
+| [Cloud computers](/computers)                    | Boat    | No cloud computer: teammates run on computers you link yourself                                |
+
+For email, set `RESEND_API_KEY` with full access, verify your `MAIL_DOMAIN` in Resend for sending and receiving, and
+point a Resend webhook at `{API_URL}/events/resend` with its secret in `RESEND_WEBHOOK_SECRET`. For cloud computers,
+set `BOAT_API_KEY`.

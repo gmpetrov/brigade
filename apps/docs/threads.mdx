@@ -1,0 +1,133 @@
+---
+title: 'Threads'
+description: 'Start a thread, write to a teammate, follow its work, and stop, move or organize threads.'
+---
+
+A thread is one conversation with one teammate. You write what you need, and the thread shows everything the teammate
+does about it, step by step, until it is done or needs you.
+
+## Start a thread
+
+Choose **New thread**, the round **+** at the top of the sidebar, and write what the teammate should work on. You can
+also start one from Home, from a [project](/projects), or from anywhere with **⌘⇧K** (Ctrl+Shift+K), which opens a
+quick box for a teammate and project.
+
+Before you send, you can set:
+
+- **The teammate**: on Home and in the quick box, under **Send to**.
+- **Project**: **No project**, or one of your projects. The thread gets the project's brief and memory.
+- In the **+** menu, **Run on**: which [computer](/computers) runs it. Shown when more than one is online.
+- In the **+** menu, **Account**: which of your [AI accounts](/ai-accounts) it uses. Shown when you have more than one
+  that fits.
+
+A pick other than the default shows as a chip in the composer; its × goes back to the default.
+
+## Write to a teammate
+
+**Enter** sends, **Shift+Enter** adds a line. While the teammate works, Enter queues your message for after its turn.
+A queued message has **Steer**, to give it to the teammate now, during the turn, and a menu with **Run in parallel**
+(the teammate starts a child thread for it), **Edit** and **Remove**.
+
+### Attach files
+
+Choose **Attach files** in the **+** menu, drag files onto the thread, or paste them. Up to 10 files per message, 25
+MB per file (500 MB for a video), 50 MB in all, not counting videos.
+
+### Mention with @
+
+Type **@** to mention:
+
+- **Teammates**: brings them into the thread.
+- **Projects**, **Apps**, **Repositories**, **Designs**, **Design systems**, **Library** files, **Threads** and
+  **Computers**: points the teammate at them.
+- **Secrets**: lets the teammate use that secret in this thread. See [Secrets](/apps#secrets).
+
+### The + menu
+
+- **Teach a task**: record yourself doing a task on the cloud computer so the teammate learns it as a skill. Cloud
+  computer only. See [Brigade Cloud](/computers#brigade-cloud).
+- **Continue on…**: move the thread to another computer (see below).
+- **Effort**: how hard the teammate thinks, from Low to Max.
+
+Type **/** at the start of a message for commands: **/visual**, **/design**, and your workspace's
+[skills](/skills) by name.
+
+## What a thread shows
+
+- **Steps.** Each command run, file read or edited, search and browser action is a line you can open. Steps in a row
+  fold into one line, such as "Ran 3 commands, read 2 files". A turn longer than 30 seconds folds under
+  **Worked for** its duration. While it works, the thread shows how many steps and how long.
+- **Cards.** Plans, approvals, questions, pull requests, and a line for each child thread started.
+- **Tickets.** What the teammate is waiting on shows in a card above the conversation, and under
+  [Needs you](/needs-you).
+- **Details.** Choose the title at the top to open the details panel: the computer's live screen (cloud computer
+  only), the thread's menu, its child threads, and its **Outputs**, including the changed files. Choose a changed
+  file to see the diff.
+- **Preview.** The eye button at top right starts or opens the preview of an app the teammate builds. See
+  [Code and previews](/code-and-previews).
+
+## Statuses and filters
+
+A dot beside each thread in the sidebar shows where it stands:
+
+| Dot           | Meaning                                    |
+| ------------- | ------------------------------------------ |
+| Violet        | Working                                    |
+| Orange        | Needs you: waiting on a person, or paused  |
+| Red           | Failed, or updates stopped arriving        |
+| Grey, filled  | Idle or done, unread                       |
+| Grey ring     | Idle or done, read                         |
+
+Threads that need you come first, then working ones, then the rest. **Filter threads**, next to **Threads**, filters
+by **Status** (**Needs you**, **Working**, **Unread**, **Failed**), by teammate and by project, and shows threads you
+put off with **Do later** and **Archived** ones.
+
+## Stop a run
+
+While a teammate works, a round stop button appears in the composer, labeled **Stop** and the teammate's name. Choose
+it to end the turn. The thread shows **Interrupted**, and any queued messages run next.
+
+<Note>
+  **Esc** never stops a teammate. It closes menus and panels, so pressing it by habit can't cut a
+  run short.
+</Note>
+
+## Answer a teammate
+
+A teammate can end its reply with up to three buttons, such as "Send it" or "Not yet". Choosing one sends its text as
+your message. Two buttons do more:
+
+- **Merge** merges the pull request the teammate opened. Owners and admins only, while it can merge.
+- **Preview** starts the app's preview without a new turn, while none runs.
+
+When a teammate offers options, it shows a card with 2 to 6 of them. Choose **Pick this one**, or write what you want
+instead. 
+
+## Child threads
+
+A teammate can hand part of the work to a child thread, for another teammate or to work in parallel. **Run in
+parallel** on a queued message makes one too. Child threads sit folded under their parent in the
+sidebar; open them with the arrow after its title. The parent shows when a child needs you, and the child's last
+message goes back to the parent.
+
+## Move a thread to another computer
+
+Choose **Continue on…** in the **+** menu and pick a computer. The next message you send moves the thread; you can send
+it empty. If your machine is offline, the thread offers **Continue on the cloud computer** or **Wait**. Only the member
+who started the thread can move it.
+
+The thread picks up from what is on GitHub and in the conversation. Files that exist only on the first computer stay
+there. See [Your computer or Brigade Cloud](/computers#move-a-thread-between-computers).
+
+## Who sees a thread
+
+Every member of the workspace sees every thread and can watch it live. Only the member who started a thread writes in
+it, because it runs on their AI subscription: others see that it runs on that member's subscription. The member who
+started it also answers its approvals and questions; a few approvals wait for an owner or admin instead.
+
+## Organize threads
+
+The **⋮** menu on a thread has:
+
+**Pin**, **Do later** (puts it aside, for you only), **Rename**, **Archive**, and **Delete**, which removes it for
+good with its files (the member who started it, or an admin).

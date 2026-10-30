@@ -1,0 +1,87 @@
+---
+title: 'Routines'
+description: 'Have a teammate do the same work on a schedule, in a fresh thread each time.'
+---
+
+A routine runs work without anyone typing a message. A schedule prompts a teammate with the same instructions at
+set times, every weekday at 9:00 or each Monday morning, and each run is a fresh thread.
+
+Everything that runs on its own is on the **Routines** page in the sidebar: installed [playbooks](/playbooks)
+first, then **Schedules**. To start work when something happens rather than at a time, use a
+[trigger](/triggers).
+
+## Create a schedule
+
+1. Open **Routines** and choose **New schedule**.
+2. Fill in:
+   - **Title**: a short name, such as "Weekly PR digest". Each run's thread is titled with it and the date.
+   - **Teammate**: who does the work.
+   - **Project**: the [project](/projects) its runs belong to, if any.
+   - **Instructions**: the first message of each run.
+   - **When**: **Every hour**, **Every day**, **Weekdays**, **Every week**, or **Custom (cron)**.
+   - **Timezone**: your browser's by default.
+3. Check the line under the form, which says when it runs in words and the next 3 runs, then choose
+   **Create schedule**.
+
+Write the instructions so they stand alone. Each run starts with no memory of earlier runs or of the conversation
+where you set it up: name the inputs, the steps, and where the result goes.
+
+<Tip>
+  "List the pull requests merged in acme/web last week and email a short digest to the team" works.
+  "Do the digest like last time" doesn't.
+</Tip>
+
+### Timing
+
+- Times are in the schedule's own time zone, daylight saving time included: "Every day at 09:00" in Europe/Paris
+  runs at 9:00 in Paris all year.
+- **Custom (cron)** takes a standard five-field cron expression: minute, hour, day of month, month, day of week.
+- Runs must be at least 5 minutes apart.
+
+## What a run is
+
+A run is an ordinary thread with the teammate's usual access, approval policy, limits and [memory](/memory). Its
+first message is your instructions, after a line saying which schedule it is, when it was due, and that nobody is
+watching live. A teammate in a run opens a ticket when it needs a person.
+
+- **Whose accounts.** Runs use the AI accounts of the member who created the schedule, its owner. The row says
+  "on your accounts" or "on Ada's accounts".
+- **Which computer.** The cloud computer, or else the owner's own computer. A run that reports to a thread runs
+  on that thread's computer while it is online.
+- **No overlap.** A run is skipped while the previous one is still going.
+- **Missed runs.** If Brigade or the computer was down at the time, the schedule runs once when it's back, not
+  once per missed time.
+- **When a run can't start**, for example because the computer is offline or the owner has no AI account, the row
+  shows **couldn't start** with the reason, and the owner gets a ticket under [Needs you](/needs-you). Only one is
+  open per schedule at a time.
+
+## Manage schedules
+
+Each row shows when it runs, the teammate, whose accounts it uses, the next run, and a link to the last run's
+thread. History is the threads themselves.
+
+- **The switch** pauses or resumes it. Resuming counts the next run from now.
+- **Run now** starts a run at once. The next scheduled run stays where it was.
+- **Edit** changes it. Only the owner edits a schedule, since it runs on their accounts.
+- **Delete** removes it. Its threads stay.
+
+The owner, an owner or an admin can pause, run or delete any schedule. Use the project filter to see one
+project's routines. A project also has a **Routines** page of its own.
+
+## Ask a teammate in a thread
+
+You don't need the form. Ask in a thread: "every Monday at 7:00, send me last week's signups". The teammate
+creates the schedule, tells you in one line when it runs and the next run, and the row shows "set up by" that
+teammate.
+
+- The schedule is active at once, and you are its owner: runs use your accounts.
+- It belongs to the thread's project.
+- By default each run is a child thread of the one you asked in. It wakes the teammate there only when it has
+  something to report or fails, and the row links to it with **Reports in**. Deleting that thread deletes the
+  schedule and its runs. Ask for runs that stand alone if you prefer separate threads.
+- If you don't give a time zone, it uses the one of your latest schedule, else UTC, and says so.
+- A teammate can list and change the schedules it runs, only from a thread you started. Deleting one is left to
+  people, on the **Routines** page.
+
+Teammates create schedules only in threads a member started, never in a thread a trigger, a schedule or a
+playbook started. An event can't set up recurring work, and a schedule can't multiply itself.

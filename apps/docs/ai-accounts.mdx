@@ -1,0 +1,104 @@
+---
+title: 'AI accounts'
+description: 'Sign in your Claude and ChatGPT plans, stack several, and see what happens when one runs out.'
+---
+
+Teammates run on your own Claude plan (for Claude Code) or ChatGPT plan (for Codex). Brigade never bills you for AI
+usage and never uses a pay-per-use API key. You manage your plans in **Settings → AI Accounts**.
+
+## Add an account
+
+Open **Settings → AI Accounts** and choose **Add Claude account** or **Add Codex account**. If more than one computer
+is online, pick the one to sign in on. A computer must be online to add an account.
+
+**Claude:**
+
+1. Choose **Open Claude sign-in** and sign in to the Claude account you want to add.
+2. Claude shows a code. Paste it in the box and choose **Finish**.
+
+On the cloud computer, Claude doesn't tell Brigade which account you signed in to. Fill in **Account email
+(optional)** to tell your accounts apart.
+
+**Codex:**
+
+1. Open the address shown and sign in to ChatGPT.
+2. Enter the code shown on the page. The page updates when you are done.
+
+You sign in on the vendor's own page: Brigade never sees your password, and the login stays on the computer. See
+[Security and your data](/security#what-brigade-stores) for how cloud computer logins are kept.
+
+### A login you already have on your computer
+
+On your own computer, a `claude` or `codex` login you already have in the terminal shows up by itself, as
+**Claude on** or **Codex on** followed by the machine's name. It reads **Uses this machine's own login**. Removing it
+from Brigade leaves the login on your machine.
+
+The runner removes API keys such as `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` from what teammates see, so work always
+runs on your plan.
+
+## Accounts are yours
+
+An account belongs to the member who added it. Nobody else's threads use it, and other members can't see it.
+
+- A thread runs on the accounts of the member who **started** it, even when others watch it.
+- A routine or trigger runs on the accounts of the member who created it.
+- An account lives on one computer. A thread uses only accounts on the computer it runs on, so sign in on each
+  computer you use, including the cloud computer.
+
+Every member who starts threads needs at least one account of their own.
+
+## Several accounts
+
+Add as many accounts of each kind as you like. The first one you add for Claude or Codex is your **Default**; change
+it with **Make default** in an account's menu.
+
+When an account runs out of usage in the middle of a turn, the thread carries on with your next account **of the same
+kind** on the same computer: Claude to Claude, Codex to Codex. The thread notes the switch, and the teammate picks up
+from a summary of the thread so far. It never switches from Claude to Codex or back.
+
+Brigade tries your accounts in this order: the one picked for the thread, your default, then the oldest. Accounts
+out of usage go last, the one that resets soonest first.
+
+### When every account is out
+
+If none of your accounts of that kind has usage left, the thread pauses and opens a ticket under
+[Needs you](/needs-you): **Paused: every account has run out of usage**, with the time usage resets. To go on:
+
+- wait for the reset, then send a message in the thread,
+- or upgrade your plan or add an account, then send a message.
+
+Sending a message closes the ticket. If you know usage is back before Brigade does, choose **Usage is back** in the
+account's menu.
+
+## Pick an account for a thread
+
+In a new thread, the composer's **+** menu has an **Account** setting when you have more than one usable account for
+that teammate on that computer. Pick one and it shows as a chip in the composer; remove the chip to go back to your
+default. Without a pick, the thread uses your default.
+
+A thread that has started has no account picker: it changes account only when one runs out.
+
+## See your usage
+
+Each account on **Settings → AI Accounts** shows its status (**Ready**, **Sign-in needed**, **Out of usage until** a
+time) and meters for its limits: **5h**, **7d**, and **7d Opus** or **7d Sonnet** when the plan reports them. Hover a meter for the
+percentage used and when it resets. A meter turns amber from 80%.
+
+The **Usage** row in your avatar menu shows the same at a glance, with **See what used it** and **Manage accounts**.
+Usage appears after a teammate's next turn. See [Usage and limits](/usage-and-limits).
+
+## Models and accounts
+
+Each teammate has a model, picked on its **Profile** tab: a Claude model runs on a Claude account, a Codex model on a
+ChatGPT account. **Default** uses the account's own default model for Claude. If you have no ready account of the
+teammate's kind on the computer, the composer says so with a link to add one. See [Teammates](/teammates#models).
+
+## Manage accounts
+
+Each account's menu has:
+
+- **Make default**: try this account first.
+- **Usage is back**: clear an out-of-usage mark.
+- **Sign in again**: when its login stopped working. Brigade opens a **Sign in again** ticket after two failed turns
+  in a row.
+- **Remove**: deletes the login from the computer, which must be online.
