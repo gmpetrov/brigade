@@ -18,7 +18,10 @@ presence come later (end of this file).
    home, settings…), each with its title above it. A design without boards shows
    its `index.html` once per viewport in its manifest (desktop and mobile side by
    side), a deck as one board. An options set shows each option as a row with its
-   name above it, instead of tabs.
+   name above it, instead of tabs. The title's menu lists the set's options (by
+   their titles) and "All side by side" to switch between them, from the thread
+   too, where an option opens alone; ← and → go to the previous and next option
+   while the panel has the focus.
 2. Trackpad or wheel pans; pinch or Ctrl/⌘ + wheel zooms; space + drag pans;
    `⇧1` fits everything, `⇧2` the selection, `⌘0` is 100 %. A zoom menu shows the
    percentage. Over a board whose page scrolls, the wheel scrolls the page.

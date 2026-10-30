@@ -5,7 +5,7 @@ import { test } from 'node:test'
 process.env.DATABASE_URL ??= 'postgresql://test@localhost/test'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
-const { findDesign } = await import('../src/designs.js')
+const { findDesign, listDesignOptions } = await import('../src/designs.js')
 type Db = Parameters<typeof findDesign>[0]
 
 const OPTIONS = 'Projects/Acme/designs/landing.options'
@@ -97,4 +97,30 @@ test('an option trashed by a pick, before it was recorded, stays in the trash', 
     path: a,
     trashed: true,
   })
+})
+
+test('the options offered with a design, in the order offered, those with a page only', async () => {
+  const files = [
+    `${OPTIONS}/b-the-pass.design/index.html`,
+    `${OPTIONS}/a-bold.design/styles.css`,
+    `${OPTIONS}/a-bold.design/index.html`,
+    // Saving, no page yet.
+    `${OPTIONS}/c-calm.design/design.json`,
+    `${OPTIONS}/notes.md`,
+  ]
+  const library = {
+    document: {
+      findMany: async ({ where }: { where: { path: { startsWith: string } } }) =>
+        files
+          .filter((path) => path.startsWith(where.path.startsWith))
+          .sort()
+          .map((path) => ({ path })),
+    },
+  } as unknown as Db
+  const scope = {} as Parameters<typeof listDesignOptions>[1]
+  assert.deepEqual(await listDesignOptions(library, scope, `${OPTIONS}/b-the-pass.design`), [
+    { path: `${OPTIONS}/a-bold.design`, title: null },
+    { path: `${OPTIONS}/b-the-pass.design`, title: null },
+  ])
+  assert.deepEqual(await listDesignOptions(library, scope, 'Projects/Acme/designs/home.design'), [])
 })

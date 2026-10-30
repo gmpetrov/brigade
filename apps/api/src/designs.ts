@@ -24,6 +24,7 @@ import {
   type DesignPersonEdit,
   type DesignSystem,
   type DesignView,
+  type DesignOption,
   type DesignWhere,
   type SaveDesignThumbnail,
   type SaveKnobs,
@@ -710,6 +711,42 @@ export async function findDesign(db: ScopedDb, path: string): Promise<DesignWher
     return settled ? { path: to, trashed: false } : here
   }
   return pick.from === folder ? { path: pick.to, trashed: false } : { ...here, trashed: true }
+}
+
+/**
+ * The options offered with a design, it included, in the order offered (a, b,
+ * c…), each with its title: none when it is not an option. Only those that
+ * have a page.
+ */
+export async function listDesignOptions(
+  db: ScopedDb,
+  scope: Scope,
+  path: string,
+): Promise<DesignOption[]> {
+  const folder = designFolderOf(path)
+  const options = folder && designOptionsOf(folder)
+  if (!options) return []
+  const rows = await db.document.findMany({
+    where: { kind: 'library', deletedAt: null, path: { startsWith: `${options}/` } },
+    orderBy: { path: 'asc' },
+  })
+  const designs = new Map<string, (typeof rows)[number] | null>()
+  for (const row of rows) {
+    const design = designFolderOf(row.path)
+    if (!design || designOptionsOf(design) !== options) continue
+    if (row.path === `${design}/${DESIGN_ENTRY}` && !designs.has(design)) designs.set(design, null)
+  }
+  for (const row of rows) {
+    const design = designFolderOf(row.path)
+    if (design && designs.has(design) && row.path === `${design}/${DESIGN_MANIFEST}`)
+      designs.set(design, row)
+  }
+  return Promise.all(
+    [...designs].map(async ([design, manifest]) => ({
+      path: design,
+      title: (await readJson(scope, manifest, DesignManifest))?.title ?? null,
+    })),
+  )
 }
 
 /**
