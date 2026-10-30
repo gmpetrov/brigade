@@ -7,20 +7,15 @@ const plain = (text: string): Piece => ({ text, italic: false, code: false })
 const italic = (text: string): Piece => ({ text, italic: true, code: false })
 const code = (text: string, inItalic = false): Piece => ({ text, italic: inItalic, code: true })
 
-test('the priority dot at the start is hidden, with its space', () => {
-  assert.deepEqual(checklistLook([plain('🔴 Page de statut')]), { hide: 3, note: null })
-  assert.deepEqual(checklistLook([plain('🟢 Rollback')]), { hide: 3, note: null })
-})
-
-test('a line without a dot hides nothing, and a dot further in stays', () => {
-  assert.deepEqual(checklistLook([plain('Page de statut 🔴')]), { hide: 0, note: null })
+test('a line without italics has no note, with or without its priority dot', () => {
+  assert.deepEqual(checklistLook([plain('🔴 Page de statut')]), { note: null })
+  assert.deepEqual(checklistLook([plain('Page de statut')]), { note: null })
 })
 
 test('a closing note in italics starts a line of its own', () => {
   const pieces = [plain('🔴 Sauvegardes Neon. '), italic('Vérifié le 26 oct.')]
   const from = 'Sauvegardes Neon. '.length + 3
   assert.deepEqual(checklistLook(pieces), {
-    hide: 3,
     note: { from, to: from + 'Vérifié le 26 oct.'.length },
   })
 })
