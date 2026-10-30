@@ -963,6 +963,10 @@
 .document-editor .bn-priority {
   display: none;
 }
+/* Sub-lines show by their indent alone: no guide line down from their parent's box. */
+.document-editor .bn-editor .bn-block-group .bn-block-group .bn-block-outer::before {
+  display: none;
+}
 .document-editor .bn-note-break {
   display: block;
 }
