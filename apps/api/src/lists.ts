@@ -743,18 +743,18 @@ async function addRemainder(
     })
   )?.remainderId
   if (!id) return null
-  // Its row first: an item being ticked meanwhile sees it, and waits for its line.
-  await db.listItem.createMany({
-    data: [
-      {
-        id,
-        documentId: link.item.documentId,
-        text: plainItemText(link.remains).slice(0, 2_000),
-        remainderOfId: link.itemId,
-      },
-    ] as never,
-    skipDuplicates: true,
-  })
+  const row = () =>
+    db.listItem.createMany({
+      data: [
+        {
+          id,
+          documentId: link.item.documentId,
+          text: plainItemText(link.remains!).slice(0, 2_000),
+          remainderOfId: link.itemId,
+        },
+      ] as never,
+      skipDuplicates: true,
+    })
   // In the file now: added by this try, or by an earlier one.
   let present = false
   let added = false
@@ -764,9 +764,12 @@ async function addRemainder(
     { type: 'teammate', id: authorId },
     link.item.documentId,
     pull.sessionId ? { sessionId: pull.sessionId } : {},
-    (text, list) => {
+    async (text, list) => {
       present = list.lines.some((l) => l.marker === id)
-      if (present) return text
+      if (present) {
+        await row()
+        return text
+      }
       const item = list.lines.find((l) => l.id === link.itemId)
       if (!item)
         throw new HTTPException(404, {
@@ -774,15 +777,17 @@ async function addRemainder(
         })
       // Ticked already: nothing remains of it.
       if (item.done) return text
+      // Its row with its line, under the file's lock, as every remaining line's (settleRemainders).
+      await row()
       present = added = true
       return insertLine(text, list, { after: item, nested: true }, link.remains!, id)
     },
-  )
-  // Ticked already: nothing remains, and no line came of it.
-  if (!present) {
-    await db.listItem.deleteMany({ where: { id } })
-    return null
-  }
+  ).catch(async (error) => {
+    // Not written: no row without its line.
+    if (added) await db.listItem.deleteMany({ where: { id } })
+    throw error
+  })
+  if (!present) return null
   if (pull.sessionId)
     await db.listItemThread.createMany({
       data: [{ itemId: id, sessionId: pull.sessionId }] as never,
@@ -800,29 +805,35 @@ async function addRemainder(
  * then they are looked at again, so that a pull request closed later lets the item be ticked.
  */
 export async function settleRemainders(db: ScopedDb, scope: Scope, itemId: string) {
-  const remainders = await db.listItem.findMany({
-    where: { remainderOfId: itemId },
-    select: { id: true, remainderSettledAt: true },
-  })
-  if (!remainders.length) return
+  const all = () =>
+    db.listItem.updateMany({
+      where: { remainderOfId: itemId, remainderSettledAt: null },
+      data: { remainderSettledAt: new Date() },
+    })
   const item = await db.listItem.findFirst({
     where: { id: itemId },
-    select: { documentId: true, document: { select: { text: true, deletedAt: true } } },
+    select: { documentId: true },
   })
-  const lines = item && !item.document.deletedAt ? byLine(parseList(item.document.text)) : null
-  const line = lines?.get(itemId)
-  const settle = (ids: string[]) =>
-    ids.length
-      ? db.listItem.updateMany({
-          where: { id: { in: ids }, remainderSettledAt: null },
-          data: { remainderSettledAt: new Date() },
-        })
-      : null
-  const all = () => settle(remainders.map((r) => r.id))
-  // Its own line gone, ticked already, or one of its remaining lines removed: for good.
-  if (!lines || !line || line.done || remainders.some((r) => !lines.get(r.id)))
-    return void (await all())
-  if (!remainders.every((r) => lines.get(r.id)!.done)) return
+  if (!item) return void (await all())
+  // Read under the file's lock, where every remaining line is made with its row (add_item,
+  // addRemainder): never a row whose line is on its way, nor a line added past this read.
+  const ready = await withLibraryLock(scope, item.documentId, async () => {
+    const remainders = await db.listItem.findMany({
+      where: { remainderOfId: itemId },
+      select: { id: true },
+    })
+    if (!remainders.length) return false
+    const file = await db.document.findFirst({ where: { id: item.documentId, ...LIST_FILE } })
+    const lines = file ? byLine(parseList(await storedText(scope, file))) : null
+    const line = lines?.get(itemId)
+    // Its own line gone, ticked already, or one of its remaining lines removed: for good.
+    if (!lines || !line || line.done || remainders.some((r) => !lines.get(r.id))) {
+      await all()
+      return false
+    }
+    return remainders.every((r) => lines.get(r.id)!.done)
+  })
+  if (!ready) return
   const coming = await db.listItemPull.count({
     where: {
       itemId,
@@ -835,8 +846,8 @@ export async function settleRemainders(db: ScopedDb, scope: Scope, itemId: strin
   if (coming) return
   const ticked = await setItemDone(db, scope, BRIGADE, itemId, true, {
     note: `what remained is done, ${shortDate(new Date())}`,
-    // Its remaining lines read again under the lock: one unticked meanwhile, or added (its row
-    // is made before its line, which waits for this lock), keeps it open.
+    // Its remaining lines read again under the lock: one unticked or added meanwhile keeps it
+    // open.
     when: async (list) => {
       const ids = new Set(
         (
@@ -1227,24 +1238,30 @@ export async function handleListCall(
       )
     }
     const id = newListItemId()
-    // Its row first: an item being ticked meanwhile sees what remains of it, and waits for it.
-    await db.listItem.create({
-      data: {
-        id,
-        documentId: file.id,
-        text: plainItemText(op.text).slice(0, 2_000),
-        ...(remainsOf ? { remainderOfId: remainsOf } : {}),
-      } as never,
-    })
-    await editList(db, scope, actor, file.id, context, (text, list) => {
+    let made = false
+    await editList(db, scope, actor, file.id, context, async (text, list) => {
       let after: ListLine | undefined
       const ref = remainsOf ?? op.after
       if (ref) {
         const line = remainsOf ? list.lines.find((l) => l.id === remainsOf) : findLine(list, ref)
         if (!line) throw new HTTPException(404, { message: 'That item is no longer in its list' })
         if (typeof line === 'string') throw new HTTPException(404, { message: line })
+        if (remainsOf && line.done)
+          throw new HTTPException(409, {
+            message: 'That item is ticked already: nothing remains of it',
+          })
         after = line
       }
+      // Its row with its line, under the file's lock (settleRemainders reads them there).
+      await db.listItem.create({
+        data: {
+          id,
+          documentId: file.id,
+          text: plainItemText(op.text).slice(0, 2_000),
+          ...(remainsOf ? { remainderOfId: remainsOf } : {}),
+        } as never,
+      })
+      made = true
       return insertLine(
         text,
         list,
@@ -1259,7 +1276,8 @@ export async function handleListCall(
         id,
       )
     }).catch(async (error) => {
-      await db.listItem.deleteMany({ where: { id } })
+      // Not written: no row without its line.
+      if (made) await db.listItem.deleteMany({ where: { id } })
       throw error
     })
     await db.listItemThread.create({ data: { itemId: id, sessionId: session.id } as never })

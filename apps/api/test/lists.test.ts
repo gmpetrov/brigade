@@ -1367,6 +1367,67 @@ describe('lists, what remains', { skip: !database && 'no database answers' }, ()
     assert.match((await read(file.id)).split('\n')[0]!, /^\* \[ \] Launch docs/)
   })
 
+  test('a sweep or a tick running while a remaining line is added waits for it, and sees it', async () => {
+    // Started while add_item holds the file's lock, between its row and its line being written.
+    const during = async (path: string, parent: string, child?: string) => {
+      const file = await save(
+        path,
+        `* [ ] Launch email <!-- item:${parent} -->\n` +
+          (child ? `  * [x] Check copy <!-- item:${child} -->\n` : ''),
+      )
+      await db.listItem.createMany({
+        data: [
+          { id: parent, documentId: file.id, text: 'Launch email' },
+          ...(child
+            ? [{ id: child, documentId: file.id, text: 'Check copy', remainderOfId: parent }]
+            : []),
+        ],
+      } as never)
+      let settling: Promise<void> | undefined
+      const adding = new Proxy(db, {
+        get(target, key) {
+          if (key !== 'listItem') return Reflect.get(target, key)
+          return new Proxy(target.listItem, {
+            get(delegate, op) {
+              if (op !== 'create') return Reflect.get(delegate, op)
+              return async (args: Parameters<typeof delegate.create>[0]) => {
+                const row = await delegate.create(args)
+                if ((args.data as { remainderOfId?: string }).remainderOfId === parent)
+                  settling = lists.settleRemainders(db, scope, parent)
+                return row
+              }
+            },
+          })
+        },
+      }) as typeof db
+      const out = (await lists.handleListCall(adding, scope, { id: sessionId }, teammate, {
+        name: 'add_item',
+        path,
+        text: 'Check translated email',
+        remainsOf: parent,
+      })) as { added: { id: string } }
+      assert.ok(settling, 'started meanwhile')
+      await settling
+      return { file, id: out.added.id }
+    }
+
+    // Not taken for a removed line: ticked later in the editor, it ticks its item.
+    const swept = await during('Remains/sweep-add.md', 'sweepparent12345')
+    assert.equal(
+      (await db.listItem.findFirst({ where: { id: swept.id } }))?.remainderSettledAt,
+      null,
+    )
+    const text = await read(swept.file.id)
+    await save('Remains/sweep-add.md', text.replace('  * [ ] Check', '  * [x] Check'))
+    assert.match((await read(swept.file.id)).split('\n')[0]!, /^\* \[x\] Launch email/)
+
+    // Its item's other remaining line done: the item stays open above the new one.
+    const ticked = await during('Remains/tick-add.md', 'tickparent123456', 'tickchild1234567')
+    const lines = (await read(ticked.file.id)).split('\n')
+    assert.match(lines[0]!, /^\* \[ \] Launch email/)
+    assert.match(lines.join('\n'), /\* \[ \] Check translated email/)
+  })
+
   test('a line whose threads stopped, with nothing else carrying it, is stalled', async () => {
     const file = await listOf('Remains/stalled.md', [['stallitem1234567', 'Refund policy']])
     const stalled = async () =>
