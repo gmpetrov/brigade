@@ -1319,6 +1319,54 @@ describe('lists, what remains', { skip: !database && 'no database answers' }, ()
     )
   })
 
+  test('a remaining line added while its item is being ticked keeps the item open', async () => {
+    const file = await save(
+      'Remains/added.md',
+      '* [ ] Launch docs <!-- item:newparent1234567 -->\n' +
+        '  * [x] Check links <!-- item:oldchild12345678 -->\n',
+    )
+    await db.listItem.createMany({
+      data: [
+        { id: 'newparent1234567', documentId: file.id, text: 'Launch docs' },
+        {
+          id: 'oldchild12345678',
+          documentId: file.id,
+          text: 'Check links',
+          remainderOfId: 'newparent1234567',
+        },
+      ],
+    } as never)
+    // Added by a teammate right after the item's remaining lines were read, before its tick.
+    let added = false
+    const meanwhile = new Proxy(db, {
+      get(target, key) {
+        if (key !== 'listItemPull') return Reflect.get(target, key)
+        return new Proxy(target.listItemPull, {
+          get(delegate, op) {
+            if (op !== 'count') return Reflect.get(delegate, op)
+            return async (args: Parameters<typeof delegate.count>[0]) => {
+              const count = await delegate.count(args)
+              if (!added) {
+                added = true
+                const out = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
+                  name: 'add_item',
+                  path: 'Remains/added.md',
+                  text: 'Check translated docs',
+                  remainsOf: 'newparent1234567',
+                })) as { added?: unknown }
+                assert.ok(out.added)
+              }
+              return count
+            }
+          },
+        })
+      },
+    }) as typeof db
+    await lists.settleRemainders(meanwhile, scope, 'newparent1234567')
+    assert.ok(added)
+    assert.match((await read(file.id)).split('\n')[0]!, /^\* \[ \] Launch docs/)
+  })
+
   test('a line whose threads stopped, with nothing else carrying it, is stalled', async () => {
     const file = await listOf('Remains/stalled.md', [['stallitem1234567', 'Refund policy']])
     const stalled = async () =>

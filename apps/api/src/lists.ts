@@ -75,12 +75,12 @@ async function editList(
   actor: Actor,
   documentId: string,
   context: Record<string, string>,
-  edit: (text: string, list: ParsedList) => string,
+  edit: (text: string, list: ParsedList) => string | Promise<string>,
 ) {
   return withLibraryLock(scope, documentId, async (lease) => {
     const row = await listFile(db, { id: documentId })
     const text = await storedText(scope, row)
-    const next = edit(text, parseList(text))
+    const next = await edit(text, parseList(text))
     if (next === text) return row
     return saveLibraryFile(
       db,
@@ -656,7 +656,7 @@ export async function setItemDone(
      * Ticks it only if this holds of the list as it is under the file's lock, read again there:
      * else nothing changes, and it comes back not done.
      */
-    when?: (list: ParsedList) => boolean
+    when?: (list: ParsedList) => boolean | Promise<boolean>
   } = {},
 ) {
   const item = await db.listItem.findFirst({ where: { id: itemId } })
@@ -670,7 +670,7 @@ export async function setItemDone(
     actor,
     item.documentId,
     options.sessionId ? { sessionId: options.sessionId } : {},
-    (current, list) => {
+    async (current, list) => {
       const line = list.lines.find((l) => l.id === itemId)
       if (!line)
         throw new HTTPException(404, {
@@ -678,7 +678,7 @@ export async function setItemDone(
         })
       text = line.text
       if (line.done === done) return current
-      if (done && options.when && !options.when(list)) {
+      if (done && options.when && !(await options.when(list))) {
         refused = true
         return current
       }
@@ -743,7 +743,19 @@ async function addRemainder(
     })
   )?.remainderId
   if (!id) return null
-  // In the file now: added by this try, or by an earlier one that stopped before its row.
+  // Its row first: an item being ticked meanwhile sees it, and waits for its line.
+  await db.listItem.createMany({
+    data: [
+      {
+        id,
+        documentId: link.item.documentId,
+        text: plainItemText(link.remains).slice(0, 2_000),
+        remainderOfId: link.itemId,
+      },
+    ] as never,
+    skipDuplicates: true,
+  })
+  // In the file now: added by this try, or by an earlier one.
   let present = false
   let added = false
   await editList(
@@ -766,18 +778,11 @@ async function addRemainder(
       return insertLine(text, list, { after: item, nested: true }, link.remains!, id)
     },
   )
-  if (!present) return null
-  await db.listItem.createMany({
-    data: [
-      {
-        id,
-        documentId: link.item.documentId,
-        text: plainItemText(link.remains).slice(0, 2_000),
-        remainderOfId: link.itemId,
-      },
-    ] as never,
-    skipDuplicates: true,
-  })
+  // Ticked already: nothing remains, and no line came of it.
+  if (!present) {
+    await db.listItem.deleteMany({ where: { id } })
+    return null
+  }
   if (pull.sessionId)
     await db.listItemThread.createMany({
       data: [{ itemId: id, sessionId: pull.sessionId }] as never,
@@ -828,11 +833,16 @@ export async function settleRemainders(db: ScopedDb, scope: Scope, itemId: strin
     },
   })
   if (coming) return
-  const ids = new Set(remainders.map((r) => r.id))
   const ticked = await setItemDone(db, scope, BRIGADE, itemId, true, {
     note: `what remained is done, ${shortDate(new Date())}`,
-    // A remaining line unticked meanwhile keeps it open.
-    when: (list) => {
+    // Its remaining lines read again under the lock: one unticked meanwhile, or added (its row
+    // is made before its line, which waits for this lock), keeps it open.
+    when: async (list) => {
+      const ids = new Set(
+        (
+          await db.listItem.findMany({ where: { remainderOfId: itemId }, select: { id: true } })
+        ).map((r) => r.id),
+      )
       const mine = list.lines.filter((l) => l.id && ids.has(l.id))
       return mine.length === ids.size && mine.every((l) => l.done)
     },
@@ -1217,6 +1227,15 @@ export async function handleListCall(
       )
     }
     const id = newListItemId()
+    // Its row first: an item being ticked meanwhile sees what remains of it, and waits for it.
+    await db.listItem.create({
+      data: {
+        id,
+        documentId: file.id,
+        text: plainItemText(op.text).slice(0, 2_000),
+        ...(remainsOf ? { remainderOfId: remainsOf } : {}),
+      } as never,
+    })
     await editList(db, scope, actor, file.id, context, (text, list) => {
       let after: ListLine | undefined
       const ref = remainsOf ?? op.after
@@ -1239,14 +1258,9 @@ export async function handleListCall(
         op.text,
         id,
       )
-    })
-    await db.listItem.create({
-      data: {
-        id,
-        documentId: file.id,
-        text: plainItemText(op.text).slice(0, 2_000),
-        ...(remainsOf ? { remainderOfId: remainsOf } : {}),
-      } as never,
+    }).catch(async (error) => {
+      await db.listItem.deleteMany({ where: { id } })
+      throw error
     })
     await db.listItemThread.create({ data: { itemId: id, sessionId: session.id } as never })
     return {
