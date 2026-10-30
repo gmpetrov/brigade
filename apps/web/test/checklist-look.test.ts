@@ -18,7 +18,11 @@ test('a line without a dot hides nothing, and a dot further in stays', () => {
 
 test('a closing note in italics starts a line of its own', () => {
   const pieces = [plain('🔴 Sauvegardes Neon. '), italic('Vérifié le 26 oct.')]
-  assert.deepEqual(checklistLook(pieces), { hide: 3, note: 'Sauvegardes Neon. '.length + 3 })
+  const from = 'Sauvegardes Neon. '.length + 3
+  assert.deepEqual(checklistLook(pieces), {
+    hide: 3,
+    note: { from, to: from + 'Vérifié le 26 oct.'.length },
+  })
 })
 
 test('code between italics stays in the note', () => {
@@ -28,12 +32,12 @@ test('code between italics stays in the note', () => {
     code('previews'),
     italic('). Ensuite, redémarrer.'),
   ]
-  assert.equal(checklistLook(pieces).note, 'Gateway redéployée. '.length)
+  assert.equal(checklistLook(pieces).note?.from, 'Gateway redéployée. '.length)
 })
 
 test('the note starts at its words, not at code before them', () => {
   const pieces = [plain('Rate limiting. '), code('POST'), italic(' reste à faire')]
-  assert.equal(checklistLook(pieces).note, 'Rate limiting. POST'.length)
+  assert.equal(checklistLook(pieces).note?.from, 'Rate limiting. POST'.length)
 })
 
 test('italics in the middle of the line are not a note', () => {
@@ -56,12 +60,15 @@ test('an italic code span counts as part of the note', () => {
     code('automatic_tax', true),
     italic(').'),
   ]
-  assert.equal(checklistLook(pieces).note, 'TVA. '.length)
+  assert.equal(checklistLook(pieces).note?.from, 'TVA. '.length)
 })
 
 test('the marker of attached work after the note leaves the note as it is', () => {
   const marker: Piece = { text: '￼', italic: false, code: false, aside: true }
   const pieces = [plain('Anti-abus. '), italic('Limites faites.'), marker]
-  assert.equal(checklistLook(pieces).note, 'Anti-abus. '.length)
+  assert.deepEqual(checklistLook(pieces).note, {
+    from: 'Anti-abus. '.length,
+    to: 'Anti-abus. Limites faites.'.length,
+  })
   assert.equal(checklistLook([plain('Anti-abus.'), marker]).note, null)
 })

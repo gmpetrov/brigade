@@ -33,8 +33,13 @@ function decorate(doc: Node) {
     const { hide, note } = checklistLook(pieces)
     const start = pos + 1
     if (hide) decorations.push(Decoration.inline(start, start + hide, { class: 'bn-priority' }))
-    if (note !== null)
-      decorations.push(Decoration.widget(start + note, noteBreak, { side: -1, key: 'note' }))
+    if (note) {
+      // Outside any mark the text before it ends with, so the break is never inside its code.
+      decorations.push(
+        Decoration.widget(start + note.from, noteBreak, { side: -1, key: 'note', marks: [] }),
+        Decoration.inline(start + note.from, start + note.to, { class: 'bn-note' }),
+      )
+    }
     return false
   })
   return DecorationSet.create(doc, decorations)
