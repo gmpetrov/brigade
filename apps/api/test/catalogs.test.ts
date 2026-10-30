@@ -196,6 +196,17 @@ describe("an App's catalog", { skip: !database && 'no database answers' }, () =>
     const res = await fetchCatalog(ids.gmail, `scope=read_write&version=${grant.catalog!.version}`)
     assert.equal(res.status, 200, await res.clone().text())
     assert.deepEqual(await res.json(), operationSpecs('gmail', 'read_write'))
+    // Asked for shared (CATALOG_SHARED_PARAM): its repeated subschemas written once, the same
+    // operations once written out whole.
+    const { unsharedSubschemas } = await import('@brigade/contracts')
+    const shared = (await (
+      await fetchCatalog(ids.gmail, `scope=read_write&version=x&schemas=shared`)
+    ).json()) as { inputSchema: Record<string, unknown> }[]
+    assert.match(JSON.stringify(shared), /"\$ref"/)
+    assert.deepEqual(
+      shared.map((o) => ({ ...o, inputSchema: unsharedSubschemas(o.inputSchema) })),
+      operationSpecs('gmail', 'read_write'),
+    )
     const reads = (await (await fetchCatalog(ids.gmail, 'scope=read&version=x')).json()) as Grant[]
     assert.ok(reads.length > 0)
     assert.ok(
@@ -377,5 +388,49 @@ describe('catalog sizes', () => {
     const reported = failuresOf('catalog-size', 60_000)
     assert.equal(reported.length, 2)
     assert.match(reported[1]!.message, /2 of 3 left out/)
+  })
+
+  test("a schema's repeated subschemas are written once, and mean the same", async () => {
+    const { catalogText } = await import('../src/catalogs.js')
+    const { sharedSubschemas, unsharedSubschemas } = await import('@brigade/contracts')
+    const filter = {
+      type: 'object',
+      description: 'A property filter, long enough to be worth a reference of its own.',
+      properties: {
+        key: { type: 'string' },
+        operator: { type: 'string', enum: ['exact', 'is_not', 'icontains'] },
+      },
+      required: ['key'],
+    }
+    const series = { type: 'array', items: { anyOf: [filter, { type: 'null' }] } }
+    const schema = {
+      type: 'object',
+      properties: {
+        properties: { type: 'array', items: filter },
+        series: { type: 'object', properties: { a: series, b: series } },
+        // Data, never a schema: left as it is, even when it looks like one.
+        mode: { type: 'object', default: filter, enum: [filter, filter] },
+      },
+    }
+    const shared = sharedSubschemas(schema)
+    assert.ok(JSON.stringify(shared).length < JSON.stringify(schema).length)
+    // The series is written once, and the filter once, inside it and outside.
+    assert.equal(Object.keys(shared.$defs as object).length, 2)
+    assert.deepEqual((shared.properties as Record<string, unknown>).mode, schema.properties.mode)
+    assert.deepEqual(unsharedSubschemas(shared), schema)
+
+    // Nothing worth sharing, or references of its own: the schema as it is, both ways.
+    const small = { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } } }
+    assert.equal(sharedSubschemas(small), small)
+    const own = { ...schema, $defs: { x: filter } }
+    assert.equal(sharedSubschemas(own), own)
+    assert.equal(unsharedSubschemas(own), own)
+
+    const [operation] = JSON.parse(
+      catalogText('c-shared', 'posthog', [
+        { name: 'query', description: 'Run a query.', write: false, inputSchema: schema },
+      ]),
+    ) as { inputSchema: Record<string, unknown> }[]
+    assert.deepEqual(operation!.inputSchema, shared)
   })
 })

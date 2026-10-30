@@ -6,7 +6,13 @@
 // serializes their schemas, wherever it runs: in a workspace's hub, a few megabytes of them
 // at each message or reconnect took its object past its memory and dropped its sockets.
 import { createHash } from 'node:crypto'
-import { CATALOG_PROTOCOL, type ApiToRunner, type ThreadSpec } from '@brigade/contracts'
+import {
+  CATALOG_PROTOCOL,
+  sharedSubschemas,
+  unsharedSubschemas,
+  type ApiToRunner,
+  type ThreadSpec,
+} from '@brigade/contracts'
 import { connectors, operationSpecs } from './connectors/index.js'
 import type { ConnectorKind } from './connectors/types.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
@@ -91,11 +97,12 @@ export async function grantOperations(
 }
 
 /**
- * A catalog's JSON, as the runner gets it: past CATALOG_WARN_CHARS it is reported, and past
- * CATALOG_MAX_CHARS its last operations are left out, so that no App can grow a turn without
- * bound.
+ * A catalog's JSON, its schemas shared (sharedSubschemas, CATALOG_SHARED_PARAM): past
+ * CATALOG_WARN_CHARS it is reported, and past CATALOG_MAX_CHARS its last operations are left
+ * out, so that no App can grow a turn without bound.
  */
-export function catalogText(connectionId: string, kind: string, operations: CatalogOperation[]) {
+export function catalogText(connectionId: string, kind: string, catalog: CatalogOperation[]) {
+  const operations = catalog.map((o) => ({ ...o, inputSchema: sharedSubschemas(o.inputSchema) }))
   const text = JSON.stringify(operations)
   if (text.length <= CATALOG_WARN_CHARS) return text
   const size = `${(text.length / 1_000_000).toFixed(1)} M characters`
@@ -124,8 +131,17 @@ const made = new Map<string, string>()
 const KEPT_CHARS = 16_000_000
 let keptChars = 0
 
+/** A catalog's JSON with its schemas whole, for a runner that did not ask for them shared. */
+export const unsharedCatalog = (text: string) =>
+  JSON.stringify(
+    (JSON.parse(text) as CatalogOperation[]).map((o) => ({
+      ...o,
+      inputSchema: unsharedSubschemas(o.inputSchema),
+    })),
+  )
+
 /**
- * A connection's catalog for a grant, as JSON, made once per version in this isolate. One its
+ * A connection's catalog for a grant, as JSON, its schemas shared, made once per version in this isolate. One its
  * MCP server could not list now is empty and incomplete: never kept, here or by the runner, so the
  * next turn asks again rather than going without the App's tools until the version turns over.
  */
@@ -182,7 +198,11 @@ export async function inlineCatalogs<T extends ApiToRunner>(workspaceId: string,
         const connection = byId.get(grant.connectionId)
         if (!catalog || !connection) return grant
         const { text } = await catalogFor(db, scope, connection, grant.scope)
-        return { ...grant, operations: JSON.parse(text) as CatalogOperation[] }
+        const operations = (JSON.parse(text) as CatalogOperation[]).map((o) => ({
+          ...o,
+          inputSchema: unsharedSubschemas(o.inputSchema),
+        }))
+        return { ...grant, operations }
       }),
     )
     return { ...spec, connectors: filled }
