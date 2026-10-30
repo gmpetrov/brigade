@@ -24,6 +24,13 @@ const HEADING = /^(#{1,6})\s+(.*?)\s*#*\s*$/
 const FENCE = /^\s*(`{3,}|~{3,})/
 /** Any list line, a checkbox or not: it starts a block of its own, never continues a line above. */
 const BULLET = /^\s*([*+-]|\d+[.)])(\s|$)/
+/**
+ * Rows that start a block of their own and so end a line's text above them (CommonMark): a quote,
+ * a thematic break, HTML. A row holding only a marker is not one: the editor writes a marker there
+ * when a line break was typed before it, and reads it back as the line's.
+ */
+const BLOCK = /^ {0,3}(>|([-*_])( *\2){2,} *$|<(\/?[a-zA-Z]|!--))/
+const MARKER_ROW = /^\s*<!--\s*item:[a-z0-9]+\s*-->\s*\\?\s*$/
 /** A hard line break at the end of a line (a backslash, or two spaces): its text goes on below. */
 const BREAK = /(\\| {2,})$/
 
@@ -103,7 +110,7 @@ export function parseList(markdown: string): ParsedList {
     const check = raw.match(CHECK)
     if (!check) {
       // Its text going on (a paragraph's next row), unless a blank row or another block ends it.
-      if (open && raw.trim() && !BULLET.test(raw)) {
+      if (open && raw.trim() && !BULLET.test(raw) && (MARKER_ROW.test(raw) || !BLOCK.test(raw))) {
         open.parts.push(raw.trim())
         open.item.end = line
       } else close()
@@ -373,12 +380,14 @@ export type HandOffItems = z.infer<typeof HandOffItems>
 
 /**
  * Attach lines to a thread that runs already. `quiet`: its teammate is not told by a note, as the
- * person sends the hand-off as a message of theirs right after (handOffMessage).
+ * person sends the hand-off as a message of theirs right after (handOffMessage); else the note
+ * carries what the person adds (`note`).
  */
 export const LinkItems = z.object({
   sessionId: z.string(),
   items: PickedLines,
   quiet: z.boolean().optional(),
+  note: z.string().trim().max(4_000).optional(),
 })
 export type LinkItems = z.infer<typeof LinkItems>
 

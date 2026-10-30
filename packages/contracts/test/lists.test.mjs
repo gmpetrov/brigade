@@ -204,3 +204,24 @@ test('handing lines over is a request naming the list, or the person’s note, t
     'Start with this one.\n\n- Pricing',
   )
 })
+
+for (const block of [
+  '> A separate quote',
+  '---\nA separate paragraph',
+  '<details>Notes</details>',
+]) {
+  test(`a block of its own ends a line's text: ${block.split('\n')[0]}`, () => {
+    const source = `* [ ] Parent\n${block}\n* [ ] Next`
+    const list = parseList(source)
+    assert.equal(list.lines[0].end, 0)
+    assert.equal(list.lines[0].text, 'Parent')
+    const nested = insertLine(
+      source,
+      list,
+      { after: list.lines[0], nested: true },
+      'Child',
+      'bbbbbbbbbbbbbbbb',
+    )
+    assert.equal(nested.split('\n')[1], '  * [ ] Child <!-- item:bbbbbbbbbbbbbbbb -->')
+  })
+}

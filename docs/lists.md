@@ -21,7 +21,8 @@ mission; threads stay where the work happens.
   conversion (`packages/editor/src/markdown.ts`). A line whose text goes on below its box (a
   line break typed in it, saved as `\` at the end of the row) is one line with all its rows
   (`ListLine.end`), and its marker counts on any of them: a line break typed before the chips
-  moves the marker to the next row.
+  moves the marker to the next row. Its rows end at a blank row or a block of its own (a list
+  line, a heading, a quote, a thematic break, HTML other than a row holding only its marker).
 - **`ListItem` keeps what the file cannot**, by that id: the threads on the line
   (`ListItemThread`), the pull requests on it (`ListItemPull`, `closes` or not), who ticked it
   from Brigade (`doneBy*`) and its text when last seen. A line or marker removed from the file
@@ -32,7 +33,7 @@ mission; threads stay where the work happens.
   a thread that runs already, which the person then hands them over in as a message of theirs
   (`handOffMessage`), so its teammate starts on them at once. A note telling it at its next turn
   (`thread.note`) only stands in when that message can't go (the thread waits on a decision or a
-  daily cap, its computer is off).
+  daily cap, its computer is off), with the person's note in it (`apps/web/lib/hand-off.ts`).
 - **One change of a list's file at a time.** Every save of a Markdown library file takes the
   file's lock (`withLibraryLock`), and Brigade reads, changes and writes a list under it, so no
   save lands in between and is lost. The lock is a lease row (`LibraryLock`, 30 s): waiting for it

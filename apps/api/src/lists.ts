@@ -620,7 +620,8 @@ export async function linkToThread(
     await noteInThread(
       db,
       session.id,
-      `Items of ${file.path} were added to this thread:\n${bullets(input.items.map((p) => p.text))}`,
+      `Items of ${file.path} were added to this thread:\n${bullets(input.items.map((p) => p.text))}` +
+        (input.note ? `\n\nWith this note from the person who added them:\n${input.note}` : ''),
     )
   return { sessionId: session.id, itemIds: ids }
 }

@@ -5,7 +5,6 @@
 // or a thread each, or to a thread that runs already, as a message that starts its teammate on
 // them; a thread shows the items it carries.
 import {
-  handOffMessage,
   newListItemId,
   plainItemText,
   type ListDetail,
@@ -41,6 +40,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { api, useApi, type ThreadSummary } from '@/lib/api'
+import { handToThread } from '@/lib/hand-off'
 import { groupOf } from '@/lib/sub-threads'
 import { cn } from '@/lib/utils'
 
@@ -288,24 +288,7 @@ function HandOffDialog({
       const items = picked.assign()
       if (mode === 'thread') {
         // Attached, then handed over as a message of theirs, which starts its teammate on them.
-        await api(`/lists/${file.id}/link`, { body: { sessionId: threadId, items, quiet: true } })
-        const text = handOffMessage(
-          file,
-          items.map((i) => i.text),
-          note,
-        )
-        try {
-          await api(`/threads/${threadId}/messages`, { body: { text } })
-        } catch (e) {
-          // Not sent (it waits on a decision, a daily cap, its computer is off): its teammate is
-          // told by a note at its next turn instead.
-          await api(`/lists/${file.id}/link`, { body: { sessionId: threadId, items } }).catch(
-            () => {},
-          )
-          throw new Error(
-            `Added to the thread, but its teammate could not start on them now: ${(e as Error).message}`,
-          )
-        }
+        await handToThread(api, file, threadId, items, note)
         openThread(threadId)
       } else {
         const { threadIds } = await api<{ threadIds: string[] }>(`/lists/${file.id}/hand-off`, {

@@ -407,9 +407,11 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     await lists.linkToThread(db, scope, ids.member, ids.file, {
       sessionId: threadId,
       items: [{ id: 'lightload1234567', text: 'Light load test' }],
+      note: 'Done means 200 sign-ups at once without errors.',
     })
     await until(() => notes().length === before + 1, 'the note')
     assert.match(String(notes().at(-1)!.text), /were added to this thread/)
+    assert.match(String(notes().at(-1)!.text), /Done means 200 sign-ups at once without errors\./)
   })
 
   test('a person unticks an item; a line removed from the file shows as gone', async () => {
