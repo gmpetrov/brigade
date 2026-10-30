@@ -1,8 +1,8 @@
 // Lists (docs/lists.md): a library Markdown file's checklist lines, handed to teammates. The
 // file stays the list; a line work is attached to carries its marker (`<!-- item:<id> -->`),
 // and `ListItem` keeps by that id what the file cannot: the threads on it, the pull requests
-// that finish it, who ticked it from Brigade. Brigade changes the file only to mark, tick or
-// add a line, each a save of its own credited to who did it.
+// that finish it, who ticked it from Brigade, the lines of what remains of it. Brigade changes
+// the file only to mark, tick or add a line, each a save of its own credited to who did it.
 import { createHash } from 'node:crypto'
 import {
   findLine,
@@ -168,7 +168,7 @@ async function views(
   lines: Map<string, ListLine>,
 ): Promise<ListItemView[]> {
   const threadIds = [...new Set(rows.flatMap((r) => r.threads.map((t) => t.session.id)))]
-  const [waiting, who] = await Promise.all([
+  const [waiting, who, remainders] = await Promise.all([
     threadIds.length
       ? hubs.get(scope.workspaceId).eventsWaitingSince(threadIds)
       : ({} as Record<string, unknown>),
@@ -178,18 +178,35 @@ async function views(
         r.doneByType && r.doneById ? [{ type: r.doneByType, id: r.doneById }] : [],
       ),
     ),
+    rows.length
+      ? db.listItem.findMany({
+          where: { remainderOfId: { in: rows.map((r) => r.id) } },
+          select: { id: true, remainderOfId: true },
+        })
+      : [],
   ])
+  // Items with a line of what remains of them still open in their file: that line carries it.
+  const remaining = new Set(
+    remainders.flatMap((r) => (lines.get(r.id)?.done === false ? [r.remainderOfId!] : [])),
+  )
   return rows.map((row) => {
     const line = lines.get(row.id)
     // Gone from the file: Brigade's tick is all that is known of it.
     const done = line ? line.done : !!row.doneAt
     const by = who(row.doneByType, row.doneById)
+    const state = stateOf(done, row)
     return {
       id: row.id,
       text: line?.text ?? row.text,
       done,
-      state: stateOf(done, row),
+      state,
       missing: !line,
+      // Its threads stopped with it open, and nothing else carries it: someone should look.
+      stalled:
+        !!line &&
+        state === 'open' &&
+        row.threads.some((t) => !t.session.archivedAt) &&
+        !remaining.has(row.id),
       section: line?.section ?? null,
       doneBy: done && by && row.doneAt ? { name: by.name, at: row.doneAt.toISOString() } : null,
       threads: row.threads.map((t) => ({
@@ -204,6 +221,7 @@ async function views(
         number: p.pullRequest.number,
         state: p.pullRequest.state,
         closes: p.closes,
+        remains: p.remains,
         url: `https://github.com/${p.pullRequest.repository}/pull/${p.pullRequest.number}`,
       })),
     }
@@ -666,28 +684,208 @@ export async function setItemDone(
         }
       : { doneByType: null, doneById: null, doneAt: null },
   })
+  // What remained of another item: that one may be done now. Its failure is not this tick's:
+  // the sweep tries it again.
+  if (done && item.remainderOfId)
+    await settleRemainders(db, scope, item.remainderOfId).catch((error) =>
+      console.warn(`lists: item ${item.remainderOfId} not settled: ${String(error)}`),
+    )
   return { id: itemId, done, text: plainItemText(text), changed }
+}
+
+// ---- What remains ---------------------------------------------------------------------------
+
+/** Brigade itself ticks an item once all its remaining lines are. */
+const BRIGADE: Actor = { type: 'system', id: 'lists' }
+
+/**
+ * Under an item a merged pull request was only part of, what remains of it, as a line of its
+ * own nested under it, attached to the pull request's thread. Its id is kept on the link first,
+ * so that a retry adds the line once. Nothing when the item is ticked already. Returns the line.
+ */
+async function addRemainder(
+  db: ScopedDb,
+  scope: Scope,
+  authorId: string,
+  pull: { id: string; number: number; sessionId: string | null },
+  link: {
+    itemId: string
+    remains: string | null
+    remainderId: string | null
+    item: { documentId: string }
+  },
+) {
+  if (!link.remains) return null
+  if (!link.remainderId) {
+    await db.listItemPull.updateMany({
+      where: { itemId: link.itemId, pullRequestId: pull.id, remainderId: null },
+      data: { remainderId: newListItemId() },
+    })
+  }
+  const id = (
+    await db.listItemPull.findFirst({
+      where: { itemId: link.itemId, pullRequestId: pull.id },
+      select: { remainderId: true },
+    })
+  )?.remainderId
+  if (!id) return null
+  // In the file now: added by this try, or by an earlier one that stopped before its row.
+  let present = false
+  let added = false
+  await editList(
+    db,
+    scope,
+    { type: 'teammate', id: authorId },
+    link.item.documentId,
+    pull.sessionId ? { sessionId: pull.sessionId } : {},
+    (text, list) => {
+      present = list.lines.some((l) => l.marker === id)
+      if (present) return text
+      const item = list.lines.find((l) => l.id === link.itemId)
+      if (!item)
+        throw new HTTPException(404, {
+          message: 'This item is no longer in its list: its line or its marker was removed',
+        })
+      // Ticked already: nothing remains of it.
+      if (item.done) return text
+      present = added = true
+      return insertLine(text, list, { after: item, nested: true }, link.remains!, id)
+    },
+  )
+  if (!present) return null
+  await db.listItem.createMany({
+    data: [
+      {
+        id,
+        documentId: link.item.documentId,
+        text: plainItemText(link.remains).slice(0, 2_000),
+        remainderOfId: link.itemId,
+      },
+    ] as never,
+    skipDuplicates: true,
+  })
+  if (pull.sessionId)
+    await db.listItemThread.createMany({
+      data: [{ itemId: id, sessionId: pull.sessionId }] as never,
+      skipDuplicates: true,
+    })
+  return added ? link.remains : null
+}
+
+/**
+ * An item's remaining lines, looked at: once all are ticked the item is ticked too, by Brigade,
+ * unless a pull request on it is still open or it is ticked already; then each ticked or gone
+ * from the file is settled (after the tick: a tick that failed leaves them to the sweep). A line
+ * gone from the file never counts as done: the item then waits for a person.
+ */
+export async function settleRemainders(db: ScopedDb, scope: Scope, itemId: string) {
+  const remainders = await db.listItem.findMany({
+    where: { remainderOfId: itemId },
+    select: { id: true, remainderSettledAt: true },
+  })
+  if (!remainders.length) return
+  const item = await db.listItem.findFirst({
+    where: { id: itemId },
+    select: { documentId: true, document: { select: { text: true, deletedAt: true } } },
+  })
+  const lines = item && !item.document.deletedAt ? byLine(parseList(item.document.text)) : null
+  const line = lines?.get(itemId)
+  const settle = (ids: string[]) =>
+    ids.length
+      ? db.listItem.updateMany({
+          where: { id: { in: ids }, remainderSettledAt: null },
+          data: { remainderSettledAt: new Date() },
+        })
+      : null
+  // Its own line gone: nothing to tick, for good.
+  if (!lines || !line) return void (await settle(remainders.map((r) => r.id)))
+  if (
+    !line.done &&
+    remainders.every((r) => lines.get(r.id)?.done) &&
+    !(await db.listItemPull.count({ where: { itemId, pullRequest: { state: 'open' } } }))
+  )
+    await setItemDone(db, scope, BRIGADE, itemId, true, {
+      note: `what remained is done, ${shortDate(new Date())}`,
+    })
+  await settle(
+    remainders
+      .filter((r) => !r.remainderSettledAt && (lines.get(r.id)?.done ?? true))
+      .map((r) => r.id),
+  )
+}
+
+/**
+ * After a save of a list's file: items whose remaining lines a person may have just ticked
+ * there. Never fails the save it follows.
+ */
+export async function settleRemaindersIn(db: ScopedDb, scope: Scope, documentId: string) {
+  try {
+    const pending = await db.listItem.findMany({
+      where: { documentId, remainderOfId: { not: null }, remainderSettledAt: null },
+      select: { remainderOfId: true },
+      distinct: ['remainderOfId'],
+    })
+    for (const p of pending) await settleRemainders(db, scope, p.remainderOfId!)
+  } catch (error) {
+    console.warn(`lists: remaining lines of ${documentId} not settled: ${String(error)}`)
+  }
+}
+
+/** Items with remaining lines not yet settled, every workspace's, a page at a time (jobs.ts). */
+async function sweepRemainders() {
+  let cursor: string | undefined
+  for (;;) {
+    const page = await prisma.listItem.groupBy({
+      by: ['remainderOfId', 'organizationId', 'workspaceId'],
+      where: {
+        remainderOfId: cursor ? { gt: cursor } : { not: null },
+        remainderSettledAt: null,
+      },
+      orderBy: { remainderOfId: 'asc' },
+      take: 200,
+    })
+    for (const p of page) {
+      const scope = { organizationId: p.organizationId, workspaceId: p.workspaceId }
+      await settleRemainders(scoped(scope), scope, p.remainderOfId!).catch((error) =>
+        console.warn(`lists: remaining lines of ${p.remainderOfId} not settled: ${String(error)}`),
+      )
+    }
+    if (page.length < 200) return
+    cursor = page.at(-1)!.remainderOfId!
+  }
 }
 
 // ---- Pull requests --------------------------------------------------------------------------
 
+/** What a pull request says of list items (github_create_pull_request's `items`). */
+export type PullItems = {
+  closes?: string[]
+  /** Those it is only part of, each with what remains of it once it is merged. */
+  partOf?: { item: string; remains: string }[]
+}
+
 /**
- * The items a pull request finishes (`closes`) or works on (`partOf`), by id; also its thread's.
- * Only lists its author may read; and it closes only items of lists it may change, as ticking
- * one itself would need: elsewhere, a pull request is only part of the work.
+ * The items a pull request finishes (`closes`) or works on (`partOf`, with what remains of
+ * each), by id; also its thread's. Only lists its author may read; and it closes only items of
+ * lists it may change, as ticking one itself would need: elsewhere, a pull request is only part
+ * of the work.
  */
 export async function linkPullItems(
   db: ScopedDb,
   pullRequestId: string,
   sessionId: string,
   teammateId: string,
-  items: { closes?: string[]; partOf?: string[] },
+  items: PullItems,
 ) {
   const closes = new Set((items.closes ?? []).filter((id) => ListItemId.safeParse(id).success))
-  const partOf = (items.partOf ?? []).filter(
-    (id) => ListItemId.safeParse(id).success && !closes.has(id),
+  const remains = new Map(
+    (items.partOf ?? []).flatMap((p) =>
+      ListItemId.safeParse(p.item).success && !closes.has(p.item) && p.remains?.trim()
+        ? [[p.item, p.remains.trim().slice(0, 500)] as const]
+        : [],
+    ),
   )
-  const wanted = [...closes, ...partOf]
+  const wanted = [...closes, ...remains.keys()]
   if (!wanted.length) return
   const teammate = await db.teammate.findFirst({ where: { id: teammateId } })
   if (!teammate) return
@@ -700,11 +898,15 @@ export async function linkPullItems(
   const ids = wanted.filter((id) => (level.get(id) ?? 'none') !== 'none')
   if (!ids.length) return
   await db.listItemPull.createMany({
-    data: ids.map((itemId) => ({
-      itemId,
-      pullRequestId,
-      closes: closes.has(itemId) && level.get(itemId) === 'read_write',
-    })) as never,
+    data: ids.map((itemId) => {
+      const closing = closes.has(itemId) && level.get(itemId) === 'read_write'
+      return {
+        itemId,
+        pullRequestId,
+        closes: closing,
+        remains: closing ? null : (remains.get(itemId) ?? null),
+      }
+    }) as never,
     skipDuplicates: true,
   })
   await db.listItemThread.createMany({
@@ -718,9 +920,10 @@ const shortDate = (at: Date) =>
 
 /**
  * A pull request was merged: the items it closes are ticked, with its number, credited to the
- * teammate that opened it, where it may still change their list. Its thread is told. Each item
- * is settled once ticked (or for good: gone from its list, or out of its author's reach); one
- * that failed otherwise (storage, the database) is tried again by sweepListMerges.
+ * teammate that opened it, where it may still change their list; under those it is only part
+ * of, what remains of each is added as a line of its own (addRemainder). Its thread is told.
+ * Each item is settled once done (or for good: gone from its list, or out of its author's
+ * reach); one that failed otherwise (storage, the database) is tried again by sweepListMerges.
  */
 export async function settleItemsOnMerge(
   db: ScopedDb,
@@ -729,8 +932,18 @@ export async function settleItemsOnMerge(
 ) {
   try {
     const links = await db.listItemPull.findMany({
-      where: { pullRequestId: pull.id, closes: true, settledAt: null },
-      select: { itemId: true, item: { select: { document: { select: { path: true } } } } },
+      where: {
+        pullRequestId: pull.id,
+        OR: [{ closes: true }, { remains: { not: null } }],
+        settledAt: null,
+      },
+      select: {
+        itemId: true,
+        closes: true,
+        remains: true,
+        remainderId: true,
+        item: { select: { documentId: true, document: { select: { path: true } } } },
+      },
     })
     if (!links.length) return
     const row = await db.pullRequest.findFirst({
@@ -742,6 +955,7 @@ export async function settleItemsOnMerge(
       : null
     const access = author ? await teammateLibraryAccess(db, author) : null
     const ticked: string[] = []
+    const remaining: string[] = []
     for (const link of links) {
       const settle = () =>
         db.listItemPull.updateMany({
@@ -753,6 +967,12 @@ export async function settleItemsOnMerge(
         continue
       }
       try {
+        if (!link.closes) {
+          const added = await addRemainder(db, scope, author.id, pull, link)
+          await settle()
+          if (added) remaining.push(added)
+          continue
+        }
         const done = await setItemDone(
           db,
           scope,
@@ -778,15 +998,32 @@ export async function settleItemsOnMerge(
         pull.sessionId,
         `Ticked in its list, as #${pull.number} closes it:\n${bullets(ticked)}`,
       )
+    if (remaining.length && pull.sessionId)
+      await noteInThread(
+        db,
+        pull.sessionId,
+        `Added to its list, under the items #${pull.number} is only part of, what remains of them; ` +
+          `each item is ticked once its remaining lines are:\n${bullets(remaining)}`,
+      )
   } catch (error) {
     console.warn(`lists: items of pull request ${pull.id} not settled: ${String(error)}`)
   }
 }
 
-/** Merged pull requests whose items are not all settled: tried again (jobs.ts). */
+/**
+ * Merged pull requests whose items are not all settled: tried again; and items whose remaining
+ * lines a person may have ticked in the file (jobs.ts).
+ */
 export async function sweepListMerges() {
+  await sweepRemainders().catch((error) =>
+    console.warn(`lists: remaining lines not swept: ${String(error)}`),
+  )
   const pending = await prisma.listItemPull.findMany({
-    where: { closes: true, settledAt: null, pullRequest: { state: 'merged' } },
+    where: {
+      OR: [{ closes: true }, { remains: { not: null } }],
+      settledAt: null,
+      pullRequest: { state: 'merged' },
+    },
     select: {
       organizationId: true,
       workspaceId: true,
@@ -810,13 +1047,19 @@ type Teammate = {
 }
 
 /** A line as a teammate reads it. */
-const lineOut = (l: ListLine, views: Map<string, ListItemView>) => {
+const lineOut = (
+  l: ListLine,
+  views: Map<string, ListItemView>,
+  remainsOf: Map<string, string | null>,
+) => {
   const view = l.id ? views.get(l.id) : undefined
+  const of = l.id ? remainsOf.get(l.id) : undefined
   return {
     id: l.id,
     done: l.done,
     text: l.text,
     ...(l.section ? { section: l.section } : {}),
+    ...(of ? { remainsOf: of } : {}),
     ...(view?.threads.length ? { threads: view.threads.map((t) => t.title) } : {}),
     ...(view?.pulls.length ? { pulls: view.pulls.map((p) => `#${p.number} ${p.state}`) } : {}),
   }
@@ -860,11 +1103,12 @@ export async function handleListCall(
       const lines = byLine(list)
       const rows = await itemRows(db, { documentId: { in: [file.id] } })
       const viewMap = new Map((await views(db, scope, rows, lines)).map((v) => [v.id, v]))
+      const remainsOf = new Map(rows.map((r) => [r.id, r.remainderOfId]))
       return {
         path: file.path,
         title: titleOf(file.path, list),
         ...listCounts(list),
-        lines: list.lines.map((l) => lineOut(l, viewMap)),
+        lines: list.lines.map((l) => lineOut(l, viewMap, remainsOf)),
       }
     }
 
@@ -919,7 +1163,7 @@ export async function handleListCall(
         )
       }
       const done = await setItemDone(db, scope, actor, itemId!, true, {
-        ...(op.note ? { note: op.note } : {}),
+        note: op.note,
         sessionId: session.id,
       })
       await db.listItemThread.createMany({
@@ -931,31 +1175,64 @@ export async function handleListCall(
 
     // add_item
     const file = await fileAt(op.path, true)
+    // What remains of an item: nested under it, which is an item (marked) for the link.
+    let remainsOf: string | undefined
+    if (op.remainsOf) {
+      const line = findLine(parseList(await storedText(scope, file)), op.remainsOf)
+      if (typeof line === 'string') return { error: line }
+      if (line.done) return { error: 'That item is ticked already: nothing remains of it' }
+      ;[remainsOf] = await itemsFor(
+        db,
+        scope,
+        actor,
+        file,
+        [{ id: line.id ?? newListItemId(), text: line.text }],
+        context,
+      )
+    }
     const id = newListItemId()
     await editList(db, scope, actor, file.id, context, (text, list) => {
       let after: ListLine | undefined
-      if (op.after) {
-        const line = findLine(list, op.after)
+      const ref = remainsOf ?? op.after
+      if (ref) {
+        const line = remainsOf ? list.lines.find((l) => l.id === remainsOf) : findLine(list, ref)
+        if (!line) throw new HTTPException(404, { message: 'That item is no longer in its list' })
         if (typeof line === 'string') throw new HTTPException(404, { message: line })
         after = line
       }
       return insertLine(
         text,
         list,
-        {
-          ...(after ? { after } : {}),
-          ...(op.nested ? { nested: true } : {}),
-          ...(op.section ? { section: op.section } : {}),
-        },
+        remainsOf
+          ? { after: after!, nested: true }
+          : {
+              ...(after ? { after } : {}),
+              ...(op.nested ? { nested: true } : {}),
+              ...(op.section ? { section: op.section } : {}),
+            },
         op.text,
         id,
       )
     })
     await db.listItem.create({
-      data: { id, documentId: file.id, text: plainItemText(op.text).slice(0, 2_000) } as never,
+      data: {
+        id,
+        documentId: file.id,
+        text: plainItemText(op.text).slice(0, 2_000),
+        ...(remainsOf ? { remainderOfId: remainsOf } : {}),
+      } as never,
     })
     await db.listItemThread.create({ data: { itemId: id, sessionId: session.id } as never })
-    return { added: { id, text: plainItemText(op.text), path: file.path } }
+    return {
+      added: { id, text: plainItemText(op.text), path: file.path },
+      ...(remainsOf
+        ? {
+            hint:
+              'Brigade ticks the item it remains of once all its remaining lines are ticked, by ' +
+              'whoever does them.',
+          }
+        : {}),
+    }
   } catch (error) {
     if (error instanceof HTTPException) return { error: error.message }
     throw error

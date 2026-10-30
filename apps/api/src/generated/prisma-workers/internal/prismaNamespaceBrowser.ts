@@ -940,6 +940,8 @@ export const ListItemScalarFieldEnum = {
   doneByType: 'doneByType',
   doneById: 'doneById',
   doneAt: 'doneAt',
+  remainderOfId: 'remainderOfId',
+  remainderSettledAt: 'remainderSettledAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -964,6 +966,8 @@ export const ListItemPullScalarFieldEnum = {
   itemId: 'itemId',
   pullRequestId: 'pullRequestId',
   closes: 'closes',
+  remains: 'remains',
+  remainderId: 'remainderId',
   settledAt: 'settledAt',
   createdAt: 'createdAt'
 } as const

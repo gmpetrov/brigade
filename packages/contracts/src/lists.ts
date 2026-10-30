@@ -242,6 +242,8 @@ export const ListPull = z.object({
   number: z.number(),
   state: z.string(),
   closes: z.boolean(),
+  /** Only part of the item: what remains of it once this one is merged. */
+  remains: z.string().nullable(),
   url: z.string(),
 })
 export type ListPull = z.infer<typeof ListPull>
@@ -257,6 +259,12 @@ export const ListItemView = z.object({
   state: ItemState,
   /** Gone from its file (the line deleted, or its marker): its threads still name it. */
   missing: z.boolean(),
+  /**
+   * Still open though nothing works on it: its threads stopped (none works or waits on a person),
+   * no pull request on it is open, and no line of what remains of it is open. Someone should
+   * tick it, or say what remains.
+   */
+  stalled: z.boolean(),
   section: z.string().nullable(),
   doneBy: z.object({ name: z.string(), at: z.string() }).nullable(),
   threads: z.array(ListThread),
@@ -326,7 +334,14 @@ export const ListOperations = [
     name: z.literal('complete_item'),
     item: Ref,
     path: Path.optional(),
-    note: z.string().trim().max(200).optional(),
+    /** What shows it is done: a teammate never ticks a line without saying so. */
+    note: z
+      .string({
+        error: 'Say in the note what shows it is done, e.g. "Sitemap read by Google, 31 Oct"',
+      })
+      .trim()
+      .min(1, 'Say in the note what shows it is done, e.g. "Sitemap read by Google, 31 Oct"')
+      .max(200),
   }),
   z.object({
     name: z.literal('add_item'),
@@ -335,6 +350,8 @@ export const ListOperations = [
     after: Ref.optional(),
     nested: z.boolean().optional(),
     section: z.string().trim().max(500).optional(),
+    /** The item this line is what remains of: nested under it, which is ticked once all are. */
+    remainsOf: Ref.optional(),
   }),
 ] as const
 

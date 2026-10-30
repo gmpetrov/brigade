@@ -304,7 +304,7 @@ export type ListItemThread = Prisma.ListItemThreadModel
 /**
  * Model ListItemPull
  * A pull request that works on a list item: `closes` ticks the item once it is merged; else it is
- * only part of the work, shown on the line.
+ * only part of the work, shown on the line, and `remains` says what is left once it is merged.
  */
 export type ListItemPull = Prisma.ListItemPullModel
 /**

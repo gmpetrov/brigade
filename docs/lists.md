@@ -20,8 +20,9 @@ mission; threads stay where the work happens.
   over from another list or workspace: a line whose editor marker names one gets a new id. The editor and the API keep markers through every
   conversion (`packages/editor/src/markdown.ts`).
 - **`ListItem` keeps what the file cannot**, by that id: the threads on the line
-  (`ListItemThread`), the pull requests on it (`ListItemPull`, `closes` or not), who ticked it
-  from Brigade (`doneBy*`) and its text when last seen. A line or marker removed from the file
+  (`ListItemThread`), the pull requests on it (`ListItemPull`, `closes` or what `remains`), who
+  ticked it from Brigade (`doneBy*`), the item it is what remains of (`remainderOfId`) and its
+  text when last seen. A line or marker removed from the file
   leaves its row: the thread's card says the item is no longer in its list, and nothing ticks
   it. Brigade never guesses which line it became.
 - **A line is not a thread.** A thread can carry several lines and a line several threads.
@@ -46,19 +47,37 @@ mission; threads stay where the work happens.
   add a short note after its text (`*PR #491, 29 Oct*`), a save of its own credited to who did
   it. Brigade writes the file only to mark, tick or add a line; the collab server applies the
   change to the lines it touches, so people's live edits elsewhere stay.
+- **Done means checks anyone can verify.** When a teammate takes on an item, it says in a line what
+  done means for it ("Done when: …"), unless the line says it; the person corrects it. A pull
+  request's description goes through those points, each done or left. People write lines fast,
+  so the teammate writes this, not them.
 - **A merged pull request ticks only what it closes.** A teammate names the items a pull request
-  works on when it opens it (`github_create_pull_request`'s `items`): `closes` for those it
-  finishes, ticked on merge (`settleItemsOnMerge`), `partOf` for those it only advances, shown
-  on the line and left open. Each item a merge closes is settled once ticked (or for good, gone
-  from its list or out of its author's reach); one that failed otherwise is tried again every 10
-  minutes (`sweepListMerges`). A merged pull request does not prove an item done (a deploy may
-  remain). Work without a pull request is ticked by the teammate (`complete_item`), with a note.
-- **What remains becomes a line.** A teammate adds what an item still needs as a line of its own
-  (`add_item`, after or under the item), attached to its thread, rather than ticking what is
-  half done.
+  works on when it opens it (`github_create_pull_request`'s `items`): `closes` for those every
+  point of which holds once it is merged, ticked on merge (`settleItemsOnMerge`); `partOf` for
+  the others, each with what `remains` of it (a deploy to check, a setting, a step only a person
+  can do). The tool refuses a `partOf` without it: work left only in a pull request's description
+  was lost (the list never saw it). Each item a merge deals with is settled once done (or for
+  good, gone from its list or out of its author's reach); one that failed otherwise is tried
+  again every 10 minutes (`sweepListMerges`).
+- **What remains becomes a line, and the item follows it.** On merge, what a pull request said
+  remains of an item is added under it, nested, attached to the pull request's thread
+  (`addRemainder`; its id is kept on the link first, so a retry adds it once). Without a pull
+  request, a teammate adds it itself (`add_item` with `remainsOf`). Once all of an item's
+  remaining lines are ticked, by anyone and anywhere (a teammate, the thread's card, the editor),
+  Brigade ticks the item, credited to Brigade (`settleRemainders`): right away for a tick made
+  through Brigade or a save of the file, else by the 10-minute sweep. Not while a pull request on
+  the item is open, and never when a remaining line was removed from the file: that one waits for
+  a person.
+- **Work without a pull request is ticked by the teammate** (`complete_item`), only with what
+  shows it is done in its note (the tool refuses a tick without one). When done is a matter of
+  judgment (a video, copy, a design), the teammate shows it and leaves the tick to the person,
+  with a "Tick it" reply.
 - **Where a line stands comes from its threads**: done when ticked; needs you when one of its
   threads waits on a person; in progress when one works or a pull request on it is open; else
-  open. The list's counts and filters read the same.
+  open. The list's counts and filters read the same. An open line with threads, none of them
+  working or waiting, no open pull request and no open remaining line, is **stalled**: nothing
+  will tick it, so it shows "Stopped, still open" for someone to tick it or say what remains.
+  It is the net for work done without a pull request, where no merge shows on the line.
 - **Within the library's access.** Members read every list. A teammate reads and changes a list
   only as its folder's access lets it (`teammateLibraryAccess`); marking a line counts as
   changing the file. A thread's items reach its teammate (spec, `list_items`) only from lists it
@@ -90,8 +109,9 @@ mission; threads stay where the work happens.
 - **A list** (`/app/lists/<documentId>`): the file in the document editor, its progress, and
   filters (All, Open, In progress, Needs you, Done) that hide the other lines (CSS over each
   line's state, `globals.css`). Each line with work on it shows its threads (state dot,
-  teammate, title, "needs you") and pull requests (`components/list-items.tsx`); the same chips
-  show wherever the file opens, such as the document panel.
+  teammate, title, "needs you"), pull requests (what remains after one, in its tooltip) and
+  "Stopped, still open" when stalled (`components/list-items.tsx`); the same chips show wherever
+  the file opens, such as the document panel.
 - **Hand over**: select lines in the editor, then **Hand to <teammate>** in its toolbar. A dialog
   asks how: one thread, one thread each, or a thread that runs already, with an optional note.
   The lines get their markers in the editor at once; the API marks them in the stored file too
@@ -104,10 +124,12 @@ mission; threads stay where the work happens.
 
 - `list_items` reads a list (lines, ids, threads, pull requests), or this thread's items.
 - `link_items` attaches lines to the thread, by id or text, marking them if needed.
-- `complete_item` ticks a line, by id or by text with the list's path, with a short note.
+- `complete_item` ticks a line, by id or by text with the list's path, with a note saying what
+  shows it is done (required).
 - `add_item` adds a line after another (or nested under it), at the end of a section, or at the
-  end of the file, attached to the thread.
-- `github_create_pull_request` takes `items: { closes, partOf }`.
+  end of the file, attached to the thread; with `remainsOf`, nested under that item as what
+  remains of it.
+- `github_create_pull_request` takes `items: { closes: [id], partOf: [{ item, remains }] }`.
 
 A thread's items come in its spec (`ThreadSpec.items`) and its instructions list them under
 "Your list items" when its session starts; other threads get a short "Lists" section. The

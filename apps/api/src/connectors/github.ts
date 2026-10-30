@@ -145,6 +145,9 @@ const branch = z
   .regex(/^[\w./-]+$/, 'A branch name')
   .refine((b) => segments(b) && !b.endsWith('.lock'), 'A branch name')
 const number = z.number().int().positive().describe('The issue or pull request number')
+/** A pull request that is only part of a list item says what remains of it (src/lists.ts). */
+const PART_OF =
+  "Each partOf entry is { item, remains }: the item's id, and what remains of it once this is merged"
 const limit = z.number().int().min(1).max(100).default(20)
 const page = z.number().int().min(1).max(100).default(1)
 
@@ -727,13 +730,26 @@ export const github: ConnectorDefinition = {
         items: z
           .object({
             closes: z.array(z.string().max(64)).max(50).optional(),
-            partOf: z.array(z.string().max(64)).max(50).optional(),
+            partOf: z
+              .array(
+                z.object(
+                  {
+                    item: z.string().max(64),
+                    remains: z.string().trim().min(1).max(500),
+                  },
+                  { error: PART_OF },
+                ),
+              )
+              .max(50)
+              .optional(),
           })
           .optional()
           .describe(
             "The list items this pull request works on, by id (list_items, or your thread's items): " +
               'closes, those it finishes, which Brigade ticks once it is merged; partOf, those it is ' +
-              'only part of, which stay open.',
+              "only part of, each with what remains of it once this is merged (a line in the list's " +
+              'language, e.g. "Submit the sitemap in Search Console once deployed"): Brigade adds it under ' +
+              'the item on merge, and ticks the item once all its remaining lines are ticked.',
           ),
       }),
       target: (i) => `pull request ${i.head} → ${i.base ?? 'default branch'} in ${i.repository}`,

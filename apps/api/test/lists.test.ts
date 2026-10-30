@@ -10,7 +10,8 @@ import { parseEnv } from 'node:util'
 //   carries them, whose teammate is told them (ThreadSpec.items);
 // - a list shows each line's threads and where it stands;
 // - a teammate reads a list, ticks a line by its text, adds one under another, attaches lines;
-// - a merged pull request ticks the items it closes, not those it is only part of;
+// - a merged pull request ticks the items it closes, and adds under those it is only part of
+//   what remains of them;
 // - a person unticks one; a line removed from the file shows as gone, its thread still naming it.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
@@ -360,7 +361,7 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     await db.libraryFolder.deleteMany({ where: { path: 'Projects/Acme' } })
   })
 
-  test('a merged pull request ticks the items it closes, not those it is only part of', async () => {
+  test('a merged pull request ticks the items it closes, and adds what remains under the others', async () => {
     const pull = await db.pullRequest.create({
       data: {
         repository: 'acme/app',
@@ -374,7 +375,10 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     } as never)
     await lists.linkPullItems(db, pull.id, threadId, ids.riley, {
       closes: ['bbbbbbbbbbbbbbbb'],
-      partOf: ['aaaaaaaaaaaaaaaa', 'not-an-item'],
+      partOf: [
+        { item: 'aaaaaaaaaaaaaaaa', remains: 'Test a restore once deployed' },
+        { item: 'not-an-item', remains: 'Anything' },
+      ],
     })
     const before = await lists.listDetail(db, scope, ids.file)
     assert.deepEqual(
@@ -386,10 +390,20 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     await lists.settleItemsOnMerge(db, scope, { id: pull.id, number: 491, sessionId: threadId })
     const lines = (await text()).split('\n')
     assert.match(
-      lines[6]!,
+      lines[7]!,
       /^\* \[x\] Documented rollback \*PR #491, \d+ \w+\* <!-- item:bbbbbbbbbbbbbbbb -->$/,
     )
     assert.match(lines[4]!, /^\* \[ \] Neon backups/, 'only part of it: still open')
+    // What remains of it, right under it, attached to the pull request's thread.
+    const remainder = await db.listItem.findFirst({ where: { remainderOfId: 'aaaaaaaaaaaaaaaa' } })
+    assert.equal(lines[5], `  * [ ] Test a restore once deployed <!-- item:${remainder?.id} -->`)
+    assert.ok(
+      await db.listItemThread.findFirst({ where: { itemId: remainder!.id, sessionId: threadId } }),
+    )
+    assert.ok(
+      (await db.listItemPull.findFirst({ where: { pullRequestId: pull.id, closes: false } }))
+        ?.settledAt,
+    )
   })
 
   test('a person unticks an item; a line removed from the file shows as gone', async () => {
@@ -400,7 +414,7 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
       'bbbbbbbbbbbbbbbb',
       false,
     )
-    assert.match((await text()).split('\n')[6]!, /^\* \[ \] Documented rollback/)
+    assert.match((await text()).split('\n')[7]!, /^\* \[ \] Documented rollback/)
     const row = await db.listItem.findFirst({ where: { id: 'bbbbbbbbbbbbbbbb' } })
     assert.equal(row?.doneAt, null)
 
@@ -945,5 +959,318 @@ describe('lists, under review', { skip: !database && 'no database answers' }, ()
   test("a late write to a file larger than the row's text leaves the newer save's bytes", async () => {
     const file = await lateSave('Lease/large.md', '\n' + 'x'.repeat(400_001))
     await consistent(file.id)
+  })
+})
+
+// What remains of an item (docs/lists.md), each through the code that does it:
+// - a merged pull request only part of an item adds what remains under it, once, even when its
+//   merge is dealt with again, and the item is ticked once its remaining lines are;
+// - a person ticking a remaining line in the file ticks its item;
+// - a remaining line removed from the file, or a pull request still open on the item, keeps it open;
+// - an item's tick that failed once its remaining lines are done is tried again;
+// - a teammate adds what remains of an item with add_item, and ticks a line only saying what shows
+//   it is done;
+// - a line whose threads stopped, with nothing else carrying it, shows as stalled.
+describe('lists, what remains', { skip: !database && 'no database answers' }, () => {
+  const suffix = randomUUID().slice(0, 8)
+  const ids = {} as Record<'org' | 'user' | 'member' | 'workspace', string>
+  let db: ReturnType<typeof scoped>
+  let scope: { organizationId: string; workspaceId: string }
+  let lists: typeof import('../src/lists.js')
+  let library: typeof import('../src/library.js')
+  let teammate: { id: string; name: string; libraryAccess: 'read_write' }
+  let sessionId: string
+  let pulls = 100
+  const member = () => ({ type: 'member' as const, id: ids.member })
+  const save = (path: string, text: string) =>
+    library.saveLibraryFile(db, scope, member(), { path, bytes: new TextEncoder().encode(text) })
+  const read = async (id: string) =>
+    library.documentText(scope, (await db.document.findFirst({ where: { id } }))!)
+  /** A list of one or more lines, each an item already. */
+  const listOf = async (path: string, items: [string, string][]) => {
+    const file = await save(
+      path,
+      items.map(([id, text]) => `* [ ] ${text} <!-- item:${id} -->`).join('\n') + '\n',
+    )
+    for (const [id, text] of items)
+      await db.listItem.create({ data: { id, documentId: file.id, text } } as never)
+    return file
+  }
+  const pullRequest = async (state: 'open' | 'merged') => {
+    const number = ++pulls
+    const row = await db.pullRequest.create({
+      data: {
+        repository: 'acme/app',
+        number,
+        title: `Change ${number}`,
+        headRef: `change-${number}`,
+        baseRef: 'main',
+        sessionId,
+        authorTeammateId: teammate.id,
+        state,
+      },
+    } as never)
+    return { id: row.id, number, sessionId }
+  }
+
+  before(async () => {
+    lists = await import('../src/lists.js')
+    library = await import('../src/library.js')
+    ids.org = `org-lists-remains-${suffix}`
+    ids.user = `user-lists-remains-${suffix}`
+    ids.member = `m-lists-remains-${suffix}`
+    await prisma.organization.create({
+      data: { id: ids.org, name: 'Remains', slug: `lists-remains-${suffix}` },
+    })
+    await prisma.user.create({
+      data: { id: ids.user, name: 'Ada', email: `${ids.user}@test.local` },
+    })
+    await prisma.member.create({
+      data: { id: ids.member, organizationId: ids.org, userId: ids.user, role: 'owner' },
+    })
+    ids.workspace = (
+      await prisma.workspace.create({ data: { organizationId: ids.org, name: 'Remains' } })
+    ).id
+    scope = { organizationId: ids.org, workspaceId: ids.workspace }
+    db = scoped(scope)
+    const made = await db.teammate.create({
+      data: { name: `Riley ${suffix}`, libraryAccess: 'read_write' },
+    } as never)
+    teammate = { id: made.id, name: made.name, libraryAccess: 'read_write' }
+    const computer = await db.computer.create({
+      data: { kind: 'member_machine', memberId: ids.member, name: 'Laptop', status: 'running' },
+    } as never)
+    sessionId = (
+      await db.session.create({
+        data: {
+          teammateId: made.id,
+          computerId: computer.id,
+          startedByMemberId: ids.member,
+          title: 'Remains',
+          status: 'idle',
+        },
+      } as never)
+    ).id
+  })
+
+  after(async () => {
+    await prisma.workspace.deleteMany({ where: { id: ids.workspace } })
+    await prisma.libraryObject.deleteMany({ where: { organizationId: ids.org } })
+    await prisma.libraryObjectFolder.deleteMany({ where: { organizationId: ids.org } })
+    await prisma.member.deleteMany({ where: { organizationId: ids.org } })
+    await prisma.organization.deleteMany({ where: { id: ids.org } })
+    await prisma.user.deleteMany({ where: { id: ids.user } })
+  })
+
+  test('what remains after a merge is added once, and the item is ticked once it is done', async () => {
+    const file = await listOf('Remains/seo.md', [
+      ['seoitem123456789', 'SEO basics: sitemap, Search Console'],
+      ['otheritem1234567', 'Demo video'],
+    ])
+    const pull = await pullRequest('merged')
+    await lists.linkPullItems(db, pull.id, sessionId, teammate.id, {
+      partOf: [{ item: 'seoitem123456789', remains: 'Submit the sitemap once deployed' }],
+    })
+    await lists.settleItemsOnMerge(db, scope, pull)
+    // Dealt with again, as after a crash before it was settled: still one line.
+    await db.listItemPull.updateMany({
+      where: { pullRequestId: pull.id },
+      data: { settledAt: null },
+    })
+    await lists.settleItemsOnMerge(db, scope, pull)
+    const remainder = await db.listItem.findFirst({ where: { remainderOfId: 'seoitem123456789' } })
+    assert.ok(remainder)
+    assert.deepEqual((await read(file.id)).split('\n').slice(0, 3), [
+      '* [ ] SEO basics: sitemap, Search Console <!-- item:seoitem123456789 -->',
+      `  * [ ] Submit the sitemap once deployed <!-- item:${remainder.id} -->`,
+      '* [ ] Demo video <!-- item:otheritem1234567 -->',
+    ])
+    assert.ok(await db.listItemThread.findFirst({ where: { itemId: remainder.id, sessionId } }))
+    const shown = await lists.listDetail(db, scope, file.id)
+    assert.equal(
+      shown.items.find((i) => i.id === 'seoitem123456789')?.pulls[0]?.remains,
+      'Submit the sitemap once deployed',
+    )
+
+    // The teammate does it: the item it remained of is ticked by Brigade.
+    const ticked = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
+      name: 'complete_item',
+      item: remainder.id,
+      note: 'Sitemap read by Google, 7 URLs',
+    })) as { ticked: { done: boolean } }
+    assert.equal(ticked.ticked.done, true)
+    const lines = (await read(file.id)).split('\n')
+    assert.match(
+      lines[0]!,
+      /^\* \[x\] SEO basics: sitemap, Search Console \*what remained is done, \d+ \w+\* <!-- item:seoitem123456789 -->$/,
+    )
+    assert.match(lines[1]!, /^ {2}\* \[x\] Submit the sitemap once deployed \*Sitemap read/)
+    assert.match(lines[2]!, /^\* \[ \] Demo video/)
+    const item = await db.listItem.findFirst({ where: { id: 'seoitem123456789' } })
+    assert.equal(item?.doneByType, 'system')
+    assert.ok((await db.listItem.findFirst({ where: { id: remainder.id } }))?.remainderSettledAt)
+  })
+
+  test('a remaining line a person ticks in the file ticks its item', async () => {
+    const file = await listOf('Remains/docs.md', [['docsitem12345678', 'Public docs']])
+    const added = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
+      name: 'add_item',
+      path: 'Remains/docs.md',
+      text: 'Create the Mintlify project',
+      remainsOf: 'Public docs',
+    })) as { added: { id: string }; hint: string }
+    assert.match(added.hint, /ticks the item it remains of/)
+    const text = await read(file.id)
+    assert.equal(
+      text.split('\n')[1],
+      `  * [ ] Create the Mintlify project <!-- item:${added.added.id} -->`,
+    )
+    assert.equal(
+      (await db.listItem.findFirst({ where: { id: added.added.id } }))?.remainderOfId,
+      'docsitem12345678',
+    )
+    // The person ticks it in the editor: a save of the whole file.
+    await save('Remains/docs.md', text.replace('  * [ ] Create', '  * [x] Create'))
+    assert.match((await read(file.id)).split('\n')[0]!, /^\* \[x\] Public docs \*what remained/)
+    assert.equal(
+      (await db.listItem.findFirst({ where: { id: 'docsitem12345678' } }))?.doneByType,
+      'system',
+    )
+    // Nothing remains of a ticked item.
+    const done = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
+      name: 'add_item',
+      path: 'Remains/docs.md',
+      text: 'More',
+      remainsOf: 'docsitem12345678',
+    })) as { error: string }
+    assert.match(done.error, /ticked already/)
+  })
+
+  test('a remaining line removed from the file, or an open pull request, keeps the item open', async () => {
+    const file = await listOf('Remains/keep.md', [
+      ['keepitem12345678', 'Billing flow'],
+      ['openitem12345678', 'Status page'],
+    ])
+    const added = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
+      name: 'add_item',
+      path: 'Remains/keep.md',
+      text: 'Test the dunning',
+      remainsOf: 'keepitem12345678',
+    })) as { added: { id: string } }
+    const without = (await read(file.id))
+      .split('\n')
+      .filter((l) => !l.includes(added.added.id))
+      .join('\n')
+    await save('Remains/keep.md', without)
+    await lists.sweepListMerges()
+    assert.match((await read(file.id)).split('\n')[0]!, /^\* \[ \] Billing flow/)
+    assert.ok(
+      (await db.listItem.findFirst({ where: { id: added.added.id } }))?.remainderSettledAt,
+      'settled for good: not looked at again',
+    )
+
+    const other = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
+      name: 'add_item',
+      path: 'Remains/keep.md',
+      text: 'Pick a provider',
+      remainsOf: 'openitem12345678',
+    })) as { added: { id: string } }
+    const open = await pullRequest('open')
+    await lists.linkPullItems(db, open.id, sessionId, teammate.id, {
+      partOf: [{ item: 'openitem12345678', remains: 'Point the DNS at it' }],
+    })
+    await lists.setItemDone(db, scope, member(), other.added.id, true)
+    assert.match(
+      (await read(file.id)).split('\n').find((l) => l.includes('openitem12345678'))!,
+      /^\* \[ \] Status page/,
+      'a pull request on it is still open',
+    )
+  })
+
+  test("an item's tick that failed once its remaining lines are done is tried again", async () => {
+    const file = await save(
+      'Remains/retry.md',
+      '* [ ] Launch email <!-- item:mailitem12345678 -->\n' +
+        '  * [x] Write the copy <!-- item:copyitem12345678 -->\n',
+    )
+    await db.listItem.createMany({
+      data: [
+        { id: 'mailitem12345678', documentId: file.id, text: 'Launch email' },
+        {
+          id: 'copyitem12345678',
+          documentId: file.id,
+          text: 'Write the copy',
+          remainderOfId: 'mailitem12345678',
+        },
+      ],
+    } as never)
+    const failing = new Proxy(db, {
+      get(target, key) {
+        if (key !== 'document') return Reflect.get(target, key)
+        return new Proxy(target.document, {
+          get(delegate, op) {
+            if (op !== 'findFirst') return Reflect.get(delegate, op)
+            return async (args: { where?: { id?: string } }) => {
+              if (args.where?.id === file.id) throw new Error('storage is out')
+              return delegate.findFirst(args as never)
+            }
+          },
+        })
+      },
+    }) as typeof db
+    await assert.rejects(lists.settleRemainders(failing, scope, 'mailitem12345678'), /storage/)
+    assert.equal(
+      (await db.listItem.findFirst({ where: { id: 'copyitem12345678' } }))?.remainderSettledAt,
+      null,
+      'left to the sweep',
+    )
+    await lists.sweepListMerges()
+    assert.match((await read(file.id)).split('\n')[0]!, /^\* \[x\] Launch email \*what remained/)
+    assert.ok(
+      (await db.listItem.findFirst({ where: { id: 'copyitem12345678' } }))?.remainderSettledAt,
+    )
+  })
+
+  test('a line whose threads stopped, with nothing else carrying it, is stalled', async () => {
+    const file = await listOf('Remains/stalled.md', [['stallitem1234567', 'Refund policy']])
+    const stalled = async () =>
+      (await lists.listDetail(db, scope, file.id)).items.find((i) => i.id === 'stallitem1234567')
+        ?.stalled
+    assert.equal(await stalled(), false, 'no thread on it: the backlog')
+    await db.listItemThread.create({ data: { itemId: 'stallitem1234567', sessionId } } as never)
+    assert.equal(await stalled(), true)
+    await db.session.updateMany({ where: { id: sessionId }, data: { status: 'running' } })
+    assert.equal(await stalled(), false, 'its thread works')
+    await db.session.updateMany({ where: { id: sessionId }, data: { status: 'idle' } })
+    const added = (await lists.handleListCall(db, scope, { id: sessionId }, teammate, {
+      name: 'add_item',
+      path: 'Remains/stalled.md',
+      text: 'Have it read by a lawyer',
+      remainsOf: 'stallitem1234567',
+    })) as { added: { id: string } }
+    const detail = await lists.listDetail(db, scope, file.id)
+    assert.equal(
+      detail.items.find((i) => i.id === 'stallitem1234567')?.stalled,
+      false,
+      'its remaining line carries it',
+    )
+    assert.equal(detail.items.find((i) => i.id === added.added.id)?.stalled, true)
+  })
+
+  test('a teammate ticks a line only saying what shows it is done', async () => {
+    const { ScheduleOperation } = await import('@brigade/contracts')
+    const bare = ScheduleOperation.safeParse({ name: 'complete_item', item: 'stallitem1234567' })
+    assert.equal(bare.success, false)
+    assert.match(bare.error!.issues[0]!.message, /what shows it is done/)
+    const blank = ScheduleOperation.safeParse({
+      name: 'complete_item',
+      item: 'stallitem1234567',
+      note: '  ',
+    })
+    assert.equal(blank.success, false)
+    assert.ok(
+      ScheduleOperation.safeParse({ name: 'complete_item', item: 'x', note: 'Done, 31 Oct' })
+        .success,
+    )
   })
 })

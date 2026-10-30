@@ -24,7 +24,7 @@ import { audit, type Actor } from './audit.js'
 import { GITHUB_API, githubHeaders, installationToken } from './connectors/github-app.js'
 import { ConnectorError, json } from './connectors/types.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
-import { linkPullItems, settleItemsOnMerge } from './lists.js'
+import { linkPullItems, settleItemsOnMerge, type PullItems } from './lists.js'
 import { teammateGitHub, workspaceGitHub } from './git.js'
 import { projectOfRepository } from './projects.js'
 import { REVIEW_DONE, REVIEW_THREAD, reviewUnderWay } from './review-state.js'
@@ -650,7 +650,7 @@ export async function notePullRequestCall(
         } as never,
       }))
     // The list items it finishes, or works on (docs/lists.md).
-    const items = call.input.items as { closes?: string[]; partOf?: string[] } | undefined
+    const items = call.input.items as PullItems | undefined
     if (items)
       await linkPullItems(db, row.id, call.sessionId, call.teammateId, items).catch((error) =>
         console.warn(`lists: items of pull request ${row.id} not kept: ${String(error)}`),

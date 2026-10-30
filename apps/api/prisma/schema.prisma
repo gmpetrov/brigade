@@ -1606,25 +1606,32 @@ model Document {
 /// and who ticked it from Brigade.
 model ListItem {
   /// The id in its marker: made when a line is first handed to a teammate, linked or added.
-  id             String           @id
-  organizationId String
-  workspaceId    String
-  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  documentId     String
-  document       Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  id                 String           @id
+  organizationId     String
+  workspaceId        String
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documentId         String
+  document           Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
   /// The line as last seen, without its checkbox and marker: for threads while the file is out of reach.
-  text           String
+  text               String
   /// Who ticked it from Brigade (a teammate's complete_item, a merged pull request), and when.
   /// A person ticks it in the file; the file says whether it is ticked, never this.
-  doneByType     ActorType?
-  doneById       String?
-  doneAt         DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  threads        ListItemThread[]
-  pulls          ListItemPull[]
+  doneByType         ActorType?
+  doneById           String?
+  doneAt             DateTime?
+  /// The item this line is what remains of (a merged pull request's `remains`, or add_item's
+  /// `remainsOf`), nested under it: that item is ticked once all its remaining lines are.
+  remainderOfId      String?
+  /// When this remaining line was dealt with for its item (seen ticked, or gone from the file);
+  /// while unset, settleRemainders looks at it again.
+  remainderSettledAt DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  threads            ListItemThread[]
+  pulls              ListItemPull[]
 
   @@index([documentId])
+  @@index([remainderOfId])
 }
 
 /// A thread working on a list item. A thread can carry several items, an item several threads.
@@ -1643,7 +1650,7 @@ model ListItemThread {
 }
 
 /// A pull request that works on a list item: `closes` ticks the item once it is merged; else it is
-/// only part of the work, shown on the line.
+/// only part of the work, shown on the line, and `remains` says what is left once it is merged.
 model ListItemPull {
   organizationId String
   workspaceId    String
@@ -1653,8 +1660,12 @@ model ListItemPull {
   pullRequestId  String
   pullRequest    PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
   closes         Boolean     @default(false)
-  /// When its merge was dealt with for this item (ticked, or nothing to tick); while unset after a
-  /// merge, the item is tried again (sweepListMerges).
+  /// Only part of the work: what remains of the item once it is merged, added under it as a line
+  /// of its own on merge (`remainderId`, made first so that a retry adds it once).
+  remains        String?
+  remainderId    String?
+  /// When its merge was dealt with for this item (ticked, its remaining line added, or nothing to
+  /// do); while unset after a merge, the item is tried again (sweepListMerges).
   settledAt      DateTime?
   createdAt      DateTime    @default(now())
 

@@ -96,6 +96,22 @@ export function ItemChips({ id }: { id: string }) {
       {item.pulls.map((p) => (
         <PullChip key={`${p.repository}#${p.number}`} pull={p} />
       ))}
+      {item.stalled && <StalledChip />}
+    </span>
+  )
+}
+
+const STALLED =
+  'Its threads stopped and nothing else carries it: tick it if it is done, or add what remains'
+
+/** A line still open though nothing works on it any more (`stalled`): someone should look. */
+function StalledChip() {
+  return (
+    <span
+      title={STALLED}
+      className="inline-flex h-6 items-center rounded-full border border-dashed border-warning/50 px-2 text-xs text-muted-foreground"
+    >
+      Stopped, still open
     </span>
   )
 }
@@ -138,7 +154,7 @@ export function PullChip({ pull }: { pull: ListPull }) {
     <span
       role="link"
       tabIndex={-1}
-      title={`${pull.repository}#${pull.number} · ${pull.state}${pull.closes ? ' · closes this item' : ''}`}
+      title={`${pull.repository}#${pull.number} · ${pull.state}${pull.closes ? ' · closes this item' : ''}${pull.remains ? ` · remains: ${pull.remains}` : ''}`}
       onClick={(e) => {
         e.preventDefault()
         window.open(pull.url, '_blank', 'noopener')
@@ -517,11 +533,13 @@ export function ThreadItemsCard({ threadId, className }: { threadId: string; cla
                 <span className={cn(item.done && 'text-muted-foreground')}>
                   {plainItemText(item.text)}
                 </span>
-                {(item.missing || item.doneBy) && (
+                {(item.missing || item.doneBy || item.stalled) && (
                   <span className="block text-xs text-muted-foreground italic">
                     {item.missing
                       ? 'No longer in its list: its line or its marker was removed'
-                      : `Ticked by ${item.doneBy!.name}`}
+                      : item.doneBy
+                        ? `Ticked by ${item.doneBy.name}`
+                        : `${STALLED}.`}
                   </span>
                 )}
               </span>
