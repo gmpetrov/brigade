@@ -92,6 +92,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { api, blobOfDataUrl, uploadFile } from '@/lib/api'
+import { stepOption } from '@/lib/design-options'
 import { API_URL } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
@@ -1287,6 +1288,14 @@ export function DesignPanel({
   const titleOf = (path: string) => choices.find((o) => o.path === path)?.title || designName(path)
   const title = info?.manifest?.title || titleOf(current)
 
+  // Switching remounts the canvas, which had the focus: the panel takes it back, so the
+  // next arrow still reaches it.
+  const refocus = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    refocus.current?.focus({ preventScroll: true })
+    refocus.current = null
+  }, [current, all])
+
   function pick(next: string | null) {
     if (next === picked) return
     setInfo(undefined)
@@ -1302,12 +1311,12 @@ export function DesignPanel({
       target.closest('input, textarea, select, [contenteditable], [role="menu"], [role="slider"]')
     )
       return
-    const step = e.key === 'ArrowRight' ? 1 : -1
-    // From all of them: the first, or the last.
-    const at = all ? (step > 0 ? -1 : 0) : choices.findIndex((o) => o.path === current)
-    const next = choices[(at + step + choices.length) % choices.length]!
+    const paths = choices.map((o) => o.path)
+    const next = stepOption(paths, all ? null : current, e.key === 'ArrowRight' ? 1 : -1)
+    if (!next) return
     e.preventDefault()
-    pick(next.path)
+    refocus.current = e.currentTarget
+    pick(next)
   }
 
   useEffect(() => {
@@ -1328,12 +1337,13 @@ export function DesignPanel({
       aria-label={`Design ${title}`}
       onClose={onClose}
       onKeyDown={onKeyDown}
+      tabIndex={-1}
       raiseKey={folder}
       // Expanded over the whole page; the same element, so the page keeps its state.
       // The whole screen until the panel sits beside the page: a sheet over a page that
       // scrolls would fight the canvas for the pointer.
       className={cn(
-        'max-xl:top-0 max-xl:h-auto max-xl:rounded-none max-xl:border-t-0',
+        'outline-none max-xl:top-0 max-xl:h-auto max-xl:rounded-none max-xl:border-t-0',
         expanded &&
           'inset-0 z-50 h-auto rounded-none border-0 xl:inset-0 xl:left-0 xl:z-50 xl:w-auto xl:border-l-0',
       )}
