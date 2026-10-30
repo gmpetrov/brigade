@@ -8,7 +8,7 @@ import {
   ArchiveRestore,
   Clock,
   EllipsisVertical,
-  Eye,
+  Globe,
   Pencil,
   Pin,
   PinOff,
@@ -97,7 +97,7 @@ export function useThreadMenu({
     {
       action: 'preview',
       label: 'Open preview',
-      icon: <Eye />,
+      icon: <Globe />,
       key: 'O',
       show: !!thread.previewRunning,
     },

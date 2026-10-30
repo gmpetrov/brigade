@@ -22,7 +22,7 @@ import {
   ChevronDown,
   Clock,
   ChevronUp,
-  Eye,
+  Globe,
   ListChecks,
   ListFilter,
   MessagesSquare,
@@ -257,7 +257,7 @@ function SubThreads({
                           openPreview(c.id)
                         }}
                       >
-                        <Eye aria-hidden className="size-3 opacity-50" />
+                        <Globe aria-hidden className="size-3 opacity-50" />
                         <span className="sr-only">Preview running</span>
                       </span>
                     )}
