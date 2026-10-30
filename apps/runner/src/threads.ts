@@ -1,6 +1,8 @@
 // Runs threads on this computer: one harness session per teammate in a thread,
 // turns of a thread in order (several teammates answer one after another), and
-// at most `concurrency` turns at once across threads. A member's message that
+// at most `concurrency` turns at once across threads; where the runner reads the
+// computer's memory, that memory decides how many below it (waitForMemory,
+// stoppedForMemory). A member's message that
 // comes in while the thread is busy waits in its queue, shown as queued, until
 // its turn starts; meanwhile it can be steered into the running turn, and cancelled or
 // edited when a person wrote it.
@@ -105,8 +107,23 @@ const RETRY_AFTER_MS = Number(process.env.BRIGADE_RETRY_MS)
 /** What a turn's error says once the memory guard stopped it (stoppedForMemory). */
 const memoryStopped = (why: string) => `Stopped to give the computer memory back: ${why}.`
 const MEMORY_STOPPED = /^Stopped to give the computer memory back/
-/** How long a turn waits for the computer to have memory for it (memoryRoom) before it starts anyway. */
+/**
+ * How long a turn waits for the computer to have memory for it (memoryRoom) before it starts
+ * anyway, when fewer than TURNS_ALWAYS run: none of them may end soon to give memory back.
+ */
 const MEMORY_WAIT_MS = 5 * 60_000
+/**
+ * Turns that start without waiting on one another, and the fewest a computer runs at once
+ * after the memory guard stopped one (stoppedForMemory).
+ */
+const TURNS_ALWAYS = 4
+/**
+ * Past TURNS_ALWAYS, turns start one at a time, this long apart: the memory a turn takes shows
+ * only once it has started, and turns let in together would all see the same room.
+ */
+const SETTLE_MS = Number(process.env.BRIGADE_TURN_SETTLE_MS) || 3_000
+/** After the memory guard stopped a turn, one more turn at once each time this goes by without another stop. */
+const RAISE_MS = Number(process.env.BRIGADE_TURN_RAISE_MS) || 5 * 60_000
 /** What a teammate is told when its turn is tried again after it failed. */
 const retried = (error: string) =>
   `Your last turn in this thread stopped on an error: ${error.slice(0, 2_000)}\n\n` +
@@ -311,7 +328,16 @@ type Thread = {
 
 export class Threads {
   private threads = new Map<string, Thread>()
+  /** Slots taken, by turns (waiting for memory or running) and memory runs. */
   private running = 0
+  /** Turns started, past waitForMemory; and turns in it. */
+  private started = 0
+  private entering = 0
+  /** Fewer turns at once than `concurrency`, for a while after the memory guard stopped one. */
+  private lowered: number | undefined
+  private raiseTimer: NodeJS.Timeout | undefined
+  /** Resolves when the turn let in last has settled (SETTLE_MS): the next may check memory. */
+  private admission = Promise.resolve()
   /** Turns queued or running, across threads. */
   private pending = 0
   /** Memory files a tidy run is laying out now, by path; when one last failed, and when one was last sent. */
@@ -914,6 +940,7 @@ export class Threads {
         queued = false
       }
       let acquired = false
+      let counted = false
       const turnId = randomUUID()
       try {
         // Taken over while waiting in the queue: the turn does not happen.
@@ -931,7 +958,8 @@ export class Threads {
         thread.slotWait = undefined
         acquired = true
         // Stopped, or taken over, while it waited for memory: the turn does not happen.
-        if (!(await this.waitForMemory(thread, spec)) || thread.takeover) return
+        counted = await this.waitForMemory(thread, spec)
+        if (!counted || thread.takeover) return
         // The runner is stopping: the API still has the turn, and gives it to the next runner.
         if (this.stopping) return
         const upTo = prepare ? await prepare() : undefined
@@ -1053,6 +1081,7 @@ export class Threads {
         }
         this.pending--
         thread.slotWait = undefined
+        if (counted) this.started--
         if (acquired) this.release()
       }
     })
@@ -1850,39 +1879,99 @@ export class Threads {
   stoppedForMemory(sessionId: string, why: string) {
     const thread = this.threads.get(sessionId)
     if (thread?.running) thread.memoryStop = why
+    // So many turns were too many for this computer: one fewer for a while (raiseLater).
+    const floor = Math.min(TURNS_ALWAYS, this.options.concurrency)
+    this.lowered = Math.max(floor, Math.min(this.limit, this.started - 1))
+    this.raiseLater()
+  }
+
+  /** Turns this computer may run at once now. */
+  private get limit() {
+    return this.lowered ?? this.options.concurrency
+  }
+
+  /** One more turn at once each RAISE_MS without another stop, back up to `concurrency`. */
+  private raiseLater() {
+    clearTimeout(this.raiseTimer)
+    this.raiseTimer = setTimeout(() => {
+      if (this.lowered === undefined) return
+      this.lowered = this.lowered + 1 < this.options.concurrency ? this.lowered + 1 : undefined
+      while (this.waiters.length && this.running < this.limit) {
+        this.running++
+        this.waiters.shift()!()
+      }
+      if (this.lowered !== undefined) this.raiseLater()
+    }, RAISE_MS)
+    this.raiseTimer.unref()
   }
 
   /**
    * Before a turn starts, the computer has memory for it: else it would only push the memory
-   * guard to stop another turn. It waits, said once in its thread, MEMORY_WAIT_MS at most.
+   * guard to stop another turn. Past TURNS_ALWAYS turns, they check one at a time, SETTLE_MS
+   * apart. It waits, said once in its thread, until there is room, or MEMORY_WAIT_MS when
+   * fewer than TURNS_ALWAYS run.
    */
   private async waitForMemory(thread: Thread, spec: ThreadSpec) {
     const room = this.options.memoryRoom
-    if (!room || (await room())) return true
-    this.options.emit(spec.sessionId, {
-      at: new Date().toISOString(),
-      type: 'raw',
-      source: 'runner',
-      value: `The computer is short of memory: ${spec.teammate.name} starts once it has some again.`,
-    })
+    // Counted as started at once, before any await: turns that come together see one another.
+    if (!room) {
+      this.started++
+      return true
+    }
+    const queue = this.started + this.entering >= TURNS_ALWAYS
+    this.entering++
     // Stop, or a person taking control, ends the wait, as they would end the turn.
     const controller = new AbortController()
     thread.controller = controller
+    const aborted = new Promise<void>((resolve) =>
+      controller.signal.addEventListener('abort', () => resolve(), { once: true }),
+    )
+    // Each turn let in holds the next back until it has settled; past the first few, they wait.
+    const before = this.admission
+    let pass!: () => void
+    this.admission = new Promise<void>((resolve) => (pass = resolve))
+    let admitted = false
     try {
+      if (queue) await Promise.race([before, aborted])
+      if (controller.signal.aborted) return false
+      // Slots are taken before this wait: a cap lowered meanwhile (stoppedForMemory) is checked here.
+      const fits = () => this.started < this.limit
       const until = Date.now() + MEMORY_WAIT_MS
-      while (!this.stopping && !controller.signal.aborted && Date.now() < until) {
-        await sleep(5_000, undefined, { signal: controller.signal }).catch(() => undefined)
-        if (controller.signal.aborted || (await room())) break
+      let told = false
+      while (!this.stopping && !controller.signal.aborted) {
+        // Fits again after reading memory: the guard may lower the cap meanwhile.
+        if (fits() && (await room()) && fits()) break
+        // Long enough, with few turns running: none may end soon to give memory back.
+        if (fits() && Date.now() >= until && this.started < TURNS_ALWAYS) break
+        if (fits() && !told) {
+          told = true
+          this.options.emit(spec.sessionId, {
+            at: new Date().toISOString(),
+            type: 'raw',
+            source: 'runner',
+            value: `The computer is short of memory: ${spec.teammate.name} starts once it has some again.`,
+          })
+        }
+        // Held by the cap, a turn ending frees a place soon: checked more often.
+        await sleep(fits() ? 5_000 : 1_000, undefined, { signal: controller.signal }).catch(
+          () => undefined,
+        )
       }
-      return !controller.signal.aborted
+      admitted = !this.stopping && !controller.signal.aborted
+      if (admitted) this.started++
+      return admitted
     } finally {
+      this.entering--
       if (thread.controller === controller) thread.controller = undefined
+      // Not let in: the next waits for those before this one still.
+      if (admitted) setTimeout(pass, SETTLE_MS).unref()
+      else void before.then(pass)
     }
   }
 
   /** A slot for a turn or a memory run; `waits` is told when there is none free now. */
   private async acquire(waits?: (running: number) => void) {
-    if (this.running < this.options.concurrency) {
+    if (this.running < this.limit) {
       this.running++
       return
     }
@@ -1890,8 +1979,9 @@ export class Threads {
     await new Promise<void>((resolve) => this.waiters.push(resolve))
   }
 
+  /** A slot given back: to the next waiting for one, unless the computer now runs fewer at once. */
   private release() {
-    const next = this.waiters.shift()
+    const next = this.running <= this.limit ? this.waiters.shift() : undefined
     if (next) next()
     else this.running--
   }

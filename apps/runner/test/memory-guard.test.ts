@@ -2,8 +2,10 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   MemoryGuard,
+  MOST_TURNS,
   parseMemory,
   roomFor,
+  turnsAtOnce,
   type Candidate,
   type Reading,
 } from '../src/memory-guard.js'
@@ -179,4 +181,13 @@ test('room for a turn: some memory available, hardly any waiting on it', () => {
   assert.equal(roomFor(calm), true)
   assert.equal(roomFor({ ...calm, available: 0.1 }), false)
   assert.equal(roomFor({ ...calm, full: 25 }), false)
+})
+
+test('turns at once: memory decides where the runner reads it, else one per 2 GB', () => {
+  const GB = 1024 ** 3
+  assert.equal(turnsAtOnce(8 * GB, true), MOST_TURNS)
+  assert.equal(turnsAtOnce(8 * GB, false), 8)
+  assert.equal(turnsAtOnce(16 * GB, false), 8)
+  assert.equal(turnsAtOnce(36 * GB, false), 18)
+  assert.equal(turnsAtOnce(128 * GB, false), MOST_TURNS)
 })
