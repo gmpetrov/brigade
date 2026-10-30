@@ -1,0 +1,117 @@
+---
+title: 'Lists'
+description: 'Plan work as a checklist in the library, hand its lines to teammates, and watch them get ticked.'
+---
+
+A list is a checklist in a Markdown file of the [library](/library): a launch checklist, an onboarding plan, a
+backlog. You write it as you like, with sections, notes and nested lines, then hand lines to teammates. Each line then
+shows the threads working on it and their pull requests, and gets ticked as the work lands.
+
+## Make a list
+
+Any Markdown file in the library with checkboxes is a list. There is nothing else to create:
+
+```md
+## Before launch
+
+- [ ] 🔴 Fix the sign-up email on Outlook
+- [ ] 🟠 Public docs: quickstart, FAQ
+- [ ] Pricing page
+```
+
+Create one with **New file** in the library, or ask a teammate to write it. The file is the list: its lines and ticks
+live only there.
+
+In the editor, a priority dot at the start of a line (🔴 🟠 🟡 🟢) is hidden, and a note in italics at the end of a line
+shows under it. The file itself keeps both.
+
+## The Lists page
+
+**Lists** in the sidebar shows every list in the library, grouped by the [project](/projects) whose folder holds it.
+Search them, and sort by **Recent activity** or **Name**. A row's dot says where the list stands: orange when a line
+needs you, violet when one is in progress.
+
+Open a list to see the file in the editor, its progress, and filters: **All**, **Open**, **In progress**,
+**Needs you** and **Done**.
+
+In the sidebar, threads working on the same list fold under one row for that list, with the dot of its most pressing
+thread. That row's menu has **Pin**, which puts the list and its threads under Pinned, for you only.
+
+## Hand lines to a teammate
+
+<Steps>
+  <Step title="Select the lines">
+    In the editor, select one or more checklist lines. Ticked lines are left out: they are done.
+  </Step>
+  <Step title="Choose Hand to">
+    Choose **Hand to** followed by a teammate's name in the toolbar.
+  </Step>
+  <Step title="Choose how">
+    - **One thread** (**A new thread** for a single line): the teammate works on them together.
+    - **One thread each**: a thread per line, side by side in the sidebar.
+    - **A thread that runs already**: pick the thread, and its teammate starts on them as if you wrote in it.
+
+    Pick the teammate, add an optional note, and confirm.
+
+  </Step>
+</Steps>
+
+The thread opens in the project whose folder holds the list. If a running thread can't take a message right now
+(it waits on a decision, it hit a daily cap, its computer is off), the lines and your note reach the teammate at its
+next turn.
+
+## What a teammate does with its lines
+
+A thread's lines show in a **Working on** card at the top of the thread, ticked live. You can tick or untick one
+there.
+
+When a teammate takes on a line, it says in a line what done means for it, as points anyone can check ("Done when:
+…"), unless the line already says. Correct it if it got it wrong.
+
+Then:
+
+- **Work in a pull request.** When the teammate opens the pull request, it says which lines it closes and which it is
+  only part of. For a line it is only part of, it must say what remains.
+- **Work without a pull request.** The teammate ticks the line itself, with a note saying what shows it is done. When
+  done is a matter of judgment (copy, a design, a video), it shows you the result and leaves the tick to you, with a
+  **Tick it** button.
+
+## Ticks when a pull request merges
+
+When a pull request is merged, Brigade ticks the lines it closes, with a short note such as _PR #491, 29 Oct_,
+credited to the teammate that opened it.
+
+Brigade never ticks a line a pull request is only part of. Instead, what remains becomes a new line, nested under it
+and attached to the same thread.
+
+## What remains
+
+What remains of a line (a deploy to check, a setting to change, a step only a person can do) is a line of its own.
+A teammate also adds one itself when work without a pull request leaves something open.
+
+Once every remaining line under a line is ticked, by anyone and from anywhere (a teammate, the thread's card, the
+editor), Brigade ticks the line too, with the note _what remained is done_. This happens right away, or within 10
+minutes for some edits. It waits while a pull request on the line is still open. If someone deletes a remaining line
+from the file, Brigade doesn't tick the line: a person decides.
+
+## Where each line stands
+
+| State                   | When                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| **Done**                | The line is ticked                                                              |
+| **Needs you**           | One of its threads waits on a person                                            |
+| **In progress**         | One of its threads is working, or a pull request on it is open                  |
+| **Open**                | Nobody has started it                                                           |
+| **Stopped, still open** | Its threads stopped and nothing else will tick it: tick it, or add what remains |
+
+The list's counts and filters use the same states.
+
+## Good to know
+
+- Lines with work attached carry a hidden marker at their end. Reword or move a line and it keeps its threads. Delete
+  the line or its marker and its threads say it's no longer in its list, and nothing ticks it.
+- Members see every list. A teammate reads a list only if it can read its folder, and ticks or adds lines only if it
+  can save there (see [Library](/library#teammate-access)). A pull request closes only lines of lists its teammate may
+  change.
+- The [Tasks](/tasks) board is still there, but lists replace it for planning: a line nobody has started is your
+  backlog.

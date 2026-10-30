@@ -1,0 +1,113 @@
+---
+title: 'Key concepts'
+description: 'The words Brigade uses, what each one means, and where to read more.'
+---
+
+Brigade has a small set of building blocks. This page explains each one in a paragraph and links to the page that
+covers it in full.
+
+## How it fits together
+
+```
+Organization        your people and their roles
+└── Workspace       one business: teammates, computer, Apps, Secrets, library, memory, billing
+    └── Project     a line of work inside it: threads, tasks, a library folder, repositories
+```
+
+## Organization
+
+The organization holds your people. A member has one role, **owner**, **admin** or **member**, and that role applies
+in every workspace of the organization. You create the organization when you answer **What are you building?** in
+onboarding: it gets the name you enter, and so does its first workspace. You rarely see the word: its name shows at
+the top of the workspace switcher. See [Members](/members).
+
+## Workspace
+
+A workspace is one business or project area. In Brigade's words: "A workspace is one business or project. It has its
+own AI teammates, computer and run log." Each workspace also has its own Apps, Secrets, library, memory, skills,
+routines and triggers, and its own [Brigade Cloud](/computers) subscription. Nothing crosses from one workspace to
+another.
+
+Switch workspaces from the menu at the top left of the sidebar. Owners and admins create one with **New workspace**
+in that menu: the **Create a workspace** form asks only for a **Workspace name**. A new workspace comes with its own
+Chief.
+
+<Tip>
+  Run separate businesses in separate workspaces. Use projects for lines of work inside one
+  business.
+</Tip>
+
+## Project
+
+A project groups threads, tasks, library files and repositories inside a workspace. It has a **Brief** that every
+thread started in it gets, a library folder, and a memory of its own. A project organizes work; it is not a wall:
+every teammate, App and Secret of the workspace stays available in it. See [Projects](/projects).
+
+## Teammate
+
+A teammate is the real Claude Code or Codex with a job: a name, role instructions, a model, and access you choose.
+Every workspace starts with **Chief**, which helps you set up your team and routes work to the right teammate. See
+[Teammates](/teammates).
+
+## Thread
+
+A thread is one conversation with one teammate. You start most of them, but a routine, a trigger or another thread
+can start one too. The thread shows every step the teammate takes. See [Threads](/threads).
+
+## Ticket and Needs you
+
+A ticket is something waiting on a person: an approval, a question, access a teammate lacks, a sign-in, a cap
+reached, an AI account out of usage. Threads and tasks that wait on you show under **Needs you** in the sidebar, and
+in **Waiting on you** on Home. See [Needs you](/needs-you).
+
+## Computer and runner
+
+A teammate works on a computer: your own Mac or Linux machine, or the workspace's cloud computer. A small program,
+the runner, links the computer to your workspace and runs each thread there with Claude Code or Codex, signed in to
+your own AI account. See [Your computer or Brigade Cloud](/computers).
+
+## AI account
+
+Your Claude or ChatGPT plan, signed in on a computer. Teammates run on it, so Brigade never bills you for AI usage.
+Accounts belong to one member; a thread runs on the accounts of the member who started it. See
+[AI accounts](/ai-accounts).
+
+## App
+
+An App is a service your teammates work in, such as Gmail, GitHub or Stripe. You connect an account once, then give
+each teammate no access, read only, or read and write. Its key stays in Brigade. See [Apps](/apps).
+
+## Secret
+
+A Secret is a login, API key or database URL for something that isn't an App. Keep them in **Settings → Secrets**
+and choose which teammates may use each one. See [Secrets](/apps#secrets).
+
+## Library
+
+The library holds the workspace's shared files: documents, lists, designs. Teammates read it and, with access, write
+to it. See [Library](/library).
+
+## Memory
+
+Memory is what teammates learn as they work, kept as notes at three levels: the workspace (every teammate loads it),
+each project, and each teammate (only that teammate loads it). See [Memory](/memory).
+
+## Skill
+
+A skill tells teammates how your workspace does a certain kind of work, step by step. It gives no access. Owners and
+admins write skills; a teammate can propose one, and an admin approves it. See [Skills](/skills).
+
+## Routine
+
+A routine starts work on a schedule, from every hour to once a week, in a fresh thread each time. Find them in
+**Routines**. See [Routines](/routines).
+
+## Trigger
+
+A trigger starts a thread when something happens in an App (a failed payment, a new issue, an email) or a webhook
+arrives. Owners and admins create them, and approve those a teammate proposes. See [Triggers](/triggers).
+
+## Playbook
+
+A playbook is a whole job, such as support, ready to install: its triggers, routines, skills and the Apps it needs.
+See [Playbooks](/playbooks).

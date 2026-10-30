@@ -1,0 +1,122 @@
+---
+title: 'Teammates'
+description: 'What a teammate is, how Chief sets up your team, and how to create, configure and archive teammates.'
+---
+
+A teammate is the real Claude Code or Codex, given a job. It has a name, role instructions, a model, and the Apps,
+Secrets and library access you choose. It works on a [computer](/computers), on your own
+[AI account](/ai-accounts), and every message to it opens or continues a [thread](/threads).
+
+## Chief
+
+Every workspace starts with a teammate called **Chief**, created with the workspace. Chief is your chief of staff and
+the first teammate you talk to. It has two jobs:
+
+- **Set up the team.** Chief asks what you're building, what takes your time and which tools the work lives in, one
+  or two questions at a time. Then it proposes a team, usually two or three teammates, each with a role,
+  instructions and the Apps it needs.
+- **Answer and route.** Chief answers simple questions itself. For real work, it hands off to the right teammate: it
+  mentions them, starts a child thread, or creates a task. It doesn't do a teammate's job itself.
+
+Chief's name can't change, and it can't be archived.
+
+### The team proposal
+
+Chief's proposal shows as a card titled **Your team**. For each teammate you can choose **Edit** to change its
+**Name** and **Instructions**, or leave it out with the X. Under **Apps this team needs**, choose **Connect** for each
+App you haven't connected yet; you can also create the team first and connect them after.
+
+Choose **Create team** to create them (owners and admins). Each new teammate gets access to the Apps it needs that are
+already connected, and its writes to Apps ask a person first. Change that on its **Access** tab. For an App you
+connect later, the card shows a **Give** button to grant it. Or write to Chief what to change.
+
+## Create a teammate
+
+Owners and admins choose **New teammate**: the **+** next to **Teammates** in the sidebar. The form asks for:
+
+| Field                 | What to put                                                                     |
+| --------------------- | ------------------------------------------------------------------------------- |
+| **Name**              | Up to 80 characters.                                                            |
+| **Title**             | Optional, up to 40 characters. Shown as a badge beside its name.                |
+| **Role instructions** | Its job, in your words. Optional, but a teammate without them is a blank hire.  |
+| **Model**             | One list, grouped by **Claude** and **Codex**. Picking a model picks the agent. |
+
+Then choose **Create teammate**. The avatar is generated for you.
+
+### Models
+
+| Claude (Claude Code)                                       | Codex                                                                                     |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **Default**: the default model of the account it runs on   | **Default**: GPT-6.1 Sol                                                                  |
+| **Opus 5.5**, **Fable 5.1**, **Sonnet 5.5**, **Haiku 5.5** | **GPT-6.1 Sol**, **GPT-6 Astra**, **GPT-6 Sol**, **GPT-6 Luna**, and older GPT-5.6 models |
+
+A Claude teammate runs on a Claude account, a Codex teammate on a ChatGPT account. Its threads need an account of
+that kind on the computer they run on. See [AI accounts](/ai-accounts).
+
+<Warning>
+  Codex can't ask before running commands or editing files, so a Codex teammate's threads run them
+  without asking.
+</Warning>
+
+## Write good role instructions
+
+Write to the teammate as "you", like a brief for a new hire:
+
+- **Start with the role.** The first line says what it does, for example "You handle customer support for Acme."
+  Chief reads that line to decide what work to send it.
+- **Say what it owns**: the inbox, the repository, the weekly report.
+- **Say how it works**: tone, where the answers are, what good looks like.
+- **Say what to ask a person about first**: refunds, anything sent to a customer, merging.
+
+Facts that change belong in [memory](/memory), and repeatable procedures in [skills](/skills).
+
+## The teammate page
+
+Open a teammate from the sidebar. Its page has four tabs.
+
+### Profile
+
+The same fields as the creation form, with **Save**, and **Archive**. Only owners and admins see this tab.
+
+### Access
+
+What the teammate may reach:
+
+- **Document library**: **Read only** (the default) or **Read and write**. Folders where its access differs, set in
+  the [library](/library), are listed under it.
+- **Mailbox**: its own email address, if your workspace has the [Email App](/email).
+- **Apps**: one row per connected account, **No access**, **Read only** or **Read and write**. A personal App
+  shows whose threads it works in.
+- **Secrets**: **No access**, **Can use, asks first** or **Without asking** for each.
+- **Acts without approval (sending, editing, deleting)**: the policy for writes to Apps. **Allow** (the default),
+  **Ask a person first**, or **Never**. See [Apps](/apps#read-write-and-approvals).
+- **Starts threads from**: the [triggers](/triggers) that start threads for this teammate.
+
+### Activity
+
+A timeline of the teammate's threads over the **Last hour**, **Last 8 hours**, **Last 24 hours** or **Last 7 days**,
+with totals for **Working**, **Waiting for approval** and **Blocked**.
+
+### Limits
+
+**Daily caps**: **Threads started**, **Computer hours** and **Write calls per connection**. Reaching a cap pauses the
+teammate's new work and opens a ticket for an admin. Days start at midnight UTC; an empty field means no cap. Owners
+and admins choose **Edit caps**. See [Usage and limits](/usage-and-limits).
+
+## Archive a teammate
+
+On the **Profile** tab, choose **Archive**. Its threads stay. Its triggers are deleted, its routines stop running,
+and it can no longer be mentioned. There is no way to bring an archived teammate back yet, so create a new one if you
+need it again.
+
+## Who may do what
+
+| Action                                                             | Who                                               |
+| ------------------------------------------------------------------ | ------------------------------------------------- |
+| Create teammates, **Create team**, edit a profile, archive         | Owners and admins                                 |
+| Library access, write policy, daily caps                           | Owners and admins                                 |
+| Give a teammate an App account                                     | Owners and admins, or the member who connected it |
+| Give a teammate a Secret                                           | Owners and admins, or the member who saved it     |
+| See **Access**, **Activity** and **Limits**; start threads with it | Everyone                                          |
+
+See [Members](/members) for roles.

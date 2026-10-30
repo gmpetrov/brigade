@@ -1,0 +1,86 @@
+---
+title: 'Billing'
+description: 'What Brigade costs, what Brigade Cloud adds, and how to subscribe, manage or cancel it.'
+---
+
+Brigade is free on your own computers. **Brigade Cloud** adds a cloud computer for your workspace, for $99 a month
+per workspace (€99 in the euro zone). There is one subscription per workspace, paid through Stripe.
+
+## Free or Brigade Cloud
+
+|                         | Free                                | Brigade Cloud                                    |
+| ----------------------- | ----------------------------------- | ------------------------------------------------ |
+| **Price**               | Free                                | $99 a month per workspace (€99 in the euro zone) |
+| **Where teammates run** | Your own Mac or Linux machine       | Brigade's cloud computer, and your own machines  |
+| **When teammates work** | While your computer is on and awake | All the time, even when your laptop is closed    |
+| **AI usage**            | Your Claude or ChatGPT plan         | Your Claude or ChatGPT plan                      |
+
+Brigade Cloud includes:
+
+- Teammates that keep working when your computer is asleep or off.
+- Brigade's cloud computer, shared by the workspace, up to 8 turns at once.
+- No charge for AI usage: teammates still run on each member's own Claude or ChatGPT plan.
+
+Brigade never bills you for AI usage, on either option. See [Your computer or Brigade Cloud](/computers) for what
+each computer can do.
+
+## Subscribe
+
+Only owners and admins can subscribe or change the plan. Other members see the plan but no buttons.
+
+<Steps>
+  <Step title="Open Billing">
+    Go to **Settings → Billing** and choose **Subscribe**. In onboarding, the same thing is **Get
+    Brigade Cloud**.
+  </Step>
+  <Step title="Pay in Stripe Checkout">
+    Checkout shows the price in your currency and accepts promotion codes and a tax ID.
+  </Step>
+  <Step title="Sign in the cloud computer">
+    Back in Brigade, the cloud computer appears in **Settings → Computers** within a few minutes.
+    Sign it in to your Claude or ChatGPT account there.
+  </Step>
+</Steps>
+
+The workspace is billed, not the person who pays: if the admin who subscribed leaves, the plan stays with the
+workspace.
+
+## Manage your plan
+
+**Settings → Billing** shows the plan's state, such as **Renews on** a date or **Ends on** a date. Choose
+**Manage billing** to open Stripe's billing portal, where you can:
+
+- update your card
+- read and download invoices
+- cancel the plan
+
+After the plan has ended, **Invoices** still opens the portal, and **Subscribe again** starts a new plan.
+
+## When a payment fails
+
+The plan shows **Payment failed: update your card to keep it**. While Stripe retries the payment, your workspace
+keeps the cloud computer. Update your card in **Manage billing**. If the payment still
+fails and the plan ends, the cloud computer stops, as after a cancellation.
+
+## Cancel
+
+Cancel in **Manage billing**. The plan runs until the end of the period you paid for, then ends. Then:
+
+- **The cloud computer stops** and keeps its disk. It doesn't start again until the workspace subscribes again.
+- **Your workspace stays**: its threads, library, memory and members. Teammates keep working for free on your own
+  computers. To move a thread there, see [Move a thread between computers](/computers#move-a-thread-between-computers).
+
+<Note>
+  You can't delete a workspace, or your account, while the workspace has Brigade Cloud. Cancel it
+  first, and delete once the plan has ended.
+</Note>
+
+## Included by Brigade
+
+Some workspaces get Brigade Cloud from the Brigade team at no charge. Their plan shows **Included by Brigade**, with
+nothing to manage and no **Manage billing** button.
+
+## Self-hosted Brigade
+
+On a Brigade server you run yourself without Stripe set up, billing is off: **Settings → Billing** says so, and the
+cloud computer, when the server has one, is included. See [Self-hosting](/self-hosting).

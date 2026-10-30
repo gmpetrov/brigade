@@ -1,0 +1,102 @@
+---
+title: 'Skills'
+description: 'Write down how your team does a kind of work, so every teammate does it the same way.'
+---
+
+A skill says how your workspace does a kind of work: release notes, issue triage, a weekly digest. A teammate reads
+a skill when the work matches its description, or when a message starts with the skill's `/name`.
+
+Skills use the open Agent Skills format that Claude Code, Codex and Grok read: a folder with a `SKILL.md` (a name,
+a description, then the instructions) and any files beside it, such as templates or scripts.
+
+## Skills and memory
+
+[Memory](/memory) holds facts: who is who, decisions, pitfalls. A skill holds a procedure: the steps for a job.
+Only a skill's name and description are loaded into each thread. The teammate reads the rest when the work calls
+for it.
+
+A skill gives no access. A teammate still reaches only the [Apps](/apps) and secrets it was given.
+
+## Manage skills
+
+Open **Settings → Skills**. Every member sees the workspace's skills and can use them as `/name` in the composer.
+Owners and admins add, change and remove them, since a skill changes what every teammate does.
+
+To write one, choose **Add a skill** and fill in:
+
+- **Name**: lowercase words joined by hyphens, such as `release-notes`.
+- **When to use it**: the description a teammate matches its work against. Be specific.
+- **Instructions**: the steps, in Markdown.
+- **Applies to**: **Every thread**, or **Only threads of these teammates and projects**.
+
+Each skill has a switch to turn it off without removing it. Its menu has **Edit** and **Remove**.
+
+Names starting with `brigade-` are reserved for Brigade's own skills.
+
+## Import skills
+
+Choose **Import** to add one skill or a pack of them:
+
+- **From GitHub**: paste a repository's address, or a folder in one, and choose **Read**. A private repository needs
+  a GitHub App account that reaches it.
+- **Choose a file**: a `.zip` of one skill folder or many, a `.skill`, or a single `SKILL.md`. Up to 50 MB.
+
+You review what was found before anything is added. One new skill opens in the editor. Several open as a pack:
+name it, tick the skills to turn on, choose where the pack applies, and add it. Files over 10 MB, and past 200 in
+one skill, are left out and listed.
+
+A pack has one switch over all its skills, and one scope. To get a newer version from GitHub, choose **Update** in
+the pack's menu: changed skills update, new ones are added, and your switches stay. A skill you wrote yourself
+with the same name is never replaced.
+
+Importing copies the skills once. Brigade doesn't keep them in sync with the source.
+
+<Note>
+  A repository can also keep its own skills, in `.claude/skills/` or `.agents/skills/`. A teammate
+  reads them after it checks the repository out, the same way it reads the repository's `AGENTS.md`
+  or `CLAUDE.md`. You don't need to import those.
+</Note>
+
+## Skills that come with Apps
+
+Some Apps come with skills from the vendor: **Cloudflare** and **Atlassian**. They are added as a pack when the
+App's first account connects, and only teammates that can use one of the App's accounts get them.
+
+If they weren't added then, open the App in **Settings → Apps** and choose **Add the skills** in its **Skills**
+section.
+
+## Teammates propose skills
+
+When a teammate finishes work of several steps that worked and you are likely to ask for again, it can propose a
+skill. You can also ask it to: "turn what you just did into a skill".
+
+A proposal opens a ticket under [Needs you](/needs-you) with the skill's instructions and files, and, for a
+change, the skill as it is now. Only an owner or admin decides: **Add the skill** (or **Apply the change**) or
+**Decline**. The teammate doesn't wait for the answer. An approved skill applies in threads that start after it.
+
+A teammate proposes procedures, never facts (those go to memory) or one-off tasks. A new proposal for the same name
+replaces an open one.
+
+## Teach a task
+
+Instead of writing the steps, show them. **Teach a task** records you doing a task on the teammate's computer, and
+the teammate turns it into a skill of its own.
+
+1. In the composer, choose **+** then **Teach a task**. The computer opens over the whole window.
+2. Choose **Start recording**, then do the task in the apps or sites you use for it.
+3. Choose **Pause** for anything the teammate shouldn't see, such as signing in, then **Resume**.
+4. Choose **Done**, add an optional note on what you were doing, and choose **Send to** the teammate.
+
+The teammate studies the recording, a frame for each step you took, and proposes a skill that applies to its own
+threads only. An admin approves it as above. Change where it applies later in **Settings → Skills**.
+
+Limits:
+
+- **Cloud computer only.** It isn't available yet on threads that run on a member's own computer. See
+  [Your computer or Brigade Cloud](/computers).
+- **A desktop browser**: Chrome, Edge or Firefox. It isn't offered on phones.
+- **Up to 10 minutes** per recording.
+- One recording at a time on a cloud computer. Starting one stops what the teammate is doing in that thread.
+
+The list of steps notes how many characters you typed, not the text. The video and the frames still show the
+screen, so pause for anything private.

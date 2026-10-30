@@ -1,0 +1,133 @@
+---
+title: 'Email'
+description: 'Give each teammate an email address of its own, share mailboxes with a project, and read all your mail in one Inbox.'
+---
+
+The Email App gives your teammates addresses of their own. A teammate signs up to services, writes to customers
+and gets replies, without touching your personal inbox. Every mail your mailboxes receive lands in one **Inbox**,
+where you see which teammate has it and approve what it sends.
+
+## Turn it on
+
+Email is off until an owner or admin turns it on: in **Settings → Apps**, open **Email** and choose **Turn on**.
+Then give addresses from **Inbox → Mailboxes** (the mailbox icon at the top of the Inbox), or from a teammate's
+**Access** tab with **Give an address**.
+
+Every address on Brigade's own domain, `mails.brigade.lol`, sends and receives at once, with nothing to set up.
+
+## Addresses
+
+- **A teammate's address**, such as `riley@mails.brigade.lol`. It belongs to that teammate alone and can't be given
+  to another. Names are unique across Brigade and never given to anyone else: turn an address off and on again,
+  and the same teammate gets it back. A taken name is offered as `riley-2`, and so on.
+- **Project addresses**: in a project's threads, the teammate writes from `riley.<project>@mails.brigade.lol`,
+  shown as "Riley · Project". Replies come back to that project. You don't set these up.
+- **Sign-up addresses**: a teammate can make a one-off address for a thread, to sign up to a service and receive its
+  confirmation code there. The mail goes straight to the thread that made it.
+- **Shared mailboxes** belong to a project rather than a teammate, for the addresses customers already write to.
+  On Brigade's domain, a shared mailbox gets a generated name such as `support-acme-7f3k`. Point your real address
+  at it (see [Your own domain](#your-own-domain)), then choose which teammates read and reply from it.
+
+To add one, choose **Add a mailbox**, pick **An agent** or **A project, shared**, then the address and its domain.
+
+## Where incoming mail goes
+
+Each mail goes to one place, in this order:
+
+1. **A thread waiting for it**: a reply in a conversation the thread started, or mail to its sign-up address.
+2. **Its conversation's thread**, if one already has it.
+3. **A member's request**: mail from a member of your workspace (checked with DKIM or DMARC) to a teammate's address
+   starts or continues a thread with that teammate, as if you had typed it.
+4. **The mailbox's rules**, in their order. The first that matches starts a thread with its teammate. A rule starts
+   up to 50 threads a day; past that, mail waits in the Inbox and you get a ticket.
+5. **The Inbox**, unassigned, for 30 days.
+
+A mailbox's page answers three questions: **Where its mail arrives**, **Who handles it** (its rules, reordered
+there by an owner or admin) and **Who reads and replies**. **Send a test mail** checks that the address receives.
+A conversation that sends mail to threads 8 times within an hour is stopped as a loop.
+
+## The Inbox
+
+**Inbox**, under Home in the sidebar, lists every conversation your mailboxes received, one row per conversation,
+newest first. It also shows Gmail accounts: all mail of a shared account when its menu has **Show all its mail in
+the Inbox**, otherwise only mail that went to a thread. A member's own Gmail shows to them alone.
+
+| Tab                | What it holds                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| **To do**          | Nobody took it, its teammate chose not to reply, or a reply waits for your approval |
+| **With teammates** | A thread has it                                                                     |
+| **Scheduled**      | A reply set to leave later                                                          |
+| **Done**           | Marked done; the next mail in the conversation waits again                          |
+| **All**            | Everything                                                                          |
+
+Filter by source, agent, project or words. From a conversation you can:
+
+- **Hand to…** a teammate, with a note: the conversation then belongs to that thread.
+- **Add a rule** (owners and admins) so the next mail like it goes to a teammate.
+- When a teammate didn't reply: **Ask Riley to reply**, **Discuss with Riley** (with your teammate's name), or
+  **Reply myself**, which sends from the mailbox as you.
+
+## Sending and approvals
+
+A teammate sends from its thread's address: the project address, or the shared mailbox. Mail to anyone outside your
+workspace waits for a person to approve it, whatever the teammate's [write policy](/apps#read-write-and-approvals).
+Mail only to members of the workspace goes without asking.
+
+The approval card shows who it goes to, the subject, files and text. The member who started the thread, or an
+owner or admin, can:
+
+- **Approve & send**: it leaves 30 seconds later and can be cancelled until then.
+- **Send later**: pick a time up to 30 days ahead. It shows under **Scheduled** and can be cancelled until it leaves.
+- **Edit** the draft first, then send it.
+- **Discard** it.
+
+The same card shows in the thread and at the end of the conversation in the Inbox. A teammate can also schedule mail
+itself ("send it Monday at 9"), within the same 30 days.
+
+Before anyone is asked, Brigade checks that a reply goes only to the conversation's people (unless the teammate adds
+recipients on purpose), that files come from the thread, and that the text holds no secret.
+
+## Replies come back to the thread
+
+When someone replies to mail a teammate sent, the reply wakes the thread that sent it, with the teammate's context.
+You don't need to tell it to check. A delivery failure wakes the thread too. If someone already answered from the
+mailbox itself, the teammate's own reply after it is refused.
+
+## Your own domain
+
+To send as `support@yourcompany.com`, add your domain in **Inbox → Mailboxes → Domains** with **Add a domain**
+(owners and admins). Brigade reads where its mail goes today and asks **How its mail reaches Brigade**:
+
+- **By forwarding**: mail stays with your provider (Google Workspace, Microsoft 365…). You forward each address to
+  its mailbox's address on Brigade's domain. The mailbox page says what to forward where, and shows Google's
+  confirmation code when it arrives.
+- **Directly**: the domain's MX points to Brigade and every address works at once. This is refused while your MX
+  points to another provider, since it would take that mail away. Use a subdomain such as `team.yourcompany.com`.
+
+Then add the DNS records Brigade shows at your DNS provider. If the domain's DNS is on Cloudflare and you connected
+Cloudflare, **Add them on Cloudflare** adds them for you, without replacing any record. Brigade checks the records
+every ten minutes, or at once with **Check now**.
+
+<Warning>
+  Add the records within 3 days. After that, while they are not in, another workspace on Brigade can
+  add the domain instead. A mailbox on a domain whose records aren't in yet sends nothing: Brigade
+  never falls back to its `mails.brigade.lol` address, so replies always come from the address
+  people wrote to.
+</Warning>
+
+A domain belongs to one workspace. Removing it stops mail going out as it; its mailboxes keep their address on
+Brigade's domain.
+
+## Limits
+
+| Limit                        | Value                      |
+| ---------------------------- | -------------------------- |
+| Mail sent per address        | 100 a day                  |
+| Recipients per mail          | 50 (To and Cc)             |
+| Files per mail               | 10, up to 25 MB in all     |
+| Send later                   | Up to 30 days ahead        |
+| Threads a rule starts        | 50 a day                   |
+| Unassigned mail in the Inbox | Kept 30 days, then deleted |
+
+Mail a thread has is kept with that thread. Gmail mail you didn't share with the Inbox, and that went to no thread,
+is never stored.

@@ -1,0 +1,108 @@
+---
+title: 'Triggers'
+description: 'Start a thread when something happens in an App, or when any service posts to a webhook.'
+---
+
+A trigger starts work when something happens elsewhere: a failed payment, a new GitHub issue, an email to your
+support address. Each time, a new thread starts for the teammate you chose, with the event as its first message.
+
+For work at set times, use a [routine](/routines) instead.
+
+## Events you can use
+
+| App                 | Events                                                                                                                           | Options                                                                                                                        |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Gmail**           | **Email received**                                                                                                               | **Only emails matching** (a Gmail search), **Automatic mail** (`skip` leaves out out-of-office replies and other machine mail) |
+| **GitHub**          | **Issue opened**, **Pull request opened**, **Review requested**, **New comment**, **Push to a branch**                           | **Repository** (`owner/name`); a reviewer for review requests; a **Branch** for pushes                                         |
+| **Stripe**          | **Payment received**, **Payment failed**, **New subscription**, **Subscription canceled**, **Dispute opened**, **Refund issued** |                                                                                                                                |
+| **Google Calendar** | **Event created**, **Event changed or canceled**, **Invited to an event**                                                        | **Calendar** (empty: the account's own)                                                                                        |
+| **Email**           | **Email received**, on a teammate's own address                                                                                  | Senders, subject words, automatic mail, threads a day                                                                          |
+
+Options left empty match everything. With Gmail, a reply in an email conversation that already has a thread
+continues that thread rather than starting a new one. The Email App's rules are set up with its addresses: see
+[Email](/email).
+
+## Create a trigger
+
+Owners and admins create triggers.
+
+1. Open **Settings → Apps** and the App.
+2. In an account's menu, choose **Triggers**, then **Add a trigger**.
+3. Fill in:
+   - **When**: the event, and its options.
+   - **Starts a thread for**: the teammate.
+   - **In project**: the [project](/projects) its threads belong to, if any.
+   - **Instructions (optional)**: what the teammate does with each event, such as "Find the cause and open a pull
+     request if the fix is small."
+   - **Name**: how the trigger is listed, and the start of each thread's title.
+4. Choose **Create trigger**.
+
+The trigger's threads run on the accounts of the admin who set it up. You can move a trigger to another project
+or delete it from the same panel.
+
+<Warning>
+  An event can contain anything its sender writes, including instructions aimed at your teammate.
+  Give the teammate only the access it needs, or set it to **Ask a person first** for writes. See
+  [Apps](/apps#read-write-and-approvals).
+</Warning>
+
+## Custom apps and webhooks
+
+For a service Brigade doesn't integrate (Sentry, a form, your own backend), add a **Custom app** from the catalog
+in **Settings → Apps**. In its menu, choose **Webhooks**, then **Add a webhook**: pick the teammate, project,
+instructions and name, and how to **Verify the sender with**:
+
+- **A signing secret Brigade generates**, for a sender that can sign its requests.
+- **Nothing (the URL alone)**, for one that can't. Anyone with the URL can then start a thread.
+
+Choose **Create webhook**. Brigade shows the URL and, if you chose one, the signing secret. The secret is shown
+once: copy it now.
+
+Your sender then posts each event to the URL:
+
+```bash
+curl -X POST "$BRIGADE_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -H "X-Brigade-Signature: sha256=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" | cut -d' ' -f2)" \
+  -d "$BODY"
+```
+
+- The signature is the HMAC-SHA256 of the raw body, keyed with the secret, in hex, after `sha256=`. A request
+  with a missing or wrong signature is refused.
+- Send JSON when you can. Any other body is passed on as text. Bodies are limited to 1 MB.
+- Senders retry. Put an `id` field in the JSON body (or an `X-Request-Id` header) so a retried event doesn't
+  start a second thread. Without one, the same body within 5 minutes counts as one event.
+
+Custom apps only receive events. Teammates can't call them back through Brigade.
+
+## What the thread receives
+
+Each event starts a thread titled with the trigger's name and the event, such as "Failed payments: Payment
+failed: $49.00". Its first message has:
+
+1. Your instructions, under "Instructions for each event of this trigger", if the trigger has any.
+2. A short summary of the event, for built-in Apps.
+3. The raw event, marked as untrusted input. Files attached to an email come with it.
+
+The thread then runs like any other, with the teammate's access, approval policy, limits and memory.
+
+If a thread can't start, for example because the computer is offline, the event is offered again later, and the
+member who set up the trigger gets a ticket under [Needs you](/needs-you). Only one is open per trigger at a time.
+
+## Ask a teammate in a thread
+
+You can also ask in a thread: "every time a payment fails, look up the customer and draft an email". The teammate
+picks the App account and event, or a new custom app for any service that can send a webhook, and writes the
+instructions.
+
+- **An owner or admin approves each one.** A trigger lets an outside event start work on someone's accounts, so
+  the teammate's request opens an approval in the thread and under **Needs you**, for owners and admins only.
+  They choose **Add the trigger** or **Decline**. A member who isn't an admin can't approve it in their own
+  thread.
+- **Once approved**, its threads run on the accounts of the member who asked, in that thread's project. A new
+  custom app is added, and the teammate gets the URL in the same turn so it can set up the sender itself.
+- **The signing secret** is never written in the thread. It is saved in **Settings → Secrets** for that
+  teammate's use only.
+
+Teammates set up triggers only in threads a member started, never in a thread a trigger, a schedule or a
+playbook started.

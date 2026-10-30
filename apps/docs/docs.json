@@ -18,11 +18,35 @@
     "groups": [
       {
         "group": "Get started",
-        "pages": ["index", "quickstart", "computers"]
+        "pages": ["index", "quickstart", "computers", "concepts"]
       },
       {
-        "group": "Working with teammates",
-        "pages": ["apps", "security"]
+        "group": "Teammates",
+        "pages": ["teammates", "threads", "needs-you", "ai-accounts"]
+      },
+      {
+        "group": "Organize work",
+        "pages": ["projects", "tasks", "lists", "library", "memory", "skills"]
+      },
+      {
+        "group": "Automate",
+        "pages": ["routines", "triggers", "playbooks"]
+      },
+      {
+        "group": "Apps",
+        "pages": ["apps", "email", "code-and-previews"]
+      },
+      {
+        "group": "Workspace",
+        "pages": ["members", "notifications", "usage-and-limits", "billing"]
+      },
+      {
+        "group": "Trust",
+        "pages": ["security"]
+      },
+      {
+        "group": "Open source",
+        "pages": ["self-hosting"]
       },
       {
         "group": "Help",
@@ -32,8 +56,14 @@
   },
   "navbar": {
     "links": [
-      { "label": "Live demo", "href": "https://demo.brigade.lol" },
-      { "label": "GitHub", "href": "https://github.com/gmpetrov/brigade" }
+      {
+        "label": "Live demo",
+        "href": "https://demo.brigade.lol"
+      },
+      {
+        "label": "GitHub",
+        "href": "https://github.com/gmpetrov/brigade"
+      }
     ],
     "primary": {
       "type": "button",

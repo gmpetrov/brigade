@@ -1,0 +1,105 @@
+---
+title: 'Memory'
+description: 'What your teammates know without being told, how it is written, and how you correct it.'
+---
+
+Memory is what your teammates know without being told: how your team wants work done, decisions, pitfalls and
+who is who. Teammates write it themselves when a thread goes quiet, and you can read and edit every line.
+
+## Three memories
+
+Each thread loads three memories:
+
+| Memory        | What it holds                                                                                          | Who loads it                    |
+| ------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| **Workspace** | People, terms, decisions and where things live, for all of your work                                   | Every teammate, in every thread |
+| **Project**   | The same kind of line, true only of one [project](/projects): its product, stack, customers            | Every thread in that project    |
+| **Teammate**  | What one teammate has learned about its job: your corrections, a way that worked after one that failed | Only that teammate              |
+
+Thread summaries are memory too. A short summary of each thread is written when it goes quiet, and teammates find
+summaries with search. They aren't loaded into threads.
+
+## Core and topics
+
+Each memory has a core and topics:
+
+- **The core** is a short list of lines every thread loads before it starts. It holds what nearly every thread
+  needs: how the team wants work done, and pitfalls that can do harm, such as an App that reaches a live account.
+- **Topics** are named groups of lines, each with a line saying when to read it ("Read when changing billing").
+  A teammate sees the list of topics and reads one before work it bears on, the way it reads a
+  [skill](/skills).
+
+This keeps what each thread loads small however much your team learns.
+
+## How memory is written
+
+When a thread has been quiet for a few minutes, a short run reads what was said since the last time and updates
+memory. It can:
+
+- **Add** a line, in the core or under a topic. Most threads add nothing, and at most 3 lines per memory.
+- **Replace** a line the conversation corrected. The old text goes to the archive.
+- **Remove** a line the conversation showed is wrong, outdated or said twice, with a reason.
+- **Confirm** a line the conversation relied on and showed still holds. Its date moves to today.
+
+The run leaves out what was done in the thread (the summary keeps that), what Apps or the code already show,
+the contents of emails and websites a teammate read, details about people outside your team, and secrets.
+Facts about a project go into that project's memory, not the workspace's.
+
+About once a week after lines changed, or sooner when a memory grows too long, a tidy run lays the file out
+again: it sorts lines into topics, merges repeats and moves what a newer line replaced to the archive. It never
+takes away a large share of the file at once.
+
+## Dates and who wins
+
+Every line shows the day it was learned or last confirmed, such as "19 Oct". A line you wrote yourself also shows
+your name. Older lines from before memory kept dates show "before" a day.
+
+Teammates follow three rules when lines disagree:
+
+- The newer line wins.
+- A line a person wrote outranks one a teammate learned.
+- A line about code, an account or a provider is checked before a teammate relies on it. When the check shows it
+  is wrong, the teammate says so in its reply, and the next memory run fixes the line.
+
+When another thread teaches memory something new, a running thread learns it at the start of its next turn.
+
+## See and edit memory
+
+Open **Library** and the **Memory** tab. You see a card for the workspace, one for each project with memory, one
+for each teammate, then the latest **Thread summaries**.
+
+- The core's lines are listed first. Topics are folded: open one to see its lines, with how many and the newest
+  date.
+- Hover a line's date to see where it came from. Click it to open the thread it was learned in.
+- Choose **Edit** to open the memory in the document editor. Add, change or delete lines as you would in any
+  document, then choose **Done**.
+
+A project's memory is also on its page and in its settings, under **Open memory**.
+
+Any member can edit memory, and each change is recorded.
+
+<Tip>
+  To teach every teammate a rule, write it in the workspace memory yourself. Lines a person writes
+  outrank what teammates learned.
+</Tip>
+
+### Topics in the editor
+
+A memory is one Markdown file. The lines before the first `## ` heading are the core. Each `## ` heading starts a
+topic, and the paragraph under it says when to read it. To move a line to another topic, move it under that
+heading. To rename a topic, rename its heading.
+
+## Removed lines
+
+Lines that leave memory, replaced, merged, outdated or deleted by a person, go to an archive. Teammates no longer
+load them, but search still finds them.
+
+At the bottom of a memory card, choose **N lines removed** to see them, with why, when, by whom and the thread
+each was learned in. Search them, and choose **Put back** on a line that still holds.
+
+A line you delete minutes after writing it counts as a draft and leaves nothing in the archive.
+
+## Search
+
+The search box at the top of **Library** searches files, memory and past threads at once. Teammates search the
+same way, so they find thread summaries and removed lines when the work calls for them.
