@@ -12,10 +12,12 @@ import {
   DESIGN_ENTRY,
   designBoards,
   designName,
+  designOptionsOf,
   formatMention,
   screenHeight,
   type DesignEditOp,
   type DesignKnob,
+  type DesignOption,
   type DesignView as DesignViewInfo,
 } from '@brigade/contracts'
 import {
@@ -79,6 +81,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -88,6 +92,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { api, blobOfDataUrl, uploadFile } from '@/lib/api'
+import { stepOption } from '@/lib/design-options'
 import { API_URL } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
@@ -175,6 +180,7 @@ function DesignFrame({
   about,
   description,
   libraryHref,
+  picker,
   controls,
 }: {
   /** The design's library folder ("acme/pricing.design"). */
@@ -194,6 +200,8 @@ function DesignFrame({
   description?: string
   /** The design in the library, from the title's menu (not when already there). */
   libraryHref?: string
+  /** First in the title's menu: the options to switch between. */
+  picker?: ReactNode
   /** The panel's own buttons, at the end of the bar: expand, close. */
   controls: ReactNode
 }) {
@@ -620,7 +628,9 @@ function DesignFrame({
               variant="ghost"
               size="sm"
               className="min-w-0 shrink justify-start gap-1.5 px-1.5"
-              title="About this design, export, hand off"
+              title={
+                picker ? 'Switch options, export, hand off' : 'About this design, export, hand off'
+              }
             >
               <Palette aria-hidden className="shrink-0 text-muted-foreground" />
               <span className="truncate font-semibold">{title}</span>
@@ -628,6 +638,7 @@ function DesignFrame({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-80">
+            {picker}
             <DropdownMenuLabel className="flex flex-col gap-1.5 font-normal">
               <span className="text-xs break-words text-muted-foreground">{about}</span>
               {description && <span className="text-xs leading-relaxed">{description}</span>}
@@ -1237,22 +1248,76 @@ export function DesignPanel({
   onClose: () => void
   /** A button to the design in the library (not when already there). */
   libraryLink?: boolean
-  /** The options offered with this one, it included: shown side by side, a row each. */
+  /** The options offered with this one, it included: shown side by side at first, a row each. */
   options?: string[]
 }) {
   const [info, setInfo] = useState<DesignViewInfo>()
   const [expanded, setExpanded] = useState(false)
   const [start, setStart] = useState<Starting>()
+  const sideBySide = !!options && options.length > 1
+  // The option shown, switched from the title's menu; null: all of them side by side.
+  const [picked, setPicked] = useState<string | null>(sideBySide ? null : folder)
   // Another design: its title, not the last one's, until it loads.
   const [shown, setShown] = useState(folder)
   if (shown !== folder) {
     setShown(folder)
     setInfo(undefined)
+    setPicked(sideBySide ? null : folder)
   }
-  const slash = folder.lastIndexOf('/')
-  const parent = slash >= 0 ? folder.slice(0, slash) : ''
-  const title = info?.manifest?.title || designName(folder)
-  const set = options && options.length > 1
+  // The options offered with it, with their titles, from the library.
+  const [offered, setOffered] = useState<DesignOption[]>()
+  const set = designOptionsOf(folder)
+  useEffect(() => {
+    setOffered(undefined)
+    if (!set) return
+    let live = true
+    api<DesignOption[]>('/designs/options', { body: { path: folder } }).then(
+      (o) => live && setOffered(o),
+      () => {},
+    )
+    return () => {
+      live = false
+    }
+  }, [folder, set])
+  const choices: DesignOption[] = offered ?? (options ?? []).map((path) => ({ path, title: null }))
+  const switchable = choices.length > 1
+  const all = picked === null && switchable
+  const current = picked ?? folder
+  const slash = current.lastIndexOf('/')
+  const parent = slash >= 0 ? current.slice(0, slash) : ''
+  const titleOf = (path: string) => choices.find((o) => o.path === path)?.title || designName(path)
+  const title = info?.manifest?.title || titleOf(current)
+
+  // Switching remounts the canvas, which had the focus: the panel takes it back, so the
+  // next arrow still reaches it.
+  const refocus = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    refocus.current?.focus({ preventScroll: true })
+    refocus.current = null
+  }, [current, all])
+
+  function pick(next: string | null) {
+    if (next === picked) return
+    setInfo(undefined)
+    setPicked(next)
+  }
+
+  // Left and right arrows go to the previous and next option, while the panel has the focus.
+  function onKeyDown(e: KeyboardEvent<HTMLElement>) {
+    if (!switchable || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+    const target = e.target as HTMLElement
+    if (
+      target.closest('input, textarea, select, [contenteditable], [role="menu"], [role="slider"]')
+    )
+      return
+    const paths = choices.map((o) => o.path)
+    const next = stepOption(paths, all ? null : current, e.key === 'ArrowRight' ? 1 : -1)
+    if (!next) return
+    e.preventDefault()
+    refocus.current = e.currentTarget
+    pick(next)
+  }
 
   useEffect(() => {
     if (!expanded) return
@@ -1271,30 +1336,56 @@ export function DesignPanel({
     <SidePanel
       aria-label={`Design ${title}`}
       onClose={onClose}
+      onKeyDown={onKeyDown}
+      tabIndex={-1}
       raiseKey={folder}
       // Expanded over the whole page; the same element, so the page keeps its state.
       // The whole screen until the panel sits beside the page: a sheet over a page that
       // scrolls would fight the canvas for the pointer.
       className={cn(
-        'max-xl:top-0 max-xl:h-auto max-xl:rounded-none max-xl:border-t-0',
+        'outline-none max-xl:top-0 max-xl:h-auto max-xl:rounded-none max-xl:border-t-0',
         expanded &&
           'inset-0 z-50 h-auto rounded-none border-0 xl:inset-0 xl:left-0 xl:z-50 xl:w-auto xl:border-l-0',
       )}
     >
       <DesignFrame
-        folder={folder}
-        version={version}
-        {...(set ? { options } : {})}
+        key={all ? '' : current}
+        folder={current}
+        {...(current === folder ? { version } : {})}
+        {...(all ? { options: choices.map((o) => o.path) } : {})}
         threadId={threadId}
         expanded={expanded}
         onExpand={() => setExpanded(true)}
         onInfo={setInfo}
         onStart={setStart}
         title={
-          set
-            ? `${options.length} options for ${designName(parent.replace(/\.options$/, '.design'))}`
+          all
+            ? `${choices.length} options for ${designName(parent.replace(/\.options$/, '.design'))}`
             : title
         }
+        {...(switchable
+          ? {
+              picker: (
+                <>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    {choices.length} options
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={all ? '' : current}
+                    onValueChange={(v) => pick(v || null)}
+                  >
+                    {choices.map((o) => (
+                      <DropdownMenuRadioItem key={o.path} value={o.path}>
+                        <span className="truncate">{titleOf(o.path)}</span>
+                      </DropdownMenuRadioItem>
+                    ))}
+                    <DropdownMenuRadioItem value="">All side by side</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
+                </>
+              ),
+            }
+          : {})}
         about={
           <>
             Design
@@ -1303,9 +1394,9 @@ export function DesignPanel({
             {parent && <span className="font-mono"> · {parent}</span>}
           </>
         }
-        {...(!set && info?.manifest?.description ? { description: info.manifest.description } : {})}
+        {...(!all && info?.manifest?.description ? { description: info.manifest.description } : {})}
         {...(libraryLink
-          ? { libraryHref: `/app/library?design=${encodeURIComponent(folder)}` }
+          ? { libraryHref: `/app/library?design=${encodeURIComponent(current)}` }
           : {})}
         controls={
           <>
