@@ -30,7 +30,7 @@ test.after(async () => {
 })
 
 /** A runner whose turns run until `end(sessionId)`, on a computer with memory as `room` says. */
-function setup(concurrency: number, room: () => boolean) {
+function setup(concurrency: number, room: () => boolean | Promise<boolean>) {
   const events: { sessionId: string; event: AgentEvent; at: number }[] = []
   const ends = new Map<string, () => void>()
   const threads = new Threads({
@@ -176,4 +176,25 @@ test('turns waiting to start keep to a cap lowered meanwhile', async () => {
   await sleep(3_500)
   assert.equal(ids.filter((id) => startedAt(id)).length - 1, 9)
   for (const id of ids) end(id)
+})
+
+test('a cap lowered while a turn reads memory holds that turn back', async () => {
+  let reading: Promise<boolean> | undefined
+  const { threads, message, startedAt, end } = setup(32, () => reading ?? true)
+  const ids = ['m0', 'm1', 'm2', 'm3', 'm4', 'm5']
+  for (const id of ids) message(id)
+  await sleep(600)
+  for (const id of ids) assert.ok(startedAt(id), `${id} started`)
+  // m6 reads memory; the guard stops m5 before the reading comes back.
+  let answer!: (room: boolean) => void
+  reading = new Promise<boolean>((resolve) => (answer = resolve))
+  message('m6')
+  await sleep(200)
+  threads.stoppedForMemory('m5', 'the computer was stuck waiting for memory for 10 s')
+  end('m5')
+  await sleep(30)
+  answer(true)
+  await sleep(50)
+  assert.equal(startedAt('m6'), undefined, 'five run, the cap is five')
+  for (const id of [...ids, 'm6']) end(id)
 })

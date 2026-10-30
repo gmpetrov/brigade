@@ -1939,7 +1939,8 @@ export class Threads {
       const until = Date.now() + MEMORY_WAIT_MS
       let told = false
       while (!this.stopping && !controller.signal.aborted) {
-        if (fits() && (await room())) break
+        // Fits again after reading memory: the guard may lower the cap meanwhile.
+        if (fits() && (await room()) && fits()) break
         // Long enough, with few turns running: none may end soon to give memory back.
         if (fits() && Date.now() >= until && this.started < TURNS_ALWAYS) break
         if (fits() && !told) {
