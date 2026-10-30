@@ -41,8 +41,7 @@ import { env } from './config.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { bridgeScript } from './design-bridge.js'
 import { annotate, applyEdits, EditError } from './design-source.js'
-import { moveFolder, trashFolder } from './library-folders.js'
-import { actorNames } from './library-history.js'
+import { actorNames, trashLibraryFile } from './library-history.js'
 import { readLibraryFile, saveLibraryFile } from './library.js'
 import { discardUpload, readyUpload, uploadBytesKey } from './uploads.js'
 
@@ -672,7 +671,7 @@ export async function checkPick(db: ScopedDb, threadId: string, path: string) {
   const replaces = !!(await db.document.findFirst({
     where: { ...live, path: { startsWith: `${to}/` } },
   }))
-  return { folder, options, to, replaces }
+  return { threadId, folder, options, to, replaces }
 }
 
 /**
@@ -713,8 +712,10 @@ export async function findDesign(db: ScopedDb, path: string): Promise<DesignWher
 }
 
 /**
- * Make the picked option the design: the design it replaces, if any, and the
- * other options go to the trash, where they stay restorable for a while.
+ * Make the picked option the design: its files are copied there, over the
+ * design it replaces, if any (whose earlier versions the library keeps, and
+ * whose files the option lacks go to the trash). The options stay, so the
+ * thread still shows each of them and the person can change their mind.
  */
 export async function applyPick(
   db: ScopedDb,
@@ -722,13 +723,34 @@ export async function applyPick(
   actor: Actor,
   pick: Awaited<ReturnType<typeof checkPick>>,
 ) {
-  if (pick.replaces) await trashFolder(db, scope, actor, pick.to)
-  await moveFolder(db, scope, actor, pick.folder, pick.to)
-  const rest = await db.document.findFirst({
-    where: { kind: 'library', deletedAt: null, path: { startsWith: `${pick.options}/` } },
+  const live = { kind: 'library' as const, deletedAt: null }
+  const files = await db.document.findMany({
+    where: { ...live, path: { startsWith: `${pick.folder}/` } },
+    select: { id: true, path: true, objectKey: true, contentType: true },
   })
-  const folderRow = await db.libraryFolder.findFirst({ where: { path: pick.options } })
-  if (rest || folderRow) await trashFolder(db, scope, actor, pick.options)
+  const copied = new Set<string>()
+  for (const file of files) {
+    const path = pick.to + file.path.slice(pick.folder.length)
+    const bytes = await readLibraryFile(scope, file)
+    // Saved from the thread, as its teammate's own saves are: the design is not a person's edit
+    // that its next save_design would stop at (personEdits).
+    await saveLibraryFile(
+      db,
+      scope,
+      actor,
+      { path, bytes, contentType: file.contentType },
+      { sessionId: pick.threadId },
+    )
+    copied.add(path)
+  }
+  if (pick.replaces) {
+    const stale = await db.document.findMany({
+      where: { ...live, path: { startsWith: `${pick.to}/` } },
+      select: { id: true, path: true },
+    })
+    for (const file of stale.filter((f) => !copied.has(f.path)))
+      await trashLibraryFile(db, scope, actor, file.id)
+  }
   await audit({
     ...scope,
     actor,

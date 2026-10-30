@@ -3780,12 +3780,17 @@ function ChoicesCard({
         {choices.options.map((o) => {
           const offered = o.design?.replace(/\/+$/, '')
           const chosen = picked?.id === o.id || sending === o.id
-          // Once picked, an option from an options folder is the design; the rest are in the trash.
+          // Once picked, an option from an options folder is copied to the design, which it opens;
+          // every option keeps its picture. Picks from before moved the option there and trashed the rest.
           const options = offered && designOptionsOf(offered)
-          const design = options && picked?.id === o.id ? pickedDesignPath(options) : offered
-          const thumbnail =
-            design && library.data?.find((f) => f.path === `${design}/${DESIGN_THUMBNAIL}`)
-          const trashed = !!options && !!picked && picked.id !== o.id
+          const made = options && picked?.id === o.id ? pickedDesignPath(options) : undefined
+          const has = (folder?: string) =>
+            !!folder && !!library.data?.some((f) => f.path.startsWith(`${folder}/`))
+          const design = made && has(made) ? made : offered
+          const thumbnail = [offered, made]
+            .map((d) => d && library.data?.find((f) => f.path === `${d}/${DESIGN_THUMBNAIL}`))
+            .find(Boolean)
+          const trashed = !!options && !!picked && !!library.data && !has(offered) && !has(made)
           return (
             <li
               key={o.id}
