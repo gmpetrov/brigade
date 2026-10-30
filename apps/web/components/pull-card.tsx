@@ -39,9 +39,18 @@ import { cn } from '@/lib/utils'
 /** While it is reviewed, or its conflicts are resolved and it merges, the card follows it. */
 const POLL_MS = 10_000
 
+/** The reloads of every card and merge button showing a pull request, by its path. */
+const shown = new Map<string, Set<() => Promise<void>>>()
+
+/** One of them merged it or asked for something: they all show where it stands now. */
+function reloadShown(path: string) {
+  return Promise.all([...(shown.get(path) ?? [])].map((reload) => reload()))
+}
+
 /**
  * A pull request's state from GitHub, and Merge and Resolve conflicts for it.
- * While it is reviewed, or its conflicts are resolved and it merges, it follows it.
+ * While it is reviewed, or its conflicts are resolved and it merges, it follows it. Merged
+ * from one place (its teammate's merge button), its card in the thread shows it too.
  */
 export function usePull(repository: string, number: number, options: { checks?: boolean } = {}) {
   const path = `/pulls/${repository}/${number}`
@@ -60,12 +69,21 @@ export function usePull(repository: string, number: number, options: { checks?: 
     return () => clearInterval(timer)
   }, [following, reload])
 
+  useEffect(() => {
+    const reloads = shown.get(path) ?? new Set()
+    shown.set(path, reloads.add(reload))
+    return () => {
+      reloads.delete(reload)
+      if (!reloads.size) shown.delete(path)
+    }
+  }, [path, reload])
+
   async function act(run: () => Promise<unknown>) {
     setBusy(true)
     setError(undefined)
     try {
       await run()
-      await reload()
+      await reloadShown(path)
     } catch (e) {
       setError((e as Error).message)
     } finally {
