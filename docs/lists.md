@@ -79,6 +79,11 @@ mission; threads stay where the work happens.
   lines are read under the file's lock, where each one is made with its row, both before the tick
   and when deciding one was removed, so one unticked or added meanwhile keeps the item open; and they are looked at again until the item is done, so a pull request closed
   later still lets it be ticked.
+- **A problem the work shows goes on the list.** When a thread working on a list's items finds a
+  problem that stands in the way of what the list is for (a launch blocker, not a remark in
+  passing), its teammate adds it as a line of its own (`add_item`, in its section) and names the
+  lines it added in its reply, so the person can remove one. Left only in a reply, such a problem
+  was lost: the docs review of a launch checklist found three and the list never saw them.
 - **Work without a pull request is ticked by the teammate** (`complete_item`), only with what
   shows it is done in its note (the tool refuses a tick without one). When done is a matter of
   judgment (a video, copy, a design), the teammate shows it and leaves the tick to the person,

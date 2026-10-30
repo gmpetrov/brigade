@@ -503,6 +503,10 @@ function lists(spec: ThreadSpec) {
       'requests, to the people who follow the list.',
     lines.join('\n'),
     general,
+    'When your work shows a problem that stands in the way of what one of these lists is for (a launch ' +
+      'blocker, not a remark in passing), add it to that list as a line of its own (`add_item`, in the section ' +
+      'it belongs to), rather than leaving it only in your reply; and say in your reply which lines you added ' +
+      'and where, so the person can remove one.',
   ].join('\n\n')
 }
 
