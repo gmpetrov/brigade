@@ -2,7 +2,6 @@
 // What the Lists pages share (docs/lists.md): a list's progress, and its filters.
 import type { ListSummary } from '@brigade/contracts'
 import { useCallback, useEffect, useState } from 'react'
-import { cn } from '@/lib/utils'
 
 export type ListFilter = 'all' | 'open' | 'in_progress' | 'needs_you' | 'done'
 
@@ -38,30 +37,20 @@ export function useListFilter() {
 /** How far a list is: ticked of all, what waits on a person, what is in progress. */
 export function ListProgress({
   list,
-  compact = false,
 }: {
   list: Pick<ListSummary, 'done' | 'total' | 'needsYou' | 'inProgress'>
-  compact?: boolean
 }) {
   const share = list.total ? Math.round((list.done / list.total) * 100) : 0
   const notStarted = list.total - list.done - list.needsYou - list.inProgress
   return (
-    <div
-      className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]',
-        compact && 'gap-x-3 text-[12.5px]',
-      )}
-    >
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
       <div
         role="progressbar"
         aria-label="Done"
         aria-valuenow={share}
         aria-valuemin={0}
         aria-valuemax={100}
-        className={cn(
-          'h-1.5 overflow-hidden rounded-full bg-secondary',
-          compact ? 'w-full' : 'w-48',
-        )}
+        className="h-1.5 w-48 overflow-hidden rounded-full bg-secondary"
       >
         <div className="h-full rounded-full bg-primary" style={{ width: `${share}%` }} />
       </div>
