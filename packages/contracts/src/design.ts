@@ -41,8 +41,9 @@ export const designName = (folder: string) =>
 
 /**
  * Alternatives offered for one design sit together in a folder ending with
- * this: `acme/pricing.options/a-bold.design`. Picking one makes it the design
- * (`acme/pricing.design`) and sends the rest to the trash.
+ * this: `acme/pricing.options/a-bold.design`. Picking one copies it to the
+ * design (`acme/pricing.design`); the options stay, so the choice can still be
+ * seen and reconsidered.
  */
 export const DESIGN_OPTIONS_SUFFIX = '.options'
 
@@ -409,6 +410,15 @@ export const DesignWhere = z.object({
   trashed: z.boolean(),
 })
 export type DesignWhere = z.infer<typeof DesignWhere>
+
+/** One of the options offered for a design, as its panel lists them to switch between. */
+export const DesignOption = z.object({
+  /** Its folder: `a/x.options/b.design`. */
+  path: z.string(),
+  /** Its `design.json` title, when it has one. */
+  title: z.string().nullable(),
+})
+export type DesignOption = z.infer<typeof DesignOption>
 
 /** A design system as a thread's teammate sees it, in its instructions. */
 export const ThreadDesignSystem = z.object({

@@ -1161,7 +1161,7 @@ export const threads = new Hono<AppEnv>()
     )
     // A playbook's run a member writes in joins their Threads, and counts as stepping in.
     await surface(db, thread, true)
-    // A design picked from the thread's options: checked first, moved once the message is sent.
+    // A design picked from the thread's options: checked first, copied once the message is sent.
     const picking = pick ? await checkPick(db, thread.id, pick) : undefined
     // Teammates the message mentions answer it, joining the thread if new; otherwise whoever answered last.
     const mentioned = await mentionedTeammates(db, text)

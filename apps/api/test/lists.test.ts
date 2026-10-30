@@ -12,6 +12,8 @@ import { parseEnv } from 'node:util'
 // - a teammate reads a list, ticks a line by its text, adds one under another, attaches lines;
 // - a merged pull request ticks the items it closes, and adds under those it is only part of
 //   what remains of them;
+// - lines added to a running thread are told by a note, unless the person hands them over in a
+//   message of theirs;
 // - a person unticks one; a line removed from the file shows as gone, its thread still naming it.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
@@ -404,6 +406,26 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
       (await db.listItemPull.findFirst({ where: { pullRequestId: pull.id, closes: false } }))
         ?.settledAt,
     )
+  })
+
+  test('lines added to a running thread: a note tells it, unless the person hands them over in a message', async () => {
+    const notes = () =>
+      sent.filter((m) => m.type === 'thread.note' && String(m.text).includes('Light load test'))
+    const before = notes().length
+    await lists.linkToThread(db, scope, ids.member, ids.file, {
+      sessionId: threadId,
+      items: [{ id: 'lightload1234567', text: 'Light load test' }],
+      quiet: true,
+    })
+    assert.equal(notes().length, before, 'the message the person sends next tells it')
+    await lists.linkToThread(db, scope, ids.member, ids.file, {
+      sessionId: threadId,
+      items: [{ id: 'lightload1234567', text: 'Light load test' }],
+      note: 'Done means 200 sign-ups at once without errors.',
+    })
+    await until(() => notes().length === before + 1, 'the note')
+    assert.match(String(notes().at(-1)!.text), /were added to this thread/)
+    assert.match(String(notes().at(-1)!.text), /Done means 200 sign-ups at once without errors\./)
   })
 
   test('a person unticks an item; a line removed from the file shows as gone', async () => {

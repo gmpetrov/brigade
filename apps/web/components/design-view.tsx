@@ -12,10 +12,12 @@ import {
   DESIGN_ENTRY,
   designBoards,
   designName,
+  designOptionsOf,
   formatMention,
   screenHeight,
   type DesignEditOp,
   type DesignKnob,
+  type DesignOption,
   type DesignView as DesignViewInfo,
 } from '@brigade/contracts'
 import {
@@ -30,9 +32,12 @@ import {
   MessageSquarePlus,
   Minimize2,
   MousePointer2,
+  PanelRightClose,
+  PanelRightOpen,
   Palette,
   Pencil,
   Play,
+  Send,
   Redo2,
   RotateCw,
   SlidersHorizontal,
@@ -60,7 +65,7 @@ import {
   type Selected,
 } from '@/components/design-canvas'
 import { DesignEdits, type DesignChange } from '@/components/design-edits'
-import { DesignProperties } from '@/components/design-properties'
+import { DesignProperties, hex } from '@/components/design-properties'
 import { NewThread, useLastTeammate, useThreadDraft } from '@/components/new-thread'
 import { SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
@@ -76,6 +81,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -85,6 +92,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { api, blobOfDataUrl, uploadFile } from '@/lib/api'
+import { stepOption } from '@/lib/design-options'
 import { API_URL } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
@@ -99,6 +107,9 @@ type Starting = { title: string; description: string; text: string; teammateId?:
 
 /** Wide enough for the properties beside the canvas. */
 const WIDE = 900
+
+/** Whether the member folded the panel beside the canvas, kept across designs. */
+const FOLDED = 'brigade:design-panel-folded'
 
 const mention = (folder: string) => formatMention({ kind: 'design', id: folder, label: folder })
 
@@ -169,6 +180,7 @@ function DesignFrame({
   about,
   description,
   libraryHref,
+  picker,
   controls,
 }: {
   /** The design's library folder ("acme/pricing.design"). */
@@ -188,6 +200,8 @@ function DesignFrame({
   description?: string
   /** The design in the library, from the title's menu (not when already there). */
   libraryHref?: string
+  /** First in the title's menu: the options to switch between. */
+  picker?: ReactNode
   /** The panel's own buttons, at the end of the bar: expand, close. */
   controls: ReactNode
 }) {
@@ -206,6 +220,13 @@ function DesignFrame({
   const [selection, setSelection] = useState<Selected[]>([])
   const [inspected, setInspected] = useState<Record<string, Inspected>>({})
   const [tab, setTab] = useState<'properties' | 'ask' | 'knobs' | null>(null)
+  const [folded, setFolded] = useState(false)
+  useEffect(() => setFolded(localStorage.getItem(FOLDED) === '1'), [])
+  const fold = (next: boolean) => {
+    setFolded(next)
+    if (next) localStorage.setItem(FOLDED, '1')
+    else localStorage.removeItem(FOLDED)
+  }
   const [values, setValues] = useState<Record<string, string>>({})
   const [notice, setNotice] = useState<{ text: string; href?: string; error?: boolean }>()
   const [busy, setBusy] = useState<string>()
@@ -607,7 +628,9 @@ function DesignFrame({
               variant="ghost"
               size="sm"
               className="min-w-0 shrink justify-start gap-1.5 px-1.5"
-              title="About this design, export, hand off"
+              title={
+                picker ? 'Switch options, export, hand off' : 'About this design, export, hand off'
+              }
             >
               <Palette aria-hidden className="shrink-0 text-muted-foreground" />
               <span className="truncate font-semibold">{title}</span>
@@ -615,6 +638,7 @@ function DesignFrame({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-80">
+            {picker}
             <DropdownMenuLabel className="flex flex-col gap-1.5 font-normal">
               <span className="text-xs break-words text-muted-foreground">{about}</span>
               {description && <span className="text-xs leading-relaxed">{description}</span>}
@@ -853,9 +877,22 @@ function DesignFrame({
           />
         )}
 
-        {wide && view && (
+        {wide && view && folded && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            title="Show the panel"
+            aria-label="Show the panel"
+            className="absolute top-2 right-2 z-10 bg-background shadow-sm"
+            onClick={() => fold(false)}
+          >
+            <PanelRightOpen aria-hidden />
+          </Button>
+        )}
+        {wide && view && !folded && (
           <aside aria-label="Properties" className="flex w-[300px] shrink-0 flex-col border-l">
-            <div role="tablist" className="flex gap-1 border-b px-2 py-1.5">
+            <div role="tablist" className="flex items-center gap-1 border-b px-2 py-1.5">
               {(
                 [
                   ['properties', 'Properties'],
@@ -879,6 +916,18 @@ function DesignFrame({
                   {label}
                 </button>
               ))}
+              <span className="flex-1" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                title="Hide the panel"
+                aria-label="Hide the panel"
+                className="text-muted-foreground"
+                onClick={() => fold(true)}
+              >
+                <PanelRightClose aria-hidden />
+              </Button>
             </div>
             {panel === 'knobs' ? (
               knobsPanel
@@ -971,58 +1020,69 @@ function CommentBox({
     setSending(false)
   }
 
+  const on = target
+    ? target.element
+      ? target.element.label || target.element.dataId || target.element.tag
+      : (target.board.title ?? target.board.file)
+    : null
+
   return (
-    <div className="flex flex-col gap-2 border-t px-3 py-2.5">
-      <div className="flex min-w-0 items-center gap-2 text-xs">
-        {target ? (
-          <>
-            <span className="text-muted-foreground">On</span>
-            <code
-              className="min-w-0 truncate rounded bg-muted px-1.5 py-0.5"
-              title={target.element?.path}
+    <div className="p-3">
+      <div className="flex flex-col rounded-lg border bg-card transition-[box-shadow,border-color] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+        {on && (
+          <div className="flex px-2 pt-2">
+            <span
+              className="flex min-w-0 items-center gap-1 rounded-md bg-muted py-0.5 pr-0.5 pl-2 text-xs"
+              title={target?.element?.path}
             >
-              {target.element
-                ? (target.element.dataId ?? target.element.tag)
-                : (target.board.title ?? target.board.file)}
-            </code>
-            {target.element?.label && (
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                “{target.element.label}”
-              </span>
-            )}
-            <button
-              type="button"
-              className="shrink-0 font-medium text-primary hover:underline"
-              onClick={onClear}
-            >
-              The whole design
-            </button>
-          </>
-        ) : (
-          <span className="flex-1 text-muted-foreground">
-            On the whole design. Select an element to point at it.
-          </span>
+              <span className="truncate">{on}</span>
+              <button
+                type="button"
+                aria-label="On the whole design instead"
+                title="On the whole design instead"
+                className="flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                onClick={onClear}
+              >
+                <X aria-hidden className="size-3" />
+              </button>
+            </span>
+          </div>
         )}
-      </div>
-      <Textarea
-        aria-label="Comment"
-        value={body}
-        rows={3}
-        placeholder="What should change?"
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            e.preventDefault()
-            void send()
+        <Textarea
+          aria-label="Comment"
+          value={body}
+          rows={3}
+          placeholder={
+            on
+              ? 'What should change here?'
+              : 'What should change? Select an element to point at it.'
           }
-        }}
-        className="bg-card text-sm"
-      />
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-xs text-muted-foreground">To {to}</span>
-        <Button size="sm" disabled={!body.trim() || sending} onClick={() => void send()}>
-          Send
-        </Button>
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault()
+              void send()
+            }
+          }}
+          className="max-h-60 min-h-20 resize-none rounded-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
+        />
+        <div className="flex items-center gap-2 py-1.5 pr-1.5 pl-3">
+          <span
+            className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
+            title={`To ${to}`}
+          >
+            To {to}
+          </span>
+          <Button
+            size="icon-sm"
+            title="Send (⌘↵)"
+            aria-label="Send"
+            disabled={!body.trim() || sending}
+            onClick={() => void send()}
+          >
+            <Send aria-hidden />
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -1064,7 +1124,7 @@ function Knobs({
                 <input
                   id={id}
                   type="color"
-                  value={/^#[0-9a-f]{6}$/i.test(value) ? value : '#000000'}
+                  value={hex(value)}
                   onChange={(e) => onChange(k, e.target.value)}
                   className="h-7 w-10 cursor-pointer rounded border bg-transparent"
                 />
@@ -1188,22 +1248,76 @@ export function DesignPanel({
   onClose: () => void
   /** A button to the design in the library (not when already there). */
   libraryLink?: boolean
-  /** The options offered with this one, it included: shown side by side, a row each. */
+  /** The options offered with this one, it included: shown side by side at first, a row each. */
   options?: string[]
 }) {
   const [info, setInfo] = useState<DesignViewInfo>()
   const [expanded, setExpanded] = useState(false)
   const [start, setStart] = useState<Starting>()
+  const sideBySide = !!options && options.length > 1
+  // The option shown, switched from the title's menu; null: all of them side by side.
+  const [picked, setPicked] = useState<string | null>(sideBySide ? null : folder)
   // Another design: its title, not the last one's, until it loads.
   const [shown, setShown] = useState(folder)
   if (shown !== folder) {
     setShown(folder)
     setInfo(undefined)
+    setPicked(sideBySide ? null : folder)
   }
-  const slash = folder.lastIndexOf('/')
-  const parent = slash >= 0 ? folder.slice(0, slash) : ''
-  const title = info?.manifest?.title || designName(folder)
-  const set = options && options.length > 1
+  // The options offered with it, with their titles, from the library.
+  const [offered, setOffered] = useState<DesignOption[]>()
+  const set = designOptionsOf(folder)
+  useEffect(() => {
+    setOffered(undefined)
+    if (!set) return
+    let live = true
+    api<DesignOption[]>('/designs/options', { body: { path: folder } }).then(
+      (o) => live && setOffered(o),
+      () => {},
+    )
+    return () => {
+      live = false
+    }
+  }, [folder, set])
+  const choices: DesignOption[] = offered ?? (options ?? []).map((path) => ({ path, title: null }))
+  const switchable = choices.length > 1
+  const all = picked === null && switchable
+  const current = picked ?? folder
+  const slash = current.lastIndexOf('/')
+  const parent = slash >= 0 ? current.slice(0, slash) : ''
+  const titleOf = (path: string) => choices.find((o) => o.path === path)?.title || designName(path)
+  const title = info?.manifest?.title || titleOf(current)
+
+  // Switching remounts the canvas, which had the focus: the panel takes it back, so the
+  // next arrow still reaches it.
+  const refocus = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    refocus.current?.focus({ preventScroll: true })
+    refocus.current = null
+  }, [current, all])
+
+  function pick(next: string | null) {
+    if (next === picked) return
+    setInfo(undefined)
+    setPicked(next)
+  }
+
+  // Left and right arrows go to the previous and next option, while the panel has the focus.
+  function onKeyDown(e: KeyboardEvent<HTMLElement>) {
+    if (!switchable || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+    const target = e.target as HTMLElement
+    if (
+      target.closest('input, textarea, select, [contenteditable], [role="menu"], [role="slider"]')
+    )
+      return
+    const paths = choices.map((o) => o.path)
+    const next = stepOption(paths, all ? null : current, e.key === 'ArrowRight' ? 1 : -1)
+    if (!next) return
+    e.preventDefault()
+    refocus.current = e.currentTarget
+    pick(next)
+  }
 
   useEffect(() => {
     if (!expanded) return
@@ -1222,30 +1336,56 @@ export function DesignPanel({
     <SidePanel
       aria-label={`Design ${title}`}
       onClose={onClose}
+      onKeyDown={onKeyDown}
+      tabIndex={-1}
       raiseKey={folder}
       // Expanded over the whole page; the same element, so the page keeps its state.
       // The whole screen until the panel sits beside the page: a sheet over a page that
       // scrolls would fight the canvas for the pointer.
       className={cn(
-        'max-xl:top-0 max-xl:h-auto max-xl:rounded-none max-xl:border-t-0',
+        'outline-none max-xl:top-0 max-xl:h-auto max-xl:rounded-none max-xl:border-t-0',
         expanded &&
           'inset-0 z-50 h-auto rounded-none border-0 xl:inset-0 xl:left-0 xl:z-50 xl:w-auto xl:border-l-0',
       )}
     >
       <DesignFrame
-        folder={folder}
-        version={version}
-        {...(set ? { options } : {})}
+        key={all ? '' : current}
+        folder={current}
+        {...(current === folder ? { version } : {})}
+        {...(all ? { options: choices.map((o) => o.path) } : {})}
         threadId={threadId}
         expanded={expanded}
         onExpand={() => setExpanded(true)}
         onInfo={setInfo}
         onStart={setStart}
         title={
-          set
-            ? `${options.length} options for ${designName(parent.replace(/\.options$/, '.design'))}`
+          all
+            ? `${choices.length} options for ${designName(parent.replace(/\.options$/, '.design'))}`
             : title
         }
+        {...(switchable
+          ? {
+              picker: (
+                <>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    {choices.length} options
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={all ? '' : current}
+                    onValueChange={(v) => pick(v || null)}
+                  >
+                    {choices.map((o) => (
+                      <DropdownMenuRadioItem key={o.path} value={o.path}>
+                        <span className="truncate">{titleOf(o.path)}</span>
+                      </DropdownMenuRadioItem>
+                    ))}
+                    <DropdownMenuRadioItem value="">All side by side</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
+                </>
+              ),
+            }
+          : {})}
         about={
           <>
             Design
@@ -1254,9 +1394,9 @@ export function DesignPanel({
             {parent && <span className="font-mono"> · {parent}</span>}
           </>
         }
-        {...(!set && info?.manifest?.description ? { description: info.manifest.description } : {})}
+        {...(!all && info?.manifest?.description ? { description: info.manifest.description } : {})}
         {...(libraryLink
-          ? { libraryHref: `/app/library?design=${encodeURIComponent(folder)}` }
+          ? { libraryHref: `/app/library?design=${encodeURIComponent(current)}` }
           : {})}
         controls={
           <>

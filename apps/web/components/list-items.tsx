@@ -2,7 +2,8 @@
 // Lists (docs/lists.md) in the dashboard: a library checklist's lines, handed to teammates.
 // A line work is attached to carries an item marker, which the editor renders as the line's
 // threads and pull requests; the lines picked in the editor go to a teammate, in one thread
-// or a thread each, or to a thread that runs already; a thread shows the items it carries.
+// or a thread each, or to a thread that runs already, as a message that starts its teammate on
+// them; a thread shows the items it carries.
 import {
   newListItemId,
   plainItemText,
@@ -39,6 +40,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { api, useApi, type ThreadSummary } from '@/lib/api'
+import { handToThread } from '@/lib/hand-off'
 import { groupOf } from '@/lib/sub-threads'
 import { cn } from '@/lib/utils'
 
@@ -301,7 +303,8 @@ function HandOffDialog({
     try {
       const items = picked.assign()
       if (mode === 'thread') {
-        await api(`/lists/${file.id}/link`, { body: { sessionId: threadId, items } })
+        // Attached, then handed over as a message of theirs, which starts its teammate on them.
+        await handToThread(api, file, threadId, items, note)
         openThread(threadId)
       } else {
         const { threadIds } = await api<{ threadIds: string[] }>(`/lists/${file.id}/hand-off`, {
@@ -358,7 +361,7 @@ function HandOffDialog({
             </ModeOption>
           )}
           <ModeOption value="thread" title="A thread that runs already">
-            Its teammate is told at its next turn.
+            Its teammate starts on {count > 1 ? 'them' : 'it'} now, as if you wrote in the thread.
           </ModeOption>
         </RadioGroup>
         {mode === 'thread' ? (
@@ -380,36 +383,34 @@ function HandOffDialog({
             </Select>
           </div>
         ) : (
-          <>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="hand-off-teammate">Teammate</Label>
-              <Select value={teammateId} onValueChange={setTeammateId}>
-                <SelectTrigger id="hand-off-teammate" className="w-full">
-                  <SelectValue placeholder="Pick a teammate" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teammates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="hand-off-note">
-                Note <span className="font-normal text-muted-foreground">optional</span>
-              </Label>
-              <Textarea
-                id="hand-off-note"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Start with the cheapest one."
-                rows={2}
-              />
-            </div>
-          </>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="hand-off-teammate">Teammate</Label>
+            <Select value={teammateId} onValueChange={setTeammateId}>
+              <SelectTrigger id="hand-off-teammate" className="w-full">
+                <SelectValue placeholder="Pick a teammate" />
+              </SelectTrigger>
+              <SelectContent>
+                {teammates.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="hand-off-note">
+            Note <span className="font-normal text-muted-foreground">optional</span>
+          </Label>
+          <Textarea
+            id="hand-off-note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Start with the cheapest one."
+            rows={2}
+          />
+        </div>
         {error && <p className="text-sm text-destructive-text">{error}</p>}
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={sending}>

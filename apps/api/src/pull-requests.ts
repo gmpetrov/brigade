@@ -16,6 +16,7 @@ import {
   type PullRequestTracking,
   type PullReview,
   type TeammateReview,
+  resolveConflictsMessage,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { personOfThread, trackLater } from './analytics.js'
@@ -978,19 +979,6 @@ async function resolverDone(db: ScopedDb, scope: Scope, row: MergeRow) {
   void advanceMerge(scope, row.id).catch(console.error)
 }
 
-function resolvePrompt(row: MergeRow, p: GhPull, author: string, method: MergeMethod) {
-  return [
-    `Pull request #${p.number} "${p.title}" in ${row.repository} conflicts with \`${p.base.ref}\`, ` +
-      `and a person asked to merge it once that is resolved: ${p.html_url}`,
-    '',
-    `${author}, fetch \`${p.base.ref}\` and merge it into \`${p.head.ref}\`. Resolve each conflict so ` +
-      `both sides' changes still work, run the typecheck and tests, then commit and push to ` +
-      `\`${p.head.ref}\`. Do not rebase or force-push. When you are done, Brigade merges it ` +
-      `(${method === 'rebase' ? 'rebase, or squashed when GitHub cannot rebase it' : method}) once GitHub allows it. If a conflict needs a person to decide, say so in your ` +
-      'reply and do not push. Do not mention other teammates in your reply.',
-  ].join('\n')
-}
-
 /**
  * An owner or admin asks the teammate that wrote a conflicting pull request to
  * resolve its conflicts, in the thread that opened it; then it merges by itself.
@@ -1051,9 +1039,19 @@ export async function resolveConflicts(
   })
   const undo = () =>
     db.pullRequest.updateMany({ where: { id: row.id }, data: { ...before, note: row.note } })
+  // Brigade's words, not the person's: the thread shows them as a note, and the audit says who asked.
   const outcome = await promptThread(db, scope, thread, {
-    text: resolvePrompt(row, p, author.name, method),
-    memberId: scope.memberId,
+    text: resolveConflictsMessage({
+      number: p.number,
+      title: p.title,
+      repository: row.repository,
+      url: p.html_url,
+      base: p.base.ref,
+      head: p.head.ref,
+      author: author.name,
+      method,
+    }),
+    memberId: null,
     teammateIds: [author.id],
   }).catch(async (error: unknown) => {
     await undo()
