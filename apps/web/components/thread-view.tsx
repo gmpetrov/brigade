@@ -2362,6 +2362,7 @@ export function ThreadItems({
               number={opened.number}
               title={opened.title}
               mergeElsewhere={mergeOffered(i, opened)}
+              childThreads={childThreads}
             />
           )
         return <ToolStep key={item.key} threadId={threadId} item={item} />
