@@ -1,6 +1,6 @@
-// A checklist line as it reads in the document editor (lib/checklist-look): its priority
-// dot hidden, its closing note on a line of its own. Decorations only: the document,
-// its Markdown and what teammates read keep the dot and the note as they are.
+// A checklist line as it reads in the document editor (lib/checklist-look): its closing
+// note on a line of its own. Decorations only: the document, its Markdown and what
+// teammates read keep the note as it is.
 import { createExtension } from '@blocknote/core'
 import type { Node } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
@@ -30,9 +30,8 @@ function decorate(doc: Node) {
         aside: child.type.name === 'item',
       })
     })
-    const { hide, note } = checklistLook(pieces)
+    const { note } = checklistLook(pieces)
     const start = pos + 1
-    if (hide) decorations.push(Decoration.inline(start, start + hide, { class: 'bn-priority' }))
     if (note) {
       // Outside any mark the text before it ends with, so the break is never inside its code.
       decorations.push(
