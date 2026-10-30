@@ -47,3 +47,13 @@ test("a list's row takes its threads' most pressing state", () => {
   assert.equal(status('idle', 'failed'), 'failed')
   assert.equal(status('idle', 'done'), 'idle')
 })
+
+test("a list's threads keep their preview, which their rows show", () => {
+  const live = { ...thread('a', 'idle', 'L'), previewRunning: true } as ThreadSummary
+  const [row] = groupByList([live, thread('b', 'idle', 'L')])
+  assert.equal(row!.previewRunning, false)
+  assert.deepEqual(
+    row!.children?.map((c) => c.previewRunning),
+    [true, false],
+  )
+})

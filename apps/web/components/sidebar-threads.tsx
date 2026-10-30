@@ -22,6 +22,7 @@ import {
   ChevronDown,
   Clock,
   ChevronUp,
+  Eye,
   ListChecks,
   ListFilter,
   MessagesSquare,
@@ -203,6 +204,7 @@ function SubThreads({
   noun?: string
 }) {
   const [all, setAll] = useState(false)
+  const { openPreview } = useThreadPanel()
   // What waits on this member is more than its own status, as for the list's threads.
   const { shown, hidden } = subThreadRows(items, { needsYou, activeId, all, cap: CHILD_CAP })
   return (
@@ -244,6 +246,21 @@ function SubThreads({
                     >
                       <StreamedTitle threadId={c.id} text={c.title} />
                     </FadeText>
+                    {/* Its preview is up, as on its parent's row: a click opens it. */}
+                    {c.previewRunning && (
+                      <span
+                        title="Open preview"
+                        className="hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          openPreview(c.id)
+                        }}
+                      >
+                        <Eye aria-hidden className="size-3 opacity-50" />
+                        <span className="sr-only">Preview running</span>
+                      </span>
+                    )}
                     {state ? (
                       <ThreadStatusIcon {...status} />
                     ) : (
