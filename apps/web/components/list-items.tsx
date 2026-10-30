@@ -2,8 +2,10 @@
 // Lists (docs/lists.md) in the dashboard: a library checklist's lines, handed to teammates.
 // A line work is attached to carries an item marker, which the editor renders as the line's
 // threads and pull requests; the lines picked in the editor go to a teammate, in one thread
-// or a thread each, or to a thread that runs already; a thread shows the items it carries.
+// or a thread each, or to a thread that runs already, as a message that starts its teammate on
+// them; a thread shows the items it carries.
 import {
+  handOffMessage,
   newListItemId,
   plainItemText,
   type ListDetail,
@@ -285,7 +287,25 @@ function HandOffDialog({
     try {
       const items = picked.assign()
       if (mode === 'thread') {
-        await api(`/lists/${file.id}/link`, { body: { sessionId: threadId, items } })
+        // Attached, then handed over as a message of theirs, which starts its teammate on them.
+        await api(`/lists/${file.id}/link`, { body: { sessionId: threadId, items, quiet: true } })
+        const text = handOffMessage(
+          file,
+          items.map((i) => i.text),
+          note,
+        )
+        try {
+          await api(`/threads/${threadId}/messages`, { body: { text } })
+        } catch (e) {
+          // Not sent (it waits on a decision, a daily cap, its computer is off): its teammate is
+          // told by a note at its next turn instead.
+          await api(`/lists/${file.id}/link`, { body: { sessionId: threadId, items } }).catch(
+            () => {},
+          )
+          throw new Error(
+            `Added to the thread, but its teammate could not start on them now: ${(e as Error).message}`,
+          )
+        }
         openThread(threadId)
       } else {
         const { threadIds } = await api<{ threadIds: string[] }>(`/lists/${file.id}/hand-off`, {
@@ -342,7 +362,7 @@ function HandOffDialog({
             </ModeOption>
           )}
           <ModeOption value="thread" title="A thread that runs already">
-            Its teammate is told at its next turn.
+            Its teammate starts on {count > 1 ? 'them' : 'it'} now, as if you wrote in the thread.
           </ModeOption>
         </RadioGroup>
         {mode === 'thread' ? (
@@ -364,36 +384,34 @@ function HandOffDialog({
             </Select>
           </div>
         ) : (
-          <>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="hand-off-teammate">Teammate</Label>
-              <Select value={teammateId} onValueChange={setTeammateId}>
-                <SelectTrigger id="hand-off-teammate" className="w-full">
-                  <SelectValue placeholder="Pick a teammate" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teammates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="hand-off-note">
-                Note <span className="font-normal text-muted-foreground">optional</span>
-              </Label>
-              <Textarea
-                id="hand-off-note"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Start with the cheapest one."
-                rows={2}
-              />
-            </div>
-          </>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="hand-off-teammate">Teammate</Label>
+            <Select value={teammateId} onValueChange={setTeammateId}>
+              <SelectTrigger id="hand-off-teammate" className="w-full">
+                <SelectValue placeholder="Pick a teammate" />
+              </SelectTrigger>
+              <SelectContent>
+                {teammates.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="hand-off-note">
+            Note <span className="font-normal text-muted-foreground">optional</span>
+          </Label>
+          <Textarea
+            id="hand-off-note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Start with the cheapest one."
+            rows={2}
+          />
+        </div>
         {error && <p className="text-sm text-destructive-text">{error}</p>}
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={sending}>

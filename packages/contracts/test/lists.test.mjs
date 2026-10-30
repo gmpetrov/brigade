@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   findLine,
+  handOffMessage,
   insertLine,
   listCounts,
   markLine,
@@ -128,5 +129,78 @@ test('a line copied with its marker is a new line: the first keeps the id', () =
   assert.deepEqual(
     parseList(marked).lines.map((l) => l.id),
     ['aaaaaaaaaaaaaaaa', 'bbbbbbbbbbbbbbbb'],
+  )
+})
+
+test('a line whose text goes on below (a line break typed in it) keeps its marker', () => {
+  // As the editor saves a line where someone typed Shift+Enter before its chips.
+  const broken = [
+    '* [x] Public docs: quickstart, FAQ. *PR #501, 30 Oct* \\',
+    '<!-- item:aaaaaaaaaaaaaaaa -->\\',
+    '',
+    '  * [ ] Propose a structure <!-- item:bbbbbbbbbbbbbbbb -->',
+    '* [ ] Pricing page',
+    'with the plans  ',
+    'and what each includes',
+    '* [ ] Demo video',
+  ].join('\n')
+  const list = parseList(broken)
+  assert.deepEqual(
+    list.lines.map((l) => [l.line, l.end, l.id, l.text]),
+    [
+      [0, 1, 'aaaaaaaaaaaaaaaa', 'Public docs: quickstart, FAQ. *PR #501, 30 Oct*'],
+      [3, 3, 'bbbbbbbbbbbbbbbb', 'Propose a structure'],
+      [4, 6, null, 'Pricing page with the plans and what each includes'],
+      [7, 7, null, 'Demo video'],
+    ],
+  )
+  // Ticked with a note: on its first row, before the line break, which stays.
+  const pricing = setLineDone(broken, list.lines[2], true, 'Live, 30 Oct')
+  assert.equal(pricing.split('\n')[4], '* [x] Pricing page *Live, 30 Oct*')
+  const unticked = setLineDone(broken, list.lines[0], false)
+  assert.equal(unticked.split('\n')[0], '* [ ] Public docs: quickstart, FAQ. *PR #501, 30 Oct* \\')
+  const noted = setLineDone(unticked, parseList(unticked).lines[0], true, 'Done')
+  assert.equal(
+    noted.split('\n')[0],
+    '* [x] Public docs: quickstart, FAQ. *PR #501, 30 Oct* *Done* \\',
+  )
+  assert.equal(parseList(noted).lines[0].id, 'aaaaaaaaaaaaaaaa')
+  // Marked: at the end of its first row, before its line break.
+  const marked = markLine(broken, list.lines[2], 'cccccccccccccccc')
+  assert.equal(marked.split('\n')[4], '* [ ] Pricing page <!-- item:cccccccccccccccc -->')
+  assert.equal(parseList(marked).lines[2].id, 'cccccccccccccccc')
+  // A new line under it goes after all its rows, not between them.
+  const nested = insertLine(
+    broken,
+    list,
+    { after: list.lines[2], nested: true },
+    'Prices',
+    'dddddddddddddddd',
+  )
+  assert.equal(nested.split('\n')[7], '  * [ ] Prices <!-- item:dddddddddddddddd -->')
+  assert.equal(
+    parseList(nested).lines[2].text,
+    'Pricing page with the plans and what each includes',
+  )
+})
+
+test('a note with a link is not put in italics, which the editor breaks a little more each save', () => {
+  const list = parseList(doc)
+  const ticked = setLineDone(doc, list.lines[1], true, 'Live at www.brigade.lol/docs, 30 Oct')
+  assert.equal(
+    ticked.split('\n')[7],
+    '* [x] 🔴 Neon backups: **7 days** and a tested restore. — Live at www.brigade.lol/docs, 30 Oct <!-- item:bbbbbbbbbbbbbbbb -->',
+  )
+})
+
+test('handing lines over is a request naming the list, or the person’s note, then the lines', () => {
+  const file = { id: 'doc1', path: 'Projects/Acme/launch.md' }
+  assert.equal(
+    handOffMessage(file, ['**Docs**: FAQ', 'Pricing']),
+    'Please take these items of @[Projects/Acme/launch.md](document:doc1):\n\n- Docs: FAQ\n- Pricing',
+  )
+  assert.equal(
+    handOffMessage(file, ['Pricing'], '  Start with this one. '),
+    'Start with this one.\n\n- Pricing',
   )
 })
