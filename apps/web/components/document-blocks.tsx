@@ -5,16 +5,21 @@
 import { itemConfig, mentionConfig } from '@brigade/editor'
 import { BlockNoteSchema, defaultInlineContentSpecs, type BlockNoteEditor } from '@blocknote/core'
 import {
+  AddBlockButton,
   createReactInlineContentSpec,
+  DragHandleButton,
   FormattingToolbar,
   FormattingToolbarController,
   getFormattingToolbarItems,
+  SideMenu,
+  SideMenuController,
   SuggestionMenuController,
   useBlockNoteEditor,
   useComponentsContext,
   useDictionary,
   useSelectedBlocks,
   type DefaultReactSuggestionItem,
+  type SideMenuProps,
   type SuggestionMenuProps,
 } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
@@ -207,7 +212,9 @@ export function DocumentBlockNoteView({
           onChange={onChange}
           // With Ask, BlockNote's toolbar with Ask first; else BlockNote's own.
           formattingToolbar={!ask}
+          sideMenu={false}
         >
+          <SideMenuController sideMenu={DocumentSideMenu} />
           {ask && (
             <AskContext.Provider value={ask}>
               <FormattingToolbarController formattingToolbar={AskToolbar} />
@@ -222,6 +229,28 @@ export function DocumentBlockNoteView({
       </ListItemsProvider>
     </div>
   )
+}
+
+/**
+ * BlockNote's side menu, with the drag handle's menu opening on click. Its menu opens on
+ * mousedown, so dragging a line opened it too, and it stayed open over the text, frozen
+ * in place, for the whole drag: pressing the handle now leaves the menu to the click.
+ */
+function DocumentSideMenu(props: SideMenuProps) {
+  return (
+    <SideMenu {...props}>
+      <AddBlockButton />
+      <span className="contents" onPointerDownCapture={pressOnly} onMouseDownCapture={pressOnly}>
+        <DragHandleButton {...props} />
+      </span>
+    </SideMenu>
+  )
+}
+
+/** The press on the handle itself, not on its menu (portaled, yet inside in React's tree). */
+function pressOnly(event: React.PointerEvent | React.MouseEvent) {
+  if (event.button === 0 && event.currentTarget.contains(event.target as Node))
+    event.stopPropagation()
 }
 
 const AskContext = createContext<DocumentAsk | undefined>(undefined)
