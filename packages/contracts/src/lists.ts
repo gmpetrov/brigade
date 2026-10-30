@@ -268,6 +268,8 @@ export const ListSummary = z.object({
   documentId: z.string(),
   path: z.string(),
   title: z.string(),
+  /** The project whose folder holds the file; null: none does. */
+  projectId: z.string().nullable(),
   done: z.number(),
   total: z.number(),
   needsYou: z.number(),
@@ -278,7 +280,7 @@ export const ListSummary = z.object({
 })
 export type ListSummary = z.infer<typeof ListSummary>
 
-export const ListDetail = ListSummary.omit({ next: true }).extend({
+export const ListDetail = ListSummary.omit({ next: true, projectId: true }).extend({
   /** The items work is attached to, in the file's order, then those gone from it. */
   items: z.array(ListItemView),
 })

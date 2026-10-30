@@ -245,6 +245,7 @@ export async function listSummaries(db: ScopedDb, scope: Scope): Promise<ListSum
     ? await itemRows(db, { documentId: { in: parsed.map((f) => f.file.id) } })
     : []
   const all = await views(db, scope, rows, new Map(parsed.flatMap((f) => [...byLine(f.list)])))
+  const projectOfPath = await projectFinder(db)
   return parsed.map(({ file, list }) => {
     const lines = byLine(list)
     const items = all.filter((i) => rows.find((r) => r.id === i.id)?.documentId === file.id)
@@ -255,6 +256,7 @@ export async function listSummaries(db: ScopedDb, scope: Scope): Promise<ListSum
       documentId: file.id,
       path: file.path,
       title: titleOf(file.path, list),
+      projectId: projectOfPath(file.path),
       ...counts(list, items),
       updatedAt: file.updatedAt.toISOString(),
       next: [
@@ -527,14 +529,17 @@ async function itemsFor(
 /** The lines as a bulleted list, for a thread's first message or a note. */
 const bullets = (texts: string[]) => texts.map((t) => `- ${plainItemText(t)}`).join('\n')
 
-/** The project whose folder holds the file: its threads work in it. */
-async function projectOf(db: ScopedDb, path: string) {
+/** Which project's folder holds a file: its threads work in it, and Lists groups it there. */
+async function projectFinder(db: ScopedDb) {
   const projects = await db.project.findMany({
     where: { archivedAt: null },
     select: { id: true, name: true, folder: true },
   })
-  return projects.find((p) => path.startsWith(`${p.folder ?? projectFolder(p.name)}/`))?.id ?? null
+  return (path: string) =>
+    projects.find((p) => path.startsWith(`${p.folder ?? projectFolder(p.name)}/`))?.id ?? null
 }
+
+const projectOf = async (db: ScopedDb, path: string) => (await projectFinder(db))(path)
 
 /** Hand lines to a teammate: one thread for them all, or one each. */
 export async function handOff(

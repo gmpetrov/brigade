@@ -69,8 +69,12 @@ mission; threads stay where the work happens.
 
 ## Dashboard
 
-- **Lists** (`/app/lists`, under Library in the sidebar): every list of the library, last
-  changed first, with its progress and what waits on a person.
+- **Lists** (`/app/lists`, under Library in the sidebar): every list of the library, one row
+  each, grouped by the project whose folder holds it (projects in the order of their last
+  changed list, lists outside every project last), last changed first or by name, with a search.
+  A row's dot alone says where the list stands (orange: a line waits on a person; violet: one is
+  in progress); under its title, its count and that line. Wide, a bar shows how far it is; on a
+  phone, a line under the row once anything is ticked.
 - **In the sidebar**, the threads working on a list's items fold under one row for the list,
   where its first thread would be, as a thread's child threads do (`lib/list-groups.ts`). Its
   title opens the list, its caret folds its threads, and its dot is its threads' most pressing

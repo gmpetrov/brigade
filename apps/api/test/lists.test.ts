@@ -277,6 +277,14 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
     const [summary] = await lists.listSummaries(db, scope)
     assert.equal(summary?.documentId, ids.file)
     assert.equal(summary?.next.length, 2)
+    assert.equal(summary?.projectId, null)
+    // Lists groups a list under the project whose folder holds it.
+    const acme = await db.project.create({
+      data: { name: 'Acme', folder: 'Projects/Acme' },
+    } as never)
+    const [grouped] = await lists.listSummaries(db, scope)
+    assert.equal(grouped?.projectId, acme.id)
+    await db.project.delete({ where: { id: acme.id } })
     await db.session.updateMany({ where: { id: threadId }, data: { status: 'idle' } })
   })
 
