@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
-import { CATALOG_INCOMPLETE_HEADER, ThreadSpec } from '@brigade/contracts'
+import { CATALOG_INCOMPLETE_HEADER, sharedSubschemas, ThreadSpec } from '@brigade/contracts'
 import { NotTaken } from '../src/connection.js'
 import { SpecParts } from '../src/spec-parts.js'
 
@@ -226,7 +226,9 @@ test("a connector's operations come from its App's catalog once, then from the d
   const withCatalog = { ...spec(), connectors: [named('c1', 'v1')] }
   const filled = await new SpecParts({ apiUrl, token: 'token' }, fresh).spec(withCatalog)
   assert.deepEqual(filled.connectors[0]!.operations, catalogOperations)
-  assert.deepEqual(catalogRequests, ['/runner/catalogs/c1?scope=read_write&version=v1'])
+  assert.deepEqual(catalogRequests, [
+    '/runner/catalogs/c1?scope=read_write&version=v1&schemas=shared',
+  ])
   // Specs naming it at once, and another process later: no more fetches.
   const parts = new SpecParts({ apiUrl, token: 'token' }, fresh)
   const again = await Promise.all(Array.from({ length: 3 }, () => parts.spec(withCatalog)))
@@ -235,6 +237,35 @@ test("a connector's operations come from its App's catalog once, then from the d
   // A new version is fetched again.
   await parts.spec({ ...spec(), connectors: [named('c1', 'v2')] })
   assert.equal(catalogRequests.length, 2)
+  await rm(fresh, { recursive: true, force: true })
+})
+
+test('a catalog comes with its schemas shared, and the harness gets them whole', async () => {
+  const fresh = await mkdtemp(join(tmpdir(), 'spec-parts-'))
+  const filter = {
+    type: 'object',
+    description: 'A property filter, long enough to be worth a reference of its own.',
+    properties: { key: { type: 'string' }, value: { type: 'string' } },
+  }
+  const inputSchema = {
+    type: 'object',
+    properties: { a: filter, b: { type: 'array', items: filter } },
+  }
+  const operations = [{ name: 'query', description: 'Query', write: false, inputSchema }]
+  const shared = operations.map((o) => ({ ...o, inputSchema: sharedSubschemas(o.inputSchema) }))
+  assert.match(JSON.stringify(shared), /"\$ref"/)
+  const local = createServer((req, res) => res.end(JSON.stringify(shared)))
+  await new Promise<void>((resolve) => local.listen(0, '127.0.0.1', resolve))
+  const url = `http://127.0.0.1:${(local.address() as AddressInfo).port}`
+  const withCatalog = { ...spec(), connectors: [named('c1', 'v1')] }
+  const filled = await new SpecParts({ apiUrl: url, token: 'token' }, fresh).spec(withCatalog)
+  assert.deepEqual(filled.connectors[0]!.operations, operations)
+  local.close()
+  // Kept shared on the disk, whole again when read from it.
+  const [file] = (await readdir(fresh)).filter((name) => name.startsWith('catalog-'))
+  assert.match(await readFile(join(fresh, file!), 'utf8'), /"\$ref"/)
+  const again = await new SpecParts({ apiUrl: url, token: 'token' }, fresh).spec(withCatalog)
+  assert.deepEqual(again.connectors[0]!.operations, operations)
   await rm(fresh, { recursive: true, force: true })
 })
 

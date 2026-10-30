@@ -9,8 +9,10 @@ import { mkdir, readdir, readFile, rm, stat, utimes, writeFile } from 'node:fs/p
 import { join } from 'node:path'
 import {
   CATALOG_INCOMPLETE_HEADER,
+  CATALOG_SHARED_PARAM,
   ConnectorGrant,
   ThreadSpec,
+  unsharedSubschemas,
   type ApiToRunner,
 } from '@brigade/contracts'
 import { HOME, type RunnerConfig } from './config.js'
@@ -28,6 +30,15 @@ const ATTEMPT_MS = 30_000
 class Refused extends Error {}
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex')
+
+/**
+ * A catalog's operations, kept and fetched with their schemas shared (CATALOG_SHARED_PARAM), each
+ * schema whole again: Claude Code's bridge reads a $ref as any value.
+ */
+const whole = (catalog: unknown) =>
+  ConnectorGrant.shape.operations
+    .parse(catalog)
+    .map((o) => ({ ...o, inputSchema: unsharedSubschemas(o.inputSchema) }))
 
 export class SpecParts {
   /** Parts read lately, by hash, as parsed JSON. */
@@ -137,9 +148,9 @@ export class SpecParts {
     if (Array.isArray(kept)) {
       const now = new Date()
       await utimes(file, now, now).catch(() => undefined)
-      return { operations: ConnectorGrant.shape.operations.parse(kept), keep: true }
+      return { operations: whole(kept), keep: true }
     }
-    const path = `/runner/catalogs/${encodeURIComponent(grant.connectionId)}?scope=${grant.scope}&version=${encodeURIComponent(grant.catalog!.version)}`
+    const path = `/runner/catalogs/${encodeURIComponent(grant.connectionId)}?scope=${grant.scope}&version=${encodeURIComponent(grant.catalog!.version)}&${CATALOG_SHARED_PARAM}=shared`
     let text: string
     let complete = true
     try {
@@ -151,7 +162,7 @@ export class SpecParts {
       console.warn(`${grant.kind} (${grant.connectionId}): no tools in this turn: ${error.message}`)
       return { operations: [], keep: false }
     }
-    const operations = ConnectorGrant.shape.operations.parse(JSON.parse(text))
+    const operations = whole(JSON.parse(text))
     // Not listed now (its server down): for this turn only, asked again at the next.
     if (!complete) {
       console.warn(`${grant.kind} (${grant.connectionId}): its tools could not be listed now`)

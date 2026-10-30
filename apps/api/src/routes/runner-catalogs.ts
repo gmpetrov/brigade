@@ -4,8 +4,8 @@
 // connections. The front sends it to the API Worker's own isolates, never to an object.
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { catalogFor } from '../catalogs.js'
-import { CATALOG_INCOMPLETE_HEADER } from '@brigade/contracts'
+import { catalogFor, unsharedCatalog } from '../catalogs.js'
+import { CATALOG_INCOMPLETE_HEADER, CATALOG_SHARED_PARAM } from '@brigade/contracts'
 import { scoped } from '../db.js'
 import { authenticateRunner } from '../hub.js'
 
@@ -25,7 +25,9 @@ export const runnerCatalogs = new Hono().get('/:connectionId', async (c) => {
   // As it is now, whatever version the spec named: an older one is not kept anywhere. One its
   // server could not list now is empty for this turn, and says so: the runner does not keep it.
   const { text, complete } = await catalogFor(db, scope, connection, grant)
-  return c.body(text, 200, {
+  // Shared as kept (sharedSubschemas); whole, as before, for a runner that does not ask so.
+  const shared = c.req.query(CATALOG_SHARED_PARAM) === 'shared'
+  return c.body(shared ? text : unsharedCatalog(text), 200, {
     'content-type': 'application/json',
     ...(complete ? {} : { [CATALOG_INCOMPLETE_HEADER]: '1' }),
   })

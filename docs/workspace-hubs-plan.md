@@ -229,6 +229,12 @@ Done on 2026-10-29:
   came to 2.7 MB), it went past the 128 MB of its isolate, which several hub objects may share,
   and dropped every socket. A catalog past 2 M characters is reported (`catalog-size`), past 8 M
   its last tools are left out.
+- (2026-10-30) a catalog writes each subschema a tool's input schema repeats once, under
+  `$defs`, and a `$ref` where it was (`sharedSubschemas` in `@brigade/contracts`): PostHog's went
+  from 2.6 M characters to 1.6 M. The API keeps catalogs so and sends them so to a runner that
+  asks (`?schemas=shared`); the runner writes each schema out whole again
+  (`unsharedSubschemas`) before its harness gets it, since Claude Code's bridge turns schemas
+  into zod and reads a `$ref` as any value. A runner that does not ask gets them whole.
 
 To do:
 

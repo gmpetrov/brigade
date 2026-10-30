@@ -2,6 +2,7 @@
 export * from './api.js'
 export * from './attachments.js'
 export * from './cards.js'
+export * from './catalog-schemas.js'
 export * from './chief.js'
 export * from './children.js'
 export * from './commands.js'
