@@ -973,25 +973,68 @@
 }
 
 /* A list's filters (app/app/lists/[id]): only its lines that stand so, under their headings.
- * Where a line stands comes from its marker's chips (components/list-items.tsx). */
+ * Where a line stands comes from its marker's chips (components/list-items.tsx). A line holds
+ * its sub-lines in its own block, so one that does not stand so but has a sub-line that does
+ * stays, dimmed, as their context: hiding it would hide them too. */
 .list-filter-open
-  .bn-block-outer:has(> .bn-block > [data-content-type='checkListItem'][data-checked='true']),
+  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
+    :has(> .bn-block > [data-content-type='checkListItem']:not([data-checked='true'])),
+    :has(
+      > .bn-block > .bn-block-group [data-content-type='checkListItem']:not([data-checked='true'])
+    )
+  ),
 .list-filter-done
-  .bn-block-outer:has(> .bn-block > [data-content-type='checkListItem']:not([data-checked='true'])),
+  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
+    :has(> .bn-block > [data-content-type='checkListItem'][data-checked='true']),
+    :has(> .bn-block > .bn-block-group [data-content-type='checkListItem'][data-checked='true'])
+  ),
 .list-filter-needs_you
-  .bn-block-outer:has(> .bn-block > [data-content-type='checkListItem']):not(
-    :has(> .bn-block > .bn-block-content [data-item-state='needs_you'])
+  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
+    :has(> .bn-block > [data-content-type='checkListItem'] [data-item-state='needs_you']),
+    :has(
+      > .bn-block
+        > .bn-block-group
+        [data-content-type='checkListItem']
+        [data-item-state='needs_you']
+    )
   ),
 .list-filter-in_progress
-  .bn-block-outer:has(> .bn-block > [data-content-type='checkListItem']):not(
-    :has(> .bn-block > .bn-block-content [data-item-state='in_progress'])
-  ),
-:is(.list-filter-open, .list-filter-done, .list-filter-needs_you, .list-filter-in_progress)
-  .bn-block-outer:has(
-    > .bn-block
-      > .bn-block-content:not([data-content-type='checkListItem'], [data-content-type='heading'])
+  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
+    :has(> .bn-block > [data-content-type='checkListItem'] [data-item-state='in_progress']),
+    :has(
+      > .bn-block
+        > .bn-block-group
+        [data-content-type='checkListItem']
+        [data-item-state='in_progress']
+    )
   ) {
   display: none;
+}
+.list-filter-open
+  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
+    :has(> .bn-block > [data-content-type='checkListItem']:not([data-checked='true']))
+  )
+  > .bn-block
+  > .bn-block-content,
+.list-filter-done
+  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
+    :has(> .bn-block > [data-content-type='checkListItem'][data-checked='true'])
+  )
+  > .bn-block
+  > .bn-block-content,
+.list-filter-needs_you
+  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
+    :has(> .bn-block > [data-content-type='checkListItem'] [data-item-state='needs_you'])
+  )
+  > .bn-block
+  > .bn-block-content,
+.list-filter-in_progress
+  .bn-block-outer:not(:has(> .bn-block > [data-content-type='heading'])):not(
+    :has(> .bn-block > [data-content-type='checkListItem'] [data-item-state='in_progress'])
+  )
+  > .bn-block
+  > .bn-block-content {
+  opacity: 0.45;
 }
 
 /* While the sidebar's edge is dragged (components/sidebar-resizer.tsx): it follows the
