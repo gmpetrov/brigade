@@ -8,7 +8,12 @@ import { DesignGallery } from '@/components/design-gallery'
 import { DesignSystems } from '@/components/design-systems'
 import { MemoryCard } from '@/components/memory-card'
 import { useDocumentPanel } from '@/components/document-panel'
-import { join, LibraryBrowser } from '@/components/library-browser'
+import {
+  join,
+  LibraryBrowser,
+  LibraryViewSwitch,
+  useLibrarySort,
+} from '@/components/library-browser'
 import { LibraryTrash } from '@/components/library-trash'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
@@ -54,6 +59,7 @@ function LibraryView() {
   const [tab, setTab] = useState<Tab>('files')
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState<'file' | 'folder' | null>(null)
+  const view = useLibrarySort()
   const documents = useDocumentPanel()
   // What the panel saved: sizes, times and memory previews, once it closes or switches.
   const shown = JSON.stringify(documents.current?.target ?? null)
@@ -214,13 +220,16 @@ function LibraryView() {
         />
       ) : (
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-          <TabsList>
-            <TabsTrigger value="files">Files</TabsTrigger>
-            <TabsTrigger value="memory">Memory</TabsTrigger>
-            <TabsTrigger value="designs">Designs</TabsTrigger>
-            <TabsTrigger value="design-systems">Design systems</TabsTrigger>
-            <TabsTrigger value="trash">Trash</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-2">
+            <TabsList className="min-w-0 justify-start overflow-x-auto">
+              <TabsTrigger value="files">Files</TabsTrigger>
+              <TabsTrigger value="memory">Memory</TabsTrigger>
+              <TabsTrigger value="designs">Designs</TabsTrigger>
+              <TabsTrigger value="design-systems">Design systems</TabsTrigger>
+              <TabsTrigger value="trash">Trash</TabsTrigger>
+            </TabsList>
+            {tab === 'files' && <LibraryViewSwitch view={view} className="ml-auto shrink-0" />}
+          </div>
           <TabsContent value="files" className="flex flex-col gap-4 pt-2">
             <LibraryBrowser
               tree={tree.data}
@@ -234,6 +243,7 @@ function LibraryView() {
               admin={me.data ? isAdmin(me.data) : false}
               creating={creating}
               setCreating={setCreating}
+              view={view}
             />
           </TabsContent>
           <TabsContent value="designs" className="flex flex-col gap-4 pt-2">

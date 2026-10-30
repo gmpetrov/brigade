@@ -15,6 +15,7 @@ import {
 } from '@brigade/contracts'
 import {
   ChevronRight,
+  Clock,
   Download,
   Ellipsis,
   File,
@@ -28,6 +29,7 @@ import {
   Folder,
   FolderLock,
   History,
+  House,
   Library,
   Palette,
   Pencil,
@@ -155,6 +157,7 @@ export function LibraryBrowser({
   admin,
   creating,
   setCreating,
+  view,
 }: {
   tree: LibraryTree | undefined
   /** The folder shown; '' for the top. */
@@ -172,6 +175,8 @@ export function LibraryBrowser({
   admin: boolean
   creating: 'file' | 'folder' | null
   setCreating: (what: 'file' | 'folder' | null) => void
+  /** Recent or Folders, when the page shows its switch itself (useLibrarySort, LibraryViewSwitch). */
+  view?: [LibrarySort, (sort: LibrarySort) => void]
 }) {
   const documents = useDocumentPanel()
   const [panel, setPanel] = useState<{ id: string; tab: 'preview' | 'history' }>()
@@ -181,19 +186,8 @@ export function LibraryBrowser({
   const [access, setAccess] = useState<string>()
   const [error, setError] = useState<string>()
   const [over, setOver] = useState<string | null>(null)
-  const [sort, setSort] = useState<'name' | 'updated'>('updated')
-  // Each member's choice, kept in this browser.
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(SORT_KEY) === 'name') setSort('name')
-    } catch {}
-  }, [])
-  function chooseSort(next: 'name' | 'updated') {
-    setSort(next)
-    try {
-      localStorage.setItem(SORT_KEY, next)
-    } catch {}
-  }
+  const own = useLibrarySort()
+  const [sort, chooseSort] = view ?? own
   const recent = sort === 'updated'
 
   const folders = useMemo(
@@ -560,48 +554,60 @@ export function LibraryBrowser({
   const empty = entries.length === 0
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <nav aria-label="Folder" className="flex min-w-0 flex-wrap items-center gap-1 text-sm">
-          <button
-            type="button"
-            onClick={() => setFolder('')}
-            {...dropTarget('')}
-            className={cn(
-              'rounded-md px-1.5 py-0.5 font-semibold hover:bg-muted',
-              over === '' && 'bg-primary/15',
-            )}
-          >
-            Library
-          </button>
-          {crumbs.map((name, i) => {
-            const path = crumbs.slice(0, i + 1).join('/')
-            return (
-              <span key={path} className="flex items-center gap-1">
-                <ChevronRight aria-hidden className="size-3.5 text-muted-foreground" />
-                <button
-                  type="button"
-                  onClick={() => setFolder(path)}
-                  aria-current={path === folder ? 'page' : undefined}
-                  {...dropTarget(path)}
-                  className={cn(
-                    'rounded-md px-1.5 py-0.5 hover:bg-muted',
-                    path === folder && 'font-semibold',
-                    over === path && 'bg-primary/15',
-                  )}
-                >
-                  {name}
-                </button>
-              </span>
-            )
-          })}
-        </nav>
-        <Tabs value={sort} onValueChange={(v) => chooseSort(v as 'name' | 'updated')}>
-          <TabsList aria-label="View">
-            <TabsTrigger value="updated">Recent</TabsTrigger>
-            <TabsTrigger value="name">Folders</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+      {(crumbs.length > 0 || !view) && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {crumbs.length > 0 && (
+            <nav aria-label="Folder" className="flex min-w-0 flex-wrap items-center gap-1 text-sm">
+              <button
+                type="button"
+                onClick={() => setFolder('')}
+                {...dropTarget('')}
+                aria-label="Library"
+                title="Library"
+                className={cn(
+                  'rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground',
+                  over === '' && 'bg-primary/15',
+                )}
+              >
+                <House aria-hidden className="size-4" />
+              </button>
+              {crumbs.map((name, i) => {
+                const path = crumbs.slice(0, i + 1).join('/')
+                return (
+                  <span key={path} className="flex items-center gap-1">
+                    <ChevronRight aria-hidden className="size-3.5 text-muted-foreground" />
+                    <button
+                      type="button"
+                      onClick={() => setFolder(path)}
+                      aria-current={path === folder ? 'page' : undefined}
+                      {...dropTarget(path)}
+                      className={cn(
+                        'rounded-md px-1.5 py-0.5 hover:bg-muted',
+                        path === folder && 'font-semibold',
+                        over === path && 'bg-primary/15',
+                      )}
+                    >
+                      {name}
+                    </button>
+                  </span>
+                )
+              })}
+            </nav>
+          )}
+          {!view && (
+            <Tabs
+              value={sort}
+              onValueChange={(v) => chooseSort(v as LibrarySort)}
+              className="ml-auto"
+            >
+              <TabsList aria-label="View">
+                <TabsTrigger value="updated">Recent</TabsTrigger>
+                <TabsTrigger value="name">Folders</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+        </div>
+      )}
 
       {creating && (
         <NewItem
@@ -684,6 +690,47 @@ export function LibraryBrowser({
 }
 
 const SORT_KEY = 'brigade.library.sort'
+
+export type LibrarySort = 'name' | 'updated'
+
+/** Recent or Folders: each member's choice, kept in this browser. */
+export function useLibrarySort(): [LibrarySort, (sort: LibrarySort) => void] {
+  const [sort, setSort] = useState<LibrarySort>('updated')
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SORT_KEY) === 'name') setSort('name')
+    } catch {}
+  }, [])
+  function chooseSort(next: LibrarySort) {
+    setSort(next)
+    try {
+      localStorage.setItem(SORT_KEY, next)
+    } catch {}
+  }
+  return [sort, chooseSort]
+}
+
+/** Recent or Folders as two icons, to sit on a row of tabs. */
+export function LibraryViewSwitch({
+  view: [sort, chooseSort],
+  className,
+}: {
+  view: [LibrarySort, (sort: LibrarySort) => void]
+  className?: string
+}) {
+  return (
+    <Tabs value={sort} onValueChange={(v) => chooseSort(v as LibrarySort)} className={className}>
+      <TabsList aria-label="View">
+        <TabsTrigger value="updated" aria-label="Recent" title="Recent">
+          <Clock aria-hidden />
+        </TabsTrigger>
+        <TabsTrigger value="name" aria-label="Folders" title="Folders">
+          <Folder aria-hidden />
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  )
+}
 
 type Entry = { kind: 'folder'; folder: LibraryFolder } | { kind: 'file'; file: LibraryFile }
 
