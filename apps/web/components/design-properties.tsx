@@ -17,6 +17,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import type { Inspected } from '@/components/design-canvas'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 type Style = Record<string, string | null>
@@ -81,28 +82,30 @@ function Field({
     if (v !== tidy(value)) onCommit(v)
   }
   return (
-    <label className={cn('flex min-w-0 items-center gap-1.5', className)} title={title ?? label}>
-      <span className="w-5 shrink-0 text-[11px] text-muted-foreground">{label}</span>
-      <Input
-        value={draft}
-        disabled={disabled}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => commit()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') commit()
-          else if (lengthy && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-            const m = /^(-?\d+(?:\.\d+)?)([a-z%]*)$/i.exec(draft.trim())
-            if (!m) return
-            e.preventDefault()
-            const step = (e.shiftKey ? 10 : 1) * (e.key === 'ArrowUp' ? 1 : -1)
-            const next = `${Math.round((Number(m[1]) + step) * 100) / 100}${m[2] || 'px'}`
-            setDraft(next)
-            commit(next)
-          }
-        }}
-        className="h-7 min-w-0 px-1.5 font-mono text-xs"
-      />
-    </label>
+    <Hint label={title ?? label}>
+      <label className={cn('flex min-w-0 items-center gap-1.5', className)}>
+        <span className="w-5 shrink-0 text-[11px] text-muted-foreground">{label}</span>
+        <Input
+          value={draft}
+          disabled={disabled}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => commit()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit()
+            else if (lengthy && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+              const m = /^(-?\d+(?:\.\d+)?)([a-z%]*)$/i.exec(draft.trim())
+              if (!m) return
+              e.preventDefault()
+              const step = (e.shiftKey ? 10 : 1) * (e.key === 'ArrowUp' ? 1 : -1)
+              const next = `${Math.round((Number(m[1]) + step) * 100) / 100}${m[2] || 'px'}`
+              setDraft(next)
+              commit(next)
+            }
+          }}
+          className="h-7 min-w-0 px-1.5 font-mono text-xs"
+        />
+      </label>
+    </Hint>
   )
 }
 
@@ -158,23 +161,24 @@ function Choice<T extends string>({
   return (
     <div role="radiogroup" aria-label={label} className="flex rounded-md border p-0.5">
       {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          role="radio"
-          aria-checked={value === o.value}
-          title={o.title ?? o.value}
-          disabled={disabled}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            'flex h-6 min-w-0 flex-1 items-center justify-center rounded px-1.5 text-[11px] disabled:opacity-50',
-            value === o.value
-              ? 'bg-secondary font-medium text-foreground'
-              : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          {o.label}
-        </button>
+        <Hint key={o.value} label={o.title ?? o.value}>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={value === o.value}
+            aria-label={o.title}
+            disabled={disabled}
+            onClick={() => onChange(o.value)}
+            className={cn(
+              'flex h-6 min-w-0 flex-1 items-center justify-center rounded px-1.5 text-[11px] disabled:opacity-50',
+              value === o.value
+                ? 'bg-secondary font-medium text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {o.label}
+          </button>
+        </Hint>
       ))}
     </div>
   )
@@ -290,24 +294,27 @@ export function DesignProperties({
             onCommit={set('font-size')}
             disabled={styleOff}
           />
-          <label className="flex min-w-0 items-center gap-1.5" title="Font weight">
-            <span className="w-5 shrink-0 text-[11px] text-muted-foreground">W</span>
-            <select
-              value={v('font-weight')}
-              disabled={styleOff}
-              onChange={(e) => set('font-weight')(e.target.value)}
-              className="h-7 min-w-0 flex-1 rounded-md border bg-transparent px-1 text-xs"
-            >
-              {!WEIGHTS.includes(v('font-weight')) && (
-                <option value={v('font-weight')}>{v('font-weight')}</option>
-              )}
-              {WEIGHTS.map((w) => (
-                <option key={w} value={w}>
-                  {w}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Hint label="Font weight">
+            <label className="flex min-w-0 items-center gap-1.5">
+              <span className="w-5 shrink-0 text-[11px] text-muted-foreground">W</span>
+              <select
+                aria-label="Font weight"
+                value={v('font-weight')}
+                disabled={styleOff}
+                onChange={(e) => set('font-weight')(e.target.value)}
+                className="h-7 min-w-0 flex-1 rounded-md border bg-transparent px-1 text-xs"
+              >
+                {!WEIGHTS.includes(v('font-weight')) && (
+                  <option value={v('font-weight')}>{v('font-weight')}</option>
+                )}
+                {WEIGHTS.map((w) => (
+                  <option key={w} value={w}>
+                    {w}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </Hint>
           <Field
             label="LH"
             title="Line height"

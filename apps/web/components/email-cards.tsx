@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 const json = (value: unknown) =>
@@ -315,13 +316,14 @@ function EmailBody({
             )}
           </div>
           {at && (
-            <time
-              dateTime={email.date}
-              title={at.title}
-              className="flex-none pt-0.5 text-xs text-muted-foreground"
-            >
-              {at.label}
-            </time>
+            <Hint label={at.title}>
+              <time
+                dateTime={email.date}
+                className="flex-none pt-0.5 text-xs text-muted-foreground"
+              >
+                {at.label}
+              </time>
+            </Hint>
           )}
         </div>,
       )}

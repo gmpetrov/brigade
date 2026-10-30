@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import { Hint, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 export function ListGroupRow({
@@ -82,29 +83,32 @@ export function ListGroupRow({
             {/* Folds its threads under it, without opening the list. From the keyboard, a
                 button below it does the same (SubThreads). */}
             {caret && (
-              <span
-                aria-hidden
-                // Folds in place: on a phone, the sidebar stays open (ui/sidebar.tsx).
-                data-keeps-sidebar
-                title={
+              <Hint
+                label={
                   caret.open
                     ? 'Hide its threads'
                     : `Show its ${caret.count} thread${caret.count === 1 ? '' : 's'}`
                 }
-                className="text-muted-foreground hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  caret.onToggle()
-                }}
               >
-                <Play
-                  className={cn(
-                    'size-2 fill-current transition-transform',
-                    caret.open && 'rotate-90',
-                  )}
-                />
-              </span>
+                <span
+                  aria-hidden
+                  // Folds in place: on a phone, the sidebar stays open (ui/sidebar.tsx).
+                  data-keeps-sidebar
+                  className="text-muted-foreground hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    caret.onToggle()
+                  }}
+                >
+                  <Play
+                    className={cn(
+                      'size-2 fill-current transition-transform',
+                      caret.open && 'rotate-90',
+                    )}
+                  />
+                </span>
+              </Hint>
             )}
           </span>
           <span
@@ -122,15 +126,21 @@ export function ListGroupRow({
       </SidebarMenuButton>
       <DropdownMenu open={open} onOpenChange={setOpen}>
         {/* Only on the hovered row, or while its menu is open, as on a thread's row. */}
-        <SidebarMenuAction asChild>
-          <DropdownMenuTrigger
-            aria-label={`${title}: more`}
-            title="More"
-            className="data-[state=open]:bg-sidebar-accent group-hover/menu-item:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0"
-          >
-            <EllipsisVertical />
-          </DropdownMenuTrigger>
-        </SidebarMenuAction>
+        {/* The menu's trigger is the tooltip's, not wrapped in it: it keeps its own data-state. */}
+        <Tooltip>
+          <SidebarMenuAction asChild>
+            <DropdownMenuTrigger
+              asChild
+              aria-label={`${title}: more`}
+              className="data-[state=open]:bg-sidebar-accent group-hover/menu-item:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0"
+            >
+              <TooltipTrigger>
+                <EllipsisVertical />
+              </TooltipTrigger>
+            </DropdownMenuTrigger>
+          </SidebarMenuAction>
+          <TooltipContent>More</TooltipContent>
+        </Tooltip>
         <DropdownMenuContent
           align="start"
           side="right"

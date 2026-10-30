@@ -7,6 +7,7 @@ import type { CodeChange } from '@brigade/contracts'
 import { Undo2 } from 'lucide-react'
 import { comparedTo, type CodeChanges as Changes } from '@/lib/code-changes'
 import { cn } from '@/lib/utils'
+import { Hint } from '@/components/ui/tooltip'
 
 const STATUS: Record<CodeChange['status'], { label: string; className: string }> = {
   M: { label: 'Modified', className: 'text-warning' },
@@ -76,13 +77,14 @@ export function CodeChanges({
                     className="flex min-w-0 flex-1 items-baseline gap-2 py-1 pr-1 pl-2 text-left disabled:cursor-default"
                     onClick={() => onOpen({ path: change.path })}
                   >
-                    <span
-                      aria-label={status.label}
-                      title={status.label}
-                      className={cn('w-2.5 shrink-0 font-mono font-semibold', status.className)}
-                    >
-                      {change.status}
-                    </span>
+                    <Hint label={status.label}>
+                      <span
+                        aria-label={status.label}
+                        className={cn('w-2.5 shrink-0 font-mono font-semibold', status.className)}
+                      >
+                        {change.status}
+                      </span>
+                    </Hint>
                     <span
                       className={cn('shrink-0', deleted && 'text-muted-foreground line-through')}
                     >
@@ -93,20 +95,23 @@ export function CodeChanges({
                     </span>
                   </button>
                   {mayEdit && (
-                    <button
-                      type="button"
-                      disabled={reverting}
-                      aria-label={`Revert ${name}`}
-                      title={
+                    <Hint
+                      label={
                         change.status === 'A'
                           ? `Delete it: it is new ${comparedTo(change).since}`
                           : `Put it back ${comparedTo(change).as}`
                       }
-                      className="mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-foreground/10 hover:text-foreground disabled:opacity-40"
-                      onClick={() => onRevert([change.path])}
                     >
-                      <Undo2 aria-hidden className="size-3.5" />
-                    </button>
+                      <button
+                        type="button"
+                        disabled={reverting}
+                        aria-label={`Revert ${name}`}
+                        className="mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-foreground/10 hover:text-foreground disabled:opacity-40"
+                        onClick={() => onRevert([change.path])}
+                      >
+                        <Undo2 aria-hidden className="size-3.5" />
+                      </button>
+                    </Hint>
                   )}
                 </div>
               )

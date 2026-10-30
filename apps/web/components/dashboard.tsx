@@ -66,6 +66,7 @@ import { TopBar } from '@/components/top-bar'
 import { UpdatePill } from '@/components/update-pill'
 import { UsageMenu } from '@/components/usage-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Hint } from '@/components/ui/tooltip'
 import { DemoBanner } from '@/components/demo-banner'
 import { DemoTour } from '@/components/demo-tour'
 import {
@@ -519,12 +520,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                           <House />
                           <span>Home</span>
                           {waitingOnYou > 0 && (
-                            <span
-                              title={`${waitingOnYou} waiting on you`}
-                              className="bg-warning/15 text-warning ml-auto shrink-0 rounded-full px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums"
-                            >
-                              {waitingOnYou}
-                            </span>
+                            <Hint label={`${waitingOnYou} waiting on you`}>
+                              <span className="bg-warning/15 text-warning ml-auto shrink-0 rounded-full px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums">
+                                {waitingOnYou}
+                              </span>
+                            </Hint>
                           )}
                         </Link>
                       </SidebarMenuButton>
@@ -539,12 +539,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                           <Mail />
                           <span>Inbox</span>
                           {inboxWaiting > 0 && (
-                            <span
-                              title={`${inboxWaiting} ${inboxWaiting === 1 ? 'email' : 'emails'} waiting`}
-                              className="bg-primary/15 text-primary ml-auto shrink-0 rounded-full px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums"
+                            <Hint
+                              label={`${inboxWaiting} ${inboxWaiting === 1 ? 'email' : 'emails'} waiting`}
                             >
-                              {inboxWaiting}
-                            </span>
+                              <span className="bg-primary/15 text-primary ml-auto shrink-0 rounded-full px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums">
+                                {inboxWaiting}
+                              </span>
+                            </Hint>
                           )}
                         </Link>
                       </SidebarMenuButton>
@@ -659,28 +660,28 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         Theme
                         <div className="bg-muted ml-auto flex gap-0.5 rounded-md p-0.5">
                           {THEMES.map(({ value, label, icon: Icon }) => (
-                            <DropdownMenuItem
-                              key={value}
-                              role="menuitemradio"
-                              aria-checked={theme === value}
-                              aria-label={label}
-                              title={label}
-                              onSelect={(e) => {
-                                e.preventDefault()
-                                setTheme(value)
-                              }}
-                              className={cn(
-                                'rounded-sm px-1.5 py-1',
-                                theme === value && 'bg-card shadow-xs',
-                              )}
-                            >
-                              <Icon
+                            <Hint key={value} label={label}>
+                              <DropdownMenuItem
+                                role="menuitemradio"
+                                aria-checked={theme === value}
+                                aria-label={label}
+                                onSelect={(e) => {
+                                  e.preventDefault()
+                                  setTheme(value)
+                                }}
                                 className={cn(
-                                  'size-3.5',
-                                  theme === value ? 'text-foreground' : 'text-muted-foreground',
+                                  'rounded-sm px-1.5 py-1',
+                                  theme === value && 'bg-card shadow-xs',
                                 )}
-                              />
-                            </DropdownMenuItem>
+                              >
+                                <Icon
+                                  className={cn(
+                                    'size-3.5',
+                                    theme === value ? 'text-foreground' : 'text-muted-foreground',
+                                  )}
+                                />
+                              </DropdownMenuItem>
+                            </Hint>
                           ))}
                         </div>
                       </div>
@@ -733,34 +734,36 @@ const TICKET_ASKS: Partial<Record<Ticket['type'], string>> = {
 function ConnectAppsButton() {
   const { isMobile, setOpenMobile } = useSidebar()
   return (
-    <button
-      type="button"
-      title="Connect apps"
-      onClick={() => {
-        if (isMobile) setOpenMobile(false)
-        openConnectApps()
-      }}
-      className="group/apps @container/apps bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border text-[0.9375rem] font-medium outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
-    >
-      <Plug className="hidden size-4 group-data-[collapsible=icon]:block" />
-      {/* Too narrow for the words: the logos alone, never a cut-off label. */}
-      <span className="hidden truncate @[11rem]/apps:inline group-data-[collapsible=icon]:hidden">
-        Connect apps
-      </span>
-      <span aria-hidden className="flex group-data-[collapsible=icon]:hidden">
-        {APP_TILES.map(({ kind, fan }) => (
-          <span
-            key={kind}
-            className={cn(
-              'border-card -ml-1.5 flex size-5 items-center justify-center overflow-hidden rounded-[0.35rem] border bg-white text-[#181717] transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] first:ml-0 motion-reduce:transition-none',
-              fan,
-            )}
-          >
-            <ProviderLogo kind={kind} className={kind === 'stripe' ? 'size-full' : 'size-3.5'} />
-          </span>
-        ))}
-      </span>
-    </button>
+    <Hint label="Connect apps">
+      <button
+        type="button"
+        aria-label="Connect apps"
+        onClick={() => {
+          if (isMobile) setOpenMobile(false)
+          openConnectApps()
+        }}
+        className="group/apps @container/apps bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border text-[0.9375rem] font-medium outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
+      >
+        <Plug className="hidden size-4 group-data-[collapsible=icon]:block" />
+        {/* Too narrow for the words: the logos alone, never a cut-off label. */}
+        <span className="hidden truncate @[11rem]/apps:inline group-data-[collapsible=icon]:hidden">
+          Connect apps
+        </span>
+        <span aria-hidden className="flex group-data-[collapsible=icon]:hidden">
+          {APP_TILES.map(({ kind, fan }) => (
+            <span
+              key={kind}
+              className={cn(
+                'border-card -ml-1.5 flex size-5 items-center justify-center overflow-hidden rounded-[0.35rem] border bg-white text-[#181717] transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] first:ml-0 motion-reduce:transition-none',
+                fan,
+              )}
+            >
+              <ProviderLogo kind={kind} className={kind === 'stripe' ? 'size-full' : 'size-3.5'} />
+            </span>
+          ))}
+        </span>
+      </button>
+    </Hint>
   )
 }
 
@@ -794,15 +797,11 @@ function RoundButton({
   children: ReactNode
 }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={roundButtonClass}
-    >
-      {children}
-    </button>
+    <Hint label={label}>
+      <button type="button" aria-label={label} onClick={onClick} className={roundButtonClass}>
+        {children}
+      </button>
+    </Hint>
   )
 }
 
@@ -858,7 +857,7 @@ export function SidebarToggle({ className }: { className?: string }) {
         className,
       )}
       aria-label={label}
-      title={isMobile ? label : `${label} (${mac ? '⌘' : 'Ctrl+'}B)`}
+      tooltip={isMobile ? label : `${label} (${mac ? '⌘' : 'Ctrl+'}B)`}
     />
   )
 }

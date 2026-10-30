@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint } from '@/components/ui/tooltip'
 import { api, blobOfDataUrl, uploadFile, type ProjectRef } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 import { cn } from '@/lib/utils'
@@ -550,15 +551,16 @@ export function ProjectLogoPreview({ logo, onRemove }: { logo: string; onRemove:
         {/* eslint-disable-next-line @next/next/no-img-element -- a data URL or a stored logo */}
         <img src={logo} alt="Logo" className="size-full object-contain" />
       </span>
-      <button
-        type="button"
-        onClick={onRemove}
-        title="Use the letter instead"
-        aria-label="Remove the logo"
-        className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full border bg-background text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
-      >
-        <X className="size-3" aria-hidden />
-      </button>
+      <Hint label="Use the letter instead">
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remove the logo"
+          className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full border bg-background text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+        >
+          <X className="size-3" aria-hidden />
+        </button>
+      </Hint>
     </span>
   )
 }
@@ -594,23 +596,24 @@ export function ThreadProjectMenu({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-md px-1 hover:bg-accent hover:text-foreground"
-            title={error ?? 'Move to a project'}
-          >
-            {project ? (
-              <>
-                <ProjectIcon project={project} className="size-4 text-[0.625rem]" />
-                <span className="font-medium text-foreground">{project.name}</span>
-              </>
-            ) : (
-              'No project'
-            )}
-            <ChevronDown className="size-3.5 opacity-60" aria-hidden />
-          </button>
-        </DropdownMenuTrigger>
+        <Hint label={error ?? 'Move to a project'}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md px-1 hover:bg-accent hover:text-foreground"
+            >
+              {project ? (
+                <>
+                  <ProjectIcon project={project} className="size-4 text-[0.625rem]" />
+                  <span className="font-medium text-foreground">{project.name}</span>
+                </>
+              ) : (
+                'No project'
+              )}
+              <ChevronDown className="size-3.5 opacity-60" aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+        </Hint>
         <DropdownMenuContent align="start" className="w-56">
           <DropdownMenuLabel className="text-xs text-muted-foreground">Move to</DropdownMenuLabel>
           {pickable.map((p) => (

@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint } from '@/components/ui/tooltip'
 import { api, useApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -25,41 +26,43 @@ type Tone = 'success' | 'failed' | 'idle'
 
 export function Dot({ tone, label }: { tone: Tone; label?: string }) {
   return (
-    <span
-      className={cn(
-        'mt-1.5 size-2 flex-none rounded-full',
-        tone === 'success' && 'bg-success',
-        tone === 'failed' && 'bg-destructive-text',
-        tone === 'idle' && 'bg-muted-foreground/40',
-      )}
-      title={label}
-      aria-label={label}
-      role={label ? 'img' : undefined}
-    />
+    <Hint label={label}>
+      <span
+        className={cn(
+          'mt-1.5 size-2 flex-none rounded-full',
+          tone === 'success' && 'bg-success',
+          tone === 'failed' && 'bg-destructive-text',
+          tone === 'idle' && 'bg-muted-foreground/40',
+        )}
+        aria-label={label}
+        role={label ? 'img' : undefined}
+      />
+    </Hint>
   )
 }
 
 export function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
   return (
-    <button
-      type="button"
-      onClick={() => {
-        void navigator.clipboard.writeText(text).then(() => {
-          setCopied(true)
-          setTimeout(() => setCopied(false), 1500)
-        })
-      }}
-      className="flex-none rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-      aria-label={copied ? 'Copied' : `Copy ${text}`}
-      title={copied ? 'Copied' : 'Copy'}
-    >
-      {copied ? (
-        <Check className="size-3.5" aria-hidden />
-      ) : (
-        <Copy className="size-3.5" aria-hidden />
-      )}
-    </button>
+    <Hint label={copied ? 'Copied' : 'Copy'}>
+      <button
+        type="button"
+        onClick={() => {
+          void navigator.clipboard.writeText(text).then(() => {
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1500)
+          })
+        }}
+        className="flex-none rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+        aria-label={copied ? 'Copied' : `Copy ${text}`}
+      >
+        {copied ? (
+          <Check className="size-3.5" aria-hidden />
+        ) : (
+          <Copy className="size-3.5" aria-hidden />
+        )}
+      </button>
+    </Hint>
   )
 }
 

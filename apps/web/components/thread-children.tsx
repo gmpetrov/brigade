@@ -15,6 +15,7 @@ import { Markdown } from '@/components/markdown'
 import { ThreadStatusIcon } from '@/components/sidebar-threads'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import { api, type ThreadChild } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -61,7 +62,7 @@ export function SendToParent({ threadId, className }: { threadId: string; classN
       size="sm"
       className={className}
       disabled={state === 'sending'}
-      title="Send its last message to the parent thread now, as its report"
+      tooltip="Send its last message to the parent thread now, as its report"
       onClick={() => {
         setState('sending')
         api(`/threads/${threadId}/report`, { body: {} }).then(
@@ -183,14 +184,15 @@ export function ReportedThread({ thread }: { thread: NoteThread }) {
         )}
       >
         {thread.status === 'report' ? (
-          <span
-            role="img"
-            aria-label="reported"
-            title="reported"
-            className="flex size-4 shrink-0 items-center justify-center"
-          >
-            <span className="size-2 rounded-full bg-success" />
-          </span>
+          <Hint label="reported">
+            <span
+              role="img"
+              aria-label="reported"
+              className="flex size-4 shrink-0 items-center justify-center"
+            >
+              <span className="size-2 rounded-full bg-success" />
+            </span>
+          </Hint>
         ) : (
           <ThreadStatusIcon
             status={thread.status ? (NOTE_DOTS[thread.status] ?? 'done') : 'running'}
@@ -299,7 +301,7 @@ export function QueuedReports({
                   setBusy(m.messageId)
                   void onAction(m.messageId, { action: 'steer' }).finally(() => setBusy(undefined))
                 }}
-                title={`Give it to ${teammateName} now, during this turn`}
+                tooltip={`Give it to ${teammateName} now, during this turn`}
               >
                 <CornerDownRight aria-hidden />
                 Steer

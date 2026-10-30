@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { Hint } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 export type StatusTone = 'success' | 'warning' | 'destructive' | 'progress' | 'neutral'
@@ -72,11 +73,12 @@ const DOTS: Record<StatusTone, string> = {
 export function StatusDot({ status, className }: { status: string; className?: string }) {
   const label = LABELS[status] ?? status
   return (
-    <span
-      role="img"
-      aria-label={label}
-      title={label}
-      className={cn('size-2 shrink-0 rounded-full', DOTS[TONES[status] ?? 'neutral'], className)}
-    />
+    <Hint label={label}>
+      <span
+        role="img"
+        aria-label={label}
+        className={cn('size-2 shrink-0 rounded-full', DOTS[TONES[status] ?? 'neutral'], className)}
+      />
+    </Hint>
   )
 }

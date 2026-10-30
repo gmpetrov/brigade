@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint } from '@/components/ui/tooltip'
 import { api, useApi, type ThreadSummary } from '@/lib/api'
 import { groupOf } from '@/lib/sub-threads'
 import { cn } from '@/lib/utils'
@@ -107,27 +108,28 @@ export function ThreadChip({ thread, className }: { thread: ListThread; classNam
   const router = useRouter()
   const waiting = !thread.stuck && groupOf(thread.status) === 'waiting'
   return (
-    <span
-      role="link"
-      tabIndex={-1}
-      title={`${thread.teammate.name} · ${thread.title}`}
-      onClick={(e) => {
-        e.preventDefault()
-        router.push(`/app/threads/${thread.id}`)
-      }}
-      className={cn(
-        'inline-flex h-6 max-w-52 cursor-pointer items-center gap-1.5 rounded-full border bg-card px-2 text-xs font-medium text-foreground hover:bg-accent',
-        waiting && 'border-warning/45 bg-warning/10',
-        className,
-      )}
-    >
-      <ThreadStatusIcon status={thread.status} stuck={thread.stuck} className="size-2.5" />
-      <span className="grid size-4 shrink-0 place-items-center rounded-full bg-primary/15 text-[9.5px] font-extrabold text-primary">
-        {initial(thread.teammate.name)}
+    <Hint label={`${thread.teammate.name} · ${thread.title}`}>
+      <span
+        role="link"
+        tabIndex={-1}
+        onClick={(e) => {
+          e.preventDefault()
+          router.push(`/app/threads/${thread.id}`)
+        }}
+        className={cn(
+          'inline-flex h-6 max-w-52 cursor-pointer items-center gap-1.5 rounded-full border bg-card px-2 text-xs font-medium text-foreground hover:bg-accent',
+          waiting && 'border-warning/45 bg-warning/10',
+          className,
+        )}
+      >
+        <ThreadStatusIcon status={thread.status} stuck={thread.stuck} className="size-2.5" />
+        <span className="grid size-4 shrink-0 place-items-center rounded-full bg-primary/15 text-[9.5px] font-extrabold text-primary">
+          {initial(thread.teammate.name)}
+        </span>
+        <span className="truncate">{thread.title}</span>
+        {waiting && <span className="shrink-0 text-muted-foreground">· needs you</span>}
       </span>
-      <span className="truncate">{thread.title}</span>
-      {waiting && <span className="shrink-0 text-muted-foreground">· needs you</span>}
-    </span>
+    </Hint>
   )
 }
 
@@ -135,23 +137,26 @@ export function ThreadChip({ thread, className }: { thread: ListThread; classNam
 export function PullChip({ pull }: { pull: ListPull }) {
   const merged = pull.state === 'merged'
   return (
-    <span
-      role="link"
-      tabIndex={-1}
-      title={`${pull.repository}#${pull.number} · ${pull.state}${pull.closes ? ' · closes this item' : ''}`}
-      onClick={(e) => {
-        e.preventDefault()
-        window.open(pull.url, '_blank', 'noopener')
-      }}
-      className={cn(
-        'inline-flex h-6 cursor-pointer items-center gap-1 rounded-full border bg-card px-2 font-mono text-[11.5px] text-muted-foreground hover:bg-accent',
-        merged && 'border-primary/35 text-primary',
-        pull.state === 'closed' && 'line-through',
-      )}
+    <Hint
+      label={`${pull.repository}#${pull.number} · ${pull.state}${pull.closes ? ' · closes this item' : ''}`}
     >
-      <GitPullRequest aria-hidden className="size-3" />#{pull.number}
-      {merged && ' merged'}
-    </span>
+      <span
+        role="link"
+        tabIndex={-1}
+        onClick={(e) => {
+          e.preventDefault()
+          window.open(pull.url, '_blank', 'noopener')
+        }}
+        className={cn(
+          'inline-flex h-6 cursor-pointer items-center gap-1 rounded-full border bg-card px-2 font-mono text-[11.5px] text-muted-foreground hover:bg-accent',
+          merged && 'border-primary/35 text-primary',
+          pull.state === 'closed' && 'line-through',
+        )}
+      >
+        <GitPullRequest aria-hidden className="size-3" />#{pull.number}
+        {merged && ' merged'}
+      </span>
+    </Hint>
   )
 }
 

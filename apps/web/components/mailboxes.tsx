@@ -1184,7 +1184,7 @@ function MailboxRules({
                   disabled={order.busy || index === 0}
                   onClick={() => void move(index, -1)}
                   aria-label={`Move "${rule.label}" up`}
-                  title="Move up"
+                  tooltip="Move up"
                 >
                   <ArrowUp />
                 </Button>
@@ -1195,7 +1195,7 @@ function MailboxRules({
                   disabled={order.busy || index === shown.length - 1}
                   onClick={() => void move(index, 1)}
                   aria-label={`Move "${rule.label}" down`}
-                  title="Move down"
+                  tooltip="Move down"
                 >
                   <ArrowDown />
                 </Button>
@@ -1207,7 +1207,7 @@ function MailboxRules({
                     disabled={order.busy}
                     onClick={() => void remove(rule)}
                     aria-label={`Delete "${rule.label}"`}
-                    title="Delete"
+                    tooltip="Delete"
                   >
                     <Trash2 />
                   </Button>

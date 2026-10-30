@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { api, attachmentUrl, uploadAttachment } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { Hint } from '@/components/ui/tooltip'
 
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
 const VIDEO = /^video\/(mp4|webm|quicktime)$/
@@ -359,7 +360,7 @@ export function ComposerMenu({
             size="icon-sm"
             className="rounded-full [&_svg:not([class*='size-'])]:size-5"
             aria-label="Add files and more"
-            title="Add files and more"
+            tooltip="Add files and more"
           >
             <Plus aria-hidden />
           </Button>
@@ -538,18 +539,19 @@ export function UploadList({
               )}
             >
               {src && kind && !u.error ? (
-                <button
-                  type="button"
-                  className={cn(
-                    'relative block size-full',
-                    kind === 'audio' ? 'cursor-pointer' : 'cursor-zoom-in',
-                  )}
-                  onClick={() => setViewing({ name: u.name, src, kind })}
-                  aria-label={`Preview ${u.name}`}
-                  title={u.name}
-                >
-                  <Thumbnail src={src} kind={kind} name={u.name} />
-                </button>
+                <Hint label={u.name}>
+                  <button
+                    type="button"
+                    className={cn(
+                      'relative block size-full',
+                      kind === 'audio' ? 'cursor-pointer' : 'cursor-zoom-in',
+                    )}
+                    onClick={() => setViewing({ name: u.name, src, kind })}
+                    aria-label={`Preview ${u.name}`}
+                  >
+                    <Thumbnail src={src} kind={kind} name={u.name} />
+                  </button>
+                </Hint>
               ) : (
                 <div className="flex size-full flex-col justify-between gap-1 p-2" title={u.name}>
                   <span className="line-clamp-3 font-medium break-all">{u.name}</span>
@@ -676,7 +678,7 @@ export function MediaPreview({
             variant="secondary"
             size="icon-sm"
             aria-label="Close"
-            title="Close (Esc)"
+            tooltip="Close (Esc)"
             className="absolute top-2 right-2 rounded-full shadow-md"
           >
             <X aria-hidden />
@@ -801,32 +803,34 @@ export function MessageAttachments({
           return (
             <li key={a.id}>
               {a.status !== 'ready' ? (
-                <span className={cn(chip, 'opacity-70')} title={a.note}>
-                  {body}
-                </span>
+                <Hint label={a.note}>
+                  <span className={cn(chip, 'opacity-70')}>{body}</span>
+                </Hint>
               ) : kind ? (
-                <button
-                  type="button"
-                  className={cn(
-                    chip,
-                    kind === 'audio' ? 'cursor-pointer' : 'cursor-zoom-in',
-                    'hover:border-ring',
-                  )}
-                  onClick={() => setViewing({ name: a.name, src: attachmentUrl(a.id), kind })}
-                  aria-label={`Preview ${a.name}`}
-                  title={a.name}
-                >
-                  {body}
-                </button>
+                <Hint label={a.name}>
+                  <button
+                    type="button"
+                    className={cn(
+                      chip,
+                      kind === 'audio' ? 'cursor-pointer' : 'cursor-zoom-in',
+                      'hover:border-ring',
+                    )}
+                    onClick={() => setViewing({ name: a.name, src: attachmentUrl(a.id), kind })}
+                    aria-label={`Preview ${a.name}`}
+                  >
+                    {body}
+                  </button>
+                </Hint>
               ) : links ? (
-                <button
-                  type="button"
-                  className={cn(chip, 'hover:border-ring')}
-                  onClick={() => links.open({ path: a.path })}
-                  title={a.path}
-                >
-                  {body}
-                </button>
+                <Hint label={a.path}>
+                  <button
+                    type="button"
+                    className={cn(chip, 'hover:border-ring')}
+                    onClick={() => links.open({ path: a.path })}
+                  >
+                    {body}
+                  </button>
+                </Hint>
               ) : (
                 <a href={attachmentUrl(a.id)} target="_blank" rel="noreferrer" className={chip}>
                   {body}

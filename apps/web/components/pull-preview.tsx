@@ -129,7 +129,7 @@ export function PullPreview({
         aria-pressed={open && inFront}
         disabled={start.busy}
         onClick={onClick}
-        title={
+        tooltip={
           live
             ? 'Opens the change beside the pull request, so you can try it'
             : "Runs this pull request's change, so you can try it"

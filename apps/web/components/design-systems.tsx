@@ -19,6 +19,7 @@ import { Markdown } from '@/components/markdown'
 import { NewThread, useLastTeammate, useThreadDraft } from '@/components/new-thread'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -313,7 +314,7 @@ function SystemCard({
                     variant="ghost"
                     size="icon-sm"
                     aria-label={`Actions for ${system.name}`}
-                    title="Actions"
+                    tooltip="Actions"
                   >
                     <Ellipsis aria-hidden />
                   </Button>
@@ -348,7 +349,9 @@ function SystemCard({
                     className="size-2 rounded-full"
                     style={{ background: facts.primary }}
                   />
-                  <span title={facts.primary}>Primary</span>
+                  <Hint label={facts.primary}>
+                    <span>Primary</span>
+                  </Hint>
                 </Fact>
               )}
               {facts.font && <Fact>{facts.font}</Fact>}

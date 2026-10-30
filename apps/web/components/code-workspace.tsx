@@ -30,6 +30,7 @@ import {
   type CodeTab,
 } from '@/lib/code-tabs'
 import { cn } from '@/lib/utils'
+import { Hint } from '@/components/ui/tooltip'
 
 /** Narrower than this, the tree lays over the editor instead of beside it. */
 const TREE_BESIDE_MIN = 560
@@ -182,69 +183,72 @@ export function CodeWorkspace({
             const dirty = drafts.has(draftKey(threadId, tab.teammateId, tab.path))
             const status = other ? undefined : statuses.get(tab.path)
             return (
-              <div
+              <Hint
                 key={key}
-                role="tab"
-                aria-selected={key === state.active}
-                title={
+                label={
                   other
                     ? `${tab.path}, in ${teammateName(tab.teammateId)}'s copy${inPreview ? ': not the one the preview runs' : ''}`
                     : tab.path
                 }
-                className={cn(
-                  'group flex h-7 shrink-0 items-center gap-1 rounded-md pr-1 pl-2 text-xs',
-                  key === state.active
-                    ? 'bg-muted text-foreground'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                )}
               >
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5"
-                  onClick={() => setCodePanel(threadId, { active: key })}
-                  onAuxClick={(e) => e.button === 1 && close(tab)}
+                <div
+                  role="tab"
+                  aria-selected={key === state.active}
+                  className={cn(
+                    'group flex h-7 shrink-0 items-center gap-1 rounded-md pr-1 pl-2 text-xs',
+                    key === state.active
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                  )}
                 >
-                  <FileCode2 aria-hidden className="size-3.5 shrink-0" />
-                  <span
-                    className={cn(
-                      'max-w-40 truncate',
-                      other && 'italic',
-                      // Changed, as the Changes list says.
-                      status === 'M' && 'text-warning',
-                      status === 'A' && 'text-success',
-                    )}
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5"
+                    onClick={() => setCodePanel(threadId, { active: key })}
+                    onAuxClick={(e) => e.button === 1 && close(tab)}
                   >
-                    {name}
-                  </span>
-                  {other && (
-                    <span className="rounded bg-warning/15 px-1 text-[10px] text-warning not-italic">
-                      {teammateName(tab.teammateId)}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Close ${name}`}
-                  className="grid size-4 place-items-center rounded-sm hover:bg-foreground/10"
-                  onClick={() => close(tab)}
-                >
-                  {/* Unsaved: a dot, which turns into the close button under the pointer. */}
-                  {dirty ? (
-                    <>
-                      <span className="size-1.5 rounded-full bg-primary group-hover:hidden" />
-                      <X aria-hidden className="hidden size-3 group-hover:block" />
-                    </>
-                  ) : (
-                    <X
-                      aria-hidden
+                    <FileCode2 aria-hidden className="size-3.5 shrink-0" />
+                    <span
                       className={cn(
-                        'size-3',
-                        key !== state.active && 'opacity-0 group-hover:opacity-100',
+                        'max-w-40 truncate',
+                        other && 'italic',
+                        // Changed, as the Changes list says.
+                        status === 'M' && 'text-warning',
+                        status === 'A' && 'text-success',
                       )}
-                    />
-                  )}
-                </button>
-              </div>
+                    >
+                      {name}
+                    </span>
+                    {other && (
+                      <span className="rounded bg-warning/15 px-1 text-[10px] text-warning not-italic">
+                        {teammateName(tab.teammateId)}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Close ${name}`}
+                    className="grid size-4 place-items-center rounded-sm hover:bg-foreground/10"
+                    onClick={() => close(tab)}
+                  >
+                    {/* Unsaved: a dot, which turns into the close button under the pointer. */}
+                    {dirty ? (
+                      <>
+                        <span className="size-1.5 rounded-full bg-primary group-hover:hidden" />
+                        <X aria-hidden className="hidden size-3 group-hover:block" />
+                      </>
+                    ) : (
+                      <X
+                        aria-hidden
+                        className={cn(
+                          'size-3',
+                          key !== state.active && 'opacity-0 group-hover:opacity-100',
+                        )}
+                      />
+                    )}
+                  </button>
+                </div>
+              </Hint>
             )
           })}
         </div>
@@ -255,7 +259,9 @@ export function CodeWorkspace({
             size="icon-sm"
             aria-pressed={picking}
             aria-label={picking ? 'Stop picking' : 'Open the code of an element of the page'}
-            title={picking ? 'Stop picking (Esc)' : 'Click an element of the page to open its code'}
+            tooltip={
+              picking ? 'Stop picking (Esc)' : 'Click an element of the page to open its code'
+            }
             className={cn(picking && 'bg-primary/12 text-primary hover:text-primary')}
             onClick={onPick}
           >
@@ -270,7 +276,7 @@ export function CodeWorkspace({
             size="icon-sm"
             aria-pressed={state.tree}
             aria-label={state.tree ? 'Hide the files' : 'Show the files'}
-            title={
+            tooltip={
               state.tree
                 ? 'Hide the files'
                 : changed
@@ -293,7 +299,7 @@ export function CodeWorkspace({
           variant="ghost"
           size="icon-sm"
           aria-label="Close the code"
-          title="Close the code"
+          tooltip="Close the code"
           onClick={onClose ?? (() => setCodePanel(threadId, { open: false }))}
         >
           <X aria-hidden />

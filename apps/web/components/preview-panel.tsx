@@ -40,6 +40,7 @@ import { PanelExpandButton, SidePanel, usePanelFull } from '@/components/side-pa
 /** The preview's name among the panels beside a page. */
 export const PREVIEW_PANEL = 'preview'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import { openCodeTab, setCodePanel, useCodePanel } from '@/lib/code-tabs'
 import { previewOrigin, typedPath, withPath } from '@/lib/preview-path'
@@ -387,12 +388,13 @@ function LivePreviewPanel({
       <div className="flex flex-nowrap items-center gap-1 border-b px-3 py-2.5">
         {/* One bar for the page: where it stands, its address and commit, and its tools. */}
         <div className="@container/bar flex h-8 min-w-0 flex-1 items-center gap-0.5 rounded-lg border bg-card pr-0.5 pl-2.5">
-          <span
-            role="img"
-            aria-label={`Preview: ${status.label}`}
-            title={status.label}
-            className={cn('mr-1 size-2 shrink-0 rounded-full', status.dot)}
-          />
+          <Hint label={status.label}>
+            <span
+              role="img"
+              aria-label={`Preview: ${status.label}`}
+              className={cn('mr-1 size-2 shrink-0 rounded-full', status.dot)}
+            />
+          </Hint>
           {view && (
             <BarButton label="Reload" title="Reload the page" onClick={() => reload()}>
               <RotateCw aria-hidden />
@@ -407,22 +409,22 @@ function LivePreviewPanel({
               }}
             />
           ) : (
-            <span
-              className={cn('min-w-0 flex-1 truncate px-1 text-xs', status.text)}
-              title={`${preview.cwd ? `${preview.cwd}$ ` : ''}${preview.command} (port ${preview.port})`}
+            <Hint
+              label={`${preview.cwd ? `${preview.cwd}$ ` : ''}${preview.command} (port ${preview.port})`}
             >
-              {status.label}
-            </span>
+              <span className={cn('min-w-0 flex-1 truncate px-1 text-xs', status.text)}>
+                {status.label}
+              </span>
+            </Hint>
           )}
           {(preview.repository || preview.commit) && (
-            <span
-              className="hidden shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.6875rem] whitespace-nowrap text-muted-foreground @[22rem]/bar:inline"
-              title={[preview.repository, preview.commit].filter(Boolean).join(' · ')}
-            >
-              {[preview.repository?.split('/').pop(), preview.commit && short(preview.commit)]
-                .filter(Boolean)
-                .join(' · ')}
-            </span>
+            <Hint label={[preview.repository, preview.commit].filter(Boolean).join(' · ')}>
+              <span className="hidden shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.6875rem] whitespace-nowrap text-muted-foreground @[22rem]/bar:inline">
+                {[preview.repository?.split('/').pop(), preview.commit && short(preview.commit)]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            </Hint>
           )}
           {view && (
             <>
@@ -445,7 +447,7 @@ function LivePreviewPanel({
               >
                 {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
               </BarButton>
-              <Button asChild variant="ghost" size="icon-xs" title="Open in a new tab">
+              <Button asChild variant="ghost" size="icon-xs" tooltip="Open in a new tab">
                 <a
                   href={view.url}
                   target="_blank"
@@ -510,7 +512,7 @@ function LivePreviewPanel({
           size="icon-sm"
           onClick={onClose}
           aria-label="Close preview"
-          title="Close"
+          tooltip="Close"
         >
           <X aria-hidden />
         </Button>
@@ -709,7 +711,7 @@ function LivePreviewPanel({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                title="Refresh"
+                tooltip="Refresh"
                 aria-label="Refresh output"
                 onClick={() => void loadLogs()}
               >
@@ -832,7 +834,7 @@ function BarButton({
       size="icon-xs"
       aria-label={label}
       aria-pressed={pressed}
-      title={title}
+      tooltip={title}
       disabled={disabled}
       className={cn('[&_svg]:size-3.5', pressed && 'bg-primary/12 text-primary hover:text-primary')}
       onClick={onClick}
@@ -1115,9 +1117,9 @@ function CodeNotice({
               <span className="shrink-0 font-mono text-foreground">
                 {m.path.split('/').pop()}:{m.line}
               </span>
-              <span className="truncate font-mono text-muted-foreground" title={m.path}>
-                {m.preview}
-              </span>
+              <Hint label={m.path}>
+                <span className="truncate font-mono text-muted-foreground">{m.preview}</span>
+              </Hint>
             </button>
           </li>
         ))}

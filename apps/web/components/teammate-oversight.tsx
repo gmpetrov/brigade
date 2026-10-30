@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Hint } from '@/components/ui/tooltip'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -98,7 +99,7 @@ export function TeammateStatus({
             variant="ghost"
             size="icon-sm"
             aria-label="Refresh"
-            title="Refresh"
+            tooltip="Refresh"
             onClick={refresh}
           >
             <RefreshCw />
@@ -166,15 +167,18 @@ function TimelineChart({ data }: { data: Timeline }) {
               </Link>
               <div className="relative h-3.5 overflow-hidden rounded-sm bg-muted">
                 {t.segments.map((s, i) => (
-                  <div
+                  <Hint
                     key={i}
-                    className={cn('absolute inset-y-0 min-w-0.5', segColor[s.state])}
-                    title={`${stateLabel[s.state]}${s.note ? ` (${s.note})` : ''}: ${new Date(s.from).toLocaleString()} to ${new Date(s.to).toLocaleTimeString()}`}
-                    style={{
-                      left: `${pct(s.from)}%`,
-                      width: `${Math.max(pct(s.to) - pct(s.from), 0.2)}%`,
-                    }}
-                  />
+                    label={`${stateLabel[s.state]}${s.note ? ` (${s.note})` : ''}: ${new Date(s.from).toLocaleString()} to ${new Date(s.to).toLocaleTimeString()}`}
+                  >
+                    <div
+                      className={cn('absolute inset-y-0 min-w-0.5', segColor[s.state])}
+                      style={{
+                        left: `${pct(s.from)}%`,
+                        width: `${Math.max(pct(s.to) - pct(s.from), 0.2)}%`,
+                      }}
+                    />
+                  </Hint>
                 ))}
               </div>
             </div>

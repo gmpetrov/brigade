@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
 import { useApi, type RunLog, type RunLogEntry, type Thread } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { Hint } from '@/components/ui/tooltip'
 
 const SOURCES: { value: RunLogEntry['source']; label: string }[] = [
   { value: 'event', label: 'Thread' },
@@ -373,12 +374,11 @@ export default function RunLogPage() {
                 const { actor, what, detail } = describe(e)
                 return (
                   <TableRow key={`${e.source}${e.seq ?? ''}${i}`} className="hover:bg-transparent">
-                    <TableCell
-                      className="w-0 py-2.5 pl-4 align-top font-mono text-xs text-muted-foreground"
-                      title={new Date(e.at).toLocaleString()}
-                    >
-                      {new Date(e.at).toLocaleTimeString()}
-                    </TableCell>
+                    <Hint label={new Date(e.at).toLocaleString()}>
+                      <TableCell className="w-0 py-2.5 pl-4 align-top font-mono text-xs text-muted-foreground">
+                        {new Date(e.at).toLocaleTimeString()}
+                      </TableCell>
+                    </Hint>
                     <TableCell className="w-0 py-2.5 align-top text-muted-foreground">
                       {actor}
                     </TableCell>

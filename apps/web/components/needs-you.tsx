@@ -23,6 +23,7 @@ import { useThreadPanel } from '@/components/thread-panel'
 import { TicketRow } from '@/components/ticket-row'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Hint } from '@/components/ui/tooltip'
 import { api, waitingItemKey, type PullWaiting, type Ticket } from '@/lib/api'
 import type { EditedEmail } from '@/components/email-cards'
 
@@ -220,16 +221,17 @@ function SentLine({ sent }: { sent: Sent }) {
         ·
       </span>
       {sent.thread ? (
-        <Link
-          href={`/app/threads/${sent.thread}`}
-          title="Open thread"
-          className="group flex min-w-0 items-center gap-1 text-muted-foreground hover:text-foreground"
-        >
-          <span className="truncate underline decoration-muted-foreground/50 underline-offset-4 group-hover:decoration-foreground">
-            {sent.title}
-          </span>
-          <ArrowUpRight className="size-3.5 flex-none" aria-hidden />
-        </Link>
+        <Hint label="Open thread">
+          <Link
+            href={`/app/threads/${sent.thread}`}
+            className="group flex min-w-0 items-center gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <span className="truncate underline decoration-muted-foreground/50 underline-offset-4 group-hover:decoration-foreground">
+              {sent.title}
+            </span>
+            <ArrowUpRight className="size-3.5 flex-none" aria-hidden />
+          </Link>
+        </Hint>
       ) : (
         <span className="min-w-0 truncate text-muted-foreground">{sent.title}</span>
       )}

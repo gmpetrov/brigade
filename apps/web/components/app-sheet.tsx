@@ -51,6 +51,7 @@ import {
 } from '@/lib/api'
 import { onSignIn, openSignIn } from '@/lib/sign-in-window'
 import { cn } from '@/lib/utils'
+import { Hint } from '@/components/ui/tooltip'
 
 type Kind = Connection['kind']
 type Scope = 'none' | 'read' | 'read_write'
@@ -590,17 +591,18 @@ function Account({
   return (
     <div className="flex flex-col gap-3 px-4 py-3">
       <div className="flex min-h-8 items-center gap-3">
-        <span
-          className={cn(
-            'size-2 shrink-0 rounded-full',
-            c.status === 'needs_reauth' ? 'bg-destructive-text' : 'bg-success',
-          )}
-          title={c.status === 'needs_reauth' ? 'Reconnect needed' : 'Connected'}
-        >
-          <span className="sr-only">
-            {c.status === 'needs_reauth' ? 'Reconnect needed' : 'Connected'}
+        <Hint label={c.status === 'needs_reauth' ? 'Reconnect needed' : 'Connected'}>
+          <span
+            className={cn(
+              'size-2 shrink-0 rounded-full',
+              c.status === 'needs_reauth' ? 'bg-destructive-text' : 'bg-success',
+            )}
+          >
+            <span className="sr-only">
+              {c.status === 'needs_reauth' ? 'Reconnect needed' : 'Connected'}
+            </span>
           </span>
-        </span>
+        </Hint>
         {/* The account itself: a mailbox, a Stripe account, a GitHub owner; a custom app's name. */}
         <span className="min-w-0 flex-1 truncate font-medium">{c.externalAccount ?? c.label}</span>
         {/* Only its owner can sign in to it again; anyone else would add an account of their own. */}

@@ -51,6 +51,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint } from '@/components/ui/tooltip'
 import { api, ApiError, attachmentUrl, useApi } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 import {
@@ -110,15 +111,16 @@ function FilterChip({
   return (
     <span className="inline-flex max-w-full items-center rounded-full border bg-card pr-1 hover:border-ring">
       {children}
-      <button
-        type="button"
-        aria-label={`Clear the ${what} filter`}
-        title="Clear"
-        onClick={onClear}
-        className="flex size-5 flex-none items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-secondary hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-      >
-        <X className="size-3.5" aria-hidden />
-      </button>
+      <Hint label="Clear">
+        <button
+          type="button"
+          aria-label={`Clear the ${what} filter`}
+          onClick={onClear}
+          className="flex size-5 flex-none items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-secondary hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          <X className="size-3.5" aria-hidden />
+        </button>
+      </Hint>
     </span>
   )
 }
@@ -414,8 +416,9 @@ export function InboxView() {
               variant="ghost"
               size="icon-sm"
               className="flex-none self-center text-muted-foreground"
+              tooltip="Mailboxes"
             >
-              <Link href="/app/inbox/mailboxes" aria-label="Mailboxes" title="Mailboxes">
+              <Link href="/app/inbox/mailboxes" aria-label="Mailboxes">
                 <Settings />
               </Link>
             </Button>
@@ -718,9 +721,9 @@ function NextStep({ item }: { item: InboxItem }) {
         {trouble ? destination(item) : 'No teammate on it'}
       </span>
     ) : item.outcome?.kind === 'handled' ? (
-      <span className="min-w-0 truncate" title={item.outcome.note}>
-        handled it without a reply
-      </span>
+      <Hint label={item.outcome.note}>
+        <span className="min-w-0 truncate">handled it without a reply</span>
+      </Hint>
     ) : null
   return (
     <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
@@ -894,7 +897,7 @@ function Reader({
             className="size-8 flex-none"
             disabled={busy}
             aria-label={done ? 'Not done' : 'Done'}
-            title={done ? 'Not done' : 'Done'}
+            tooltip={done ? 'Not done' : 'Done'}
             onClick={() => void toggleDone()}
           >
             {done ? <Undo2 /> : <Check />}
@@ -902,15 +905,14 @@ function Reader({
         </div>
         {unowned ? (
           // Nobody is on it: what to do with it, and with the mail that comes next, together.
-          <div
-            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-2.5"
-            title={d.reason ?? undefined}
-          >
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-2.5">
             <span aria-hidden className="size-1.5 flex-none rounded-full bg-warning" />
-            <span className={cn('min-w-0 flex-1 text-sm', trouble && 'text-warning')}>
-              {state}
-              {about && <span className="text-muted-foreground"> · {about}</span>}
-            </span>
+            <Hint label={d.reason ?? undefined}>
+              <span className={cn('min-w-0 flex-1 text-sm', trouble && 'text-warning')}>
+                {state}
+                {about && <span className="text-muted-foreground"> · {about}</span>}
+              </span>
+            </Hint>
             <div className="flex flex-none items-center gap-1">
               {!d.hidden && handButton(true)}
               {d.reason && d.addRule && (
@@ -1186,9 +1188,9 @@ function Message({
     <div className="flex w-full items-start gap-3 text-left">
       {avatar}
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-semibold" title={m.from}>
-          {name}
-        </span>
+        <Hint label={m.from}>
+          <span className="truncate text-sm font-semibold">{name}</span>
+        </Hint>
         <span className="truncate text-xs text-muted-foreground">
           to {m.to.join(', ')}
           {m.cc.length > 0 && ` · Cc ${m.cc.join(', ')}`}
@@ -1206,9 +1208,11 @@ function Message({
           {sent}
         </span>
       )}
-      <time dateTime={m.at} title={date} className="flex-none text-xs text-muted-foreground">
-        {when}
-      </time>
+      <Hint label={date}>
+        <time dateTime={m.at} className="flex-none text-xs text-muted-foreground">
+          {when}
+        </time>
+      </Hint>
     </div>
   )
 
@@ -1323,19 +1327,22 @@ function MailFiles({ m }: { m: InboxMessage }) {
           return (
             <li key={`${a.id}-${i}`}>
               {kind ? (
-                <button
-                  type="button"
-                  className={cn(chip, kind === 'audio' ? 'cursor-pointer' : 'cursor-zoom-in')}
-                  onClick={() => setViewing({ name: a.name, src, kind })}
-                  aria-label={`Preview ${a.name}`}
-                  title={a.name}
-                >
-                  {body}
-                </button>
+                <Hint label={a.name}>
+                  <button
+                    type="button"
+                    className={cn(chip, kind === 'audio' ? 'cursor-pointer' : 'cursor-zoom-in')}
+                    onClick={() => setViewing({ name: a.name, src, kind })}
+                    aria-label={`Preview ${a.name}`}
+                  >
+                    {body}
+                  </button>
+                </Hint>
               ) : (
-                <a href={src} target="_blank" rel="noreferrer" className={chip} title={a.name}>
-                  {body}
-                </a>
+                <Hint label={a.name}>
+                  <a href={src} target="_blank" rel="noreferrer" className={chip}>
+                    {body}
+                  </a>
+                </Hint>
               )}
             </li>
           )

@@ -17,6 +17,7 @@ import type { DocumentEditorProps } from '@/components/document-editor'
 import { agentTyping, typeNextUpdate, type Writer } from '@/components/document-typing'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Hint } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -249,14 +250,14 @@ function EditorStatus({
         <span className="flex items-center gap-2">
           <span className="flex -space-x-1.5">
             {others.slice(0, 4).map((o) => (
-              <span
-                key={o.name}
-                title={o.name}
-                className="flex size-6 items-center justify-center rounded-full border-2 border-card text-[10px] font-semibold text-white"
-                style={{ backgroundColor: o.color }}
-              >
-                {o.name.slice(0, 1).toUpperCase()}
-              </span>
+              <Hint key={o.name} label={o.name}>
+                <span
+                  className="flex size-6 items-center justify-center rounded-full border-2 border-card text-[10px] font-semibold text-white"
+                  style={{ backgroundColor: o.color }}
+                >
+                  {o.name.slice(0, 1).toUpperCase()}
+                </span>
+              </Hint>
             ))}
           </span>
           {others.length === 1 ? `${others[0]!.name} is here` : `${others.length} others here`}

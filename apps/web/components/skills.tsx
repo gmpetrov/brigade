@@ -49,6 +49,7 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint } from '@/components/ui/tooltip'
 import { api, uploadFile, useApi } from '@/lib/api'
 import { ProjectIcon } from '@/components/projects'
 
@@ -245,23 +246,24 @@ export function Skills({ admin }: { admin: boolean }) {
   const skillRow = (s: Skill, inPack?: SkillPack) => (
     <div key={s.id} className={`flex items-center gap-3 py-2.5 pr-3 ${inPack ? 'pl-15' : 'pl-4'}`}>
       {!inPack && <AuthorImage skill={s} />}
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 flex-col text-left"
-        title={s.description}
-        onClick={() => (admin ? setDraft({ ...s }) : setViewing(s))}
-      >
-        <span
-          className={`truncate font-mono text-sm font-medium ${s.active ? '' : 'text-muted-foreground'}`}
+      <Hint label={s.description}>
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 flex-col text-left"
+          onClick={() => (admin ? setDraft({ ...s }) : setViewing(s))}
         >
-          /{s.name}
-        </span>
-        <span className="truncate text-xs text-muted-foreground">
-          {inPack
-            ? s.description
-            : [where(s), s.updatedBy?.name, timeAgo(s.updatedAt)].filter(Boolean).join(' · ')}
-        </span>
-      </button>
+          <span
+            className={`truncate font-mono text-sm font-medium ${s.active ? '' : 'text-muted-foreground'}`}
+          >
+            /{s.name}
+          </span>
+          <span className="truncate text-xs text-muted-foreground">
+            {inPack
+              ? s.description
+              : [where(s), s.updatedBy?.name, timeAgo(s.updatedAt)].filter(Boolean).join(' · ')}
+          </span>
+        </button>
+      </Hint>
       {admin && (
         <>
           <Switch
@@ -301,7 +303,7 @@ export function Skills({ admin }: { admin: boolean }) {
             <Button
               variant="outline"
               size="sm"
-              title="A GitHub repository, a zip of skill folders, a .skill or a SKILL.md"
+              tooltip="A GitHub repository, a zip of skill folders, a .skill or a SKILL.md"
               onClick={() => setImporting(true)}
             >
               <Upload aria-hidden />
@@ -332,36 +334,37 @@ export function Skills({ admin }: { admin: boolean }) {
                 <div key={p.id} className="flex flex-col divide-y">
                   <div className="flex items-center gap-3 py-2.5 pr-3 pl-4">
                     <PackImage pack={p} />
-                    <button
-                      type="button"
-                      className="flex min-w-0 flex-1 flex-col text-left"
-                      title={sourceLabel(p.source)}
-                      aria-expanded={expanded}
-                      onClick={() => {
-                        const next = new Set(open)
-                        if (expanded) next.delete(p.id)
-                        else next.add(p.id)
-                        setOpen(next)
-                      }}
-                    >
-                      <span className="flex min-w-0 items-center gap-1">
-                        <span
-                          className={`truncate text-sm font-medium ${p.enabled ? '' : 'text-muted-foreground'}`}
-                        >
-                          {p.name}
+                    <Hint label={sourceLabel(p.source)}>
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 flex-col text-left"
+                        aria-expanded={expanded}
+                        onClick={() => {
+                          const next = new Set(open)
+                          if (expanded) next.delete(p.id)
+                          else next.add(p.id)
+                          setOpen(next)
+                        }}
+                      >
+                        <span className="flex min-w-0 items-center gap-1">
+                          <span
+                            className={`truncate text-sm font-medium ${p.enabled ? '' : 'text-muted-foreground'}`}
+                          >
+                            {p.name}
+                          </span>
+                          <ChevronRight
+                            aria-hidden
+                            className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`}
+                          />
                         </span>
-                        <ChevronRight
-                          aria-hidden
-                          className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`}
-                        />
-                      </span>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {on === inPack.length
-                          ? `${inPack.length} skill${inPack.length === 1 ? '' : 's'}`
-                          : `${on} of ${inPack.length} on`}{' '}
-                        · {where(p)}
-                      </span>
-                    </button>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {on === inPack.length
+                            ? `${inPack.length} skill${inPack.length === 1 ? '' : 's'}`
+                            : `${on} of ${inPack.length} on`}{' '}
+                          · {where(p)}
+                        </span>
+                      </button>
+                    </Hint>
                     {admin && (
                       <>
                         <Switch

@@ -3,6 +3,7 @@ import { Maximize2, Minimize2, RotateCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import {
   KeyboardField,
   TouchButtons,
@@ -160,28 +161,29 @@ export function DesktopScreen({
 
   if (mode === 'thumbnail')
     return (
-      <button
-        type="button"
-        onClick={onOpen}
-        aria-label={`Open ${teammateName}'s computer`}
-        title="Open the computer"
-        className="group relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border bg-black outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-      >
-        {/* The screen shows, but the click is the button's: control is once it is open. */}
-        <span className="pointer-events-none flex size-full items-center justify-center">
-          {screen}
-        </span>
-        <Badge
-          variant="secondary"
-          className="absolute top-2 left-2 bg-background/85 text-muted-foreground"
+      <Hint label="Open the computer">
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`Open ${teammateName}'s computer`}
+          className="group relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border bg-black outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
-          {control ? 'You have control' : 'View only'}
-        </Badge>
-        <span className="absolute inset-0 flex items-center justify-center gap-2 bg-background/60 text-sm font-semibold opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-          <Maximize2 aria-hidden className="size-4" />
-          Open computer
-        </span>
-      </button>
+          {/* The screen shows, but the click is the button's: control is once it is open. */}
+          <span className="pointer-events-none flex size-full items-center justify-center">
+            {screen}
+          </span>
+          <Badge
+            variant="secondary"
+            className="absolute top-2 left-2 bg-background/85 text-muted-foreground"
+          >
+            {control ? 'You have control' : 'View only'}
+          </Badge>
+          <span className="absolute inset-0 flex items-center justify-center gap-2 bg-background/60 text-sm font-semibold opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            <Maximize2 aria-hidden className="size-4" />
+            Open computer
+          </span>
+        </button>
+      </Hint>
     )
 
   return (
@@ -221,7 +223,7 @@ export function DesktopScreen({
           size="icon-sm"
           onClick={reload}
           aria-label="Reconnect"
-          title="Reconnect"
+          tooltip="Reconnect"
         >
           <RotateCw aria-hidden />
         </Button>
@@ -232,7 +234,7 @@ export function DesktopScreen({
             size="icon-sm"
             onClick={onCollapse}
             aria-label="Back to the thread"
-            title="Back to the thread (Esc)"
+            tooltip="Back to the thread (Esc)"
           >
             <Minimize2 aria-hidden />
           </Button>

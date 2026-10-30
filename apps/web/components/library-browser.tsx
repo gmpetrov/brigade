@@ -78,6 +78,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   api,
   type LibraryFile,
@@ -558,19 +559,20 @@ export function LibraryBrowser({
         <div className="flex flex-wrap items-center justify-between gap-3">
           {crumbs.length > 0 && (
             <nav aria-label="Folder" className="flex min-w-0 flex-wrap items-center gap-1 text-sm">
-              <button
-                type="button"
-                onClick={() => setFolder('')}
-                {...dropTarget('')}
-                aria-label="Library"
-                title="Library"
-                className={cn(
-                  'rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground',
-                  over === '' && 'bg-primary/15',
-                )}
-              >
-                <House aria-hidden className="size-4" />
-              </button>
+              <Hint label="Library">
+                <button
+                  type="button"
+                  onClick={() => setFolder('')}
+                  {...dropTarget('')}
+                  aria-label="Library"
+                  className={cn(
+                    'rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground',
+                    over === '' && 'bg-primary/15',
+                  )}
+                >
+                  <House aria-hidden className="size-4" />
+                </button>
+              </Hint>
               {crumbs.map((name, i) => {
                 const path = crumbs.slice(0, i + 1).join('/')
                 return (
@@ -721,12 +723,24 @@ export function LibraryViewSwitch({
   return (
     <Tabs value={sort} onValueChange={(v) => chooseSort(v as LibrarySort)} className={className}>
       <TabsList aria-label="View">
-        <TabsTrigger value="updated" aria-label="Recent" title="Recent">
-          <Clock aria-hidden />
-        </TabsTrigger>
-        <TabsTrigger value="name" aria-label="Folders" title="Folders">
-          <Folder aria-hidden />
-        </TabsTrigger>
+        {/* The tab is the tooltip's trigger, not the other way round: a trigger wrapped in
+            the tooltip's would take its data-state and lose the active tab's look. */}
+        <Tooltip>
+          <TabsTrigger value="updated" aria-label="Recent" asChild>
+            <TooltipTrigger>
+              <Clock aria-hidden />
+            </TooltipTrigger>
+          </TabsTrigger>
+          <TooltipContent>Recent</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TabsTrigger value="name" aria-label="Folders" asChild>
+            <TooltipTrigger>
+              <Folder aria-hidden />
+            </TooltipTrigger>
+          </TabsTrigger>
+          <TooltipContent>Folders</TooltipContent>
+        </Tooltip>
       </TabsList>
     </Tabs>
   )
@@ -788,7 +802,7 @@ function RowMenu({ label, children }: { label: string; children: ReactNode }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={label} title="Actions">
+        <Button variant="ghost" size="icon-sm" aria-label={label} tooltip="Actions">
           <Ellipsis aria-hidden />
         </Button>
       </DropdownMenuTrigger>
@@ -952,7 +966,7 @@ function LibraryFilePanel({
             )}
           </span>
         </div>
-        <Button asChild variant="ghost" size="icon-sm" title="Download">
+        <Button asChild variant="ghost" size="icon-sm" tooltip="Download">
           <a href={contentUrl(file.id, true)} aria-label="Download">
             <Download aria-hidden />
           </a>

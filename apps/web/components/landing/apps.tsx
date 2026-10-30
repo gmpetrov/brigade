@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
+import { Hint } from '@/components/ui/tooltip'
 import { c, Icon } from './parts'
 
 type Tile = {
@@ -147,16 +148,16 @@ export function Apps() {
             )}
           </svg>
           {tiles.map((t) => (
-            <span
-              key={t.kind}
-              className={c(t.glow ? `app-t ${t.glow}` : 'app-t')}
-              style={{ '--x': t.x, '--y': t.y } as CSSProperties}
-              title={t.name}
-            >
-              <span className={c('app-i')}>
-                <Logo kind={t.kind} />
+            <Hint key={t.kind} label={t.name}>
+              <span
+                className={c(t.glow ? `app-t ${t.glow}` : 'app-t')}
+                style={{ '--x': t.x, '--y': t.y } as CSSProperties}
+              >
+                <span className={c('app-i')}>
+                  <Logo kind={t.kind} />
+                </span>
               </span>
-            </span>
+            </Hint>
           ))}
 
           <div className={c('ap-chat')}>

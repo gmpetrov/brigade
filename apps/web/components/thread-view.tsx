@@ -129,6 +129,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint } from '@/components/ui/tooltip'
 import { WidgetFrame } from '@/components/widget-frame'
 import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
 import {
@@ -709,7 +710,7 @@ function MessageActions({ text, onReply }: { text: string; onReply?: () => void 
           })
         }
         aria-label={copied ? 'Copied' : 'Copy'}
-        title={copied ? 'Copied' : 'Copy'}
+        tooltip={copied ? 'Copied' : 'Copy'}
       >
         {copied ? (
           <Check className="size-3.5" aria-hidden />
@@ -725,7 +726,7 @@ function MessageActions({ text, onReply }: { text: string; onReply?: () => void 
           className={button}
           onClick={onReply}
           aria-label="Reply"
-          title="Reply"
+          tooltip="Reply"
         >
           <Reply className="size-3.5" aria-hidden />
         </Button>
@@ -799,22 +800,23 @@ export function MessageBubble({ text }: { text: string }) {
 /** The message a person's message replies to, above it: a click scrolls to it. */
 function ReplyQuote({ reply, author }: { reply: ReplyTo; author?: string }) {
   return (
-    <button
-      type="button"
-      className="flex max-w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-      title="Show the message it replies to"
-      onClick={() =>
-        document
-          .querySelector(`[data-seq="${reply.seq}"]`)
-          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
-    >
-      <Reply className="size-3.5 shrink-0" aria-hidden />
-      <span className="truncate">
-        {author && <span className="font-medium">{author}: </span>}“
-        {mentionsToText(reply.text).replace(/\s+/g, ' ')}”
-      </span>
-    </button>
+    <Hint label="Show the message it replies to">
+      <button
+        type="button"
+        className="flex max-w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        onClick={() =>
+          document
+            .querySelector(`[data-seq="${reply.seq}"]`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      >
+        <Reply className="size-3.5 shrink-0" aria-hidden />
+        <span className="truncate">
+          {author && <span className="font-medium">{author}: </span>}“
+          {mentionsToText(reply.text).replace(/\s+/g, ' ')}”
+        </span>
+      </button>
+    </Hint>
   )
 }
 
@@ -966,20 +968,21 @@ function ThreadImage({
     )
   return (
     <div className="pl-11">
-      <button
-        type="button"
-        className="block cursor-zoom-in overflow-hidden rounded-lg border bg-muted"
-        title={item.prompt ?? name}
-        onClick={() => setOpen(true)}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={item.prompt ?? name ?? 'A generated image'}
-          className="max-h-96 max-w-full object-contain"
-          onError={() => setFailed(true)}
-        />
-      </button>
+      <Hint label={item.prompt ?? name}>
+        <button
+          type="button"
+          className="block cursor-zoom-in overflow-hidden rounded-lg border bg-muted"
+          onClick={() => setOpen(true)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={item.prompt ?? name ?? 'A generated image'}
+            className="max-h-96 max-w-full object-contain"
+            onError={() => setFailed(true)}
+          />
+        </button>
+      </Hint>
       <MediaPreview
         media={open ? { name: name ?? item.path, src, kind: 'image' } : undefined}
         onClose={() => setOpen(false)}
@@ -1850,13 +1853,14 @@ function WorkingLine({
 /** When the thread picked up again, centred above the message (lib/thread-times.ts). */
 function PauseTime({ at }: { at: number }) {
   return (
-    <time
-      dateTime={new Date(at).toISOString()}
-      title={new Date(at).toLocaleString()}
-      className="text-muted-foreground self-center pt-2 text-xs"
-    >
-      {pauseLabel(at)}
-    </time>
+    <Hint label={new Date(at).toLocaleString()}>
+      <time
+        dateTime={new Date(at).toISOString()}
+        className="text-muted-foreground self-center pt-2 text-xs"
+      >
+        {pauseLabel(at)}
+      </time>
+    </Hint>
   )
 }
 
@@ -2407,7 +2411,7 @@ export function ThreadItems({
                   <Button
                     size="sm"
                     variant="outline"
-                    title="Let this teammate use it from now on, in any thread, without asking"
+                    tooltip="Let this teammate use it from now on, in any thread, without asking"
                     onClick={() => onApproval(item.approvalId, true, true)}
                   >
                     Always allow
@@ -3612,7 +3616,7 @@ function AskView({
                 key={o.id}
                 size="sm"
                 variant="outline"
-                title={o.description}
+                tooltip={o.description}
                 onClick={() => onReply({ type: 'decision', optionId: o.id })}
               >
                 {o.label}
@@ -3801,28 +3805,29 @@ function ChoicesCard({
                 </span>
               )}
               {design && !trashed && (
-                <button
-                  type="button"
-                  className="group relative flex aspect-[16/10] items-center justify-center overflow-hidden border-b bg-muted/50"
-                  title={`Open ${design}`}
-                  aria-label={`Open ${o.label}`}
-                  onClick={() => links?.open({ path: design })}
-                >
-                  {thumbnail ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- a library file through the API
-                    <img
-                      src={contentUrl(thumbnail.id)}
-                      alt=""
-                      loading="lazy"
-                      className="size-full object-cover object-top transition group-hover:scale-[1.02]"
-                    />
-                  ) : (
-                    <LayoutTemplate aria-hidden className="size-7 text-muted-foreground/60" />
-                  )}
-                  <span className="absolute right-2 bottom-2 rounded-full bg-background/85 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm">
-                    Open
-                  </span>
-                </button>
+                <Hint label={`Open ${design}`}>
+                  <button
+                    type="button"
+                    className="group relative flex aspect-[16/10] items-center justify-center overflow-hidden border-b bg-muted/50"
+                    aria-label={`Open ${o.label}`}
+                    onClick={() => links?.open({ path: design })}
+                  >
+                    {thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- a library file through the API
+                      <img
+                        src={contentUrl(thumbnail.id)}
+                        alt=""
+                        loading="lazy"
+                        className="size-full object-cover object-top transition group-hover:scale-[1.02]"
+                      />
+                    ) : (
+                      <LayoutTemplate aria-hidden className="size-7 text-muted-foreground/60" />
+                    )}
+                    <span className="absolute right-2 bottom-2 rounded-full bg-background/85 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm">
+                      Open
+                    </span>
+                  </button>
+                </Hint>
               )}
               <div className="flex flex-1 flex-col gap-1 px-3.5 py-3">
                 <span className="font-semibold">{o.label}</span>

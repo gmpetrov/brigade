@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
+import { Hint } from '@/components/ui/tooltip'
 import { api, useApi, type CredentialUse, type CredentialWithGrants } from '@/lib/api'
 
 export default function VaultPage() {
@@ -141,9 +142,8 @@ export default function VaultPage() {
                   <span className="truncate text-sm font-medium" title={c.name}>
                     {c.name}
                   </span>
-                  <span
-                    className="truncate text-xs text-muted-foreground"
-                    title={[
+                  <Hint
+                    label={[
                       credentialHint(c),
                       c.createdByTeammateId &&
                         `saved by ${nameOf(c.createdByTeammateId) ?? 'a teammate'}`,
@@ -151,8 +151,10 @@ export default function VaultPage() {
                       .filter(Boolean)
                       .join(' · ')}
                   >
-                    Used by {whoUses(c)} · {timeAgo(c.updatedAt)}
-                  </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      Used by {whoUses(c)} · {timeAgo(c.updatedAt)}
+                    </span>
+                  </Hint>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

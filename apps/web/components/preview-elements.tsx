@@ -149,7 +149,7 @@ export function PreviewElementChip({
             className="size-5 shrink-0 rounded-full text-primary hover:text-primary"
             onClick={onRemove}
             aria-label={`Remove ${element.label}`}
-            title="Remove"
+            tooltip="Remove"
           >
             <X aria-hidden />
           </Button>

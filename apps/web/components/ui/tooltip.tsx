@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { cn } from '@/lib/utils'
-import { Tooltip as TooltipPrimitive } from 'radix-ui'
+import { Slot, Tooltip as TooltipPrimitive } from 'radix-ui'
 
 // Brigade: 300ms before the first tooltip shows (the browser's own `title` waited about a
 // second), then none while the pointer moves on to the next control.
@@ -92,12 +92,23 @@ function Hint({
   if (label === undefined || label === null || label === false || label === '') return children
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipTrigger asChild>
+        <WithoutState>{children}</WithoutState>
+      </TooltipTrigger>
       <TooltipContent side={side} align={align}>
         {label}
       </TooltipContent>
     </Tooltip>
   )
+}
+
+// The trigger hands its `data-state` down, and a menu, popover or tabs trigger inside would
+// take it over its own, losing its `data-[state=open]` and `data-[state=active]` styles.
+function WithoutState({
+  'data-state': _,
+  ...props
+}: React.ComponentProps<typeof Slot.Root> & { 'data-state'?: string }) {
+  return <Slot.Root {...props} />
 }
 
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, Hint }

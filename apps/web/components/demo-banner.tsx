@@ -2,6 +2,7 @@
 import { ArrowRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { DEMO, framed, SIGN_UP_URL } from '@/lib/demo/flag'
+import { Hint } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 /**
@@ -49,15 +50,16 @@ export function DemoBanner({ place }: { place: 'sidebar' | 'phone' }) {
           <ArrowRight className="size-3.5" aria-hidden />
         </a>
       </div>
-      <a
-        href={SIGN_UP_URL}
-        target="_top"
-        title="Demo workspace: sign up free"
-        aria-label="Demo workspace: sign up free"
-        className="bg-primary text-primary-foreground hidden size-8 items-center justify-center rounded-full group-data-[collapsible=icon]:flex"
-      >
-        <ArrowRight className="size-4" aria-hidden />
-      </a>
+      <Hint side="right" label="Demo workspace: sign up free">
+        <a
+          href={SIGN_UP_URL}
+          target="_top"
+          aria-label="Demo workspace: sign up free"
+          className="bg-primary text-primary-foreground hidden size-8 items-center justify-center rounded-full group-data-[collapsible=icon]:flex"
+        >
+          <ArrowRight className="size-4" aria-hidden />
+        </a>
+      </Hint>
     </div>
   )
 }
