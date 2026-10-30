@@ -56,6 +56,7 @@ export type PullRequestMinAggregateOutputType = {
   round: number | null
   resolveFromSha: string | null
   note: string | null
+  autoMergeAt: Date | null
   state: string | null
   mergedAt: Date | null
   createdAt: Date | null
@@ -82,6 +83,7 @@ export type PullRequestMaxAggregateOutputType = {
   round: number | null
   resolveFromSha: string | null
   note: string | null
+  autoMergeAt: Date | null
   state: string | null
   mergedAt: Date | null
   createdAt: Date | null
@@ -108,6 +110,7 @@ export type PullRequestCountAggregateOutputType = {
   round: number
   resolveFromSha: number
   note: number
+  autoMergeAt: number
   state: number
   mergedAt: number
   createdAt: number
@@ -146,6 +149,7 @@ export type PullRequestMinAggregateInputType = {
   round?: true
   resolveFromSha?: true
   note?: true
+  autoMergeAt?: true
   state?: true
   mergedAt?: true
   createdAt?: true
@@ -172,6 +176,7 @@ export type PullRequestMaxAggregateInputType = {
   round?: true
   resolveFromSha?: true
   note?: true
+  autoMergeAt?: true
   state?: true
   mergedAt?: true
   createdAt?: true
@@ -198,6 +203,7 @@ export type PullRequestCountAggregateInputType = {
   round?: true
   resolveFromSha?: true
   note?: true
+  autoMergeAt?: true
   state?: true
   mergedAt?: true
   createdAt?: true
@@ -311,6 +317,7 @@ export type PullRequestGroupByOutputType = {
   round: number
   resolveFromSha: string | null
   note: string | null
+  autoMergeAt: Date | null
   state: string
   mergedAt: Date | null
   createdAt: Date
@@ -360,6 +367,7 @@ export type PullRequestWhereInput = {
   round?: Prisma.IntFilter<"PullRequest"> | number
   resolveFromSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  autoMergeAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   state?: Prisma.StringFilter<"PullRequest"> | string
   mergedAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"PullRequest"> | Date | string
@@ -392,6 +400,7 @@ export type PullRequestOrderByWithRelationInput = {
   round?: Prisma.SortOrder
   resolveFromSha?: Prisma.SortOrderInput | Prisma.SortOrder
   note?: Prisma.SortOrderInput | Prisma.SortOrder
+  autoMergeAt?: Prisma.SortOrderInput | Prisma.SortOrder
   state?: Prisma.SortOrder
   mergedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -428,6 +437,7 @@ export type PullRequestWhereUniqueInput = Prisma.AtLeast<{
   round?: Prisma.IntFilter<"PullRequest"> | number
   resolveFromSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  autoMergeAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   state?: Prisma.StringFilter<"PullRequest"> | string
   mergedAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"PullRequest"> | Date | string
@@ -460,6 +470,7 @@ export type PullRequestOrderByWithAggregationInput = {
   round?: Prisma.SortOrder
   resolveFromSha?: Prisma.SortOrderInput | Prisma.SortOrder
   note?: Prisma.SortOrderInput | Prisma.SortOrder
+  autoMergeAt?: Prisma.SortOrderInput | Prisma.SortOrder
   state?: Prisma.SortOrder
   mergedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -494,6 +505,7 @@ export type PullRequestScalarWhereWithAggregatesInput = {
   round?: Prisma.IntWithAggregatesFilter<"PullRequest"> | number
   resolveFromSha?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
+  autoMergeAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PullRequest"> | Date | string | null
   state?: Prisma.StringWithAggregatesFilter<"PullRequest"> | string
   mergedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PullRequest"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"PullRequest"> | Date | string
@@ -516,6 +528,7 @@ export type PullRequestCreateInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -548,6 +561,7 @@ export type PullRequestUncheckedCreateInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -572,6 +586,7 @@ export type PullRequestUpdateInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -604,6 +619,7 @@ export type PullRequestUncheckedUpdateInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -632,6 +648,7 @@ export type PullRequestCreateManyInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -654,6 +671,7 @@ export type PullRequestUpdateManyMutationInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -680,6 +698,7 @@ export type PullRequestUncheckedUpdateManyInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -722,6 +741,7 @@ export type PullRequestCountOrderByAggregateInput = {
   round?: Prisma.SortOrder
   resolveFromSha?: Prisma.SortOrder
   note?: Prisma.SortOrder
+  autoMergeAt?: Prisma.SortOrder
   state?: Prisma.SortOrder
   mergedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -753,6 +773,7 @@ export type PullRequestMaxOrderByAggregateInput = {
   round?: Prisma.SortOrder
   resolveFromSha?: Prisma.SortOrder
   note?: Prisma.SortOrder
+  autoMergeAt?: Prisma.SortOrder
   state?: Prisma.SortOrder
   mergedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -779,6 +800,7 @@ export type PullRequestMinOrderByAggregateInput = {
   round?: Prisma.SortOrder
   resolveFromSha?: Prisma.SortOrder
   note?: Prisma.SortOrder
+  autoMergeAt?: Prisma.SortOrder
   state?: Prisma.SortOrder
   mergedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -1011,6 +1033,7 @@ export type PullRequestCreateWithoutWorkspaceInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1041,6 +1064,7 @@ export type PullRequestUncheckedCreateWithoutWorkspaceInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1098,6 +1122,7 @@ export type PullRequestScalarWhereInput = {
   round?: Prisma.IntFilter<"PullRequest"> | number
   resolveFromSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  autoMergeAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   state?: Prisma.StringFilter<"PullRequest"> | string
   mergedAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"PullRequest"> | Date | string
@@ -1120,6 +1145,7 @@ export type PullRequestCreateWithoutAuthorTeammateInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1150,6 +1176,7 @@ export type PullRequestUncheckedCreateWithoutAuthorTeammateInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1200,6 +1227,7 @@ export type PullRequestCreateWithoutSessionInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1230,6 +1258,7 @@ export type PullRequestUncheckedCreateWithoutSessionInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1264,6 +1293,7 @@ export type PullRequestCreateWithoutReviewSessionInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1294,6 +1324,7 @@ export type PullRequestUncheckedCreateWithoutReviewSessionInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1360,6 +1391,7 @@ export type PullRequestCreateWithoutReviewsInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1391,6 +1423,7 @@ export type PullRequestUncheckedCreateWithoutReviewsInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1430,6 +1463,7 @@ export type PullRequestUpdateWithoutReviewsInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1461,6 +1495,7 @@ export type PullRequestUncheckedUpdateWithoutReviewsInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1484,6 +1519,7 @@ export type PullRequestCreateWithoutListItemsInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1515,6 +1551,7 @@ export type PullRequestUncheckedCreateWithoutListItemsInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1554,6 +1591,7 @@ export type PullRequestUpdateWithoutListItemsInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1585,6 +1623,7 @@ export type PullRequestUncheckedUpdateWithoutListItemsInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1611,6 +1650,7 @@ export type PullRequestCreateManyWorkspaceInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1633,6 +1673,7 @@ export type PullRequestUpdateWithoutWorkspaceInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1663,6 +1704,7 @@ export type PullRequestUncheckedUpdateWithoutWorkspaceInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1690,6 +1732,7 @@ export type PullRequestUncheckedUpdateManyWithoutWorkspaceInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1715,6 +1758,7 @@ export type PullRequestCreateManyAuthorTeammateInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1737,6 +1781,7 @@ export type PullRequestUpdateWithoutAuthorTeammateInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1767,6 +1812,7 @@ export type PullRequestUncheckedUpdateWithoutAuthorTeammateInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1794,6 +1840,7 @@ export type PullRequestUncheckedUpdateManyWithoutAuthorTeammateInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1819,6 +1866,7 @@ export type PullRequestCreateManySessionInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1844,6 +1892,7 @@ export type PullRequestCreateManyReviewSessionInput = {
   round?: number
   resolveFromSha?: string | null
   note?: string | null
+  autoMergeAt?: Date | string | null
   state?: string
   mergedAt?: Date | string | null
   createdAt?: Date | string
@@ -1866,6 +1915,7 @@ export type PullRequestUpdateWithoutSessionInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1896,6 +1946,7 @@ export type PullRequestUncheckedUpdateWithoutSessionInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1923,6 +1974,7 @@ export type PullRequestUncheckedUpdateManyWithoutSessionInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1945,6 +1997,7 @@ export type PullRequestUpdateWithoutReviewSessionInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1975,6 +2028,7 @@ export type PullRequestUncheckedUpdateWithoutReviewSessionInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2002,6 +2056,7 @@ export type PullRequestUncheckedUpdateManyWithoutReviewSessionInput = {
   round?: Prisma.IntFieldUpdateOperationsInput | number
   resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoMergeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2068,6 +2123,7 @@ export type PullRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   round?: boolean
   resolveFromSha?: boolean
   note?: boolean
+  autoMergeAt?: boolean
   state?: boolean
   mergedAt?: boolean
   createdAt?: boolean
@@ -2101,6 +2157,7 @@ export type PullRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   round?: boolean
   resolveFromSha?: boolean
   note?: boolean
+  autoMergeAt?: boolean
   state?: boolean
   mergedAt?: boolean
   createdAt?: boolean
@@ -2131,6 +2188,7 @@ export type PullRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   round?: boolean
   resolveFromSha?: boolean
   note?: boolean
+  autoMergeAt?: boolean
   state?: boolean
   mergedAt?: boolean
   createdAt?: boolean
@@ -2161,13 +2219,14 @@ export type PullRequestSelectScalar = {
   round?: boolean
   resolveFromSha?: boolean
   note?: boolean
+  autoMergeAt?: boolean
   state?: boolean
   mergedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewSessionId" | "noReviewReason" | "reviewClaimedAt" | "mergeStatus" | "mergeMethod" | "requestedByMemberId" | "round" | "resolveFromSha" | "note" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
+export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewSessionId" | "noReviewReason" | "reviewClaimedAt" | "mergeStatus" | "mergeMethod" | "requestedByMemberId" | "round" | "resolveFromSha" | "note" | "autoMergeAt" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
 export type PullRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
@@ -2253,6 +2312,11 @@ export type $PullRequestPayload<ExtArgs extends runtime.Types.Extensions.Interna
      * Why a merge is waiting or stopped, shown on the pull request.
      */
     note: string | null
+    /**
+     * When Brigade set it merging on its own, for its member's Auto-merge (src/auto-merge.ts): such
+     * a merge gives up rather than sending it back to the author or asking a person.
+     */
+    autoMergeAt: Date | null
     /**
      * As last seen on GitHub: open, closed or merged.
      */
@@ -2708,6 +2772,7 @@ export interface PullRequestFieldRefs {
   readonly round: Prisma.FieldRef<"PullRequest", 'Int'>
   readonly resolveFromSha: Prisma.FieldRef<"PullRequest", 'String'>
   readonly note: Prisma.FieldRef<"PullRequest", 'String'>
+  readonly autoMergeAt: Prisma.FieldRef<"PullRequest", 'DateTime'>
   readonly state: Prisma.FieldRef<"PullRequest", 'String'>
   readonly mergedAt: Prisma.FieldRef<"PullRequest", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"PullRequest", 'DateTime'>

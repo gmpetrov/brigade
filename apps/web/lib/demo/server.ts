@@ -511,6 +511,7 @@ function syncPulls() {
       number: p.summary.number,
       title: p.summary.title,
       mergeStatus: 'none',
+      autoMerge: false,
       updatedAt: p.summary.updatedAt,
       session: p.session,
       authorTeammate: p.summary.tracking?.author ?? null,

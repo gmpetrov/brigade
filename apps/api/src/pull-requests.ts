@@ -4,7 +4,8 @@
 // verdict (github_review_pull_request) is kept here. A person merges, or asks a
 // teammate with write access to (github_merge_pull_request). A pull request that
 // conflicts goes back to the teammate that wrote it to resolve, and merges once
-// that is done.
+// that is done. A member who turned Auto-merge on has Brigade merge what teammates open in
+// their threads once it is ready (autoMerge).
 import {
   MergeMethod,
   type CheckRun,
@@ -29,7 +30,7 @@ import { linkPullItems, settleItemsOnMerge, type PullItems } from './lists.js'
 import { teammateGitHub, workspaceGitHub } from './git.js'
 import { projectOfRepository } from './projects.js'
 import { REVIEW_DONE, REVIEW_THREAD, reviewUnderWay } from './review-state.js'
-import { cancelReview } from './reviews.js'
+import { cancelReview, REVIEW_CLAIM_MS } from './reviews.js'
 import type { WorkspaceScope } from './scope.js'
 import { settleOnMerge } from './tasks.js'
 import { noteInThread, pullNote } from './thread-notes.js'
@@ -179,6 +180,7 @@ function tracking(row: Row | undefined, headSha?: string): PullRequestTracking |
   if (!row) return null
   return {
     mergeStatus: row.mergeStatus,
+    autoMerge: row.mergeStatus === 'merging' && row.autoMergeAt !== null,
     note: row.note,
     sessionId: row.sessionId,
     author: row.authorTeammate,
@@ -236,7 +238,9 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
       state,
       ...(p.merged_at ? { mergedAt: new Date(p.merged_at) } : {}),
       // A pull request closed on GitHub ends a merge under way.
-      ...(closed && row.mergeStatus !== 'none' ? { mergeStatus: 'none', note: null } : {}),
+      ...(closed && row.mergeStatus !== 'none'
+        ? { mergeStatus: 'none', autoMergeAt: null, note: null }
+        : {}),
     },
   })
   if (closed && row.state !== state && row.sessionId) {
@@ -737,7 +741,10 @@ async function ticketFor(db: ScopedDb, row: MergeRow, note: string) {
 
 /** The merge stops here; a person decides what next. */
 async function stop(db: ScopedDb, scope: Scope, row: MergeRow, note: string) {
-  await db.pullRequest.updateMany({ where: { id: row.id }, data: { mergeStatus: 'stuck', note } })
+  await db.pullRequest.updateMany({
+    where: { id: row.id },
+    data: { mergeStatus: 'stuck', autoMergeAt: null, note },
+  })
   await ticketFor(db, row, note)
   await audit({
     ...scope,
@@ -870,7 +877,7 @@ export async function stopMerge(scope: WorkspaceScope, repo: string, number: num
     })
   await db.pullRequest.updateMany({
     where: { id: row.id },
-    data: { mergeStatus: 'none', note: null },
+    data: { mergeStatus: 'none', autoMergeAt: null, note: null },
   })
   await closeTickets(db, row.id)
   await audit({
@@ -958,7 +965,7 @@ async function resolverDone(db: ScopedDb, scope: Scope, row: MergeRow) {
   const gh = await github(db, scope, row.repository)
   const p = await pullOf(gh, row.repository, row.number)
   if (stateOf(p) !== 'open') {
-    await claim(db, row, { mergeStatus: 'none', state: stateOf(p), note: null })
+    await claim(db, row, { mergeStatus: 'none', autoMergeAt: null, state: stateOf(p), note: null })
     return
   }
   if (p.head.sha === row.resolveFromSha)
@@ -1021,6 +1028,7 @@ export async function resolveConflicts(
 
   const before = {
     mergeStatus: row.mergeStatus,
+    autoMergeAt: row.autoMergeAt,
     mergeMethod: row.mergeMethod,
     requestedByMemberId: row.requestedByMemberId,
     round: row.round,
@@ -1030,6 +1038,7 @@ export async function resolveConflicts(
     where: { id: row.id },
     data: {
       mergeStatus: 'resolving',
+      autoMergeAt: null,
       mergeMethod: method,
       requestedByMemberId: scope.memberId,
       round: 1,
@@ -1075,24 +1084,37 @@ export async function resolveConflicts(
 }
 
 /**
- * Merge a pull request a person asked to merge, as soon as GitHub allows it.
- * Checked when it is ready and every minute after.
+ * Merge a pull request a person asked to merge, or Auto-merge set merging, as soon as GitHub
+ * allows it. Checked when it is ready and every minute after. An auto-merge gives up, back to
+ * waiting on a person, where a person's merge would send it back to its author or ask them.
  */
-async function advanceMerge(scope: Scope, id: string) {
+async function advanceMerge(scope: Scope, id: string, now = new Date()) {
   const db = scoped(scope)
   const row = await db.pullRequest.findFirst({ where: { id } })
   if (!row || row.state !== 'open' || row.mergeStatus !== 'merging') return
+  const auto = row.autoMergeAt !== null
+  if (auto) {
+    const held = await autoMergeHeld(db, row.id, now)
+    if (held) return autoMergeOff(db, scope, row, held)
+    if (now.getTime() - row.autoMergeAt!.getTime() > AUTO_MERGE_WAIT_MS)
+      return autoMergeOff(db, scope, row, 'GitHub did not allow the merge in time')
+  }
   const gh = await github(db, scope, row.repository)
   const p = await pullOf(gh, row.repository, row.number)
   if (stateOf(p) !== 'open') {
     await db.pullRequest.updateMany({
       where: { id: row.id },
-      data: { state: stateOf(p), mergeStatus: 'none', note: null },
+      data: { state: stateOf(p), mergeStatus: 'none', autoMergeAt: null, note: null },
     })
     return
   }
-  if (p.draft) return waiting(db, row, 'A draft: mark it ready for review on GitHub to merge', true)
+  if (p.draft) {
+    if (auto) return autoMergeOff(db, scope, row, 'it is a draft')
+    return waiting(db, row, 'A draft: mark it ready for review on GitHub to merge', true)
+  }
   if (p.mergeable == null) return // GitHub is still working it out.
+  if (auto && p.mergeable_state === 'dirty')
+    return autoMergeOff(db, scope, row, `it conflicts with \`${p.base.ref}\``)
   if (p.mergeable_state === 'dirty')
     return sendBack(
       db,
@@ -1104,6 +1126,8 @@ async function advanceMerge(scope: Scope, id: string) {
     )
   const checks = await checksOf(gh, row.repository, p.head.sha)
   const failed = checks.filter((c) => c.status === 'failure')
+  if (auto && failed.length)
+    return autoMergeOff(db, scope, row, `checks failed (${failed.map((c) => c.name).join(', ')})`)
   if (failed.length)
     return sendBack(
       db,
@@ -1123,6 +1147,8 @@ async function advanceMerge(scope: Scope, id: string) {
     })
     return waiting(db, row, `Bringing the branch up to date with \`${p.base.ref}\``)
   }
+  if (auto && p.mergeable_state === 'blocked')
+    return autoMergeOff(db, scope, row, 'GitHub requires an approving review or another rule')
   if (p.mergeable_state === 'blocked')
     return waiting(
       db,
@@ -1135,10 +1161,13 @@ async function advanceMerge(scope: Scope, id: string) {
   // its base in, still lands as one commit on the base: squashed.
   const method = asked === 'rebase' && p.rebaseable === false ? 'squash' : asked
   const merged = await mergeOnGitHub(gh, row.repository, p, method)
-  if ('refused' in merged)
+  if ('refused' in merged) {
+    if (auto) return autoMergeOff(db, scope, row, `GitHub refused the merge: ${merged.refused}`)
     return waiting(db, row, `GitHub refused the merge: ${merged.refused}`, true)
+  }
   await recordMerge(db, scope, row, { type: 'system', id: 'brigade' }, method, {
     requestedBy: row.requestedByMemberId,
+    ...(auto ? { auto: true } : {}),
   })
 }
 
@@ -1162,7 +1191,13 @@ async function recordMerge(
 ) {
   await db.pullRequest.updateMany({
     where: { id: row.id },
-    data: { state: 'merged', mergedAt: new Date(), mergeStatus: 'none', note: null },
+    data: {
+      state: 'merged',
+      mergedAt: new Date(),
+      mergeStatus: 'none',
+      autoMergeAt: null,
+      note: null,
+    },
   })
   await closeTickets(db, row.id)
   await audit({
@@ -1254,6 +1289,149 @@ export async function setPullState(
     target: { type: 'pull_request', id: row.id },
     data: { repository: repo, number },
   })
+}
+
+// ---------------------------------------------------------------------------
+// Auto-merge: a member's preference
+// ---------------------------------------------------------------------------
+
+/** How long an auto-merge waits on GitHub (checks still running) before it leaves the pull request to a person. */
+const AUTO_MERGE_WAIT_MS = 2 * 60 * 60_000
+/** A thread's statuses once its teammate is done with it and asks nothing. */
+const AT_REST: readonly string[] = ['idle', 'done']
+
+/** What autoMergeHold reads of a pull request. */
+const autoInclude = {
+  session: {
+    select: {
+      status: true,
+      archivedAt: true,
+      controlledByMemberId: true,
+      parentId: true,
+      awaited: true,
+      reportDeliveredAt: true,
+      parent: { select: { status: true } },
+      startedBy: { select: { id: true, role: true, autoMerge: true } },
+    },
+  },
+  ...reviewInclude,
+} as const
+type AutoRow = Prisma.PullRequestGetPayload<{ include: typeof autoInclude }>
+
+/**
+ * Why Brigade may not merge it on its own now, as far as Brigade knows; null when it may. Its
+ * thread's member turned Auto-merge on and may merge; a teammate opened it in that thread, which
+ * is done with nothing asked (a child's, once its report reached the thread that started it, done
+ * too: that one decides whether it gets a review); no review of it is starting or under way, and
+ * its latest one, if any, approved it. headSha, once GitHub was asked: that approval read it.
+ */
+export function autoMergeHold(row: AutoRow, now: Date, headSha?: string): string | null {
+  const thread = row.session
+  if (!thread || !row.authorTeammateId) return 'no teammate opened it in a thread'
+  const member = thread.startedBy
+  if (!member.autoMerge) return 'Auto-merge is off'
+  if (member.role !== 'owner' && member.role !== 'admin') return 'only owners and admins merge'
+  if (thread.archivedAt) return 'its thread is archived'
+  if (thread.controlledByMemberId) return 'a person has control of its thread'
+  if (!AT_REST.includes(thread.status)) return 'its thread is at work or asks something'
+  if (thread.parentId) {
+    if (thread.awaited && !thread.reportDeliveredAt)
+      return 'its report has not reached the thread that started it'
+    if (!thread.parent || !AT_REST.includes(thread.parent.status))
+      return 'the thread that started it is at work or asks something'
+  }
+  if (row.reviewClaimedAt && now.getTime() - row.reviewClaimedAt.getTime() < REVIEW_CLAIM_MS)
+    return 'a review of it is starting'
+  const review = reviewOf(row)
+  if (review?.state === 'reviewing') return 'a review of it is under way'
+  if (review?.state === 'changes_requested') return 'its review asked for changes'
+  const last = row.reviews[0]
+  if (last && headSha && last.sha !== headSha) return 'commits came after its review approved it'
+  return null
+}
+
+const autoMergeHeld = async (db: ScopedDb, id: string, now: Date) => {
+  const row = await db.pullRequest.findFirst({ where: { id }, include: autoInclude })
+  return row ? autoMergeHold(row, now) : 'it is gone'
+}
+
+/** An auto-merge that cannot go on: the pull request waits on a person again, as before it. */
+async function autoMergeOff(db: ScopedDb, scope: Scope, row: MergeRow, reason: string) {
+  const { count } = await db.pullRequest.updateMany({
+    where: { id: row.id, mergeStatus: 'merging', autoMergeAt: { not: null } },
+    data: { mergeStatus: 'none', autoMergeAt: null, note: null },
+  })
+  if (count)
+    await audit({
+      ...scope,
+      actor: { type: 'system', id: 'brigade' },
+      action: 'pull_request.auto_merge_stopped',
+      target: { type: 'pull_request', id: row.id },
+      data: { repository: row.repository, number: row.number, reason },
+    })
+}
+
+/**
+ * Set a pull request merging on its own, for its thread's member's Auto-merge, when it is
+ * ready: what Brigade knows holds it nowhere (autoMergeHold), and on GitHub it is open, no
+ * draft, without conflicts or a failed check. Then it merges once its checks pass, as a merge a
+ * person asked for does. Whether it was set merging.
+ */
+export async function autoMerge(scope: Scope, id: string, now = new Date()) {
+  const db = scoped(scope)
+  const row = await db.pullRequest.findFirst({ where: { id }, include: autoInclude })
+  if (!row || row.state !== 'open' || row.mergeStatus !== 'none') return false
+  if (autoMergeHold(row, now)) return false
+  const gh = await github(db, scope, row.repository)
+  const p = await pullOf(gh, row.repository, row.number)
+  if (stateOf(p) !== 'open' || p.draft || p.mergeable_state === 'dirty') return false
+  if (autoMergeHold(row, now, p.head.sha)) return false
+  const checks = await checksOf(gh, row.repository, p.head.sha)
+  if (checks.some((c) => c.status === 'failure')) return false
+  const { count } = await db.pullRequest.updateMany({
+    where: { id: row.id, state: 'open', mergeStatus: 'none' },
+    data: {
+      mergeStatus: 'merging',
+      autoMergeAt: now,
+      requestedByMemberId: row.session!.startedBy.id,
+      round: 0,
+      note: 'Merging once its checks pass',
+    },
+  })
+  if (!count) return false
+  await audit({
+    ...scope,
+    actor: { type: 'system', id: 'brigade' },
+    action: 'pull_request.auto_merge_started',
+    target: { type: 'pull_request', id: row.id },
+    data: { repository: row.repository, number: row.number, memberId: row.session!.startedBy.id },
+  })
+  await advanceMerge(scope, row.id, now)
+  return true
+}
+
+/**
+ * A teammate's turn ended in a thread: the pull requests it may have readied for Auto-merge,
+ * opened there or in one of its child threads, or reviewed there.
+ */
+export async function autoMergeTurnEnded(scope: Scope, sessionId: string) {
+  const db = scoped(scope)
+  const rows = await db.pullRequest.findMany({
+    where: {
+      state: 'open',
+      mergeStatus: 'none',
+      authorTeammateId: { not: null },
+      OR: [{ sessionId }, { reviewSessionId: sessionId }, { session: { parentId: sessionId } }],
+      session: { startedBy: { autoMerge: true } },
+    },
+    select: { id: true },
+    orderBy: { updatedAt: 'desc' },
+    take: 20,
+  })
+  for (const { id } of rows)
+    await autoMerge(scope, id).catch((error) =>
+      console.warn(`auto-merge of ${id} failed: ${String(error)}`),
+    )
 }
 
 /** Workspaces with a pull request a person asked to merge, still open (src/jobs.ts). */

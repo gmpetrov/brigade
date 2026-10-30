@@ -317,6 +317,8 @@ export type Me = {
   aiReady: boolean
   /** Their message box suggests what they may write next (message.suggested). */
   suggestions: boolean
+  /** Brigade merges what teammates open in their threads once it is ready (owners and admins). */
+  autoMerge: boolean
 }
 
 export type Teammate = {

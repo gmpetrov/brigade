@@ -7635,7 +7635,8 @@ export const MemberScalarFieldEnum = {
   role: 'role',
   createdAt: 'createdAt',
   notify: 'notify',
-  suggestions: 'suggestions'
+  suggestions: 'suggestions',
+  autoMerge: 'autoMerge'
 } as const
 
 export type MemberScalarFieldEnum = (typeof MemberScalarFieldEnum)[keyof typeof MemberScalarFieldEnum]
@@ -8004,6 +8005,7 @@ export const PullRequestScalarFieldEnum = {
   round: 'round',
   resolveFromSha: 'resolveFromSha',
   note: 'note',
+  autoMergeAt: 'autoMergeAt',
   state: 'state',
   mergedAt: 'mergedAt',
   createdAt: 'createdAt',

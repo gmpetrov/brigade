@@ -189,6 +189,9 @@ model Member {
   notify                NotifyPreset           @default(needed)
   /// Their message box suggests what they may write next, guessed after each turn on their account.
   suggestions           Boolean                @default(true)
+  /// Brigade merges the pull requests teammates open in their threads once they are ready: no
+  /// review under way or asked for, and checks passed (src/auto-merge.ts). Owners and admins only.
+  autoMerge             Boolean                @default(false)
   pushNotices           PushNotice[]
   /// Playbooks that run on their accounts.
   playbookInstallations PlaybookInstallation[]
@@ -1036,6 +1039,9 @@ model PullRequest {
   resolveFromSha      String?             @map("reviewedSha")
   /// Why a merge is waiting or stopped, shown on the pull request.
   note                String?
+  /// When Brigade set it merging on its own, for its member's Auto-merge (src/auto-merge.ts): such
+  /// a merge gives up rather than sending it back to the author or asking a person.
+  autoMergeAt         DateTime?
   /// As last seen on GitHub: open, closed or merged.
   state               String              @default("open")
   mergedAt            DateTime?
