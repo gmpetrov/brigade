@@ -533,7 +533,9 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   pass, as a merge a person asked for. Unlike one, it never goes back to the author nor opens a ticket: failed
   checks, conflicts, a rule GitHub enforces, its thread back at work or two hours without GitHub allowing it, and
   it waits on a person again (`pull_request.auto_merge_stopped`). It does not reach pull requests that already
-  waited when it was turned on, until their thread's next turn ends.
+  waited when it was turned on, until their thread's next turn ends. Checks it cannot read are never taken for
+  checks that passed: GitHub failing to list them, it tries again; without the GitHub app's Checks permission, it
+  never merges on its own.
 - **Reviews** (`apps/api/src/reviews.ts`). Another teammate reviews a pull request in a child thread of the thread
   that opened it, which Brigade starts with a standard brief rather than the author's: the pull request, how that
   thread started, and whether the repository runs checks (then the reviewer reads the logic and leaves the rest to

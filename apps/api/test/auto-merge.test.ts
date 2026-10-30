@@ -16,7 +16,7 @@ import { parseEnv } from 'node:util'
 // - a merge under way gives up when its thread goes back to work, or when what it would merge is
 //   no longer the head its review approved;
 // - checks GitHub fails to list are never taken for none: not set merging, and a merge under way
-//   waits; only a missing Checks permission reads as no check runs.
+//   waits; without the Checks permission it never merges on its own.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -410,16 +410,26 @@ describe('auto-merge', { skip: !database && 'no database answers' }, () => {
     assert.ok(merged.has(11), 'GitHub answers again: merged')
   })
 
-  test('without the Checks permission, commit statuses alone say', async () => {
+  test('without the Checks permission, it cannot tell and leaves it to a person', async () => {
+    const noChecks = (pathname: string) =>
+      pathname.endsWith('/check-runs')
+        ? Response.json({ message: 'Resource not accessible by integration' }, { status: 403 })
+        : undefined
     const thread = await opened(12)
-    await withGitHub(
-      (pathname) =>
-        pathname.endsWith('/check-runs')
-          ? Response.json({ message: 'Resource not accessible by integration' }, { status: 403 })
-          : undefined,
-      () => turnEnded(thread),
-    )
-    assert.ok(merged.has(12))
+    await withGitHub(noChecks, () => turnEnded(thread))
+    assert.equal((await row(12)).mergeStatus, 'none', 'not set merging')
+    assert.ok(!merged.has(12))
+
+    // Lost meanwhile, under way: it gives up at once rather than wait two hours.
+    checks.set(14, 'pending')
+    const other = await opened(14)
+    await turnEnded(other)
+    assert.equal((await row(14)).mergeStatus, 'merging')
+    checks.set(14, 'success')
+    const { advanceMerges } = await import('../src/pull-requests.js')
+    await withGitHub(noChecks, () => advanceMerges(ids.workspace))
+    assert.equal((await row(14)).mergeStatus, 'none')
+    assert.ok(!merged.has(14))
   })
 
   test('another 403 on check runs, such as a rate limit, is not a missing permission', async () => {

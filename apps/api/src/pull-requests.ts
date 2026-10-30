@@ -456,16 +456,13 @@ function checkStatus(status: string, conclusion: string | null): CheckRun['statu
   return 'failure'
 }
 
-/**
- * GitHub's answer to an app without a permission. Its other 403s, such as a secondary rate
- * limit, say nothing about whether there are checks.
- */
+/** GitHub's answer to an app without a permission, such as reading check runs. */
 const NO_PERMISSION = /^403: Resource not accessible by integration/
 
 /**
  * Check runs and commit statuses on a commit. Without the Checks permission, statuses only.
- * strict: GitHub failing to say throws, rather than reading as no checks (what an auto-merge
- * must never take for checks that passed); only a missing Checks permission still reads as none.
+ * strict: GitHub failing to say throws, a missing Checks permission too, rather than reading as
+ * no checks: an auto-merge must never take checks it cannot see for checks that passed.
  */
 export async function checksOf(
   gh: GitHub,
@@ -473,14 +470,12 @@ export async function checksOf(
   sha: string,
   options: { strict?: boolean } = {},
 ): Promise<CheckRun[]> {
-  const lenient = <T>(empty: T, permission = false) =>
-    options.strict
-      ? (error: unknown): T => {
-          if (permission && error instanceof ConnectorError && NO_PERMISSION.test(error.message))
-            return empty
-          throw error
-        }
-      : () => empty
+  const lenient =
+    <T>(empty: T) =>
+    (error: unknown): T => {
+      if (options.strict) throw error
+      return empty
+    }
   const [runs, statuses] = await Promise.all([
     gh
       .fetch(`${repoPath(repo)}/commits/${sha}/check-runs?per_page=100`)
@@ -494,7 +489,7 @@ export async function checksOf(
           }[]
         }>(r),
       )
-      .catch(lenient({ check_runs: [] }, true)),
+      .catch(lenient({ check_runs: [] })),
     gh
       .fetch(`${repoPath(repo)}/commits/${sha}/status`)
       .then((r) =>
@@ -1153,8 +1148,15 @@ async function advanceMerge(scope: Scope, id: string, now = new Date()) {
       `it conflicts with \`${p.base.ref}\``,
       `merge \`${p.base.ref}\` into your branch and resolve the conflicts.`,
     )
-  // GitHub failing to list them: an auto-merge tries again next minute, never takes it for none.
-  const checks = await checksOf(gh, row.repository, p.head.sha, { strict: auto })
+  // GitHub failing to list them: an auto-merge tries again next minute. The app not allowed to
+  // read check runs: it can never tell, and leaves it to a person.
+  const checks = await checksOf(gh, row.repository, p.head.sha, { strict: auto }).catch(
+    (error: unknown) => {
+      if (error instanceof ConnectorError && NO_PERMISSION.test(error.message)) return null
+      throw error
+    },
+  )
+  if (!checks) return autoMergeOff(db, scope, row, 'the GitHub app may not read its check runs')
   const failed = checks.filter((c) => c.status === 'failure')
   if (auto && failed.length)
     return autoMergeOff(db, scope, row, `checks failed (${failed.map((c) => c.name).join(', ')})`)
