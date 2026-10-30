@@ -22,6 +22,7 @@ import {
   ChevronDown,
   Download,
   ExternalLink,
+  Hand,
   Hammer,
   Library,
   Maximize,
@@ -201,7 +202,7 @@ function DesignFrame({
   const root = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const canvas = useRef<CanvasHandle>(null)
-  const [mode, setMode] = useState<'select' | 'play'>('select')
+  const [mode, setMode] = useState<'select' | 'hand' | 'play'>('select')
   const [selection, setSelection] = useState<Selected[]>([])
   const [inspected, setInspected] = useState<Record<string, Inspected>>({})
   const [tab, setTab] = useState<'properties' | 'ask' | 'knobs' | null>(null)
@@ -425,6 +426,9 @@ function DesignFrame({
           ? [{ board: last.board, h: parent, bid: null }]
           : [],
       )
+    } else if (!mod && !e.altKey && (e.key === 'v' || e.key === 'h')) {
+      e.preventDefault()
+      setMode(e.key === 'v' ? 'select' : 'hand')
     } else if ((e.key === 'Enter' || e.key === 'F2') && last && lastInspected?.editable.text) {
       e.preventDefault()
       canvas.current?.retype(last)
@@ -728,6 +732,8 @@ function DesignFrame({
                 variant="ghost"
                 size={compact ? 'icon-sm' : 'sm'}
                 title="Edit by hand: expand the design"
+                // The panel already takes the whole screen there.
+                className="max-xl:hidden"
                 aria-label={compact ? 'Edit' : undefined}
                 onClick={onExpand}
               >
@@ -765,7 +771,8 @@ function DesignFrame({
           <div role="radiogroup" aria-label="Mode" className="flex rounded-md bg-muted p-0.5">
             {(
               [
-                ['select', MousePointer2, 'Select: pick elements to change or ask about'],
+                ['select', MousePointer2, 'Select: pick elements to change or ask about (V)'],
+                ['hand', Hand, 'Hand: drag to move around the canvas (H)'],
                 ['play', Play, 'Play: use the pages'],
               ] as const
             ).map(([m, Icon, title]) => (
@@ -892,7 +899,9 @@ function DesignFrame({
               <p className="p-3 text-xs text-muted-foreground">
                 {mode === 'play'
                   ? 'Play: the pages work as they would in a browser. Switch to Select to change them.'
-                  : 'Select an element on a board to change its text, size, spacing and look. Space + drag or the trackpad pans, pinch or ⌘ + scroll zooms, ⇧1 fits everything.'}
+                  : mode === 'hand'
+                    ? 'Hand: drag anywhere to move around the canvas. Switch to Select (V) to change elements.'
+                    : 'Select an element on a board to change its text, size, spacing and look. Space + drag, the Hand (H) or the trackpad pans, pinch or ⌘ + scroll zooms, ⇧1 fits everything.'}
               </p>
             )}
           </aside>
@@ -1257,6 +1266,8 @@ export function DesignPanel({
               size="icon-sm"
               title={expanded ? 'Back to the panel' : 'Expand'}
               aria-label={expanded ? 'Back to the panel' : 'Expand'}
+              // Below xl the panel is the whole screen already.
+              className="max-xl:hidden"
               onClick={() => setExpanded(!expanded)}
             >
               {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
