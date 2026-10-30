@@ -1934,23 +1934,29 @@ export class Threads {
     try {
       if (queue) await Promise.race([before, aborted])
       if (controller.signal.aborted) return false
-      if (await room()) {
-        this.started++
-        return (admitted = true)
-      }
-      this.options.emit(spec.sessionId, {
-        at: new Date().toISOString(),
-        type: 'raw',
-        source: 'runner',
-        value: `The computer is short of memory: ${spec.teammate.name} starts once it has some again.`,
-      })
+      // Slots are taken before this wait: a cap lowered meanwhile (stoppedForMemory) is checked here.
+      const fits = () => this.started < this.limit
       const until = Date.now() + MEMORY_WAIT_MS
+      let told = false
       while (!this.stopping && !controller.signal.aborted) {
-        await sleep(5_000, undefined, { signal: controller.signal }).catch(() => undefined)
-        if (controller.signal.aborted || (await room())) break
-        if (Date.now() >= until && this.started < TURNS_ALWAYS) break
+        if (fits() && (await room())) break
+        // Long enough, with few turns running: none may end soon to give memory back.
+        if (fits() && Date.now() >= until && this.started < TURNS_ALWAYS) break
+        if (fits() && !told) {
+          told = true
+          this.options.emit(spec.sessionId, {
+            at: new Date().toISOString(),
+            type: 'raw',
+            source: 'runner',
+            value: `The computer is short of memory: ${spec.teammate.name} starts once it has some again.`,
+          })
+        }
+        // Held by the cap, a turn ending frees a place soon: checked more often.
+        await sleep(fits() ? 5_000 : 1_000, undefined, { signal: controller.signal }).catch(
+          () => undefined,
+        )
       }
-      admitted = !controller.signal.aborted
+      admitted = !this.stopping && !controller.signal.aborted
       if (admitted) this.started++
       return admitted
     } finally {

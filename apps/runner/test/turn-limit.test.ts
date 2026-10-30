@@ -160,3 +160,20 @@ test('after the memory guard stopped a turn, one fewer at once, then more again'
   assert.ok(startedAt('g'), 'g started once the limit went back up')
   for (const id of [...ids, 'g']) end(id)
 })
+
+test('turns waiting to start keep to a cap lowered meanwhile', async () => {
+  const { threads, message, startedAt, end } = setup(32, () => true)
+  const ids = Array.from({ length: 10 }, (_, i) => `q${i}`)
+  for (const id of ids) message(id)
+  await sleep(220)
+  assert.equal(ids.filter((id) => startedAt(id)).length, 5)
+  // The guard stops the fifth: four at once now, and the five still queued wait for a place.
+  threads.stoppedForMemory('q4', 'the computer was stuck waiting for memory for 10 s')
+  end('q4')
+  await sleep(250)
+  assert.equal(ids.filter((id) => startedAt(id)).length - 1, 4)
+  // A while without another stop, the cap goes back up and they start, one at a time.
+  await sleep(3_500)
+  assert.equal(ids.filter((id) => startedAt(id)).length - 1, 9)
+  for (const id of ids) end(id)
+})
