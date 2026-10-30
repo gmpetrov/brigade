@@ -124,11 +124,11 @@ mission; threads stay where the work happens.
   opens the list. `GET /api/lists/pins`, `POST|DELETE /api/lists/:documentId/pin`.
 - **A list** (`/app/lists/<documentId>`): the file in the document editor, its progress, and
   filters (All, Open, In progress, Needs you, Done) that hide the other lines (CSS over each
-  line's state, `globals.css`); a line that does not match but holds a sub-line that does stays,
-  dimmed, above it. Each line with work on it shows its threads (state dot,
-  teammate, title, "needs you"), pull requests (what remains after one, in its tooltip) and
-  "Stopped, still open" when stalled (`components/list-items.tsx`); the same chips show wherever
-  the file opens, such as the document panel.
+  line's state, `globals.css`); a line that does not match but holds a sub-line that does stays
+  above it as a small grey breadcrumb (no box, chips or note). Each line with work on it shows
+  its threads (state dot, teammate, title, "needs you"), pull requests (what remains after one,
+  in its tooltip) and "Stopped, still open" when stalled (`components/list-items.tsx`); the same
+  chips show wherever the file opens, such as the document panel.
 - **Hand over**: select lines in the editor, then **Hand to <teammate>** in its toolbar. A dialog
   asks how: one thread, one thread each, or a thread that runs already, with an optional note.
   The lines get their markers in the editor at once; the API marks them in the stored file too
