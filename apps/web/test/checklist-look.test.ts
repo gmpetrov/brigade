@@ -6,80 +6,78 @@ import { checklistLook, type Piece } from '../lib/checklist-look'
 const plain = (text: string): Piece => ({ text, italic: false, code: false })
 const italic = (text: string): Piece => ({ text, italic: true, code: false })
 const code = (text: string, inItalic = false): Piece => ({ text, italic: inItalic, code: true })
+const br = plain('\n')
+const length = (pieces: Piece[]) => pieces.reduce((n, p) => n + p.text.length, 0)
 
 test('a line without italics has no note, with or without its priority dot', () => {
   assert.deepEqual(checklistLook([plain('🔴 Page de statut')]), { note: null })
   assert.deepEqual(checklistLook([plain('Page de statut')]), { note: null })
 })
 
-test('a closing note in italics starts a line of its own', () => {
-  const pieces = [plain('🔴 Sauvegardes Neon. '), italic('Vérifié le 26 oct.')]
-  const from = 'Sauvegardes Neon. '.length + 3
+test('italics on a line of their own after a line break are a note, from the break', () => {
+  const pieces = [plain('🔴 Sauvegardes Neon.'), br, italic('Vérifié le 26 oct.')]
   assert.deepEqual(checklistLook(pieces), {
-    note: { from, to: from + 'Vérifié le 26 oct.'.length },
+    note: { from: '🔴 Sauvegardes Neon.'.length, to: length(pieces) },
   })
 })
 
-test('code between italics stays in the note', () => {
-  const pieces = [
-    plain('Gateway redéployée. '),
-    italic('Depuis la PR #414 (table '),
-    code('previews'),
-    italic('). Ensuite, redémarrer.'),
-  ]
-  assert.equal(checklistLook(pieces).note?.from, 'Gateway redéployée. '.length)
-})
-
-test('the note starts at its words, not at code before them', () => {
-  const pieces = [plain('Rate limiting. '), code('POST'), italic(' reste à faire')]
-  assert.equal(checklistLook(pieces).note?.from, 'Rate limiting. POST'.length)
+test('italics at the end of the line itself are not a note', () => {
+  assert.equal(checklistLook([plain('Sauvegardes Neon. '), italic('Vérifié.')]).note, null)
+  assert.equal(checklistLook([plain('Tester dans '), italic('Safari')]).note, null)
 })
 
 test('italics in the middle of the line are not a note', () => {
   assert.equal(checklistLook([plain('Un '), italic('seul'), plain(' runner')]).note, null)
 })
 
-test('a line all in italics has no note', () => {
-  assert.equal(checklistLook([plain('🟠 '), italic('À voir')]).note, null)
-  assert.equal(checklistLook([italic('À voir')]).note, null)
-})
-
-test('code alone at the end is not a note', () => {
-  assert.equal(checklistLook([plain('Clé '), code('VAULT_KEY')]).note, null)
-})
-
-test('an italic code span counts as part of the note', () => {
-  const pieces = [
-    plain('TVA. '),
-    italic('Aucune taxe ('),
-    code('automatic_tax', true),
-    italic(').'),
-  ]
-  assert.equal(checklistLook(pieces).note?.from, 'TVA. '.length)
-})
-
-test('the marker of attached work after the note leaves the note as it is', () => {
-  const marker: Piece = { text: '￼', italic: false, code: false, aside: true }
-  const pieces = [plain('Anti-abus. '), italic('Limites faites.'), marker]
-  assert.deepEqual(checklistLook(pieces).note, {
-    from: 'Anti-abus. '.length,
-    to: 'Anti-abus. Limites faites.'.length,
-  })
-  assert.equal(checklistLook([plain('Anti-abus.'), marker]).note, null)
+test('a line break followed by plain text is not a note', () => {
+  assert.equal(checklistLook([plain('Rollback'), br, plain('API et dashboard')]).note, null)
+  assert.equal(
+    checklistLook([plain('Rollback'), br, italic('à voir'), br, plain('fin')]).note,
+    null,
+  )
 })
 
 test('several notes, each on its own line, make one note', () => {
   const pieces = [
-    plain('Gateway redéployée. '),
+    plain('Gateway redéployée.'),
+    br,
     italic('Depuis la PR #414 (table '),
     code('previews'),
     italic('). Ensuite, redémarrer.'),
-    plain('\n'),
+    br,
     italic('Deuxième commentaire'),
   ]
-  const text = pieces.map((p) => p.text).join('')
   assert.deepEqual(checklistLook(pieces).note, {
-    from: 'Gateway redéployée. '.length,
-    to: text.length,
+    from: 'Gateway redéployée.'.length,
+    to: length(pieces),
+  })
+})
+
+test('a note at the end of the line before the break stays in the line', () => {
+  const pieces = [plain('Gateway. '), italic('Inline.'), br, italic('Sous la ligne')]
+  assert.equal(checklistLook(pieces).note?.from, 'Gateway. Inline.'.length)
+})
+
+test('a note may start with code', () => {
+  const pieces = [plain('Rate limiting.'), br, code('POST'), italic(' reste à faire')]
+  assert.equal(checklistLook(pieces).note?.from, 'Rate limiting.'.length)
+})
+
+test('a line that is only a dot, or only italics, has no note', () => {
+  assert.equal(checklistLook([plain('🟠'), br, italic('À voir')]).note, null)
+  assert.equal(checklistLook([br, italic('À voir')]).note, null)
+})
+
+test('code alone on the last line is not a note', () => {
+  assert.equal(checklistLook([plain('Clé'), br, code('VAULT_KEY')]).note, null)
+})
+
+test('the marker of attached work after the note stays out of it', () => {
+  const marker: Piece = { text: '￼', italic: false, code: false, aside: true }
+  const pieces = [plain('Anti-abus.'), br, italic('Limites faites.'), marker]
+  assert.deepEqual(checklistLook(pieces).note, {
+    from: 'Anti-abus.'.length,
+    to: 'Anti-abus.\nLimites faites.'.length,
   })
 })
