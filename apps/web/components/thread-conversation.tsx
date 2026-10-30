@@ -5,7 +5,7 @@
 // beside it (a file, the preview, the computer) need the room, so asking for one
 // expands it first.
 import {
-  Eye,
+  Globe,
   ArrowDown,
   ArrowUp,
   CalendarClock,
@@ -1150,7 +1150,7 @@ export function ThreadConversation({
         {previewStart.busy ? (
           <LoaderCircle aria-hidden className="animate-spin" />
         ) : (
-          <Eye aria-hidden />
+          <Globe aria-hidden />
         )}
         {preview && live && (
           <span

@@ -5,7 +5,7 @@
 // row itself. Under Pinned, a row can be dragged to another place (`drag`). A thread whose
 // preview is up shows its icon, which opens the preview on hover (and in the menu on phones).
 // One with child threads has a caret after its title, which folds them under it (SubThreads).
-import { EllipsisVertical, Laptop, Eye, Play } from 'lucide-react'
+import { EllipsisVertical, Laptop, Globe, Play } from 'lucide-react'
 import Link from 'next/link'
 import { useState, type ComponentProps, type ReactNode } from 'react'
 import {
@@ -172,7 +172,7 @@ export function ThreadRow({
             {/* Its preview is up: people can try what it builds. */}
             {thread.previewRunning && (
               <span title="Preview running" className="flex">
-                <Eye aria-hidden className="size-3 opacity-50" />
+                <Globe aria-hidden className="size-3 opacity-50" />
                 <span className="sr-only">Preview running</span>
               </span>
             )}
@@ -196,7 +196,7 @@ export function ThreadRow({
             onClick={() => openPreview(thread.id)}
             className="right-7 group-hover/menu-item:opacity-100 focus-visible:opacity-100 max-md:hidden md:opacity-0"
           >
-            <Eye />
+            <Globe />
           </SidebarMenuAction>
         </Hint>
       )}

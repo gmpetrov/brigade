@@ -7,7 +7,7 @@
 // shows the first time only, unless the person keeps it. A stopped workspace
 // computer starts first: it asks again until the computer is up.
 import type { PreviewStartOutcome } from '@brigade/contracts'
-import { Eye, LoaderCircle } from 'lucide-react'
+import { Globe, LoaderCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -186,7 +186,7 @@ function PreviewSetupDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Eye aria-hidden className="size-5 text-muted-foreground" />
+            <Globe aria-hidden className="size-5 text-muted-foreground" />
             {setup ? `Set up a preview of ${what}` : `Start the preview of ${what}`}
           </DialogTitle>
           <DialogDescription>

@@ -4,7 +4,7 @@
 // an owner or admin forgets one, so the next preview is set up again. Beside
 // each, the variables people gave it (preview-variables.tsx).
 import type { SavedPreview } from '@brigade/contracts'
-import { Eye, ChevronRight } from 'lucide-react'
+import { Globe, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
@@ -71,7 +71,7 @@ export function SavedPreviews({ repositories }: { repositories?: string[] } = {}
             return (
               <Collapsible key={repository} className="flex flex-col gap-3 px-5 py-4">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <Eye aria-hidden className="size-5 shrink-0 text-muted-foreground" />
+                  <Globe aria-hidden className="size-5 shrink-0 text-muted-foreground" />
                   <div className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
                     <span className="font-mono font-semibold">{repository}</span>
                     <span className="truncate text-sm text-muted-foreground">

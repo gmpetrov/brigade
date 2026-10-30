@@ -6,7 +6,7 @@
 // Brigade gets a thread first, where a teammate checks out its branch and
 // starts it; that thread becomes the pull request's.
 import type { PullRequestDetail, ThreadPreviewState } from '@brigade/contracts'
-import { Eye, LoaderCircle } from 'lucide-react'
+import { Globe, LoaderCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
@@ -135,7 +135,7 @@ export function PullPreview({
             : "Runs this pull request's change, so you can try it"
         }
       >
-        {start.busy ? <LoaderCircle className="animate-spin" /> : <Eye />}
+        {start.busy ? <LoaderCircle className="animate-spin" /> : <Globe />}
         {start.busy
           ? 'Starting…'
           : open && inFront
@@ -240,7 +240,7 @@ function PickTeammate({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Eye aria-hidden className="size-5 text-muted-foreground" />
+            <Globe aria-hidden className="size-5 text-muted-foreground" />
             Preview #{pull.number}
           </DialogTitle>
           <DialogDescription>

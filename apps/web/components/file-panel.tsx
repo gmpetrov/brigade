@@ -13,7 +13,7 @@ import {
   type ThreadFile,
 } from '@brigade/contracts'
 import {
-  Eye,
+  Globe,
   Check,
   Copy,
   Download,
@@ -293,7 +293,7 @@ function ThreadFilePanel({
             tooltip="Open it in the code beside the preview, to see your edits as you save"
             onClick={() => previewCopy.open(file.path)}
           >
-            <Eye aria-hidden />
+            <Globe aria-hidden />
           </Button>
         )}
         {content && (
