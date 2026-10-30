@@ -456,8 +456,25 @@ function checkStatus(status: string, conclusion: string | null): CheckRun['statu
   return 'failure'
 }
 
-/** Check runs and commit statuses on a commit. Without the Checks permission, statuses only. */
-export async function checksOf(gh: GitHub, repo: string, sha: string): Promise<CheckRun[]> {
+/**
+ * Check runs and commit statuses on a commit. Without the Checks permission, statuses only.
+ * strict: GitHub failing to say throws, rather than reading as no checks (what an auto-merge
+ * must never take for checks that passed); only a missing Checks permission still reads as none.
+ */
+export async function checksOf(
+  gh: GitHub,
+  repo: string,
+  sha: string,
+  options: { strict?: boolean } = {},
+): Promise<CheckRun[]> {
+  const lenient = <T>(empty: T, permission = false) =>
+    options.strict
+      ? (error: unknown): T => {
+          if (permission && error instanceof ConnectorError && error.message.startsWith('403'))
+            return empty
+          throw error
+        }
+      : () => empty
   const [runs, statuses] = await Promise.all([
     gh
       .fetch(`${repoPath(repo)}/commits/${sha}/check-runs?per_page=100`)
@@ -471,13 +488,13 @@ export async function checksOf(gh: GitHub, repo: string, sha: string): Promise<C
           }[]
         }>(r),
       )
-      .catch(() => ({ check_runs: [] })),
+      .catch(lenient({ check_runs: [] }, true)),
     gh
       .fetch(`${repoPath(repo)}/commits/${sha}/status`)
       .then((r) =>
         json<{ statuses: { context: string; state: string; target_url: string | null }[] }>(r),
       )
-      .catch(() => ({ statuses: [] })),
+      .catch(lenient({ statuses: [] })),
   ])
   return [
     ...runs.check_runs.map((r) => ({
@@ -1108,6 +1125,12 @@ async function advanceMerge(scope: Scope, id: string, now = new Date()) {
     })
     return
   }
+  if (auto) {
+    // Pushed since it was set merging (by its author, or Brigade bringing it up to date): its
+    // review's approval must still be of what merges.
+    const held = await autoMergeHeld(db, row.id, now, p.head.sha)
+    if (held) return autoMergeOff(db, scope, row, held)
+  }
   if (p.draft) {
     if (auto) return autoMergeOff(db, scope, row, 'it is a draft')
     return waiting(db, row, 'A draft: mark it ready for review on GitHub to merge', true)
@@ -1124,7 +1147,8 @@ async function advanceMerge(scope: Scope, id: string, now = new Date()) {
       `it conflicts with \`${p.base.ref}\``,
       `merge \`${p.base.ref}\` into your branch and resolve the conflicts.`,
     )
-  const checks = await checksOf(gh, row.repository, p.head.sha)
+  // GitHub failing to list them: an auto-merge tries again next minute, never takes it for none.
+  const checks = await checksOf(gh, row.repository, p.head.sha, { strict: auto })
   const failed = checks.filter((c) => c.status === 'failure')
   if (auto && failed.length)
     return autoMergeOff(db, scope, row, `checks failed (${failed.map((c) => c.name).join(', ')})`)
@@ -1350,9 +1374,9 @@ export function autoMergeHold(row: AutoRow, now: Date, headSha?: string): string
   return null
 }
 
-const autoMergeHeld = async (db: ScopedDb, id: string, now: Date) => {
+const autoMergeHeld = async (db: ScopedDb, id: string, now: Date, headSha?: string) => {
   const row = await db.pullRequest.findFirst({ where: { id }, include: autoInclude })
-  return row ? autoMergeHold(row, now) : 'it is gone'
+  return row ? autoMergeHold(row, now, headSha) : 'it is gone'
 }
 
 /** An auto-merge that cannot go on: the pull request waits on a person again, as before it. */
@@ -1386,7 +1410,7 @@ export async function autoMerge(scope: Scope, id: string, now = new Date()) {
   const p = await pullOf(gh, row.repository, row.number)
   if (stateOf(p) !== 'open' || p.draft || p.mergeable_state === 'dirty') return false
   if (autoMergeHold(row, now, p.head.sha)) return false
-  const checks = await checksOf(gh, row.repository, p.head.sha)
+  const checks = await checksOf(gh, row.repository, p.head.sha, { strict: true })
   if (checks.some((c) => c.status === 'failure')) return false
   const { count } = await db.pullRequest.updateMany({
     where: { id: row.id, state: 'open', mergeStatus: 'none' },

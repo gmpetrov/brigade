@@ -13,7 +13,10 @@ import { parseEnv } from 'node:util'
 // - not while its thread is at work, nor for a member who may not merge;
 // - checks still running: it merges once they pass; failed, it waits on a person again, with no
 //   ticket and nothing sent to the author; failed already, it is not set merging at all;
-// - a merge under way gives up when its thread goes back to work.
+// - a merge under way gives up when its thread goes back to work, or when what it would merge is
+//   no longer the head its review approved;
+// - checks GitHub fails to list are never taken for none: not set merging, and a merge under way
+//   waits; only a missing Checks permission reads as no check runs.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -336,5 +339,86 @@ describe('auto-merge', { skip: !database && 'no database answers' }, () => {
     await advanceMerges(ids.workspace)
     assert.equal((await row(8)).mergeStatus, 'none')
     assert.ok(!merged.has(8))
+  })
+
+  /** GitHub, changed for one test: `change` answers first, or passes to the fake above. */
+  async function withGitHub(
+    change: (pathname: string, method: string) => Response | Promise<Response> | undefined,
+    run: () => Promise<void>,
+  ) {
+    const fake = globalThis.fetch
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) =>
+      (await change(new URL(String(url)).pathname, init?.method ?? 'GET')) ??
+      fake(url, init)) as typeof fetch
+    try {
+      await run()
+    } finally {
+      globalThis.fetch = fake
+    }
+  }
+
+  test('a head pushed after the approval while checks ran is not merged', async () => {
+    checks.set(9, 'pending')
+    const thread = await opened(9)
+    const pr = await row(9)
+    await db.pullRequestReview.create({
+      data: {
+        pullRequestId: pr.id,
+        teammateId: ids.kai,
+        sessionId: thread,
+        verdict: 'approve',
+        body: 'approve',
+        sha: 'sha9',
+        round: 1,
+      } as never,
+    })
+    await turnEnded(thread)
+    assert.equal((await row(9)).mergeStatus, 'merging')
+    checks.set(9, 'success')
+    const { advanceMerges } = await import('../src/pull-requests.js')
+    await withGitHub(
+      (pathname, method) =>
+        pathname === '/repos/acme/auto/pulls/9' && method === 'GET'
+          ? Response.json({ ...pull(9), head: { ref: 'brigade/change-9', sha: 'sha9-new' } })
+          : undefined,
+      () => advanceMerges(ids.workspace),
+    )
+    assert.ok(!merged.has(9), 'its approval read sha9')
+    assert.equal((await row(9)).mergeStatus, 'none')
+  })
+
+  test('checks GitHub fails to list are never taken for none', async () => {
+    const down = (pathname: string) =>
+      /\/(check-runs|status)$/.test(pathname)
+        ? Response.json({ message: 'Server Error' }, { status: 502 })
+        : undefined
+    const thread = await opened(10)
+    await withGitHub(down, () => turnEnded(thread))
+    assert.equal((await row(10)).mergeStatus, 'none', 'not set merging')
+    assert.ok(!merged.has(10))
+
+    checks.set(11, 'pending')
+    const other = await opened(11)
+    await turnEnded(other)
+    assert.equal((await row(11)).mergeStatus, 'merging')
+    checks.set(11, 'success')
+    const { advanceMerges } = await import('../src/pull-requests.js')
+    await withGitHub(down, () => advanceMerges(ids.workspace))
+    assert.ok(!merged.has(11))
+    assert.equal((await row(11)).mergeStatus, 'merging', 'it tries again next minute')
+    await advanceMerges(ids.workspace)
+    assert.ok(merged.has(11), 'GitHub answers again: merged')
+  })
+
+  test('without the Checks permission, commit statuses alone say', async () => {
+    const thread = await opened(12)
+    await withGitHub(
+      (pathname) =>
+        pathname.endsWith('/check-runs')
+          ? Response.json({ message: 'Resource not accessible by integration' }, { status: 403 })
+          : undefined,
+      () => turnEnded(thread),
+    )
+    assert.ok(merged.has(12))
   })
 })
