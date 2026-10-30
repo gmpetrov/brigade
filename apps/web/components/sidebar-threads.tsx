@@ -72,6 +72,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
+import { Hint } from '@/components/ui/tooltip'
 import {
   api,
   useApi,
@@ -230,11 +231,11 @@ function SubThreads({
               return (
                 <li key={c.id} className={BRANCH}>
                   <Link
+                    title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
                     href={`/app/threads/${c.id}`}
                     data-active={c.id === activeId}
                     {...preloadOnPoint(c.id, c.id === activeId)}
                     onClick={(e) => clickInPlace(e, `/app/threads/${c.id}`)}
-                    title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
                     className={SUB_ROW}
                   >
                     <FadeText
@@ -1290,20 +1291,22 @@ export function SidebarWork({
         {/* Folded, Threads is only its label: no filter beside it. */}
         {!folded.threads && (
           <DropdownMenu>
-            <SidebarGroupAction asChild title="Filter threads">
-              <DropdownMenuTrigger
-                aria-label="Filter threads"
-                className="data-[state=open]:bg-sidebar-accent"
-              >
-                <ListFilter />
-                {filtered && (
-                  <span
-                    aria-hidden
-                    className="bg-primary absolute top-0.5 right-0.5 size-1.5 rounded-full"
-                  />
-                )}
-              </DropdownMenuTrigger>
-            </SidebarGroupAction>
+            <Hint side="right" label="Filter threads">
+              <SidebarGroupAction asChild>
+                <DropdownMenuTrigger
+                  aria-label="Filter threads"
+                  className="data-[state=open]:bg-sidebar-accent"
+                >
+                  <ListFilter />
+                  {filtered && (
+                    <span
+                      aria-hidden
+                      className="bg-primary absolute top-0.5 right-0.5 size-1.5 rounded-full"
+                    />
+                  )}
+                </DropdownMenuTrigger>
+              </SidebarGroupAction>
+            </Hint>
             <DropdownMenuContent align="start" side="right" className="min-w-56">
               <DropdownMenuLabel className="text-muted-foreground text-xs">
                 Status
@@ -1429,12 +1432,14 @@ export function SidebarWork({
           />
         </SidebarGroupLabel>
         {admin && (
-          <SidebarGroupAction asChild title="New teammate">
-            <Link href="/app/teammates/new">
-              <Plus />
-              <span className="sr-only">New teammate</span>
-            </Link>
-          </SidebarGroupAction>
+          <Hint side="right" label="New teammate">
+            <SidebarGroupAction asChild>
+              <Link href="/app/teammates/new">
+                <Plus />
+                <span className="sr-only">New teammate</span>
+              </Link>
+            </SidebarGroupAction>
+          </Hint>
         )}
         {!folded.teammates && (
           <SidebarGroupContent>
@@ -1472,10 +1477,12 @@ export function SidebarWork({
             onToggle={() => toggleFolded('projects')}
           />
         </SidebarGroupLabel>
-        <SidebarGroupAction title="New project" onClick={onNewProject}>
-          <Plus />
-          <span className="sr-only">New project</span>
-        </SidebarGroupAction>
+        <Hint side="right" label="New project">
+          <SidebarGroupAction onClick={onNewProject}>
+            <Plus />
+            <span className="sr-only">New project</span>
+          </SidebarGroupAction>
+        </Hint>
         {!folded.projects && (
           <SidebarGroupContent>
             <SidebarMenu>
@@ -1543,11 +1550,13 @@ function SidebarRow({
         {badge}
       </SidebarMenuButton>
       {action && (
-        <SidebarMenuAction asChild showOnHover>
-          <Link href={action.href} aria-label={action.label} title={action.label}>
-            {action.icon}
-          </Link>
-        </SidebarMenuAction>
+        <Hint side="right" label={action.label}>
+          <SidebarMenuAction asChild showOnHover>
+            <Link href={action.href} aria-label={action.label}>
+              {action.icon}
+            </Link>
+          </SidebarMenuAction>
+        </Hint>
       )}
     </SidebarMenuItem>
   )

@@ -127,7 +127,7 @@ export function TouchButtons({
             size="icon-sm"
             disabled={!input}
             aria-label="Copy and paste"
-            title="Copy and paste"
+            tooltip="Copy and paste"
           >
             <Clipboard aria-hidden />
           </Button>
@@ -162,7 +162,7 @@ export function TouchButtons({
         onPointerDown={(e) => e.preventDefault()}
         onClick={onKeyboard}
         aria-label={keyboardOpen ? 'Hide the keyboard' : 'Keyboard'}
-        title={keyboardOpen ? 'Hide the keyboard' : 'Keyboard'}
+        tooltip={keyboardOpen ? 'Hide the keyboard' : 'Keyboard'}
       >
         <Keyboard aria-hidden />
       </Button>

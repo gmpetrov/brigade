@@ -21,6 +21,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Hint } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -44,18 +45,16 @@ function LineDate({ info }: { info: MemoryLineInfo | undefined }) {
   if (!info) return null
   const label = info.legacy ? `before ${day(info.at)}` : day(info.at)
   const className = 'shrink-0 text-xs whitespace-nowrap text-muted-foreground tabular-nums'
-  return info.sessionId && !info.legacy ? (
-    <Link
-      href={`/app/threads/${info.sessionId}`}
-      title={source(info)}
-      className={`${className} hover:underline`}
-    >
-      {label}
-    </Link>
-  ) : (
-    <span title={source(info)} className={className}>
-      {label}
-    </span>
+  return (
+    <Hint label={source(info)}>
+      {info.sessionId && !info.legacy ? (
+        <Link href={`/app/threads/${info.sessionId}`} className={`${className} hover:underline`}>
+          {label}
+        </Link>
+      ) : (
+        <span className={className}>{label}</span>
+      )}
+    </Hint>
   )
 }
 

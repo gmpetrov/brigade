@@ -162,7 +162,7 @@ export function TicketRow({
           <Button
             size="sm"
             variant="outline"
-            title="Let this teammate use it from now on, in any thread, without asking"
+            tooltip="Let this teammate use it from now on, in any thread, without asking"
             onClick={() => void onResolve(t.id, true, true)}
           >
             {t.payload.credentialAction === 'create' ? 'Save, use without asking' : 'Always allow'}

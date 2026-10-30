@@ -26,6 +26,7 @@ import {
   useFileLinks,
 } from '@/components/file-links'
 import { MentionChip, MessageText } from '@/components/mention'
+import { Hint } from '@/components/ui/tooltip'
 import { storedFileUrl, threadImageUrl } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -62,24 +63,25 @@ function CodeBlock({ children, ...props }: ComponentProps<'pre'>) {
           {language}
         </span>
       )}
-      <button
-        type="button"
-        onClick={() => {
-          void navigator.clipboard.writeText(textOf(children).replace(/\n$/, '')).then(() => {
-            setCopied(true)
-            setTimeout(() => setCopied(false), 1500)
-          })
-        }}
-        className="absolute top-1.5 right-1.5 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity group-hover/code:opacity-100 hover:bg-background hover:text-foreground focus-visible:opacity-100"
-        aria-label={copied ? 'Copied' : 'Copy code'}
-        title={copied ? 'Copied' : 'Copy'}
-      >
-        {copied ? (
-          <Check className="size-3.5" aria-hidden />
-        ) : (
-          <Copy className="size-3.5" aria-hidden />
-        )}
-      </button>
+      <Hint label={copied ? 'Copied' : 'Copy'}>
+        <button
+          type="button"
+          onClick={() => {
+            void navigator.clipboard.writeText(textOf(children).replace(/\n$/, '')).then(() => {
+              setCopied(true)
+              setTimeout(() => setCopied(false), 1500)
+            })
+          }}
+          className="absolute top-1.5 right-1.5 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity group-hover/code:opacity-100 hover:bg-background hover:text-foreground focus-visible:opacity-100"
+          aria-label={copied ? 'Copied' : 'Copy code'}
+        >
+          {copied ? (
+            <Check className="size-3.5" aria-hidden />
+          ) : (
+            <Copy className="size-3.5" aria-hidden />
+          )}
+        </button>
+      </Hint>
       <pre
         {...props}
         className={cn(
@@ -121,24 +123,25 @@ function CopyChip({ text, children }: { text: string; children: ReactNode }) {
       ) : (
         <code className="min-w-0 font-mono text-[0.875em] wrap-anywhere">{children}</code>
       )}
-      <button
-        type="button"
-        onClick={() => {
-          void navigator.clipboard.writeText(text).then(() => {
-            setCopied(true)
-            setTimeout(() => setCopied(false), 1500)
-          })
-        }}
-        className="flex-none self-center rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
-        aria-label={copied ? 'Copied' : `Copy ${text}`}
-        title={copied ? 'Copied' : 'Copy'}
-      >
-        {copied ? (
-          <Check className="size-3" aria-hidden />
-        ) : (
-          <Copy className="size-3" aria-hidden />
-        )}
-      </button>
+      <Hint label={copied ? 'Copied' : 'Copy'}>
+        <button
+          type="button"
+          onClick={() => {
+            void navigator.clipboard.writeText(text).then(() => {
+              setCopied(true)
+              setTimeout(() => setCopied(false), 1500)
+            })
+          }}
+          className="flex-none self-center rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
+          aria-label={copied ? 'Copied' : `Copy ${text}`}
+        >
+          {copied ? (
+            <Check className="size-3" aria-hidden />
+          ) : (
+            <Copy className="size-3" aria-hidden />
+          )}
+        </button>
+      </Hint>
     </span>
   )
 }
@@ -157,17 +160,18 @@ function InlineCode({ className, children, ...props }: ComponentProps<'code'>) {
       </code>
     )
   return (
-    <button
-      type="button"
-      onClick={() => links.open({ path: text, teammateId: links.teammateId })}
-      title={`Open ${text}`}
-      className={cn(
-        codeClass,
-        'cursor-pointer text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:bg-primary/15 hover:decoration-primary',
-      )}
-    >
-      {children}
-    </button>
+    <Hint label={`Open ${text}`}>
+      <button
+        type="button"
+        onClick={() => links.open({ path: text, teammateId: links.teammateId })}
+        className={cn(
+          codeClass,
+          'cursor-pointer text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:bg-primary/15 hover:decoration-primary',
+        )}
+      >
+        {children}
+      </button>
+    </Hint>
   )
 }
 
@@ -197,14 +201,15 @@ function FileImage({ path, children }: { path: string; children: ReactNode }) {
   const name = path.split('/').pop() ?? path
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        title={`Preview ${name}`}
-        className={cn(linkClass, 'inline-flex cursor-zoom-in items-center gap-1')}
-      >
-        {children}
-      </button>
+      <Hint label={`Preview ${name}`}>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={cn(linkClass, 'inline-flex cursor-zoom-in items-center gap-1')}
+        >
+          {children}
+        </button>
+      </Hint>
       <MediaPreview
         media={open ? { name, src: imageSrc(links, path), kind: 'image' } : undefined}
         onClose={() => setOpen(false)}
@@ -221,14 +226,15 @@ function Anchor({ href, children, ...props }: ComponentProps<'a'>) {
     return <FileImage path={file}>{children}</FileImage>
   if (links && file)
     return (
-      <button
-        type="button"
-        onClick={() => links.open({ path: file, teammateId: links.teammateId })}
-        title={`Open ${file}`}
-        className={cn(linkClass, 'cursor-pointer')}
-      >
-        {children}
-      </button>
+      <Hint label={`Open ${file}`}>
+        <button
+          type="button"
+          onClick={() => links.open({ path: file, teammateId: links.teammateId })}
+          className={cn(linkClass, 'cursor-pointer')}
+        >
+          {children}
+        </button>
+      </Hint>
     )
   return (
     <a

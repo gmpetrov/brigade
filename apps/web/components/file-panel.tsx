@@ -262,7 +262,7 @@ function ThreadFilePanel({
           variant="ghost"
           size="icon-sm"
           aria-label={copied ? 'Copied' : 'Copy path'}
-          title={copied ? 'Copied' : 'Copy path'}
+          tooltip={copied ? 'Copied' : 'Copy path'}
           onClick={() =>
             void navigator.clipboard.writeText(shown).then(() => {
               setCopied(true)
@@ -278,7 +278,7 @@ function ThreadFilePanel({
             variant="ghost"
             size="icon-sm"
             aria-label="Edit"
-            title="Edit the file"
+            tooltip="Edit the file"
             onClick={() => setEditOpen(true)}
           >
             <Pencil aria-hidden />
@@ -290,21 +290,21 @@ function ThreadFilePanel({
             variant="ghost"
             size="icon-sm"
             aria-label="Open it with the preview"
-            title="Open it in the code beside the preview, to see your edits as you save"
+            tooltip="Open it in the code beside the preview, to see your edits as you save"
             onClick={() => previewCopy.open(file.path)}
           >
             <Eye aria-hidden />
           </Button>
         )}
         {content && (
-          <Button asChild variant="ghost" size="icon-sm" title="Download">
+          <Button asChild variant="ghost" size="icon-sm" tooltip="Download">
             <a href={`${content}?download`} aria-label="Download">
               <Download aria-hidden />
             </a>
           </Button>
         )}
         {file?.source === 'library' && (
-          <Button asChild variant="ghost" size="icon-sm" title="Open the library">
+          <Button asChild variant="ghost" size="icon-sm" tooltip="Open the library">
             <Link
               href={file.documentId ? `/app/library?file=${file.documentId}` : '/app/library'}
               aria-label="Open the library"

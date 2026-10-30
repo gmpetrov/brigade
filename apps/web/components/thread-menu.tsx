@@ -26,6 +26,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Hint } from '@/components/ui/tooltip'
 import { renamedHere } from '@/components/streamed-title'
 import { useThreadPanel } from '@/components/thread-panel'
 import { api, type Thread, type ThreadSummary } from '@/lib/api'
@@ -193,14 +194,15 @@ export function ThreadMenu({ thread, onChanged }: { thread: Thread; onChanged: (
   })
   return (
     <DropdownMenu open={menu.open} onOpenChange={menu.setOpen}>
-      <DropdownMenuTrigger
-        aria-label={`${menu.title}: more`}
-        title="More"
-        disabled={menu.busy}
-        className="-my-1 flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-[state=open]:bg-accent data-[state=open]:text-foreground [&>svg]:size-4"
-      >
-        <EllipsisVertical aria-hidden />
-      </DropdownMenuTrigger>
+      <Hint label="More">
+        <DropdownMenuTrigger
+          aria-label={`${menu.title}: more`}
+          disabled={menu.busy}
+          className="-my-1 flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-[state=open]:bg-accent data-[state=open]:text-foreground [&>svg]:size-4"
+        >
+          <EllipsisVertical aria-hidden />
+        </DropdownMenuTrigger>
+      </Hint>
       <DropdownMenuContent align="end" className="min-w-44" onKeyDown={menu.onMenuKey}>
         {menu.content}
       </DropdownMenuContent>

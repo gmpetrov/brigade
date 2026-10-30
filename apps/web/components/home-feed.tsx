@@ -108,7 +108,7 @@ function LooseEndRow({ item, onChange }: { item: LooseEnd; onChange: () => Promi
       variant="ghost"
       size="icon-sm"
       aria-label="Dismiss"
-      title="Dismiss"
+      tooltip="Dismiss"
       disabled={busy}
       onClick={() => run(() => api('/home/dismiss', { body: { key: item.key } }))}
     >
@@ -139,7 +139,7 @@ function LooseEndRow({ item, onChange }: { item: LooseEnd; onChange: () => Promi
               size="sm"
               className={pill}
               disabled={busy}
-              title={item.reply}
+              tooltip={item.reply}
               onClick={() =>
                 run(() =>
                   api(`/threads/${item.thread.id}/messages`, { body: { text: item.reply } }),

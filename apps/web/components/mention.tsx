@@ -13,6 +13,7 @@ import { useMaybeDashboard } from '@/components/dashboard'
 import { useFileLinks } from '@/components/file-links'
 import { ProjectIcon } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
+import { Hint } from '@/components/ui/tooltip'
 
 export type ConnectionKind = Connection['kind']
 
@@ -101,15 +102,16 @@ export function MentionChip({
   // An email opens its conversation in the Inbox.
   if (mention.kind === 'email')
     return (
-      <Link
-        href={`/app/inbox?status=all&item=${encodeURIComponent(`mail:${mention.id}`)}`}
-        data-kind="email"
-        title={`Open ${mention.label} in the Inbox`}
-        className={cn(chip, 'max-w-[40ch] hover:bg-accent', className)}
-      >
-        <MentionIcon kind="email" />
-        <span className="min-w-0 truncate">{mention.label}</span>
-      </Link>
+      <Hint label={`Open ${mention.label} in the Inbox`}>
+        <Link
+          href={`/app/inbox?status=all&item=${encodeURIComponent(`mail:${mention.id}`)}`}
+          data-kind="email"
+          className={cn(chip, 'max-w-[40ch] hover:bg-accent', className)}
+        >
+          <MentionIcon kind="email" />
+          <span className="min-w-0 truncate">{mention.label}</span>
+        </Link>
+      </Hint>
     )
   // A project opens its page.
   if (mention.kind === 'project' && !isLegacyProjectMention(mention))
@@ -123,28 +125,32 @@ export function MentionChip({
         {mention.label}
       </Link>
     )
+  // A chip that opens says so in a tooltip; one that doesn't keeps the plain title, for a
+  // label cut short.
   return (
-    <Tag
-      data-kind={mention.kind}
-      {...(open && {
-        type: 'button' as const,
-        onClick: open,
-      })}
-      title={open ? `Open ${label}` : label}
-      className={cn(
-        open && 'cursor-pointer hover:bg-accent',
-        chip,
-        // Room for the account, which is what tells two accounts of one App apart.
-        mention.kind === 'connection' && 'max-w-[40ch]',
-        className,
-      )}
-    >
-      <MentionIcon
-        kind={isLegacyProjectMention(mention) ? 'repository' : mention.kind}
-        connectionKind={kind}
-      />
-      <span className="min-w-0 truncate">{label}</span>
-    </Tag>
+    <Hint label={open ? `Open ${label}` : undefined}>
+      <Tag
+        data-kind={mention.kind}
+        {...(open && {
+          type: 'button' as const,
+          onClick: open,
+        })}
+        title={open ? undefined : label}
+        className={cn(
+          open && 'cursor-pointer hover:bg-accent',
+          chip,
+          // Room for the account, which is what tells two accounts of one App apart.
+          mention.kind === 'connection' && 'max-w-[40ch]',
+          className,
+        )}
+      >
+        <MentionIcon
+          kind={isLegacyProjectMention(mention) ? 'repository' : mention.kind}
+          connectionKind={kind}
+        />
+        <span className="min-w-0 truncate">{label}</span>
+      </Tag>
+    </Hint>
   )
 }
 

@@ -19,6 +19,7 @@ import { isAdmin, useDashboard } from '@/components/dashboard'
 import { PullStatus, ReviewLink, reviewLine, reviewThread } from '@/components/pull-status'
 import { ChildLine } from '@/components/thread-children'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import { api, pullHref, useApi, type PullRequestState, type ThreadChild } from '@/lib/api'
 import {
   blockedBecause,
@@ -137,7 +138,7 @@ export function PullCard({
           className="relative z-10 flex-none"
           disabled={busy}
           onClick={resolve}
-          title={`It conflicts with ${p.base}. ${p.tracking?.author?.name} resolves the conflicts, then it merges.`}
+          tooltip={`It conflicts with ${p.base}. ${p.tracking?.author?.name} resolves the conflicts, then it merges.`}
         >
           <GitCompareArrows />
           {busy ? 'Asking…' : 'Resolve conflicts'}
@@ -158,13 +159,14 @@ export function PullCard({
     return reviewHolds(p) ? (
       <span className="flex flex-none items-center gap-2">
         {thread ? (
-          <Link
-            href={`/app/threads/${thread}`}
-            className="relative z-10 rounded-md hover:opacity-80"
-            title={`Open ${reviewer(p) ?? unreviewedBy(p) ?? changesAskedBy(p)}'s review`}
-          >
-            <PullStatus pull={p} />
-          </Link>
+          <Hint label={`Open ${reviewer(p) ?? unreviewedBy(p) ?? changesAskedBy(p)}'s review`}>
+            <Link
+              href={`/app/threads/${thread}`}
+              className="relative z-10 rounded-md hover:opacity-80"
+            >
+              <PullStatus pull={p} />
+            </Link>
+          </Hint>
         ) : (
           <PullStatus pull={p} />
         )}
@@ -183,7 +185,7 @@ export function PullCard({
       className="relative z-10 flex-none"
       disabled={busy || !enabled}
       onClick={merge}
-      title={title}
+      tooltip={title}
     >
       <GitMerge />
       {busy && !asking ? 'Merging…' : 'Merge'}
@@ -225,15 +227,16 @@ export function PullCard({
           {p?.state === 'open' && unreviewedBy(p) && (
             <>
               {' · '}
-              <button
-                type="button"
-                className="relative z-10 font-medium text-primary hover:underline disabled:opacity-50"
-                disabled={busy}
-                onClick={reviewAgain}
-                title={`${unreviewedBy(p)} reviews its latest commits, in a new review`}
-              >
-                {asking ? 'Asking…' : 'Review again'}
-              </button>
+              <Hint label={`${unreviewedBy(p)} reviews its latest commits, in a new review`}>
+                <button
+                  type="button"
+                  className="relative z-10 font-medium text-primary hover:underline disabled:opacity-50"
+                  disabled={busy}
+                  onClick={reviewAgain}
+                >
+                  {asking ? 'Asking…' : 'Review again'}
+                </button>
+              </Hint>
             </>
           )}
         </span>

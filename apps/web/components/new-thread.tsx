@@ -43,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Hint } from '@/components/ui/tooltip'
 import {
   api,
   computerName,
@@ -78,19 +79,21 @@ function NotDefault({
   onReset: () => void
 }) {
   return (
-    <span
-      title={title}
-      className="flex h-8 max-w-44 min-w-0 items-center gap-1.5 rounded-md pr-0.5 pl-2 text-sm text-muted-foreground [&_svg:not([class*='size-'])]:size-4"
-    >
-      {icon}
-      <span className="truncate text-foreground">{label}</span>
+    <span className="flex h-8 max-w-44 min-w-0 items-center gap-1.5 rounded-md pr-0.5 pl-2 text-sm text-muted-foreground [&_svg:not([class*='size-'])]:size-4">
+      {/* The tooltip is on the name alone: the reset button has its own. */}
+      <Hint label={title}>
+        <span className="flex min-w-0 items-center gap-1.5">
+          {icon}
+          <span className="truncate text-foreground">{label}</span>
+        </span>
+      </Hint>
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
         className="size-6 shrink-0"
         aria-label={`Back to the default instead of ${label}`}
-        title="Back to the default"
+        tooltip="Back to the default"
         onClick={onReset}
       >
         <X aria-hidden />
@@ -790,7 +793,7 @@ export function NewThread({
       className="ml-auto rounded-full [&_svg:not([class*='size-'])]:size-5"
       disabled={busy || !ready}
       aria-label={busy ? 'Starting…' : 'Send'}
-      title={busy ? 'Starting…' : 'Send (↵)'}
+      tooltip={busy ? 'Starting…' : 'Send (↵)'}
     >
       <ArrowUp aria-hidden />
     </Button>

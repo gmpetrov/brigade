@@ -2,10 +2,12 @@
 
 import * as React from 'react'
 import { cn } from '@/lib/utils'
-import { Tooltip as TooltipPrimitive } from 'radix-ui'
+import { Slot, Tooltip as TooltipPrimitive } from 'radix-ui'
 
+// Brigade: 300ms before the first tooltip shows (the browser's own `title` waited about a
+// second), then none while the pointer moves on to the next control.
 function TooltipProvider({
-  delayDuration = 0,
+  delayDuration = 300,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
@@ -21,13 +23,35 @@ function Tooltip({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Root
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
 
-function TooltipTrigger({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
+function TooltipTrigger({
+  onFocus,
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+  return (
+    <TooltipPrimitive.Trigger
+      data-slot="tooltip-trigger"
+      onFocus={(e) => {
+        onFocus?.(e)
+        // Brigade: open on keyboard focus only. A menu or dialog closed with the mouse hands
+        // focus back to its button, which would otherwise pop its tooltip up again.
+        if (!focusVisible(e.currentTarget)) e.preventDefault()
+      }}
+      {...props}
+    />
+  )
+}
+
+function focusVisible(el: Element) {
+  try {
+    return el.matches(':focus-visible')
+  } catch {
+    return true
+  }
 }
 
 function TooltipContent({
   className,
-  sideOffset = 0,
+  sideOffset = 4,
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
@@ -37,16 +61,54 @@ function TooltipContent({
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          'z-50 w-fit origin-(--radix-tooltip-content-transform-origin) animate-in rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
+          'z-50 w-fit max-w-xs origin-(--radix-tooltip-content-transform-origin) animate-in rounded-md border bg-popover px-2.5 py-1.5 text-xs text-balance text-popover-foreground shadow-md fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
           className,
         )}
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground" />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   )
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+/**
+ * Shows `label` in a tooltip over its one child, in place of the browser's slow `title`.
+ * The child must take a ref and pass on its props (an element, Button, Link). Without a
+ * label it renders the child alone. A tooltip is not an accessible name: an icon-only
+ * button still needs its `aria-label`.
+ */
+function Hint({
+  label,
+  side,
+  align,
+  children,
+}: {
+  label?: React.ReactNode
+  side?: React.ComponentProps<typeof TooltipPrimitive.Content>['side']
+  align?: React.ComponentProps<typeof TooltipPrimitive.Content>['align']
+  children: React.ReactElement
+}) {
+  if (label === undefined || label === null || label === false || label === '') return children
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <WithoutState>{children}</WithoutState>
+      </TooltipTrigger>
+      <TooltipContent side={side} align={align}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+// The trigger hands its `data-state` down, and a menu, popover or tabs trigger inside would
+// take it over its own, losing its `data-[state=open]` and `data-[state=active]` styles.
+function WithoutState({
+  'data-state': _,
+  ...props
+}: React.ComponentProps<typeof Slot.Root> & { 'data-state'?: string }) {
+  return <Slot.Root {...props} />
+}
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, Hint }

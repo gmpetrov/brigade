@@ -7,6 +7,7 @@ import { EFFORTS, type Effort } from '@brigade/contracts'
 import { CircleHelp } from 'lucide-react'
 import { Popover } from 'radix-ui'
 import { useEffect, useRef, useState } from 'react'
+import { Hint } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 /** The thread's effort (null: the model's own), that level, and a change to it. */
@@ -245,20 +246,21 @@ export function EffortButton({
   const index = level(effort)
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
-        <button
-          type="button"
-          className={cn(
-            'flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent',
-            index === MAX && 'bg-primary/10 text-primary hover:bg-primary/15',
-            className,
-          )}
-          title={`${EFFORTS[index]!.label} effort${later ? ', from the next turn' : ''}`}
-        >
-          <EffortBars index={index} />
-          {EFFORTS[index]!.label}
-        </button>
-      </Popover.Trigger>
+      <Hint label={`${EFFORTS[index]!.label} effort${later ? ', from the next turn' : ''}`}>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent',
+              index === MAX && 'bg-primary/10 text-primary hover:bg-primary/15',
+              className,
+            )}
+          >
+            <EffortBars index={index} />
+            {EFFORTS[index]!.label}
+          </button>
+        </Popover.Trigger>
+      </Hint>
       <EffortPanel effort={effort} later={later} align="end" />
     </Popover.Root>
   )

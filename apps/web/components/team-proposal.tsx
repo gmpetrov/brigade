@@ -18,6 +18,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Hint } from '@/components/ui/tooltip'
 import { api, useApi, type Connection, type ConnectionsResponse } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -214,7 +215,7 @@ function ProposedRow({
               size="icon"
               className="size-8"
               aria-label={t.included ? `Leave out ${t.name}` : `Add ${t.name} back`}
-              title={t.included ? 'Leave out' : 'Add back'}
+              tooltip={t.included ? 'Leave out' : 'Add back'}
               onClick={() => {
                 setEditing(false)
                 onChange({ included: !t.included })
@@ -253,16 +254,14 @@ function ProposedRow({
           {t.connections.map((c) => {
             const connected = !!connectionOf(connections, c.kind)
             return (
-              <li
-                key={c.kind}
-                className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
-                title={c.why}
-              >
-                <ProviderLogo kind={c.kind} className="size-3.5" />
-                <span className="font-medium">{KIND_LABEL[c.kind]}</span>
-                <span className="text-muted-foreground">· {scopeLabel(c.scope)}</span>
-                {connected && <Check aria-label="connected" className="size-3.5 text-success" />}
-              </li>
+              <Hint key={c.kind} label={c.why}>
+                <li className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs">
+                  <ProviderLogo kind={c.kind} className="size-3.5" />
+                  <span className="font-medium">{KIND_LABEL[c.kind]}</span>
+                  <span className="text-muted-foreground">· {scopeLabel(c.scope)}</span>
+                  {connected && <Check aria-label="connected" className="size-3.5 text-success" />}
+                </li>
+              </Hint>
             )
           })}
         </ul>

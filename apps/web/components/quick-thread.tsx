@@ -159,7 +159,7 @@ export function QuickThread() {
               variant="outline"
               // A file still uploading in the box would lose its upload on the way aside.
               disabled={draft.files.busy}
-              title={draft.files.busy ? 'Once the files in the box have uploaded' : undefined}
+              tooltip={draft.files.busy ? 'Once the files in the box have uploaded' : undefined}
               onClick={() => backToMessage(kept)}
             >
               {kept.error ? 'Back to message' : 'Back to it'}
@@ -168,7 +168,7 @@ export function QuickThread() {
               variant="ghost"
               size="icon-sm"
               aria-label="Dismiss"
-              title="Dismiss: the message is gone"
+              tooltip="Dismiss: the message is gone"
               onClick={() => keptMessages.drop(kept.key)}
             >
               <X aria-hidden />

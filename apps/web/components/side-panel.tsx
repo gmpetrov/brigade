@@ -24,6 +24,7 @@ import {
   type RefObject,
 } from 'react'
 import { Button } from '@/components/ui/button'
+import { Hint } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 const WIDTH_KEY = 'brigade:panel-width'
@@ -97,23 +98,24 @@ export function PanelResizeHandle() {
   }
 
   return (
-    <div
-      ref={panel}
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="Resize panel"
-      title="Drag to resize, double-click to reset"
-      tabIndex={0}
-      onPointerDown={onPointerDown}
-      onDoubleClick={() => setWidth(null)}
-      onKeyDown={onKeyDown}
-      className="group absolute inset-y-0 -left-1.5 z-20 hidden w-3 cursor-col-resize touch-none outline-none xl:block"
-    >
-      <span
-        aria-hidden
-        className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors group-hover:bg-primary/60 group-focus-visible:bg-primary group-active:bg-primary"
-      />
-    </div>
+    <Hint side="left" label="Drag to resize, double-click to reset">
+      <div
+        ref={panel}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panel"
+        tabIndex={0}
+        onPointerDown={onPointerDown}
+        onDoubleClick={() => setWidth(null)}
+        onKeyDown={onKeyDown}
+        className="group absolute inset-y-0 -left-1.5 z-20 hidden w-3 cursor-col-resize touch-none outline-none xl:block"
+      >
+        <span
+          aria-hidden
+          className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors group-hover:bg-primary/60 group-focus-visible:bg-primary group-active:bg-primary"
+        />
+      </div>
+    </Hint>
   )
 }
 
@@ -237,7 +239,7 @@ export function PanelExpandButton() {
       type="button"
       variant="ghost"
       size="icon-sm"
-      title={label}
+      tooltip={label}
       aria-label={label}
       className="max-md:hidden"
       onClick={() => setFull(!full)}

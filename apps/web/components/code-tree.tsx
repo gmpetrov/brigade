@@ -7,6 +7,7 @@ import { ChevronRight, File, Folder, FolderOpen, RotateCw, Search, X } from 'luc
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { Hint } from '@/components/ui/tooltip'
 
 type Listing = { entries?: CodeEntry[]; more?: boolean; error?: string }
 
@@ -217,15 +218,16 @@ export function CodeTree({
             </button>
           )}
         </label>
-        <button
-          type="button"
-          aria-label="Refresh the files"
-          title="Refresh the files"
-          className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-          onClick={refresh}
-        >
-          <RotateCw aria-hidden className="size-3.5" />
-        </button>
+        <Hint label="Refresh the files">
+          <button
+            type="button"
+            aria-label="Refresh the files"
+            className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={refresh}
+          >
+            <RotateCw aria-hidden className="size-3.5" />
+          </button>
+        </Hint>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-2">
         {searching ? (
