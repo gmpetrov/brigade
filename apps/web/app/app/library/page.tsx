@@ -1,5 +1,5 @@
 'use client'
-import { FilePlus, FolderPlus, FolderUp, Plus, Search, Upload } from 'lucide-react'
+import { FilePlus, FolderPlus, FolderUp, Search, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
@@ -123,33 +123,34 @@ function LibraryView() {
           {uploading && (
             <span className="truncate text-sm text-muted-foreground">Uploading {uploading}…</span>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-full"
-                aria-label="New"
-                title="New"
-              >
-                <Plus />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={() => (setTab('files'), setQuery(''), setCreating('folder'))}
-              >
-                <FolderPlus aria-hidden />
-                New folder
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => (setTab('files'), setQuery(''), setCreating('file'))}
-              >
-                <FilePlus aria-hidden />
-                New file
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-full"
+            aria-label="New folder"
+            title="New folder"
+            onClick={() => (
+              setTab('files'),
+              setQuery(''),
+              setCreating(creating === 'folder' ? null : 'folder')
+            )}
+          >
+            <FolderPlus />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-full"
+            aria-label="New file"
+            title="New file"
+            onClick={() => (
+              setTab('files'),
+              setQuery(''),
+              setCreating(creating === 'file' ? null : 'file')
+            )}
+          >
+            <FilePlus />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
