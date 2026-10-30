@@ -4,14 +4,7 @@
 // per playbook that ran this week. Each section shows only when it has something, so a quiet
 // day leaves the composer alone on the page.
 import type { PlaybookHomeLine } from '@brigade/contracts'
-import {
-  BookOpenCheck,
-  CircleAlert,
-  Clock,
-  CornerDownLeft,
-  MessageCircleQuestion,
-  X,
-} from 'lucide-react'
+import { BookOpenCheck, CircleAlert, Clock, X } from 'lucide-react'
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
 import { StatusBadge, TeammateAvatar } from '@/components/dashboard'
@@ -127,48 +120,41 @@ function LooseEndRow({ item, onChange }: { item: LooseEnd; onChange: () => Promi
 
   if (item.kind === 'proposal') {
     const href = `/app/threads/${item.thread.id}`
-    // The offer itself is the action, in full and tinted violet, under the title: a button
-    // beside the title left both cut to a few letters.
-    const action =
-      'flex w-full min-w-0 items-center gap-2 rounded-lg border border-primary/35 bg-primary/15 px-3 py-1.5 text-left text-sm transition-colors hover:bg-primary/25 disabled:opacity-50'
+    const pill = 'max-w-full rounded-full'
+    // The reply sits right of the title when there is room for both, and drops under it,
+    // left-aligned, on a phone: beside a narrow title, both were cut to a few letters.
     return (
-      <li className="flex flex-col gap-2 px-4 py-2.5">
-        <div className="flex items-center gap-3">
-          <Icon>
-            <MessageCircleQuestion />
-          </Icon>
-          <Link href={href} className="min-w-0 flex-1 rounded-sm">
-            <p className="truncate text-sm font-semibold">{item.thread.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {meta(`${item.teammate.name} · no answer for ${since(item.at)}`)}
-            </p>
-          </Link>
-          {dismiss}
-        </div>
-        <div className="pl-11">
+      <li className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
+        <Link href={href} className="min-w-0 flex-1 rounded-sm">
+          <p className="truncate text-sm font-semibold">{item.thread.title}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {meta(`${item.teammate.name} · no answer for ${since(item.at)}`)}
+          </p>
+        </Link>
+        <div className="order-last flex min-w-0 basis-full sm:order-none sm:max-w-[50%] sm:basis-auto">
           {item.reply ? (
             // A click is the member's own message, as the button in the thread.
-            <button
-              type="button"
-              className={action}
+            <Button
+              variant="outline"
+              size="sm"
+              className={pill}
               disabled={busy}
-              title={`Send “${item.reply}”`}
+              title={item.reply}
               onClick={() =>
                 run(() =>
                   api(`/threads/${item.thread.id}/messages`, { body: { text: item.reply } }),
                 )
               }
             >
-              <span className="min-w-0 flex-1 truncate">{item.reply}</span>
-              <CornerDownLeft aria-hidden className="size-4 flex-none text-primary" />
-            </button>
+              <span className="truncate">{item.reply}</span>
+            </Button>
           ) : (
-            <Link href={href} className={action}>
-              <span className="min-w-0 flex-1 truncate">{item.offers.join(' · ')}</span>
-              <span className="flex-none text-xs font-medium text-primary">Choose</span>
-            </Link>
+            <Button variant="outline" size="sm" className={pill} asChild>
+              <Link href={href}>Choose</Link>
+            </Button>
           )}
         </div>
+        {dismiss}
       </li>
     )
   }
