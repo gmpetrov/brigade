@@ -780,7 +780,8 @@ export function SidebarWork({
     setPinOrder(ids)
     try {
       await api('/threads/pins/order', { method: 'PUT', body: { ids } })
-      await reloadThreads()
+      // Lists keep their place in their own list: both, or a dragged list jumps back.
+      await Promise.all([reloadThreads(), pinnedLists.reload()])
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e))
     }
