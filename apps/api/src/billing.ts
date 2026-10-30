@@ -486,6 +486,8 @@ export async function startCheckout(input: {
         // Stripe fills in the session's id; not encoded, or it would not.
         success_url: `${back}&session={CHECKOUT_SESSION_ID}`,
         cancel_url: input.cancelUrl,
+        // The account's public name is shared with Papers: Checkout names Brigade itself.
+        branding_settings: { display_name: 'Brigade' },
       })
       made = session.id
       // Still the lock's: this write fails if it was lost, and the session is expired below.
