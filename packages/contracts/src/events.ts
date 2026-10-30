@@ -78,11 +78,11 @@ export const Choices = z.object({
 export type Choices = z.infer<typeof Choices>
 /**
  * The message a click on a choice sends. A design picked from an options
- * folder has been moved to `picked` by then, and the message says where.
+ * folder has been copied to `picked` by then, and the message says where; the
+ * options stay where they are.
  */
 export const choiceMessage = (option: { label: string }, picked?: string) =>
-  `Go with ${option.label}` +
-  (picked ? `. It is now @[${picked}](design:${picked}); the other options went to the trash.` : '')
+  `Go with ${option.label}` + (picked ? `. It is now @[${picked}](design:${picked}).` : '')
 /** The option a message picked, if it is a click on one. */
 export const pickedChoice = <O extends { label: string }>(options: O[], message: string) =>
   options.find(
