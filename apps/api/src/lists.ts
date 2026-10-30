@@ -76,20 +76,27 @@ async function editList(
   documentId: string,
   context: Record<string, string>,
   edit: (text: string, list: ParsedList) => string | Promise<string>,
+  /** What `edit` wrote elsewhere, undone when the change fails: still under the file's lock. */
+  undo?: () => Promise<unknown>,
 ) {
   return withLibraryLock(scope, documentId, async (lease) => {
     const row = await listFile(db, { id: documentId })
     const text = await storedText(scope, row)
-    const next = await edit(text, parseList(text))
-    if (next === text) return row
-    return saveLibraryFile(
-      db,
-      scope,
-      actor,
-      { path: row.path, bytes: new TextEncoder().encode(next), contentType: row.contentType },
-      context,
-      { lease },
-    )
+    try {
+      const next = await edit(text, parseList(text))
+      if (next === text) return row
+      return await saveLibraryFile(
+        db,
+        scope,
+        actor,
+        { path: row.path, bytes: new TextEncoder().encode(next), contentType: row.contentType },
+        context,
+        { lease },
+      )
+    } catch (error) {
+      await undo?.()
+      throw error
+    }
   })
 }
 
@@ -784,11 +791,11 @@ async function addRemainder(
       present = added = true
       return insertLine(text, list, { after: item, nested: true }, link.remains!, id)
     },
-  ).catch(async (error) => {
-    // Not written: no row without its line.
-    if (added) await db.listItem.deleteMany({ where: { id } })
-    throw error
-  })
+    // Not written: no row without its line, gone before anyone else may read the file.
+    async () => {
+      if (added) await db.listItem.deleteMany({ where: { id } })
+    },
+  )
   if (!present) return null
   if (pull.sessionId)
     await db.listItemThread.createMany({
@@ -1241,47 +1248,54 @@ export async function handleListCall(
     }
     const id = newListItemId()
     let made = false
-    await editList(db, scope, actor, file.id, context, async (text, list) => {
-      let after: ListLine | undefined
-      const ref = remainsOf ?? op.after
-      if (ref) {
-        const line = remainsOf ? list.lines.find((l) => l.id === remainsOf) : findLine(list, ref)
-        if (!line) throw new HTTPException(404, { message: 'That item is no longer in its list' })
-        if (typeof line === 'string') throw new HTTPException(404, { message: line })
-        if (remainsOf && line.done)
-          throw new HTTPException(409, {
-            message: 'That item is ticked already: nothing remains of it',
-          })
-        after = line
-      }
-      // Its row with its line, under the file's lock (settleRemainders reads them there).
-      await db.listItem.create({
-        data: {
+    await editList(
+      db,
+      scope,
+      actor,
+      file.id,
+      context,
+      async (text, list) => {
+        let after: ListLine | undefined
+        const ref = remainsOf ?? op.after
+        if (ref) {
+          const line = remainsOf ? list.lines.find((l) => l.id === remainsOf) : findLine(list, ref)
+          if (!line) throw new HTTPException(404, { message: 'That item is no longer in its list' })
+          if (typeof line === 'string') throw new HTTPException(404, { message: line })
+          if (remainsOf && line.done)
+            throw new HTTPException(409, {
+              message: 'That item is ticked already: nothing remains of it',
+            })
+          after = line
+        }
+        // Its row with its line, under the file's lock (settleRemainders reads them there).
+        await db.listItem.create({
+          data: {
+            id,
+            documentId: file.id,
+            text: plainItemText(op.text).slice(0, 2_000),
+            ...(remainsOf ? { remainderOfId: remainsOf } : {}),
+          } as never,
+        })
+        made = true
+        return insertLine(
+          text,
+          list,
+          remainsOf
+            ? { after: after!, nested: true }
+            : {
+                ...(after ? { after } : {}),
+                ...(op.nested ? { nested: true } : {}),
+                ...(op.section ? { section: op.section } : {}),
+              },
+          op.text,
           id,
-          documentId: file.id,
-          text: plainItemText(op.text).slice(0, 2_000),
-          ...(remainsOf ? { remainderOfId: remainsOf } : {}),
-        } as never,
-      })
-      made = true
-      return insertLine(
-        text,
-        list,
-        remainsOf
-          ? { after: after!, nested: true }
-          : {
-              ...(after ? { after } : {}),
-              ...(op.nested ? { nested: true } : {}),
-              ...(op.section ? { section: op.section } : {}),
-            },
-        op.text,
-        id,
-      )
-    }).catch(async (error) => {
-      // Not written: no row without its line.
-      if (made) await db.listItem.deleteMany({ where: { id } })
-      throw error
-    })
+        )
+      },
+      // Not written: no row without its line, gone before anyone else may read the file.
+      async () => {
+        if (made) await db.listItem.deleteMany({ where: { id } })
+      },
+    )
     await db.listItemThread.create({ data: { itemId: id, sessionId: session.id } as never })
     return {
       added: { id, text: plainItemText(op.text), path: file.path },

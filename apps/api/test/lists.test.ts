@@ -1450,6 +1450,83 @@ describe('lists, what remains', { skip: !database && 'no database answers' }, ()
     assert.match(lines.join('\n'), /\* \[ \] Check translated email/)
   })
 
+  test('a remaining line whose save fails leaves no row behind for a sweep to take for removed', async () => {
+    const parent = 'failparent123456'
+    const child = 'failchild1234567'
+    const path = 'Remains/failed-insert.md'
+    const file = await save(
+      path,
+      `* [ ] Launch email <!-- item:${parent} -->\n` +
+        `  * [ ] Check copy <!-- item:${child} -->\n`,
+    )
+    await db.listItem.createMany({
+      data: [
+        { id: parent, documentId: file.id, text: 'Launch email' },
+        { id: child, documentId: file.id, text: 'Check copy', remainderOfId: parent },
+      ],
+    } as never)
+    let made = ''
+    let failed = false
+    let settling: Promise<void> | undefined
+    const failing = new Proxy(db, {
+      get(target, key) {
+        if (key === 'document')
+          return new Proxy(target.document, {
+            get(delegate, op) {
+              if (op !== 'findFirst') return Reflect.get(delegate, op)
+              return async (args: Parameters<typeof delegate.findFirst>[0]) => {
+                // The save of the new line fails.
+                if (made && !failed) {
+                  failed = true
+                  throw new Error('storage is out')
+                }
+                return delegate.findFirst(args)
+              }
+            },
+          })
+        if (key !== 'listItem') return Reflect.get(target, key)
+        return new Proxy(target.listItem, {
+          get(delegate, op) {
+            if (op === 'create')
+              return async (args: Parameters<typeof delegate.create>[0]) => {
+                const row = await delegate.create(args)
+                if ((args.data as { remainderOfId?: string }).remainderOfId === parent)
+                  made = row.id
+                return row
+              }
+            if (op === 'deleteMany')
+              return async (args: Parameters<typeof delegate.deleteMany>[0]) => {
+                // A sweep starts as the row is being taken back.
+                if ((args?.where as { id?: string })?.id === made)
+                  settling = lists.settleRemainders(db, scope, parent)
+                return delegate.deleteMany(args)
+              }
+            return Reflect.get(delegate, op)
+          },
+        })
+      },
+    }) as typeof db
+    await assert.rejects(
+      lists.handleListCall(failing, scope, { id: sessionId }, teammate, {
+        name: 'add_item',
+        path,
+        text: 'Check translated email',
+        remainsOf: parent,
+      }),
+      /storage is out/,
+    )
+    assert.ok(settling, 'started meanwhile')
+    await settling
+    assert.equal(await db.listItem.findFirst({ where: { id: made } }), null)
+    assert.equal(
+      (await db.listItem.findFirst({ where: { id: child } }))?.remainderSettledAt,
+      null,
+      'not taken for a removed line',
+    )
+    await save(path, (await read(file.id)).replace('  * [ ] Check copy', '  * [x] Check copy'))
+    assert.match((await read(file.id)).split('\n')[0]!, /^\* \[x\] Launch email/)
+  })
+
   test('a line whose threads stopped, with nothing else carrying it, is stalled', async () => {
     const file = await listOf('Remains/stalled.md', [['stallitem1234567', 'Refund policy']])
     const stalled = async () =>
