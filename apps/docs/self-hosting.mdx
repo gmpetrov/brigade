@@ -89,13 +89,27 @@ This is how brigade.lol runs: the API, the dashboard and live document editing a
 for the WebSockets, R2 for files and Neon for PostgreSQL.
 
 1. Sign in with `wrangler login`.
-2. Change the domains in `apps/api/wrangler.front.jsonc` (and its `WEB_URL`), `apps/web/wrangler.jsonc` and
-   `apps/collab/wrangler.jsonc`: they name brigade.lol.
-3. Create an R2 bucket and set its CORS rules from `scripts/deploy/r2-cors.json`, with your dashboard's origin in
+2. Point the configuration at your own domains and resources. These files name Brigade's:
+   - `scripts/deploy/workers.sh`: `API_URL`. The dashboard is built against it and the collab Worker deployed with
+     it, so leaving it as is sends your dashboard's sign-ins and work to brigade.lol.
+   - `apps/api/wrangler.front.jsonc` (its routes and `WEB_URL`), `apps/web/wrangler.jsonc` and
+     `apps/collab/wrangler.jsonc`: their routes.
+   - `apps/api/wrangler.jsonc`: the Hyperdrive `id`. Make your own with
+     `wrangler hyperdrive create <name> --connection-string=<your PostgreSQL> --caching-disabled`.
+3. Create the API's queues: `wrangler queues create brigade-jobs` and `wrangler queues create brigade-jobs-dlq`.
+4. Create an R2 bucket and set its CORS rules from `scripts/deploy/r2-cors.json`, with your dashboard's origin in
    place of Brigade's.
-4. Set each Worker's settings as secrets, with `pnpm --filter @brigade/api exec wrangler secret put <NAME>`.
-5. Build and deploy each Worker with `pnpm run cf:build:<worker>` and `pnpm run cf:deploy:<worker>` (`api`,
+5. Set each Worker's secrets in its own package, for example:
+   ```bash
+   pnpm --filter @brigade/api exec wrangler secret put BETTER_AUTH_SECRET
+   pnpm --filter @brigade/collab exec wrangler secret put COLLAB_SECRET
+   ```
+   The API's secrets are the settings below. The collab Worker needs `COLLAB_SECRET` (at least 32 characters), the same value as the API's,
+   or it refuses every request.
+6. Build and deploy each Worker with `pnpm run cf:build:<worker>` and `pnpm run cf:deploy:<worker>` (`api`,
    `api-front`, `web`, `collab`). The API's deploy migrates the database first, so it needs `DATABASE_URL` set.
+
+The [deployment plan](https://github.com/gmpetrov/brigade/blob/main/docs/deployment-plan.md) has the details.
 
 ## Settings you must set and keep
 
