@@ -992,6 +992,8 @@ function DesignCanvasInner({
           e.preventDefault()
           if (own && e.button === 0 && !hand && panning !== 'space' && selection.length)
             onSelect([])
+          // preventDefault keeps focus where it was: the canvas takes it, for its keys (V, H, ⇧1).
+          box.current?.focus({ preventScroll: true })
           setPanning((p) => p ?? 'drag')
           startDrag(e)
         }
