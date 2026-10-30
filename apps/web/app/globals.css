@@ -926,7 +926,7 @@
 }
 
 /* Checklist lines (Projects/Brigade/designs/editor-lists.design): a round box, filled
- * violet once done; a done line fades rather than being struck through. Notes on
+ * violet once done; a done line keeps its colour, struck through by a thin, faint line. Notes on
  * lines of their own at its end are smaller and grey (components/document-checklist.ts). */
 .document-editor .bn-block-content[data-content-type='checkListItem'] > div > input {
   appearance: none;
@@ -956,9 +956,7 @@
 .document-editor
   .bn-block-content[data-content-type='checkListItem'][data-checked='true']
   .bn-inline-content {
-  text-decoration: none;
-  opacity: 0.6;
-  transition: opacity 0.15s;
+  text-decoration: line-through 1px color-mix(in oklch, var(--muted-foreground) 55%, transparent);
 }
 /* Sub-lines show by their indent alone: no guide line down from their parent's box. */
 .document-editor .bn-editor .bn-block-group .bn-block-group .bn-block-outer::before {
@@ -1045,7 +1043,7 @@
     color: var(--muted-foreground);
     text-overflow: ellipsis;
     white-space: nowrap;
-    opacity: 1;
+    text-decoration: none;
   }
   & .bn-inline-content::before {
     content: '↳ ';
