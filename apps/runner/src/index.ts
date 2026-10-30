@@ -9,7 +9,7 @@ import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { setTimeout as sleep } from 'node:timers/promises'
 import type { ReadableStream as NodeReadableStream } from 'node:stream/web'
-import { hostname } from 'node:os'
+import { hostname, totalmem } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import {
@@ -58,7 +58,7 @@ import { Outbox } from './outbox.js'
 import { SeenCommands } from './seen-commands.js'
 import { imageStore } from './reply-images.js'
 import { bundleStore, libraryMessage } from './uploads.js'
-import { MemoryGuard, memoryRoom } from './memory-guard.js'
+import { MemoryGuard, memoryRoom, turnsAtOnce } from './memory-guard.js'
 import { runnerCgroups } from './preview-cgroup.js'
 import { Previews } from './previews.js'
 import { processGroups } from './process-groups.js'
@@ -81,7 +81,8 @@ const { values, positionals } = parseArgs({
   options: {
     api: { type: 'string', default: 'http://localhost:3001' },
     name: { type: 'string', default: hostname() },
-    concurrency: { type: 'string', default: '8' },
+    /** Turns at once at most; by default from the computer's memory (turnsAtOnce). */
+    concurrency: { type: 'string' },
     version: { type: 'boolean' },
     /** Set on a workspace cloud computer: no member's own logins live there. */
     cloud: { type: 'boolean' },
@@ -337,8 +338,10 @@ async function start() {
   if (backups) startBrowsersAfter(() => backups.ready())
   // On a cloud computer, the memory guard's (below): a turn waits for memory before it starts.
   const memoryGuard = CLOUD && process.env.BRIGADE_MEMORY_GUARD !== '0'
+  const concurrency = Number(values.concurrency) || turnsAtOnce(totalmem(), memoryGuard)
+  console.log(`up to ${concurrency} turns at once${memoryGuard ? ', as memory allows' : ''}`)
   const threads = new Threads({
-    concurrency: Number(values.concurrency),
+    concurrency,
     previews,
     folders,
     ...(memoryGuard ? { memoryRoom } : {}),

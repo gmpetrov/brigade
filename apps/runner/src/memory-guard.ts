@@ -159,6 +159,19 @@ export function roomFor(reading: Reading) {
   return reading.available >= 0.15 && reading.full < 10
 }
 
+/** The most turns a runner runs at once by default where its memory decides (roomFor): a safety cap. */
+export const MOST_TURNS = 32
+
+/**
+ * How many turns a runner runs at once by default. Where it reads its memory (the guard's, on a
+ * cloud computer), that memory decides, up to MOST_TURNS. Elsewhere (a member's Mac, which runs
+ * their own apps too), one per 2 GB of memory, 8 to MOST_TURNS.
+ */
+export function turnsAtOnce(memory: number, readsMemory: boolean) {
+  if (readsMemory) return MOST_TURNS
+  return Math.min(MOST_TURNS, Math.max(8, Math.round(memory / (2 * GB))))
+}
+
 /** The computer has room for a turn (roomFor); true where it says nothing of its memory. */
 export async function memoryRoom() {
   const reading = await readMemory()
