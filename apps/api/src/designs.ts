@@ -42,6 +42,7 @@ import { scoped, type Scope, type ScopedDb } from './db.js'
 import { bridgeScript } from './design-bridge.js'
 import { annotate, applyEdits, EditError } from './design-source.js'
 import { actorNames, trashLibraryFile } from './library-history.js'
+import { fileKey } from './library-objects.js'
 import { readLibraryFile, saveLibraryFile } from './library.js'
 import { discardUpload, readyUpload, uploadBytesKey } from './uploads.js'
 
@@ -619,12 +620,13 @@ export async function personEdits(
   if (rows.length === 0) return []
   const ours = await db.documentVersion.findMany({
     where: { documentId: { in: rows.map((r) => r.id) }, sessionId: session.id },
-    select: { documentId: true, createdAt: true },
+    select: { documentId: true, updatedAt: true },
   })
+  // A version's last change: saves moments apart fold into one version (recordVersion).
   const lastSaved = (id: string) =>
     Math.max(
       session.createdAt.getTime(),
-      ...ours.filter((v) => v.documentId === id).map((v) => v.createdAt.getTime()),
+      ...ours.filter((v) => v.documentId === id).map((v) => v.updatedAt.getTime()),
     )
   const edited = rows.filter((r) => r.updatedAt.getTime() > lastSaved(r.id))
   const name = await actorNames(
@@ -726,19 +728,33 @@ export async function applyPick(
   const live = { kind: 'library' as const, deletedAt: null }
   const files = await db.document.findMany({
     where: { ...live, path: { startsWith: `${pick.folder}/` } },
-    select: { id: true, path: true, objectKey: true, contentType: true },
+    select: {
+      id: true,
+      path: true,
+      objectKey: true,
+      contentType: true,
+      size: true,
+      sha256: true,
+      text: true,
+    },
   })
   const copied = new Set<string>()
   for (const file of files) {
     const path = pick.to + file.path.slice(pick.folder.length)
-    const bytes = await readLibraryFile(scope, file)
-    // Saved from the thread, as its teammate's own saves are: the design is not a person's edit
-    // that its next save_design would stop at (personEdits).
+    // Copied inside the bucket, never read here: a design's assets can be large. Saved from the
+    // thread, as its teammate's own saves are: the design is not a person's edit that its next
+    // save_design would stop at (personEdits).
+    const upload = {
+      key: fileKey(scope, file),
+      size: file.size,
+      sha256: file.sha256,
+      text: file.text,
+    }
     await saveLibraryFile(
       db,
       scope,
       actor,
-      { path, bytes, contentType: file.contentType },
+      { path, upload, contentType: file.contentType },
       { sessionId: pick.threadId },
     )
     copied.add(path)

@@ -107,6 +107,14 @@ describe('design picks', { skip: !database && 'no database answers' }, () => {
     assert.deepEqual(await designs.personEdits(db, thread, DESIGN), [])
   })
 
+  test('nor is a second pick moments later, whose version folds into the first', async () => {
+    await pick(`${OPTIONS}/b-calm.design`, true)
+    await pick(`${OPTIONS}/a-bold.design`, true)
+    assert.equal(await text(`${DESIGN}/index.html`), '<p>a-bold</p>')
+    const thread = { id: threadId, createdAt: new Date(Date.now() - 60_000) }
+    assert.deepEqual(await designs.personEdits(db, thread, DESIGN), [])
+  })
+
   test('picking again replaces the design, keeping its history, and the options stay', async () => {
     await save(`${DESIGN}/extra.html`, '<p>only in the design</p>', teammate)
     const index = await db.document.findFirst({
