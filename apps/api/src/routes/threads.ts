@@ -414,7 +414,15 @@ export const threads = new Hono<AppEnv>()
     const children = rows.length
       ? await c.var.db.session.findMany({
           where: { parentId: { in: rows.map((r) => r.id) }, origin: 'child', archivedAt: null },
-          select: { id: true, title: true, status: true, parentId: true, updatedAt: true },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            parentId: true,
+            updatedAt: true,
+            computerId: true,
+            computer: { select: { kind: true, name: true } },
+          },
           orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
         })
       : []
@@ -440,16 +448,16 @@ export const threads = new Hono<AppEnv>()
       c.var.db,
       rows.map((r) => r.id),
     )
-    // Whose preview is up: the sidebar marks them. Not on a computer that is gone, whatever
-    // the events say, as on the preview panel.
-    const previews = await previewStates(
-      c.var.db,
-      rows.map((r) => r.id),
-    )
+    // Whose preview is up, its child threads' too: the sidebar marks them. Not on a computer
+    // that is gone, whatever the events say, as on the preview panel.
+    const previews = await previewStates(c.var.db, [
+      ...rows.map((r) => r.id),
+      ...children.map((r) => r.id),
+    ])
     // How its computers are connected, and whose events wait on them: from the hub.
     const hub = hubs.get(c.var.scope.workspaceId)
     const [presence, waitingSince] = await Promise.all([
-      hub.presence([...new Set(rows.map((r) => r.computerId))]),
+      hub.presence([...new Set([...rows, ...children].map((r) => r.computerId))]),
       hub.eventsWaitingSince(rows.map((r) => r.id)),
     ])
     // When this member last looked at each: a teammate's turn after it is unread for them.
@@ -477,12 +485,15 @@ export const threads = new Hono<AppEnv>()
           childrenWorking: working.find((w) => w.parentId === row.id)?._count._all ?? 0,
           children: children
             .filter((child) => child.parentId === row.id)
-            .map(({ parentId: _, ...child }) => ({
+            .map(({ parentId: _, computerId, computer, ...child }) => ({
               ...child,
               unread: unread(
                 childTurns.find((t) => t.sessionId === child.id)?._max.at,
                 childReads.find((r) => r.sessionId === child.id)?.seenAt,
               ),
+              previewRunning:
+                !!previews.get(child.id) &&
+                !previewOfflineIn(presence, { id: computerId, ...computer }),
             })),
           list: lists.get(row.id) ?? null,
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,

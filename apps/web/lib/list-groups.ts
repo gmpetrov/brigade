@@ -50,6 +50,7 @@ function listRow(threads: ThreadSummary[]): ThreadSummary {
     status: t.status,
     updatedAt: t.updatedAt,
     unread: !!t.unread,
+    previewRunning: !!t.previewRunning,
   }))
   return {
     ...first,

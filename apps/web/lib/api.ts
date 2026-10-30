@@ -433,6 +433,8 @@ export type SidebarChild = {
   updatedAt: string
   /** A teammate replied since this member last looked at it. */
   unread: boolean
+  /** Its preview is starting or running, on a computer that is up. */
+  previewRunning?: boolean
 }
 
 /** A thread started from another (start_child, or a schedule's run that reports there), shown in it. */
