@@ -391,13 +391,13 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   Export: the folder as a zip (`GET /api/designs/zip`), PDF, PNG, and for decks PowerPoint (one picture per
   slide with its notes, pptxgenjs). A message mentions a design as `@[path](design:path)`; Hand off starts a
   thread that builds it. **Design systems** are `DesignSystem` rows over a library folder (`README.md` rules,
-  `tokens.css`, assets, an optional `preview.design`), shown under Library → Design systems. Each says where it
+  `tokens.css`, assets, an optional `preview.design`), shown in a line above the designs in Library → Designs, and managed in a panel beside it (Manage). Each says where it
   applies: library folders, repositories, teammates, or the workspace default. Every thread's spec carries the
   catalog, and the teammate's instructions say how to pick one: named in the message, then folder, repository,
   teammate, default; it asks when none applies. A teammate makes one with `save_design_system`: it saves the
   folder, then a `library.call` registers it (by name, so saving again updates it), which needs write access to
-  that folder and is audited as the teammate; the workspace's first is the default. "Ask a teammate" under Library
-  → Design systems drafts that thread.
+  that folder and is audited as the teammate; the workspace's first is the default. "Ask a teammate" in that
+  panel drafts that thread.
 - **Memory** (design in `docs/memory.md`) is four kinds of Markdown `Document` with no bucket object: workspace
   (`workspace.md`), project (`projects/<id>.md`), teammate (`teammates/<id>.md`) and thread summaries
   (`threads/<id>.md`). A memory file is in layers: the lines before its first `## ` heading are its core, which every

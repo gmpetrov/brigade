@@ -2,14 +2,26 @@
 // The workspace's design systems: each a library folder (its README, tokens
 // and assets) and where it applies. Teammates making a design pick one: the
 // one named, then by library folder, repository, teammate, the default.
-// Owners and admins change them; a teammate makes one and registers it.
+// Owners and admins change them; a teammate makes one and registers it. They
+// sit above the designs in the Library's Designs tab, a line each, and open
+// beside the page to be managed.
 import {
   DESIGN_SYSTEM_PREVIEW,
   DESIGN_THUMBNAIL,
   type DesignSystem,
   type LibraryFile,
 } from '@brigade/contracts'
-import { Ellipsis, FolderOpen, Palette, Pencil, Plus, Sparkles, Star, Trash2 } from 'lucide-react'
+import {
+  Ellipsis,
+  FolderOpen,
+  Palette,
+  Pencil,
+  Plus,
+  Sparkles,
+  Star,
+  Trash2,
+  X,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useDashboard } from '@/components/dashboard'
@@ -44,6 +56,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { api, useApi, type LibraryTree, type Teammate } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 import { ProjectIcon } from '@/components/projects'
+import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 
 /** Where design systems go. */
 const FOLDER = 'design-systems'
@@ -62,19 +75,106 @@ const list = (text: string) =>
     .map((s) => s.trim().replace(/^\/+|\/+$/g, ''))
     .filter(Boolean)
 
-export function DesignSystems({
+/** The design systems in a line above the designs; Manage opens them beside the page. */
+export function DesignSystemsBar({
   tree,
   teammates,
   admin,
+  open,
+  onOpenChange,
 }: {
   tree: LibraryTree | undefined
   teammates: Teammate[] | undefined
   admin: boolean
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }) {
   const systems = useApi<DesignSystem[]>('/design-systems')
+  const [preview, setPreview] = useState<string>()
+  const none = systems.data?.length === 0
+
+  return (
+    <>
+      <div className="flex min-h-11 items-center gap-2 rounded-lg border bg-card px-3 py-1.5 text-sm">
+        <span className="shrink-0 text-muted-foreground max-sm:hidden">Design systems</span>
+        {none && <span className="text-muted-foreground">No design system yet</span>}
+        <ul className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {systems.data?.map((system, i) => (
+            // On a phone, the first one only: the rest are a tap on Manage away.
+            <li key={system.id} className={i > 0 ? 'max-sm:hidden' : undefined}>
+              <Badge variant="outline" className="h-7 gap-1.5 rounded-full px-2.5 text-sm">
+                <Palette aria-hidden className="text-primary" />
+                {system.name}
+                {system.isDefault && (
+                  <Badge variant="secondary" className="px-1.5 text-[0.6875rem]">
+                    Default
+                  </Badge>
+                )}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto shrink-0"
+          aria-expanded={open}
+          onClick={() => onOpenChange(!open)}
+        >
+          {none ? 'Set one up' : 'Manage'}
+        </Button>
+      </div>
+
+      {open && (
+        <SidePanel aria-label="Design systems" onClose={() => onOpenChange(false)}>
+          <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
+            <Palette aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+            <strong className="min-w-0 flex-1 truncate text-sm font-semibold">
+              Design systems
+            </strong>
+            <PanelExpandButton />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => onOpenChange(false)}
+              aria-label="Close design systems"
+            >
+              <X aria-hidden />
+            </Button>
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+            <DesignSystems
+              systems={systems}
+              tree={tree}
+              teammates={teammates}
+              admin={admin}
+              onPreview={setPreview}
+            />
+          </div>
+        </SidePanel>
+      )}
+      {/* After the panel, so it opens on top of it. */}
+      {preview && <DesignPanel folder={preview} onClose={() => setPreview(undefined)} />}
+    </>
+  )
+}
+
+function DesignSystems({
+  systems,
+  tree,
+  teammates,
+  admin,
+  onPreview,
+}: {
+  systems: { data?: DesignSystem[]; reload: () => Promise<void> }
+  tree: LibraryTree | undefined
+  teammates: Teammate[] | undefined
+  admin: boolean
+  onPreview: (folder: string) => void
+}) {
   const [editing, setEditing] = useState<DesignSystem | 'new'>()
   const [asking, setAsking] = useState(false)
-  const [preview, setPreview] = useState<string>()
   const [error, setError] = useState<string>()
 
   async function remove(system: DesignSystem) {
@@ -91,8 +191,8 @@ export function DesignSystems({
 
   return (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted-foreground">
+      <div className="flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">
           The rules, tokens and assets designs follow, each in a library folder. A teammate making a
           design uses the one named in the message; otherwise the one for the folder the design goes
           in, the repository it works in, the teammate, then the default.
@@ -139,7 +239,7 @@ export function DesignSystems({
             admin={admin}
             onEdit={() => setEditing(system)}
             onRemove={() => void remove(system)}
-            onPreview={() => setPreview(`${system.path}/${PREVIEW}`)}
+            onPreview={() => onPreview(`${system.path}/${PREVIEW}`)}
           />
         ))
       )}
@@ -162,7 +262,6 @@ export function DesignSystems({
           }}
         />
       )}
-      {preview && <DesignPanel folder={preview} onClose={() => setPreview(undefined)} />}
     </>
   )
 }
@@ -270,11 +369,12 @@ function SystemCard({
     <Palette aria-hidden className="size-7 text-muted-foreground/60" />
   )
   const frame =
-    'group relative flex aspect-[16/10] w-full shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/50 sm:w-48'
+    'group relative flex aspect-[16/10] w-full shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/50 @lg:w-48'
 
   return (
-    <Card className="gap-4 px-5 py-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
+    // Side by side once the panel is wide enough for it.
+    <Card className="@container gap-4 px-5 py-5">
+      <div className="flex flex-col gap-4 @lg:flex-row @lg:gap-5">
         {hasPreview ? (
           <button
             type="button"
