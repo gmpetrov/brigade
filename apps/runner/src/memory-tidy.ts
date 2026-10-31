@@ -88,8 +88,8 @@ export function lineAt(file: ReadLines, ref: number | string): string | null {
 /**
  * A line a run wrote in place of `from` (one line's text, or the lines a merge joins), without
  * the day the run read after one of them when it copied it onto the end: that day is memory's,
- * not the line's, and would show twice. A day that ends the own text of any of them is a
- * date the line holds, and stays.
+ * not the line's, and would show twice. A day found anywhere in the own text of any of them
+ * is a date the line holds, and stays.
  */
 export function withoutCopiedDay(text: string, file: ReadLines, from: string[]) {
   const days = from.flatMap((f) => {
@@ -97,7 +97,7 @@ export function withoutCopiedDay(text: string, file: ReadLines, from: string[]) 
     const day = i >= 0 ? file.notes[i]!.trim() : ''
     return day ? [day] : []
   })
-  const copied = days.find((day) => text.endsWith(day) && !from.some((f) => f.endsWith(day)))
+  const copied = days.find((day) => text.endsWith(day) && !from.some((f) => f.includes(day)))
   return copied ? text.slice(0, -copied.length).trimEnd() : text
 }
 /** A list that keeps the items it can read and drops the others. */
