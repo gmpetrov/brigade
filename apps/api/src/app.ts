@@ -2,7 +2,7 @@ import { PROTOCOL_VERSION, type HealthResponse } from '@brigade/contracts'
 import { Hono, type Context } from 'hono'
 import { z } from 'zod'
 import { HTTPException } from 'hono/http-exception'
-import { auth } from './auth.js'
+import { auth, authRouteClosed } from './auth.js'
 import { checkoutReturn, stripeWebhook } from './billing.js'
 import { apiCors } from './cors.js'
 import { env } from './config.js'
@@ -135,7 +135,11 @@ app.post('/ops/hubs', async (c) => {
   return c.json({ workspaceId: input.data.workspaceId, mode: input.data.mode })
 })
 
-app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+app.on(['GET', 'POST'], '/api/auth/*', (c) =>
+  authRouteClosed(c.req.raw)
+    ? Response.json({ error: 'Not found' }, { status: 404 })
+    : auth.handler(c.req.raw),
+)
 // Billing (src/billing.ts): Stripe's webhook, verified by its signature, and the way back
 // from Checkout, which reads only Stripe. Neither needs a session: before the routers below,
 // whose middleware asks for one.

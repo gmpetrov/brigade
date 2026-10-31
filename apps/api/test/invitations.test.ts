@@ -44,7 +44,7 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 
 const { Hono } = await import('hono')
 const { HTTPException } = await import('hono/http-exception')
-const { auth } = await import('../src/auth.js')
+const { auth, authRouteClosed } = await import('../src/auth.js')
 const { prisma } = await import('../src/db.js')
 const { env } = await import('../src/config.js')
 const { members } = await import('../src/routes/members.js')
@@ -53,7 +53,11 @@ const { invitationMail } = await import('../src/invitation-mail.js')
 
 // The routes as src/app.ts mounts them, with its error answer.
 const app = new Hono()
-app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+app.on(['GET', 'POST'], '/api/auth/*', (c) =>
+  authRouteClosed(c.req.raw)
+    ? Response.json({ error: 'Not found' }, { status: 404 })
+    : auth.handler(c.req.raw),
+)
 app.route('/api', workspaces)
 app.route('/api', members)
 app.onError((error, c) =>
@@ -167,6 +171,9 @@ before(async () => {
 after(async () => {
   if (skip) return
   await prisma.workspace.deleteMany({ where: { organizationId: { in: organizations } } })
+  await prisma.rateLimit.deleteMany({
+    where: { OR: organizations.map((o) => ({ key: { startsWith: `invitations:${o}` } })) },
+  })
   await prisma.organization.deleteMany({ where: { id: { in: organizations } } })
   await prisma.user.deleteMany({ where: { email: { in: emails } } })
   await prisma.verification.deleteMany({ where: { identifier: { contains: run } } })
@@ -350,4 +357,59 @@ test('someone in two organizations switches between them', { skip }, async () =>
     cookie: mallory.cookie,
   })
   assert.equal(refused.status, 404)
+})
+
+test('inviting again with another role replaces the open invitation', { skip }, async () => {
+  const jo = address('jo')
+  const first = await invite(ada.cookie, jo, 'owner')
+  const second = await invite(ada.cookie, jo, 'member')
+  assert.notEqual(second, first)
+  const rows = await prisma.invitation.findMany({
+    where: { email: jo },
+    select: { id: true, role: true, status: true },
+  })
+  assert.deepEqual(
+    rows.map((r) => [r.id, r.role, r.status]).sort(),
+    [
+      [first, 'owner', 'canceled'],
+      [second, 'member', 'pending'],
+    ].sort(),
+  )
+  const cookie = await signIn(jo)
+  assert.equal((await call(`/api/invitations/${first}/accept`, { body: {}, cookie })).status, 400)
+  assert.equal((await call(`/api/invitations/${second}/accept`, { body: {}, cookie })).status, 200)
+  assert.equal((await meOf(cookie)).role, 'member')
+})
+
+test('an address is mailed at most 3 times a day', { skip }, async () => {
+  const kim = address('kim')
+  for (let i = 0; i < 3; i++) await invite(ada.cookie, kim)
+  let refused!: Response
+  const lines = await logged(async () => {
+    refused = await call('/api/members/invitations', {
+      body: { email: kim, role: 'member' },
+      cookie: ada.cookie,
+    })
+  })
+  assert.equal(refused.status, 429)
+  assert.deepEqual(
+    lines.filter((l) => l.startsWith(`invitation for ${kim}`)),
+    [],
+  )
+})
+
+test("the plugin's invitation routes are closed over HTTP", { skip }, async () => {
+  for (const path of [
+    'invite-member',
+    'accept-invitation',
+    'reject-invitation',
+    'cancel-invitation',
+  ]) {
+    const response = await call(`/api/auth/organization/${path}`, {
+      body: { email: address('lee'), role: 'member', invitationId: 'x' },
+      cookie: ada.cookie,
+    })
+    assert.equal(response.status, 404, path)
+  }
+  assert.equal(await prisma.invitation.count({ where: { email: { startsWith: 'lee-' } } }), 0)
 })

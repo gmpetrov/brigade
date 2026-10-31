@@ -120,6 +120,8 @@ export const auth = betterAuth({
       // An invitation goes to an address: only its proven owner may take it.
       requireEmailVerificationOnInvitation: true,
       invitationExpiresIn: INVITATION_DAYS * 24 * 60 * 60,
+      // Inviting again with another role replaces the open invitation (src/routes/members.ts).
+      cancelPendingInvitationsOnReInvite: true,
       // Settings › Members invites (src/routes/members.ts); the link leads to /invite/<id>.
       sendInvitationEmail: ({ id, email, role, organization, inviter }) =>
         sendInvitation({
@@ -233,3 +235,14 @@ export const auth = betterAuth({
 })
 
 export type AuthSession = typeof auth.$Infer.Session
+
+/**
+ * The plugin's invitation routes, closed over HTTP: the dashboard invites, cancels and joins
+ * through src/routes/members.ts, which keeps the sending budget (src/invitation-budget.ts) and
+ * calls them with auth.api.
+ */
+const INVITATION_ROUTES =
+  /^\/api\/auth\/organization\/(invite-member|accept-invitation|reject-invitation|cancel-invitation)\/?$/
+
+export const authRouteClosed = (request: Request) =>
+  INVITATION_ROUTES.test(new URL(request.url).pathname)

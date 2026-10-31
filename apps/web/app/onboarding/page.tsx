@@ -227,7 +227,8 @@ export default function Onboarding() {
   }
 
   // Stays up once the account works, while the chief's thread starts.
-  if (me.activeWorkspaceId && !adding) return <ConnectAI onReady={reload} />
+  if (me.activeWorkspaceId && !adding)
+    return <ConnectAI onReady={reload} elsewhere={<OtherOrganizations me={me} />} />
 
   return (
     <Shell
@@ -258,7 +259,49 @@ export default function Onboarding() {
           </form>
         </CardContent>
       </Card>
+      <OtherOrganizations me={me} />
     </Shell>
+  )
+}
+
+/**
+ * Back to another organization of theirs: someone who joined one keeps an AI account in their
+ * first, and can return there without connecting one here.
+ */
+function OtherOrganizations({ me }: { me: Me }) {
+  const others = me.organizations.filter((o) => o.id !== me.activeOrganizationId)
+  const [error, setError] = useState<string>()
+  if (others.length === 0) return null
+
+  async function switchTo(organizationId: string) {
+    setError(undefined)
+    try {
+      await api('/organizations/switch', { body: { organizationId } })
+      location.assign('/app')
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-1 text-center text-sm text-muted-foreground">
+      <p>
+        Or go back to{' '}
+        {others.map((o, i) => (
+          <span key={o.id}>
+            {i > 0 && ', '}
+            <button
+              type="button"
+              onClick={() => void switchTo(o.id)}
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {o.name}
+            </button>
+          </span>
+        ))}
+      </p>
+      {error && <p className="text-destructive-text">{error}</p>}
+    </div>
   )
 }
 
@@ -358,7 +401,14 @@ const PRICE = (
  * be added later from Computers. Once an account works, the chief's setup
  * thread starts.
  */
-function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
+function ConnectAI({
+  onReady,
+  elsewhere,
+}: {
+  onReady: () => Promise<Me | undefined>
+  /** Below it: the way back to another organization of theirs. */
+  elsewhere?: React.ReactNode
+}) {
   const router = useRouter()
   const accounts = useApi<Account[]>('/accounts')
   const computers = useApi<ComputersResponse>('/computers')
@@ -881,6 +931,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
       )}
 
       {error && <p className="text-center text-sm text-destructive-text">{error}</p>}
+      {elsewhere}
     </Shell>
   )
 }

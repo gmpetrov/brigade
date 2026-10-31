@@ -9,6 +9,7 @@ import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { auth } from '../auth.js'
 import { prisma } from '../db.js'
+import { spendInvitation } from '../invitation-budget.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 /** The plugin's messages, said the way the dashboard says things. */
@@ -39,7 +40,7 @@ async function plugin<T>(call: () => Promise<T>): Promise<T> {
 }
 
 /** Open: pending and not yet expired. */
-const open = () => ({ status: 'pending', expiresAt: { gt: new Date() } })
+const openNow = () => ({ status: 'pending', expiresAt: { gt: new Date() } })
 
 export const members = new Hono<AppEnv>()
   .use(requireUser)
@@ -56,7 +57,7 @@ export const members = new Hono<AppEnv>()
       scope.role === 'member'
         ? []
         : prisma.invitation.findMany({
-            where: { organizationId: scope.organizationId, ...open() },
+            where: { organizationId: scope.organizationId, ...openNow() },
             include: { inviter: { select: { name: true } } },
             orderBy: { createdAt: 'desc' },
           }),
@@ -80,15 +81,28 @@ export const members = new Hono<AppEnv>()
     })
   })
 
-  /** Invite an address, or mail an open invitation again (its week starts over). */
+  /**
+   * Invite an address, or mail its open invitation again (its week starts over). With another
+   * role than the open one, a new invitation replaces it: the plugin's resend keeps the old role.
+   */
   .post('/members/invitations', requireWorkspace, async (c) => {
     const { scope } = c.var
     requireRole(scope, 'owner', 'admin')
     const { email, role } = await parseBody(c.req.raw, CreateInvitation)
+    const open = await prisma.invitation.findFirst({
+      where: { organizationId: scope.organizationId, email, ...openNow() },
+      select: { role: true },
+    })
+    await spendInvitation(scope.organizationId, email)
     const invitation = await plugin(() =>
       auth.api.createInvitation({
         headers: c.req.raw.headers,
-        body: { email, role, organizationId: scope.organizationId, resend: true },
+        body: {
+          email,
+          role,
+          organizationId: scope.organizationId,
+          resend: !!open && (open.role ?? 'member') === role,
+        },
       }),
     )
     return c.json({ id: invitation.id, email: invitation.email }, 201)
@@ -116,7 +130,7 @@ export const members = new Hono<AppEnv>()
     // Only a proven address sees what was sent to it.
     if (!user.emailVerified) return c.json([])
     const rows = await prisma.invitation.findMany({
-      where: { email: user.email.toLowerCase(), ...open() },
+      where: { email: user.email.toLowerCase(), ...openNow() },
       include: { organization: { select: { name: true } }, inviter: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
     })
