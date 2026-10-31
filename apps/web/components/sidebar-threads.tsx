@@ -1,6 +1,6 @@
 'use client'
 // The sidebar's work: one list of the latest threads, each with its status, and below it
-// the teammates and projects. A teammate opens its latest thread and a project its page,
+// the teammates and projects. A teammate opens a new thread with it and a project its page,
 // and each narrows the list to theirs; the filter beside "Threads" narrows it by status,
 // teammate or project without going anywhere. The list shows its first few threads (waiting
 // on a person first, then working, then the rest) and folds the others into a "+N" row, so
@@ -1198,8 +1198,8 @@ export function SidebarWork({
       byRow: 'teammate',
       ...(f.byRow === 'project' ? { projectId: undefined } : {}),
     }))
-    // Its latest thread, else a box to start one with it.
-    void openTeammate(id)
+    // A new thread with it: its threads are in the list, narrowed to them.
+    openTeammate(id)
   }
   function clickProject(id: string) {
     setFilter((f) => ({

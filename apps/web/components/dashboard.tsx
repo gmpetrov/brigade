@@ -891,10 +891,10 @@ export function SidebarToggle({ className }: { className?: string }) {
   )
 }
 
-/** Folded, the teammates as a menu beside the rail: each opens its threads, as above. */
+/** Folded, the teammates as a menu beside the rail: each starts a new thread with it, as above. */
 function TeammatesRailMenu({ teammates, admin }: { teammates: Teammate[]; admin: boolean }) {
   const router = useRouter()
-  const { teammateHref, chooseTeammate } = useThreadPanel()
+  const { chooseTeammate } = useThreadPanel()
   const pathname = usePathname()
   return (
     <RailMenu
@@ -903,7 +903,7 @@ function TeammatesRailMenu({ teammates, admin }: { teammates: Teammate[]; admin:
       active={pathname.startsWith('/app/teammates')}
       items={teammates.map((t) => ({
         id: t.id,
-        href: teammateHref(t.id),
+        href: '/app/threads',
         label: t.name,
         icon: <TeammateAvatar teammate={t} className="size-5" />,
         onSelect: () => chooseTeammate(t.id),
