@@ -7,7 +7,6 @@
 <p align="center">
   <a href="https://www.brigade.lol"><strong>Website</strong></a> &middot;
   <a href="https://demo.brigade.lol"><strong>Live demo</strong></a> &middot;
-  <a href="https://www.brigade.lol/how-it-works"><strong>How it works</strong></a> &middot;
   <a href="#run-it-locally"><strong>Run it locally</strong></a> &middot;
   <a href="docs"><strong>Docs</strong></a>
 </p>

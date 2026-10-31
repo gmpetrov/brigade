@@ -5,7 +5,6 @@ import { isPublicPage } from '../lib/public-pages'
 test('only the public pages may send analytics', () => {
   for (const page of [
     '/',
-    '/how-it-works',
     '/privacy',
     '/terms/',
     '/dpa',
@@ -21,6 +20,7 @@ test('only the public pages may send analytics', () => {
     '/app/threads/x',
     '/onboarding',
     '/privacy/x',
+    '/how-it-works',
     '/changelog/rss.xml',
   ])
     assert.equal(isPublicPage(page), false, page)

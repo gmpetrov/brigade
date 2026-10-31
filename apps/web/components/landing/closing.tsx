@@ -170,12 +170,6 @@ export function Faq() {
           <h2 className={c('h2')} id="faq-title">
             Questions, answered
           </h2>
-          <p>
-            More on how it runs:{' '}
-            <Link className={c('link')} href="/how-it-works">
-              How Brigade works
-            </Link>
-          </p>
         </div>
         <div className={c('qs')}>
           <details open>
