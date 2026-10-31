@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import {
   findLine,
   handOffMessage,
+  handOffParts,
   insertLine,
   listCounts,
   markLine,
@@ -203,6 +204,21 @@ test('handing lines over is a request naming the list, or the person’s note, t
     handOffMessage(file, ['Pricing'], '  Start with this one. '),
     'Start with this one.\n\n- Pricing',
   )
+})
+
+test('a hand-off with no note of the person’s reads back as its file and lines', () => {
+  const file = { id: 'doc1', path: 'Projects/Acme/launch.md' }
+  assert.deepEqual(handOffParts(handOffMessage(file, ['**Docs**: FAQ', 'Pricing'])), {
+    file,
+    items: ['Docs: FAQ', 'Pricing'],
+  })
+  assert.deepEqual(handOffParts(handOffMessage(file, ['🔴 Invite: « Invite them » (PR #531).'])), {
+    file,
+    items: ['🔴 Invite: « Invite them » (PR #531).'],
+  })
+  // The person's own words stay theirs, as does anything else.
+  assert.equal(handOffParts(handOffMessage(file, ['Pricing'], 'Start with this one.')), null)
+  assert.equal(handOffParts('Please take this item of the list: pricing'), null)
 })
 
 for (const block of [

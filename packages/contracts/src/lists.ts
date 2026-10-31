@@ -418,6 +418,28 @@ export function handOffMessage(
   ].join('\n\n')
 }
 
+const HAND_OFF =
+  /^Please take (?:this item|these items) of @\[([^\]]*)\]\(document:([^)\s]+)\):\n\n((?:- .*(?:\n|$))+)$/
+
+/**
+ * A hand-off message as handOffMessage writes it with no note of the person's: the list's file
+ * and the lines, so people see what was handed over rather than the request it is worded as.
+ * Null for any other message, one with a note included: the person wrote that.
+ */
+export function handOffParts(
+  text: string,
+): { file: { id: string; path: string }; items: string[] } | null {
+  const m = HAND_OFF.exec(text.trim())
+  if (!m) return null
+  return {
+    file: { id: m[2]!, path: m[1]! },
+    items: m[3]!
+      .trim()
+      .split('\n')
+      .map((line) => line.slice(2)),
+  }
+}
+
 export const SetItemDone = z.object({ done: z.boolean() })
 
 // ---- What a teammate does with them (schedule.call operations) --------------------------------

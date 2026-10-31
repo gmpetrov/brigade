@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react'
 import { useState } from 'react'
-import { brigadeNote, notePreview } from '@/components/brigade-notes'
+import { brigadeNote, handOffNote, notePreview } from '@/components/brigade-notes'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import {
@@ -93,7 +93,12 @@ export function QueuedMessages({
   }
   const preview = (m: QueuedMessage) => {
     const files = m.attachments.length
-    const note = m.memberId === null && !childNote(m.text) ? brigadeNote(m.text, true) : null
+    const note =
+      m.memberId === null
+        ? childNote(m.text)
+          ? null
+          : brigadeNote(m.text, true)
+        : handOffNote(m.text)
     if (note) return notePreview(note)
     return mentionsToText(forPeople(m.text)) || `${files} file${files === 1 ? '' : 's'}`
   }

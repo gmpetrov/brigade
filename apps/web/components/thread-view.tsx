@@ -83,7 +83,12 @@ import { MediaPreview, MessageAttachments } from '@/components/attachments'
 import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
 import { CredentialForm } from '@/components/credential-form'
-import { BrigadeNoteLine, brigadeNote, type BrigadeNote } from '@/components/brigade-notes'
+import {
+  BrigadeNoteLine,
+  brigadeNote,
+  handOffNote,
+  type BrigadeNote,
+} from '@/components/brigade-notes'
 import {
   EditableEmailPreview,
   isEmailSend,
@@ -366,6 +371,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             ...(e.memberId === null && childNote(e.text) ? { brigade: childNote(e.text)! } : {}),
             ...(e.memberId === null ? receivedEmail(e.text) : {}),
             ...userNote(e.text, fromBrigade),
+            ...(e.memberId !== null && handOffNote(e.text) ? { note: handOffNote(e.text)! } : {}),
             ...(handback ? { handback: { ...handback, commands: handed?.commands ?? [] } } : {}),
             ...(handedOver ? { handed: handedOver } : {}),
           })
