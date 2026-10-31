@@ -13,6 +13,7 @@ import {
   isTriggerOperation,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { handleAppCall } from './app-calls.js'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { handleChildCall, isChildOperation } from './children.js'
@@ -553,6 +554,11 @@ export async function handleScheduleCall(
         : { ok: true, output: result.output }),
       ...(decision ? { decision } : {}),
     })
+  }
+  // And the Apps it can use, ask for or have connected; a playbook's run has only its own.
+  if (op.name === 'list_apps') {
+    const answer = await handleAppCall(db, session, teammate, op)
+    return 'error' in answer ? fail(answer.error) : done(answer.output)
   }
   // A playbook's run, its children included: a schedule's runs would be threads outside it.
   if (session.playbookRunId)

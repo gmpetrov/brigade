@@ -98,6 +98,7 @@ import { readCommand, reportWithFiles } from './report-files.js'
 import {
   ASK_USER_TOOL,
   alwaysLoaded,
+  appTools,
   askUserTool,
   computerUseTools,
   connectorTools,
@@ -285,6 +286,8 @@ function createAgent(
     ...taskTools(callTask, spec.playbook ? { dryRun: spec.playbook.dryRun } : undefined),
     // Nor a schedule, whose runs are threads outside it (wake-ups are for threads a person started).
     ...(spec.playbook ? {} : scheduleTools(callSchedule)),
+    // Nor the workspace's other Apps: it has only those the playbook declares.
+    ...appTools(callSchedule, { playbook: !!spec.playbook }),
     // Lists' items (docs/lists.md): read, attach to this thread, tick, add.
     ...listTools(callSchedule),
     // A playbook's run may wait on another run's child (follow_thread); a dry run waits for nothing.

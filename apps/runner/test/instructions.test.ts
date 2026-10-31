@@ -89,4 +89,7 @@ test('a thread asks for an App account it lacks with a ticket, rather than guess
   )
   assert.match(text, /## App accounts\n\n/)
   assert.match(text, /`app` of that App's kind with the scope you need and `account` naming it/)
+  // An App it has no account for at all: list_apps shows which, rather than "does not show at all".
+  assert.match(text, /call `list_apps` and propose the App that fits with a ticket/)
+  assert.doesNotMatch(text, /does not show at all/)
 })

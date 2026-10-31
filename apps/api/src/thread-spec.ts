@@ -107,6 +107,70 @@ export function movedOf(thread: {
   }
 }
 
+/** The App accounts a teammate is granted, with their App: usableGrants picks a thread's. */
+export const teammateGrants = (db: ScopedDb, teammateId: string) =>
+  db.grant.findMany({
+    where: { teammateId, connection: { status: { not: 'removed' } } },
+    include: {
+      connection: {
+        include: { app: { select: { disabledTools: true, mcp: true, updatedAt: true } } },
+      },
+    },
+  })
+
+/**
+ * The granted accounts a teammate uses in a thread: its spec's connectors, and list_apps'
+ * own (src/app-calls.ts). A member's own account (reach mine) only in the threads they
+ * started. In a playbook's thread, only the Apps it declares, and no more than the access it
+ * declares for each: a mail written to trap it cannot reach any other App its teammate has.
+ * Brigade's own addresses: a project's inbox only in its project's threads, an agent's address
+ * only for that agent, shown as the variant this thread writes from (riley.lovarank@).
+ */
+export async function usableGrants(
+  db: ScopedDb,
+  thread: { startedByMemberId: string; projectId: string | null },
+  teammateId: string,
+  granted: Awaited<ReturnType<typeof teammateGrants>>,
+  playbook: Parameters<typeof playbookAccount>[0] | null,
+) {
+  const mailIds = granted.filter((g) => g.connection.kind === 'email').map((g) => g.connection.id)
+  const mail = mailIds.length
+    ? await db.mailAddress.findMany({ where: { connectionId: { in: mailIds }, releasedAt: null } })
+    : []
+  const mailAddress = new Map<string, string>()
+  for (const address of mail) {
+    if (!address.connectionId) continue
+    if (address.kind === 'inbox' && address.projectId !== thread.projectId) continue
+    if (address.kind === 'agent' && address.teammateId !== teammateId) continue
+    mailAddress.set(
+      address.connectionId,
+      (await threadAddress(db, address.connectionId, thread.projectId)) ?? '',
+    )
+  }
+  return granted
+    .filter((g) => usableIn(g.connection, thread))
+    .filter((g) => g.connection.kind !== 'email' || mailAddress.has(g.connection.id))
+    .map((g) =>
+      g.connection.kind === 'email'
+        ? {
+            ...g,
+            connection: {
+              ...g.connection,
+              externalAccount: mailAddress.get(g.connection.id) || g.connection.externalAccount,
+            },
+          }
+        : g,
+    )
+    .flatMap((g) => {
+      if (!playbook) return [g]
+      // An App one of its roles accepts; where a setting picks the role's account (its inbox,
+      // its analytics tool), that account alone. A server added by its URL only when picked.
+      const access = playbookAccount(playbook, g.connection)
+      if (!access) return []
+      return [access === 'read' ? { ...g, scope: 'read' as const } : g]
+    })
+}
+
 /**
  * The thread's spec, with the account it should run on next: its current
  * account if still usable, else the next one its starter may run on (src/account-sharing.ts).
@@ -139,14 +203,7 @@ export async function specFor(
       preferredId: thread.accountId,
     }),
     // The connections this teammate is granted, as tool specs. Never a credential.
-    db.grant.findMany({
-      where: { teammateId: teammate.id, connection: { status: { not: 'removed' } } },
-      include: {
-        connection: {
-          include: { app: { select: { disabledTools: true, mcp: true, updatedAt: true } } },
-        },
-      },
-    }),
+    teammateGrants(db, teammate.id),
     teammate.kind === 'chief' ? chiefRoster(db) : [],
     folderRules(db),
     threadAttachments(db, thread.id),
@@ -170,47 +227,7 @@ export async function specFor(
       ? await db.account.findFirst({ where: { id: thread.accountId, provider: teammate.harness } })
       : null)
   if (!current) throw noAccount(teammate.harness)
-  // A member's own account (reach mine) only in the threads they started. In a playbook's
-  // thread, only the Apps it declares, and no more than the access it declares for each: a
-  // mail written to trap it cannot reach any other App its teammate has.
-  // Brigade's own addresses: a project's inbox only in its project's threads, an agent's address
-  // only for that agent, shown as the variant this thread writes from (riley.lovarank@).
-  const mailIds = granted.filter((g) => g.connection.kind === 'email').map((g) => g.connection.id)
-  const mail = mailIds.length
-    ? await db.mailAddress.findMany({ where: { connectionId: { in: mailIds }, releasedAt: null } })
-    : []
-  const mailAddress = new Map<string, string>()
-  for (const address of mail) {
-    if (!address.connectionId) continue
-    if (address.kind === 'inbox' && address.projectId !== thread.projectId) continue
-    if (address.kind === 'agent' && address.teammateId !== teammate.id) continue
-    mailAddress.set(
-      address.connectionId,
-      (await threadAddress(db, address.connectionId, thread.projectId)) ?? '',
-    )
-  }
-  const grants = granted
-    .filter((g) => usableIn(g.connection, thread))
-    .filter((g) => g.connection.kind !== 'email' || mailAddress.has(g.connection.id))
-    .map((g) =>
-      g.connection.kind === 'email'
-        ? {
-            ...g,
-            connection: {
-              ...g.connection,
-              externalAccount: mailAddress.get(g.connection.id) || g.connection.externalAccount,
-            },
-          }
-        : g,
-    )
-    .flatMap((g) => {
-      if (!playbook) return [g]
-      // An App one of its roles accepts; where a setting picks the role's account (its inbox,
-      // its analytics tool), that account alone. A server added by its URL only when picked.
-      const access = playbookAccount(playbook, g.connection)
-      if (!access) return []
-      return [access === 'read' ? { ...g, scope: 'read' as const } : g]
-    })
+  const grants = await usableGrants(db, thread, teammate.id, granted, playbook)
   const github = grants.some(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
   )

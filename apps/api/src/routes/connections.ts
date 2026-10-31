@@ -247,6 +247,36 @@ export async function createConnection(
   return row
 }
 
+/** Whether each App can be connected on this Brigade server: Google's and GitHub's need their apps set up. */
+export const availableApps = (): Record<ConnectorKind, boolean> => ({
+  gmail: googleConfigured(),
+  google_calendar: googleConfigured(),
+  google_drive: googleConfigured(),
+  google_docs: googleConfigured(),
+  google_sheets: googleConfigured(),
+  google_search_console: googleConfigured(),
+  google_analytics: googleConfigured(),
+  stripe: true,
+  github: githubConfigured(),
+  cloudflare: true,
+  google_cloud: googleMcpConfigured(),
+  neon: true,
+  supabase: true,
+  atlassian: true,
+  notion: true,
+  linear: true,
+  mixpanel: true,
+  resend: true,
+  replicate: true,
+  openrouter: true,
+  posthog: true,
+  dataforseo: true,
+  ahrefs: true,
+  email: !unavailable('email'),
+  mcp: true,
+  webhook: true,
+})
+
 export const connections = new Hono<AppEnv>()
   .use(requireUser)
 
@@ -497,34 +527,7 @@ export const connections = new Hono<AppEnv>()
           ]
         }),
       ),
-      available: {
-        gmail: googleConfigured(),
-        google_calendar: googleConfigured(),
-        google_drive: googleConfigured(),
-        google_docs: googleConfigured(),
-        google_sheets: googleConfigured(),
-        google_search_console: googleConfigured(),
-        google_analytics: googleConfigured(),
-        stripe: true,
-        github: githubConfigured(),
-        cloudflare: true,
-        google_cloud: googleMcpConfigured(),
-        neon: true,
-        supabase: true,
-        atlassian: true,
-        notion: true,
-        linear: true,
-        mixpanel: true,
-        resend: true,
-        replicate: true,
-        openrouter: true,
-        posthog: true,
-        dataforseo: true,
-        ahrefs: true,
-        email: !unavailable('email'),
-        mcp: true,
-        webhook: true,
-      },
+      available: availableApps(),
       connections: rows.map(({ vaultSecretId: _secret, ...row }) => row),
     })
   })

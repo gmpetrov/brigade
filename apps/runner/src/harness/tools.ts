@@ -1879,6 +1879,43 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
   }
 }
 
+/** What list_apps says on an API from before it, which cannot read the call. */
+const LIST_APPS_UNKNOWN =
+  "Brigade's server does not have list_apps yet: it is older than this computer's runner. Until it updates, " +
+  "ask for an App with open_ticket's access ask, whose app.kind names every App you can ask for."
+
+/**
+ * The Apps a teammate can suggest from what a person needs: its accounts here, the workspace's
+ * it may ask for, and those a person may connect (src/app-calls.ts in the API). Names only; an
+ * account's tools still come with its grant. None in a playbook's run, which has only the Apps
+ * the playbook declares (the API refuses it too).
+ */
+export function appTools(
+  call: ScheduleCaller,
+  options: { playbook: boolean },
+): Record<string, Tool> {
+  if (options.playbook) return {}
+  return {
+    list_apps: tool({
+      description:
+        'List the Apps, one line each: the accounts you use here, the accounts of the workspace not granted to you, ' +
+        'and the Apps nobody has connected for you yet, each with the app.kind an open_ticket access ask takes. ' +
+        'Call it when a person wants to use a service you have no account for ("track my Google rankings", ' +
+        '"connect my Gmail"), then propose granting or connecting one with a ticket.',
+      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+      execute: (input, { toolCallId }) =>
+        call({ operation: { name: 'list_apps' }, toolCallId, toolName: 'list_apps', input }).catch(
+          (error: unknown) => {
+            // An API from before it answers that it cannot read the call (hub/runner-messages.ts).
+            if (errorMessage(error).includes('could not read this call'))
+              throw new Error(LIST_APPS_UNKNOWN)
+            throw error
+          },
+        ),
+    }),
+  }
+}
+
 /**
  * A playbook's run: its triage case once the event is sorted, and how it ended. Through the
  * schedule calls, which the API checks.
