@@ -39,6 +39,7 @@ import { playbookAccepts, playbookAccount, playbookActionOf, threadPlaybook } fr
 import { notePullRequestCall } from './pull-requests.js'
 import { reviewOnCreate } from './reviews.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
+import { timeWhenSent } from './mail/gmail-outbound.js'
 import {
   decideHeld,
   holdCall,
@@ -498,13 +499,15 @@ export async function handleConnectorCall(
       ...(onItsOwn ? { input: numbersOf(input.data) } : {}),
     })
     // The playbook's first response went out (on its own or approved): its run's time, set once.
+    // Gmail's leaves later (src/mail/gmail-outbound.ts): its run is timed once it has.
     if (playbook?.firstResponse && !playbook.dryRun && playbookActionKey === playbook.firstResponse)
-      await db.playbookRun
-        .updateMany({
-          where: { id: playbook.runId, firstResponseAt: null },
-          data: { firstResponseAt: new Date() },
-        })
-        .catch((error) => console.warn(`first response bookkeeping failed: ${String(error)}`))
+      await (connection.kind === 'gmail' && call.operation === 'gmail_send'
+        ? timeWhenSent(db, (output as { id?: unknown } | null)?.id, playbook.runId)
+        : db.playbookRun.updateMany({
+            where: { id: playbook.runId, firstResponseAt: null },
+            data: { firstResponseAt: new Date() },
+          })
+      ).catch((error) => console.warn(`first response bookkeeping failed: ${String(error)}`))
     // Pull requests a teammate opens, reviews or merges: Brigade keeps them, their reviews and merges.
     if (connection.kind === 'github')
       await notePullRequestCall(db, scope, {

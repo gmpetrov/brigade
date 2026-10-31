@@ -18,8 +18,28 @@ import { bareAddress } from './names.js'
 import { reopenUnanswered } from './outcomes.js'
 import { leavingAt, takeFromBox, tellThread } from './outbound.js'
 
-/** What a held Gmail email keeps to be sent as asked: the fields its row has no column for. */
-type Held = { replyToMessageId?: string; from?: string; attachments?: string[] }
+/**
+ * What a held Gmail email keeps to be sent as asked: the fields its row has no column for, and
+ * the playbook run its leaving times as answered (firstResponseAt).
+ */
+type Held = {
+  replyToMessageId?: string
+  from?: string
+  attachments?: string[]
+  firstResponseOf?: string
+}
+
+/** A playbook's first response, held: its run is timed when it leaves, not when it was written. */
+export async function timeWhenSent(db: ScopedDb, id: unknown, runId: string) {
+  if (typeof id !== 'string') return
+  const row = await db.mailMessage.findFirst({ where: { id, direction: 'out' } })
+  if (!row) return
+  const held = ((row.headers as { gmail?: Held } | null)?.gmail ?? {}) as Held
+  await db.mailMessage.updateMany({
+    where: { id },
+    data: { headers: { gmail: { ...held, firstResponseOf: runId } } },
+  })
+}
 
 const boxOf = (connectionId: string) => `gmail:${connectionId}`
 
@@ -248,17 +268,24 @@ async function sendOne(db: ScopedDb, scope: Scope, id: string) {
         }
       },
     } as ConnectorContext
+    const { firstResponseOf, ...asked } = held
     const out = await sendComposed(ctx, {
       to: row.to,
       ...(row.cc.length ? { cc: row.cc } : {}),
       subject: row.subject,
       body: row.text,
-      ...held,
+      ...asked,
     })
+    if (firstResponseOf)
+      await db.playbookRun.updateMany({
+        where: { id: firstResponseOf, firstResponseAt: null },
+        data: { firstResponseAt: new Date() },
+      })
+    // A reply stays in its conversation; a new email's is Gmail's thread from now on.
     const known = !row.conversationId.startsWith('out:')
     await db.mailMessage.updateMany({
       where: { id: row.id },
-      data: { sourceId: out.id, conversationId: out.threadId },
+      data: { sourceId: out.id, ...(known ? {} : { conversationId: out.threadId }) },
     })
     // A new conversation: its answer wakes the thread from now on.
     if (!known && row.session)

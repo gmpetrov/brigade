@@ -83,26 +83,35 @@ onScopedWrite((model, scope, operation, result) => {
 })
 
 /**
- * An email_send waiting for approval that answers a mail of this thread's conversation: the
- * Inbox shows it there as a reply to approve (inbox.ts, draftsOf), so the thread stays quiet.
+ * An email_send or gmail_send waiting for approval that answers a mail of this thread's
+ * conversation: the Inbox shows it there as a reply to approve (inbox.ts, draftsOf), so the
+ * thread stays quiet.
  */
 async function draftInInbox(
   scope: Scope,
   sessionId: string,
   ticket: { type?: string; payload?: unknown },
 ) {
-  const payload = (ticket.payload ?? {}) as { operation?: unknown; input?: { replyTo?: unknown } }
-  const replyTo = payload.input?.replyTo
-  if (
-    ticket.type !== 'approval' ||
-    typeof payload.operation !== 'string' ||
-    !/^email_send(_|$)/.test(payload.operation) ||
-    typeof replyTo !== 'string'
-  )
-    return false
+  const payload = (ticket.payload ?? {}) as {
+    operation?: unknown
+    connectionId?: unknown
+    input?: { replyTo?: unknown; replyToMessageId?: unknown }
+  }
+  if (ticket.type !== 'approval' || typeof payload.operation !== 'string') return false
+  // Brigade's address names the mail it answers by its id; Gmail by Gmail's, in its account's box.
+  const where = /^email_send(_|$)/.test(payload.operation)
+    ? typeof payload.input?.replyTo === 'string'
+      ? { id: payload.input.replyTo }
+      : null
+    : payload.operation === 'gmail_send' &&
+        typeof payload.input?.replyToMessageId === 'string' &&
+        typeof payload.connectionId === 'string'
+      ? { box: `gmail:${payload.connectionId}`, sourceId: payload.input.replyToMessageId }
+      : null
+  if (!where) return false
   const db = scoped(scope)
   const answered = await db.mailMessage.findFirst({
-    where: { id: replyTo },
+    where,
     select: { box: true, conversationId: true },
   })
   if (!answered) return false

@@ -14,9 +14,9 @@ import {
 import { scoped } from '../db.js'
 import { jsonBase64Field } from '../json-base64.js'
 import { checkGmail, holdGmail } from '../mail/gmail-outbound.js'
-import { whenToReply } from '../mail/guidance.js'
+import { UNDO_SECONDS, whenToReply } from '../mail/guidance.js'
 import { recordOutcome } from '../mail/outcomes.js'
-import { cancelMail, takeFromBox, UNDO_SECONDS } from '../mail/outbound.js'
+import { cancelMail, takeFromBox } from '../mail/outbound.js'
 
 export const API = 'https://gmail.googleapis.com/gmail/v1/users/me'
 /** Messages with attachments go through the upload endpoint, which takes up to 35 MB. */

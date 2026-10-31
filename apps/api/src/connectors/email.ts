@@ -8,7 +8,7 @@ import { prisma, scoped, type ScopedDb } from '../db.js'
 import { boxKey, newAlias, senderOfBox, variantLocal } from '../mail/addresses.js'
 import { awaitMail } from '../mail/inbound.js'
 import { addressOf, bareAddress } from '../mail/names.js'
-import { whenToReply } from '../mail/guidance.js'
+import { UNDO_SECONDS, whenToReply } from '../mail/guidance.js'
 import { recordOutcome } from '../mail/outcomes.js'
 import {
   cancelMail,
@@ -16,7 +16,6 @@ import {
   sendDraft,
   takeFromBox,
   threadBox,
-  UNDO_SECONDS,
   type Draft,
 } from '../mail/outbound.js'
 import { receivedAttachment } from '../mail/resend.js'

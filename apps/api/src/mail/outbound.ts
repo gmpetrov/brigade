@@ -11,6 +11,7 @@ import { watchReplies } from '../replies.js'
 import { fireNow } from '../wakeups.js'
 import { boxKey, senderOfBox } from './addresses.js'
 import { contactFor } from './identity.js'
+import { UNDO_SECONDS } from './guidance.js'
 import { reopenUnanswered } from './outcomes.js'
 import { bareAddress } from './names.js'
 import { cancelEmail, sendEmail, sentEmail, type SendInput } from './resend.js'
@@ -18,7 +19,7 @@ import { secretIn } from './text.js'
 import { triggerEventText } from '@brigade/contracts'
 
 /** The time a person (or the teammate) has to cancel a mail, before Resend sends it. */
-export const UNDO_SECONDS = 30
+export { UNDO_SECONDS }
 /** Mails one address sends in a day, at most. */
 export const SENDS_PER_DAY = 100
 export const RECIPIENTS_MAX = 50

@@ -193,6 +193,11 @@ describe('work kept in the database', { skip: !database && 'no database answers'
       },
     }
   }
+  /** Gmail's email held for its window to cancel it (src/mail/gmail-outbound.ts), sent now. */
+  const flush = async () => {
+    const { sendDueGmail } = await import('../src/mail/gmail-outbound.js')
+    await sendDueGmail(new Date(Date.now() + 3600_000), scope.workspaceId)
+  }
   const pendingOf = async (call: { heard: Sent[] }) => {
     await until(() => call.heard.some((m) => m.type === 'connector.pending'), 'the call to wait')
     return call.heard.find((m) => m.type === 'connector.pending')!.ticketId as string
@@ -228,6 +233,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
       async () => (await db.heldCall.findFirst({ where: { ticketId } }))?.status === 'done',
       'the held call to be made',
     )
+    await flush()
     assert.equal(sends.length - before, 1, 'sent once')
     const calls = await db.connectionCall.findMany({ where: { ticketId } })
     assert.deepEqual(
@@ -245,7 +251,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     assert.equal(wakeup.teammateId, ids.sam)
     assert.match(wakeup.note, /approved/)
     assert.match(wakeup.note, /do not make it again/)
-    assert.match(wakeup.note, /m-\d+/, 'with its result')
+    assert.match(wakeup.note, /leavesAt/, 'with its result')
     // And the runner is sent the decision, so the thread's approval card shows it decided.
     await until(() => settleOf(call.conn, ticketId) !== undefined, 'the decision to the runner')
     assert.deepEqual(settleOf(call.conn, ticketId), {
@@ -266,6 +272,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     )
     const { settleHeldCalls } = await import('../src/held-calls.js')
     await settleHeldCalls()
+    await flush()
     assert.equal(sends.length - before, 1)
   })
 
@@ -288,8 +295,10 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     await db.ticket.updateMany({ where: { id: ticketId }, data: { status: 'approved' } })
     await settleHeldCalls()
     assert.equal((await db.heldCall.findFirstOrThrow({ where: { ticketId } })).status, 'done')
+    await flush()
     assert.equal(sends.length - before, 1)
     await settleHeldCalls()
+    await flush()
     assert.equal(sends.length - before, 1, 'never twice')
     void decideTicket
   })
@@ -336,6 +345,7 @@ describe('work kept in the database', { skip: !database && 'no database answers'
       () => [two, three, four].every((c) => c.heard.some((m) => m.type === 'connector.result')),
       'the result',
     )
+    await flush()
     assert.equal(sends.length - before, 1, 'one mail')
     for (const call of [two, three, four]) {
       const result = call.heard.find((m) => m.type === 'connector.result')
@@ -349,6 +359,44 @@ describe('work kept in the database', { skip: !database && 'no database answers'
     )
     // Tools heard it: no message in the thread for it.
     assert.equal(await db.wakeup.count({ where: { sourceId: `held:${ticketId}` } }), 0)
+  })
+
+  test('a mailbox’s rule decides whether its email asks, whatever the teammate’s writes do', async () => {
+    const before = sends.length
+    // Sam's writes go without asking: the mailbox's rule alone decides for its email.
+    await db.teammate.updateMany({
+      where: { id: ids.sam },
+      data: { permissionPolicy: { connectorWrites: 'allow' } },
+    })
+    try {
+      // Auto (every mailbox's to start with): it goes, held for its window to cancel it.
+      const free = await send()
+      await until(() => free.heard.some((m) => m.type === 'connector.result'), 'the result')
+      assert.equal(
+        free.heard.some((m) => m.type === 'connector.pending'),
+        false,
+      )
+      assert.equal(free.heard.find((m) => m.type === 'connector.result')?.ok, true)
+      await flush()
+      assert.equal(sends.length - before, 1)
+
+      // Approve: each email waits for a person, with why.
+      await db.connection.updateMany({ where: { id: ids.gmail }, data: { sendPolicy: 'approve' } })
+      const asked = await send()
+      const ticketId = await pendingOf(asked)
+      const ticket = await db.ticket.findFirstOrThrow({ where: { id: ticketId } })
+      assert.match(String((ticket.payload as { reason?: string }).reason), /its mailbox's setting/)
+      await flush()
+      assert.equal(sends.length - before, 1, 'nothing more left')
+      const { decideTicket } = await import('../src/connector-calls.js')
+      await decideTicket({ ...scope, memberId: ids.owner }, ticketId, { approved: false })
+    } finally {
+      await db.connection.updateMany({ where: { id: ids.gmail }, data: { sendPolicy: 'auto' } })
+      await db.teammate.updateMany({
+        where: { id: ids.sam },
+        data: { permissionPolicy: { connectorWrites: 'ask' } },
+      })
+    }
   })
 
   test('a denial after a restart: nothing is sent, and the thread hears why', async () => {

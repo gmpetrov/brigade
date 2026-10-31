@@ -32,6 +32,7 @@ import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -155,6 +156,7 @@ function MailboxRow({ mailbox: m }: { mailbox: MailboxSummary }) {
             : m.ruleCount === 0
               ? 'No rule: its mail waits for you'
               : `${m.ruleCount} ${m.ruleCount === 1 ? 'rule' : 'rules'}`}
+          {m.sendPolicy === 'approve' && ' · Every email approved'}
         </span>
       </div>
     </Link>
@@ -504,6 +506,10 @@ export function MailboxView({ id }: { id: string }) {
             ? 'In the Inbox, only you see its mail.'
             : 'In the Inbox, everyone in the workspace sees its mail.'}
         </p>
+      </Section>
+
+      <Section step={4} title="How its replies go">
+        <MailboxSending mailbox={m} reload={mailbox.reload} />
       </Section>
 
       {m.addressId && (
@@ -1051,6 +1057,69 @@ function MailboxJournal({ mailbox: m }: { mailbox: MailboxDetail }) {
           })}
         </ul>
       )}
+    </div>
+  )
+}
+
+const SENDING: { value: MailboxDetail['sendPolicy']; label: string; detail: string }[] = [
+  {
+    value: 'auto',
+    label: 'Teammates reply on their own',
+    detail:
+      'When the answer is clear. What needs your judgment (money, a promise, a complaint, a doubt) comes to your To do with their reason, unanswered.',
+  },
+  {
+    value: 'approve',
+    label: 'Approve every email',
+    detail: 'Each email they write waits in your To do as a draft to approve, change or discard.',
+  },
+]
+
+/**
+ * How the email its teammates send goes, the same for Brigade's addresses and Gmail: on their own,
+ * or each approved first. Either way it leaves 30 seconds later, and can be cancelled until then.
+ */
+function MailboxSending({
+  mailbox: m,
+  reload,
+}: {
+  mailbox: MailboxDetail
+  reload: () => Promise<unknown>
+}) {
+  const save = useAction()
+  const choose = (value: string) =>
+    void save
+      .run(() =>
+        api(`/connections/${m.connectionId}`, { method: 'PATCH', body: { sendPolicy: value } }),
+      )
+      .then(() => reload())
+  return (
+    <div className="flex flex-col gap-3 text-sm">
+      <RadioGroup
+        value={m.sendPolicy}
+        onValueChange={choose}
+        disabled={!m.setsSending || save.busy}
+        className="gap-3"
+      >
+        {SENDING.map((o) => (
+          <div key={o.value} className="flex items-start gap-2.5">
+            <RadioGroupItem value={o.value} id={`sending-${o.value}`} className="mt-0.5" />
+            <Label htmlFor={`sending-${o.value}`} className="grid gap-0.5 font-normal">
+              <span className="font-medium">{o.label}</span>
+              <span className="text-muted-foreground">{o.detail}</span>
+            </Label>
+          </div>
+        ))}
+      </RadioGroup>
+      <p className="text-muted-foreground">
+        Every email leaves 30 seconds after it is sent or approved, and can be cancelled until
+        then.
+        {!m.setsSending &&
+          (m.kind === 'gmail'
+            ? ' Only the member who connected it, or an owner or admin, changes this.'
+            : ' Only an owner or admin changes this.')}
+      </p>
+      <ErrorLine error={save.error} />
     </div>
   )
 }

@@ -854,7 +854,7 @@ const json = (value: unknown) =>
 /** An approval's question in words, for the writes people meet most: its tool name otherwise. */
 function approvalAsk(toolName: string) {
   const name = bareToolName(toolName)
-  if (isEmailSend(toolName) || /^gmail_send(_|$)/.test(name)) return 'Allow sending this email?'
+  if (isEmailSend(toolName)) return 'Allow sending this email?'
   if (/^github_merge_pull_request(_|$)/.test(name)) return 'Allow merging this pull request?'
   return null
 }

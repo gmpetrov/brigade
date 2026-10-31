@@ -29,6 +29,7 @@ import { authorisedFetch } from './connector-calls.js'
 import { attachmentLink } from './connectors/email.js'
 import { gmailFile } from './connectors/gmail.js'
 import { addressOf } from './mail/names.js'
+import { holdGmail } from './mail/gmail-outbound.js'
 import { whenToReply } from './mail/guidance.js'
 import { clearOutcome } from './mail/outcomes.js'
 import { sendDraft, UNDO_SECONDS } from './mail/outbound.js'
@@ -189,16 +190,21 @@ const declinedSql = (
       and o.status <> 'cancelled' and o."receivedAt" > h."receivedAt"))`
 
 /**
- * A teammate's reply in it waits for this member's approval (h: a head): an open email_send
- * ticket answering one of its mails, in a thread they started, or any for an admin (decide.ts).
+ * A teammate's reply in it waits for this member's approval (h: a head): an open email_send or
+ * gmail_send ticket answering one of its mails (Brigade's by its id, Gmail's by Gmail's), in a
+ * thread they started, or any for an admin (decide.ts).
  */
 const draftSql = (scope: WorkspaceScope) => sql`exists (select 1 from "Ticket" t
   join "Session" s on s.id = t."sessionId"
   where t."workspaceId" = ${scope.workspaceId} and t.status = 'open' and t.type = 'approval'
-    and t.payload->>'operation' like 'email_send%'
-    and t.payload->'input'->>'replyTo' in (select y.id from "MailMessage" y
-      where y."workspaceId" = ${scope.workspaceId}
-        and y.box = h.box and y."conversationId" = h."conversationId")
+    and ((t.payload->>'operation' like 'email_send%'
+        and t.payload->'input'->>'replyTo' in (select y.id from "MailMessage" y
+          where y."workspaceId" = ${scope.workspaceId}
+            and y.box = h.box and y."conversationId" = h."conversationId"))
+      or (t.payload->>'operation' = 'gmail_send'
+        and t.payload->'input'->>'replyToMessageId' in (select y."sourceId" from "MailMessage" y
+          where y."workspaceId" = ${scope.workspaceId} and y."sourceId" is not null
+            and y.box = h.box and y."conversationId" = h."conversationId")))
     and ${admin(scope) ? sql`true` : sql`s."startedByMemberId" = ${scope.memberId}`})`
 
 /** Mail sent in it that waits to leave, past the window to cancel any mail (h: a head). */
@@ -394,6 +400,7 @@ async function toItems(
           select: {
             id: true,
             box: true,
+            sourceId: true,
             conversationId: true,
             sessionId: true,
             direction: true,
@@ -530,6 +537,8 @@ function activityOf(
 type ConversationMail = {
   id: string
   box: string
+  /** Gmail's id for it. */
+  sourceId: string | null
   conversationId: string
   sessionId: string | null
   direction: 'in' | 'out'
@@ -560,12 +569,24 @@ async function draftsOf(
     orderBy: { createdAt: 'asc' },
   })
   const ids = new Set(mails.map((m) => m.id))
+  // Gmail's replies name the mail they answer by Gmail's id: the Inbox's, of the same box.
+  const byGmailId = new Map(
+    mails.flatMap((m) => (m.sourceId ? [[`${m.box} ${m.sourceId}`, m.id] as const] : [])),
+  )
   return tickets.flatMap((t) => {
-    const payload = t.payload as { operation?: string; input?: Record<string, unknown> }
+    const payload = t.payload as {
+      operation?: string
+      connectionId?: string
+      input?: Record<string, unknown>
+    }
     const input = payload.input ?? {}
-    const replyTo = typeof input.replyTo === 'string' ? input.replyTo : null
-    if (!/^email_send(_|$)/.test(payload.operation ?? '') || !replyTo || !ids.has(replyTo))
-      return []
+    const replyTo =
+      /^email_send(_|$)/.test(payload.operation ?? '') && typeof input.replyTo === 'string'
+        ? input.replyTo
+        : payload.operation === 'gmail_send' && typeof input.replyToMessageId === 'string'
+          ? (byGmailId.get(`gmail:${payload.connectionId} ${input.replyToMessageId}`) ?? null)
+          : null
+    if (!replyTo || !ids.has(replyTo)) return []
     return [
       {
         ticketId: t.id,
@@ -775,7 +796,7 @@ export async function readItem(
     drafts: item!.hidden ? [] : (await draftsOf(db, scope, mails)).map(({ replyTo: _, ...d }) => d),
     mayPrompt: mayPrompt(scope, head),
     // In its thread's name: by who may write in it, who may also cancel it before it leaves.
-    canReply: !item!.hidden && !!head.address && mayPrompt(scope, head),
+    canReply: !item!.hidden && (!!head.address || !!head.sourceId) && mayPrompt(scope, head),
     replyRecipients: recipientsOf(head),
   }
 }
@@ -801,13 +822,13 @@ export async function askedToReply(db: ScopedDb, scope: WorkspaceScope, itemId: 
 
 /**
  * A person's own reply, from the Inbox: from the conversation's mailbox, to its people, in its
- * thread's name (the thread is told by the conversation, and does not answer twice: outbound.ts).
- * Brigade's addresses only: Gmail's is answered in Gmail.
+ * thread's name (the thread is told by the conversation, and does not answer twice: outbound.ts,
+ * gmail-outbound.ts). Brigade's addresses and Gmail's alike.
  */
 export async function replyItem(db: ScopedDb, scope: WorkspaceScope, itemId: string, text: string) {
   const { head } = await conversationOf(db, scope, itemId)
   const detail = await readItem(db, scope, itemId)
-  if (!detail.canReply || !head.address || !head.session)
+  if (!detail.canReply || !head.session)
     throw new HTTPException(403, { message: 'You cannot reply to this conversation from here' })
   const thread = await db.session.findFirst({
     where: { id: head.session.id },
@@ -816,6 +837,25 @@ export async function replyItem(db: ScopedDb, scope: WorkspaceScope, itemId: str
   if (!thread) throw new HTTPException(404, { message: 'Its thread is gone' })
   // What the form showed: the same recipients, from the same mail.
   const to = recipientsOf(head)
+  // Gmail's: from the account, held for its window to cancel it as a teammate's reply is.
+  if (!head.address) {
+    const connection = head.connectionId
+      ? await db.connection.findFirst({
+          where: { id: head.connectionId, status: 'active' },
+          select: { id: true, externalAccount: true },
+        })
+      : null
+    if (!connection || !head.sourceId)
+      throw new HTTPException(409, { message: 'Its Gmail account cannot send now' })
+    const held = await holdGmail(db, scope, {
+      connection,
+      session: thread,
+      teammateId: thread.teammateId,
+      sentByMemberId: scope.memberId,
+      email: { to, subject: '', body: text, replyToMessageId: head.sourceId },
+    })
+    return { id: `mail:${held.id}`, sendAt: held.sendAt.toISOString() }
+  }
   const sent = await sendDraft(db, scope, {
     address: head.address,
     thread,
