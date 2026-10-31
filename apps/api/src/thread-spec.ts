@@ -14,7 +14,7 @@ import { isMcp } from './mcp-tools.js'
 import { catalogVersion, grantOperations, takesCatalogs } from './catalogs.js'
 import { threadAttachments } from './attachments.js'
 import { chiefRoster } from './chief.js'
-import type { ScopedDb } from './db.js'
+import { prisma, type ScopedDb } from './db.js'
 import type { WorkspaceScope } from './scope.js'
 import { connectors } from './connectors/index.js'
 import { threadAddress } from './connectors/email.js'
@@ -338,6 +338,11 @@ export async function askedBy(db: ScopedDb, sessionId: string): Promise<string |
     select: { askedByMemberId: true },
   })
   if (thread?.askedByMemberId) return thread.askedByMemberId
+  return askedByEvents(db, sessionId)
+}
+
+/** Whose request a thread from before Session.askedByMemberId works on: its latest person's input. */
+async function askedByEvents(db: Pick<ScopedDb, 'sessionEvent'>, sessionId: string) {
   const latest = await db.sessionEvent.findMany({
     where: {
       sessionId,
@@ -360,26 +365,22 @@ export const SEVERAL_ASKERS = '*'
 /**
  * A member wrote, answered or decided in a thread. Its teammate works on its asker's requests
  * alone while nobody else takes part; once another member does, on several members' for good
- * (SEVERAL_ASKERS), whatever is queued or under way: a member's own Apps stay out of it.
+ * (SEVERAL_ASKERS), whatever is queued or under way: a member's own Apps stay out of it. Taken
+ * under the thread's row lock, so two members at once both count.
  */
 export async function noteAsker(db: ScopedDb, sessionId: string, memberId: string) {
-  // Another's, or several already: several. A change made at once never loses this.
-  await db.session.updateMany({
-    where: { id: sessionId, askedByMemberId: { not: memberId } },
-    data: { askedByMemberId: SEVERAL_ASKERS },
+  const thread = await db.session.findFirst({ where: { id: sessionId }, select: { id: true } })
+  if (!thread) return
+  await prisma.$transaction(async (tx) => {
+    const [row] = await tx.$queryRaw<{ askedByMemberId: string | null }[]>`
+      SELECT "askedByMemberId" FROM "Session" WHERE id = ${thread.id} FOR UPDATE`
+    if (!row) return
+    // Unknown (a thread from before it was kept): read from what people wrote in it.
+    const before = row.askedByMemberId ?? (await askedByEvents(tx, thread.id))
+    const next = !before || before === memberId ? memberId : SEVERAL_ASKERS
+    if (next !== row.askedByMemberId)
+      await tx.session.update({ where: { id: thread.id }, data: { askedByMemberId: next } })
   })
-  // Unknown (a thread from before it was kept): read from what people wrote in it.
-  const thread = await db.session.findFirst({
-    where: { id: sessionId },
-    select: { askedByMemberId: true },
-  })
-  if (thread && thread.askedByMemberId === null) {
-    const before = await askedBy(db, sessionId)
-    await db.session.updateMany({
-      where: { id: sessionId, askedByMemberId: null },
-      data: { askedByMemberId: !before || before === memberId ? memberId : SEVERAL_ASKERS },
-    })
-  }
 }
 
 /** Prompting or approving: its starter, or any member but a viewer once it is open (mayWrite). */

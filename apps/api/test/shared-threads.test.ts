@@ -539,6 +539,68 @@ describe('threads others write in', { skip: !database && 'no database answers' }
     }
   })
 
+  test('two members taking part at once in a thread from before both count', async () => {
+    const { noteAsker, askedBy, SEVERAL_ASKERS } = await import('../src/thread-spec.js')
+    for (const order of [
+      ['ada', 'bob'],
+      ['bob', 'ada'],
+      ['ada', 'bob'],
+      ['bob', 'ada'],
+    ] as const) {
+      const id = await legacy(await thread('ada', cloud))
+      await say(id, 1, 'message.user', member('ada'))
+      // Both wait on the row, held from another connection, then go at once.
+      let both!: Promise<unknown>
+      await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "Session" WHERE id = ${id} FOR UPDATE`
+        both = Promise.all(order.map((p) => noteAsker(db, id, member(p))))
+        await new Promise((resolve) => setTimeout(resolve, 300))
+      })
+      await both
+      assert.equal(await askedBy(db, id), SEVERAL_ASKERS)
+    }
+  })
+
+  test('a decline with a note is taking part; a bare one is not', async () => {
+    const { answerQuestion, answerTicket } = await import('../src/decide.js')
+    const { askedBy, SEVERAL_ASKERS } = await import('../src/thread-spec.js')
+    const scope = {
+      organizationId: org,
+      workspaceId,
+      userId: user('bob'),
+      memberId: member('bob'),
+      role: 'member' as const,
+    }
+    const conn = await runner()
+    try {
+      for (const type of ['question', 'request'] as const)
+        for (const note of [undefined, 'Instead, search her inbox.']) {
+          const id = await thread('ada', cloud)
+          const ticket = await db.ticket.create({
+            data: {
+              sessionId: id,
+              type,
+              title: 'Which inbox?',
+              payload:
+                type === 'question'
+                  ? { source: 'harness', questionId: randomUUID(), questions: [] }
+                  : { source: 'harness', requestId: randomUUID(), asks: [] },
+            },
+          } as never)
+          const answer = { action: 'declined' as const, ...(note ? { note } : {}) }
+          if (type === 'question') await answerQuestion(scope, ticket.id, answer)
+          else await answerTicket(scope, ticket.id, answer)
+          assert.equal(
+            await askedBy(db, id),
+            note ? SEVERAL_ASKERS : member('ada'),
+            `${type}, ${note ? 'with' : 'without'} a note`,
+          )
+        }
+    } finally {
+      conn.close()
+    }
+  })
+
   test('another member’s queued message is theirs to change; anyone steers it', async () => {
     const id = await thread('ada', cloud)
     const messageId = `msg-${suffix}`
