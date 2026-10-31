@@ -11,6 +11,7 @@ import {
   DocumentBlockNoteView,
   editorFiles,
   editorSchema,
+  steadyDropCursor,
   type DocumentBlockEditor,
 } from '@/components/document-blocks'
 import type { DocumentEditorProps } from '@/components/document-editor'
@@ -123,6 +124,7 @@ function LiveEditor({
     withCollaboration({
       schema: editorSchema,
       ...editorFiles(documentId, self),
+      dropCursor: steadyDropCursor(),
       extensions: [agentTyping(setTyping), checklistLookExtension(), checkboxTapExtension()],
       collaboration: {
         provider,
@@ -282,6 +284,7 @@ function SavedDocument({
   const editor = useCreateBlockNote({
     schema: editorSchema,
     ...editorFiles(session.documentId, self),
+    dropCursor: steadyDropCursor(),
     extensions: [checklistLookExtension(), checkboxTapExtension()],
   })
   self.current = editor
