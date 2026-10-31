@@ -191,8 +191,9 @@ export async function closeAnswered(scope: Scope, sessionId: string) {
 }
 
 /**
- * A reply cancelled before it left: its conversation, which Brigade marked done for it, is the
- * teammate's again (a person's own "Done" stays).
+ * A reply cancelled before it left, or that bounced or failed: its conversation, which Brigade
+ * marked done for it, is the teammate's again (a person's own "Done" stays, and so does one
+ * another reply still answers).
  */
 export async function reopenUnanswered(
   db: ScopedDb,

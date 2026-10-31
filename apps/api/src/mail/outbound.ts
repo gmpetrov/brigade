@@ -398,6 +398,8 @@ export async function statusChanged(type: string, data: StatusEvent) {
       where: { id: row.id },
       data: { status: 'bounced', error: reason.slice(0, 500), messageId },
     })
+    // It answers nothing: a conversation Brigade closed for it is the teammate's again.
+    await reopenUnanswered(db, row)
     if (row.sessionId) await tellThread(db, row, reason)
     return true
   }

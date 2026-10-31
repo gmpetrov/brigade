@@ -2207,6 +2207,41 @@ describe('what a thread did without replying', { skip }, () => {
     await cancelMail(db, scope, later.id, { type: 'member', id: members[0]! })
     assert.equal((await inbox.readItem(db, as(0), `mail:${mine.id}`)).status, 'done')
   })
+
+  test('a reply that bounces or fails gives its conversation back, unless another answers it', async () => {
+    const db = scoped(scope)
+    const { closeAnswered } = await import('../src/mail/outcomes.js')
+    const { statusChanged } = await import('../src/mail/outbound.js')
+    const handed = await thread(riley.id)
+    const status = async (m: { id: string }) =>
+      (await inbox.readItem(db, as(0), `mail:${m.id}`)).status
+    const received = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    await sent(received, { resendId: `bounce-${id}`, sessionId: handed.id })
+    const twice = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    await sent(twice, { resendId: `fail-${id}`, sessionId: handed.id })
+    await sent(twice)
+    assert.equal(await closeAnswered(scope, handed.id), 2)
+
+    assert.equal(
+      await statusChanged('email.bounced', {
+        email_id: `bounce-${id}`,
+        bounce: { message: 'No such user' },
+      }),
+      true,
+    )
+    assert.equal(await status(received), 'handled')
+    // Its other reply still answers it: done it stays.
+    await statusChanged('email.failed', { email_id: `fail-${id}`, failed: { reason: 'x' } })
+    assert.equal(await status(twice), 'done')
+  })
 })
 
 describe('a thread’s reply from Gmail', { skip }, () => {
