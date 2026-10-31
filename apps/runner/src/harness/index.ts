@@ -74,6 +74,7 @@ import {
   type WaitingApproval,
   type WaitingCall,
 } from './closed-turn.js'
+import { claudeSettingsEnv } from './claude-settings.js'
 import { harnessEnv } from './env.js'
 import { reportRunUsage } from '../usage.js'
 import {
@@ -1693,6 +1694,8 @@ export class HarnessThread {
           : {
               ...env,
               ...terminalTools(tools),
+              // Claude Code's own schedules, memory and the like are off (claude-settings.ts).
+              ...claudeSettingsEnv(),
               ...(this.spec.suggestions ? { BRIGADE_PROMPT_SUGGESTIONS: '1' } : {}),
             },
       ...(this.runAs ? { runAs: this.runAs, thread: this.spec.sessionId } : {}),
