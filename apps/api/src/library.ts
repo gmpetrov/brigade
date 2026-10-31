@@ -337,7 +337,7 @@ export async function committedBytes(
   const version = await prisma.documentVersion.findFirst({
     where: { documentId: row.id, sha256: row.sha256 },
     orderBy: { createdAt: 'desc' },
-    select: { id: true, documentId: true, objectKey: true },
+    select: { id: true, documentId: true, objectKey: true, size: true },
   })
   const bytes = version ? await readVersion(scope, version).catch(() => null) : null
   return bytes && sha256(bytes) === row.sha256 ? bytes : null
@@ -485,8 +485,16 @@ export async function libraryFile(db: ScopedDb, id: string) {
   return row
 }
 
-/** A library file's bytes: those its row points to. */
-export async function readLibraryFile(scope: Scope, row: { id: string; objectKey: string | null }) {
+/**
+ * A library file's bytes: those its row points to, read whole. Refused past LIBRARY_READ_MAX,
+ * which the API's memory would not hold: such a file is streamed or served from the bucket.
+ */
+export async function readLibraryFile(
+  scope: Scope,
+  row: { id: string; objectKey: string | null; size: number },
+) {
+  if (row.size > LIBRARY_READ_MAX)
+    throw new HTTPException(413, { message: 'The file is too large to read here' })
   const bytes = await getObject(fileKey(scope, row))
   if (!bytes) throw new HTTPException(404, { message: 'The file is missing from storage' })
   return bytes

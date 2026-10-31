@@ -57,6 +57,7 @@ const { localBucket } = await import('../src/routes/bucket.js')
 const { uploads } = await import('../src/routes/uploads.js')
 const { library } = await import('../src/routes/library.js')
 const { designs } = await import('../src/routes/designs.js')
+const { designFiles, openDesignView } = await import('../src/designs.js')
 const { skills } = await import('../src/routes/skills.js')
 const { runnerUploads } = await import('../src/routes/runner-uploads.js')
 const { runnerLibrary } = await import('../src/routes/runner-library.js')
@@ -84,6 +85,7 @@ const app = new Hono()
   .route('/api/skills', skills)
   .route('/runner/uploads', runnerUploads)
   .route('/runner/library', runnerLibrary)
+  .route('/v', designFiles)
 
 const sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
 const json = (body: unknown, headers: Record<string, string> = {}) => ({
@@ -346,6 +348,38 @@ test(
     assert.equal(await objectSize(fileKey(scope, now)), first.byteLength)
   },
 )
+
+test("a design's large video streams by ranges; its page is read whole", { skip }, async () => {
+  const folder = 'Designs/promo.design'
+  const save = async (name: string, bytes: Uint8Array, type: string) => {
+    const uploadId = await ready('library', `${folder}/${name}`, bytes, type)
+    const saved = await app.request(
+      '/api/library/files',
+      json({ path: `${folder}/${name}`, uploadId }),
+    )
+    assert.equal(saved.status, 201, await saved.clone().text())
+  }
+  const clip = new Uint8Array(LIBRARY_READ_MAX + 4096).fill(7)
+  clip.set(strToU8('clip-head'), 0)
+  await save('index.html', strToU8('<video src="clip.mp4"></video>'), 'text/html')
+  await save('clip.mp4', clip, 'video/mp4')
+  const view = await openDesignView(scoped(scope), scope, folder)
+  const page = new URL(view.url)
+  const at = (name: string, headers: Record<string, string> = {}) =>
+    app.request(page.pathname.replace(/[^/]*$/, name), { headers: { host: page.host, ...headers } })
+
+  const html = await at('index.html')
+  assert.equal(html.status, 200)
+  assert.match(await html.text(), /<video[^>]*src="clip.mp4"/)
+  const part = await at('clip.mp4', { range: 'bytes=0-8' })
+  assert.equal(part.status, 206)
+  assert.equal(await part.text(), 'clip-head')
+  assert.equal(part.headers.get('access-control-allow-origin'), '*')
+  assert.match(part.headers.get('content-security-policy') ?? '', /sandbox/)
+  const whole = await at('clip.mp4')
+  assert.equal(whole.status, 200)
+  assert.equal(sha(new Uint8Array(await whole.arrayBuffer())), sha(clip))
+})
 
 const PNG = new Uint8Array([
   0x89,
