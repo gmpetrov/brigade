@@ -407,7 +407,7 @@ export async function statusChanged(type: string, data: StatusEvent) {
 }
 
 /** A sent mail that failed: the thread that sent it hears it, once. */
-async function tellThread(
+export async function tellThread(
   db: ScopedDb,
   row: {
     id: string

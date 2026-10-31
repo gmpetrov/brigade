@@ -87,11 +87,6 @@ export const CreateTeammate = z
 export const PermissionPolicy = z.object({
   /** Connector writes: allow (the default), ask (a ticket waits for a person) or deny. */
   connectorWrites: z.enum(['allow', 'ask', 'deny']).optional(),
-  /**
-   * Emails from Brigade's own addresses (the Email App) to anyone outside the workspace: ask
-   * (the default, whatever connectorWrites says) or allow. A deny of connectorWrites still stands.
-   */
-  emailSends: z.enum(['allow', 'ask']).optional(),
 })
 export type PermissionPolicy = z.infer<typeof PermissionPolicy>
 /** Daily caps per teammate. Unset means no cap. Reaching one pauses new work and opens a ticket. */
@@ -203,6 +198,13 @@ export type McpInspection = {
 /** A custom app that posts events to Brigade. No credential: its triggers' URLs carry the trust. */
 export const ConnectWebhookApp = z.object({ label: z.string().trim().min(1).max(80) })
 /**
+ * How a mailbox's email goes out, whichever its provider: auto, its teammates send on their own
+ * and leave a person what needs judgment (email_no_reply, gmail_no_reply); approve, each email
+ * waits for a person's approval.
+ */
+export const SendPolicy = z.enum(['auto', 'approve'])
+export type SendPolicy = z.infer<typeof SendPolicy>
+/**
  * An account of an App: its name, and where teammates may use it. mine: only in
  * threads the member who connected it started; workspace: in every thread.
  */
@@ -211,6 +213,8 @@ export const UpdateConnection = z.object({
   reach: z.enum(['mine', 'workspace']).optional(),
   /** Gmail shared with the workspace: its mail shows in the Inbox (src/inbox.ts). */
   inbox: z.boolean().optional(),
+  /** A mailbox (Gmail, an Email App address): how the email its teammates send goes. */
+  sendPolicy: SendPolicy.optional(),
 })
 /** An App's tools that no teammate gets, on any of its accounts. */
 export const UpdateApp = z.object({ disabledTools: z.array(z.string().max(100)).max(200) })
@@ -230,13 +234,20 @@ export const CreateTrigger = z.object({
   /** What the teammate does with each event, before the event in each thread. */
   instructions: TriggerInstructions.optional(),
 })
-/** An email's draft as a person approving it changed it (the Email App's email_send). */
-export const EditedEmail = z.object({
-  to: z.array(z.string().email()).min(1).max(50),
-  cc: z.array(z.string().email()).max(50).optional(),
-  subject: z.string().max(500),
-  text: z.string().max(100_000),
-})
+/**
+ * An email's draft as a person approving it changed it (email_send, gmail_send), or only when it
+ * leaves (Send later).
+ */
+export const EditedEmail = z.union([
+  z.object({
+    to: z.array(z.string().email()).min(1).max(50),
+    cc: z.array(z.string().email()).max(50).optional(),
+    subject: z.string().max(500),
+    text: z.string().max(100_000),
+    sendAt: z.string().datetime({ offset: true }).optional(),
+  }),
+  z.object({ sendAt: z.string().datetime({ offset: true }) }),
+])
 export type EditedEmail = z.infer<typeof EditedEmail>
 export const ResolveTicket = z.object({
   approved: z.boolean(),

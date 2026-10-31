@@ -38,9 +38,6 @@ import {
 import { playbookAccepts, playbookAccount, playbookActionOf, threadPlaybook } from './playbooks.js'
 import { notePullRequestCall } from './pull-requests.js'
 import { reviewOnCreate } from './reviews.js'
-import { keepGmailSent } from './mail/gmail-inbox.js'
-import { endWatch, watchingNote, watchReplies } from './replies.js'
-import { syncConnection } from './subscriptions/index.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import {
   decideHeld,
@@ -57,6 +54,9 @@ export type { Decision }
 
 type Call = Extract<RunnerToApi, { type: 'connector.call' }>
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
+
+/** The operation that sends a mailbox's email, by its kind: its mailbox's sendPolicy applies. */
+const MAIL_SENDS: Partial<Record<string, string>> = { email: 'email_send', gmail: 'gmail_send' }
 
 /**
  * A runner's connector call. One that asks a person is held with its ticket (src/held-calls.ts)
@@ -148,9 +148,11 @@ export async function handleConnectorCall(
       error: `Invalid input: ${input.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`,
     })
   let target = operation.target(input.data)
-  // Brigade's own connectors act on Brigade's data, for this thread.
+  // Brigade's own connectors act on Brigade's data, for this thread; so does Gmail's sending,
+  // which Brigade holds for its window to cancel it (src/mail/gmail-outbound.ts).
   const brigade = connectors[connection.kind]?.auth === 'brigade'
-  const own = brigade
+  const own =
+    brigade || connection.kind === 'gmail'
     ? {
         scope,
         connectionId: connection.id,
@@ -306,9 +308,12 @@ export async function handleConnectorCall(
       return result({ ok: false, error: verdict.reason })
     }
     const cap = await writeCapReached(db, teammate, connection.id)
+    // A mailbox whose email waits for a person: every send asks, a playbook's too.
+    const approves = MAIL_SENDS[connection.kind] === call.operation && connection.sendPolicy === 'approve'
     let asks = verdict
-      ? verdict.level === 'ask'
-      : policy === 'ask' ||
+      ? verdict.level === 'ask' || approves
+      : approves ||
+        policy === 'ask' ||
         (operation.asks
           ? await operation.asks(
               callContext(),
@@ -317,7 +322,7 @@ export async function handleConnectorCall(
             )
           : false)
     let overCap: string | undefined
-    if (verdict?.level === 'auto' && !cap && !resume) {
+    if (verdict?.level === 'auto' && !cap && !resume && !approves) {
       // On its own: it first takes its share of its action's caps, atomically; past one, it asks.
       const spec = playbook?.actions.find((a) => a.key === playbookActionKey)
       const taken = spec
@@ -344,9 +349,11 @@ export async function handleConnectorCall(
       const where = connection.externalAccount ?? connection.label
       const reason = cap
         ? `${teammate.name} reached its cap of ${cap.limit} write calls today on ${where}. Approving allows this one call.`
-        : verdict?.level === 'ask'
-          ? verdict.reason
-          : overCap
+        : approves
+          ? `Every email from ${where} waits for a person's approval (its mailbox's setting).`
+          : verdict?.level === 'ask'
+            ? verdict.reason
+            : overCap
       // Held with its ticket: made once a person decides, whenever that is (src/held-calls.ts).
       // An identical call meanwhile joins this ticket.
       await holdCall(db, {
@@ -409,7 +416,8 @@ export async function handleConnectorCall(
       const ticket = { id: decision.ticketId }
       // The person changed the draft before approving: what goes is theirs, checked again.
       if (decided.approved && decided.input && operation.editable) {
-        const edited = operation.input.safeParse({ ...(input.data as object), ...decided.input })
+        const changes = operation.edited ? operation.edited(decided.input) : decided.input
+        const edited = operation.input.safeParse({ ...(input.data as object), ...changes })
         const problem = edited.success
           ? operation.check
             ? await operation
@@ -519,40 +527,9 @@ export async function handleConnectorCall(
             return undefined
           })
         : undefined
-    // A reply in a conversation the Inbox keeps: kept there too, as the teammate's answer.
-    if (connection.kind === 'gmail' && call.operation === 'gmail_send')
-      await keepGmailSent(db, {
-        connection,
-        sessionId: session.id,
-        teammateId: teammate.id,
-        ...(decision ? { approvedByMemberId: decision.memberId } : {}),
-        input: input.data as Parameters<typeof keepGmailSent>[1]['input'],
-        attachments: ((input.data as { attachments?: string[] }).attachments ?? []).filter(
-          (a): a is string => typeof a === 'string',
-        ),
-        output,
-      }).catch((error) => console.warn(`sent mail not kept: ${String(error)}`))
-    // An email sent from a person's thread: a reply in its conversation wakes the thread.
-    const replies =
-      connection.kind === 'gmail' && call.operation === 'gmail_send'
-        ? await awaitReplies(db, scope, {
-            session,
-            teammateId: teammate.id,
-            connectionId: connection.id,
-            input: input.data as { to: string[]; subject: string },
-            output,
-          }).catch((error) => {
-            console.warn(`reply watch failed: ${String(error)}`)
-            return undefined
-          })
-        : undefined
     return result({
       ok: true,
-      output: replies
-        ? { ...(output as object), replies }
-        : review
-          ? { ...(output as object), ...review }
-          : output,
+      output: review ? { ...(output as object), ...review } : output,
       attachments: kept,
       ...(decision ? { decision } : {}),
     })
@@ -577,43 +554,6 @@ export async function handleConnectorCall(
     })
     return result({ ok: false, error: message, ...(decision ? { decision } : {}) })
   }
-}
-
-/**
- * After gmail_send: watch the email's conversation, so that a reply wakes the thread, and read
- * its mailbox from now on if nothing does (no trigger, or every earlier watch ended and the
- * tick dropped it). What the teammate is told, if anything.
- */
-async function awaitReplies(
-  db: ScopedDb,
-  scope: Scope,
-  sent: {
-    session: { id: string; origin: string; status: string }
-    teammateId: string
-    connectionId: string
-    input: { to: string[]; subject: string }
-    output: unknown
-  },
-) {
-  const threadId = (sent.output as { threadId?: unknown } | null)?.threadId
-  if (typeof threadId !== 'string') return undefined
-  const watch = await watchReplies(db, scope, {
-    session: sent.session,
-    teammateId: sent.teammateId,
-    connectionId: sent.connectionId,
-    conversationKey: threadId,
-    to: sent.input.to,
-    subject: sent.input.subject,
-  })
-  if (!watch) return undefined
-  if (!(await db.subscription.count({ where: { connectionId: sent.connectionId } })))
-    try {
-      await syncConnection(scope, sent.connectionId)
-    } catch (error) {
-      await endWatch(db, watch.id)
-      return `A reply cannot wake you here (its inbox could not be watched: ${error instanceof Error ? error.message : String(error)}). Set a wake-up to check for it.`
-    }
-  return watchingNote(watch.until)
 }
 
 /**

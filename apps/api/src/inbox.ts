@@ -29,6 +29,7 @@ import { authorisedFetch } from './connector-calls.js'
 import { attachmentLink } from './connectors/email.js'
 import { gmailFile } from './connectors/gmail.js'
 import { addressOf } from './mail/names.js'
+import { whenToReply } from './mail/guidance.js'
 import { clearOutcome } from './mail/outcomes.js'
 import { sendDraft, UNDO_SECONDS } from './mail/outbound.js'
 import { usableProject } from './projects.js'
@@ -954,8 +955,8 @@ export async function handItem(
       body: x.text,
     }))
   const how = gmail
-    ? `It is Gmail message ${m.sourceId} on ${detail.to}: read its conversation with gmail_read_thread, and answer with gmail_send and replyToMessageId "${m.sourceId}" if it needs one.`
-    : `Read it in full with email_read ("${m.id}"), and answer with email_send and replyTo "${m.id}" if it needs one; if not, say why with email_no_reply ("${m.id}").`
+    ? `It is Gmail message ${m.sourceId} on ${detail.to}: read its conversation with gmail_read_thread, and answer with gmail_send and replyToMessageId "${m.sourceId}" if it needs one; if not, say why with gmail_no_reply ("${m.sourceId}"). ${whenToReply('gmail_no_reply')}`
+    : `Read it in full with email_read ("${m.id}"), and answer with email_send and replyTo "${m.id}" if it needs one; if not, say why with email_no_reply ("${m.id}"). ${whenToReply('email_no_reply')}`
   // The mail is untrusted: in this member's message, its mentions summon nobody and grant nothing.
   // Made plain once written out, since writing it (JSON) can turn its words into a mention.
   const mail = unmention(

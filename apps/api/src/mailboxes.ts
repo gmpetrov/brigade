@@ -20,6 +20,10 @@ const gmailWhere = (scope: WorkspaceScope): Prisma.ConnectionWhereInput => ({
   ],
 })
 
+/** A mailbox's sending rule as stored: anything but approve is auto. */
+const sendPolicyOf = (value: string | null | undefined) =>
+  value === 'approve' ? ('approve' as const) : ('auto' as const)
+
 async function rows(
   db: ScopedDb,
   scope: WorkspaceScope,
@@ -34,7 +38,7 @@ async function rows(
             connectionId: { not: null },
             ...(only?.email ? { id: only.email } : {}),
           },
-          include: { domain: true },
+          include: { domain: true, connection: { select: { sendPolicy: true } } },
           orderBy: { createdAt: 'asc' },
         }),
     only?.email
@@ -76,10 +80,12 @@ async function rows(
         teammate,
         visibility: 'workspace' as const,
         showAll: true,
+        sendPolicy: sendPolicyOf(a.connection?.sendPolicy),
         addressId: a.id as string | null,
         connectionId: a.connectionId!,
         manages: admin(scope),
         accountOwner: false,
+        setsSending: admin(scope),
         reach: null,
       }
     }),
@@ -94,10 +100,12 @@ async function rows(
       teammate: null,
       visibility: c.reach === 'workspace' ? ('workspace' as const) : ('you' as const),
       showAll: c.reach === 'workspace' && c.inbox,
+      sendPolicy: sendPolicyOf(c.sendPolicy),
       addressId: null as string | null,
       connectionId: c.id,
       manages: admin(scope),
       accountOwner: c.createdByMemberId === scope.memberId,
+      setsSending: admin(scope) || c.createdByMemberId === scope.memberId,
       reach: c.reach as 'workspace' | 'mine',
     })),
   ]
@@ -118,6 +126,7 @@ const summary = (
   ruleCount,
   visibility: row.visibility,
   showAll: row.showAll,
+  sendPolicy: row.sendPolicy,
 })
 
 /** Every mailbox this member may see, with how many rules and playbooks handle each. */
@@ -182,6 +191,7 @@ export async function readMailbox(
     connectionId: row.connectionId,
     manages: row.manages,
     accountOwner: row.accountOwner,
+    setsSending: row.setsSending,
     rules,
     readers: grants.map((g) => g.teammate),
     reach: row.reach,

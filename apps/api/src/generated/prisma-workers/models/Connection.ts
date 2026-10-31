@@ -31,6 +31,7 @@ export type ConnectionMinAggregateOutputType = {
   appId: string | null
   reach: $Enums.ConnectionReach | null
   inbox: boolean | null
+  sendPolicy: string | null
   kind: $Enums.ConnectorKind | null
   label: string | null
   externalAccount: string | null
@@ -50,6 +51,7 @@ export type ConnectionMaxAggregateOutputType = {
   appId: string | null
   reach: $Enums.ConnectionReach | null
   inbox: boolean | null
+  sendPolicy: string | null
   kind: $Enums.ConnectorKind | null
   label: string | null
   externalAccount: string | null
@@ -69,6 +71,7 @@ export type ConnectionCountAggregateOutputType = {
   appId: number
   reach: number
   inbox: number
+  sendPolicy: number
   kind: number
   label: number
   externalAccount: number
@@ -90,6 +93,7 @@ export type ConnectionMinAggregateInputType = {
   appId?: true
   reach?: true
   inbox?: true
+  sendPolicy?: true
   kind?: true
   label?: true
   externalAccount?: true
@@ -109,6 +113,7 @@ export type ConnectionMaxAggregateInputType = {
   appId?: true
   reach?: true
   inbox?: true
+  sendPolicy?: true
   kind?: true
   label?: true
   externalAccount?: true
@@ -128,6 +133,7 @@ export type ConnectionCountAggregateInputType = {
   appId?: true
   reach?: true
   inbox?: true
+  sendPolicy?: true
   kind?: true
   label?: true
   externalAccount?: true
@@ -220,6 +226,7 @@ export type ConnectionGroupByOutputType = {
   appId: string
   reach: $Enums.ConnectionReach
   inbox: boolean
+  sendPolicy: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount: string | null
@@ -260,6 +267,7 @@ export type ConnectionWhereInput = {
   appId?: Prisma.StringFilter<"Connection"> | string
   reach?: Prisma.EnumConnectionReachFilter<"Connection"> | $Enums.ConnectionReach
   inbox?: Prisma.BoolFilter<"Connection"> | boolean
+  sendPolicy?: Prisma.StringFilter<"Connection"> | string
   kind?: Prisma.EnumConnectorKindFilter<"Connection"> | $Enums.ConnectorKind
   label?: Prisma.StringFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableFilter<"Connection"> | string | null
@@ -290,6 +298,7 @@ export type ConnectionOrderByWithRelationInput = {
   appId?: Prisma.SortOrder
   reach?: Prisma.SortOrder
   inbox?: Prisma.SortOrder
+  sendPolicy?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -324,6 +333,7 @@ export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
   appId?: Prisma.StringFilter<"Connection"> | string
   reach?: Prisma.EnumConnectionReachFilter<"Connection"> | $Enums.ConnectionReach
   inbox?: Prisma.BoolFilter<"Connection"> | boolean
+  sendPolicy?: Prisma.StringFilter<"Connection"> | string
   kind?: Prisma.EnumConnectorKindFilter<"Connection"> | $Enums.ConnectorKind
   label?: Prisma.StringFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableFilter<"Connection"> | string | null
@@ -353,6 +363,7 @@ export type ConnectionOrderByWithAggregationInput = {
   appId?: Prisma.SortOrder
   reach?: Prisma.SortOrder
   inbox?: Prisma.SortOrder
+  sendPolicy?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -378,6 +389,7 @@ export type ConnectionScalarWhereWithAggregatesInput = {
   appId?: Prisma.StringWithAggregatesFilter<"Connection"> | string
   reach?: Prisma.EnumConnectionReachWithAggregatesFilter<"Connection"> | $Enums.ConnectionReach
   inbox?: Prisma.BoolWithAggregatesFilter<"Connection"> | boolean
+  sendPolicy?: Prisma.StringWithAggregatesFilter<"Connection"> | string
   kind?: Prisma.EnumConnectorKindWithAggregatesFilter<"Connection"> | $Enums.ConnectorKind
   label?: Prisma.StringWithAggregatesFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableWithAggregatesFilter<"Connection"> | string | null
@@ -395,6 +407,7 @@ export type ConnectionCreateInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -424,6 +437,7 @@ export type ConnectionUncheckedCreateInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -449,6 +463,7 @@ export type ConnectionUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -478,6 +493,7 @@ export type ConnectionUncheckedUpdateInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -505,6 +521,7 @@ export type ConnectionCreateManyInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -522,6 +539,7 @@ export type ConnectionUpdateManyMutationInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -540,6 +558,7 @@ export type ConnectionUncheckedUpdateManyInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -574,6 +593,7 @@ export type ConnectionCountOrderByAggregateInput = {
   appId?: Prisma.SortOrder
   reach?: Prisma.SortOrder
   inbox?: Prisma.SortOrder
+  sendPolicy?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrder
@@ -593,6 +613,7 @@ export type ConnectionMaxOrderByAggregateInput = {
   appId?: Prisma.SortOrder
   reach?: Prisma.SortOrder
   inbox?: Prisma.SortOrder
+  sendPolicy?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrder
@@ -612,6 +633,7 @@ export type ConnectionMinOrderByAggregateInput = {
   appId?: Prisma.SortOrder
   reach?: Prisma.SortOrder
   inbox?: Prisma.SortOrder
+  sendPolicy?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrder
@@ -880,6 +902,7 @@ export type ConnectionCreateWithoutWorkspaceInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -907,6 +930,7 @@ export type ConnectionUncheckedCreateWithoutWorkspaceInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -963,6 +987,7 @@ export type ConnectionScalarWhereInput = {
   appId?: Prisma.StringFilter<"Connection"> | string
   reach?: Prisma.EnumConnectionReachFilter<"Connection"> | $Enums.ConnectionReach
   inbox?: Prisma.BoolFilter<"Connection"> | boolean
+  sendPolicy?: Prisma.StringFilter<"Connection"> | string
   kind?: Prisma.EnumConnectorKindFilter<"Connection"> | $Enums.ConnectorKind
   label?: Prisma.StringFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableFilter<"Connection"> | string | null
@@ -980,6 +1005,7 @@ export type ConnectionCreateWithoutReplyWatchesInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1008,6 +1034,7 @@ export type ConnectionUncheckedCreateWithoutReplyWatchesInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1048,6 +1075,7 @@ export type ConnectionUpdateWithoutReplyWatchesInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1076,6 +1104,7 @@ export type ConnectionUncheckedUpdateWithoutReplyWatchesInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1100,6 +1129,7 @@ export type ConnectionCreateWithoutAppInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1127,6 +1157,7 @@ export type ConnectionUncheckedCreateWithoutAppInput = {
   workspaceId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1178,6 +1209,7 @@ export type ConnectionCreateWithoutVaultSecretInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1206,6 +1238,7 @@ export type ConnectionUncheckedCreateWithoutVaultSecretInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1246,6 +1279,7 @@ export type ConnectionUpdateWithoutVaultSecretInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1274,6 +1308,7 @@ export type ConnectionUncheckedUpdateWithoutVaultSecretInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1298,6 +1333,7 @@ export type ConnectionCreateWithoutGrantsInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1326,6 +1362,7 @@ export type ConnectionUncheckedCreateWithoutGrantsInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1366,6 +1403,7 @@ export type ConnectionUpdateWithoutGrantsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1394,6 +1432,7 @@ export type ConnectionUncheckedUpdateWithoutGrantsInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1418,6 +1457,7 @@ export type ConnectionCreateWithoutCallsInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1446,6 +1486,7 @@ export type ConnectionUncheckedCreateWithoutCallsInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1486,6 +1527,7 @@ export type ConnectionUpdateWithoutCallsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1514,6 +1556,7 @@ export type ConnectionUncheckedUpdateWithoutCallsInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1538,6 +1581,7 @@ export type ConnectionCreateWithoutTriggersInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1566,6 +1610,7 @@ export type ConnectionUncheckedCreateWithoutTriggersInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1606,6 +1651,7 @@ export type ConnectionUpdateWithoutTriggersInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1634,6 +1680,7 @@ export type ConnectionUncheckedUpdateWithoutTriggersInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1658,6 +1705,7 @@ export type ConnectionCreateWithoutSubscriptionsInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1686,6 +1734,7 @@ export type ConnectionUncheckedCreateWithoutSubscriptionsInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1726,6 +1775,7 @@ export type ConnectionUpdateWithoutSubscriptionsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1754,6 +1804,7 @@ export type ConnectionUncheckedUpdateWithoutSubscriptionsInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1778,6 +1829,7 @@ export type ConnectionCreateWithoutAttachmentsInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1806,6 +1858,7 @@ export type ConnectionUncheckedCreateWithoutAttachmentsInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1846,6 +1899,7 @@ export type ConnectionUpdateWithoutAttachmentsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1874,6 +1928,7 @@ export type ConnectionUncheckedUpdateWithoutAttachmentsInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1898,6 +1953,7 @@ export type ConnectionCreateWithoutMailAddressInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1926,6 +1982,7 @@ export type ConnectionUncheckedCreateWithoutMailAddressInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -1966,6 +2023,7 @@ export type ConnectionUpdateWithoutMailAddressInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1994,6 +2052,7 @@ export type ConnectionUncheckedUpdateWithoutMailAddressInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2018,6 +2077,7 @@ export type ConnectionCreateWithoutMailMessagesInput = {
   organizationId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -2046,6 +2106,7 @@ export type ConnectionUncheckedCreateWithoutMailMessagesInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -2086,6 +2147,7 @@ export type ConnectionUpdateWithoutMailMessagesInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2114,6 +2176,7 @@ export type ConnectionUncheckedUpdateWithoutMailMessagesInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2139,6 +2202,7 @@ export type ConnectionCreateManyWorkspaceInput = {
   appId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -2156,6 +2220,7 @@ export type ConnectionUpdateWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2183,6 +2248,7 @@ export type ConnectionUncheckedUpdateWithoutWorkspaceInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2209,6 +2275,7 @@ export type ConnectionUncheckedUpdateManyWithoutWorkspaceInput = {
   appId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2227,6 +2294,7 @@ export type ConnectionCreateManyAppInput = {
   workspaceId: string
   reach?: $Enums.ConnectionReach
   inbox?: boolean
+  sendPolicy?: string
   kind: $Enums.ConnectorKind
   label: string
   externalAccount?: string | null
@@ -2244,6 +2312,7 @@ export type ConnectionUpdateWithoutAppInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2271,6 +2340,7 @@ export type ConnectionUncheckedUpdateWithoutAppInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2297,6 +2367,7 @@ export type ConnectionUncheckedUpdateManyWithoutAppInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
   inbox?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sendPolicy?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2401,6 +2472,7 @@ export type ConnectionSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   appId?: boolean
   reach?: boolean
   inbox?: boolean
+  sendPolicy?: boolean
   kind?: boolean
   label?: boolean
   externalAccount?: boolean
@@ -2432,6 +2504,7 @@ export type ConnectionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   appId?: boolean
   reach?: boolean
   inbox?: boolean
+  sendPolicy?: boolean
   kind?: boolean
   label?: boolean
   externalAccount?: boolean
@@ -2454,6 +2527,7 @@ export type ConnectionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   appId?: boolean
   reach?: boolean
   inbox?: boolean
+  sendPolicy?: boolean
   kind?: boolean
   label?: boolean
   externalAccount?: boolean
@@ -2476,6 +2550,7 @@ export type ConnectionSelectScalar = {
   appId?: boolean
   reach?: boolean
   inbox?: boolean
+  sendPolicy?: boolean
   kind?: boolean
   label?: boolean
   externalAccount?: boolean
@@ -2488,7 +2563,7 @@ export type ConnectionSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "appId" | "reach" | "inbox" | "kind" | "label" | "externalAccount" | "externalUrl" | "mcpUrl" | "status" | "vaultSecretId" | "createdByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["connection"]>
+export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "appId" | "reach" | "inbox" | "sendPolicy" | "kind" | "label" | "externalAccount" | "externalUrl" | "mcpUrl" | "status" | "vaultSecretId" | "createdByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["connection"]>
 export type ConnectionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   app?: boolean | Prisma.AppDefaultArgs<ExtArgs>
@@ -2550,6 +2625,12 @@ export type $ConnectionPayload<ExtArgs extends runtime.Types.Extensions.Internal
      * hold someone's personal mail.
      */
     inbox: boolean
+    /**
+     * A mailbox (the Email App's address, a Gmail account): how the email its teammates send goes.
+     * auto: on its own, a teammate leaving a person what needs their judgment (email_no_reply);
+     * approve: each email waits for a person. Set by an owner or admin, or the account's owner.
+     */
+    sendPolicy: string
     kind: $Enums.ConnectorKind
     label: string
     /**
@@ -3009,6 +3090,7 @@ export interface ConnectionFieldRefs {
   readonly appId: Prisma.FieldRef<"Connection", 'String'>
   readonly reach: Prisma.FieldRef<"Connection", 'ConnectionReach'>
   readonly inbox: Prisma.FieldRef<"Connection", 'Boolean'>
+  readonly sendPolicy: Prisma.FieldRef<"Connection", 'String'>
   readonly kind: Prisma.FieldRef<"Connection", 'ConnectorKind'>
   readonly label: Prisma.FieldRef<"Connection", 'String'>
   readonly externalAccount: Prisma.FieldRef<"Connection", 'String'>
