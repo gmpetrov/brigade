@@ -36,7 +36,10 @@ repeats piled up where nothing read them. Memory now has layers, dates and an ar
   corrects (`replace`: the new text takes the old one's place), lines to archive with
   why, and lines the conversation showed still true (`confirm`: their date moves to
   today). The runner turns numbers back into the lines' text, which is how the API finds
-  them, so edits that cross never apply to the wrong line.
+  them, so edits that cross never apply to the wrong line. A line named by its text is
+  the line with that text, else the one the run read that way, day included. The day a
+  run read after a line, copied onto the end of the line that replaces it or merges it,
+  is taken off (a date in the line's own text stays), so no line shows its day twice.
 - **Verified where it is used.** No run audits the code for memory's sake: the teammate
   with the repository open checks a line before relying on it and says in its reply when
   one is wrong; the memory run then replaces or archives it, and confirms the lines that
