@@ -1243,6 +1243,7 @@ export function DesignPanel({
   onClose,
   libraryLink = true,
   options,
+  expand = false,
 }: {
   folder: string
   version?: string
@@ -1253,9 +1254,11 @@ export function DesignPanel({
   libraryLink?: boolean
   /** The options offered with this one, it included: shown side by side at first, a row each. */
   options?: string[]
+  /** Opens over the whole page rather than beside it. */
+  expand?: boolean
 }) {
   const [info, setInfo] = useState<DesignViewInfo>()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(expand)
   const [start, setStart] = useState<Starting>()
   const sideBySide = !!options && options.length > 1
   // The option shown, switched from the title's menu; null: all of them side by side.
