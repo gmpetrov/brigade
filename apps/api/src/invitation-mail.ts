@@ -19,7 +19,9 @@ export function invitationMail(input: {
 }) {
   const inviter = input.inviter.name.trim() || input.inviter.email
   const as =
-    input.role === 'member' ? '' : ` as ${input.role === 'owner' ? 'an owner' : 'an admin'}`
+    input.role === 'member'
+      ? ''
+      : ` as ${input.role === 'owner' ? 'an owner' : input.role === 'admin' ? 'an admin' : 'a viewer, who can look but not change anything'}`
   return {
     from: `Brigade <${addressOf('noreply')}>`,
     to: [input.email],

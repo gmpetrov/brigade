@@ -2,6 +2,7 @@ import { type BetterAuthPlugin, betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { APIError } from 'better-auth/api'
 import { captcha, emailOTP, organization } from 'better-auth/plugins'
+import { adminAc, defaultAc, memberAc, ownerAc } from 'better-auth/plugins/organization/access'
 import { HTTPException } from 'hono/http-exception'
 import { recordSignup } from './analytics.js'
 import { audit } from './audit.js'
@@ -117,6 +118,10 @@ export const auth = betterAuth({
         })
       : ({ id: 'no-captcha' } satisfies BetterAuthPlugin),
     organization({
+      // The default roles, and a viewer, who reads the workspace and changes nothing in it
+      // (src/viewers.ts): in the organization's own terms, what a member may.
+      ac: defaultAc,
+      roles: { owner: ownerAc, admin: adminAc, member: memberAc, viewer: memberAc },
       // An invitation goes to an address: only its proven owner may take it.
       requireEmailVerificationOnInvitation: true,
       invitationExpiresIn: INVITATION_DAYS * 24 * 60 * 60,

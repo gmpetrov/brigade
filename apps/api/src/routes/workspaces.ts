@@ -78,8 +78,11 @@ export const workspaces = new Hono<AppEnv>()
     }
     // Nothing runs without an AI account: onboarding asks for one first, unless the workspace
     // shares one already (src/account-sharing.ts).
-    const aiReady = scope
-      ? (await prisma.account.count({
+    // A viewer runs nothing (src/viewers.ts): ready as they are.
+    const aiReady = !scope
+      ? false
+      : scope.role === 'viewer' ||
+        (await prisma.account.count({
           where: {
             workspaceId: scope.workspaceId,
             AND: [
@@ -94,7 +97,6 @@ export const workspaces = new Hono<AppEnv>()
             ],
           },
         })) > 0
-      : false
     return c.json({
       user,
       aiReady,

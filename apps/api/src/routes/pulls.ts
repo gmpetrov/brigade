@@ -79,7 +79,7 @@ export const pulls = new Hono<AppEnv>()
     const laters = await latersOf(c.var.db, scope.memberId)
     const [waiting, open] = await Promise.all([
       needsAttention(c.var.db, [...laters.keys()], {
-        startedBy: scope.role === 'member' ? scope.memberId : undefined,
+        startedBy: scope.role === 'owner' || scope.role === 'admin' ? undefined : scope.memberId,
       }),
       openCount(c.var.db),
     ])

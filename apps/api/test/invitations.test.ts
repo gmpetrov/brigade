@@ -466,3 +466,34 @@ test('sendings at once spend the budget once each', { skip }, async () => {
     3,
   )
 })
+
+test('a viewer joins, looks around and changes nothing', { skip }, async () => {
+  const vic = address('vic')
+  const id = await invite(ada.cookie, vic, 'viewer')
+  const cookie = await signIn(vic)
+  assert.equal((await call(`/api/invitations/${id}/accept`, { body: {}, cookie })).status, 200)
+  const me = (await (await call('/api/me', { cookie })).json()) as Me & { aiReady: boolean }
+  assert.equal(me.role, 'viewer')
+  // Nothing to run: straight into the dashboard, no AI account asked.
+  assert.equal(me.aiReady, true)
+  assert.equal((await call('/api/members', { cookie })).status, 200)
+  // Their own place in it, yes; a change to the workspace, no.
+  const order = await call('/api/me/sidebar-order', {
+    method: 'PUT',
+    body: { list: 'teammates', ids: [] },
+    cookie,
+  })
+  assert.equal(order.status, 204)
+  const merge = await call('/api/me/auto-merge', {
+    method: 'PUT',
+    body: { autoMerge: false },
+    cookie,
+  })
+  assert.equal(merge.status, 403)
+  assert.match(((await merge.json()) as { error: string }).error, /view this workspace/)
+  const invited = await call('/api/members/invitations', {
+    body: { email: address('wes'), role: 'member' },
+    cookie,
+  })
+  assert.equal(invited.status, 403)
+})
