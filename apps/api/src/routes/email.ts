@@ -526,7 +526,10 @@ export const email = new Hono<AppEnv>()
       where: { id: c.req.param('id'), direction: 'out' },
     })
     if (!row?.sessionId) throw new HTTPException(404, { message: 'No such email' })
-    const thread = await db.session.findFirst({ where: { id: row.sessionId } })
+    const thread = await db.session.findFirst({
+      where: { id: row.sessionId },
+      include: { computer: { select: { kind: true } } },
+    })
     if (!thread) throw new HTTPException(404, { message: 'No such email' })
     requireMayPrompt(scope, { ...thread, controlledByMemberId: null })
     return c.json(await cancelMail(db, scope, row.id, { type: 'member', id: scope.memberId }))

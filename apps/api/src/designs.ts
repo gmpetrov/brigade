@@ -2,6 +2,8 @@
 // folder whose page runs the teammate's script, so it is served only from
 // DESIGN_URL, another site than the dashboard and the API, with no cookies:
 // under a short-lived signed address, as a sandboxed document.
+import { mayWrite } from './account-sharing.js'
+import type { Role } from './scope.js'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import {
   DESIGN_ENTRY,
@@ -270,7 +272,7 @@ const designRows = (db: ScopedDb, folder: string) =>
  */
 export async function openDesignView(
   db: ScopedDb,
-  scope: Scope & { memberId: string },
+  scope: Scope & { memberId: string; role: Role },
   path: string,
 ): Promise<DesignView> {
   const folder = designFolderOf(path)
@@ -294,6 +296,7 @@ export async function openDesignView(
             id: sessionId,
             OR: [{ private: false }, { startedByMemberId: scope.memberId }],
           },
+          include: { computer: { select: { kind: true } } },
         })
       : null,
     teammateId ? db.teammate.findFirst({ where: { id: teammateId, archivedAt: null } }) : null,
@@ -313,7 +316,7 @@ export async function openDesignView(
       ? {
           id: session.id,
           title: session.title,
-          mayPrompt: session.startedByMemberId === scope.memberId || session.othersMayPrompt,
+          mayPrompt: mayWrite(session, scope),
         }
       : null,
     teammate: teammate ? { id: teammate.id, name: teammate.name } : null,

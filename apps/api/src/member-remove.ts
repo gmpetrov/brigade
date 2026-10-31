@@ -1,6 +1,8 @@
 // A person leaves an organization others stay in: removed by an owner or admin
-// (src/routes/members.ts), or when they delete their account (src/account-delete.ts). The threads
-// they started go with their files, the accounts they connected for themselves alone are
+// (src/routes/members.ts), or when they delete their account (src/account-delete.ts). Removed,
+// the threads they started stay, others may have written in them: they become the remover's,
+// but those on their own computer, which goes with them. Deleting their account, every thread
+// they started goes with its files. The accounts they connected for themselves alone are
 // disconnected, then their membership goes, and what hangs off it (schedules, tasks, their own
 // machines and AI accounts) with it.
 //
@@ -15,6 +17,8 @@ import { hubs } from './hub.js'
 import { beingRemoved } from './member-fence.js'
 import type { WorkspaceScope } from './scope.js'
 import { deleteThread } from './thread-delete.js'
+import { loadThread } from './thread-spec.js'
+import { handBack } from './work.js'
 
 export { beingRemoved }
 
@@ -79,6 +83,8 @@ export async function removeMember(
     actor: { type: 'member'; id: string }
     reason: string
     check?: (tx: Prisma.TransactionClient) => Promise<void>
+    /** Who the threads they started go to; without: they are deleted. */
+    handTo?: string
   },
   whose?: string,
 ) {
@@ -101,7 +107,7 @@ export async function removeMember(
   })
   try {
     await dropMemberSockets(membership.organizationId, membership.id)
-    await cleanUp(userId, membership)
+    await cleanUp(userId, membership, by.handTo)
   } catch (error) {
     await prisma.member
       .updateMany({ where: { id: membership.id }, data: { removingAt: null } })
@@ -124,7 +130,7 @@ export async function removeMember(
 }
 
 /** What they started and connected for themselves, in each workspace of the organization. */
-async function cleanUp(userId: string, membership: Membership) {
+async function cleanUp(userId: string, membership: Membership, handTo?: string) {
   const { disconnect } = await import('./routes/connections.js')
   const workspaces = await prisma.workspace.findMany({
     where: { organizationId: membership.organizationId },
@@ -140,6 +146,28 @@ async function cleanUp(userId: string, membership: Membership) {
     }
     const db = scoped(scope)
     const actor = { type: 'member' as const, id: membership.id }
+    if (handTo) {
+      // Kept for the team, but those on their own computer: it goes with them.
+      await db.session.updateMany({
+        where: {
+          startedByMemberId: membership.id,
+          NOT: { computer: { kind: 'member_machine', memberId: membership.id } },
+        },
+        data: { startedByMemberId: handTo },
+      })
+      // A thread they had taken control of goes back to its teammate.
+      const controlled = await db.session.findMany({
+        where: { controlledByMemberId: membership.id },
+        select: { id: true },
+      })
+      for (const { id } of controlled)
+        await handBack(
+          db,
+          scope,
+          await loadThread(db, id),
+          'The member who had taken control was removed from the organization.',
+        )
+    }
     const started = await db.session.findMany({
       where: { startedByMemberId: membership.id },
       select: { id: true },

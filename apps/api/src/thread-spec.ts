@@ -6,6 +6,7 @@ import {
   type ThreadSpec,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { mayWrite } from './account-sharing.js'
 import { usableIn } from './apps.js'
 import { hubs } from './hub.js'
 import { customMcp } from './mcp-servers.js'
@@ -325,18 +326,40 @@ export async function specFor(
   }
 }
 
-/** Prompting or approving is the starter's: only they may, unless they allow others. */
+/**
+ * The member who asked for what a thread's teammate does now: the author of its latest person's
+ * message. Null when no person wrote lately (a trigger's, a routine's thread).
+ */
+export async function askedBy(db: ScopedDb, sessionId: string) {
+  const latest = await db.sessionEvent.findMany({
+    where: { sessionId, type: 'message.user' },
+    orderBy: { seq: 'desc' },
+    select: { data: true },
+    take: 20,
+  })
+  for (const { data } of latest) {
+    const memberId = (data as { memberId?: string | null } | null)?.memberId
+    if (memberId) return memberId
+  }
+  return null
+}
+
+/** Prompting or approving: its starter, or any member but a viewer once it is open (mayWrite). */
 export function requireMayPrompt(
   scope: WorkspaceScope,
   thread: {
     startedByMemberId: string
     othersMayPrompt: boolean
+    computer: { kind: string }
     controlledByMemberId: string | null
   },
 ) {
-  if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt) {
+  if (!mayWrite(thread, scope)) {
     throw new HTTPException(403, {
-      message: 'Only the member who started this thread writes in it. Fork it to continue.',
+      message:
+        scope.role === 'viewer'
+          ? 'You can view this workspace but not change it. Ask an owner or admin.'
+          : 'Only the member who started this thread writes in it. Fork it to continue.',
     })
   }
   if (thread.controlledByMemberId) {

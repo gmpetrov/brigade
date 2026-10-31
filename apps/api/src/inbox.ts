@@ -4,6 +4,7 @@
 // own addresses as they receive it (src/mail/inbound.ts), shared Gmail accounts as their inbox
 // reader reads it (src/mail/gmail-inbox.ts). So one query lists, filters and pages them all, and
 // a new source (a chat) only has to keep its messages there.
+import { mayWrite } from './account-sharing.js'
 import {
   HANDOFF_DEFAULT_NOTE,
   INBOX_HANDOFF,
@@ -337,6 +338,7 @@ const include = {
       projectId: true,
       startedByMemberId: true,
       othersMayPrompt: true,
+      computer: { select: { kind: true } },
     },
   },
 } as const
@@ -714,7 +716,7 @@ export async function readItem(
           !!m.sendAt &&
           m.sendAt > new Date() &&
           !!m.session &&
-          (m.session.startedByMemberId === scope.memberId || m.session.othersMayPrompt),
+          mayWrite(m.session, scope),
         hidden: masked,
       }
     }),
@@ -735,8 +737,7 @@ const recipientsOf = (m: { replyTo: string[]; fromAddress: string }) =>
 
 /** Whether this member may write in the conversation's thread (thread-spec.ts, requireMayPrompt). */
 const mayPrompt = (scope: WorkspaceScope, head: Row) =>
-  !!head.session &&
-  (head.session.startedByMemberId === scope.memberId || head.session.othersMayPrompt)
+  !!head.session && mayWrite(head.session, scope)
 
 /**
  * A person asked its thread to reply after all (their message went to the thread): the

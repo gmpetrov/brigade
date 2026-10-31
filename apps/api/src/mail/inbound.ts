@@ -6,6 +6,7 @@
 //   4. the address's rules, in their order: the first that matches takes it;
 //   5. else its box, read on demand, for 30 days.
 // Each step's outcome stays on the message (route), which is the address's journal.
+import { memberMayWrite } from '../account-sharing.js'
 import {
   AWAITED_EMAIL,
   EMAIL_IN_CONVERSATION,
@@ -481,6 +482,7 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
         status: true,
         startedByMemberId: true,
         othersMayPrompt: true,
+        computerId: true,
         controlledByMemberId: true,
       },
     })
@@ -491,7 +493,7 @@ async function deliverMail(db: ScopedDb, scope: Scope, row: Row): Promise<Outcom
         sender.kind === 'member' &&
         !!sender.memberId &&
         !session.controlledByMemberId &&
-        (session.startedByMemberId === sender.memberId || session.othersMayPrompt)
+        (await memberMayWrite(session, sender.memberId))
       if (mayPrompt) {
         if (await memberRequest(db, scope, row, sender, session.id))
           return { route: 'conversation', sessionId: session.id }

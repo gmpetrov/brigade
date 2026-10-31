@@ -12,6 +12,7 @@ import {
   type TicketAnswer,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { mayWrite } from './account-sharing.js'
 import { usableIn } from './apps.js'
 import { audit } from './audit.js'
 import { decideTicket } from './connector-calls.js'
@@ -43,15 +44,14 @@ export async function answerQuestion(
   const db = scoped(scope)
   const ticket = await db.ticket.findFirst({
     where: { id: ticketId, type: 'question', status: 'open' },
-    include: { session: true },
+    include: { session: { include: { computer: { select: { kind: true } } } } },
   })
   const payload = ticket?.payload as TicketPayload | undefined
   if (!ticket?.sessionId || payload?.source !== 'harness' || !payload.questionId)
     throw new HTTPException(404, { message: 'Question not found or already answered' })
-  const isAdmin = scope.role === 'owner' || scope.role === 'admin'
-  if (!isAdmin && ticket.session?.startedByMemberId !== scope.memberId)
+  if (!ticket.session || !mayAnswer(scope, ticket.session))
     throw new HTTPException(403, {
-      message: 'Only the member who started the thread, or an admin, can answer',
+      message: 'Only who may write in the thread, or an admin, can answer',
     })
   if (answer.action !== 'declined') {
     const questions = new Map((payload.questions ?? []).map((q) => [q.id, q]))
@@ -101,11 +101,15 @@ export async function answerQuestion(
   return { ok: true as const, live: true }
 }
 
-/** Who may answer a thread's tickets: the member who started it, or an admin. */
-export function mayAnswer(scope: WorkspaceScope, thread: { startedByMemberId: string }) {
-  return (
-    scope.role === 'owner' || scope.role === 'admin' || thread.startedByMemberId === scope.memberId
-  )
+/**
+ * Who may answer a thread's questions and tickets, and allow its teammates' steps: whoever may
+ * write in it (src/account-sharing.ts), or an admin.
+ */
+export function mayAnswer(
+  scope: WorkspaceScope,
+  thread: { startedByMemberId: string; othersMayPrompt: boolean; computer: { kind: string } },
+) {
+  return scope.role === 'owner' || scope.role === 'admin' || mayWrite(thread, scope)
 }
 
 /**
@@ -117,14 +121,14 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
   const db = scoped(scope)
   const ticket = await db.ticket.findFirst({
     where: { id: ticketId, type: 'request', status: 'open' },
-    include: { session: true },
+    include: { session: { include: { computer: { select: { kind: true } } } } },
   })
   const payload = ticket?.payload as TicketPayload | undefined
   if (!ticket?.sessionId || payload?.source !== 'harness' || !payload.requestId)
     throw new HTTPException(404, { message: 'Ticket not found or already answered' })
   if (!ticket.session || !mayAnswer(scope, ticket.session))
     throw new HTTPException(403, {
-      message: 'Only the member who started the thread, or an admin, can answer',
+      message: 'Only who may write in the thread, or an admin, can answer',
     })
   const thread = await loadThread(db, ticket.sessionId)
   const asker = teammateIn(thread, payload.teammateId)
@@ -492,7 +496,7 @@ export async function resolveTicket(
   const db = scoped(scope)
   const ticket = await db.ticket.findFirst({
     where: { id: ticketId, status: 'open' },
-    include: { session: true },
+    include: { session: { include: { computer: { select: { kind: true } } } } },
   })
   if (!ticket) throw new HTTPException(404, { message: 'Ticket not found or already resolved' })
   const payload = ticket.payload as TicketPayload
@@ -568,10 +572,22 @@ export async function resolveTicket(
       await mayDecideCredential(db, scope, payload, { isAdmin, isStarter, always: input.always })
       return { ok: true, live: await decideTicket(scope, ticket.id, input) }
     }
-    if (!isAdmin && !isStarter)
+    // Whoever may write in the thread, but a write on a member's own account (an App account
+    // only they use) is theirs to allow, or an admin's.
+    if (!isAdmin && (!ticket.session || !mayAnswer(scope, ticket.session)))
       throw new HTTPException(403, {
-        message: 'Only the member who started the thread, or an admin, can decide',
+        message: 'Only who may write in the thread, or an admin, can decide',
       })
+    if (payload.connectionId && !isAdmin) {
+      const connection = await db.connection.findFirst({
+        where: { id: payload.connectionId },
+        select: { reach: true, createdByMemberId: true },
+      })
+      if (connection?.reach === 'mine' && connection.createdByMemberId !== scope.memberId)
+        throw new HTTPException(403, {
+          message: 'This account is another member’s own: only they, or an admin, can allow it',
+        })
+    }
     if (payload.source !== 'harness')
       return { ok: true, live: await decideTicket(scope, ticket.id, input) }
     // The harness asked before a built-in tool call: the answer goes to the runner.

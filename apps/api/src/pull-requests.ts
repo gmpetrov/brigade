@@ -6,6 +6,7 @@
 // conflicts goes back to the teammate that wrote it to resolve, and merges once
 // that is done. A member who turned Auto-merge on has Brigade merge what teammates open in
 // their threads once it is ready (autoMerge).
+import { mayWrite } from './account-sharing.js'
 import {
   MergeMethod,
   type CheckRun,
@@ -1036,10 +1037,9 @@ export async function resolveConflicts(
   if (row.mergeStatus === 'resolving')
     throw new HTTPException(409, { message: 'A teammate is already working on it' })
   const thread = await loadThread(db, row.sessionId)
-  if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt)
+  if (!mayWrite(thread, scope))
     throw new HTTPException(403, {
-      message:
-        "Only the member who started this pull request's thread can ask, unless they let others prompt in it.",
+      message: "Only who may write in this pull request's thread can ask.",
     })
   if (thread.controlledByMemberId)
     throw new HTTPException(409, {

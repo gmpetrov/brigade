@@ -49,7 +49,7 @@ import {
   type Live,
   type Resume,
 } from './held-calls.js'
-import { actingTeammate } from './thread-spec.js'
+import { actingTeammate, askedBy } from './thread-spec.js'
 import { openSecret, replaceSecret } from './vault.js'
 
 export type { Decision }
@@ -190,6 +190,17 @@ export async function handleConnectorCall(
       ok: false,
       error: `${connection.label} belongs to another member and is used only in their threads`,
     })
+  }
+  // In a thread others write in, a member's own account answers only what they asked for.
+  if (connection.reach === 'mine') {
+    const asker = await askedBy(db, session.id)
+    if (asker && asker !== connection.createdByMemberId) {
+      await record({ result: 'denied', target, error: 'asked by another member' })
+      return result({
+        ok: false,
+        error: `${connection.label} is the account of the member who started this thread: it is used only when they ask, not for another member's request. Ask them, or use an account the whole workspace shares.`,
+      })
+    }
   }
   if (playbook) {
     const role = playbookAccepts(playbook, connection.kind)

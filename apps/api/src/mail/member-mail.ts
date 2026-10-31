@@ -1,6 +1,7 @@
 // A member writing to an agent's address, proved by the mail server: their request, as if typed
 // in the chat with that agent, on their own subscription, in the project of the address's
 // variant. Their files come along; a later mail of theirs in the conversation continues it.
+import { memberMayWrite } from '../account-sharing.js'
 import { splitQuoted } from '@brigade/contracts'
 import { ingestExternal } from '../attachments.js'
 import type { Scope, ScopedDb } from '../db.js'
@@ -61,7 +62,7 @@ export async function memberRequestThread(
     const thread = await loadThread(db, sessionId)
     // Their message only where they may prompt, as in the chat (requireMayPrompt).
     if (thread.controlledByMemberId) return null
-    if (thread.startedByMemberId !== sender.memberId && !thread.othersMayPrompt) return null
+    if (!(await memberMayWrite(thread, sender.memberId))) return null
     const outcome = await promptWithAttachments(
       db,
       scope,

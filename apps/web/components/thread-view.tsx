@@ -96,7 +96,7 @@ import {
   ToolInputPreview,
   type EditedEmail,
 } from '@/components/email-cards'
-import { TeammateAvatar } from '@/components/dashboard'
+import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { contentUrl } from '@/components/library-browser'
 import { CommandChip, startingCommand, useSkillCommands } from '@/components/composer'
@@ -151,6 +151,7 @@ import { slotWait } from '@/lib/slot-wait'
 import { inGap, type EventGap } from '@/lib/use-thread-events'
 import { messageRuns, type RunEntry } from '@/lib/message-runs'
 import { pauseLabel, pauses } from '@/lib/thread-times'
+import { useMemberNames } from '@/lib/member-names'
 import { cn } from '@/lib/utils'
 
 export type Item =
@@ -160,6 +161,8 @@ export type Item =
       /** Where it is in the thread: a reply names it by this. */
       seq: number
       text: string
+      /** The member who wrote it; null for Brigade's own words. */
+      memberId: string | null
       attachments: MessageAttachment[]
       /** The earlier message it replies to. */
       replyTo?: ReplyTo
@@ -364,6 +367,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             key: `u${seq}`,
             seq,
             text: e.text,
+            memberId: fromBrigade ? null : e.memberId,
             attachments: e.attachments ?? [],
             at: Date.parse(e.at),
             ...(e.replyTo ? { replyTo: e.replyTo } : {}),
@@ -2033,6 +2037,12 @@ export function ThreadItems({
 }) {
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
+  // Others write in it too: their messages say whose they are.
+  const { me } = useDashboard()
+  const othersWrote = items.some(
+    (it) => it.kind === 'user' && it.memberId !== null && it.memberId !== me.memberId,
+  )
+  const memberNames = useMemberNames(othersWrote)
   const [retrying, setRetrying] = useState<string>()
   // The latest turn failed: nothing came after its error but notes (a try planned on its own, say).
   const retryable = (i: number) =>
@@ -2166,6 +2176,11 @@ export function ThreadItems({
             data-seq={item.seq}
             className="flex max-w-[85%] flex-col items-end gap-1.5 self-end"
           >
+            {item.memberId !== null && item.memberId !== me.memberId && (
+              <span className="text-xs font-medium text-muted-foreground">
+                {memberNames.get(item.memberId) ?? 'Another member'}
+              </span>
+            )}
             {item.replyTo && (
               <ReplyQuote
                 reply={item.replyTo}

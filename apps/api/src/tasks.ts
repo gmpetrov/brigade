@@ -3,6 +3,7 @@
 // thread. Assigning a teammate starts the thread: until then the task waits in
 // Backlog with nobody on it. Members act here; teammates through their task
 // tools, which never assign a person nor move a task to Needs you (a ticket does).
+import { memberMayWrite } from './account-sharing.js'
 import { randomUUID } from 'node:crypto'
 import {
   formatMention,
@@ -254,9 +255,9 @@ const typedBy = (by: By) => (by.actor.type === 'member' ? by.memberId : null)
 /** Who may change a task's thread: whoever may prompt it. Without one: anyone. */
 async function requireMayAct(db: ScopedDb, by: By, taskId: string) {
   const thread = await db.session.findFirst({ where: { taskId } })
-  if (thread && thread.startedByMemberId !== by.memberId && !thread.othersMayPrompt)
+  if (thread && !(await memberMayWrite(thread, by.memberId)))
     throw new HTTPException(403, {
-      message: "Only the member who started this task's thread can act on it.",
+      message: "Only who may write in this task's thread can act on it.",
     })
   return thread
 }

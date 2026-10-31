@@ -1,4 +1,5 @@
 import { addressOf } from '../mail/names.js'
+import { mayWrite, openToOthers } from '../account-sharing.js'
 import { randomUUID } from 'node:crypto'
 import {
   ASIDE_PROTOCOL,
@@ -187,10 +188,14 @@ async function deliver(
 
 /** Starting, restarting and stopping a thread's preview is for people who may write in it. */
 function mayPrompt(
-  thread: { startedByMemberId: string | null; othersMayPrompt: boolean },
-  memberId: string,
+  thread: {
+    startedByMemberId: string | null
+    othersMayPrompt: boolean
+    computer: { kind: string }
+  },
+  scope: WorkspaceScope,
 ) {
-  if (thread.startedByMemberId !== memberId && !thread.othersMayPrompt)
+  if (!mayWrite(thread, scope))
     throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
 }
 
@@ -255,9 +260,13 @@ async function noteEdit(db: ScopedDb, scope: WorkspaceScope, threadId: string, p
 /** Renaming and archiving a thread is for who may write in it, and admins. */
 function mayChange(
   scope: WorkspaceScope,
-  thread: { startedByMemberId: string | null; othersMayPrompt: boolean },
+  thread: {
+    startedByMemberId: string | null
+    othersMayPrompt: boolean
+    computer: { kind: string }
+  },
 ) {
-  if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt && !isAdmin(scope))
+  if (!mayWrite(thread, scope) && !isAdmin(scope))
     throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
 }
 
@@ -500,6 +509,8 @@ export const threads = new Hono<AppEnv>()
           pinPosition: pins.find((p) => p.sessionId === row.id)?.position ?? null,
           laterAt: laters.get(row.id)?.toISOString() ?? null,
           eventsWaitingSince: waitingSince[row.id] ?? null,
+          // Others than its starter write in it, so rename and archive it (account-sharing.ts).
+          othersMayPrompt: openToOthers(row),
           previewRunning:
             !!previews.get(row.id) &&
             !previewOfflineIn(presence, { id: row.computerId, ...row.computer }),
@@ -541,6 +552,7 @@ export const threads = new Hono<AppEnv>()
             createdAt: true,
             startedByMemberId: true,
             othersMayPrompt: true,
+            computer: { select: { kind: true } },
             teammate: { select: { id: true, name: true } },
             schedule: { select: { id: true, title: true } },
             tickets: {
@@ -632,22 +644,21 @@ export const threads = new Hono<AppEnv>()
       attachments: thread.attachments.map((a) => toInfo(a.attachment, a.path)),
       followers: thread.followers.map((f) => f.follower),
       // Whether this member may send a child's report now (POST /:id/report), as in the child itself.
-      children: thread.children.map(({ startedByMemberId, othersMayPrompt, ...child }) => {
-        // Its line shows the start of its report; the child keeps the whole of it.
-        const report = reportOf(child.report)
-        return {
-          ...child,
-          ...(report
-            ? { report: { ...report, summary: clipReport(report.summary, REPORT_START) } }
-            : {}),
-          mayPrompt:
-            c.var.scope.role !== 'viewer' &&
-            (startedByMemberId === c.var.scope.memberId || othersMayPrompt),
-        }
-      }),
-      mayPrompt:
-        c.var.scope.role !== 'viewer' &&
-        (thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt),
+      children: thread.children.map(
+        ({ startedByMemberId, othersMayPrompt, computer, ...child }) => {
+          // Its line shows the start of its report; the child keeps the whole of it.
+          const report = reportOf(child.report)
+          return {
+            ...child,
+            ...(report
+              ? { report: { ...report, summary: clipReport(report.summary, REPORT_START) } }
+              : {}),
+            mayPrompt: mayWrite({ startedByMemberId, othersMayPrompt, computer }, c.var.scope),
+          }
+        },
+      ),
+      othersMayPrompt: openToOthers(thread),
+      mayPrompt: mayWrite(thread, c.var.scope),
       eventsWaitingSince: waitingSince[thread.id] ?? null,
       mailAliases: thread.mailAliases.map((a) => ({ ...a, address: addressOf(a.local) })),
     })
@@ -1272,6 +1283,12 @@ export const threads = new Hono<AppEnv>()
     })
     const data = queued?.data as { memberId?: string | null; text?: string } | undefined
     const memberId = data?.memberId
+    // Another member's own words are theirs to change: anyone who may write steers them in.
+    if (memberId && memberId !== scope.memberId && input.action !== 'steer')
+      throw new HTTPException(403, {
+        message:
+          'Another member wrote this message: only they can change it. Steer it, or write your own.',
+      })
     if (memberId !== undefined && !mayChangeQueued(memberId, input.action))
       throw new HTTPException(409, {
         message:
@@ -1595,7 +1612,7 @@ export const threads = new Hono<AppEnv>()
   .post('/:id/preview/start', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
-    mayPrompt(thread, scope.memberId)
+    mayPrompt(thread, scope)
     const { repository } = await parseBody(c.req.raw, StartPreview)
     const result = await startPreview(db, thread, repository)
     if (result.outcome === 'started')
@@ -1626,7 +1643,7 @@ export const threads = new Hono<AppEnv>()
       teammateName: (teammate ?? thread.teammate).name,
       computerName: thread.computer.name,
       cloud: thread.computer.kind === 'cloud',
-      mayControl: thread.startedByMemberId === scope.memberId || thread.othersMayPrompt,
+      mayControl: mayWrite(thread, scope),
     } satisfies ThreadPreviewState)
   })
 
@@ -1634,7 +1651,7 @@ export const threads = new Hono<AppEnv>()
   .post('/:id/preview/control', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
-    mayPrompt(thread, scope.memberId)
+    mayPrompt(thread, scope)
     const { action } = await parseBody(c.req.raw, z.object({ action: PreviewAction }))
     await livePreview(db, thread)
     if (
@@ -1936,7 +1953,7 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(403, {
         message: 'Only the member who started this thread can change it',
       })
-    if (input.effort !== undefined) mayPrompt(thread, scope.memberId)
+    if (input.effort !== undefined) mayPrompt(thread, scope)
     await db.session.updateMany({ where: { id: thread.id }, data: input })
     await audit({
       ...scope,
