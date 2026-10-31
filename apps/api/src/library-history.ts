@@ -2,7 +2,7 @@
 // trash. A version points to the object of the save it records, the one the file
 // pointed to then (library-objects.ts); a trashed file keeps its row and bytes,
 // under a path no live file can have, until a restore or the sweep 30 days on.
-import { TRASH_DAYS, VERSIONS_KEPT, type LibraryActor } from '@brigade/contracts'
+import { LIBRARY_READ_MAX, TRASH_DAYS, VERSIONS_KEPT, type LibraryActor } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { sweepAssets } from './assets.js'
 import { audit, type Actor } from './audit.js'
@@ -157,11 +157,13 @@ export async function ensureFirstVersion(
   })
 }
 
-/** A version's bytes. */
+/** A version's bytes, read whole: refused past LIBRARY_READ_MAX, as readLibraryFile. */
 export async function readVersion(
   scope: Scope,
-  version: { id: string; documentId: string; objectKey: string | null },
+  version: { id: string; documentId: string; objectKey: string | null; size: number },
 ) {
+  if (version.size > LIBRARY_READ_MAX)
+    throw new HTTPException(413, { message: 'The version is too large to read here' })
   const bytes = await getObject(versionBytesKey(scope, version))
   if (!bytes) throw new HTTPException(404, { message: 'That version is missing from storage' })
   return bytes

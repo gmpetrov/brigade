@@ -57,14 +57,17 @@ const { localBucket } = await import('../src/routes/bucket.js')
 const { uploads } = await import('../src/routes/uploads.js')
 const { library } = await import('../src/routes/library.js')
 const { designs } = await import('../src/routes/designs.js')
+const { designFiles, openDesignView } = await import('../src/designs.js')
 const { skills } = await import('../src/routes/skills.js')
 const { runnerUploads } = await import('../src/routes/runner-uploads.js')
+const { runnerLibrary } = await import('../src/routes/runner-library.js')
 const { handleLibraryCall } = await import('../src/library-calls.js')
 const { readSkills, readSkillsStream } = await import('../src/skill-import.js')
 const { decideSkillProposal } = await import('../src/skills.js')
 const { readLogo } = await import('../src/logos.js')
 const { updateWorkspace } = await import('../src/workspace-settings.js')
-const { search } = await import('../src/library.js')
+const { documentText, search } = await import('../src/library.js')
+const { LIBRARY_READ_MAX } = await import('@brigade/contracts')
 
 const id = randomUUID().slice(0, 8)
 const ids = { organization: `org-up-${id}`, user: `user-up-${id}`, member: `mem-up-${id}` }
@@ -81,6 +84,8 @@ const app = new Hono()
   .route('/api/designs', designs)
   .route('/api/skills', skills)
   .route('/runner/uploads', runnerUploads)
+  .route('/runner/library', runnerLibrary)
+  .route('/v', designFiles)
 
 const sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
 const json = (body: unknown, headers: Record<string, string> = {}) => ({
@@ -283,6 +288,97 @@ test('the library saves an upload, with a version, once for the same bytes', { s
   const logo = await ready('logo', 'logo.png', PNG)
   const wrong = await app.request('/api/library/files', json({ path: 'x.png', uploadId: logo }))
   assert.equal(wrong.status, 404)
+})
+
+test(
+  'a file past what the API reads whole is saved, served and restored without being read whole',
+  { skip },
+  async () => {
+    const big = (words: string) =>
+      strToU8(words.repeat(Math.ceil((LIBRARY_READ_MAX + 1024) / words.length)))
+    const first = big('platypus orbit ')
+    const second = big('second draft ')
+    const save = async (bytes: Uint8Array) => {
+      const uploadId = await ready('library', 'Notes/big.txt', bytes, 'text/plain')
+      const saved = await app.request(
+        '/api/library/files',
+        json({ path: 'Notes/big.txt', uploadId }),
+      )
+      assert.equal(saved.status, 201, await saved.clone().text())
+      return (await saved.json()) as { id: string }
+    }
+    const file = await save(first)
+    // Saved a while ago: the next save is a version of its own, not folded into this one.
+    await prisma.documentVersion.updateMany({
+      where: { documentId: file.id },
+      data: { updatedAt: new Date(Date.now() - 24 * 3600_000) },
+    })
+    await save(second)
+
+    // Shown by ranges, as it streams.
+    const part = await app.request(`/api/library/${file.id}/content`, {
+      headers: { range: 'bytes=0-11' },
+    })
+    assert.equal(part.status, 206)
+    assert.equal(await part.text(), 'second draft')
+    // A runner mirrors it as it streams.
+    const mirrored = await app.request(`/runner/library/files/${file.id}`, { headers: runner })
+    assert.equal(mirrored.status, 200)
+    assert.equal(sha(new Uint8Array(await mirrored.arrayBuffer())), sha(second))
+    // Neither previewed nor opened as text: both would read it whole.
+    const preview = await app.request(`/api/library/${file.id}/preview`)
+    assert.equal(preview.status, 413)
+    const doc = await prisma.document.findUniqueOrThrow({ where: { id: file.id } })
+    await assert.rejects(documentText(scope, doc), /too large to open as text/)
+
+    // The first version comes back copied inside the bucket, its text read as it streams by.
+    const firstVersion = await prisma.documentVersion.findFirst({
+      where: { documentId: file.id, sha256: sha(first) },
+    })
+    const restored = await app.request(
+      `/api/library/${file.id}/versions/${firstVersion!.id}/restore`,
+      { method: 'POST' },
+    )
+    assert.equal(restored.status, 200, await restored.clone().text())
+    const now = await prisma.document.findUniqueOrThrow({ where: { id: file.id } })
+    assert.equal(now.sha256, sha(first))
+    assert.equal(now.size, first.byteLength)
+    assert.notEqual(now.objectKey, doc.objectKey)
+    assert.ok(now.text.startsWith('platypus orbit'))
+    assert.equal(await objectSize(fileKey(scope, now)), first.byteLength)
+  },
+)
+
+test("a design's large video streams by ranges; its page is read whole", { skip }, async () => {
+  const folder = 'Designs/promo.design'
+  const save = async (name: string, bytes: Uint8Array, type: string) => {
+    const uploadId = await ready('library', `${folder}/${name}`, bytes, type)
+    const saved = await app.request(
+      '/api/library/files',
+      json({ path: `${folder}/${name}`, uploadId }),
+    )
+    assert.equal(saved.status, 201, await saved.clone().text())
+  }
+  const clip = new Uint8Array(LIBRARY_READ_MAX + 4096).fill(7)
+  clip.set(strToU8('clip-head'), 0)
+  await save('index.html', strToU8('<video src="clip.mp4"></video>'), 'text/html')
+  await save('clip.mp4', clip, 'video/mp4')
+  const view = await openDesignView(scoped(scope), scope, folder)
+  const page = new URL(view.url)
+  const at = (name: string, headers: Record<string, string> = {}) =>
+    app.request(page.pathname.replace(/[^/]*$/, name), { headers: { host: page.host, ...headers } })
+
+  const html = await at('index.html')
+  assert.equal(html.status, 200)
+  assert.match(await html.text(), /<video[^>]*src="clip.mp4"/)
+  const part = await at('clip.mp4', { range: 'bytes=0-8' })
+  assert.equal(part.status, 206)
+  assert.equal(await part.text(), 'clip-head')
+  assert.equal(part.headers.get('access-control-allow-origin'), '*')
+  assert.match(part.headers.get('content-security-policy') ?? '', /sandbox/)
+  const whole = await at('clip.mp4')
+  assert.equal(whole.status, 200)
+  assert.equal(sha(new Uint8Array(await whole.arrayBuffer())), sha(clip))
 })
 
 const PNG = new Uint8Array([

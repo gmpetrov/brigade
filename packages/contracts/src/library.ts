@@ -2,10 +2,17 @@
 // Markdown memory at three levels, and one search over both.
 import { z } from 'zod'
 
-/** Largest file the library takes. */
-export const LIBRARY_FILE_MAX = 25 * 1024 * 1024
-/** Largest file a teammate saves to the library in one call. */
-export const LIBRARY_SAVE_MAX = 10 * 1024 * 1024
+/**
+ * Largest file the library takes, from a member or a teammate: straight to the bucket, never
+ * read whole by the API. As large as a member's upload to a thread (UPLOAD_FILE_MAX).
+ */
+export const LIBRARY_FILE_MAX = 500 * 1024 * 1024
+/**
+ * Largest library file the API reads whole: to preview an Office file, to restore a version
+ * through it, or saved by a runner from before direct uploads (in its message). Larger ones are
+ * copied inside the bucket and served from it.
+ */
+export const LIBRARY_READ_MAX = 25 * 1024 * 1024
 /** Longest memory file; teammates are asked to keep theirs much shorter. */
 export const MEMORY_MAX = 50_000
 

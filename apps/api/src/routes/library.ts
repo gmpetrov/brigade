@@ -10,6 +10,7 @@ import {
   SaveLibraryUpload,
   SetFolderAccess,
   LIBRARY_FILE_MAX,
+  LIBRARY_READ_MAX,
   TRASH_DAYS,
   WriteLibraryText,
   WriteMemory,
@@ -22,7 +23,7 @@ import {
 } from '@brigade/contracts'
 import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { directUploads } from '../bucket.js'
+import { directUploads, presignGet } from '../bucket.js'
 import { collabEnabled, COLLAB_PARTY, cursorColor, editToken } from '../collab.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
@@ -63,6 +64,7 @@ import {
   writeMemory,
 } from '../library.js'
 import { fileKey, versionBytesKey } from '../library-objects.js'
+import { inspectObject } from '../object-check.js'
 import { libraryPreview } from '../previews.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import { serveObject } from '../serve-object.js'
@@ -72,20 +74,33 @@ import { discardUpload, readyUpload, uploadBytesKey } from '../uploads.js'
 const INLINE =
   /^(text\/plain|text\/markdown|text\/csv|text\/tab-separated-values|application\/json|application\/pdf|image\/(png|jpeg|gif|webp|avif)|video\/(mp4|webm|quicktime)|audio\/(mpeg|mp4|wav|ogg))$/
 
-/** A file's bytes, to show or download, as they stream. Never run as a page on this origin. */
-function fileResponse(
+/** Served from the bucket's short-lived URL: a player asks for many ranges, which the bucket answers itself. */
+const MEDIA = /^(audio|video)\//
+
+/**
+ * A file's bytes, to show or download, as they stream. Never run as a page on this origin. Audio,
+ * video and large files come from the bucket's short-lived URL, never through the API.
+ */
+async function fileResponse(
   c: Context,
   key: string,
-  file: { path: string; contentType: string },
+  file: { path: string; contentType: string; size: number },
   download: boolean,
 ) {
   const inline = !download && INLINE.test(file.contentType)
   const name = file.path.split('/').pop()!
+  const disposition = `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(name)}`
+  if (directUploads && (MEDIA.test(file.contentType) || file.size > LIBRARY_READ_MAX)) {
+    const signed = await presignGet(key, { contentType: file.contentType, disposition })
+    // The signed URL works a little longer than the browser keeps this.
+    c.header('cache-control', `private, max-age=${signed.seconds - 60}`)
+    return c.redirect(signed.url, 302)
+  }
   return serveObject(c, key, {
     'content-type': file.contentType.startsWith('text/')
       ? `${file.contentType}; charset=utf-8`
       : file.contentType,
-    'content-disposition': `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(name)}`,
+    'content-disposition': disposition,
     'x-content-type-options': 'nosniff',
     'content-security-policy': 'sandbox',
     'cache-control': 'private, no-cache',
@@ -279,7 +294,7 @@ export const library = new Hono<AppEnv>()
     const { scope, db } = c.var
     if (directUploads) throw new HTTPException(400, { message: 'Upload to the bucket' })
     if (Number(c.req.header('content-length') ?? 0) > LIBRARY_FILE_MAX + 64 * 1024)
-      throw new HTTPException(413, { message: 'Files in the library can be up to 25 MB' })
+      throw new HTTPException(413, { message: 'Files in the library can be up to 500 MB' })
     const form = await c.req.parseBody()
     const file = form.file
     if (!(file instanceof File)) throw new HTTPException(400, { message: 'Attach a file' })
@@ -516,6 +531,9 @@ export const library = new Hono<AppEnv>()
       ? await db.documentVersion.findFirst({ where: { id: versionId, documentId: row.id } })
       : null
     if (versionId && !version) throw new HTTPException(404, { message: 'Version not found' })
+    // Read whole to unzip it: past this, it is only downloaded.
+    if ((version ?? row).size > LIBRARY_READ_MAX)
+      throw new HTTPException(413, { message: 'The file is too large to preview' })
     const bytes = version ? await readVersion(scope, version) : await readLibraryFile(scope, row)
     return c.json(await libraryPreview(bytes, version?.contentType ?? row.contentType))
   })
@@ -572,15 +590,29 @@ export const library = new Hono<AppEnv>()
       where: { id: c.req.param('versionId'), documentId: row.id },
     })
     if (!version) throw new HTTPException(404, { message: 'Version not found' })
+    // A large one is copied inside the bucket, its text for search read as it streams by.
+    const key = versionBytesKey(scope, version)
+    const large = version.size > LIBRARY_READ_MAX
+    const inspected = large
+      ? await inspectObject(key, { name: row.path, contentType: version.contentType, text: true })
+      : null
+    if (large && !inspected)
+      throw new HTTPException(404, { message: 'That version is missing from storage' })
     const saved = await saveLibraryFile(
       db,
       scope,
       { type: 'member', id: scope.memberId },
-      {
-        path: row.path,
-        bytes: await readVersion(scope, version),
-        contentType: version.contentType,
-      },
+      inspected
+        ? {
+            path: row.path,
+            upload: { key, size: inspected.size, sha256: inspected.sha256, text: inspected.text },
+            contentType: version.contentType,
+          }
+        : {
+            path: row.path,
+            bytes: await readVersion(scope, version),
+            contentType: version.contentType,
+          },
       { restoredFrom: version.id },
       { restoredFromId: version.id },
     )

@@ -40,6 +40,7 @@ import { HTTPException } from 'hono/http-exception'
 import type { z } from 'zod'
 import { audit, type Actor } from './audit.js'
 import { directUploads, readHead } from './bucket.js'
+import { serveObject } from './serve-object.js'
 import { env } from './config.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { bridgeScript } from './design-bridge.js'
@@ -245,7 +246,7 @@ const libraryRow = (db: ScopedDb, path: string) =>
 /** A JSON file of the library, parsed by `schema`; null when missing or unreadable. */
 async function readJson<T>(
   scope: Scope,
-  row: { id: string; objectKey: string | null } | null,
+  row: { id: string; objectKey: string | null; size: number } | null,
   schema: { safeParse: (v: unknown) => { data?: T } },
 ) {
   if (!row) return null
@@ -465,16 +466,8 @@ export const designFiles = new Hono().get('/:token/*', async (c) => {
   const db = scoped(scope)
   const row = await libraryRow(db, [claim.p, ...rest].join('/'))
   if (!row) return c.text('Not found', 404)
-  let bytes = await readLibraryFile(scope, row)
   const html = row.contentType === 'text/html'
-  if (html)
-    bytes = new TextEncoder().encode(
-      await withKnobs(scope, db, claim.p, new TextDecoder().decode(bytes), {
-        file: rest.join('/'),
-        sha256: row.sha256,
-      }),
-    )
-  return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
+  const headers = {
     'content-type': row.contentType.startsWith('text/')
       ? `${row.contentType}; charset=utf-8`
       : row.contentType,
@@ -486,7 +479,17 @@ export const designFiles = new Hono().get('/:token/*', async (c) => {
     'access-control-allow-origin': '*',
     // A page is numbered from its bytes of now: a cached one would number another version.
     'cache-control': html ? 'no-store' : 'private, max-age=60',
-  })
+  }
+  // Any other file as it streams, by ranges: a video beside the page can be hundreds of MB.
+  if (!html) return serveObject(c, fileKey(scope, row), headers)
+  const page = await withKnobs(
+    scope,
+    db,
+    claim.p,
+    new TextDecoder().decode(await readLibraryFile(scope, row)),
+    { file: rest.join('/'), sha256: row.sha256 },
+  )
+  return c.body(new TextEncoder().encode(page), 200, headers)
 })
 
 // ---------------------------------------------------------------------------

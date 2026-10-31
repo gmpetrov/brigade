@@ -2,7 +2,7 @@
 // the experimental AI SDK harness packages (spec: "keep every import inside
 // one module of the runner package").
 import { randomUUID } from 'node:crypto'
-import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { connect } from 'node:net'
 import { basename, dirname, extname, join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
@@ -13,6 +13,7 @@ import { createCodex } from '@ai-sdk/harness-codex'
 import {
   ATTACHMENT_MAX,
   CODEX_DEFAULT_MODEL,
+  LIBRARY_FILE_MAX,
   type AccountRef,
   type AgentEvent,
   PROPOSE_TEAM_TOOL,
@@ -24,7 +25,7 @@ import {
   runModel,
   WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { ShotResult } from '../design-shot.js'
 import { accountEnv, accountToken } from '../accounts.js'
@@ -91,6 +92,7 @@ import { claimHandOver, type HandedOver } from '../hand-over.js'
 import { bridgeBrowser, threadNet } from '../thread-net.js'
 import { ReplyWatch, terminalTools } from './replies.js'
 import { callFiles } from './call-files.js'
+import { stageStream } from '../uploads.js'
 import { readCommand, reportWithFiles } from './report-files.js'
 import {
   ASK_USER_TOOL,
@@ -1635,6 +1637,7 @@ export class HarnessThread {
         libraryDir,
         call: this.context.callLibrary,
         readFile: (file) => this.readFile(file),
+        stageFile: (file) => this.stageFile(file, LIBRARY_FILE_MAX, 'Files saved to the library'),
         listFiles: (folder) => listAs(resolvePath(this.workDir, folder), this.runAs),
         renderDesign: (folder, options) =>
           renderDesign(resolvePath(this.workDir, folder), this.runAs, options),
@@ -1758,6 +1761,44 @@ export class HarnessThread {
       what,
       net?.isolated ? net.thread : undefined,
     )
+  }
+
+  /**
+   * A file the teammate names, read as readFile reads it but staged on this computer as it
+   * comes, never held whole: sent from there as it streams (uploads.ts).
+   */
+  private async stageFile(file: string, max: number, what: string) {
+    const net = this.runAs ? await threadNet(this.spec.sessionId) : null
+    const [command, args] = readCommand(
+      resolvePath(this.workDir, file),
+      max,
+      this.runAs,
+      net?.isolated ? net.thread : undefined,
+    )
+    const child = spawn(command, args, { cwd: '/', stdio: ['ignore', 'pipe', 'pipe'] })
+    let stderr = ''
+    child.stderr.on('data', (chunk: Buffer) => {
+      if (stderr.length < 2000) stderr += chunk.toString()
+    })
+    const exited = new Promise<number | null>((done) => {
+      child.on('close', done)
+      child.on('error', (error) => {
+        stderr ||= error.message
+        done(null)
+      })
+    })
+    try {
+      const staged = await stageStream(child.stdout, max, what)
+      const code = await exited
+      if (code !== 0) {
+        await rm(staged.path, { force: true })
+        throw new Error(`Could not read ${file}: ${stderr.trim() || `it ended with ${code}`}`)
+      }
+      return staged
+    } catch (error) {
+      child.kill()
+      throw error
+    }
   }
 
   /** After a failure: save what can be saved, so the next message starts clean. */

@@ -42,7 +42,7 @@ import {
   type ScheduleOperation,
   type TaskOperation,
 } from '@brigade/contracts'
-import type { LibraryOperation } from '../uploads.js'
+import type { LibraryOperation, StagedFile } from '../uploads.js'
 import { errorMessage } from './events.js'
 import { WIDGET_GUIDE } from './widget-guide.js'
 
@@ -722,6 +722,8 @@ export function libraryTools(options: {
   call: LibraryCaller
   /** Reads a file the teammate wrote on this computer, as the teammate. */
   readFile: (path: string) => Promise<Buffer>
+  /** Copies a file the teammate wrote, as the teammate, to be sent as it streams (save_to_library). */
+  stageFile: (path: string) => Promise<StagedFile>
   /** The files in a folder on this computer, as the teammate: paths relative to it. */
   listFiles: (folder: string) => Promise<string[]>
   /** Render a design folder with this computer's Chrome: screenshots and the page's errors. */
@@ -918,9 +920,9 @@ export function libraryTools(options: {
         required: ['file', 'path'],
       }),
       execute: async (input, { toolCallId }) => {
-        const bytes = await options.readFile(input.file)
+        const file = await options.stageFile(input.file)
         return options.call({
-          operation: { name: 'save', path: input.path, bytes },
+          operation: { name: 'save', path: input.path, file },
           toolCallId,
           toolName: 'save_to_library',
           input,
