@@ -563,6 +563,8 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   /** Its latest emails sent from Brigade's addresses; a scheduled one can be cancelled until sendAt. */
   mailMessages: {
     id: string
+    /** Gmail's: its account. Null: from Brigade's address. */
+    connectionId: string | null
     to: string[]
     subject: string
     status: 'scheduled' | 'sent' | 'delivered' | 'bounced' | 'cancelled' | string

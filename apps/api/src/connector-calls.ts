@@ -154,20 +154,20 @@ export async function handleConnectorCall(
   const brigade = connectors[connection.kind]?.auth === 'brigade'
   const own =
     brigade || connection.kind === 'gmail'
-    ? {
-        scope,
-        connectionId: connection.id,
-        teammateId: teammate.id,
-        thread: {
-          id: session.id,
-          projectId: session.projectId,
+      ? {
+          scope,
+          connectionId: connection.id,
           teammateId: teammate.id,
-          startedByMemberId: session.startedByMemberId,
-          origin: session.origin,
-          status: session.status,
-        },
-      }
-    : {}
+          thread: {
+            id: session.id,
+            projectId: session.projectId,
+            teammateId: teammate.id,
+            startedByMemberId: session.startedByMemberId,
+            origin: session.origin,
+            status: session.status,
+          },
+        }
+      : {}
   const callContext = (extra: Partial<ConnectorContext> = {}) =>
     ({
       fetch: (url: string, init?: RequestInit) => fetch(url, init),
@@ -310,7 +310,8 @@ export async function handleConnectorCall(
     }
     const cap = await writeCapReached(db, teammate, connection.id)
     // A mailbox whose email waits for a person: every send asks, a playbook's too.
-    const approves = MAIL_SENDS[connection.kind] === call.operation && connection.sendPolicy === 'approve'
+    const approves =
+      MAIL_SENDS[connection.kind] === call.operation && connection.sendPolicy === 'approve'
     let asks = verdict
       ? verdict.level === 'ask' || approves
       : approves ||
@@ -501,12 +502,13 @@ export async function handleConnectorCall(
     // The playbook's first response went out (on its own or approved): its run's time, set once.
     // Gmail's leaves later (src/mail/gmail-outbound.ts): its run is timed once it has.
     if (playbook?.firstResponse && !playbook.dryRun && playbookActionKey === playbook.firstResponse)
-      await (connection.kind === 'gmail' && call.operation === 'gmail_send'
-        ? timeWhenSent(db, (output as { id?: unknown } | null)?.id, playbook.runId)
-        : db.playbookRun.updateMany({
-            where: { id: playbook.runId, firstResponseAt: null },
-            data: { firstResponseAt: new Date() },
-          })
+      await (
+        connection.kind === 'gmail' && call.operation === 'gmail_send'
+          ? timeWhenSent(db, (output as { id?: unknown } | null)?.id, playbook.runId)
+          : db.playbookRun.updateMany({
+              where: { id: playbook.runId, firstResponseAt: null },
+              data: { firstResponseAt: new Date() },
+            })
       ).catch((error) => console.warn(`first response bookkeeping failed: ${String(error)}`))
     // Pull requests a teammate opens, reviews or merges: Brigade keeps them, their reviews and merges.
     if (connection.kind === 'github')

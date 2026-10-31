@@ -105,7 +105,9 @@ export function askText(
     list,
     'For each, ' +
       [
-        ...(brigade ? ['reply with email_send (replyTo its id), or call email_no_reply with its id'] : []),
+        ...(brigade
+          ? ['reply with email_send (replyTo its id), or call email_no_reply with its id']
+          : []),
         ...(gmail
           ? [
               'reply with gmail_send (replyToMessageId its Gmail message id), or call gmail_no_reply with its Gmail message id',

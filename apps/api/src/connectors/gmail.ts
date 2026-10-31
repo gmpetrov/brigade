@@ -580,9 +580,7 @@ export const gmail: ConnectorDefinition = {
       target: (i) =>
         `email${i.from ? ` from ${i.from}` : ''} to ${i.to.join(', ')}: "${i.subject}"${withFiles(i)}`,
       check: async (ctx, i) =>
-        ctx.scope && ctx.connectionId
-          ? checkGmail(scoped(ctx.scope), ctx.connectionId, i)
-          : null,
+        ctx.scope && ctx.connectionId ? checkGmail(scoped(ctx.scope), ctx.connectionId, i) : null,
       run: async (ctx, i) => {
         // Outside a thread (no Brigade context): at once, as Gmail sends.
         if (!ctx.scope || !ctx.thread || !ctx.connectionId) return sendComposed(ctx, i)

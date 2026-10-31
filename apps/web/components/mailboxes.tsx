@@ -1112,8 +1112,7 @@ function MailboxSending({
         ))}
       </RadioGroup>
       <p className="text-muted-foreground">
-        Every email leaves 30 seconds after it is sent or approved, and can be cancelled until
-        then.
+        Every email leaves 30 seconds after it is sent or approved, and can be cancelled until then.
         {!m.setsSending &&
           (m.kind === 'gmail'
             ? ' Only the member who connected it, or an owner or admin, changes this.'
