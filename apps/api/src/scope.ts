@@ -4,6 +4,7 @@ import type { z } from 'zod'
 import { auth } from './auth.js'
 import { env } from './config.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { beingRemoved } from './member-fence.js'
 import { requireNotViewer } from './viewers.js'
 
 /** A viewer reads only (src/viewers.ts). */
@@ -72,7 +73,8 @@ export async function resolveScope(input: {
       where: { id: activeWorkspaceId, organizationId: activeOrganizationId },
     }),
   ])
-  if (!member || !workspace) return null
+  // Shut out from the moment their removal starts (src/member-remove.ts).
+  if (!member || !workspace || beingRemoved(member)) return null
   return {
     organizationId: activeOrganizationId,
     workspaceId: workspace.id,

@@ -16,6 +16,7 @@ import { inlineCatalogs, takesCatalogs } from '../catalogs.js'
 import { wake } from '../cloud.js'
 import { prisma } from '../db.js'
 import { beingDeleted } from '../deletion-fence.js'
+import { lapsedMembers } from '../member-fence.js'
 import { movesOn } from '../move.js'
 import { noteFailure } from '../ops/failures.js'
 import {
@@ -725,6 +726,29 @@ export class WorkspaceHub {
     this.scheduleTick()
   }
 
+  /**
+   * A member was removed or their role changed (src/member-remove.ts, src/routes/members.ts):
+   * their dashboards' sockets, and the terminals relayed to them, close. A dashboard connects
+   * again with its new role, or not at all once they are out.
+   */
+  dropMember(memberId: string) {
+    for (const conn of [...this.browsers]) {
+      if (conn.scope.memberId !== memberId) continue
+      this.browserClosed(conn)
+      conn.socket.close(4003, 'membership changed')
+    }
+  }
+
+  /**
+   * Dashboards whose member was removed or changed role close, should dropMember not have reached
+   * the hub: checked on each tick, and before a dashboard opens a thread or a terminal.
+   */
+  async dropLapsed(conns: Iterable<BrowserConn> = this.browsers) {
+    const lapsed = await lapsedMembers([...conns].map((c) => c.scope))
+    for (const memberId of lapsed) this.dropMember(memberId)
+    return lapsed
+  }
+
   /** A dashboard's connection closed: its terminals close on their runners. */
   browserClosed(conn: BrowserConn) {
     this.browsers.delete(conn)
@@ -775,6 +799,7 @@ export class WorkspaceHub {
     // back are sent away too.
     if ([...this.runners.values()].some((c) => c.heldBack))
       if (!(await beingDeleted(this.workspaceId).catch(() => true))) this.releaseHeldBack()
+    await this.dropLapsed().catch((error: unknown) => console.error('dropLapsed', error))
     for (const conn of [...this.runners.values()]) {
       if ((conn.protocolVersion ?? 0) < HEARTBEAT_PROTOCOL) continue
       const heard = Math.max(conn.heardAt, this.host.heardAt?.(conn.socket) ?? 0)

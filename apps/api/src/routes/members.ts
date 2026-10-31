@@ -1,16 +1,32 @@
 // Settings › Members: who belongs to the organization, and the invitations still open. Inviting
 // and taking an invitation go through better-auth's organization plugin (src/auth.ts), which
 // checks roles (an admin invites members and admins, only an owner invites an owner), mails the
-// link and lets only the proven owner of the invited address join, at /invite/<id>.
-import { CreateInvitation } from '@brigade/contracts'
+// link and lets only the proven owner of the invited address join, at /invite/<id>. Owners and
+// admins also change members' roles and remove them; the organization always keeps an owner.
+import { CreateInvitation, UpdateMember } from '@brigade/contracts'
 import { APIError } from 'better-auth/api'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
+import { audit } from '../audit.js'
 import { auth } from '../auth.js'
-import { prisma } from '../db.js'
+import { prisma, type Prisma } from '../db.js'
 import { spendInvitation } from '../invitation-budget.js'
-import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
+import {
+  beingRemoved,
+  dropMemberSockets,
+  lockMembers,
+  ownersLeft,
+  removeMember,
+} from '../member-remove.js'
+import {
+  parseBody,
+  requireRole,
+  requireUser,
+  requireWorkspace,
+  type AppEnv,
+  type WorkspaceScope,
+} from '../scope.js'
 
 /** The plugin's messages, said the way the dashboard says things. */
 const SAID: Record<string, string> = {
@@ -37,6 +53,34 @@ async function plugin<T>(call: () => Promise<T>): Promise<T> {
       message: SAID[message] ?? message,
     })
   }
+}
+
+/**
+ * A member of the active organization, for an owner or admin to change, both read again from
+ * `db` (in the members' turn, src/member-remove.ts): only an owner touches an owner.
+ */
+async function memberToChange(
+  db: Prisma.TransactionClient | typeof prisma,
+  scope: WorkspaceScope,
+  id: string,
+) {
+  const actor = await db.member.findUnique({
+    where: { id: scope.memberId },
+    select: { role: true, removingAt: true },
+  })
+  if (!actor || beingRemoved(actor) || (actor.role !== 'owner' && actor.role !== 'admin'))
+    throw new HTTPException(403, { message: 'Only an owner or admin can do this' })
+  const member = await db.member.findFirst({
+    where: { id, organizationId: scope.organizationId },
+    include: {
+      user: { select: { name: true, email: true } },
+      organization: { select: { name: true } },
+    },
+  })
+  if (!member) throw new HTTPException(404, { message: 'They are no longer a member' })
+  if (member.role === 'owner' && actor.role !== 'owner')
+    throw new HTTPException(403, { message: 'Only an owner can change an owner' })
+  return { actor, member }
 }
 
 /** Open: pending and not yet expired. */
@@ -120,6 +164,69 @@ export const members = new Hono<AppEnv>()
         headers: c.req.raw.headers,
         body: { invitationId: invitation.id },
       }),
+    )
+    return c.body(null, 204)
+  })
+
+  /**
+   * Another role for a member, in the members' turn: the organization keeps at least one owner.
+   * Their dashboards connect again with it.
+   */
+  .patch('/members/:id', requireWorkspace, async (c) => {
+    const { scope } = c.var
+    requireRole(scope, 'owner', 'admin')
+    const { role } = await parseBody(c.req.raw, UpdateMember)
+    const from = await prisma.$transaction(async (tx) => {
+      await lockMembers(tx, scope.organizationId)
+      const { actor, member } = await memberToChange(tx, scope, c.req.param('id'))
+      if (beingRemoved(member)) throw new HTTPException(409, { message: 'They are being removed' })
+      if (role === member.role) return null
+      if (role === 'owner' && actor.role !== 'owner')
+        throw new HTTPException(403, { message: 'Only an owner can make someone an owner' })
+      if (member.role === 'owner' && (await ownersLeft(tx, scope.organizationId)) <= 1)
+        throw new HTTPException(409, {
+          message: 'Make someone else an owner first: the organization needs one',
+        })
+      await tx.member.update({ where: { id: member.id }, data: { role } })
+      return member.role
+    })
+    const id = c.req.param('id')
+    if (from) {
+      await audit({
+        organizationId: scope.organizationId,
+        workspaceId: null,
+        actor: { type: 'member', id: scope.memberId },
+        action: 'member.role_changed',
+        target: { type: 'member', id },
+        data: { from, to: role },
+      })
+    }
+    // Also when unchanged: asked again after a failure, it closes what that one left open.
+    await dropMemberSockets(scope.organizationId, id)
+    return c.json({ id, role })
+  })
+
+  /**
+   * Remove a member from the organization, with the threads they started and their files
+   * (src/member-remove.ts). Not oneself, and not while a teammate works in one of their threads.
+   */
+  .delete('/members/:id', requireWorkspace, async (c) => {
+    const { scope } = c.var
+    requireRole(scope, 'owner', 'admin')
+    const id = c.req.param('id')
+    const { member } = await memberToChange(prisma, scope, id)
+    if (member.id === scope.memberId)
+      throw new HTTPException(400, { message: 'You cannot remove yourself' })
+    await removeMember(
+      member.userId,
+      member,
+      {
+        actor: { type: 'member', id: scope.memberId },
+        reason: 'removed',
+        // Who may remove whom, again in the members' turn: a role may have changed since.
+        check: async (tx) => void (await memberToChange(tx, scope, id)),
+      },
+      member.user.name || member.user.email,
     )
     return c.body(null, 204)
   })

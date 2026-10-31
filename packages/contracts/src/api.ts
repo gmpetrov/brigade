@@ -25,6 +25,8 @@ export const CreateInvitation = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email().max(320)),
   role: z.enum(['viewer', 'member', 'admin', 'owner']).default('member'),
 })
+/** An owner or admin changes a member's role (only an owner makes or unmakes an owner). */
+export const UpdateMember = z.object({ role: z.enum(['viewer', 'member', 'admin', 'owner']) })
 /** An owner or admin renames the active workspace, or changes its logo (null: back to its letter). */
 export const UpdateWorkspace = z.object({
   name: z.string().trim().min(1).max(80).optional(),

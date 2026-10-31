@@ -293,6 +293,7 @@ export const MemberScalarFieldEnum = {
   userId: 'userId',
   role: 'role',
   createdAt: 'createdAt',
+  removingAt: 'removingAt',
   notify: 'notify',
   suggestions: 'suggestions',
   autoMerge: 'autoMerge'

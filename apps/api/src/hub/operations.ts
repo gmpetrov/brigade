@@ -30,6 +30,7 @@ export const operations = {
   isLooking: (hub: WorkspaceHub, memberId: string, withinMs: number) =>
     hub.isLooking(memberId, withinMs),
   threadsWaiting: (hub: WorkspaceHub) => hub.threadsWaiting(),
+  dropMember: (hub: WorkspaceHub, memberId: string) => hub.dropMember(memberId),
   eventsWaitingSince: (hub: WorkspaceHub, sessionIds: string[]) =>
     Object.fromEntries(sessionIds.map((id) => [id, hub.eventsWaitingSince(id)])),
 
