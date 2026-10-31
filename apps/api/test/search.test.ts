@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { after, before, describe, test } from 'node:test'
 import { parseEnv } from 'node:util'
-import type { SearchResult } from '@brigade/contracts'
+import { SCORE, type SearchResult } from '@brigade/contracts'
 import { Hono } from 'hono'
 
 // The dashboard's ⌘K search (src/routes/search.ts) against the API's development database
@@ -11,6 +11,7 @@ import { Hono } from 'hono'
 // answers:
 // - a name found despite a typo ("launch cecklist" finds launch-checklist.md), through pg_trgm;
 // - a file named as typed scores above threads that only share a word with it;
+// - a name as typed is found before newer ones that only share its words, past the limit of each kind;
 // - another workspace's rows never turn up, whatever matches;
 // - punctuation separates words, as in a file's name, and matches nothing on its own.
 const envFile = new URL('../.env', import.meta.url)
@@ -66,10 +67,24 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
     const { auth } = await import('../src/auth.js')
     const { search } = await import('../src/routes/search.js')
     await prisma.user.create({ data: { id: user, name: 'Ada', email: `${user}@test.local` } })
+    // The release plan first, then more newer drafts than a kind shows.
+    const drafts = [1, 2, 3, 4, 5, 6, 7]
     await workspace(
       orgs[0]!,
-      ['Checklist release officielle', 'Oubli de la checklist ?', 'Launch checklist review'],
-      ['Projects/Brigade/launch-checklist.md', 'Projects/Brigade/pricing.md', 'notes/100% done.md'],
+      [
+        'Checklist release officielle',
+        'Oubli de la checklist ?',
+        'Launch checklist review',
+        'Release plan',
+        ...drafts.map((n) => `Release plan draft ${n}`),
+      ],
+      [
+        'Projects/Brigade/launch-checklist.md',
+        'Projects/Brigade/pricing.md',
+        'notes/100% done.md',
+        'Projects/Brigade/release-plan.md',
+        ...drafts.map((n) => `Projects/Brigade/release-plan-draft-${n}.md`),
+      ],
     )
     // Same names elsewhere: never shown here.
     await workspace(orgs[1]!, ['Launch checklist elsewhere'], ['launch-checklist.md'])
@@ -127,6 +142,17 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
       results.filter((r) => r.kind === 'thread').every((r) => r.score < best.score),
       'threads below it',
     )
+  })
+
+  test('a name as typed beats newer ones that only share its words', async () => {
+    const results = await find('release plan')
+    const files = titles(results, 'file')
+    const threads = titles(results, 'thread')
+    assert.equal(files[0], 'Projects/Brigade/release-plan.md')
+    assert.equal(threads[0], 'Release plan')
+    assert.equal(files.length, 6)
+    const best = results.reduce((a, b) => (b.score > a.score ? b : a))
+    assert.equal(best.score, SCORE.exact)
   })
 
   test("another workspace's rows never turn up", async () => {

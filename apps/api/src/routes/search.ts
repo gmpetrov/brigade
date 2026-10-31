@@ -26,11 +26,21 @@ const NEAR_MIN = 3
 const like = (word: string) => `%${word.replace(/[\\%_]/g, '\\$&')}%`
 const column = (name: string) => Prisma.raw(`"${name}"`)
 
+/** A name as titleScore reads it: lower case, spaces and punctuation one space. */
+const plain = (name: Prisma.Sql) =>
+  Prisma.sql`btrim(regexp_replace(lower(${name}), '[[:space:][:punct:]]+', ' ', 'g'))`
+
+/** A file's name: its path's last part without its extension. */
+const FILE_NAME = Prisma.sql`regexp_replace(regexp_replace("path", '^.*/', ''), '[.][^.]*$', '')`
+
 /**
  * Ids of a table's rows in this workspace where every word is in one of `fields`,
  * or close to a word of `near` (`<%`, pg_trgm's word similarity): "cecklist" finds
- * "launch-checklist.md". Rows where every word is there as typed come first, then
- * the closest, then by `order`. Table and column names are this file's, never input.
+ * "launch-checklist.md". Best named first, as titleScore ranks them (the name as
+ * typed, then starting with it, then each word starting one of its words), so that
+ * newer rows that only share the words never push it past the limit; then rows
+ * where every word is there as typed, the closest, and by `order`. Table and column
+ * names are this file's, never input.
  */
 async function nearly(
   scope: Scope,
@@ -39,12 +49,20 @@ async function nearly(
     near: string
     fields: string[]
     words: string[]
+    /** What titleScore reads as its name, when not `near` itself. */
+    name?: Prisma.Sql
     where?: Prisma.Sql
     order: string
     take?: number
   },
 ): Promise<string[]> {
   const near = column(input.near)
+  const name = plain(input.name ?? near)
+  const typed = input.words.join(' ').toLowerCase()
+  const starts = Prisma.join(
+    input.words.map((word) => Prisma.sql`(' ' || ${name}) LIKE ${`% ${word.toLowerCase()}%`}`),
+    ' AND ',
+  )
   const exact = input.words.map(
     (word) =>
       Prisma.sql`(${Prisma.join(
@@ -68,7 +86,8 @@ async function nearly(
       AND "workspaceId" = ${scope.workspaceId}
       ${input.where ? Prisma.sql`AND ${input.where}` : Prisma.empty}
       AND ${Prisma.join(each, ' AND ')}
-    ORDER BY (${Prisma.join(exact, ' AND ')}) DESC, ${similarity} DESC, ${Prisma.raw(input.order)}
+    ORDER BY ${name} = ${typed} DESC, ${name} LIKE ${`${typed}%`} DESC, (${starts}) DESC,
+      (${Prisma.join(exact, ' AND ')}) DESC, ${similarity} DESC, ${Prisma.raw(input.order)}
     LIMIT ${input.take ?? EACH}`
   return rows.map((r) => r.id)
 }
@@ -300,6 +319,7 @@ export const search = new Hono<AppEnv>()
     const pathIds = await nearly(scope, {
       table: 'Document',
       near: 'path',
+      name: FILE_NAME,
       fields: ['path'],
       words,
       where: Prisma.sql`kind = 'library' AND "deletedAt" IS NULL`,
@@ -333,40 +353,46 @@ export const search = new Hono<AppEnv>()
         }),
       ),
       ...ranked(threadResults),
-      ...tasks.map((t) =>
-        result({
-          kind: 'task',
-          id: t.id,
-          title: t.title,
-          detail: [
-            t.teammate?.name ?? 'Backlog',
-            t.completedAt && 'done',
-            t.trashedAt && 'in the Trash',
-          ]
-            .filter(Boolean)
-            .join(' · '),
-          score: score(t.title),
-        }),
+      ...ranked(
+        tasks.map((t) =>
+          result({
+            kind: 'task',
+            id: t.id,
+            title: t.title,
+            detail: [
+              t.teammate?.name ?? 'Backlog',
+              t.completedAt && 'done',
+              t.trashedAt && 'in the Trash',
+            ]
+              .filter(Boolean)
+              .join(' · '),
+            score: score(t.title),
+          }),
+        ),
       ),
-      ...pulls.map((p) =>
-        result({
-          kind: 'pull_request',
-          id: p.id,
-          title: p.title,
-          detail: `${p.repository}#${p.number} · ${p.state}`,
-          pull: { repository: p.repository, number: p.number },
-          score: p.number === number ? SCORE.exact : score(p.title),
-        }),
+      ...ranked(
+        pulls.map((p) =>
+          result({
+            kind: 'pull_request',
+            id: p.id,
+            title: p.title,
+            detail: `${p.repository}#${p.number} · ${p.state}`,
+            pull: { repository: p.repository, number: p.number },
+            score: p.number === number ? SCORE.exact : score(p.title),
+          }),
+        ),
       ),
-      ...tickets.map((t) =>
-        result({
-          kind: 'ticket',
-          id: t.id,
-          title: t.title,
-          detail: t.status,
-          threadId: t.sessionId,
-          score: score(t.title),
-        }),
+      ...ranked(
+        tickets.map((t) =>
+          result({
+            kind: 'ticket',
+            id: t.id,
+            title: t.title,
+            detail: t.status,
+            threadId: t.sessionId,
+            score: score(t.title),
+          }),
+        ),
       ),
       ...schedules.map((s) =>
         result({
