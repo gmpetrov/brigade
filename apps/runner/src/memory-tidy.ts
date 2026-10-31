@@ -86,15 +86,19 @@ export function lineAt(file: ReadLines, ref: number | string): string | null {
 }
 
 /**
- * A line a run wrote in place of `from` (a line's text), without the day the run
- * read after `from` when it copied it onto the end: that day is memory's, not the line's,
- * and would show twice. A day `from` had in its own text is the line's, and stays.
+ * A line a run wrote in place of `from` (one line's text, or the lines a merge joins), without
+ * the day the run read after one of them when it copied it onto the end: that day is memory's,
+ * not the line's, and would show twice. A day that ends the own text of any of them is a
+ * date the line holds, and stays.
  */
-export function withoutCopiedDay(text: string, file: ReadLines, from: string) {
-  const i = file.lines.indexOf(from)
-  const day = i >= 0 ? file.notes[i]!.trim() : ''
-  if (!day || from.endsWith(day) || !text.endsWith(day)) return text
-  return text.slice(0, -day.length).trimEnd()
+export function withoutCopiedDay(text: string, file: ReadLines, from: string[]) {
+  const days = from.flatMap((f) => {
+    const i = file.lines.indexOf(f)
+    const day = i >= 0 ? file.notes[i]!.trim() : ''
+    return day ? [day] : []
+  })
+  const copied = days.find((day) => text.endsWith(day) && !from.some((f) => f.endsWith(day)))
+  return copied ? text.slice(0, -copied.length).trimEnd() : text
 }
 /** A list that keeps the items it can read and drops the others. */
 export const lenientList = <T extends z.ZodTypeAny>(item: T) =>
@@ -206,10 +210,7 @@ export function tidyRun(file: TidyFile, now = new Date()) {
       merge: answer.merge
         .map((m) => {
           const from = lines(m.lines).slice(0, 20)
-          const text = from.reduce(
-            (t, f) => withoutCopiedDay(t, numbered, f),
-            m.text.trim().replace(/\s*\n\s*/g, ' '),
-          )
+          const text = withoutCopiedDay(m.text.trim().replace(/\s*\n\s*/g, ' '), numbered, from)
           return { from, text: text.slice(0, 1000), topic: m.topic?.trim().slice(0, 60) || null }
         })
         .filter((m) => m.from.length >= 1 && m.text)

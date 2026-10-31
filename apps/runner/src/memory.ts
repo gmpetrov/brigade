@@ -270,7 +270,7 @@ function toEdit(edit: FileEdit | undefined, file: RunFile): MemoryEdit {
       .slice(0, 1000)
   const replace = edit.replace.flatMap((r) => {
     const from = line(r.line)
-    const to = from && withoutCopiedDay(clip(r.text), file, from)
+    const to = from && withoutCopiedDay(clip(r.text), file, [from])
     return from && to ? [{ from, to }] : []
   })
   return {

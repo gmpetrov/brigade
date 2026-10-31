@@ -200,3 +200,21 @@ test('a line whose text already ends with its day shows it once, and other dates
   ])
   assert.deepEqual(numbered.notes, [' (31 Oct)', ' (31 Oct)'])
 })
+
+test('a line told as news whose text ends with its day shows the day once, with where it is', () => {
+  const later = new Date('2026-11-02T10:00:00Z')
+  const copied = 'Use violet. (1 Nov)'
+  const project = layerMemory(
+    `# Memory\n\n- ${copied}\n`,
+    'project',
+    { [memoryLineKey(copied)]: { at: '2026-11-01T12:00:00Z' } },
+    later,
+  )
+  const empty = layerMemory('', 'workspace', {}, later)
+  const news = memoryNews(
+    { dir: '/work', workspace: empty, project, teammate: empty },
+    new Set(),
+    new Set(),
+  )
+  assert.match(news, /\n- Use violet\. \(1 Nov\) \(project memory\)\n/)
+})

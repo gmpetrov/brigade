@@ -252,8 +252,10 @@ export function memoryNews(memory: ThreadMemory, loaded: ReadonlySet<string>, to
     for (const { where, lines } of sections)
       for (const line of lines) {
         if (loaded.has(line.key) || told.has(line.key)) continue
-        const note = line.note ? line.note.replace(/\)$/, `, ${where})`) : ` (${where})`
-        const text = `- ${dated(line.text, note)}`
+        // Its day once, with where it is: not again when its text already ends with it.
+        const day = line.note && !line.text.endsWith(line.note.trim()) ? line.note : ''
+        const note = day ? day.replace(/\)$/, `, ${where})`) : ` (${where})`
+        const text = `- ${line.text}${note}`
         if (news.length >= NEWS_LINES || size + text.length > NEWS_CHARS) return
         news.push(text)
         size += text.length

@@ -166,3 +166,23 @@ test('a merged line loses the days the run read after its lines, and names them 
     },
   ])
 })
+
+test("a merge keeps a date one of its lines holds, even when it is another line's day", () => {
+  const acme = `# M\n\n- Acme renews (1 Nov)\n- Acme renews automatically.\n- Use violet.\n- Run checks.\n`
+  const run = tidyRun(
+    file(acme, {
+      meta: {
+        [memoryLineKey('Acme renews (1 Nov)')]: { at: '2026-10-31T09:00:00Z' },
+        [memoryLineKey('Acme renews automatically.')]: { at: '2026-11-01T09:00:00Z' },
+      },
+    }),
+    new Date('2026-11-02T10:00:00Z'),
+  )
+  const layout = run.parse(
+    JSON.stringify({
+      core: [3, 4],
+      merge: [{ lines: [1, 2], text: 'Acme renews automatically (1 Nov)', topic: null }],
+    }),
+  )!
+  assert.equal(layout.merge[0]?.text, 'Acme renews automatically (1 Nov)')
+})
