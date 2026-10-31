@@ -641,6 +641,7 @@ describe('threads others write in', { skip: !database && 'no database answers' }
         })
         let waiting = 0
         for (let i = 0; i < 150; i++) {
+          await tx.$executeRaw`SELECT pg_stat_clear_snapshot()`
           const rows = await tx.$queryRaw<
             { n: bigint }[]
           >`SELECT count(*) as n FROM pg_stat_activity WHERE application_name = ${name} AND wait_event_type = 'Lock'`
