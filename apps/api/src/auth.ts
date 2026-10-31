@@ -9,6 +9,7 @@ import { guardOrganizationDeletion } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { desktopSignIn } from './desktop-sign-in.js'
+import { INVITATION_DAYS, sendInvitation } from './invitation-mail.js'
 import { passwordSignIn } from './password-sign-in.js'
 import { CODE_MINUTES, sendSignInCode } from './sign-in-code.js'
 
@@ -118,6 +119,18 @@ export const auth = betterAuth({
     organization({
       // An invitation goes to an address: only its proven owner may take it.
       requireEmailVerificationOnInvitation: true,
+      invitationExpiresIn: INVITATION_DAYS * 24 * 60 * 60,
+      // Inviting again with another role replaces the open invitation (src/routes/members.ts).
+      cancelPendingInvitationsOnReInvite: true,
+      // Settings › Members invites (src/routes/members.ts); the link leads to /invite/<id>.
+      sendInvitationEmail: ({ id, email, role, organization, inviter }) =>
+        sendInvitation({
+          id,
+          email,
+          role,
+          organization: organization.name,
+          inviter: { name: inviter.user.name, email: inviter.user.email },
+        }),
       organizationHooks: {
         afterCreateOrganization: async ({ organization, user }) =>
           audit({
@@ -197,9 +210,39 @@ export const auth = betterAuth({
             target: { type: 'invitation', id: invitation.id },
             data: { email: invitation.email, role: invitation.role },
           }),
+        afterCancelInvitation: async ({ invitation, cancelledBy, organization }) =>
+          audit({
+            organizationId: organization.id,
+            workspaceId: null,
+            actor: await memberActor(organization.id, cancelledBy.id),
+            action: 'invitation.canceled',
+            target: { type: 'invitation', id: invitation.id },
+            data: { email: invitation.email },
+          }),
+        // Joined by their invitation: the same entry as a member added, by the one who joined.
+        afterAcceptInvitation: async ({ invitation, member, organization }) =>
+          audit({
+            organizationId: organization.id,
+            workspaceId: null,
+            actor: { type: 'member', id: member.id },
+            action: 'member.added',
+            target: { type: 'member', id: member.id },
+            data: { role: member.role, invitationId: invitation.id },
+          }),
       },
     }),
   ],
 })
 
 export type AuthSession = typeof auth.$Infer.Session
+
+/**
+ * The plugin's invitation routes, closed over HTTP: the dashboard invites, cancels and joins
+ * through src/routes/members.ts, which keeps the sending budget (src/invitation-budget.ts) and
+ * calls them with auth.api.
+ */
+const INVITATION_ROUTES =
+  /^\/api\/auth\/organization\/(invite-member|accept-invitation|reject-invitation|cancel-invitation)\/?$/
+
+export const authRouteClosed = (request: Request) =>
+  INVITATION_ROUTES.test(new URL(request.url).pathname)

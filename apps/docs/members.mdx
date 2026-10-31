@@ -7,15 +7,31 @@ People belong to an **organization**, the account you created at sign-up. Each m
 every workspace of the organization: **owner**, **admin** or **member**. See [Key concepts](/concepts) for how
 organizations, workspaces and projects fit together.
 
-<Note>The dashboard doesn't have a screen to invite people or change their role yet.</Note>
+## Invite people
+
+Owners and admins invite people in **Settings → Members**: **Invite**, type their email address, pick a role and
+**Send invitation**. Only an owner can invite another owner.
+
+The invited person gets an email with a link. They open it, sign in with that address (Google or a code mailed to
+them; it makes their account if they have none) and choose **Join**. Only the address the invitation was sent to can
+take it. Someone who signs up without the link finds it on their first screen. Once in, they connect an AI account of
+their own before starting threads: see [AI accounts](/ai-accounts).
+
+An invitation stays open for 7 days. Until it is taken, it shows under **Invited** in **Settings → Members**, where
+**Send again** mails it once more for another 7 days and **Cancel invitation** stops its link.
+
+Someone in several organizations (their own and one they were invited to, say) switches between them from the
+workspace name at the top of the sidebar, under **Other organizations**.
+
+<Note>Changing a member's role or removing a member isn't in the dashboard yet.</Note>
 
 ## What each role can do
 
-| Role       | Can                                                                                                                                                                                                                              |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Member** | Start threads, connect their own AI accounts, Apps and computers, add secrets, create routines and projects, answer tickets on their own threads                                                                                 |
-| **Admin**  | All of that, plus: create workspaces and teammates, edit teammates' access, policies and caps, manage billing, the cloud computer, skills, triggers, email and the Security activity log, merge pull requests, answer any ticket |
-| **Owner**  | All of that, plus: delete a workspace                                                                                                                                                                                            |
+| Role       | Can                                                                                                                                                                                                                                                         |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Member** | Start threads, connect their own AI accounts, Apps and computers, add secrets, create routines and projects, answer tickets on their own threads                                                                                                            |
+| **Admin**  | All of that, plus: invite members and admins, create workspaces and teammates, edit teammates' access, policies and caps, manage billing, the cloud computer, skills, triggers, email and the Security activity log, merge pull requests, answer any ticket |
+| **Owner**  | All of that, plus: invite owners, delete a workspace                                                                                                                                                                                                        |
 
 Some things belong to the member who made them, whatever their role: an App account they connected, a secret they
 created, a routine they set up. They, or an owner or admin, manage it.

@@ -4,6 +4,7 @@ import {
   DeleteWorkspace,
   SetAutoMerge,
   SetSuggestions,
+  SwitchOrganization,
   SwitchWorkspace,
   UpdateWorkspace,
 } from '@brigade/contracts'
@@ -206,6 +207,28 @@ export const workspaces = new Hono<AppEnv>()
     await prisma.authSession.update({
       where: { id: c.var.authSessionId },
       data: { activeWorkspaceId: scope.workspaceId },
+    })
+    return c.json({ ok: true })
+  })
+
+  /**
+   * Make another organization the person belongs to the session's, in its first workspace: for
+   * someone in several (one of their own, and one they were invited to).
+   */
+  .post('/organizations/switch', async (c) => {
+    const { organizationId } = await parseBody(c.req.raw, SwitchOrganization)
+    const member = await prisma.member.findUnique({
+      where: { organizationId_userId: { organizationId, userId: c.var.userId } },
+    })
+    if (!member) throw new HTTPException(404, { message: 'Organization not found' })
+    const workspace = await prisma.workspace.findFirst({
+      where: { organizationId },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    })
+    await prisma.authSession.update({
+      where: { id: c.var.authSessionId },
+      data: { activeOrganizationId: organizationId, activeWorkspaceId: workspace?.id ?? null },
     })
     return c.json({ ok: true })
   })

@@ -2,7 +2,7 @@ import { PROTOCOL_VERSION, type HealthResponse } from '@brigade/contracts'
 import { Hono, type Context } from 'hono'
 import { z } from 'zod'
 import { HTTPException } from 'hono/http-exception'
-import { auth } from './auth.js'
+import { auth, authRouteClosed } from './auth.js'
 import { checkoutReturn, stripeWebhook } from './billing.js'
 import { apiCors } from './cors.js'
 import { env } from './config.js'
@@ -59,6 +59,7 @@ import { runnerInstall } from './routes/runner-install.js'
 import { teammates } from './routes/teammates.js'
 import { threads } from './routes/threads.js'
 import { workspaces } from './routes/workspaces.js'
+import { members } from './routes/members.js'
 import { mcpClientDocument } from './connectors/mcp.js'
 import { resolveScope, signInFirst } from './scope.js'
 import { serverTiming } from './timing.js'
@@ -134,7 +135,11 @@ app.post('/ops/hubs', async (c) => {
   return c.json({ workspaceId: input.data.workspaceId, mode: input.data.mode })
 })
 
-app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+app.on(['GET', 'POST'], '/api/auth/*', (c) =>
+  authRouteClosed(c.req.raw)
+    ? Response.json({ error: 'Not found' }, { status: 404 })
+    : auth.handler(c.req.raw),
+)
 // Billing (src/billing.ts): Stripe's webhook, verified by its signature, and the way back
 // from Checkout, which reads only Stripe. Neither needs a session: before the routers below,
 // whose middleware asks for one.
@@ -154,6 +159,7 @@ app.use('/api/connections/oauth/*', signInFirst)
 app.route('/api/bucket', localBucket)
 app.route('/api/errors', errors)
 app.route('/api', workspaces)
+app.route('/api', members)
 app.route('/api/teammates', teammates)
 app.route('/api/computers', computers)
 app.route('/api/billing', billing)

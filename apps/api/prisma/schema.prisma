@@ -145,6 +145,7 @@ model Organization {
   updatedAt       DateTime?        @updatedAt
   members         Member[]
   invitations     Invitation[]
+  invitationSends InvitationSend[]
   workspaces      Workspace[]
   billingClosings BillingClosing[]
 }
@@ -214,6 +215,20 @@ model Invitation {
 
   @@index([organizationId])
   @@index([email])
+}
+
+/// One invitation mail sent, first or again (src/invitation-budget.ts): what the sending budget
+/// counts, per organization and per address. Kept a day, the longest window; a table of its own
+/// because better-auth's RateLimit cleanup prunes every row past its own short windows.
+model InvitationSend {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  at             DateTime     @default(now())
+
+  @@index([organizationId, at])
+  @@index([organizationId, email, at])
 }
 
 // ---------------------------------------------------------------------------
