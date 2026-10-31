@@ -102,6 +102,13 @@ export type Member = Prisma.MemberModel
  */
 export type Invitation = Prisma.InvitationModel
 /**
+ * Model InvitationSend
+ * One invitation mail sent, first or again (src/invitation-budget.ts): what the sending budget
+ * counts, per organization and per address. Kept a day, the longest window; a table of its own
+ * because better-auth's RateLimit cleanup prunes every row past its own short windows.
+ */
+export type InvitationSend = Prisma.InvitationSendModel
+/**
  * Model Workspace
  * 
  */

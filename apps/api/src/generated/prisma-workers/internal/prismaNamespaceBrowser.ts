@@ -62,6 +62,7 @@ export const ModelName = {
   BillingClosing: 'BillingClosing',
   Member: 'Member',
   Invitation: 'Invitation',
+  InvitationSend: 'InvitationSend',
   Workspace: 'Workspace',
   Computer: 'Computer',
   Runner: 'Runner',
@@ -312,6 +313,16 @@ export const InvitationScalarFieldEnum = {
 } as const
 
 export type InvitationScalarFieldEnum = (typeof InvitationScalarFieldEnum)[keyof typeof InvitationScalarFieldEnum]
+
+
+export const InvitationSendScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  email: 'email',
+  at: 'at'
+} as const
+
+export type InvitationSendScalarFieldEnum = (typeof InvitationSendScalarFieldEnum)[keyof typeof InvitationSendScalarFieldEnum]
 
 
 export const WorkspaceScalarFieldEnum = {

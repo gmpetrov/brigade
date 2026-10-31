@@ -67,6 +67,8 @@ const UNSCOPED = new Set([
   // A workspace's plan, an organization's deletion under way: src/billing.ts's only.
   'BillingSubscription',
   'BillingClosing',
+  // Invitation mails sent, by organization: src/invitation-budget.ts's only.
+  'InvitationSend',
   // Webhooks as they came, before anyone knows whose they are: src/inbound.ts's only.
   'InboundEvent',
   // A library file's lock, by workspace and file: src/library.ts's withLibraryLock only.

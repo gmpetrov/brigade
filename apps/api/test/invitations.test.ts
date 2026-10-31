@@ -171,9 +171,6 @@ before(async () => {
 after(async () => {
   if (skip) return
   await prisma.workspace.deleteMany({ where: { organizationId: { in: organizations } } })
-  await prisma.rateLimit.deleteMany({
-    where: { OR: organizations.map((o) => ({ key: { startsWith: `invitations:${o}` } })) },
-  })
   await prisma.organization.deleteMany({ where: { id: { in: organizations } } })
   await prisma.user.deleteMany({ where: { email: { in: emails } } })
   await prisma.verification.deleteMany({ where: { identifier: { contains: run } } })
@@ -412,4 +409,60 @@ test("the plugin's invitation routes are closed over HTTP", { skip }, async () =
     assert.equal(response.status, 404, path)
   }
   assert.equal(await prisma.invitation.count({ where: { email: { startsWith: 'lee-' } } }), 0)
+})
+
+test("auth's rate-limit cleanup leaves the invitation budget alone", { skip }, async () => {
+  const { spendInvitation } = await import('../src/invitation-budget.js')
+  const email = address('prune')
+  const ip = `198.51.100.${200 + Math.floor(Math.random() * 50)}`
+  // A sign-in from a visitor Cloudflare names: counted, and its old buckets pruned.
+  const login = () =>
+    auth.handler(
+      new Request(`${env.API_URL}/api/auth/sign-in/email-otp`, {
+        method: 'POST',
+        headers: {
+          origin: env.WEB_URL[0]!,
+          'content-type': 'application/json',
+          'cf-connecting-ip': ip,
+        },
+        body: JSON.stringify({ email, otp: '000000' }),
+      }),
+    )
+  try {
+    await login()
+    for (let i = 0; i < 3; i++) await spendInvitation(ada.organizationId, email)
+    // Ten minutes on: the three sendings, and every rate-limit row of this visitor and of the
+    // organization's invitations, which the next sign-in's cleanup would prune.
+    const tenMinutesAgo = Date.now() - 10 * 60 * 1000
+    await prisma.invitationSend.updateMany({
+      where: { organizationId: ada.organizationId, email },
+      data: { at: new Date(tenMinutesAgo) },
+    })
+    await prisma.rateLimit.updateMany({
+      where: {
+        OR: [
+          { key: { contains: ip } },
+          { key: { startsWith: `invitations:${ada.organizationId}` } },
+        ],
+      },
+      data: { lastRequest: BigInt(tenMinutesAgo) },
+    })
+    await login()
+    await assert.rejects(() => spendInvitation(ada.organizationId, email), /invited 3 times/)
+  } finally {
+    await prisma.rateLimit.deleteMany({ where: { key: { contains: ip } } })
+  }
+})
+
+test('sendings at once spend the budget once each', { skip }, async () => {
+  const { spendInvitation } = await import('../src/invitation-budget.js')
+  const email = address('rush')
+  const results = await Promise.allSettled(
+    Array.from({ length: 6 }, () => spendInvitation(ada.organizationId, email)),
+  )
+  assert.equal(results.filter((r) => r.status === 'fulfilled').length, 3)
+  assert.equal(
+    await prisma.invitationSend.count({ where: { organizationId: ada.organizationId, email } }),
+    3,
+  )
 })

@@ -1,7 +1,7 @@
 // Each invitation mails someone outside Brigade: a budget per organization and per address,
-// counted in the database (the RateLimit table, in keys of its own), so neither a loop of
-// Invite and Send again nor a restart sends more. A window starts with its first sending.
-import { randomUUID } from 'node:crypto'
+// counted in the database (InvitationSend), so neither a loop of Invite and Send again nor a
+// restart sends more. Not in better-auth's RateLimit table: its cleanup prunes every row older
+// than its own short windows, counts included.
 import { HTTPException } from 'hono/http-exception'
 import { prisma } from './db.js'
 
@@ -13,32 +13,33 @@ export const INVITATION_BUDGETS = {
   address: { max: 3, window: 24 * HOUR },
 }
 
-/** One more sending in `key`'s window: how many it now holds. */
-async function count(key: string, window: number) {
-  const now = Date.now()
-  const [row] = await prisma.$queryRaw<{ count: number }[]>`
-    INSERT INTO "RateLimit" ("id", "key", "count", "lastRequest")
-    VALUES (${randomUUID()}, ${key}, 1, ${now})
-    ON CONFLICT ("key") DO UPDATE SET
-      "count" = CASE WHEN "RateLimit"."lastRequest" <= ${now - window} THEN 1
-                     ELSE "RateLimit"."count" + 1 END,
-      "lastRequest" = CASE WHEN "RateLimit"."lastRequest" <= ${now - window} THEN ${now}
-                           ELSE "RateLimit"."lastRequest" END
-    RETURNING "count"`
-  return Number(row!.count)
-}
-
-/** Before an invitation is mailed (first or again): refused once either budget is spent. */
+/**
+ * Before an invitation is mailed (first or again): counted, or refused once either budget is
+ * spent. One organization's sendings at a time, so two at once can't both pass the last place.
+ */
 export async function spendInvitation(organizationId: string, email: string) {
   const { organization, address } = INVITATION_BUDGETS
-  const [forOrganization, forAddress] = await Promise.all([
-    count(`invitations:${organizationId}`, organization.window),
-    count(`invitations:${organizationId}:${email.toLowerCase()}`, address.window),
-  ])
-  if (forAddress > address.max)
-    throw new HTTPException(429, {
-      message: `${email} was invited ${address.max} times today: try again tomorrow`,
+  const now = Date.now()
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`invitations:${organizationId}`}, 0))`
+    // Past the longest window, a sending counts no more.
+    await tx.invitationSend.deleteMany({
+      where: { organizationId, at: { lt: new Date(now - address.window) } },
     })
-  if (forOrganization > organization.max)
-    throw new HTTPException(429, { message: 'Too many invitations this hour: try again later' })
+    const [forOrganization, forAddress] = await Promise.all([
+      tx.invitationSend.count({
+        where: { organizationId, at: { gt: new Date(now - organization.window) } },
+      }),
+      tx.invitationSend.count({
+        where: { organizationId, email, at: { gt: new Date(now - address.window) } },
+      }),
+    ])
+    if (forAddress >= address.max)
+      throw new HTTPException(429, {
+        message: `${email} was invited ${address.max} times today: try again tomorrow`,
+      })
+    if (forOrganization >= organization.max)
+      throw new HTTPException(429, { message: 'Too many invitations this hour: try again later' })
+    await tx.invitationSend.create({ data: { organizationId, email } })
+  })
 }
