@@ -4,6 +4,7 @@
 // the API's (@brigade/editor), which writes both to Markdown teammates read.
 import { itemConfig, mentionConfig } from '@brigade/editor'
 import { BlockNoteSchema, defaultInlineContentSpecs, type BlockNoteEditor } from '@blocknote/core'
+import type { ComputeDropPositionContext, DropCursorOptions } from '@blocknote/core/extensions'
 import {
   AddBlockButton,
   createReactInlineContentSpec,
@@ -112,6 +113,33 @@ export function editorFiles(
       }
     },
     resolveFileUrl: async (url: string) => documentFileUrl(url),
+  }
+}
+
+/**
+ * Where a dragged line lands, kept steady while the pointer is in the margin beside the
+ * lines (where their drag handles are, so where a drag usually goes). There, BlockNote
+ * places each `dragover` twice: at the pointer, and again moved onto the lines (its
+ * synthetic copy). The two gave different places, so the drop line jumped between them on
+ * every event, and each jump made the next event recompute the page's styles: the page
+ * drew a few frames a second and the line seemed stuck. In the margin, only the copy on
+ * the lines counts.
+ */
+export function steadyDropCursor(): DropCursorOptions {
+  type Position = ComputeDropPositionContext['defaultPosition']
+  let onLines: Position = null
+  return {
+    hooks: {
+      computeDropPosition: ({ event, view, defaultPosition }) => {
+        const synthetic = (event as DragEvent & { synthetic?: boolean }).synthetic === true
+        const lines = (view.dom.firstChild as HTMLElement).getBoundingClientRect()
+        if (synthetic || (event.clientX >= lines.left && event.clientX <= lines.right)) {
+          onLines = defaultPosition
+          return defaultPosition
+        }
+        return onLines ?? defaultPosition
+      },
+    },
   }
 }
 
