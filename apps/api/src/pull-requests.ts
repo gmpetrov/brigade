@@ -405,26 +405,28 @@ export const waitingNow = {
 /**
  * Those waiting on a person now, newest first, with the thread that opened each and where its
  * review stands. `putAway`: threads the member put away for later (src/later.ts), whose pull
- * requests and their children's are left out.
+ * requests and their children's are left out. `startedBy`: only those of threads this member
+ * started, for a member who may not merge (owners and admins see them all).
  */
-export async function needsAttention(db: ScopedDb, putAway: string[] = []) {
+export async function needsAttention(
+  db: ScopedDb,
+  putAway: string[] = [],
+  options: { startedBy?: string } = {},
+) {
+  const where: Prisma.PullRequestWhereInput[] = [waitingNow]
+  if (putAway.length)
+    where.push({
+      OR: [
+        { sessionId: null },
+        {
+          sessionId: { notIn: putAway },
+          session: { OR: [{ parentId: null }, { parentId: { notIn: putAway } }] },
+        },
+      ],
+    })
+  if (options.startedBy) where.push({ session: { startedByMemberId: options.startedBy } })
   const rows = await db.pullRequest.findMany({
-    where: putAway.length
-      ? {
-          AND: [
-            waitingNow,
-            {
-              OR: [
-                { sessionId: null },
-                {
-                  sessionId: { notIn: putAway },
-                  session: { OR: [{ parentId: null }, { parentId: { notIn: putAway } }] },
-                },
-              ],
-            },
-          ],
-        }
-      : waitingNow,
+    where: { AND: where },
     orderBy: { updatedAt: 'desc' },
     take: 50,
     select: {

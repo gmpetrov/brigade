@@ -224,3 +224,38 @@ test(
     assert.deepEqual(await numbers([t.id]), [103, 104])
   },
 )
+
+test(
+  'for a member who may not merge, only those of the threads they started',
+  { skip },
+  async () => {
+    const mine = await thread()
+    const theirs = await prisma.session.update({
+      where: { id: (await thread()).id },
+      data: { startedByMemberId: ids.members[1]! },
+    })
+    const pr = (sessionId: string | null, n: number) =>
+      prisma.pullRequest.create({
+        data: {
+          ...scope,
+          sessionId,
+          repository: 'acme/members',
+          number: n,
+          title: `PR ${n}`,
+          headRef: `m${n}`,
+          baseRef: 'main',
+          mergeStatus: sessionId ? 'none' : 'stuck',
+        },
+      } as never)
+    await pr(mine.id, 201)
+    await pr(theirs.id, 202)
+    await pr(null, 203)
+    const numbers = async (startedBy?: string) =>
+      (await needsAttention(scoped(scope), [], { startedBy }))
+        .filter((p) => p.repository === 'acme/members')
+        .map((p) => p.number)
+        .sort()
+    assert.deepEqual(await numbers(), [201, 202, 203])
+    assert.deepEqual(await numbers(ids.members[1]!), [202])
+  },
+)
