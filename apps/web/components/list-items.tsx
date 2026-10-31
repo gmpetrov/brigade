@@ -17,7 +17,7 @@ import { Check, ChevronDown, GitPullRequest, ListChecks } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
-import { useDashboard } from '@/components/dashboard'
+import { timeAgo, useDashboard } from '@/components/dashboard'
 import { ThreadStatusIcon } from '@/components/sidebar-threads'
 import { useThreadPanel } from '@/components/thread-panel'
 import { Button } from '@/components/ui/button'
@@ -42,8 +42,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Hint } from '@/components/ui/tooltip'
 import { api, useApi, type ThreadSummary } from '@/lib/api'
 import { handToThread } from '@/lib/hand-off'
+import type { RecentDay } from '@/lib/recently-done'
 import { groupOf } from '@/lib/sub-threads'
-import { cn } from '@/lib/utils'
+import { cn, dayLabel } from '@/lib/utils'
 
 /** What a list's views follow: its items, their threads and pull requests, and its file. */
 export const LIST_LIVE = [
@@ -559,6 +560,60 @@ export function ThreadItemsCard({ threadId, className }: { threadId: string; cla
           ))}
         </ul>
       )}
+    </section>
+  )
+}
+
+// ---- Recently done ----------------------------------------------------------------------------
+
+/**
+ * Above a list's Done filter: the items Brigade ticked lately, newest first, by day, each with who
+ * ticked it and the pull requests and threads that did it. Lines a person ticked have no date and
+ * stay in the list below (`recentlyDone`).
+ */
+export function RecentlyDone({ days }: { days: RecentDay[] }) {
+  return (
+    <section aria-label="Recently done" className="flex flex-col gap-1.5">
+      <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        Recently done
+      </h2>
+      <div className="rounded-2xl border bg-card px-2 py-1.5 shadow-sm">
+        {days.map(({ day, items: done }) => (
+          <div key={day}>
+            <p className="px-2 pt-2 pb-0.5 text-xs text-muted-foreground">
+              {dayLabel(done[0]!.doneBy!.at)}
+            </p>
+            <ul className="flex flex-col">
+              {done.map((item) => (
+                <li key={item.id} className="flex items-start gap-2.5 rounded-lg px-2 py-1.5">
+                  <span
+                    aria-hidden
+                    className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-[5px] border-[1.5px] border-primary bg-primary text-primary-foreground"
+                  >
+                    <Check className="size-3" strokeWidth={3} />
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm leading-snug">
+                    {plainItemText(item.text)}
+                    <span className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      <span className="mr-1">
+                        {item.doneBy!.name}
+                        {Date.now() - Date.parse(item.doneBy!.at) < 86_400_000 &&
+                          ` · ${timeAgo(item.doneBy!.at)}`}
+                      </span>
+                      {item.pulls.map((p) => (
+                        <PullChip key={`${p.repository}#${p.number}`} pull={p} />
+                      ))}
+                      {item.threads.map((t) => (
+                        <ThreadChip key={t.id} thread={t} />
+                      ))}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </section>
   )
 }
