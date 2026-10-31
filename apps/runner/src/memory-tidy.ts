@@ -17,7 +17,6 @@ import {
   type MemoryFileRef,
   type MemoryLineMeta,
   type MemoryScope,
-  withoutShownDay,
 } from '@brigade/contracts'
 import { z } from 'zod'
 import { memoryDay, numberedMemory } from './memory-layers.js'
@@ -69,14 +68,33 @@ export function inWords(reason: string | undefined, lines: string[]) {
 
 /** Lines named by number, or by their text when a run writes that instead. */
 export const LineRef = z.union([z.number().int(), z.string()])
+/** A memory file as a run read it: each line's text and the day shown after it, by number less one. */
+export type ReadLines = { lines: string[]; notes: string[] }
+
 /**
  * The line a run names, by its number or its text: its text as the file has it, which is
- * how the API finds it. A text is matched with or without the day the run read after it.
+ * how the API finds it. A text is the line's own, or the line as the run read it, with
+ * its day after it; a line's own text wins, so a day in a line's text is never a guess.
  */
-export function lineAt(lines: string[], ref: number | string): string | null {
-  if (typeof ref === 'number') return lines[ref - 1] ?? null
-  const key = memoryLineKey(withoutShownDay(ref))
-  return lines.find((l) => memoryLineKey(withoutShownDay(l)) === key) ?? (ref.trim() || null)
+export function lineAt(file: ReadLines, ref: number | string): string | null {
+  if (typeof ref === 'number') return file.lines[ref - 1] ?? null
+  const key = memoryLineKey(ref)
+  const own = file.lines.find((l) => memoryLineKey(l) === key)
+  if (own !== undefined) return own
+  const read = file.lines.findIndex((l, i) => memoryLineKey(`${l}${file.notes[i] ?? ''}`) === key)
+  return read >= 0 ? file.lines[read]! : ref.trim() || null
+}
+
+/**
+ * A line a run wrote in place of `from` (a line's text), without the day the run
+ * read after `from` when it copied it onto the end: that day is memory's, not the line's,
+ * and would show twice. A day `from` had in its own text is the line's, and stays.
+ */
+export function withoutCopiedDay(text: string, file: ReadLines, from: string) {
+  const i = file.lines.indexOf(from)
+  const day = i >= 0 ? file.notes[i]!.trim() : ''
+  if (!day || from.endsWith(day) || !text.endsWith(day)) return text
+  return text.slice(0, -day.length).trimEnd()
 }
 /** A list that keeps the items it can read and drops the others. */
 export const lenientList = <T extends z.ZodTypeAny>(item: T) =>
@@ -169,7 +187,7 @@ export function tidyRun(file: TidyFile, now = new Date()) {
     const parsed = Answer.safeParse(json)
     if (!parsed.success) return null
     const answer = parsed.data
-    const line = (ref: number | string) => lineAt(numbered.lines, ref)
+    const line = (ref: number | string) => lineAt(numbered, ref)
     const lines = (refs: (number | string)[]) =>
       refs.flatMap((r) => {
         const text = line(r)
@@ -186,11 +204,14 @@ export function tidyRun(file: TidyFile, now = new Date()) {
           lines: lines(t.lines).slice(0, 400),
         })),
       merge: answer.merge
-        .map((m) => ({
-          from: lines(m.lines).slice(0, 20),
-          text: withoutShownDay(m.text.trim().replace(/\s*\n\s*/g, ' ')).slice(0, 1000),
-          topic: m.topic?.trim().slice(0, 60) || null,
-        }))
+        .map((m) => {
+          const from = lines(m.lines).slice(0, 20)
+          const text = from.reduce(
+            (t, f) => withoutCopiedDay(t, numbered, f),
+            m.text.trim().replace(/\s*\n\s*/g, ' '),
+          )
+          return { from, text: text.slice(0, 1000), topic: m.topic?.trim().slice(0, 60) || null }
+        })
         .filter((m) => m.from.length >= 1 && m.text)
         .slice(0, 100),
       archive: answer.archive

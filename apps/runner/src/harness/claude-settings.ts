@@ -32,15 +32,14 @@ const DENIED_TOOLS = [
 
 /**
  * Claude Code's bundled skills that are about Claude Code itself, or that Brigade does
- * otherwise: its schedules (loop, schedule), the CLAUDE.md it writes (init), previews
- * (run), reviews (code-review, which reports with ReportFindings).
+ * otherwise: its schedules (loop, schedule), the CLAUDE.md it writes (init), previews (run).
+ * Its review skills (code-review, security-review, simplify) stay: a reviewer uses them.
  */
 const SKILLS_OFF = [
   'loop',
   'schedule',
   'init',
   'run',
-  'code-review',
   'workflow-authoring',
   'update-config',
   'keybindings-help',
@@ -48,14 +47,24 @@ const SKILLS_OFF = [
   'plugin-authoring',
 ]
 
-export const CLAUDE_SETTINGS = {
-  // Memory is Brigade's (CLAUDE.md's memory sections); Claude Code's own would be a second one.
-  autoMemoryEnabled: false,
-  permissions: { deny: DENIED_TOOLS },
-  skillOverrides: Object.fromEntries(SKILLS_OFF.map((name) => [name, 'off'])),
+/**
+ * Brigade's settings for a session whose skills (the workspace's, written to its folder) have
+ * these names. Claude Code turns a skill off by its name, whatever it comes from, so a
+ * workspace skill named like a bundled one keeps its name on, and the bundled one with it.
+ */
+export function claudeSettings(skillNames: readonly string[] = []) {
+  const ours = new Set(skillNames)
+  return {
+    // Memory is Brigade's (CLAUDE.md's memory sections); Claude Code's own would be a second one.
+    autoMemoryEnabled: false,
+    permissions: { deny: DENIED_TOOLS },
+    skillOverrides: Object.fromEntries(
+      SKILLS_OFF.filter((name) => !ours.has(name)).map((name) => [name, 'off' as const]),
+    ),
+  }
 }
 
 /** The environment that gives a Claude Code session Brigade's settings. */
-export const claudeSettingsEnv = (): Record<string, string> => ({
-  BRIGADE_CLAUDE_SETTINGS: JSON.stringify(CLAUDE_SETTINGS),
+export const claudeSettingsEnv = (skillNames: readonly string[] = []): Record<string, string> => ({
+  BRIGADE_CLAUDE_SETTINGS: JSON.stringify(claudeSettings(skillNames)),
 })

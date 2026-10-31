@@ -1692,7 +1692,7 @@ export class HarnessThread {
           : {
               ...env,
               ...terminalTools(tools),
-              ...claudeSettingsEnv(),
+              ...claudeSettingsEnv((this.spec.skills ?? []).map((s) => s.name)),
               ...(this.spec.suggestions ? { BRIGADE_PROMPT_SUGGESTIONS: '1' } : {}),
             },
       ...(this.runAs ? { runAs: this.runAs, thread: this.spec.sessionId } : {}),

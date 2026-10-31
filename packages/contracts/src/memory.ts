@@ -30,15 +30,6 @@ export const memoryLineText = (raw: string) => raw.replace(BULLET, '').trim()
 /** What tells lines apart: the text, any case, any spacing. */
 export const memoryLineKey = (raw: string) => memoryLineText(raw).replace(/\s+/g, ' ').toLowerCase()
 
-/** The days memory shows after a line, one or more: " (19 Oct)", " (before 19 Oct 2025, by Ada)". */
-const SHOWN_DAY =
-  /(?:\s*\((?:before )?\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?: \d{4})?(?:, by [^()]*)?\))+$/
-/**
- * A line's text without the days shown after it. Memory and tidy runs read each
- * line with its day after it, and may copy that day into a line they write,
- * which would then show two: its own and the copied one.
- */
-export const withoutShownDay = (text: string) => text.replace(SHOWN_DAY, '').trimEnd()
 /** A topic's name as compared. */
 const topicKey = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase()
 
