@@ -80,6 +80,7 @@ import { localPreviewUrl } from '../preview-gateway.js'
 import {
   currentTeammate,
   loadThread,
+  noteAsker,
   requireMayPrompt,
   specFor,
   teammateIn,
@@ -1364,6 +1365,8 @@ export const threads = new Hono<AppEnv>()
         }),
       )
     }
+    // Allowed, or told why not: what the teammate goes on with is theirs now.
+    if (input.approved || input.reason) await noteAsker(db, thread.id, scope.memberId)
     await deliver(thread.computer, {
       type: 'thread.approval',
       commandId: randomUUID(),

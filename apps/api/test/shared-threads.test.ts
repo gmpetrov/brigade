@@ -441,14 +441,17 @@ describe('threads others write in', { skip: !database && 'no database answers' }
     }
   })
 
-  test('a child thread acts for whoever asked its parent', async () => {
+  test('work passed on keeps whose request it is', async () => {
     const id = await thread('ada', cloud)
     const connectionId = await privateGmail()
-    await say(id, 1, 'message.user', member('bob'))
-    const { handleChildCall } = await import('../src/children.js')
+    const { handleChildCall, messageChild } = await import('../src/children.js')
     const { loadThread, askedBy } = await import('../src/thread-spec.js')
     const conn = await runner()
     try {
+      // Bob asks in Ada's thread; its teammate starts a child for it.
+      const asked = await call('bob', `/${id}/messages`, { body: { text: 'Read the inbox' } })
+      assert.equal(asked.status, 200, await asked.clone().text())
+      assert.equal(await askedBy(db, id), member('bob'))
       const result = (await handleChildCall(
         db,
         { organizationId: org, workspaceId },
@@ -457,8 +460,68 @@ describe('threads others write in', { skip: !database && 'no database answers' }
         { name: 'start_child', title: 'Read the inbox', instructions: 'Read it', wait: false },
       )) as { threadId?: string }
       assert.ok(result.threadId, JSON.stringify(result))
-      assert.equal(await askedBy(db, result.threadId), member('bob'))
-      assert.match(await searchPrivate(result.threadId, connectionId), /used only when they ask/)
+      const child = result.threadId
+      assert.equal(await askedBy(db, child), member('bob'))
+      assert.match(await searchPrivate(child, connectionId), /used only when they ask/)
+      // Ada writes in the parent about something else: the child still works for Bob.
+      assert.equal(
+        (await call('ada', `/${id}/messages`, { body: { text: 'Unrelated' } })).status,
+        200,
+      )
+      assert.equal(await askedBy(db, child), member('bob'))
+      assert.match(await searchPrivate(child, connectionId), /used only when they ask/)
+      // Her request passed on to it (message_thread): it works for her now.
+      const passed = await messageChild(
+        db,
+        { organizationId: org, workspaceId },
+        { id, title: 'Launch notes' },
+        { id: riley, name: 'Riley' },
+        child,
+        'Check her inbox',
+      )
+      assert.ok('ok' in passed, JSON.stringify(passed))
+      assert.equal(await askedBy(db, child), member('ada'))
+      assert.doesNotMatch(await searchPrivate(child, connectionId), /used only when they ask/)
+    } finally {
+      conn.close()
+    }
+  })
+
+  test('an answer to the teammate makes its author the one asking', async () => {
+    const { answerQuestion } = await import('../src/decide.js')
+    const { askedBy, noteAsker } = await import('../src/thread-spec.js')
+    const id = await thread('ada', cloud)
+    await noteAsker(db, id, member('ada'))
+    const ask = () =>
+      db.ticket.create({
+        data: {
+          sessionId: id,
+          type: 'question',
+          title: 'Riley asks',
+          payload: {
+            source: 'harness',
+            questionId: `q-${randomUUID()}`,
+            questions: [{ id: 'q', question: 'Which inbox?', options: [{ id: 'a', label: 'A' }] }],
+          },
+        } as never,
+      })
+    const scope = {
+      organizationId: org,
+      workspaceId,
+      userId: user('bob'),
+      memberId: member('bob'),
+      role: 'member' as const,
+    }
+    const conn = await runner()
+    try {
+      // Declining asks for nothing.
+      await answerQuestion(scope, (await ask()).id, { action: 'declined' })
+      assert.equal(await askedBy(db, id), member('ada'))
+      await answerQuestion(scope, (await ask()).id, {
+        action: 'answered',
+        answers: { q: { optionIds: ['a'] } },
+      } as never)
+      assert.equal(await askedBy(db, id), member('bob'))
     } finally {
       conn.close()
     }

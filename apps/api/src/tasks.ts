@@ -26,7 +26,13 @@ import { projectRefusal } from './task-project.js'
 import { usableAccounts } from './routes/accounts.js'
 import type { WorkspaceScope } from './scope.js'
 import { pullWaitsOnPerson, REVIEW_THREAD } from './review-state.js'
-import { actingTeammate, currentTeammate, loadThread, requireMayPrompt } from './thread-spec.js'
+import {
+  actingTeammate,
+  askedBy,
+  currentTeammate,
+  loadThread,
+  requireMayPrompt,
+} from './thread-spec.js'
 import { joinThread, promptThread, startThread } from './work.js'
 
 /** What the board shows of a task and its thread. */
@@ -239,8 +245,8 @@ export type By = {
   scope: Scope
   memberId: string
   actor: Actor
-  /** A teammate's call: its name and its thread's title, which the threads it starts name. */
-  from?: { name: string; threadTitle: string }
+  /** A teammate's call: its name and its thread, which the threads it starts name. */
+  from?: { name: string; threadTitle: string; sessionId: string }
 }
 
 export const byMember = (scope: WorkspaceScope): By => ({
@@ -564,6 +570,8 @@ async function startTask(
         ? taskBrief({ ...task, from: by.from.name, threadTitle: by.from.threadTitle })
         : brief(task),
       ...(by.actor.type === 'teammate' ? { byTeammateId: by.actor.id } : {}),
+      // Started by a teammate, for whoever asked it in its thread.
+      ...(by.from ? { askedByMemberId: await askedBy(db, by.from.sessionId) } : {}),
       taskId: task.id,
       projectId: task.projectId,
     })
@@ -1119,7 +1127,7 @@ export async function handleTaskCall(
     scope,
     memberId: session.startedByMemberId,
     actor: { type: 'teammate', id: teammate.id },
-    from: { name: teammate.name, threadTitle: session.title },
+    from: { name: teammate.name, threadTitle: session.title, sessionId: session.id },
   }
   const op = call.operation
   if (session.playbookRunId) {
@@ -1325,6 +1333,8 @@ export async function handleTaskCall(
         const outcome = await promptThread(db, scope, target, {
           text: taskComment({ from: teammate.name, threadTitle: session.title, text: op.text }),
           memberId: null,
+          // Whoever asked for it here asks that thread now.
+          onBehalfOf: await askedBy(db, session.id),
           ...(task.teammateId && target.teammates.some((t) => t.teammateId === task.teammateId)
             ? { teammateIds: [task.teammateId] }
             : {}),

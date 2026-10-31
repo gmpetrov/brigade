@@ -466,6 +466,7 @@ export const SessionScalarFieldEnum = {
   private: 'private',
   othersMayPrompt: 'othersMayPrompt',
   controlledByMemberId: 'controlledByMemberId',
+  askedByMemberId: 'askedByMemberId',
   origin: 'origin',
   parentId: 'parentId',
   parentTeammateId: 'parentTeammateId',

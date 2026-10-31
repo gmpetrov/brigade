@@ -584,6 +584,10 @@ model Session {
   othersMayPrompt      Boolean            @default(false)
   /// Set while a member has taken over the thread; the teammate does not act meanwhile.
   controlledByMemberId String?
+  /// The member whose request its teammate works on now: who last wrote or answered in it, or,
+  /// for work a teammate passed on (a child, a task, message_thread), who had asked for it there.
+  /// A member's own App account answers only them (src/connector-calls.ts).
+  askedByMemberId      String?
   /// member: a member's message. trigger: an outside event. schedule: a schedule's instructions, at its time.
   /// child: a teammate started it from its parent thread (start_child).
   origin               SessionOrigin      @default(member)

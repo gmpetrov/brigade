@@ -28,7 +28,7 @@ import type { WorkspaceScope } from './scope.js'
 import { decidePromotion } from './playbook-autonomy.js'
 import { decideActivation } from './playbooks.js'
 import { decideSkillProposal } from './skills.js'
-import { loadThread, specFor, teammateIn } from './thread-spec.js'
+import { loadThread, noteAsker, specFor, teammateIn } from './thread-spec.js'
 import { handBack, joinThread, promptThread } from './work.js'
 
 /**
@@ -74,6 +74,8 @@ export async function answerQuestion(
     }
   }
   const thread = await loadThread(db, ticket.sessionId)
+  // What they answer the teammate goes on with: their request now.
+  if (answer.action !== 'declined') await noteAsker(db, thread.id, scope.memberId)
   const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
     type: 'thread.answer',
     commandId: randomUUID(),
@@ -229,6 +231,8 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
   for (const grant of grants) holders.push(await accessHolder(db, asker, grant.app.teammate))
   for (const [i, account] of accounts.entries())
     await grantAccount(db, scope, holders[i]!.id, account, grants[i]!.app.scope)
+  // What they answer the teammate goes on with: their request now.
+  if (answer.action !== 'declined') await noteAsker(db, thread.id, scope.memberId)
   const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
     type: 'thread.ticket',
     commandId: randomUUID(),
@@ -600,6 +604,8 @@ export async function resolveTicket(
     if (!ticket.sessionId || !payload.approvalId)
       throw new HTTPException(409, { message: 'This approval has no thread' })
     const thread = await loadThread(db, ticket.sessionId)
+    // Allowed, or told why not: what the teammate goes on with is theirs now.
+    if (input.approved || input.reason) await noteAsker(db, thread.id, scope.memberId)
     const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
       type: 'thread.approval',
       commandId: randomUUID(),

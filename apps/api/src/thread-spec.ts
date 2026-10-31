@@ -327,12 +327,17 @@ export async function specFor(
 }
 
 /**
- * The member who asked for what a thread's teammate does now: the author of its latest person's
- * input (a message, or an answer to its question, ticket or approval). A child thread nobody
- * wrote in acts for whoever asked its parent. Null when no person wrote lately (a trigger's, a
- * routine's thread).
+ * The member whose request a thread's teammate works on now (Session.askedByMemberId): who last
+ * wrote or answered in it, or who had asked for the work a teammate passed on to it. Null when
+ * no person asked (a trigger's, a routine's thread). Threads from before it was kept: the
+ * author of their latest person's input.
  */
 export async function askedBy(db: ScopedDb, sessionId: string): Promise<string | null> {
+  const thread = await db.session.findFirst({
+    where: { id: sessionId },
+    select: { askedByMemberId: true },
+  })
+  if (thread?.askedByMemberId) return thread.askedByMemberId
   const latest = await db.sessionEvent.findMany({
     where: {
       sessionId,
@@ -346,11 +351,12 @@ export async function askedBy(db: ScopedDb, sessionId: string): Promise<string |
     const memberId = (data as { memberId?: string | null } | null)?.memberId
     if (memberId) return memberId
   }
-  const thread = await db.session.findFirst({
-    where: { id: sessionId },
-    select: { parentId: true },
-  })
-  return thread?.parentId ? askedBy(db, thread.parentId) : null
+  return null
+}
+
+/** A member wrote, answered or decided in a thread: its teammate works on their request now. */
+export async function noteAsker(db: ScopedDb, sessionId: string, memberId: string) {
+  await db.session.updateMany({ where: { id: sessionId }, data: { askedByMemberId: memberId } })
 }
 
 /** Prompting or approving: its starter, or any member but a viewer once it is open (mayWrite). */
