@@ -7,6 +7,7 @@ import {
   forPeople,
   fromTaskBrief,
   fromTaskComment,
+  handOffParts,
   mentionsToText,
   resolveConflictsNote,
   scheduledRunNote,
@@ -92,11 +93,27 @@ export function brigadeNote(text: string, fromBrigade: boolean): BrigadeNote | n
   return { icon: Info, label: 'From Brigade', body: forPeople(text) }
 }
 
+/**
+ * Lines of a list a person handed over (handOffMessage), with no note of theirs: what they handed
+ * over and from where, rather than the request it is worded as for the teammate.
+ */
+export function handOffNote(text: string): BrigadeNote | null {
+  const handOff = handOffParts(text)
+  if (!handOff) return null
+  const count = handOff.items.length
+  return {
+    icon: ListTodo,
+    label: `Handed over ${count} ${count > 1 ? 'items' : 'item'} of ${handOff.file.path.split('/').pop()}`,
+    body: handOff.items.map((item) => `- ${item}`).join('\n'),
+  }
+}
+
 const firstLine = (body: string) =>
   mentionsToText(body)
     .split('\n')
     .find((line) => line.trim())
-    ?.trim() ?? ''
+    ?.trim()
+    .replace(/^[-*] +/, '') ?? ''
 
 /** Its first line, for a queued message's preview. */
 export const notePreview = (note: BrigadeNote) => firstLine(note.body)
