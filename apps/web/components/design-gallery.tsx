@@ -2,7 +2,8 @@
 // Every design in the library, newest first: its picture (the thumbnail
 // save_design renders), name, folder and who changed it last. Opens beside
 // the page. Options offered for one design (an options folder) are one card
-// until someone picks. A design system's preview is left to the Design systems tab.
+// until someone picks. A design system's preview is left to its card, under
+// Design systems above the gallery.
 import {
   DESIGN_OPTIONS_SUFFIX,
   DESIGN_THUMBNAIL,

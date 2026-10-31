@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { timeAgo } from '@/components/dashboard'
 import { DesignGallery } from '@/components/design-gallery'
-import { DesignSystems } from '@/components/design-systems'
+import { DesignSystemsBar } from '@/components/design-systems'
 import { MemoryCard } from '@/components/memory-card'
 import { useDocumentPanel } from '@/components/document-panel'
 import {
@@ -47,7 +47,7 @@ export default function LibraryPage() {
   )
 }
 
-type Tab = 'files' | 'designs' | 'memory' | 'design-systems' | 'trash'
+type Tab = 'files' | 'designs' | 'memory' | 'trash'
 
 function LibraryView() {
   const params = useSearchParams()
@@ -57,6 +57,7 @@ function LibraryView() {
   const teammates = useApi<Teammate[]>('/teammates', ['teammates.updated'])
   const me = useApi<Me>('/me')
   const [tab, setTab] = useState<Tab>('files')
+  const [managing, setManaging] = useState(false)
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState<'file' | 'folder' | null>(null)
   const view = useLibrarySort()
@@ -89,7 +90,14 @@ function LibraryView() {
   )
   useEffect(() => {
     const asked = focus || focusDesign ? 'files' : params.get('tab')
-    const tabs: Tab[] = ['files', 'designs', 'memory', 'design-systems', 'trash']
+    // Design systems were a tab of their own: they open beside the designs now.
+    if (asked === 'design-systems') {
+      setTab('designs')
+      setManaging(true)
+      setQuery('')
+      return
+    }
+    const tabs: Tab[] = ['files', 'designs', 'memory', 'trash']
     if (!tabs.includes(asked as Tab)) return
     setTab(asked as Tab)
     setQuery('')
@@ -219,13 +227,12 @@ function LibraryView() {
           onFile={() => setQuery('')}
         />
       ) : (
-        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <Tabs value={tab} onValueChange={(v) => (setTab(v as Tab), setManaging(false))}>
           <div className="flex items-center gap-2">
             <TabsList className="min-w-0 justify-start overflow-x-auto">
               <TabsTrigger value="files">Files</TabsTrigger>
               <TabsTrigger value="memory">Memory</TabsTrigger>
               <TabsTrigger value="designs">Designs</TabsTrigger>
-              <TabsTrigger value="design-systems">Design systems</TabsTrigger>
               <TabsTrigger value="trash">Trash</TabsTrigger>
             </TabsList>
             {tab === 'files' && <LibraryViewSwitch view={view} className="ml-auto shrink-0" />}
@@ -247,17 +254,17 @@ function LibraryView() {
             />
           </TabsContent>
           <TabsContent value="designs" className="flex flex-col gap-4 pt-2">
+            <DesignSystemsBar
+              tree={tree.data}
+              teammates={teammates.data}
+              admin={me.data ? isAdmin(me.data) : false}
+              open={managing}
+              onOpenChange={setManaging}
+            />
             <DesignGallery tree={tree.data} />
           </TabsContent>
           <TabsContent value="memory" className="flex flex-col gap-4 pt-2">
             <Memory overview={memory.data} reload={memory.reload} />
-          </TabsContent>
-          <TabsContent value="design-systems" className="flex flex-col gap-4 pt-2">
-            <DesignSystems
-              tree={tree.data}
-              teammates={teammates.data}
-              admin={me.data ? isAdmin(me.data) : false}
-            />
           </TabsContent>
           <TabsContent value="trash" className="flex flex-col gap-4 pt-2">
             <LibraryTrash
