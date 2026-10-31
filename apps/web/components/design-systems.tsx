@@ -92,6 +92,8 @@ export function DesignSystemsBar({
   const systems = useApi<DesignSystem[]>('/design-systems')
   const [preview, setPreview] = useState<string>()
   const none = systems.data?.length === 0
+  const hasPreview = (system: DesignSystem) =>
+    !!tree?.files.some((f) => f.path === `${system.path}/${PREVIEW}/index.html`)
 
   return (
     <>
@@ -102,14 +104,29 @@ export function DesignSystemsBar({
           {systems.data?.map((system, i) => (
             // On a phone, the first one only: the rest are a tap on Manage away.
             <li key={system.id} className={i > 0 ? 'max-sm:hidden' : undefined}>
-              <Badge variant="outline" className="h-7 gap-1.5 rounded-full px-2.5 text-sm">
-                <Palette aria-hidden className="text-primary" />
-                {system.name}
-                {system.isDefault && (
-                  <Badge variant="secondary" className="px-1.5 text-[0.6875rem]">
-                    Default
-                  </Badge>
-                )}
+              <Badge
+                asChild
+                variant="outline"
+                className="h-7 gap-1.5 rounded-full px-2.5 text-sm transition hover:border-primary/40 hover:bg-accent"
+              >
+                <button
+                  type="button"
+                  // Its preview when it has one, else its card beside the page.
+                  onClick={() =>
+                    hasPreview(system)
+                      ? setPreview(`${system.path}/${PREVIEW}`)
+                      : onOpenChange(true)
+                  }
+                  aria-label={hasPreview(system) ? `Preview ${system.name}` : `Open ${system.name}`}
+                >
+                  <Palette aria-hidden className="text-primary" />
+                  {system.name}
+                  {system.isDefault && (
+                    <Badge variant="secondary" className="px-1.5 text-[0.6875rem]">
+                      Default
+                    </Badge>
+                  )}
+                </button>
               </Badge>
             </li>
           ))}
