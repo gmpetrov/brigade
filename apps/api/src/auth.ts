@@ -2,7 +2,13 @@ import { type BetterAuthPlugin, betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { APIError } from 'better-auth/api'
 import { captcha, emailOTP, organization } from 'better-auth/plugins'
-import { adminAc, defaultAc, memberAc, ownerAc } from 'better-auth/plugins/organization/access'
+import { createAccessControl } from 'better-auth/plugins/access'
+import {
+  adminAc,
+  defaultStatements,
+  memberAc,
+  ownerAc,
+} from 'better-auth/plugins/organization/access'
 import { HTTPException } from 'hono/http-exception'
 import { recordSignup } from './analytics.js'
 import { audit } from './audit.js'
@@ -36,6 +42,9 @@ function limitOf(request: Request, rule: { window: number; max: number }) {
   if (path === '/sign-in/email-otp') return { window: 60, max: 10 }
   return rule
 }
+
+/** The organization plugin's roles: its default three, and a viewer. */
+const access = createAccessControl(defaultStatements)
 
 export const auth = betterAuth({
   baseURL: env.API_URL,
@@ -120,8 +129,13 @@ export const auth = betterAuth({
     organization({
       // The default roles, and a viewer, who reads the workspace and changes nothing in it
       // (src/viewers.ts): in the organization's own terms, what a member may.
-      ac: defaultAc,
-      roles: { owner: ownerAc, admin: adminAc, member: memberAc, viewer: memberAc },
+      ac: access,
+      roles: {
+        owner: access.newRole(ownerAc.statements),
+        admin: access.newRole(adminAc.statements),
+        member: access.newRole(memberAc.statements),
+        viewer: access.newRole(memberAc.statements),
+      },
       // An invitation goes to an address: only its proven owner may take it.
       requireEmailVerificationOnInvitation: true,
       invitationExpiresIn: INVITATION_DAYS * 24 * 60 * 60,
