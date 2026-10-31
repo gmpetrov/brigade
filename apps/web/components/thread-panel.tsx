@@ -124,11 +124,9 @@ type ThreadPanel = {
   teammateId?: string
   chooseTeammate: (id: string) => void
   /**
-   * Where a teammate opens from the sidebar: expanded, on the thread last open with it in
-   * this browser, else its latest; its list when it has none yet.
+   * A teammate picked from the sidebar: a new thread with it, its box focused. Its threads
+   * are in the sidebar's list, which the pick narrows to them.
    */
-  teammateHref: (teammateId: string) => string
-  /** Goes there, looking further back than the latest threads loaded here if need be. */
   openTeammate: (teammateId: string) => void
   /**
    * A teammate's computer, a page like any other (/app/teammates/<id>/computer):
@@ -145,8 +143,6 @@ type ThreadPanel = {
 
 const Context = createContext<ThreadPanel | null>(null)
 const OPEN_KEY = 'brigade:threads-panel'
-/** The thread last open with each teammate, by the teammate that leads it. */
-const LAST_THREADS_KEY = 'brigade:teammate-threads'
 /** Its name among the panels beside a page. */
 const PANEL = 'threads'
 
@@ -163,15 +159,6 @@ function readSaved(): { open: boolean; threadId: string | null } {
     }
   } catch {
     return { open: false, threadId: null }
-  }
-}
-
-function readLastThreads(): Record<string, string> {
-  try {
-    const saved = JSON.parse(localStorage.getItem(LAST_THREADS_KEY) ?? 'null') as unknown
-    return saved && typeof saved === 'object' ? (saved as Record<string, string>) : {}
-  } catch {
-    return {}
   }
 }
 
@@ -387,8 +374,6 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
     return { activity, waiting }
   }, [threads.data])
 
-  // The thread last open with each teammate, docked or expanded, for the sidebar to go back to.
-  const [lastThreads, setLastThreads] = useState(readLastThreads)
   const threadList = threads.data
   // The thread shown here is read by this member: as it opens, and again each time a reply
   // comes in while it shows in a tab in front. The sidebar then shows it read.
@@ -409,41 +394,12 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       .then(() => reloadThreads())
       .catch(() => {})
   }, [showing, unreadShowing, reloadThreads])
-  useEffect(() => {
-    const lead = threadId && threadList?.find((t) => t.id === threadId)?.teammate.id
-    if (!lead || lastThreads[lead] === threadId) return
-    const next = { ...lastThreads, [lead]: threadId }
-    setLastThreads(next)
-    try {
-      localStorage.setItem(LAST_THREADS_KEY, JSON.stringify(next))
-    } catch {}
-  }, [threadId, threadList, lastThreads])
-  const teammateHref = useCallback(
-    (teammate: string) => {
-      // The latest active first: the remembered one while it is still there, else the latest.
-      const list = (threadList ?? []).filter(
-        (t) => t.teammate.id === teammate || t.teammates?.some((p) => p.teammate.id === teammate),
-      )
-      const last = list.find((t) => t.id === lastThreads[teammate]) ?? list[0]
-      return last ? `/app/threads/${last.id}` : '/app/threads'
-    },
-    [threadList, lastThreads],
-  )
   const openTeammate = useCallback(
-    async (teammate: string) => {
+    (teammate: string) => {
       chooseTeammate(teammate)
-      let href = teammateHref(teammate)
-      // None among the latest loaded here: its own latest, if it has any.
-      if (!routeThread(href)) {
-        const [latest] = await api<ThreadSummary[]>(
-          `/threads?teammateId=${teammate}&limit=1&sort=activity`,
-        ).catch(() => [])
-        if (latest) href = `/app/threads/${latest.id}`
-      }
-      go(href)
+      newThreadPage()
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [teammateHref, go],
+    [chooseTeammate, newThreadPage],
   )
 
   const value = useMemo(
@@ -477,7 +433,6 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       setCovered,
       teammateId,
       chooseTeammate,
-      teammateHref,
       openTeammate,
       openComputer,
       computerPage,
@@ -513,7 +468,6 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       covered,
       teammateId,
       chooseTeammate,
-      teammateHref,
       openTeammate,
       openComputer,
       computerPage,
