@@ -12,6 +12,8 @@ const OWN_WRITES: [string, RegExp][] = [
   // Reading a thread's preview or code changes nothing.
   ['POST', /^\/api\/threads\/[^/]+\/preview$/],
   ['POST', /^\/api\/threads\/[^/]+\/code\/hashes$/],
+  // Opening a document: a viewer's comes back to read only (src/routes/library.ts).
+  ['POST', /^\/api\/library\/edit$/],
   ['POST', /^\/api\/library\/[^/]+\/pin$/],
   ['DELETE', /^\/api\/library\/[^/]+\/pin$/],
   ['POST', /^\/api\/lists\/[^/]+\/pin$/],

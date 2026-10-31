@@ -49,6 +49,7 @@ const { prisma } = await import('../src/db.js')
 const { env } = await import('../src/config.js')
 const { members } = await import('../src/routes/members.js')
 const { workspaces } = await import('../src/routes/workspaces.js')
+const { library } = await import('../src/routes/library.js')
 const { invitationMail } = await import('../src/invitation-mail.js')
 
 // The routes as src/app.ts mounts them, with its error answer.
@@ -60,6 +61,7 @@ app.on(['GET', 'POST'], '/api/auth/*', (c) =>
 )
 app.route('/api', workspaces)
 app.route('/api', members)
+app.route('/api/library', library)
 app.onError((error, c) =>
   error instanceof HTTPException
     ? c.json({ error: error.message }, error.status)
@@ -496,4 +498,25 @@ test('a viewer joins, looks around and changes nothing', { skip }, async () => {
     cookie,
   })
   assert.equal(invited.status, 403)
+  // A document opens to read: no live editing, nothing created for them, no saving.
+  const memories = () =>
+    prisma.document.count({
+      where: { workspaceId: ada.workspaceId, kind: 'workspace_memory' },
+    })
+  const before = await memories()
+  const opened = await call('/api/library/edit', {
+    body: { kind: 'workspace_memory' },
+    cookie,
+  })
+  assert.equal(opened.status, 200, await opened.clone().text())
+  const session = (await opened.json()) as { readOnly?: boolean; live: unknown; documentId: string }
+  assert.equal(session.readOnly, true)
+  assert.equal(session.live, null)
+  assert.equal(await memories(), before)
+  const saved = await call(`/api/library/edit/${session.documentId}`, {
+    method: 'PUT',
+    body: { text: 'changed' },
+    cookie,
+  })
+  assert.equal(saved.status, 403)
 })
