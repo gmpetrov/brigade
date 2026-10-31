@@ -6,7 +6,7 @@
 // one waiting on its conversation): the rest of the mailbox, personal mail, is never kept.
 import { mailbox } from '@brigade/contracts'
 import type { ReceivedEmail } from '../connectors/gmail.js'
-import { scoped, type Scope, type ScopedDb } from '../db.js'
+import { scoped, type Scope } from '../db.js'
 import { BOX_DAYS } from './inbound.js'
 import { bareAddress } from './names.js'
 import { addressesIn } from './text.js'
@@ -86,67 +86,5 @@ export async function keepGmail(
         where: { box: `gmail:${connection.id}`, sourceId: email.id, sessionId: null },
         data,
       })
-  }
-}
-
-/**
- * A thread's reply with gmail_send, kept in its conversation when the Inbox keeps that
- * conversation: the Inbox shows what the teammate answered, and its turn's end can close it
- * (src/mail/outcomes.ts). The inbox reader skips sent mail, so this is its only copy. Any other
- * email it sends is not kept: the Inbox keeps only the mailbox's mail a thread took.
- */
-export async function keepGmailSent(
-  db: ScopedDb,
-  sent: {
-    connection: { id: string; externalAccount: string | null }
-    sessionId: string
-    teammateId: string
-    approvedByMemberId?: string
-    input: { to: string[]; cc?: string[]; subject: string; body: string; from?: string }
-    attachments: string[]
-    output: unknown
-  },
-) {
-  const { id, threadId } = (sent.output ?? {}) as { id?: unknown; threadId?: unknown }
-  if (typeof id !== 'string' || typeof threadId !== 'string') return
-  const box = `gmail:${sent.connection.id}`
-  const kept = await db.mailMessage.count({
-    where: { box, conversationId: threadId, direction: 'in' },
-  })
-  if (!kept) return
-  const files = sent.attachments.length
-    ? await db.attachment.findMany({
-        where: { id: { in: sent.attachments }, sessionId: sent.sessionId },
-        select: { id: true, name: true, contentType: true, size: true },
-      })
-    : []
-  try {
-    await db.mailMessage.create({
-      data: {
-        connectionId: sent.connection.id,
-        box,
-        sourceId: id,
-        direction: 'out',
-        status: 'sent',
-        conversationId: threadId,
-        fromAddress: bareAddress(sent.input.from ?? sent.connection.externalAccount ?? ''),
-        to: sent.input.to.map(bareAddress),
-        cc: (sent.input.cc ?? []).map(bareAddress),
-        subject: sent.input.subject.slice(0, 1000),
-        text: sent.input.body.slice(0, 100_000),
-        sessionId: sent.sessionId,
-        teammateId: sent.teammateId,
-        approvedByMemberId: sent.approvedByMemberId ?? null,
-        attachments: files.map((f) => ({
-          id: f.id,
-          filename: f.name,
-          contentType: f.contentType,
-          size: f.size,
-        })),
-      } as never,
-    })
-  } catch (error) {
-    // Kept already: the same call made again.
-    if ((error as { code?: string }).code !== 'P2002') throw error
   }
 }

@@ -193,6 +193,11 @@ export type MailboxSummary = {
   visibility: 'workspace' | 'you'
   /** Gmail: all its mail shows in the Inbox, not only what went to a thread. */
   showAll: boolean
+  /**
+   * How the email its teammates send goes, whichever its provider: on their own (auto), or each
+   * waiting for a person's approval (approve).
+   */
+  sendPolicy: 'auto' | 'approve'
 }
 
 /** One way a mailbox's mail goes to a teammate: a rule, or a playbook's (changed in it). */
@@ -216,6 +221,8 @@ export type MailboxDetail = MailboxSummary & {
   manages: boolean
   /** A Gmail account this member connected: they choose whether all its mail shows. */
   accountOwner: boolean
+  /** This member may change how its email goes: an owner or admin, or the Gmail account's owner. */
+  setsSending: boolean
   /** In the order they apply: the first that matches takes the mail. */
   rules: MailboxRule[]
   /** The teammates given it: they read it and reply from it. */

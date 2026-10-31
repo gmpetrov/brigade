@@ -125,15 +125,29 @@ sends as that address only, in every project, once its domain is verified, and r
 - at most 100 mails a day from an address, 50 recipients, 10 files, 25 MB;
 - no reply after someone already answered from the mailbox itself (`own_copy`).
 
-A mail to anyone outside the workspace waits for a person (`Operation.asks`), unless the teammate's
-`permissionPolicy.emailSends` is `allow` or a playbook's action lets it go; the approval card lets
-the person edit the draft first (`ResolveApproval.edited`, `Operation.editable`), or approve it for
-later ("Send later", which sets `sendAt`). It is handed to Resend scheduled 30 seconds ahead, or at
+**One sending rule per mailbox, whatever its provider** (`Connection.sendPolicy`, set under Mail
+settings › a mailbox › How its replies go; Brigade's addresses by an owner or admin, a Gmail account
+also by the member who connected it): `auto` (every mailbox's to start with) lets its teammates send
+on their own, `approve` makes each email (`email_send`, `gmail_send`, `MAIL_SENDS` in
+`connector-calls.ts`) wait for a person, a playbook's too. A teammate whose connector writes ask
+(`connectorWrites`) still asks, and its deny still stands. In `auto`, a teammate replies when the
+answer is clear and leaves a person what needs judgment (money, a promise, a complaint, a doubt) with
+`email_no_reply` or `gmail_no_reply`, which puts the conversation in To do with its line: every
+email's first message, `email_send`'s and `gmail_send`'s descriptions and the hand-over say so
+(`mail/guidance.ts`, `whenToReply`).
+
+The approval card lets the person edit the draft first (`ResolveApproval.edited`,
+`Operation.editable`; Gmail's words are its `body`, `Operation.edited`), or approve it for later
+("Send later", which sets `sendAt`). Every email leaves 30 seconds ahead (`UNDO_SECONDS`), or at
 `sendAt` when later (the teammate's own, "send it Monday at 9", or the approver's; up to 30 days,
-`SEND_LATER_MAX_DAYS`, as Resend holds mail): until then it can be cancelled from the thread's panel
-or the Inbox (`POST /api/email/messages/:id/cancel`) or with `email_cancel`. Its replies are followed
-from when it leaves. Gmail cannot send later: its API has no scheduled send. Resend's events (`email.sent`,
-`delivered`, `bounced`, `failed`) give its `Message-ID` and its fate; a bounce wakes the thread.
+`SEND_LATER_MAX_DAYS`): until then it can be cancelled from the thread's panel or the Inbox
+(`POST /api/email/messages/:id/cancel`), or with `email_cancel` / `gmail_cancel`. Brigade's
+addresses' mail is handed to Resend scheduled; Gmail's, whose API has no scheduled send, is held by
+Brigade as a scheduled out `MailMessage` in the account's box (`mail/gmail-outbound.ts`) and sent by
+the `gmail-outbound` job (every 30 seconds) once due, claimed first so it leaves once at most (one cut off between its claim and Gmail's answer is never sent again: after 10 minutes it is marked failed and its thread told to check the sent mail); one
+Gmail refuses is marked `bounced` and goes back to its thread. Its replies are followed from when it
+leaves. Resend's events (`email.sent`, `delivered`, `bounced`, `failed`) give its `Message-ID` and its
+fate; a bounce wakes the thread.
 
 ## Gmail follows the same rules
 
@@ -147,11 +161,12 @@ conversation wakes the thread.
 ## Agents' tools
 
 `email_list`, `email_read`, `email_read_attachment`, `email_new_address`, `email_wait` (up to two
-minutes in one call), `email_send`, `email_cancel`, `email_no_reply`. Everything read is untrusted
-input.
+minutes in one call), `email_send`, `email_cancel`, `email_no_reply`; Gmail's `gmail_send`,
+`gmail_cancel` and `gmail_no_reply` (by Gmail's message id) do the same for its account. Everything
+read is untrusted input.
 
 **What a thread did without replying** (`src/mail/outcomes.ts`): a thread that leaves a received
-mail unanswered says why with `email_no_reply`, in one line a person reads in the Inbox
+mail unanswered says why with `email_no_reply` (`gmail_no_reply` for Gmail's), in one line a person reads in the Inbox
 (`MailMessage.outcome`, `outcomeNote`, on the conversation's received mails): `no_reply` (it chose
 not to answer: the conversation is To do) or `handled` (it did what the mail needed without a
 reply: it stays with the teammate). A mail sent in the conversation since makes it answered; a new
@@ -205,9 +220,9 @@ has to keep its messages there.
 - **Filters**: source, agent, project, words; a conversation shows when any of its mails matches
   (words: its senders, or the words of its mails received or sent).
   Pages of 50, newest first.
-- **Opened** (by any of its mails' ids): each mail, received and sent from Brigade's address, or a
-  thread's `gmail_send` reply in a Gmail conversation the Inbox keeps (`keepGmailSent`, kept by
-  `connector-calls.ts`; Gmail's other sent mail is not kept), oldest first, with its words (the quote apart), files,
+- **Opened** (by any of its mails' ids): each mail, received and sent from Brigade's address or
+  from Gmail through Brigade (`gmail_send`, Reply myself: kept as Brigade holds them; Gmail's other
+  sent mail is not kept), oldest first, with its words (the quote apart), files,
   authentication. A sign-up's conversation, with the replies sent in it (they can quote its code),
   is shown and searched only for its thread's starter and admins; others see that it came.
 - **Files** open from the page (`/api/inbox/items/:id/files/:fileId`), never through the API's

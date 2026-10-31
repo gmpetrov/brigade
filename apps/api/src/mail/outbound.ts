@@ -6,11 +6,12 @@ import { SEND_LATER_MAX_DAYS } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { attachmentKey, presignGet } from '../bucket.js'
-import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
+import { Prisma, prisma, scoped, type Scope, type ScopedDb } from '../db.js'
 import { watchReplies } from '../replies.js'
 import { fireNow } from '../wakeups.js'
 import { boxKey, senderOfBox } from './addresses.js'
 import { contactFor } from './identity.js'
+import { UNDO_SECONDS } from './guidance.js'
 import { reopenUnanswered } from './outcomes.js'
 import { bareAddress } from './names.js'
 import { cancelEmail, sendEmail, sentEmail, type SendInput } from './resend.js'
@@ -18,7 +19,7 @@ import { secretIn } from './text.js'
 import { triggerEventText } from '@brigade/contracts'
 
 /** The time a person (or the teammate) has to cancel a mail, before Resend sends it. */
-export const UNDO_SECONDS = 30
+export { UNDO_SECONDS }
 /** Mails one address sends in a day, at most. */
 export const SENDS_PER_DAY = 100
 export const RECIPIENTS_MAX = 50
@@ -70,7 +71,13 @@ export const threadBox = (
  */
 export async function checkDraft(
   db: ScopedDb,
-  input: { address: Address; thread: SendingThread; draft: Draft },
+  input: {
+    address: Address
+    thread: SendingThread
+    draft: Draft
+    /** A person writes it (Reply myself): they may write again after their own reply. */
+    byPerson?: boolean
+  },
 ): Promise<string | null> {
   const { address, thread, draft } = input
   const box = threadBox(address, thread.projectId)
@@ -142,14 +149,17 @@ export async function checkDraft(
     )
     if (human)
       return `Someone already replied in this conversation from the mailbox itself, at ${human.receivedAt.toISOString()}. Read the conversation (email_read) before replying, and tell the person rather than answer twice.`
-    // A person replied from the Inbox after it (Reply myself).
-    const person = conversation.find(
-      (m) =>
-        m.direction === 'out' &&
-        m.sentByMemberId &&
-        m.status !== 'cancelled' &&
-        m.receivedAt > original.receivedAt,
-    )
+    // A person replied from the Inbox after it (Reply myself): the teammate does not answer twice.
+    const person =
+      !input.byPerson &&
+      conversation.find(
+        (m) =>
+          m.direction === 'out' &&
+          m.sentByMemberId &&
+          m.status !== 'cancelled' &&
+          m.status !== 'bounced' &&
+          m.receivedAt > original.receivedAt,
+      )
     if (person)
       return `A person already replied in this conversation from the Inbox, at ${person.receivedAt.toISOString()}. Read the conversation (email_read) before replying, and tell the person rather than answer twice.`
   }
@@ -212,7 +222,12 @@ export async function sendDraft(
   },
 ) {
   const { address, thread, draft } = input
-  const problem = await checkDraft(db, { address, thread, draft })
+  const problem = await checkDraft(db, {
+    address,
+    thread,
+    draft,
+    byPerson: !!input.sentByMemberId,
+  })
   if (problem) throw new HTTPException(400, { message: problem })
   const box = threadBox(address, thread.projectId)
   const from = await senderOfBox(db, address, box.projectId)
@@ -394,21 +409,44 @@ export async function statusChanged(type: string, data: StatusEvent) {
       data.bounce?.message ??
       data.failed?.reason ??
       (type === 'email.bounced' ? 'it bounced' : 'it failed')
-    await db.mailMessage.updateMany({
-      where: { id: row.id },
-      data: { status: 'bounced', error: reason.slice(0, 500), messageId },
-    })
-    // It answers nothing: a conversation Brigade closed for it is the teammate's again.
-    await reopenUnanswered(db, row)
-    if (row.sessionId) await tellThread(db, row, reason)
+    await failSent(db, row.id, reason, { data: { messageId } })
     return true
   }
   return false
 }
 
-/** A sent mail that failed: the thread that sent it hears it, once. */
-async function tellThread(
+/**
+ * A sent mail that failed (bounced, refused, or cut off while it left), in one transaction: marked
+ * so, its conversation given back to the teammate if Brigade had closed it for this reply (it
+ * answers nothing), and its thread's wake-up queued, so a restart between them loses none. The
+ * wake-up fires after; one that cannot fire now does on the next tick. Whether `guard` matched.
+ */
+export async function failSent(
   db: ScopedDb,
+  id: string,
+  reason: string,
+  options: {
+    guard?: Prisma.MailMessageWhereInput
+    data?: Prisma.MailMessageUpdateManyMutationInput
+  } = {},
+) {
+  const wakeupId = await db.$transaction(async (tx) => {
+    const settled = await tx.mailMessage.updateMany({
+      where: { id, ...options.guard },
+      data: { ...options.data, status: 'bounced', error: reason.slice(0, 500) },
+    })
+    if (!settled.count) return false
+    const row = await tx.mailMessage.findFirstOrThrow({ where: { id } })
+    await reopenUnanswered(tx, row)
+    return row.sessionId ? ((await queueFailure(tx, row, reason)) ?? true) : true
+  })
+  if (typeof wakeupId === 'string') await fireNow(wakeupId)
+  return wakeupId !== false
+}
+
+/** The thread that sent a failed mail hears it, once: its wake-up, queued. Its id, if new. */
+async function queueFailure(
+  tx: Pick<ScopedDb, 'session' | 'wakeup'>,
   row: {
     id: string
     sessionId: string | null
@@ -419,11 +457,13 @@ async function tellThread(
   },
   reason: string,
 ) {
-  const session = await db.session.findFirst({
+  const session = await tx.session.findFirst({
     where: { id: row.sessionId! },
     select: { id: true, teammateId: true },
   })
-  if (!session) return
+  if (!session) return null
+  const sourceId = `email-status:${row.id}`
+  if (await tx.wakeup.count({ where: { sessionId: session.id, sourceId } })) return null
   const note = triggerEventText({
     summary:
       `The email you sent from this thread to ${row.to.join(', ')} ("${row.subject}") could not be delivered: ${reason}. ` +
@@ -436,21 +476,17 @@ async function tellThread(
     received: new Date().toISOString(),
     payload: { to: row.to, subject: row.subject, reason },
   })
-  try {
-    const wakeup = await db.wakeup.create({
-      data: {
-        sessionId: session.id,
-        teammateId: row.teammateId ?? session.teammateId,
-        kind: 'reply',
-        note,
-        wakeAt: new Date(),
-        sourceId: `email-status:${row.id}`,
-      } as never,
-    })
-    await fireNow(wakeup.id)
-  } catch (error) {
-    if ((error as { code?: string }).code !== 'P2002') throw error
-  }
+  const wakeup = await tx.wakeup.create({
+    data: {
+      sessionId: session.id,
+      teammateId: row.teammateId ?? session.teammateId,
+      kind: 'reply',
+      note,
+      wakeAt: new Date(),
+      sourceId,
+    } as never,
+  })
+  return wakeup.id
 }
 
 /** A sent mail whose Message-ID Resend has not reported yet: asked for, once it has left. */

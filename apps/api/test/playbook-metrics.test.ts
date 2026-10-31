@@ -518,13 +518,21 @@ describe('the first response', { skip: !database && 'no database answers' }, () 
     // A draft is no answer to the customer.
     assert.equal((await write(live.sessionId, 'gmail_create_draft')).ok, true)
     assert.equal(await responded(live.runId), null)
-    // A send Gmail refused is none either.
+    // A send Gmail refused is none either: held for its window to cancel it, then refused.
+    const flush = async () => {
+      const { sendDueGmail } = await import('../src/mail/gmail-outbound.js')
+      await sendDueGmail(new Date(Date.now() + 3600_000), scope.workspaceId)
+    }
     failing = true
-    assert.equal((await write(live.sessionId, 'gmail_send')).ok, false)
+    assert.equal((await write(live.sessionId, 'gmail_send')).ok, true)
+    await flush()
     failing = false
     assert.equal(await responded(live.runId), null)
-    // The reply asks first: approved, it goes out, and times the run's first response.
+    // The reply asks first: approved, it goes out once its window passed, and times the run's
+    // first response then.
     assert.equal((await write(live.sessionId, 'gmail_send')).ok, true)
+    assert.equal(await responded(live.runId), null, 'not before it left')
+    await flush()
     const first = await responded(live.runId)
     assert.ok(first)
     // On its own the next time: the first response stays the first.
@@ -533,6 +541,7 @@ describe('the first response', { skip: !database && 'no database answers' }, () 
       data: { level: 'auto' },
     })
     assert.equal((await write(live.sessionId, 'gmail_send')).ok, true)
+    await flush()
     assert.deepEqual(await responded(live.runId), first)
   })
 })

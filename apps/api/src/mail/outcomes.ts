@@ -55,11 +55,14 @@ export async function unaccounted(db: ScopedDb, sessionId: string) {
       fromAddress: string
       fromName: string
       subject: string
+      sourceId: string | null
     }[]
   >`
-    select m.id, m.box, m."conversationId", m."fromAddress", m."fromName", m.subject
+    select m.id, m.box, m."conversationId", m."fromAddress", m."fromName", m.subject,
+      case when m."connectionId" is not null then m."sourceId" end as "sourceId"
     from "MailMessage" m
-    where m."sessionId" = ${session.id} and m.direction = 'in' and m."addressId" is not null
+    where m."sessionId" = ${session.id} and m.direction = 'in'
+      and (m."addressId" is not null or m."connectionId" is not null)
       and m.status = 'done' and m.route in (${Prisma.join(ANSWERABLE)})
       and m."doneAt" is null and m.outcome is null and m."outcomeAskedAt" is null
       and m."receivedAt" > ${since}
@@ -80,19 +83,39 @@ export async function unaccounted(db: ScopedDb, sessionId: string) {
 
 /** What the thread is told, about the mails it left without a word. */
 export function askText(
-  mails: { id: string; fromAddress: string; fromName: string; subject: string }[],
+  mails: {
+    id: string
+    fromAddress: string
+    fromName: string
+    subject: string
+    sourceId?: string | null
+  }[],
 ) {
   const list = mails
     .map(
       (m) =>
-        `- ${m.fromName ? `${m.fromName} <${m.fromAddress}>` : m.fromAddress}: "${m.subject || '(no subject)'}" (id ${m.id})`,
+        `- ${m.fromName ? `${m.fromName} <${m.fromAddress}>` : m.fromAddress}: "${m.subject || '(no subject)'}" ` +
+        (m.sourceId ? `(Gmail message id ${m.sourceId})` : `(id ${m.id})`),
     )
     .join('\n')
+  const gmail = mails.some((m) => m.sourceId)
+  const brigade = mails.some((m) => !m.sourceId)
   return [
     `Your turn ended without a reply to ${mails.length > 1 ? 'these emails' : 'this email'}, nor a word on why:`,
     list,
-    'For each, reply with email_send (replyTo its id), or call email_no_reply with its id and one line a person ' +
-      'will read in the Inbox: why you did not reply, or what you did instead (handled: true). Do nothing else.',
+    'For each, ' +
+      [
+        ...(brigade
+          ? ['reply with email_send (replyTo its id), or call email_no_reply with its id']
+          : []),
+        ...(gmail
+          ? [
+              'reply with gmail_send (replyToMessageId its Gmail message id), or call gmail_no_reply with its Gmail message id',
+            ]
+          : []),
+      ].join('; for Gmail, ') +
+      ' and one line a person will read in the Inbox: why you did not reply, or what you did instead (handled: true). ' +
+      'Do nothing else.',
   ].join('\n\n')
 }
 
@@ -196,7 +219,7 @@ export async function closeAnswered(scope: Scope, sessionId: string) {
  * another reply still answers).
  */
 export async function reopenUnanswered(
-  db: ScopedDb,
+  db: Pick<ScopedDb, 'mailMessage'>,
   mail: { box: string; conversationId: string },
 ) {
   const conversation = { box: mail.box, conversationId: mail.conversationId }

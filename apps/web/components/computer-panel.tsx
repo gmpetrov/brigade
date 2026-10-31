@@ -445,7 +445,10 @@ function SentMail({ thread, onChange }: { thread: Thread; onChange: () => void }
               : 0
           return (
             <li key={m.id} className="flex items-center gap-3 rounded-md px-2 py-1.5">
-              <ProviderLogo kind="email" className="size-4 flex-none" />
+              <ProviderLogo
+                kind={m.connectionId ? 'gmail' : 'email'}
+                className="size-4 flex-none"
+              />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-medium" title={m.subject}>
                   {m.subject || '(no subject)'}

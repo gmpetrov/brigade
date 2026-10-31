@@ -17,6 +17,7 @@ import { driveReplacements, dueReplacements } from './cloud-replace.js'
 import { dueHeldCalls, settleHeldCalls } from './held-calls.js'
 import { processDueInbound, processInbound, sweepInbound } from './inbound.js'
 import { sweepTrash } from './library-history.js'
+import { dueGmailSends, sendDueGmail } from './mail/gmail-outbound.js'
 import { dueMail, mailMinute, retryMail, sweepMail } from './mail/jobs.js'
 import { processMail } from './mail/inbound.js'
 import { sweep as sweepNotifications } from './notifications.js'
@@ -63,6 +64,12 @@ export const JOBS = {
   // Its cloud computer: shut down without a plan, stopped once idle, kept alive meanwhile.
   cloud: { every: 60, due: dueCloud, run: (key) => cloudMinute(ws(key)) },
   mail: { every: 60, due: dueMail, run: (key) => retryMail(ws(key)) },
+  // Gmail's email held for its window to cancel it, or until its time: sent once due.
+  'gmail-outbound': {
+    every: 30,
+    due: dueGmailSends,
+    run: (key, now) => sendDueGmail(now, ws(key)),
+  },
   'held-calls': {
     every: 60,
     due: (now) => dueHeldCalls(now.getTime()),

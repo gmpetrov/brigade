@@ -1262,6 +1262,10 @@ model Connection {
   /// (reach workspace), and only when its owner or an admin says so: a shared account may still
   /// hold someone's personal mail.
   inbox             Boolean          @default(false)
+  /// A mailbox (the Email App's address, a Gmail account): how the email its teammates send goes.
+  /// auto: on its own, a teammate leaving a person what needs their judgment (email_no_reply);
+  /// approve: each email waits for a person. Set by an owner or admin, or the account's owner.
+  sendPolicy        String           @default("auto")
   kind              ConnectorKind
   label             String
   /// The external account, e.g. the mailbox address. Never a credential.

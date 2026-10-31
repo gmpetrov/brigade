@@ -722,7 +722,7 @@ function NextStep({ item }: { item: InboxItem }) {
       </span>
     ) : item.outcome?.kind === 'no_reply' ? (
       <span className="min-w-0 truncate font-semibold text-warning" title={item.outcome.note}>
-        didn’t reply{item.outcome.note && `: ${item.outcome.note}`}
+        needs you{item.outcome.note && `: ${item.outcome.note}`}
       </span>
     ) : item.status === 'waiting' ? (
       <span className="font-semibold text-warning">
@@ -1439,7 +1439,7 @@ function OutcomeLine({
             )}
           />
           <span className="font-medium">
-            {declined ? `${who} didn’t reply` : `${who} handled it without a reply`}
+            {declined ? `${who} needs you and didn’t reply` : `${who} handled it without a reply`}
           </span>
           <time dateTime={outcome.at} className="text-muted-foreground">
             · {timeAgo(outcome.at)}

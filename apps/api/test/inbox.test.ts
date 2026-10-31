@@ -2088,6 +2088,15 @@ describe('what a thread did without replying', { skip }, () => {
       replyTo: received.id,
     }).catch((e: Error) => e.message)
     assert.match(String(problem), /A person already replied/)
+
+    // The person may write again: a correction, before any new mail.
+    const beforeAgain = globalThis.fetch
+    globalThis.fetch = (async () => json({ id: `own-out-2-${id}` })) as typeof fetch
+    try {
+      assert.ok((await inbox.replyItem(db, as(0), item, 'One more thing.')).id)
+    } finally {
+      globalThis.fetch = beforeAgain
+    }
   })
 
   test('a row says where its teammate is: at work, asking a person, or replied', async () => {
@@ -2253,17 +2262,41 @@ describe('a thread’s reply from Gmail', { skip }, () => {
     ).id
   })
 
-  test('kept in the conversation the Inbox keeps, shown even where only taken mail shows', async () => {
-    const db = scoped(scope)
-    const { keepGmail, keepGmailSent } = await import('../src/mail/gmail-inbox.js')
-    // Bob's own account shows only what went to a thread.
-    const connection = await prisma.connection.findUniqueOrThrow({ where: { id: gmailBobs } })
-    const ruled = await thread(cody.id)
+  /** Gmail, played by a fake fetch: what it was asked to send. */
+  const gmailFake = () => {
+    const sent: string[] = []
+    const before = globalThis.fetch
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.pathname.endsWith('/messages/send')) {
+        sent.push(Buffer.from(JSON.parse(String(init?.body)).raw, 'base64url').toString())
+        return json({ id: `gs-out-${sent.length}-${id}`, threadId: `gs-thread-${id}` })
+      }
+      const message = /\/messages\/([^/]+)$/.exec(url.pathname)?.[1]
+      if (message)
+        return json({
+          id: message,
+          threadId: `gs-thread-${id}`,
+          payload: { headers: [{ name: 'Message-ID', value: `<${message}@mail.test>` }] },
+        })
+      throw new Error(`unexpected request ${url}`)
+    }) as typeof fetch
+    return { sent, restore: () => (globalThis.fetch = before) }
+  }
+  /** Held Gmail email, sent as if its time had come. */
+  const flush = async () => {
+    const { sendDueGmail } = await import('../src/mail/gmail-outbound.js')
+    return sendDueGmail(new Date(Date.now() + 3600_000), scope.workspaceId)
+  }
+  /** A received Gmail email a rule gave a thread, as the reader keeps it. */
+  const received = async (connectionId: string, sessionId: string, n: string) => {
+    const { keepGmail } = await import('../src/mail/gmail-inbox.js')
+    const connection = await prisma.connection.findUniqueOrThrow({ where: { id: connectionId } })
     await keepGmail(
       connection,
       {
-        id: `gs-in-${id}`,
-        threadId: `gs-thread-${id}`,
+        id: `gs-in-${n}-${id}`,
+        threadId: `gs-thread-${n}-${id}`,
         from: 'Client <client@outside.test>',
         to: connection.externalAccount ?? '',
         subject: 'test',
@@ -2275,56 +2308,275 @@ describe('a thread’s reply from Gmail', { skip }, () => {
         attachments: [],
         automatic: false,
       },
-      { route: 'rule', sessionId: ruled.id },
+      { route: 'rule', sessionId },
     )
-    const received = await prisma.mailMessage.findFirstOrThrow({
-      where: { connectionId: gmailBobs, sourceId: `gs-in-${id}` },
+    return prisma.mailMessage.findFirstOrThrow({
+      where: { connectionId, sourceId: `gs-in-${n}-${id}` },
     })
-    const reply = {
-      connection,
-      sessionId: ruled.id,
-      teammateId: cody.id,
-      input: {
-        to: ['client@outside.test'],
-        subject: 'Re: test',
-        body: 'Your test message came through.',
-      },
-      attachments: [],
-      output: { id: `gs-out-${id}`, threadId: `gs-thread-${id}` },
-    }
-    await keepGmailSent(db, reply)
-    // The same call kept again, and an email outside any kept conversation: one copy, none.
-    await keepGmailSent(db, reply)
-    await keepGmailSent(db, {
-      ...reply,
-      output: { id: `gs-other-${id}`, threadId: `gs-elsewhere-${id}` },
-    })
-    assert.equal(
-      await prisma.mailMessage.count({ where: { connectionId: gmailBobs, direction: 'out' } }),
-      1,
-    )
+  }
 
-    const detail = await inbox.readItem(db, as(1), `mail:${received.id}`)
+  test('held for its window to cancel it, in the conversation, then sent: shown where only taken mail shows', async () => {
+    const db = scoped(scope)
+    const { holdGmail } = await import('../src/mail/gmail-outbound.js')
+    // Bob's own account shows only what went to a thread.
+    const connection = await prisma.connection.findUniqueOrThrow({ where: { id: gmailBobs } })
+    const ruled = await thread(cody.id)
+    const mail = await received(gmailBobs, ruled.id, 'held')
+    const held = await holdGmail(db, scope, {
+      connection,
+      session: ruled,
+      teammateId: cody.id,
+      email: {
+        to: ['client@outside.test'],
+        subject: '',
+        body: 'Your test message came through.',
+        replyToMessageId: mail.sourceId!,
+      },
+    })
+    const item = `mail:${mail.id}`
+    let detail = await inbox.readItem(db, as(1), item)
     assert.equal(detail.count, 2)
     const out = detail.messages.at(-1)!
     assert.equal(out.direction, 'out')
     assert.equal(out.from, `bob-${id}@acme.test`)
-    assert.deepEqual(out.to, ['client@outside.test'])
-    assert.equal(out.text, 'Your test message came through.')
-    assert.equal(out.sent, 'sent')
+    assert.equal(out.subject, 'Re: test')
+    assert.equal(out.sent, 'scheduled')
+    assert.ok(out.sendAt)
     assert.equal(detail.activity?.kind, 'replied')
+
+    const gmail = gmailFake()
+    try {
+      assert.equal(await flush(), 1)
+    } finally {
+      gmail.restore()
+    }
+    assert.equal(gmail.sent.length, 1)
+    assert.match(gmail.sent[0]!, /In-Reply-To: <gs-in-held-/)
+    detail = await inbox.readItem(db, as(1), item)
+    assert.equal(detail.messages.at(-1)!.sent, 'sent')
+    const row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: held.id } })
+    assert.match(row.sourceId ?? '', /^gs-out-1-/)
     // Its words are found.
     const found = await inbox.listInbox(db, as(1), { status: 'all', q: 'came through' })
-    assert.ok(found.items.some((i) => i.id === `mail:${received.id}`))
-
+    assert.ok(found.items.some((i) => i.id === item))
     // Its turn's end closes it.
     const { closeAnswered } = await import('../src/mail/outcomes.js')
     assert.equal(await closeAnswered(scope, ruled.id), 1)
-    assert.equal((await inbox.readItem(db, as(1), `mail:${received.id}`)).status, 'done')
+    assert.equal((await inbox.readItem(db, as(1), item)).status, 'done')
+  })
+
+  test('a Gmail reply to approve is To do, as a Brigade address’s is', async () => {
+    const db = scoped(scope)
+    const ruled = await thread(cody.id)
+    const mail = await received(gmailShared, ruled.id, 'draft')
+    const item = `mail:${mail.id}`
+    assert.equal((await inbox.readItem(db, as(0), item)).status, 'handled')
+    // As connector-calls.ts opens it.
+    await db.ticket.create({
+      data: {
+        sessionId: ruled.id,
+        type: 'approval',
+        title: 'Cody: gmail send',
+        payload: {
+          connectionId: gmailShared,
+          operation: 'gmail_send',
+          input: {
+            to: ['client@outside.test'],
+            subject: '',
+            body: 'Got it.',
+            replyToMessageId: mail.sourceId,
+          },
+        },
+      } as never,
+    })
+    const detail = await inbox.readItem(db, as(0), item)
+    assert.equal(detail.drafts.length, 1)
+    assert.equal(detail.drafts[0]!.input.body, 'Got it.')
+    assert.equal(detail.next?.kind, 'draft')
+    const todo = await inbox.listInbox(db, as(0), { status: 'waiting' })
+    assert.ok(todo.items.some((i) => i.id === item))
+  })
+
+  test('Reply myself from Gmail: held as the teammate’s is, and the teammate does not answer twice', async () => {
+    const db = scoped(scope)
+    const { checkGmail } = await import('../src/mail/gmail-outbound.js')
+    const ruled = await thread(cody.id)
+    const mail = await received(gmailShared, ruled.id, 'mine')
+    const item = `mail:${mail.id}`
+    assert.equal((await inbox.readItem(db, as(0), item)).canReply, true)
+    const reply = await inbox.replyItem(db, as(0), item, 'Thanks, we are on it.')
+    const row = await prisma.mailMessage.findUniqueOrThrow({
+      where: { id: reply.id.slice('mail:'.length) },
+    })
+    assert.equal(row.sentByMemberId, members[0])
+    assert.equal(row.teammateId, null)
+    assert.equal(row.status, 'scheduled')
+    assert.deepEqual(row.to, ['client@outside.test'])
+    assert.match(
+      String(
+        await checkGmail(db, gmailShared, {
+          to: ['client@outside.test'],
+          subject: '',
+          body: 'Hello again',
+          replyToMessageId: mail.sourceId!,
+        }),
+      ),
+      /A person already replied/,
+    )
+    // The person may write again: a correction, before any new mail.
+    const again = await inbox.replyItem(db, as(0), item, 'Sorry, one more thing.')
+    assert.ok(again.id)
+  })
+
+  test('a Gmail email cut off while it left is never sent again: its thread is told to check', async () => {
+    const db = scoped(scope)
+    const { holdGmail, sendDueGmail } = await import('../src/mail/gmail-outbound.js')
+    const connection = await prisma.connection.findUniqueOrThrow({ where: { id: gmailShared } })
+    const ruled = await thread(cody.id)
+    const mail = await received(gmailShared, ruled.id, 'cut')
+    const held = await holdGmail(db, scope, {
+      connection,
+      session: ruled,
+      teammateId: cody.id,
+      email: {
+        to: ['client@outside.test'],
+        subject: '',
+        body: 'On its way.',
+        replyToMessageId: mail.sourceId!,
+      },
+    })
+    // Claimed, then the API restarted before Gmail answered.
+    await prisma.mailMessage.update({
+      where: { id: held.id },
+      data: { attempts: 1, updatedAt: new Date(Date.now() - 11 * 60_000) },
+    })
+    const gmail = gmailFake()
+    try {
+      await sendDueGmail(new Date(Date.now() + 3600_000), scope.workspaceId)
+    } finally {
+      gmail.restore()
+    }
+    // Other tests' held mail may leave now; this one does not.
+    assert.ok(!gmail.sent.some((m) => m.includes('On its way.')), 'not sent again')
+    const row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: held.id } })
+    assert.equal(row.status, 'bounced')
+    assert.match(row.error ?? '', /may or may not have left/)
+    const told = await prisma.wakeup.findFirstOrThrow({
+      where: { sourceId: `email-status:${held.id}` },
+    })
+    assert.equal(told.sessionId, ruled.id)
+    // Not counted as an answer: the conversation is the teammate's again.
+    assert.equal((await inbox.readItem(db, as(0), `mail:${mail.id}`)).activity, null)
+  })
+
+  test('settling a cut-off email is all or nothing: interrupted, it is settled on a later tick', async () => {
+    const db = scoped(scope)
+    const { holdGmail, sendDueGmail } = await import('../src/mail/gmail-outbound.js')
+    const { closeAnswered } = await import('../src/mail/outcomes.js')
+    const connection = await prisma.connection.findUniqueOrThrow({ where: { id: gmailShared } })
+    const ruled = await thread(cody.id)
+    const mail = await received(gmailShared, ruled.id, 'atomic')
+    const held = await holdGmail(db, scope, {
+      connection,
+      session: ruled,
+      teammateId: cody.id,
+      email: {
+        to: ['client@outside.test'],
+        subject: '',
+        body: 'Coming.',
+        replyToMessageId: mail.sourceId!,
+      },
+    })
+    // Its turn ended: Brigade closed the conversation for this reply.
+    assert.equal(await closeAnswered(scope, ruled.id), 1)
+    await prisma.mailMessage.update({
+      where: { id: held.id },
+      data: { attempts: 1, updatedAt: new Date(Date.now() - 11 * 60_000) },
+    })
+    // The database refuses the thread's wake-up: an interruption after the row was marked.
+    const name = `fail_wakeup_${id.replace(/-/g, '_')}`
+    await prisma.$executeRawUnsafe(
+      `CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'refused'; END $$`,
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE TRIGGER ${name} BEFORE INSERT ON "Wakeup" FOR EACH ROW WHEN (NEW."sessionId" = '${ruled.id}') EXECUTE FUNCTION ${name}()`,
+    )
+    const later = new Date(Date.now() + 3600_000)
+    const gmail = gmailFake()
+    try {
+      await sendDueGmail(later, scope.workspaceId)
+    } finally {
+      gmail.restore()
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${name} ON "Wakeup"`)
+      await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${name}()`)
+    }
+    // Nothing of it was kept: still cut off, the conversation still closed, nobody told.
+    let row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: held.id } })
+    assert.equal(row.status, 'scheduled')
+    assert.equal((await inbox.readItem(db, as(0), `mail:${mail.id}`)).status, 'done')
+    assert.equal(await prisma.wakeup.count({ where: { sourceId: `email-status:${held.id}` } }), 0)
+
+    // The next tick settles all of it.
+    await sendDueGmail(later, scope.workspaceId)
+    row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: held.id } })
+    assert.equal(row.status, 'bounced')
+    assert.equal((await inbox.readItem(db, as(0), `mail:${mail.id}`)).status, 'handled')
+    assert.equal(await prisma.wakeup.count({ where: { sourceId: `email-status:${held.id}` } }), 1)
+  })
+
+  test('gmail_no_reply: what needs a person goes To do with its reason', async () => {
+    const db = scoped(scope)
+    const { gmail } = await import('../src/connectors/gmail.js')
+    const ruled = await thread(cody.id)
+    const mail = await received(gmailShared, ruled.id, 'escalate')
+    const session = await prisma.session.findUniqueOrThrow({ where: { id: ruled.id } })
+    await gmail.operations.gmail_no_reply!.run(
+      {
+        scope,
+        connectionId: gmailShared,
+        teammateId: cody.id,
+        thread: session,
+        callId: randomUUID(),
+        fetch: globalThis.fetch,
+      } as never,
+      { messageId: mail.sourceId, reason: 'Asks for a refund over 500 €' } as never,
+    )
+    const detail = await inbox.readItem(db, as(0), `mail:${mail.id}`)
+    assert.equal(detail.status, 'waiting')
+    assert.equal(detail.outcome?.note, 'Asks for a refund over 500 €')
+    // A turn that ends with Gmail mail left without a word is asked about it, in Gmail's terms.
+    const { unaccounted, askText } = await import('../src/mail/outcomes.js')
+    const left = await received(gmailShared, ruled.id, 'left')
+    const found = await unaccounted(db, ruled.id)
+    assert.deepEqual(
+      found.map((m) => m.id),
+      [left.id],
+    )
+    assert.match(askText(found), /gmail_no_reply with its Gmail message id/)
+    assert.doesNotMatch(askText(found), /email_no_reply/)
   })
 })
 
 describe('mailboxes', { skip }, () => {
+  test('each says how its email goes, and who may change it', async () => {
+    const db = scoped(scope)
+    const { readMailbox } = await import('../src/mailboxes.js')
+    // Every mailbox starts on its own, Brigade's addresses and Gmail alike.
+    const agentBox = await readMailbox(db, as(0), `email:${agent.id}`)
+    assert.equal(agentBox.sendPolicy, 'auto')
+    assert.equal(agentBox.setsSending, true)
+    assert.equal((await readMailbox(db, as(1), `email:${agent.id}`)).setsSending, false)
+    // A Gmail account: an owner or admin, or the member who connected it.
+    assert.equal((await readMailbox(db, as(1), `gmail:${gmailShared}`)).setsSending, false)
+    assert.equal((await readMailbox(db, as(1), `gmail:${gmailBobs}`)).setsSending, true)
+    await db.connection.updateMany({ where: { id: gmailShared }, data: { sendPolicy: 'approve' } })
+    try {
+      assert.equal((await readMailbox(db, as(1), `gmail:${gmailShared}`)).sendPolicy, 'approve')
+    } finally {
+      await db.connection.updateMany({ where: { id: gmailShared }, data: { sendPolicy: 'auto' } })
+    }
+  })
+
   test('every mailbox in one list; one whole, with its rules in order and who reads it', async () => {
     const db = scoped(scope)
     const { listMailboxes, readMailbox } = await import('../src/mailboxes.js')

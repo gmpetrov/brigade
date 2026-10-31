@@ -437,7 +437,7 @@ export function EmailDraftView({
 }
 
 /**
- * What a person changed in an email's draft before approving it (the Email App's email_send):
+ * What a person changed in an email's draft before approving it (email_send, gmail_send):
  * its recipients and words, or only when it leaves (sendAt, ISO 8601).
  */
 export type EditedEmail =
@@ -545,9 +545,12 @@ export function EditableEmailPreview({
   )
 }
 
-/** The Email App's send, whatever its name carries (email_send, or email_send_<account>). */
+/**
+ * A mailbox's send, Brigade's address's or Gmail's, whatever its name carries (email_send,
+ * gmail_send, or either with _<account>): its approver may change the draft, or when it leaves.
+ */
 export const isEmailSend = (toolName: string) =>
-  /^email_send(_|$)/.test(toolName.replace(/^mcp__.+?__/, ''))
+  /^(email|gmail)_send(_|$)/.test(toolName.replace(/^mcp__.+?__/, ''))
 
 /** Any other tool's arguments: one per line, text with its line breaks, an amount first. */
 export function ToolArguments({ input, className }: { input: unknown; className?: string }) {

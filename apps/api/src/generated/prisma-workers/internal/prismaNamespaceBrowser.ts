@@ -757,6 +757,7 @@ export const ConnectionScalarFieldEnum = {
   appId: 'appId',
   reach: 'reach',
   inbox: 'inbox',
+  sendPolicy: 'sendPolicy',
   kind: 'kind',
   label: 'label',
   externalAccount: 'externalAccount',

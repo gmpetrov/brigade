@@ -602,11 +602,13 @@ export const threads = new Hono<AppEnv>()
           select: { id: true, local: true, purpose: true, waitUntil: true, teammateId: true },
           orderBy: { createdAt: 'desc' },
         },
-        // Emails it sent from Brigade's addresses, the latest: one in its window can be cancelled.
+        // Emails it sent from Brigade's addresses or Gmail, the latest: one in its window can be
+        // cancelled.
         mailMessages: {
           where: { direction: 'out' },
           select: {
             id: true,
+            connectionId: true,
             to: true,
             subject: true,
             status: true,

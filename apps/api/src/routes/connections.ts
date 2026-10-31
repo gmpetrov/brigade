@@ -69,6 +69,7 @@ import { prisma, scoped, type ScopedDb } from '../db.js'
 import { hashToken } from '../hub.js'
 import {
   parseBody,
+  requireRole,
   requireUser,
   requireWorkspace,
   resolveScope,
@@ -727,7 +728,21 @@ export const connections = new Hono<AppEnv>()
     const input = await parseBody(c.req.raw, UpdateConnection)
     if (input.inbox !== undefined && connection.kind !== 'gmail')
       throw new HTTPException(400, { message: 'Only a Gmail account goes in the Inbox' })
+    if (input.sendPolicy !== undefined) {
+      if (connection.kind !== 'gmail' && connection.kind !== 'email')
+        throw new HTTPException(400, { message: 'Only a mailbox sends email' })
+      // Brigade's addresses are the workspace's: an owner's or admin's, as their rules are.
+      if (connection.kind === 'email') requireRole(scope, 'owner', 'admin')
+    }
     await db.connection.updateMany({ where: { id: connection.id }, data: input })
+    if (input.sendPolicy !== undefined && input.sendPolicy !== connection.sendPolicy)
+      await audit({
+        ...scope,
+        actor: { type: 'member', id: scope.memberId },
+        action: 'connection.send_policy',
+        target: { type: 'connection', id: connection.id },
+        data: { sendPolicy: input.sendPolicy },
+      })
     if (connection.kind === 'webhook' && input.label)
       await db.app.updateMany({ where: { id: connection.appId }, data: { name: input.label } })
     // Gmail in the Inbox is read for it; out of it, or back to its owner's, it is not.

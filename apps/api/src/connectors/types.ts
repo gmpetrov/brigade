@@ -28,6 +28,11 @@ export type Operation<I extends z.ZodType = z.ZodType> = {
   asks?: (ctx: ConnectorContext, input: z.infer<I>, policy: PermissionPolicy) => Promise<boolean>
   /** A person approving the call may change its input (an email's draft) first. */
   editable?: boolean
+  /**
+   * What a person's changes (EditedEmail: to, cc, subject, text, sendAt) are in this operation's
+   * input, when its fields are named otherwise (Gmail's body). Absent: taken as they are.
+   */
+  edited?: (changes: Record<string, unknown>) => Record<string, unknown>
 }
 
 /** The thread a call comes from, for connectors that act on Brigade's own data (the Email App). */
@@ -67,7 +72,10 @@ export type ConnectorContext = {
    * passed on. The merge goes through only on that commit, never on one pushed since.
    */
   checkedSha?: string
-  /** Brigade's own connectors (auth brigade): the call's workspace, account, thread and teammate. */
+  /**
+   * Brigade's own connectors (auth brigade), and mailboxes Brigade keeps the mail of (Gmail): the
+   * call's workspace, account, thread and teammate.
+   */
   scope?: Scope
   connectionId?: string
   thread?: CallThread

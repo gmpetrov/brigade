@@ -304,8 +304,18 @@ async function subscribed() {
   return sub
 }
 
+/** Gmail's email held for its window to cancel it (src/mail/gmail-outbound.ts), sent now. */
+async function flushGmail() {
+  const { sendDueGmail } = await import('../src/mail/gmail-outbound.js')
+  await sendDueGmail(new Date(Date.now() + 3600_000), scope.workspaceId)
+}
+
 /** gmail_send as a teammate calls it from this thread; what it answered. */
-async function gmailSend(t: Awaited<ReturnType<typeof thread>>, conversation: string) {
+async function gmailSend(
+  t: Awaited<ReturnType<typeof thread>>,
+  conversation: string,
+  extra: Record<string, unknown> = {},
+) {
   gmail.sendsIn = conversation
   let answer: { ok: boolean; output?: unknown; error?: string } | undefined
   await handleConnectorCall(
@@ -317,7 +327,12 @@ async function gmailSend(t: Awaited<ReturnType<typeof thread>>, conversation: st
       sessionId: t.id,
       connectionId: connection.id,
       operation: 'gmail_send',
-      input: { to: ['support@ascii.dev'], subject: 'Runner lost', body: 'Details inside.' },
+      input: {
+        to: ['support@ascii.dev'],
+        subject: 'Runner lost',
+        body: 'Details inside.',
+        ...extra,
+      },
     } as never,
     (message) => {
       if (message.type === 'connector.result') answer = message
@@ -338,7 +353,9 @@ test(
     const t = await thread()
     const first = await gmailSend(t, 'conv-e')
     assert.equal(first.ok, true, first.error)
-    assert.match(String((first.output as { replies?: string }).replies), /wakes you/)
+    assert.match(String((first.output as { note?: string }).note), /wakes you/)
+    // Held for its window to cancel it: its conversation is watched once it has left.
+    await flushGmail()
     assert.equal(await prisma.subscription.count({ where: { connectionId: connection.id } }), 1)
 
     // Its wait ends, and the minute tick drops the inbox nothing listens to any more.
@@ -351,6 +368,7 @@ test(
 
     const again = await gmailSend(t, 'conv-e')
     assert.equal(again.ok, true, again.error)
+    await flushGmail()
     assert.equal(await prisma.subscription.count({ where: { connectionId: connection.id } }), 1)
     assert.equal(await prisma.replyWatch.count({ where: { sessionId: t.id } }), 1)
   },
@@ -375,23 +393,47 @@ test('a reply sent in a conversation the Inbox keeps is kept there too', { skip 
     } as never,
     { route: 'rule', sessionId: t.id },
   )
-  const sent = await gmailSend(t, 'conv-kept')
+  gmail.messages['m-kept'] = { id: 'm-kept', threadId: 'conv-kept', payload: { headers: [] } }
+  const sent = await gmailSend(t, 'conv-kept', { replyToMessageId: 'm-kept' })
   assert.equal(sent.ok, true, sent.error)
-  const out = await prisma.mailMessage.findFirstOrThrow({
+  // In its conversation at once, waiting its window to cancel it.
+  const held = await prisma.mailMessage.findFirstOrThrow({
     where: { connectionId: connection.id, conversationId: 'conv-kept', direction: 'out' },
   })
-  assert.equal(out.sourceId, (sent.output as { id: string }).id)
-  assert.equal(out.sessionId, t.id)
-  assert.equal(out.teammateId, teammateId)
-  assert.equal(out.text, 'Details inside.')
-  // One in a conversation the Inbox does not keep is not.
-  await gmailSend(t, 'conv-not-kept')
-  assert.equal(
-    await prisma.mailMessage.count({
-      where: { connectionId: connection.id, conversationId: 'conv-not-kept' },
-    }),
-    0,
-  )
+  assert.equal(held.id, (sent.output as { id: string }).id)
+  assert.equal(held.status, 'scheduled')
+  assert.ok(held.sendAt && held.sendAt.getTime() > Date.now() + 20_000)
+  assert.equal(held.sessionId, t.id)
+  assert.equal(held.teammateId, teammateId)
+  assert.equal(held.text, 'Details inside.')
+  // Not yet due: nothing leaves.
+  const { sendDueGmail } = await import('../src/mail/gmail-outbound.js')
+  assert.equal(await sendDueGmail(new Date(), scope.workspaceId), 0)
+  await flushGmail()
+  const out = await prisma.mailMessage.findUniqueOrThrow({ where: { id: held.id } })
+  assert.equal(out.status, 'sent')
+  assert.match(out.sourceId ?? '', /^sent-/)
+  // Once only.
+  assert.equal(await sendDueGmail(new Date(Date.now() + 3600_000), scope.workspaceId), 0)
+
+  // A new email's conversation is Gmail's thread, once it has left.
+  const fresh = await gmailSend(t, 'conv-new')
+  await flushGmail()
+  const row = await prisma.mailMessage.findUniqueOrThrow({
+    where: { id: (fresh.output as { id: string }).id },
+  })
+  assert.equal(row.conversationId, 'conv-new')
+})
+
+test('cancelled in its window, a Gmail email never leaves', { skip }, async () => {
+  const t = await thread()
+  const sent = await gmailSend(t, 'conv-cancel')
+  const { cancelMail } = await import('../src/mail/outbound.js')
+  const id = (sent.output as { id: string }).id
+  await cancelMail(scoped(scope), scope, id, { type: 'member', id: member })
+  const { sendDueGmail } = await import('../src/mail/gmail-outbound.js')
+  assert.equal(await sendDueGmail(new Date(Date.now() + 3600_000), scope.workspaceId), 0)
+  assert.equal((await prisma.mailMessage.findUniqueOrThrow({ where: { id } })).status, 'cancelled')
 })
 
 test('a wait started while the inbox is being read still gets its reply', { skip }, async () => {
