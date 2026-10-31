@@ -90,7 +90,7 @@ async function checkTarget(db: ScopedDb, thread: LoadedThread, computerId: strin
     })
     if (!account)
       throw new HTTPException(409, {
-        message: `No ${provider === 'codex' ? 'Codex' : 'Claude'} account of yours on ${label(computer)} is ready. Add or sign in to one under Accounts.`,
+        message: `No ${provider === 'codex' ? 'Codex' : 'Claude'} account you can use on ${label(computer)} is ready. Add or sign in to one under Accounts.`,
       })
   }
   // A runner too old to take a thread in is no reason to refuse: the thread waits for its update (deliver).

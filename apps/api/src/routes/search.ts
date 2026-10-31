@@ -5,6 +5,7 @@
 // and each result gets a score so the dashboard ranks every kind together.
 import { SCORE, titleScore, type SearchResult } from '@brigade/contracts'
 import { Hono } from 'hono'
+import { usableBy } from '../account-sharing.js'
 import { prisma, Prisma, type Scope } from '../db.js'
 import { search as searchDocuments } from '../library.js'
 import { requireUser, requireWorkspace, type AppEnv } from '../scope.js'
@@ -203,9 +204,9 @@ export const search = new Hono<AppEnv>()
         orderBy: { name: 'asc' },
         take: EACH,
       }),
-      // A member's AI accounts are theirs alone.
+      // The AI accounts this member may run on (src/account-sharing.ts).
       db.account.findMany({
-        where: { memberId: scope.memberId, ...matching(words, ['label', 'email']) },
+        where: { AND: [usableBy(scope.memberId), matching(words, ['label', 'email'])] },
         select: { id: true, label: true, email: true, provider: true },
         orderBy: { createdAt: 'asc' },
         take: EACH,

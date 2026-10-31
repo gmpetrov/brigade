@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Cloud, Laptop, ShieldCheck } from 'lucide-react'
 import { AccountRow, machineName } from '@/components/account-card'
+import { isAdmin, useDashboard } from '@/components/dashboard'
 import { HarnessLogo } from '@/components/harness-logo'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -24,6 +25,7 @@ import {
 import { useLive } from '@/lib/use-live'
 
 export default function Accounts() {
+  const { me } = useDashboard()
   const accounts = useApi<Account[]>('/accounts')
   const computers = useApi<ComputersResponse>('/computers')
   const [logins, setLogins] = useState<Record<string, AccountLogin>>({})
@@ -57,9 +59,10 @@ export default function Accounts() {
       <header className="flex flex-col gap-3">
         <h1 className="text-3xl font-extrabold tracking-tight">Accounts</h1>
         <p className="max-w-prose text-muted-foreground">
-          Your Claude and Codex subscriptions. Add several of each: when one runs out of usage, your
-          threads continue on the next. Accounts are yours alone; nobody else&apos;s threads use
-          them.
+          The Claude and Codex subscriptions your teammates run on. Add several of each: when one
+          runs out of usage, threads continue on the next. Those on the cloud computer are the
+          workspace&apos;s: every member&apos;s threads there use them. Those on your own computer
+          are yours alone.
         </p>
         <div className="flex gap-3 rounded-lg bg-accent p-4 text-sm text-accent-foreground">
           <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -94,7 +97,13 @@ export default function Accounts() {
           ) : (
             <Card className="gap-0 divide-y overflow-hidden py-0">
               {byProvider(provider).map((a) => (
-                <AccountRow key={a.id} account={a} login={logins[a.id] ?? a.login} onAct={act} />
+                <AccountRow
+                  key={a.id}
+                  account={a}
+                  login={logins[a.id] ?? a.login}
+                  onAct={act}
+                  admin={isAdmin(me)}
+                />
               ))}
             </Card>
           )}

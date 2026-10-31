@@ -11,6 +11,7 @@ import {
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { deleteAccount } from '../account-delete.js'
+import { usableBy } from '../account-sharing.js'
 import { audit } from '../audit.js'
 import { auth } from '../auth.js'
 import { workspaceLogoKey } from '../bucket.js'
@@ -75,16 +76,21 @@ export const workspaces = new Hono<AppEnv>()
         activeWorkspaceId: workspaceId,
       })
     }
-    // Nothing runs without an AI account: onboarding asks for one first.
+    // Nothing runs without an AI account: onboarding asks for one first, unless the workspace
+    // shares one already (src/account-sharing.ts).
     const aiReady = scope
       ? (await prisma.account.count({
           where: {
             workspaceId: scope.workspaceId,
-            memberId: scope.memberId,
-            // Signed in once is enough: a login that expires later opens a ticket instead.
-            OR: [
-              { status: { in: ['ready', 'exhausted', 'unverified'] } },
-              { sessions: { some: {} } },
+            AND: [
+              usableBy(scope.memberId),
+              // Signed in once is enough: a login that expires later opens a ticket instead.
+              {
+                OR: [
+                  { status: { in: ['ready', 'exhausted', 'unverified'] } },
+                  { sessions: { some: {} } },
+                ],
+              },
             ],
           },
         })) > 0

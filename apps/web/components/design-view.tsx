@@ -515,7 +515,7 @@ function DesignFrame({
       onStart({
         title: 'Send the comment in a new thread',
         description: view?.thread
-          ? `The thread that made this design runs on another member's subscription. Start one to ${view.teammate?.name ?? 'a teammate'}.`
+          ? `Another member started the thread that made this design. Start one to ${view.teammate?.name ?? 'a teammate'}.`
           : 'No thread made this design that you can write to. Start one.',
         text,
         ...(view?.teammate ? { teammateId: view.teammate.id } : {}),

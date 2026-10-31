@@ -1678,8 +1678,7 @@ export function ThreadConversation({
           ) : (
             <p className="text-sm text-muted-foreground">
               {!atEnd && <JumpToEnd onClick={() => toEnd('smooth')} />}
-              This thread runs on {t.startedBy.user.name}&apos;s subscription. You can watch it
-              live.
+              {t.startedBy.user.name} started this thread and writes in it. You can watch it live.
             </p>
           )}
         </div>

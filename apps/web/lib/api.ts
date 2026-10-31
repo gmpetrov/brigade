@@ -700,6 +700,12 @@ export type Account = {
   lastUsage: { window: string; utilization: number; resetsAt: string | null }[] | null
   computer: { id: string; name: string; kind: 'cloud' | 'member_machine' }
   login: AccountLogin | null
+  /** Added by the signed-in member. */
+  mine: boolean
+  /** The workspace's, usable by every member (on the cloud computer). */
+  shared: boolean
+  /** Who added it. */
+  addedBy: string
 }
 
 export type ComputersResponse = {

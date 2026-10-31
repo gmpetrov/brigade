@@ -256,7 +256,7 @@ async function requireMayAct(db: ScopedDb, by: By, taskId: string) {
   const thread = await db.session.findFirst({ where: { taskId } })
   if (thread && thread.startedByMemberId !== by.memberId && !thread.othersMayPrompt)
     throw new HTTPException(403, {
-      message: "This task's thread runs on another member's subscription.",
+      message: "Only the member who started this task's thread can act on it.",
     })
   return thread
 }
@@ -530,7 +530,7 @@ export async function computerFor(
   const name = harness === 'codex' ? 'Codex' : 'Claude'
   throw new HTTPException(409, {
     message: candidates.length
-      ? `No ${name} account of yours is ready on the computers it could run on. Add or sign in to one under Accounts.`
+      ? `No ${name} account you can use is ready on the computers it could run on. Add or sign in to one under Accounts.`
       : 'No computer is online to run it. Start your runner, or set up the cloud computer.',
   })
 }

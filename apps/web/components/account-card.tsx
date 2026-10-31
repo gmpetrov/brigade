@@ -92,10 +92,13 @@ export function AccountRow({
   account: a,
   login,
   onAct,
+  admin = false,
 }: {
   account: Account
   login: AccountLogin | null
   onAct: (p: Promise<unknown>) => Promise<void>
+  /** An owner or admin: may remove a shared account another member added. */
+  admin?: boolean
 }) {
   const [code, setCode] = useState('')
   const [email, setEmail] = useState(a.email ?? '')
@@ -109,13 +112,20 @@ export function AccountRow({
     (a.status === 'needs_sign_in' || (a.status === 'signing_in' && !signingIn))
   const name = machineName(a.computer)
   // Who it is and its plan; a machine's own login without either says so.
-  const details =
+  const details = [
     [a.email, a.plan && a.plan.charAt(0).toUpperCase() + a.plan.slice(1)]
       .filter(Boolean)
       .join(' · ') ||
-    (a.source === 'machine'
-      ? "Uses this machine's own login"
-      : `Signed in with ${harnessLabel(a.provider)}`)
+      (a.source === 'machine'
+        ? "Uses this machine's own login"
+        : `Signed in with ${harnessLabel(a.provider)}`),
+    // Another member's, shared with the workspace: whose it is.
+    !a.mine && `added by ${a.addedBy}`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  // Only whoever added it changes it; a shared one an owner or admin can remove too.
+  const removable = a.mine || (a.shared && admin)
   const status = exhausted
     ? {
         tone: 'bg-warning',
@@ -166,65 +176,70 @@ export function AccountRow({
             className={cn('size-2 shrink-0 rounded-full', status.tone)}
           />
         </Hint>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`${harnessLabel(a.provider)} on ${name} options`}
-            >
-              <EllipsisVertical aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            {!a.isDefault && a.status === 'ready' && (
-              <DropdownMenuItem
-                onSelect={() =>
-                  void onAct(
-                    api(`/accounts/${a.id}`, { method: 'PATCH', body: { isDefault: true } }),
-                  )
-                }
+        {(a.mine || removable) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`${harnessLabel(a.provider)} on ${name} options`}
               >
-                Make default
-              </DropdownMenuItem>
-            )}
-            {exhausted && (
-              <DropdownMenuItem
-                onSelect={() =>
-                  void onAct(
-                    api(`/accounts/${a.id}`, { method: 'PATCH', body: { exhaustedUntil: null } }),
-                  )
-                }
-              >
-                Usage is back
-              </DropdownMenuItem>
-            )}
-            {canSignInAgain && (
-              <DropdownMenuItem
-                onSelect={() => void onAct(api(`/accounts/${a.id}/sign-in`, { method: 'POST' }))}
-              >
-                Sign in again
-              </DropdownMenuItem>
-            )}
-            {((!a.isDefault && a.status === 'ready') || exhausted || canSignInAgain) && (
-              <DropdownMenuSeparator />
-            )}
-            <DropdownMenuItem
-              variant="destructive"
-              onSelect={() => {
-                if (
-                  confirm(
-                    `Remove ${harnessLabel(a.provider)} on ${name}? ${a.source === 'brigade' ? 'Its login is deleted from the computer.' : 'The login stays on your machine.'}`,
-                  )
-                ) {
-                  void onAct(api(`/accounts/${a.id}`, { method: 'DELETE' }))
-                }
-              }}
-            >
-              Remove
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <EllipsisVertical aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {a.mine && !a.isDefault && a.status === 'ready' && (
+                <DropdownMenuItem
+                  onSelect={() =>
+                    void onAct(
+                      api(`/accounts/${a.id}`, { method: 'PATCH', body: { isDefault: true } }),
+                    )
+                  }
+                >
+                  Make default
+                </DropdownMenuItem>
+              )}
+              {a.mine && exhausted && (
+                <DropdownMenuItem
+                  onSelect={() =>
+                    void onAct(
+                      api(`/accounts/${a.id}`, { method: 'PATCH', body: { exhaustedUntil: null } }),
+                    )
+                  }
+                >
+                  Usage is back
+                </DropdownMenuItem>
+              )}
+              {a.mine && canSignInAgain && (
+                <DropdownMenuItem
+                  onSelect={() => void onAct(api(`/accounts/${a.id}/sign-in`, { method: 'POST' }))}
+                >
+                  Sign in again
+                </DropdownMenuItem>
+              )}
+              {a.mine &&
+                ((!a.isDefault && a.status === 'ready') || exhausted || canSignInAgain) && (
+                  <DropdownMenuSeparator />
+                )}
+              {removable && (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => {
+                    if (
+                      confirm(
+                        `Remove ${harnessLabel(a.provider)} on ${name}? ${a.source === 'brigade' ? 'Its login is deleted from the computer.' : 'The login stays on your machine.'}`,
+                      )
+                    ) {
+                      void onAct(api(`/accounts/${a.id}`, { method: 'DELETE' }))
+                    }
+                  }}
+                >
+                  Remove
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {signingIn && (
