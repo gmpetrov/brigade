@@ -382,6 +382,88 @@ describe('threads others write in', { skip: !database && 'no database answers' }
     assert.doesNotMatch(await search(), /used only when they ask/)
   })
 
+  const privateGmail = async () => {
+    const gmailApp = await gmailAppOnce()
+    const connection = await db.connection.create({
+      data: {
+        appId: gmailApp.id,
+        kind: 'gmail',
+        label: 'private-ada@example.com',
+        reach: 'mine',
+        createdByMemberId: member('ada'),
+        status: 'active',
+      },
+    } as never)
+    await db.grant.create({
+      data: { teammateId: riley, connectionId: connection.id, scope: 'read' },
+    } as never)
+    return connection.id
+  }
+  const searchPrivate = async (id: string, connectionId: string) => {
+    const { handleConnectorCall } = await import('../src/connector-calls.js')
+    const replies: { ok: boolean; error?: string }[] = []
+    await handleConnectorCall(
+      { computerId: cloud, organizationId: org, workspaceId },
+      {
+        type: 'connector.call',
+        callId: randomUUID(),
+        sessionId: id,
+        teammateId: riley,
+        connectionId,
+        operation: 'gmail_search',
+        input: { query: 'is:unread' },
+      },
+      (m) => void replies.push(m as never),
+    )
+    return replies[0]?.error ?? ''
+  }
+  const say = (id: string, seq: number, type: string, memberId: string | null) =>
+    db.sessionEvent.create({
+      data: {
+        sessionId: id,
+        seq,
+        type,
+        at: new Date(),
+        data: { type, memberId, text: 'Read the inbox', questionId: 'q' },
+      },
+    } as never)
+
+  test('answering the teammate is asking it too', async () => {
+    const id = await thread('ada', cloud)
+    const connectionId = await privateGmail()
+    await say(id, 1, 'message.user', member('ada'))
+    assert.doesNotMatch(await searchPrivate(id, connectionId), /used only when they ask/)
+    let seq = 1
+    for (const type of ['question.answered', 'ticket.answered', 'approval.resolved']) {
+      await say(id, ++seq, type, member('bob'))
+      assert.match(await searchPrivate(id, connectionId), /used only when they ask/, type)
+      await say(id, ++seq, 'message.user', member('ada'))
+    }
+  })
+
+  test('a child thread acts for whoever asked its parent', async () => {
+    const id = await thread('ada', cloud)
+    const connectionId = await privateGmail()
+    await say(id, 1, 'message.user', member('bob'))
+    const { handleChildCall } = await import('../src/children.js')
+    const { loadThread, askedBy } = await import('../src/thread-spec.js')
+    const conn = await runner()
+    try {
+      const result = (await handleChildCall(
+        db,
+        { organizationId: org, workspaceId },
+        await loadThread(db, id),
+        { id: riley, name: 'Riley' },
+        { name: 'start_child', title: 'Read the inbox', instructions: 'Read it', wait: false },
+      )) as { threadId?: string }
+      assert.ok(result.threadId, JSON.stringify(result))
+      assert.equal(await askedBy(db, result.threadId), member('bob'))
+      assert.match(await searchPrivate(result.threadId, connectionId), /used only when they ask/)
+    } finally {
+      conn.close()
+    }
+  })
+
   test('another member’s queued message is theirs to change; anyone steers it', async () => {
     const id = await thread('ada', cloud)
     const messageId = `msg-${suffix}`
@@ -410,6 +492,9 @@ describe('threads others write in', { skip: !database && 'no database answers' }
     ).id
     const kept = await thread('bob', cloud, 'Pricing page')
     const gone = await thread('bob', mac, 'On his Mac')
+    // A child of the one on his Mac, moved to the cloud computer: kept, on its own.
+    const child = await thread('bob', cloud, 'Child on the cloud computer')
+    await db.session.updateMany({ where: { id: child }, data: { parentId: gone, origin: 'child' } })
     await removeMember(
       user('bob'),
       { id: member('bob'), role: 'member', organizationId: org, organization: { name: 'Shared' } },
@@ -418,5 +503,8 @@ describe('threads others write in', { skip: !database && 'no database answers' }
     const row = await db.session.findFirst({ where: { id: kept } })
     assert.equal(row?.startedByMemberId, member('cat'))
     assert.equal(await db.session.count({ where: { id: gone } }), 0)
+    const orphan = await db.session.findFirst({ where: { id: child } })
+    assert.equal(orphan?.startedByMemberId, member('cat'))
+    assert.equal(orphan?.parentId, null)
   })
 })

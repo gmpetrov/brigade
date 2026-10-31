@@ -155,6 +155,14 @@ async function cleanUp(userId: string, membership: Membership, handTo?: string) 
         },
         data: { startedByMemberId: handTo },
       })
+      // One kept whose parent goes (on their computer) would go with it: it stands alone now.
+      await db.session.updateMany({
+        where: {
+          parent: { startedByMemberId: membership.id },
+          NOT: { startedByMemberId: membership.id },
+        },
+        data: { parentId: null },
+      })
       // A thread they had taken control of goes back to its teammate.
       const controlled = await db.session.findMany({
         where: { controlledByMemberId: membership.id },

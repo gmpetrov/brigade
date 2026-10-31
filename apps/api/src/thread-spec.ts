@@ -328,11 +328,16 @@ export async function specFor(
 
 /**
  * The member who asked for what a thread's teammate does now: the author of its latest person's
- * message. Null when no person wrote lately (a trigger's, a routine's thread).
+ * input (a message, or an answer to its question, ticket or approval). A child thread nobody
+ * wrote in acts for whoever asked its parent. Null when no person wrote lately (a trigger's, a
+ * routine's thread).
  */
-export async function askedBy(db: ScopedDb, sessionId: string) {
+export async function askedBy(db: ScopedDb, sessionId: string): Promise<string | null> {
   const latest = await db.sessionEvent.findMany({
-    where: { sessionId, type: 'message.user' },
+    where: {
+      sessionId,
+      type: { in: ['message.user', 'question.answered', 'ticket.answered', 'approval.resolved'] },
+    },
     orderBy: { seq: 'desc' },
     select: { data: true },
     take: 20,
@@ -341,7 +346,11 @@ export async function askedBy(db: ScopedDb, sessionId: string) {
     const memberId = (data as { memberId?: string | null } | null)?.memberId
     if (memberId) return memberId
   }
-  return null
+  const thread = await db.session.findFirst({
+    where: { id: sessionId },
+    select: { parentId: true },
+  })
+  return thread?.parentId ? askedBy(db, thread.parentId) : null
 }
 
 /** Prompting or approving: its starter, or any member but a viewer once it is open (mayWrite). */
