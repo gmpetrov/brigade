@@ -54,7 +54,7 @@ export const members = new Hono<AppEnv>()
         include: { user: { select: { name: true, email: true, image: true } } },
         orderBy: { createdAt: 'asc' },
       }),
-      scope.role === 'member'
+      scope.role !== 'owner' && scope.role !== 'admin'
         ? []
         : prisma.invitation.findMany({
             where: { organizationId: scope.organizationId, ...openNow() },

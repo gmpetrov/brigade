@@ -98,6 +98,7 @@ import {
 import {
   api,
   isAdmin,
+  isViewer,
   useApi,
   waitingItemKey,
   waitsOn,
@@ -833,6 +834,8 @@ function RoundButton({
 /** The round + that starts a thread: beside the workspace's name, and on a phone at the top of each page. */
 export function NewThreadButton() {
   const { newThreadPage } = useThreadPanel()
+  // A viewer starts nothing.
+  if (isViewer(useDashboard().me)) return null
   return (
     <RoundButton label="New thread" onClick={newThreadPage}>
       <Plus />
@@ -842,6 +845,7 @@ export function NewThreadButton() {
 
 function NewThreadRailItem() {
   const { newThreadPage } = useThreadPanel()
+  if (isViewer(useDashboard().me)) return null
   return (
     <SidebarMenuItem>
       <SidebarMenuButton tooltip="New thread" onClick={newThreadPage}>

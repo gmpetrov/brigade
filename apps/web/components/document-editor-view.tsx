@@ -329,17 +329,22 @@ function SavedDocument({
         label={label}
         ask={ask}
         list={target.kind === 'library'}
+        readOnly={session.readOnly}
         onChange={() =>
           void blocksToMarkdown(editor, editor.document).then((text) => setDirty(text !== saved))
         }
       />
       {error && <p className="text-sm text-destructive-text">{error}</p>}
-      <div className="flex items-center justify-end gap-3">
-        <span className="text-xs text-muted-foreground">{dirty ? 'Unsaved changes' : 'Saved'}</span>
-        <Button size="sm" disabled={!dirty || busy} onClick={() => void save()}>
-          Save
-        </Button>
-      </div>
+      {!session.readOnly && (
+        <div className="flex items-center justify-end gap-3">
+          <span className="text-xs text-muted-foreground">
+            {dirty ? 'Unsaved changes' : 'Saved'}
+          </span>
+          <Button size="sm" disabled={!dirty || busy} onClick={() => void save()}>
+            Save
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

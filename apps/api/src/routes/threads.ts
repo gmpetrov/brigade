@@ -640,10 +640,14 @@ export const threads = new Hono<AppEnv>()
           ...(report
             ? { report: { ...report, summary: clipReport(report.summary, REPORT_START) } }
             : {}),
-          mayPrompt: startedByMemberId === c.var.scope.memberId || othersMayPrompt,
+          mayPrompt:
+            c.var.scope.role !== 'viewer' &&
+            (startedByMemberId === c.var.scope.memberId || othersMayPrompt),
         }
       }),
-      mayPrompt: thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt,
+      mayPrompt:
+        c.var.scope.role !== 'viewer' &&
+        (thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt),
       eventsWaitingSince: waitingSince[thread.id] ?? null,
       mailAliases: thread.mailAliases.map((a) => ({ ...a, address: addressOf(a.local) })),
     })

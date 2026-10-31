@@ -344,7 +344,11 @@ export function requireManager(
   scope: { memberId: string; role: string },
   installation: { ownerMemberId: string },
 ) {
-  if (installation.ownerMemberId !== scope.memberId && scope.role === 'member')
+  if (
+    installation.ownerMemberId !== scope.memberId &&
+    scope.role !== 'owner' &&
+    scope.role !== 'admin'
+  )
     throw new HTTPException(403, {
       message:
         "This playbook runs on another member's accounts; only they or an owner or admin manage it",

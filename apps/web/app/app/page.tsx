@@ -8,6 +8,7 @@ import { NeedsYou } from '@/components/needs-you'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
 import {
+  isViewer,
   useApi,
   waitingItemKey,
   waitsOn,
@@ -75,7 +76,12 @@ export default function Home() {
         )}
       </header>
 
-      {teammate ? (
+      {isViewer(me) ? (
+        <p className="text-sm text-muted-foreground">
+          You can view this workspace&apos;s threads, tasks and files. Ask an owner or admin to
+          start work.
+        </p>
+      ) : teammate ? (
         <NewThread
           teammate={teammate}
           rows={3}

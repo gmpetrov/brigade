@@ -4,8 +4,10 @@ import type { z } from 'zod'
 import { auth } from './auth.js'
 import { env } from './config.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { requireNotViewer } from './viewers.js'
 
-export type Role = 'owner' | 'admin' | 'member'
+/** A viewer reads only (src/viewers.ts). */
+export type Role = 'owner' | 'admin' | 'member' | 'viewer'
 
 export type WorkspaceScope = Scope & {
   userId: string
@@ -87,6 +89,7 @@ export const requireWorkspace = createMiddleware<AppEnv>(async (c, next) => {
     activeWorkspaceId: c.var.activeWorkspaceId,
   })
   if (!scope) throw new HTTPException(409, { message: 'no_workspace' })
+  requireNotViewer(scope.role, c.req.method, c.req.path)
   c.set('scope', scope)
   c.set('db', scoped(scope))
   await next()

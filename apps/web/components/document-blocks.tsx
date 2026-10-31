@@ -132,6 +132,7 @@ export function DocumentBlockNoteView({
   onChange,
   ask,
   list = false,
+  readOnly = false,
 }: {
   editor: DocumentBlockEditor
   documentId: string
@@ -140,6 +141,8 @@ export function DocumentBlockNoteView({
   ask?: DocumentAsk
   /** A library file: its checklist lines show their threads and pull requests (docs/lists.md). */
   list?: boolean
+  /** To read, not edit (a viewer's). */
+  readOnly?: boolean
 }) {
   const { resolvedTheme } = useTheme()
   const options = useMentionOptions()
@@ -209,6 +212,7 @@ export function DocumentBlockNoteView({
           theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
           aria-label={label}
           className="document-editor"
+          editable={!readOnly}
           onChange={onChange}
           // With Ask, BlockNote's toolbar with Ask first; else BlockNote's own.
           formattingToolbar={!ask}

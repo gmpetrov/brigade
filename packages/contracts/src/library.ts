@@ -452,6 +452,8 @@ export const EditSession = z.object({
       user: z.object({ name: z.string(), color: z.string() }),
     })
     .nullable(),
+  /** To read, not edit: a viewer's (no live, no save). */
+  readOnly: z.boolean().optional(),
 })
 export type EditSession = z.infer<typeof EditSession>
 

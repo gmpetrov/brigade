@@ -119,7 +119,7 @@ async function requireTeammate(db: ScopedDb, id: string) {
 
 /** Its owner, or an owner or admin of the workspace: pause, resume, run now, delete. */
 function requireManager(scope: WorkspaceScope, schedule: { ownerMemberId: string }) {
-  if (schedule.ownerMemberId !== scope.memberId && scope.role === 'member')
+  if (schedule.ownerMemberId !== scope.memberId && scope.role !== 'owner' && scope.role !== 'admin')
     throw new HTTPException(403, {
       message: "This schedule runs on another member's accounts; only they or an admin manage it",
     })

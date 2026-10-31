@@ -13,7 +13,7 @@ import { api, ApiError, type InvitationView } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 
-const AS = { owner: 'an owner', admin: 'an admin', member: 'a member' } as const
+const AS = { owner: 'an owner', admin: 'an admin', member: 'a member', viewer: 'a viewer' } as const
 
 export default function Invite() {
   const { id } = useParams<{ id: string }>()

@@ -433,11 +433,23 @@ export const library = new Hono<AppEnv>()
 
   /**
    * Open a Markdown file or a memory file to edit (memory is created on first
-   * open). Live through the collab server when it is configured.
+   * open). Live through the collab server when it is configured. A viewer
+   * (src/viewers.ts) opens it to read: no collab token, nothing created.
    */
   .post('/edit', async (c) => {
     const { db, scope } = c.var
     const target = await parseBody(c.req.raw, EditTarget)
+    const viewer = scope.role === 'viewer'
+    if (viewer && target.kind !== 'library') {
+      const memory = await readMemory(db, target)
+      const session: EditSession = {
+        documentId: memory?.id ?? `${target.kind}-unwritten`,
+        text: memory ? await documentText(scope, memory) : '',
+        live: null,
+        readOnly: true,
+      }
+      return c.json(session)
+    }
     let row
     if (target.kind === 'library') {
       row = await libraryFile(db, target.id)
@@ -457,7 +469,7 @@ export const library = new Hono<AppEnv>()
       row = await ensureMemory(db, scope, target, teammate.name)
     }
     let live: EditSession['live'] = null
-    if (collabEnabled()) {
+    if (collabEnabled() && !viewer) {
       const user = await prisma.user.findUnique({ where: { id: scope.userId } })
       const name = user?.name || user?.email || 'Someone'
       live = {
@@ -472,6 +484,7 @@ export const library = new Hono<AppEnv>()
       documentId: row.id,
       text: await documentText(scope, row),
       live,
+      ...(viewer && { readOnly: true }),
     }
     return c.json(session)
   })

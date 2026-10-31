@@ -23,7 +23,7 @@ export const SwitchOrganization = z.object({ organizationId: z.string() })
 /** An owner or admin invites an address to the organization (only an owner invites an owner). */
 export const CreateInvitation = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email().max(320)),
-  role: z.enum(['member', 'admin', 'owner']).default('member'),
+  role: z.enum(['viewer', 'member', 'admin', 'owner']).default('member'),
 })
 /** An owner or admin renames the active workspace, or changes its logo (null: back to its letter). */
 export const UpdateWorkspace = z.object({

@@ -308,7 +308,7 @@ export type Me = {
   user: { id: string; name: string; email: string; image: string | null }
   organizations: { id: string; name: string; slug: string; role: string }[]
   activeOrganizationId: string | null
-  role: 'owner' | 'admin' | 'member' | null
+  role: 'owner' | 'admin' | 'member' | 'viewer' | null
   /** `logo`: its stored logo's version (workspaceLogoPath); null: its letter shows. */
   workspaces: { id: string; name: string; logo: string | null }[]
   activeWorkspaceId: string | null
@@ -328,13 +328,13 @@ export type MembersResponse = {
     name: string
     email: string
     image: string | null
-    role: 'owner' | 'admin' | 'member'
+    role: 'owner' | 'admin' | 'member' | 'viewer'
     joinedAt: string
   }[]
   invitations: {
     id: string
     email: string
-    role: 'owner' | 'admin' | 'member'
+    role: 'owner' | 'admin' | 'member' | 'viewer'
     invitedBy: string
     expiresAt: string
   }[]
@@ -349,7 +349,7 @@ export type InvitationView =
       signedInAs: string
       organization: string
       invitedBy: string
-      role: 'owner' | 'admin' | 'member'
+      role: 'owner' | 'admin' | 'member' | 'viewer'
       /** A member of it already. */
       member: boolean
     }
@@ -359,7 +359,7 @@ export type OpenInvitation = {
   id: string
   organization: string
   invitedBy: string
-  role: 'owner' | 'admin' | 'member'
+  role: 'owner' | 'admin' | 'member' | 'viewer'
 }
 
 export type Teammate = {
@@ -1170,6 +1170,8 @@ export type HomeFeed = {
 }
 
 export const isAdmin = (me: Me) => me.role === 'owner' || me.role === 'admin'
+/** Reads the workspace, changes nothing (the API's src/viewers.ts). */
+export const isViewer = (me: Me) => me.role === 'viewer'
 
 /** A credential's ticket only its creator or an admin decides: sharing it, or changing it. */
 export const credentialManagersOnly = (t: Ticket) =>
