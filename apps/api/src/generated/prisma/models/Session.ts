@@ -49,6 +49,7 @@ export type SessionMinAggregateOutputType = {
   private: boolean | null
   othersMayPrompt: boolean | null
   controlledByMemberId: string | null
+  askedByMemberId: string | null
   origin: $Enums.SessionOrigin | null
   parentId: string | null
   parentTeammateId: string | null
@@ -88,6 +89,7 @@ export type SessionMaxAggregateOutputType = {
   private: boolean | null
   othersMayPrompt: boolean | null
   controlledByMemberId: string | null
+  askedByMemberId: string | null
   origin: $Enums.SessionOrigin | null
   parentId: string | null
   parentTeammateId: string | null
@@ -127,6 +129,7 @@ export type SessionCountAggregateOutputType = {
   private: number
   othersMayPrompt: number
   controlledByMemberId: number
+  askedByMemberId: number
   origin: number
   parentId: number
   parentTeammateId: number
@@ -180,6 +183,7 @@ export type SessionMinAggregateInputType = {
   private?: true
   othersMayPrompt?: true
   controlledByMemberId?: true
+  askedByMemberId?: true
   origin?: true
   parentId?: true
   parentTeammateId?: true
@@ -219,6 +223,7 @@ export type SessionMaxAggregateInputType = {
   private?: true
   othersMayPrompt?: true
   controlledByMemberId?: true
+  askedByMemberId?: true
   origin?: true
   parentId?: true
   parentTeammateId?: true
@@ -258,6 +263,7 @@ export type SessionCountAggregateInputType = {
   private?: true
   othersMayPrompt?: true
   controlledByMemberId?: true
+  askedByMemberId?: true
   origin?: true
   parentId?: true
   parentTeammateId?: true
@@ -386,6 +392,7 @@ export type SessionGroupByOutputType = {
   private: boolean
   othersMayPrompt: boolean
   controlledByMemberId: string | null
+  askedByMemberId: string | null
   origin: $Enums.SessionOrigin
   parentId: string | null
   parentTeammateId: string | null
@@ -450,6 +457,7 @@ export type SessionWhereInput = {
   private?: Prisma.BoolFilter<"Session"> | boolean
   othersMayPrompt?: Prisma.BoolFilter<"Session"> | boolean
   controlledByMemberId?: Prisma.StringNullableFilter<"Session"> | string | null
+  askedByMemberId?: Prisma.StringNullableFilter<"Session"> | string | null
   origin?: Prisma.EnumSessionOriginFilter<"Session"> | $Enums.SessionOrigin
   parentId?: Prisma.StringNullableFilter<"Session"> | string | null
   parentTeammateId?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -530,6 +538,7 @@ export type SessionOrderByWithRelationInput = {
   private?: Prisma.SortOrder
   othersMayPrompt?: Prisma.SortOrder
   controlledByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
+  askedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   origin?: Prisma.SortOrder
   parentId?: Prisma.SortOrderInput | Prisma.SortOrder
   parentTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -614,6 +623,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   private?: Prisma.BoolFilter<"Session"> | boolean
   othersMayPrompt?: Prisma.BoolFilter<"Session"> | boolean
   controlledByMemberId?: Prisma.StringNullableFilter<"Session"> | string | null
+  askedByMemberId?: Prisma.StringNullableFilter<"Session"> | string | null
   origin?: Prisma.EnumSessionOriginFilter<"Session"> | $Enums.SessionOrigin
   parentId?: Prisma.StringNullableFilter<"Session"> | string | null
   parentTeammateId?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -693,6 +703,7 @@ export type SessionOrderByWithAggregationInput = {
   private?: Prisma.SortOrder
   othersMayPrompt?: Prisma.SortOrder
   controlledByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
+  askedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   origin?: Prisma.SortOrder
   parentId?: Prisma.SortOrderInput | Prisma.SortOrder
   parentTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -742,6 +753,7 @@ export type SessionScalarWhereWithAggregatesInput = {
   private?: Prisma.BoolWithAggregatesFilter<"Session"> | boolean
   othersMayPrompt?: Prisma.BoolWithAggregatesFilter<"Session"> | boolean
   controlledByMemberId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
+  askedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   origin?: Prisma.EnumSessionOriginWithAggregatesFilter<"Session"> | $Enums.SessionOrigin
   parentId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   parentTeammateId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
@@ -778,6 +790,7 @@ export type SessionCreateInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -852,6 +865,7 @@ export type SessionUncheckedCreateInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -916,6 +930,7 @@ export type SessionUpdateInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -990,6 +1005,7 @@ export type SessionUncheckedUpdateInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1059,6 +1075,7 @@ export type SessionCreateManyInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -1095,6 +1112,7 @@ export type SessionUpdateManyMutationInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1130,6 +1148,7 @@ export type SessionUncheckedUpdateManyInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1191,6 +1210,7 @@ export type SessionCountOrderByAggregateInput = {
   private?: Prisma.SortOrder
   othersMayPrompt?: Prisma.SortOrder
   controlledByMemberId?: Prisma.SortOrder
+  askedByMemberId?: Prisma.SortOrder
   origin?: Prisma.SortOrder
   parentId?: Prisma.SortOrder
   parentTeammateId?: Prisma.SortOrder
@@ -1237,6 +1257,7 @@ export type SessionMaxOrderByAggregateInput = {
   private?: Prisma.SortOrder
   othersMayPrompt?: Prisma.SortOrder
   controlledByMemberId?: Prisma.SortOrder
+  askedByMemberId?: Prisma.SortOrder
   origin?: Prisma.SortOrder
   parentId?: Prisma.SortOrder
   parentTeammateId?: Prisma.SortOrder
@@ -1276,6 +1297,7 @@ export type SessionMinOrderByAggregateInput = {
   private?: Prisma.SortOrder
   othersMayPrompt?: Prisma.SortOrder
   controlledByMemberId?: Prisma.SortOrder
+  askedByMemberId?: Prisma.SortOrder
   origin?: Prisma.SortOrder
   parentId?: Prisma.SortOrder
   parentTeammateId?: Prisma.SortOrder
@@ -2193,6 +2215,7 @@ export type SessionCreateWithoutStartedByInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -2265,6 +2288,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -2363,6 +2387,7 @@ export type SessionScalarWhereInput = {
   private?: Prisma.BoolFilter<"Session"> | boolean
   othersMayPrompt?: Prisma.BoolFilter<"Session"> | boolean
   controlledByMemberId?: Prisma.StringNullableFilter<"Session"> | string | null
+  askedByMemberId?: Prisma.StringNullableFilter<"Session"> | string | null
   origin?: Prisma.EnumSessionOriginFilter<"Session"> | $Enums.SessionOrigin
   parentId?: Prisma.StringNullableFilter<"Session"> | string | null
   parentTeammateId?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -2399,6 +2424,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -2471,6 +2497,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -2561,6 +2588,7 @@ export type SessionCreateWithoutComputerInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -2633,6 +2661,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -2723,6 +2752,7 @@ export type SessionCreateWithoutTeammateInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -2795,6 +2825,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -2885,6 +2916,7 @@ export type SessionCreateWithoutReadsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -2958,6 +2990,7 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -3037,6 +3070,7 @@ export type SessionUpdateWithoutReadsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -3110,6 +3144,7 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3173,6 +3208,7 @@ export type SessionCreateWithoutPinsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -3246,6 +3282,7 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -3325,6 +3362,7 @@ export type SessionUpdateWithoutPinsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -3398,6 +3436,7 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3461,6 +3500,7 @@ export type SessionCreateWithoutLatersInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -3534,6 +3574,7 @@ export type SessionUncheckedCreateWithoutLatersInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -3613,6 +3654,7 @@ export type SessionUpdateWithoutLatersInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -3686,6 +3728,7 @@ export type SessionUncheckedUpdateWithoutLatersInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3749,6 +3792,7 @@ export type SessionCreateWithoutChildrenInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -3822,6 +3866,7 @@ export type SessionUncheckedCreateWithoutChildrenInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -3890,6 +3935,7 @@ export type SessionCreateWithoutParentInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -3963,6 +4009,7 @@ export type SessionUncheckedCreateWithoutParentInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -4047,6 +4094,7 @@ export type SessionUpdateWithoutChildrenInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -4120,6 +4168,7 @@ export type SessionUncheckedUpdateWithoutChildrenInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4199,6 +4248,7 @@ export type SessionCreateWithoutTaskInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -4272,6 +4322,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -4351,6 +4402,7 @@ export type SessionUpdateWithoutTaskInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -4424,6 +4476,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4487,6 +4540,7 @@ export type SessionCreateWithoutReportingSchedulesInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -4560,6 +4614,7 @@ export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -4628,6 +4683,7 @@ export type SessionCreateWithoutScheduleInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -4701,6 +4757,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -4785,6 +4842,7 @@ export type SessionUpdateWithoutReportingSchedulesInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -4858,6 +4916,7 @@ export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4937,6 +4996,7 @@ export type SessionCreateWithoutWakeupsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -5010,6 +5070,7 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -5089,6 +5150,7 @@ export type SessionUpdateWithoutWakeupsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -5162,6 +5224,7 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5225,6 +5288,7 @@ export type SessionCreateWithoutReplyWatchesInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -5298,6 +5362,7 @@ export type SessionUncheckedCreateWithoutReplyWatchesInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -5377,6 +5442,7 @@ export type SessionUpdateWithoutReplyWatchesInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -5450,6 +5516,7 @@ export type SessionUncheckedUpdateWithoutReplyWatchesInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5513,6 +5580,7 @@ export type SessionCreateWithoutTeammatesInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -5586,6 +5654,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -5665,6 +5734,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -5738,6 +5808,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5801,6 +5872,7 @@ export type SessionCreateWithoutEventsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -5874,6 +5946,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -5953,6 +6026,7 @@ export type SessionUpdateWithoutEventsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -6026,6 +6100,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6089,6 +6164,7 @@ export type SessionCreateWithoutTokenUsageInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -6162,6 +6238,7 @@ export type SessionUncheckedCreateWithoutTokenUsageInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -6241,6 +6318,7 @@ export type SessionUpdateWithoutTokenUsageInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -6314,6 +6392,7 @@ export type SessionUncheckedUpdateWithoutTokenUsageInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6377,6 +6456,7 @@ export type SessionCreateWithoutAccountInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -6449,6 +6529,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -6539,6 +6620,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -6612,6 +6694,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -6680,6 +6763,7 @@ export type SessionCreateWithoutReviewsOfInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -6753,6 +6837,7 @@ export type SessionUncheckedCreateWithoutReviewsOfInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -6832,6 +6917,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -6905,6 +6991,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6979,6 +7066,7 @@ export type SessionUpdateWithoutReviewsOfInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -7052,6 +7140,7 @@ export type SessionUncheckedUpdateWithoutReviewsOfInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7115,6 +7204,7 @@ export type SessionCreateWithoutCommentsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -7188,6 +7278,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -7267,6 +7358,7 @@ export type SessionUpdateWithoutCommentsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -7340,6 +7432,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7403,6 +7496,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -7476,6 +7570,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -7555,6 +7650,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -7628,6 +7724,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7691,6 +7788,7 @@ export type SessionCreateWithoutTriggerInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -7764,6 +7862,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -7853,6 +7952,7 @@ export type SessionCreateWithoutTicketsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -7926,6 +8026,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -8005,6 +8106,7 @@ export type SessionUpdateWithoutTicketsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -8078,6 +8180,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8141,6 +8244,7 @@ export type SessionCreateWithoutDocumentsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -8214,6 +8318,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -8293,6 +8398,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -8366,6 +8472,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8429,6 +8536,7 @@ export type SessionCreateWithoutListItemsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -8502,6 +8610,7 @@ export type SessionUncheckedCreateWithoutListItemsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -8581,6 +8690,7 @@ export type SessionUpdateWithoutListItemsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -8654,6 +8764,7 @@ export type SessionUncheckedUpdateWithoutListItemsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8717,6 +8828,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -8790,6 +8902,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -8869,6 +8982,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -8942,6 +9056,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9005,6 +9120,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -9078,6 +9194,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -9157,6 +9274,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -9230,6 +9348,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9293,6 +9412,7 @@ export type SessionCreateWithoutProjectInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -9366,6 +9486,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -9455,6 +9576,7 @@ export type SessionCreateWithoutRootOfPlaybookRunInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -9528,6 +9650,7 @@ export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -9596,6 +9719,7 @@ export type SessionCreateWithoutPlaybookRunInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -9669,6 +9793,7 @@ export type SessionUncheckedCreateWithoutPlaybookRunInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -9753,6 +9878,7 @@ export type SessionUpdateWithoutRootOfPlaybookRunInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -9826,6 +9952,7 @@ export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9905,6 +10032,7 @@ export type SessionCreateWithoutPlaybookDryRunsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -9978,6 +10106,7 @@ export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -10057,6 +10186,7 @@ export type SessionUpdateWithoutPlaybookDryRunsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -10130,6 +10260,7 @@ export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -10193,6 +10324,7 @@ export type SessionCreateWithoutFollowersInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -10266,6 +10398,7 @@ export type SessionUncheckedCreateWithoutFollowersInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -10334,6 +10467,7 @@ export type SessionCreateWithoutFollowingInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -10407,6 +10541,7 @@ export type SessionUncheckedCreateWithoutFollowingInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -10486,6 +10621,7 @@ export type SessionUpdateWithoutFollowersInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -10559,6 +10695,7 @@ export type SessionUncheckedUpdateWithoutFollowersInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -10633,6 +10770,7 @@ export type SessionUpdateWithoutFollowingInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -10706,6 +10844,7 @@ export type SessionUncheckedUpdateWithoutFollowingInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -10769,6 +10908,7 @@ export type SessionCreateWithoutMailAliasesInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -10842,6 +10982,7 @@ export type SessionUncheckedCreateWithoutMailAliasesInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -10921,6 +11062,7 @@ export type SessionUpdateWithoutMailAliasesInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -10994,6 +11136,7 @@ export type SessionUncheckedUpdateWithoutMailAliasesInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -11057,6 +11200,7 @@ export type SessionCreateWithoutMailMessagesInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -11130,6 +11274,7 @@ export type SessionUncheckedCreateWithoutMailMessagesInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -11209,6 +11354,7 @@ export type SessionUpdateWithoutMailMessagesInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -11282,6 +11428,7 @@ export type SessionUncheckedUpdateWithoutMailMessagesInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -11345,6 +11492,7 @@ export type SessionCreateWithoutHeldCallsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -11418,6 +11566,7 @@ export type SessionUncheckedCreateWithoutHeldCallsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -11497,6 +11646,7 @@ export type SessionUpdateWithoutHeldCallsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -11570,6 +11720,7 @@ export type SessionUncheckedUpdateWithoutHeldCallsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -11633,6 +11784,7 @@ export type SessionCreateWithoutRunnerCommandsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -11706,6 +11858,7 @@ export type SessionUncheckedCreateWithoutRunnerCommandsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -11785,6 +11938,7 @@ export type SessionUpdateWithoutRunnerCommandsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -11858,6 +12012,7 @@ export type SessionUncheckedUpdateWithoutRunnerCommandsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -11921,6 +12076,7 @@ export type SessionCreateWithoutFolderBackupsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -11994,6 +12150,7 @@ export type SessionUncheckedCreateWithoutFolderBackupsInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -12073,6 +12230,7 @@ export type SessionUpdateWithoutFolderBackupsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -12146,6 +12304,7 @@ export type SessionUncheckedUpdateWithoutFolderBackupsInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12213,6 +12372,7 @@ export type SessionCreateManyStartedByInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -12249,6 +12409,7 @@ export type SessionUpdateWithoutStartedByInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -12321,6 +12482,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12389,6 +12551,7 @@ export type SessionUncheckedUpdateManyWithoutStartedByInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12429,6 +12592,7 @@ export type SessionCreateManyWorkspaceInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -12465,6 +12629,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -12537,6 +12702,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12605,6 +12771,7 @@ export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12645,6 +12812,7 @@ export type SessionCreateManyComputerInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -12681,6 +12849,7 @@ export type SessionUpdateWithoutComputerInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -12753,6 +12922,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12821,6 +12991,7 @@ export type SessionUncheckedUpdateManyWithoutComputerInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -12861,6 +13032,7 @@ export type SessionCreateManyTeammateInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -12897,6 +13069,7 @@ export type SessionUpdateWithoutTeammateInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -12969,6 +13142,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13037,6 +13211,7 @@ export type SessionUncheckedUpdateManyWithoutTeammateInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13078,6 +13253,7 @@ export type SessionCreateManyParentInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentTeammateId?: string | null
   awaited?: boolean
@@ -13113,6 +13289,7 @@ export type SessionUpdateWithoutParentInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -13186,6 +13363,7 @@ export type SessionUncheckedUpdateWithoutParentInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -13254,6 +13432,7 @@ export type SessionUncheckedUpdateManyWithoutParentInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -13294,6 +13473,7 @@ export type SessionCreateManyScheduleInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -13329,6 +13509,7 @@ export type SessionUpdateWithoutScheduleInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -13402,6 +13583,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13470,6 +13652,7 @@ export type SessionUncheckedUpdateManyWithoutScheduleInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13509,6 +13692,7 @@ export type SessionCreateManyAccountInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -13545,6 +13729,7 @@ export type SessionUpdateWithoutAccountInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -13617,6 +13802,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13685,6 +13871,7 @@ export type SessionUncheckedUpdateManyWithoutAccountInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13726,6 +13913,7 @@ export type SessionCreateManyTriggerInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -13761,6 +13949,7 @@ export type SessionUpdateWithoutTriggerInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -13834,6 +14023,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13902,6 +14092,7 @@ export type SessionUncheckedUpdateManyWithoutTriggerInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -13942,6 +14133,7 @@ export type SessionCreateManyProjectInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -13977,6 +14169,7 @@ export type SessionUpdateWithoutProjectInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -14050,6 +14243,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14118,6 +14312,7 @@ export type SessionUncheckedUpdateManyWithoutProjectInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14158,6 +14353,7 @@ export type SessionCreateManyPlaybookRunInput = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
+  askedByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   parentId?: string | null
   parentTeammateId?: string | null
@@ -14193,6 +14389,7 @@ export type SessionUpdateWithoutPlaybookRunInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   awaited?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -14266,6 +14463,7 @@ export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14334,6 +14532,7 @@ export type SessionUncheckedUpdateManyWithoutPlaybookRunInput = {
   private?: Prisma.BoolFieldUpdateOperationsInput | boolean
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  askedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -14639,6 +14838,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: boolean
+  askedByMemberId?: boolean
   origin?: boolean
   parentId?: boolean
   parentTeammateId?: boolean
@@ -14720,6 +14920,7 @@ export type SessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: boolean
+  askedByMemberId?: boolean
   origin?: boolean
   parentId?: boolean
   parentTeammateId?: boolean
@@ -14772,6 +14973,7 @@ export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: boolean
+  askedByMemberId?: boolean
   origin?: boolean
   parentId?: boolean
   parentTeammateId?: boolean
@@ -14824,6 +15026,7 @@ export type SessionSelectScalar = {
   private?: boolean
   othersMayPrompt?: boolean
   controlledByMemberId?: boolean
+  askedByMemberId?: boolean
   origin?: boolean
   parentId?: boolean
   parentTeammateId?: boolean
@@ -14852,7 +15055,7 @@ export type SessionSelectScalar = {
   quiet?: boolean
 }
 
-export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "lastSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "playbookTeammate" | "surfacedAt" | "quiet", ExtArgs["result"]["session"]>
+export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "askedByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "lastSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "playbookTeammate" | "surfacedAt" | "quiet", ExtArgs["result"]["session"]>
 export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -15038,6 +15241,13 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * Set while a member has taken over the thread; the teammate does not act meanwhile.
      */
     controlledByMemberId: string | null
+    /**
+     * The one member whose requests its teammate works on: who wrote or answered in it, or, for
+     * work a teammate passed on (a child, a task, message_thread), who had asked for it there;
+     * '*' once another member took part. A member's own App account answers only them
+     * (src/connector-calls.ts, src/thread-spec.ts).
+     */
+    askedByMemberId: string | null
     /**
      * member: a member's message. trigger: an outside event. schedule: a schedule's instructions, at its time.
      * child: a teammate started it from its parent thread (start_child).
@@ -15604,6 +15814,7 @@ export interface SessionFieldRefs {
   readonly private: Prisma.FieldRef<"Session", 'Boolean'>
   readonly othersMayPrompt: Prisma.FieldRef<"Session", 'Boolean'>
   readonly controlledByMemberId: Prisma.FieldRef<"Session", 'String'>
+  readonly askedByMemberId: Prisma.FieldRef<"Session", 'String'>
   readonly origin: Prisma.FieldRef<"Session", 'SessionOrigin'>
   readonly parentId: Prisma.FieldRef<"Session", 'String'>
   readonly parentTeammateId: Prisma.FieldRef<"Session", 'String'>

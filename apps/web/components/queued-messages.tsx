@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { brigadeNote, handOffNote, notePreview } from '@/components/brigade-notes'
+import { useDashboard } from '@/components/dashboard'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
+import { useMemberNames } from '@/lib/member-names'
 import { Hint } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
@@ -77,6 +79,12 @@ export function QueuedMessages({
   onResend: (message: Outgoing) => void
   onDiscard: (messageId: string) => void
 }) {
+  const { me } = useDashboard()
+  // Another member's message is theirs to change: anyone who may write steers it in.
+  const others = queued.some((m) => m.memberId !== null && m.memberId !== me.memberId)
+  const names = useMemberNames(others)
+  const mayChange = (m: QueuedMessage, action: QueuedMessageAction['action']) =>
+    mayChangeQueued(m.memberId, action) && (m.memberId === null || m.memberId === me.memberId)
   const [editing, setEditing] = useState<{ messageId: string; text: string }>()
   const [busy, setBusy] = useState<string>()
   const [open, setOpen] = useState(true)
@@ -102,7 +110,7 @@ export function QueuedMessages({
     if (note) return notePreview(note)
     return mentionsToText(forPeople(m.text)) || `${files} file${files === 1 ? '' : 's'}`
   }
-  const cancellable = queued.filter((m) => mayChangeQueued(m.memberId, 'cancel'))
+  const cancellable = queued.filter((m) => mayChange(m, 'cancel'))
   // One message needs no header: it sits on a single line, marked Queued.
   const single = queued.length === 1
   const shown = open || single
@@ -145,20 +153,22 @@ export function QueuedMessages({
               {queued.map((m) => {
                 const files = m.attachments.length
                 const from =
-                  m.memberId === null &&
-                  (childNote(m.text) === 'report'
-                    ? 'Reports from child threads'
-                    : childNote(m.text) === 'task' || childNote(m.text) === 'parent'
-                      ? 'From the parent thread'
-                      : (brigadeNote(m.text, true)?.label ?? 'From Brigade'))
+                  m.memberId !== null && m.memberId !== me.memberId
+                    ? (names.get(m.memberId) ?? 'Another member')
+                    : m.memberId === null &&
+                      (childNote(m.text) === 'report'
+                        ? 'Reports from child threads'
+                        : childNote(m.text) === 'task' || childNote(m.text) === 'parent'
+                          ? 'From the parent thread'
+                          : (brigadeNote(m.text, true)?.label ?? 'From Brigade'))
                 const parallel =
                   canSteer &&
                   canParallel &&
                   m.waitingFor === 'turn' &&
-                  mayChangeQueued(m.memberId, 'parallel') &&
+                  mayChange(m, 'parallel') &&
                   !asksParallel(m.text)
-                const editable = mayChangeQueued(m.memberId, 'edit')
-                const removable = mayChangeQueued(m.memberId, 'cancel')
+                const editable = mayChange(m, 'edit')
+                const removable = mayChange(m, 'cancel')
                 return (
                   <li key={m.messageId} className={single ? 'py-2' : 'py-2.5'}>
                     {editing?.messageId === m.messageId ? (

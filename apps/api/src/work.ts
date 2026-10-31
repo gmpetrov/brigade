@@ -18,9 +18,11 @@ import { describeError, hubs, threadUpdated } from './hub.js'
 import { isKept } from './runner-commands.js'
 import { usableAccounts } from './routes/accounts.js'
 import {
+  askedBy,
   currentTeammate,
   loadThread,
   noAccount,
+  noteAsker,
   specFor,
   teammateIn,
   type LoadedThread,
@@ -42,6 +44,11 @@ type Prompt = {
   steer?: boolean
   /** The earlier message it replies to. */
   replyTo?: ReplyTo
+  /**
+   * Written by a teammate for a member's request elsewhere (message_thread, a task comment):
+   * that member asks it too (Session.askedByMemberId). A person's own message: memberId does.
+   */
+  onBehalfOf?: string | null
 }
 
 const MAX_TEAMMATES_PER_MESSAGE = 5
@@ -96,6 +103,9 @@ export async function promptThread(
 ): Promise<'sent' | 'queued' | 'offline' | 'paused'> {
   // Every turn starts here: none in a workspace being deleted, whose computer and Apps are going.
   await refuseWhileDeleting(scope.workspaceId)
+  // Whose requests it works on: Brigade's own notes (a wake-up, a report) change nothing.
+  const asker = prompt.memberId ?? prompt.onBehalfOf
+  if (asker) await noteAsker(db, thread.id, asker)
   // Moving, the thread is on neither computer for good: what is sent now could be lost on
   // the old one, or reach the new one before its runner can take the thread in.
   if (thread.move && !options.moving)
@@ -415,6 +425,11 @@ export async function startThread(
     /** Its first prompt's stable id (promptThread's commandId). */
     commandId?: string
     /**
+     * Whose request a teammate started it for (Session.askedByMemberId). Unset: the member
+     * typing it, a child's parent's asker, or no one for an event's or a schedule's.
+     */
+    askedByMemberId?: string | null
+    /**
      * The thread's id, chosen beforehand (a trigger's delivery keeps it with its claim): started
      * again after a restart cut it off, the thread it made then is taken up rather than a second.
      */
@@ -451,6 +466,14 @@ export async function startThread(
         ...(input.id ? { id: input.id } : {}),
         teammateId: input.teammate.id,
         startedByMemberId: input.memberId,
+        askedByMemberId:
+          input.askedByMemberId !== undefined
+            ? input.askedByMemberId
+            : input.origin?.kind === 'child'
+              ? await askedBy(db, input.origin.parent.id)
+              : input.origin || input.byTeammateId
+                ? null
+                : input.memberId,
         computerId: input.computer.id,
         accountId: account.id,
         title: input.title.slice(0, 120),

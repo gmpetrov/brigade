@@ -223,6 +223,8 @@ export const members = new Hono<AppEnv>()
       {
         actor: { type: 'member', id: scope.memberId },
         reason: 'removed',
+        // What they started stays, for the team: the remover's now.
+        handTo: scope.memberId,
         // Who may remove whom, again in the members' turn: a role may have changed since.
         check: async (tx) => void (await memberToChange(tx, scope, id)),
       },

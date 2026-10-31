@@ -45,7 +45,7 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 const { Hono } = await import('hono')
 const { HTTPException } = await import('hono/http-exception')
 const { auth, authRouteClosed } = await import('../src/auth.js')
-const { prisma } = await import('../src/db.js')
+const { prisma, scoped } = await import('../src/db.js')
 const { env } = await import('../src/config.js')
 const { members } = await import('../src/routes/members.js')
 const { workspaces } = await import('../src/routes/workspaces.js')
@@ -596,8 +596,25 @@ test('owners and admins remove members, who leave the organization', { skip }, a
   assert.equal((await remove(member.cookie, admin.memberId)).status, 403)
   assert.equal((await remove(admin.cookie, owner!.id)).status, 403)
   assert.equal((await remove(admin.cookie, admin.memberId)).status, 400)
+  // A thread they started on the cloud computer: it stays, the remover's now.
+  const db = scoped({ organizationId: org.organizationId, workspaceId: org.workspaceId })
+  const computer = await db.computer.create({ data: { kind: 'cloud', name: 'Cloud' } } as never)
+  const teammate = await db.teammate.create({ data: { name: 'Riley' } } as never)
+  const kept = await db.session.create({
+    data: {
+      teammateId: teammate.id,
+      startedByMemberId: member.memberId,
+      computerId: computer.id,
+      title: 'Pricing page',
+      status: 'idle',
+    },
+  } as never)
   assert.equal((await remove(admin.cookie, member.memberId)).status, 204)
   assert.equal(await roleOf(member.memberId), undefined)
+  assert.equal(
+    (await db.session.findFirst({ where: { id: kept.id } }))?.startedByMemberId,
+    admin.memberId,
+  )
   // Out of it: no longer in it, nor shown its members.
   const me = await meOf(member.cookie)
   assert.equal(me.activeOrganizationId, null)

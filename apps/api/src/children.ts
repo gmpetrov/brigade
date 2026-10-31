@@ -34,7 +34,7 @@ import { audit, type Actor } from './audit.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
 import { looksTaken } from './review-state.js'
-import { loadThread } from './thread-spec.js'
+import { askedBy, loadThread } from './thread-spec.js'
 import { fireNow, firedInARow } from './wakeups.js'
 import { promptThread, startThread } from './work.js'
 
@@ -813,6 +813,8 @@ export async function messageChild(
   const outcome = await promptThread(db, scope, thread, {
     text: parentMessage({ from: teammate.name, parentTitle: parent.title, text }),
     memberId: null,
+    // Whoever asked for it in the parent asks in the child too.
+    onBehalfOf: await askedBy(db, parent.id),
   })
   if (outcome === 'offline') return { error: "That child thread's computer is offline." }
   await parentChanged(scope, parent.id)

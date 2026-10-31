@@ -3,6 +3,7 @@
 // and `ListItem` keeps by that id what the file cannot: the threads on it, the pull requests
 // that finish it, who ticked it from Brigade, the lines of what remains of it. Brigade changes
 // the file only to mark, tick or add a line, each a save of its own credited to who did it.
+import { memberMayWrite } from './account-sharing.js'
 import { createHash } from 'node:crypto'
 import {
   findLine,
@@ -650,7 +651,7 @@ export async function linkToThread(
   const session = await db.session.findFirst({ where: { id: input.sessionId } })
   if (!session) throw new HTTPException(404, { message: 'Thread not found' })
   // Its teammate reads the lines at its next turn, on its starter's accounts: as a message would.
-  if (session.startedByMemberId !== memberId && !session.othersMayPrompt)
+  if (!(await memberMayWrite(session, memberId)))
     throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
   const ids = [
     ...new Set(await itemsFor(db, scope, { type: 'member', id: memberId }, file, input.items)),

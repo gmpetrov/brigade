@@ -136,6 +136,26 @@ const ASKS: Record<string, string> = {
 const threadUrl = (workspaceId: string, threadId: string) =>
   `/app/threads/${threadId}?workspace=${workspaceId}`
 
+/** Who wrote each thread's latest person's message, of the last day. */
+async function latestAskers(sessionIds: string[], now: Date) {
+  const askers = new Map<string, string>()
+  if (!sessionIds.length) return askers
+  const messages = await prisma.sessionEvent.findMany({
+    where: {
+      sessionId: { in: sessionIds },
+      type: 'message.user',
+      at: { gt: new Date(now.getTime() - 24 * 60 * 60_000) },
+    },
+    select: { sessionId: true, data: true },
+    orderBy: { seq: 'desc' },
+  })
+  for (const { sessionId, data } of messages) {
+    const memberId = (data as { memberId?: string | null } | null)?.memberId
+    if (memberId && !askers.has(sessionId)) askers.set(sessionId, memberId)
+  }
+  return askers
+}
+
 /** What each member of an organization may be notified of in one workspace. */
 async function workspaceItems(workspaceId: string, members: Recipient[], now: Date) {
   const fresh = new Date(now.getTime() - FRESH_MS)
@@ -408,24 +428,28 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
   }
   // A thread's latest turn only: one notification per thread.
   const latest = new Map(turns.map((turn) => [turn.session.id, turn]))
+  // In a thread others write in, the reply is also news for whoever asked for it last.
+  const askers = await latestAskers([...latest.keys()], now)
   for (const turn of latest.values()) {
     const s = turn.session
-    const m = members.find((r) => r.id === s.startedByMemberId && r.notify === 'everything')
-    if (!m || counted.get(m.id)!.has(`needs:${s.id}`)) continue
-    // Read since: they saw it.
-    const seen = s.reads.find((r) => r.memberId === m.id)?.seenAt
-    if (seen && seen >= turn.at) continue
     // A task's thread says when it is done, not each turn on the way.
     if (s.taskId) continue
-    add(m.id, {
-      key: `reply:${s.id}:${turn.at.getTime()}`,
-      workspaceId,
-      needs: false,
-      title: `${s.teammate.name} replied`,
-      body: s.title,
-      url: threadUrl(workspaceId, s.id),
-      tag: s.id,
-    })
+    for (const id of new Set([s.startedByMemberId, askers.get(s.id)])) {
+      const m = members.find((r) => r.id === id && r.notify === 'everything')
+      if (!m || counted.get(m.id)!.has(`needs:${s.id}`)) continue
+      // Read since: they saw it.
+      const seen = s.reads.find((r) => r.memberId === m.id)?.seenAt
+      if (seen && seen >= turn.at) continue
+      add(m.id, {
+        key: `reply:${s.id}:${turn.at.getTime()}`,
+        workspaceId,
+        needs: false,
+        title: `${s.teammate.name} replied`,
+        body: s.title,
+        url: threadUrl(workspaceId, s.id),
+        tag: s.id,
+      })
+    }
   }
 
   return { items, counted }

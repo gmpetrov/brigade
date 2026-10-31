@@ -12,6 +12,7 @@
 // A pull request a child thread opened is reviewed in a child of that child's parent,
 // whose teammate tells the child what to fix: children stay one level deep. One opened
 // outside Brigade is reviewed in a thread of its own, which posts its verdict on GitHub.
+import { memberMayWrite } from './account-sharing.js'
 import { randomUUID } from 'node:crypto'
 import {
   childPrompt,
@@ -457,10 +458,9 @@ async function startClaimed(
         'request_review is for a pull request this thread, or one of its child threads, opened. A person can ask for a review of another one on its page.',
     })
   if (by.kind === 'member' && parent) {
-    if (parent.startedByMemberId !== by.memberId && !parent.othersMayPrompt)
+    if (!(await memberMayWrite(parent, by.memberId)))
       throw new HTTPException(403, {
-        message:
-          "Only the member who started this pull request's thread can ask for its review, unless they let others prompt in it.",
+        message: "Only who may write in this pull request's thread can ask for its review.",
       })
     if (parent.controlledByMemberId)
       throw new HTTPException(409, {

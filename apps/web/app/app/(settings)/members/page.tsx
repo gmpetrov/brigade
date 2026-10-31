@@ -126,7 +126,7 @@ export default function MembersPage() {
     const from = organization?.name ?? 'the organization'
     if (
       !confirm(
-        `Remove ${who} from ${from}? They lose access to every workspace, and the threads they started are deleted with their files.`,
+        `Remove ${who} from ${from}? They lose access to every workspace. Threads they started on their own computer are deleted; the others become yours.`,
       )
     )
       return

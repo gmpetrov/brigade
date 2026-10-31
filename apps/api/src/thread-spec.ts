@@ -6,6 +6,7 @@ import {
   type ThreadSpec,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { mayWrite } from './account-sharing.js'
 import { usableIn } from './apps.js'
 import { hubs } from './hub.js'
 import { customMcp } from './mcp-servers.js'
@@ -13,7 +14,7 @@ import { isMcp } from './mcp-tools.js'
 import { catalogVersion, grantOperations, takesCatalogs } from './catalogs.js'
 import { threadAttachments } from './attachments.js'
 import { chiefRoster } from './chief.js'
-import type { ScopedDb } from './db.js'
+import { prisma, type ScopedDb } from './db.js'
 import type { WorkspaceScope } from './scope.js'
 import { connectors } from './connectors/index.js'
 import { threadAddress } from './connectors/email.js'
@@ -325,18 +326,88 @@ export async function specFor(
   }
 }
 
-/** Prompting or approving is the starter's: only they may, unless they allow others. */
+/**
+ * Whose requests a thread's teammate works on (Session.askedByMemberId): the one member who
+ * wrote, answered or decided in it, or who had asked for the work a teammate passed on to it;
+ * SEVERAL_ASKERS once another took part. Null when no person asked (a trigger's, a routine's
+ * thread). Threads from before it was kept: the author of their latest person's input.
+ */
+export async function askedBy(db: ScopedDb, sessionId: string): Promise<string | null> {
+  const thread = await db.session.findFirst({
+    where: { id: sessionId },
+    select: { askedByMemberId: true },
+  })
+  if (thread?.askedByMemberId) return thread.askedByMemberId
+  return askedByEvents(db, sessionId)
+}
+
+/** The person's inputs that tell whose request a thread from before askedByMemberId works on. */
+const personInputs = (sessionId: string) => ({
+  where: {
+    sessionId,
+    type: { in: ['message.user', 'question.answered', 'ticket.answered', 'approval.resolved'] },
+  },
+  orderBy: { seq: 'desc' as const },
+  select: { data: true },
+  take: 20,
+})
+
+/** The member who wrote the latest of them. */
+const latestAsker = (rows: { data: unknown }[]) => {
+  for (const { data } of rows) {
+    const memberId = (data as { memberId?: string | null } | null)?.memberId
+    if (memberId) return memberId
+  }
+  return null
+}
+
+/** Whose request a thread from before Session.askedByMemberId works on: its latest person's input. */
+async function askedByEvents(db: ScopedDb, sessionId: string) {
+  return latestAsker(await db.sessionEvent.findMany(personInputs(sessionId)))
+}
+
+/** Several members asked in a thread: no one member's own App account answers it any more. */
+export const SEVERAL_ASKERS = '*'
+
+/**
+ * A member wrote, answered or decided in a thread. Its teammate works on its asker's requests
+ * alone while nobody else takes part; once another member does, on several members' for good
+ * (SEVERAL_ASKERS), whatever is queued or under way: a member's own Apps stay out of it. Taken
+ * under the thread's row lock, so two members at once both count.
+ */
+export async function noteAsker(db: ScopedDb, sessionId: string, memberId: string) {
+  const thread = await db.session.findFirst({ where: { id: sessionId }, select: { id: true } })
+  if (!thread) return
+  await prisma.$transaction(async (tx) => {
+    const [row] = await tx.$queryRaw<{ askedByMemberId: string | null }[]>`
+      SELECT "askedByMemberId" FROM "Session" WHERE id = ${thread.id} FOR UPDATE`
+    if (!row) return
+    // Unknown (a thread from before it was kept): read from what people wrote in it.
+    // On the transaction's own connection: it holds the lock, and needs no other from the pool.
+    const before =
+      row.askedByMemberId ?? latestAsker(await tx.sessionEvent.findMany(personInputs(thread.id)))
+    const next = !before || before === memberId ? memberId : SEVERAL_ASKERS
+    if (next !== row.askedByMemberId)
+      await tx.session.update({ where: { id: thread.id }, data: { askedByMemberId: next } })
+  })
+}
+
+/** Prompting or approving: its starter, or any member but a viewer once it is open (mayWrite). */
 export function requireMayPrompt(
   scope: WorkspaceScope,
   thread: {
     startedByMemberId: string
     othersMayPrompt: boolean
+    computer: { kind: string }
     controlledByMemberId: string | null
   },
 ) {
-  if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt) {
+  if (!mayWrite(thread, scope)) {
     throw new HTTPException(403, {
-      message: 'Only the member who started this thread writes in it. Fork it to continue.',
+      message:
+        scope.role === 'viewer'
+          ? 'You can view this workspace but not change it. Ask an owner or admin.'
+          : 'Only the member who started this thread writes in it. Fork it to continue.',
     })
   }
   if (thread.controlledByMemberId) {
