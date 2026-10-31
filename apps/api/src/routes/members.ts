@@ -10,9 +10,15 @@ import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { audit } from '../audit.js'
 import { auth } from '../auth.js'
-import { prisma } from '../db.js'
+import { prisma, type Prisma } from '../db.js'
 import { spendInvitation } from '../invitation-budget.js'
-import { checkMemberIdle, removeMember } from '../member-remove.js'
+import {
+  beingRemoved,
+  dropMemberSockets,
+  lockMembers,
+  ownersLeft,
+  removeMember,
+} from '../member-remove.js'
 import {
   parseBody,
   requireRole,
@@ -50,12 +56,21 @@ async function plugin<T>(call: () => Promise<T>): Promise<T> {
 }
 
 /**
- * A member of the active organization, for an owner or admin to change: only an owner touches
- * an owner.
+ * A member of the active organization, for an owner or admin to change, both read again from
+ * `db` (in the members' turn, src/member-remove.ts): only an owner touches an owner.
  */
-async function memberToChange(scope: WorkspaceScope, id: string) {
-  requireRole(scope, 'owner', 'admin')
-  const member = await prisma.member.findFirst({
+async function memberToChange(
+  db: Prisma.TransactionClient | typeof prisma,
+  scope: WorkspaceScope,
+  id: string,
+) {
+  const actor = await db.member.findUnique({
+    where: { id: scope.memberId },
+    select: { role: true, removingAt: true },
+  })
+  if (!actor || beingRemoved(actor) || (actor.role !== 'owner' && actor.role !== 'admin'))
+    throw new HTTPException(403, { message: 'Only an owner or admin can do this' })
+  const member = await db.member.findFirst({
     where: { id, organizationId: scope.organizationId },
     include: {
       user: { select: { name: true, email: true } },
@@ -63,9 +78,9 @@ async function memberToChange(scope: WorkspaceScope, id: string) {
     },
   })
   if (!member) throw new HTTPException(404, { message: 'They are no longer a member' })
-  if (member.role === 'owner' && scope.role !== 'owner')
+  if (member.role === 'owner' && actor.role !== 'owner')
     throw new HTTPException(403, { message: 'Only an owner can change an owner' })
-  return member
+  return { actor, member }
 }
 
 /** Open: pending and not yet expired. */
@@ -153,38 +168,41 @@ export const members = new Hono<AppEnv>()
     return c.body(null, 204)
   })
 
-  /** Another role for a member. The organization keeps at least one owner. */
+  /**
+   * Another role for a member, in the members' turn: the organization keeps at least one owner.
+   * Their dashboards connect again with it.
+   */
   .patch('/members/:id', requireWorkspace, async (c) => {
     const { scope } = c.var
-    const member = await memberToChange(scope, c.req.param('id'))
+    requireRole(scope, 'owner', 'admin')
     const { role } = await parseBody(c.req.raw, UpdateMember)
-    if (role === member.role) return c.json({ id: member.id, role })
-    if (role === 'owner' && scope.role !== 'owner')
-      throw new HTTPException(403, { message: 'Only an owner can make someone an owner' })
-    if (member.role === 'owner') {
-      const owners = await prisma.member.count({
-        where: { organizationId: scope.organizationId, role: 'owner' },
-      })
-      if (owners <= 1)
+    const from = await prisma.$transaction(async (tx) => {
+      await lockMembers(tx, scope.organizationId)
+      const { actor, member } = await memberToChange(tx, scope, c.req.param('id'))
+      if (beingRemoved(member)) throw new HTTPException(409, { message: 'They are being removed' })
+      if (role === member.role) return null
+      if (role === 'owner' && actor.role !== 'owner')
+        throw new HTTPException(403, { message: 'Only an owner can make someone an owner' })
+      if (member.role === 'owner' && (await ownersLeft(tx, scope.organizationId)) <= 1)
         throw new HTTPException(409, {
           message: 'Make someone else an owner first: the organization needs one',
         })
+      await tx.member.update({ where: { id: member.id }, data: { role } })
+      return member.role
+    })
+    const id = c.req.param('id')
+    if (from) {
+      await audit({
+        organizationId: scope.organizationId,
+        workspaceId: null,
+        actor: { type: 'member', id: scope.memberId },
+        action: 'member.role_changed',
+        target: { type: 'member', id },
+        data: { from, to: role },
+      })
+      await dropMemberSockets(scope.organizationId, id)
     }
-    // Only if it is still the role read above: two changes at once don't both pass the check.
-    const { count } = await prisma.member.updateMany({
-      where: { id: member.id, role: member.role },
-      data: { role },
-    })
-    if (!count) throw new HTTPException(409, { message: 'Their role just changed: try again' })
-    await audit({
-      organizationId: scope.organizationId,
-      workspaceId: null,
-      actor: { type: 'member', id: scope.memberId },
-      action: 'member.role_changed',
-      target: { type: 'member', id: member.id },
-      data: { from: member.role, to: role },
-    })
-    return c.json({ id: member.id, role })
+    return c.json({ id, role })
   })
 
   /**
@@ -193,14 +211,22 @@ export const members = new Hono<AppEnv>()
    */
   .delete('/members/:id', requireWorkspace, async (c) => {
     const { scope } = c.var
-    const member = await memberToChange(scope, c.req.param('id'))
+    requireRole(scope, 'owner', 'admin')
+    const id = c.req.param('id')
+    const { member } = await memberToChange(prisma, scope, id)
     if (member.id === scope.memberId)
       throw new HTTPException(400, { message: 'You cannot remove yourself' })
-    await checkMemberIdle(member, member.user.name || member.user.email)
-    await removeMember(member.userId, member, {
-      actor: { type: 'member', id: scope.memberId },
-      reason: 'removed',
-    })
+    await removeMember(
+      member.userId,
+      member,
+      {
+        actor: { type: 'member', id: scope.memberId },
+        reason: 'removed',
+        // Who may remove whom, again in the members' turn: a role may have changed since.
+        check: async (tx) => void (await memberToChange(tx, scope, id)),
+      },
+      member.user.name || member.user.email,
+    )
     return c.body(null, 204)
   })
 

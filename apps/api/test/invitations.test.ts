@@ -626,3 +626,121 @@ test('owners and admins remove members, who leave the organization', { skip }, a
     ],
   )
 })
+
+test('two owners demoted at once: one stays an owner', { skip }, async () => {
+  const org = await founder('race')
+  const [a] = await prisma.member.findMany({ where: { organizationId: org.organizationId } })
+  const b = await joined(org.cookie, 'race-owner', 'owner')
+  // Each steps down at the same time: one is refused, being the last.
+  const results = await Promise.all(
+    [
+      [a!.id, org.cookie],
+      [b.memberId, b.cookie],
+    ].map(([id, cookie]) =>
+      call(`/api/members/${id}`, { method: 'PATCH', body: { role: 'admin' }, cookie }),
+    ),
+  )
+  assert.deepEqual(results.map((r) => r.status).sort(), [200, 409])
+  assert.equal(
+    await prisma.member.count({ where: { organizationId: org.organizationId, role: 'owner' } }),
+    1,
+  )
+})
+
+test(
+  'a removal under way: their role no longer changes, nor do they get in',
+  { skip },
+  async () => {
+    const org = await founder('fence')
+    const admin = await joined(org.cookie, 'fence-admin', 'admin')
+    const target = await joined(org.cookie, 'fence-target', 'member')
+    // The removal stops in its turn, at its check of their threads at work.
+    const original = prisma.session.count.bind(prisma.session)
+    let reached!: () => void
+    let release!: () => void
+    const checking = new Promise<void>((r) => (reached = r))
+    const proceed = new Promise<void>((r) => (release = r))
+    prisma.session.count = (async (args: { where?: { organizationId?: string } }) => {
+      const count = await original(args as never)
+      if (args?.where?.organizationId === org.organizationId) {
+        reached()
+        await proceed
+      }
+      return count
+    }) as typeof prisma.session.count
+    try {
+      const removing = call(`/api/members/${target.memberId}`, {
+        method: 'DELETE',
+        cookie: admin.cookie,
+      })
+      await checking
+      // The owner promotes them meanwhile: it waits for the removal's turn, then is refused.
+      const promoting = call(`/api/members/${target.memberId}`, {
+        method: 'PATCH',
+        body: { role: 'owner' },
+        cookie: org.cookie,
+      })
+      await new Promise((r) => setTimeout(r, 200))
+      release()
+      assert.equal((await removing).status, 204)
+      const promoted = await promoting
+      assert.ok([404, 409].includes(promoted.status), String(promoted.status))
+      assert.equal(await roleOf(target.memberId), undefined)
+    } finally {
+      release()
+      prisma.session.count = original
+    }
+  },
+)
+
+test("a removed member's open dashboards close", { skip }, async () => {
+  const org = await founder('sock')
+  const target = await joined(org.cookie, 'sock-target', 'member')
+  const member = await prisma.member.findUniqueOrThrow({ where: { id: target.memberId } })
+  const { browserSocket } = await import('../src/hub/memory-host.js')
+  const closed: number[] = []
+  const socket = browserSocket({
+    organizationId: org.organizationId,
+    workspaceId: org.workspaceId,
+    userId: member.userId,
+    memberId: member.id,
+    role: 'member',
+  })
+  const ws = {
+    send() {},
+    close: (code: number) => void closed.push(code),
+    readyState: 1,
+  } as unknown as Parameters<typeof socket.onOpen>[0]
+  socket.onOpen(ws)
+  try {
+    // Another role: closed, to connect again with it.
+    const patched = await call(`/api/members/${member.id}`, {
+      method: 'PATCH',
+      body: { role: 'viewer' },
+      cookie: org.cookie,
+    })
+    assert.equal(patched.status, 200)
+    assert.deepEqual(closed, [4003])
+    // Nothing more is heard on it.
+    const sent: string[] = []
+    const late = { ...ws, send: (data: string) => void sent.push(data) } as typeof ws
+    await socket.onMessage('not json', late)
+    assert.deepEqual(sent, [])
+    const again = browserSocket({
+      organizationId: org.organizationId,
+      workspaceId: org.workspaceId,
+      userId: member.userId,
+      memberId: member.id,
+      role: 'viewer',
+    })
+    again.onOpen(ws)
+    assert.equal(
+      (await call(`/api/members/${member.id}`, { method: 'DELETE', cookie: org.cookie })).status,
+      204,
+    )
+    assert.deepEqual(closed, [4003, 4003])
+    again.onClose()
+  } finally {
+    socket.onClose()
+  }
+})

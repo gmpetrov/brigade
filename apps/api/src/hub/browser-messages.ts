@@ -10,6 +10,8 @@ import type { BrowserConn } from './host.js'
 import type { WorkspaceHub } from './workspace-hub.js'
 
 export async function onBrowserMessage(hub: WorkspaceHub, conn: BrowserConn, raw: string) {
+  // Closed by the hub (dropMember): what still arrives on it is not heard.
+  if (!hub.browsers.has(conn)) return
   const send = (message: Parameters<WorkspaceHub['send']>[1]) => hub.send(conn, message)
   let json: unknown
   try {

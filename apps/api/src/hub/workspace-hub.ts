@@ -725,6 +725,19 @@ export class WorkspaceHub {
     this.scheduleTick()
   }
 
+  /**
+   * A member was removed or their role changed (src/member-remove.ts, src/routes/members.ts):
+   * their dashboards' sockets, and the terminals relayed to them, close. A dashboard connects
+   * again with its new role, or not at all once they are out.
+   */
+  dropMember(memberId: string) {
+    for (const conn of [...this.browsers]) {
+      if (conn.scope.memberId !== memberId) continue
+      this.browserClosed(conn)
+      conn.socket.close(4003, 'membership changed')
+    }
+  }
+
   /** A dashboard's connection closed: its terminals close on their runners. */
   browserClosed(conn: BrowserConn) {
     this.browsers.delete(conn)

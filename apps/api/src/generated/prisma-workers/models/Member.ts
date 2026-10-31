@@ -30,6 +30,7 @@ export type MemberMinAggregateOutputType = {
   userId: string | null
   role: string | null
   createdAt: Date | null
+  removingAt: Date | null
   notify: $Enums.NotifyPreset | null
   suggestions: boolean | null
   autoMerge: boolean | null
@@ -41,6 +42,7 @@ export type MemberMaxAggregateOutputType = {
   userId: string | null
   role: string | null
   createdAt: Date | null
+  removingAt: Date | null
   notify: $Enums.NotifyPreset | null
   suggestions: boolean | null
   autoMerge: boolean | null
@@ -52,6 +54,7 @@ export type MemberCountAggregateOutputType = {
   userId: number
   role: number
   createdAt: number
+  removingAt: number
   notify: number
   suggestions: number
   autoMerge: number
@@ -65,6 +68,7 @@ export type MemberMinAggregateInputType = {
   userId?: true
   role?: true
   createdAt?: true
+  removingAt?: true
   notify?: true
   suggestions?: true
   autoMerge?: true
@@ -76,6 +80,7 @@ export type MemberMaxAggregateInputType = {
   userId?: true
   role?: true
   createdAt?: true
+  removingAt?: true
   notify?: true
   suggestions?: true
   autoMerge?: true
@@ -87,6 +92,7 @@ export type MemberCountAggregateInputType = {
   userId?: true
   role?: true
   createdAt?: true
+  removingAt?: true
   notify?: true
   suggestions?: true
   autoMerge?: true
@@ -171,6 +177,7 @@ export type MemberGroupByOutputType = {
   userId: string
   role: string
   createdAt: Date
+  removingAt: Date | null
   notify: $Enums.NotifyPreset
   suggestions: boolean
   autoMerge: boolean
@@ -203,6 +210,7 @@ export type MemberWhereInput = {
   userId?: Prisma.StringFilter<"Member"> | string
   role?: Prisma.StringFilter<"Member"> | string
   createdAt?: Prisma.DateTimeFilter<"Member"> | Date | string
+  removingAt?: Prisma.DateTimeNullableFilter<"Member"> | Date | string | null
   notify?: Prisma.EnumNotifyPresetFilter<"Member"> | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFilter<"Member"> | boolean
   autoMerge?: Prisma.BoolFilter<"Member"> | boolean
@@ -230,6 +238,7 @@ export type MemberOrderByWithRelationInput = {
   userId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  removingAt?: Prisma.SortOrderInput | Prisma.SortOrder
   notify?: Prisma.SortOrder
   suggestions?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
@@ -261,6 +270,7 @@ export type MemberWhereUniqueInput = Prisma.AtLeast<{
   userId?: Prisma.StringFilter<"Member"> | string
   role?: Prisma.StringFilter<"Member"> | string
   createdAt?: Prisma.DateTimeFilter<"Member"> | Date | string
+  removingAt?: Prisma.DateTimeNullableFilter<"Member"> | Date | string | null
   notify?: Prisma.EnumNotifyPresetFilter<"Member"> | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFilter<"Member"> | boolean
   autoMerge?: Prisma.BoolFilter<"Member"> | boolean
@@ -288,6 +298,7 @@ export type MemberOrderByWithAggregationInput = {
   userId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  removingAt?: Prisma.SortOrderInput | Prisma.SortOrder
   notify?: Prisma.SortOrder
   suggestions?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
@@ -305,6 +316,7 @@ export type MemberScalarWhereWithAggregatesInput = {
   userId?: Prisma.StringWithAggregatesFilter<"Member"> | string
   role?: Prisma.StringWithAggregatesFilter<"Member"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Member"> | Date | string
+  removingAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Member"> | Date | string | null
   notify?: Prisma.EnumNotifyPresetWithAggregatesFilter<"Member"> | $Enums.NotifyPreset
   suggestions?: Prisma.BoolWithAggregatesFilter<"Member"> | boolean
   autoMerge?: Prisma.BoolWithAggregatesFilter<"Member"> | boolean
@@ -314,6 +326,7 @@ export type MemberCreateInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -341,6 +354,7 @@ export type MemberUncheckedCreateInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -364,6 +378,7 @@ export type MemberUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -391,6 +406,7 @@ export type MemberUncheckedUpdateInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -416,6 +432,7 @@ export type MemberCreateManyInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -425,6 +442,7 @@ export type MemberUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -436,6 +454,7 @@ export type MemberUncheckedUpdateManyInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -462,6 +481,7 @@ export type MemberCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  removingAt?: Prisma.SortOrder
   notify?: Prisma.SortOrder
   suggestions?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
@@ -473,6 +493,7 @@ export type MemberMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  removingAt?: Prisma.SortOrder
   notify?: Prisma.SortOrder
   suggestions?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
@@ -484,6 +505,7 @@ export type MemberMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  removingAt?: Prisma.SortOrder
   notify?: Prisma.SortOrder
   suggestions?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
@@ -789,6 +811,7 @@ export type MemberCreateWithoutUserInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -814,6 +837,7 @@ export type MemberUncheckedCreateWithoutUserInput = {
   organizationId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -868,6 +892,7 @@ export type MemberScalarWhereInput = {
   userId?: Prisma.StringFilter<"Member"> | string
   role?: Prisma.StringFilter<"Member"> | string
   createdAt?: Prisma.DateTimeFilter<"Member"> | Date | string
+  removingAt?: Prisma.DateTimeNullableFilter<"Member"> | Date | string | null
   notify?: Prisma.EnumNotifyPresetFilter<"Member"> | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFilter<"Member"> | boolean
   autoMerge?: Prisma.BoolFilter<"Member"> | boolean
@@ -877,6 +902,7 @@ export type MemberCreateWithoutOrganizationInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -902,6 +928,7 @@ export type MemberUncheckedCreateWithoutOrganizationInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -951,6 +978,7 @@ export type MemberCreateWithoutComputersInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -977,6 +1005,7 @@ export type MemberUncheckedCreateWithoutComputersInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1015,6 +1044,7 @@ export type MemberUpdateWithoutComputersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1041,6 +1071,7 @@ export type MemberUncheckedUpdateWithoutComputersInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1063,6 +1094,7 @@ export type MemberCreateWithoutThreadReadsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1089,6 +1121,7 @@ export type MemberUncheckedCreateWithoutThreadReadsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1127,6 +1160,7 @@ export type MemberUpdateWithoutThreadReadsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1153,6 +1187,7 @@ export type MemberUncheckedUpdateWithoutThreadReadsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1175,6 +1210,7 @@ export type MemberCreateWithoutThreadPinsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1201,6 +1237,7 @@ export type MemberUncheckedCreateWithoutThreadPinsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1239,6 +1276,7 @@ export type MemberUpdateWithoutThreadPinsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1265,6 +1303,7 @@ export type MemberUncheckedUpdateWithoutThreadPinsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1287,6 +1326,7 @@ export type MemberCreateWithoutSidebarOrdersInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1313,6 +1353,7 @@ export type MemberUncheckedCreateWithoutSidebarOrdersInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1351,6 +1392,7 @@ export type MemberUpdateWithoutSidebarOrdersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1377,6 +1419,7 @@ export type MemberUncheckedUpdateWithoutSidebarOrdersInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1399,6 +1442,7 @@ export type MemberCreateWithoutThreadLatersInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1425,6 +1469,7 @@ export type MemberUncheckedCreateWithoutThreadLatersInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1463,6 +1508,7 @@ export type MemberUpdateWithoutThreadLatersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1489,6 +1535,7 @@ export type MemberUncheckedUpdateWithoutThreadLatersInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1511,6 +1558,7 @@ export type MemberCreateWithoutHomeDismissalsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1537,6 +1585,7 @@ export type MemberUncheckedCreateWithoutHomeDismissalsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1575,6 +1624,7 @@ export type MemberUpdateWithoutHomeDismissalsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1601,6 +1651,7 @@ export type MemberUncheckedUpdateWithoutHomeDismissalsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1623,6 +1674,7 @@ export type MemberCreateWithoutSessionsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1649,6 +1701,7 @@ export type MemberUncheckedCreateWithoutSessionsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1687,6 +1740,7 @@ export type MemberUpdateWithoutSessionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1713,6 +1767,7 @@ export type MemberUncheckedUpdateWithoutSessionsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1735,6 +1790,7 @@ export type MemberCreateWithoutTasksInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1761,6 +1817,7 @@ export type MemberUncheckedCreateWithoutTasksInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1799,6 +1856,7 @@ export type MemberUpdateWithoutTasksInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1825,6 +1883,7 @@ export type MemberUncheckedUpdateWithoutTasksInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1847,6 +1906,7 @@ export type MemberCreateWithoutSchedulesInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1873,6 +1933,7 @@ export type MemberUncheckedCreateWithoutSchedulesInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1911,6 +1972,7 @@ export type MemberUpdateWithoutSchedulesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1937,6 +1999,7 @@ export type MemberUncheckedUpdateWithoutSchedulesInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1959,6 +2022,7 @@ export type MemberCreateWithoutAccountsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -1985,6 +2049,7 @@ export type MemberUncheckedCreateWithoutAccountsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2023,6 +2088,7 @@ export type MemberUpdateWithoutAccountsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2049,6 +2115,7 @@ export type MemberUncheckedUpdateWithoutAccountsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2071,6 +2138,7 @@ export type MemberCreateWithoutListPinsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2097,6 +2165,7 @@ export type MemberUncheckedCreateWithoutListPinsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2135,6 +2204,7 @@ export type MemberUpdateWithoutListPinsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2161,6 +2231,7 @@ export type MemberUncheckedUpdateWithoutListPinsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2183,6 +2254,7 @@ export type MemberCreateWithoutDocumentPinsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2209,6 +2281,7 @@ export type MemberUncheckedCreateWithoutDocumentPinsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2247,6 +2320,7 @@ export type MemberUpdateWithoutDocumentPinsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2273,6 +2347,7 @@ export type MemberUncheckedUpdateWithoutDocumentPinsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2295,6 +2370,7 @@ export type MemberCreateWithoutPushNoticesInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2321,6 +2397,7 @@ export type MemberUncheckedCreateWithoutPushNoticesInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2359,6 +2436,7 @@ export type MemberUpdateWithoutPushNoticesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2385,6 +2463,7 @@ export type MemberUncheckedUpdateWithoutPushNoticesInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2407,6 +2486,7 @@ export type MemberCreateWithoutPlaybookInstallationsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2433,6 +2513,7 @@ export type MemberUncheckedCreateWithoutPlaybookInstallationsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2471,6 +2552,7 @@ export type MemberUpdateWithoutPlaybookInstallationsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2497,6 +2579,7 @@ export type MemberUncheckedUpdateWithoutPlaybookInstallationsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2520,6 +2603,7 @@ export type MemberCreateManyUserInput = {
   organizationId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2529,6 +2613,7 @@ export type MemberUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2554,6 +2639,7 @@ export type MemberUncheckedUpdateWithoutUserInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2578,6 +2664,7 @@ export type MemberUncheckedUpdateManyWithoutUserInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2588,6 +2675,7 @@ export type MemberCreateManyOrganizationInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  removingAt?: Date | string | null
   notify?: $Enums.NotifyPreset
   suggestions?: boolean
   autoMerge?: boolean
@@ -2597,6 +2685,7 @@ export type MemberUpdateWithoutOrganizationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2622,6 +2711,7 @@ export type MemberUncheckedUpdateWithoutOrganizationInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2646,6 +2736,7 @@ export type MemberUncheckedUpdateManyWithoutOrganizationInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  removingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   suggestions?: Prisma.BoolFieldUpdateOperationsInput | boolean
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2805,6 +2896,7 @@ export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   userId?: boolean
   role?: boolean
   createdAt?: boolean
+  removingAt?: boolean
   notify?: boolean
   suggestions?: boolean
   autoMerge?: boolean
@@ -2833,6 +2925,7 @@ export type MemberSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   userId?: boolean
   role?: boolean
   createdAt?: boolean
+  removingAt?: boolean
   notify?: boolean
   suggestions?: boolean
   autoMerge?: boolean
@@ -2846,6 +2939,7 @@ export type MemberSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   userId?: boolean
   role?: boolean
   createdAt?: boolean
+  removingAt?: boolean
   notify?: boolean
   suggestions?: boolean
   autoMerge?: boolean
@@ -2859,12 +2953,13 @@ export type MemberSelectScalar = {
   userId?: boolean
   role?: boolean
   createdAt?: boolean
+  removingAt?: boolean
   notify?: boolean
   suggestions?: boolean
   autoMerge?: boolean
 }
 
-export type MemberOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "userId" | "role" | "createdAt" | "notify" | "suggestions" | "autoMerge", ExtArgs["result"]["member"]>
+export type MemberOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "userId" | "role" | "createdAt" | "removingAt" | "notify" | "suggestions" | "autoMerge", ExtArgs["result"]["member"]>
 export type MemberInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2922,6 +3017,12 @@ export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     userId: string
     role: string
     createdAt: Date
+    /**
+     * Set while they are being removed from the organization (src/member-remove.ts): they reach
+     * nothing of it, and their role no longer changes. Cleared when the removal fails; one older
+     * than its lease no longer holds.
+     */
+    removingAt: Date | null
     /**
      * Which notifications reach their devices (src/notifications.ts).
      */
@@ -3379,6 +3480,7 @@ export interface MemberFieldRefs {
   readonly userId: Prisma.FieldRef<"Member", 'String'>
   readonly role: Prisma.FieldRef<"Member", 'String'>
   readonly createdAt: Prisma.FieldRef<"Member", 'DateTime'>
+  readonly removingAt: Prisma.FieldRef<"Member", 'DateTime'>
   readonly notify: Prisma.FieldRef<"Member", 'NotifyPreset'>
   readonly suggestions: Prisma.FieldRef<"Member", 'Boolean'>
   readonly autoMerge: Prisma.FieldRef<"Member", 'Boolean'>
