@@ -3,6 +3,7 @@ import {
   ApiToRunner,
   KEEPALIVE,
   PROTOCOL_VERSION,
+  type LoggedResponse,
   type RunnerToApi,
   type SequencedEvent,
   type ThreadAttachmentRef,
@@ -64,6 +65,8 @@ const RESEND_MS = 30_000
 const RESEND_FOR_MS = 24 * 60 * 60_000
 /** Events unacknowledged this long make their thread's page say so (events.waiting). */
 const WAITING_MS = 3 * 60_000
+/** Longest the API takes to keep a usage.responses before it is sent again later. */
+const USAGE_CALL_MS = 60_000
 
 type Result = Extract<ApiToRunner, { type: 'connector.result' }>
 
@@ -430,6 +433,25 @@ export class Connection {
     return url
   }
 
+  /** Give the API what model responses spent (usage-logs.ts). Resolves once it kept them. */
+  async sendUsage(responses: LoggedResponse[]): Promise<void> {
+    const callId = randomUUID()
+    const timer = setTimeout(() => {
+      const call = this.calls.get(callId)
+      this.calls.delete(callId)
+      call?.reject(new Error('The API did not answer in time'))
+    }, USAGE_CALL_MS)
+    try {
+      await this.call(
+        { type: 'usage.responses', responses },
+        { onPending: () => undefined, onDecision: () => undefined },
+        callId,
+      )
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
   private call(
     message: DistributiveOmit<
       Extract<
@@ -443,14 +465,15 @@ export class Connection {
             | 'schedule.call'
             | 'preview.expose'
             | 'preview.call'
+            | 'usage.responses'
         }
       >,
       'callId'
     >,
     hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,
+    callId = randomUUID(),
   ): Promise<Result> {
     if (!this.ready) return Promise.reject(new Error('Not connected to Brigade; try again shortly'))
-    const callId = randomUUID()
     return new Promise((resolve, reject) => {
       this.calls.set(callId, { resolve, reject, ...hooks })
       this.send({ ...message, callId } as RunnerToApi)

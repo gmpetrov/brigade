@@ -6,13 +6,30 @@ it should stands out. Brigade keeps the counts only, never what was said.
 
 ## What is counted
 
-- **A teammate's turn.** At the end of each stream of a turn the runner sends
-  `usage.updated` with the AI SDK's totals (`TokenCounts`): input (with the
-  cache's reads and writes in it, as both harnesses report it), output (with
-  reasoning in it), the cache's share, and the model the harness named in its
-  last step. It stamps the turn's account on the event. The API keeps one
-  `TokenUsage` row per event, by the thread and the event's seq, so an event
-  stored again counts once.
+- **A teammate's turn, response by response, from the harness's own log.** Claude
+  Code keeps a transcript of each session on the computer (its config directory,
+  `projects/<the working directory>/`, subagents in `<session>/subagents/`), and
+  Codex a rollout of each thread, its subagents' included (`sessions/`), with each
+  model response's id, model and final counts. The runner reads them
+  (`apps/runner/src/usage-logs.ts`, `usage-scan.ts`, run as the teammate's user on
+  a cloud computer) after each stream of a turn and every 10 minutes, from where
+  each was read up to, and sends `usage.responses`. The API keeps one `TokenUsage`
+  row per response, by its id (`responseId`), with the most read of it (a Claude
+  response's output grows as its transcript is written), so a response sent again
+  counts once; the runner moves past what it read only once the API kept it. Only
+  threads' working directories are read (`<BRIGADE_HOME>/teammates/<teammate>/threads/<thread>`,
+  or `/home/<teammate's user>/threads/<thread>`), never a member's own sessions: a
+  Codex rollout of another directory is skipped after its first line. Input counts
+  the cache's reads and writes, output counts reasoning.
+- **A turn's stream totals** (`usage.updated`, the AI SDK's totals at the end of
+  each stream of a turn, stamped with the turn's account) are kept too, one row per
+  event by the thread and the event's seq. From the first response a log gave for
+  a thread, teammate and account on, those rows count the turn but not its tokens
+  (`replaced`). They count only for turns no log covers: an older runner's, or
+  before a thread's log begins. Measured against the transcripts, the stream's
+  totals counted a turn split by background work twice (its last stream repeats
+  the whole turn), missed subagents, and missed turns stopped or failed before
+  their stream's end.
 - **Runs outside a turn**, which spend the same subscriptions without showing in
   a thread: a quiet thread's memory (`memory`), a memory file laid out again
   (`tidy`), a new thread's title (`title`), a project's brief (`brief`) and an
@@ -44,7 +61,10 @@ Usage row shows how much of each window is gone (from `Account.lastUsage`).
 
 The tables give each row's tokens, its share, its turns (a routine's: its runs)
 and its tokens per run, the figure to compare to spot a thread or routine that
-spends far more each time than the others.
+spends far more each time than the others. A response is no turn: a model only
+subagents ran shows tokens with no turns.
 
-Only usage since this was deployed is counted: older turns' events kept input
-and output alone, and are not backfilled.
+Not counted: what Claude Code spends outside its transcript (the guess at a
+person's next message, its own small calls), about 2 to 3% of a thread's tokens.
+Usage counts from 25 October 2026; when a runner first reads its computer's logs,
+it sends what they still hold, which replaces the stream's totals of those turns.

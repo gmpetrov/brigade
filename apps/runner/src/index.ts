@@ -67,6 +67,7 @@ import { Threads, threadFolder } from './threads.js'
 import { prefetch, sweep } from './repos.js'
 import { Updater } from './updater.js'
 import { sendUsageRunsTo } from './usage.js'
+import { UsageLogs } from './usage-logs.js'
 import { noteHandOver, takeHandOver } from './hand-over.js'
 
 /** While an update hands its turns over, how long the calls under way get to finish on the connection. */
@@ -340,10 +341,17 @@ async function start() {
   const memoryGuard = CLOUD && process.env.BRIGADE_MEMORY_GUARD !== '0'
   const concurrency = Number(values.concurrency) || turnsAtOnce(totalmem(), memoryGuard)
   console.log(`up to ${concurrency} turns at once${memoryGuard ? ', as memory allows' : ''}`)
+  // What teammates' turns spend, from the harness's own logs on this computer.
+  const usageLogs = new UsageLogs({
+    send: (responses) => connection.sendUsage(responses),
+    stateFile: join(paths.state, 'usage-logs.json'),
+  })
   const threads = new Threads({
     concurrency,
     previews,
     folders,
+    streamEnded: (teammateId, sessionId, workDir) =>
+      usageLogs.turnEnded(teammateId, sessionId, workDir),
     ...(memoryGuard ? { memoryRoom } : {}),
     ...(backups
       ? {
@@ -811,6 +819,8 @@ async function start() {
   folders.start()
   // And back up what lives only on this cloud computer's disk, now and then.
   backups?.start()
+  // Once connected: what turns spent while the runner was away, then every few minutes.
+  setTimeout(() => usageLogs.start(), 60_000).unref()
 
   const shutdown = async () => {
     console.log('stopping: saving thread state')

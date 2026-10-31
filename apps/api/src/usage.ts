@@ -1,7 +1,11 @@
-// What the workspace's Claude and Codex subscriptions spend tokens on (Settings › Usage): each
-// teammate turn's usage.updated events and each run outside a turn (usage.run), kept as
-// TokenUsage rows with who and what they were for. Counts only, never what was said.
+// What the workspace's Claude and Codex subscriptions spend tokens on (Settings › Usage), kept as
+// TokenUsage rows with who and what they were for. Counts only, never what was said. A teammate's
+// turns are counted response by response from the harness's own log on its computer
+// (usage.responses); the totals its stream gave (usage.updated) count only for turns no log
+// covers: an older runner's, or before a thread's log begins. Runs outside a turn come as usage.run.
+import { randomUUID } from 'node:crypto'
 import type {
+  LoggedResponse,
   RunnerToApi,
   SequencedEvent,
   TokenCounts,
@@ -12,6 +16,7 @@ import type {
   UsageTotals,
 } from '@brigade/contracts'
 import { Prisma, prisma, scoped, type Scope } from './db.js'
+import type { PrismaClient } from './generated/prisma/client.js'
 
 /** Postgres' integer: a count past it is a harness's mistake, not tokens spent. */
 const INT_MAX = 2_147_483_647
@@ -57,7 +62,8 @@ type ThreadForUsage = {
 /**
  * Keep the tokens a run of a thread's events spent, once each (by the event's seq): a run
  * noted again counts nothing twice. Each turn says its account (turn.started); the runner
- * also stamps it on the usage event itself.
+ * also stamps it on the usage event itself. A turn its log already counted response by response
+ * (noteLoggedResponses) keeps its row, to count the turn, with its tokens replaced.
  */
 export async function noteTokenUsage(session: ThreadForUsage, events: SequencedEvent[]) {
   if (!events.some((e) => spends(e.event))) return
@@ -102,26 +108,192 @@ export async function noteTokenUsage(session: ThreadForUsage, events: SequencedE
     spent.map((s) => s.accountId),
     spent.map((s) => s.teammateId),
   )
-  await db.tokenUsage.createMany({
-    data: spent.map((s) => ({
-      organizationId: session.organizationId,
-      workspaceId: session.workspaceId,
-      sessionId: session.id,
-      seq: s.seq,
-      teammateId: s.teammateId,
-      accountId: s.accountId,
-      memberId: (s.accountId && owners.accounts.get(s.accountId)?.memberId) || null,
-      projectId: thread.projectId,
-      scheduleId: thread.scheduleId,
-      provider:
-        (s.accountId && owners.accounts.get(s.accountId)?.provider) ||
-        owners.teammates.get(s.teammateId) ||
-        'claude_code',
-      source,
-      at: new Date(s.at),
-      ...tokenColumns(s.counts),
-    })),
-    skipDuplicates: true,
+  await prisma.$transaction(async (tx) => {
+    await lockUsage(tx, [session.id])
+    const logged = await loggedFrom(tx, session)
+    await tx.tokenUsage.createMany({
+      data: spent.map((s) => ({
+        organizationId: session.organizationId,
+        workspaceId: session.workspaceId,
+        sessionId: session.id,
+        seq: s.seq,
+        teammateId: s.teammateId,
+        accountId: s.accountId,
+        memberId: (s.accountId && owners.accounts.get(s.accountId)?.memberId) || null,
+        projectId: thread.projectId,
+        scheduleId: thread.scheduleId,
+        provider:
+          (s.accountId && owners.accounts.get(s.accountId)?.provider) ||
+          owners.teammates.get(s.teammateId) ||
+          'claude_code',
+        source,
+        at: new Date(s.at),
+        replaced: logged.some(
+          (l) =>
+            l.teammateId === s.teammateId &&
+            l.accountId === s.accountId &&
+            l.first.getTime() <= new Date(s.at).getTime(),
+        ),
+        ...tokenColumns(s.counts),
+      })),
+      skipDuplicates: true,
+    })
+  })
+}
+
+type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'>
+
+/**
+ * One writer of a thread's usage at a time: a turn's row and the responses that replace it may
+ * come together, from the thread's events and from its log.
+ */
+async function lockUsage(tx: Tx, sessionIds: string[]) {
+  for (const id of [...new Set(sessionIds)].sort())
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`usage:${id}`}))`
+}
+
+/** Since when a thread's turns are counted from their log, by teammate and account. */
+function loggedFrom(tx: Tx, session: { id: string; workspaceId: string }) {
+  return tx.$queryRaw<{ teammateId: string; accountId: string; first: Date }[]>`
+    SELECT "teammateId", "accountId", min("at") AS first FROM "TokenUsage"
+    WHERE "workspaceId" = ${session.workspaceId} AND "sessionId" = ${session.id}
+      AND "responseId" IS NOT NULL AND "teammateId" IS NOT NULL AND "accountId" IS NOT NULL
+    GROUP BY 1, 2`
+}
+
+/** One per response: what was read of it most (a response's output grows as its log is written). */
+function mergeResponses(responses: LoggedResponse[]) {
+  const byId = new Map<string, LoggedResponse>()
+  for (const r of responses) {
+    const seen = byId.get(r.id)
+    byId.set(
+      r.id,
+      seen
+        ? {
+            ...seen,
+            at: seen.at < r.at ? seen.at : r.at,
+            inputTokens: Math.max(seen.inputTokens, r.inputTokens),
+            cacheReadTokens: Math.max(seen.cacheReadTokens, r.cacheReadTokens),
+            cacheWriteTokens: Math.max(seen.cacheWriteTokens, r.cacheWriteTokens),
+            outputTokens: Math.max(seen.outputTokens, r.outputTokens),
+            reasoningTokens: Math.max(seen.reasoningTokens, r.reasoningTokens),
+            ...(seen.model || !r.model ? {} : { model: r.model }),
+          }
+        : r,
+    )
+  }
+  return [...byId.values()]
+}
+
+/**
+ * What a teammate's turns spent, response by response, as the harness's own log on the runner's
+ * computer records it (usage.responses): each kept once by its id, with the most read of it, for
+ * threads, teammates and accounts of this workspace and computer only. From the first
+ * response of a thread, teammate and account on, its turns' rows from their usage.updated events
+ * count the turn but not its tokens (replaced): the stream's totals counted a turn split by
+ * background work twice, and missed its subagents.
+ */
+export async function noteLoggedResponses(
+  runner: { computerId: string; organizationId: string; workspaceId: string },
+  responses: LoggedResponse[],
+) {
+  const merged = mergeResponses(responses)
+  if (!merged.length) return
+  const db = scoped(runner)
+  const [threads, teammates, accounts] = await Promise.all([
+    db.session.findMany({
+      where: { id: { in: [...new Set(merged.map((r) => r.sessionId))] } },
+      select: {
+        id: true,
+        origin: true,
+        playbookRunId: true,
+        projectId: true,
+        scheduleId: true,
+        _count: { select: { reviewsOf: true } },
+      },
+    }),
+    db.teammate.findMany({
+      where: { id: { in: [...new Set(merged.map((r) => r.teammateId))] } },
+      select: { id: true },
+    }),
+    db.account.findMany({
+      where: { computerId: runner.computerId },
+      select: { id: true, memberId: true, provider: true, source: true },
+    }),
+  ])
+  const threadById = new Map(threads.map((t) => [t.id, t]))
+  const teammateIds = new Set(teammates.map((t) => t.id))
+  // A clock far ahead is the computer's: the response goes in when it came.
+  const latest = Date.now() + DAY_MS
+  const rows = merged.flatMap((r) => {
+    const thread = threadById.get(r.sessionId)
+    // The computer's own login when it names none (a member's machine).
+    const account = r.accountId
+      ? accounts.find((a) => a.id === r.accountId)
+      : accounts.find((a) => a.source === 'machine' && a.provider === r.provider)
+    if (!thread || !teammateIds.has(r.teammateId) || account?.provider !== r.provider) return []
+    const at = Date.parse(r.at) > latest ? new Date() : new Date(r.at)
+    return [
+      {
+        id: randomUUID(),
+        sessionId: r.sessionId,
+        teammateId: r.teammateId,
+        accountId: account.id,
+        memberId: account.memberId,
+        projectId: thread.projectId,
+        scheduleId: thread.scheduleId,
+        provider: r.provider,
+        source: threadSource({ ...thread, reviews: thread._count.reviewsOf }),
+        ...tokenColumns(r),
+        at: at.toISOString(),
+        responseId: r.id,
+      },
+    ]
+  })
+  if (!rows.length) return
+  const column = <K extends keyof (typeof rows)[number]>(key: K) => rows.map((r) => r[key])
+  await prisma.$transaction(async (tx) => {
+    await lockUsage(tx, column('sessionId'))
+    await tx.$executeRaw`
+      INSERT INTO "TokenUsage" ("id", "organizationId", "workspaceId", "sessionId", "teammateId",
+        "accountId", "memberId", "projectId", "scheduleId", "provider", "model", "source",
+        "inputTokens", "cacheReadTokens", "cacheWriteTokens", "outputTokens", "reasoningTokens",
+        "at", "responseId")
+      SELECT u.id, ${runner.organizationId}, ${runner.workspaceId}, u.session, u.teammate,
+        u.account, u.member, u.project, u.schedule, u.provider::"Harness", u.model, u.source,
+        u.input, u.cache_read, u.cache_write, u.output, u.reasoning, u.at, u.response
+      FROM unnest(
+        ${column('id')}::text[], ${column('sessionId')}::text[], ${column('teammateId')}::text[],
+        ${column('accountId')}::text[], ${column('memberId')}::text[], ${column('projectId')}::text[],
+        ${column('scheduleId')}::text[], ${column('provider')}::text[], ${column('model')}::text[],
+        ${column('source')}::text[], ${column('inputTokens')}::int[],
+        ${column('cacheReadTokens')}::int[], ${column('cacheWriteTokens')}::int[],
+        ${column('outputTokens')}::int[], ${column('reasoningTokens')}::int[],
+        ${column('at')}::timestamp(3)[], ${column('responseId')}::text[]
+      ) AS u(id, session, teammate, account, member, project, schedule, provider, model, source,
+        input, cache_read, cache_write, output, reasoning, at, response)
+      ON CONFLICT ("workspaceId", "responseId") DO UPDATE SET
+        "inputTokens" = GREATEST("TokenUsage"."inputTokens", EXCLUDED."inputTokens"),
+        "cacheReadTokens" = GREATEST("TokenUsage"."cacheReadTokens", EXCLUDED."cacheReadTokens"),
+        "cacheWriteTokens" = GREATEST("TokenUsage"."cacheWriteTokens", EXCLUDED."cacheWriteTokens"),
+        "outputTokens" = GREATEST("TokenUsage"."outputTokens", EXCLUDED."outputTokens"),
+        "reasoningTokens" = GREATEST("TokenUsage"."reasoningTokens", EXCLUDED."reasoningTokens"),
+        "model" = COALESCE("TokenUsage"."model", EXCLUDED."model"),
+        "at" = LEAST("TokenUsage"."at", EXCLUDED."at")`
+    // The turns these responses are of: counted by response from the first on.
+    await tx.$executeRaw`
+      UPDATE "TokenUsage" t SET "replaced" = true
+      FROM (
+        SELECT session, teammate, account, min(at) AS first
+        FROM unnest(${column('sessionId')}::text[], ${column('teammateId')}::text[],
+          ${column('accountId')}::text[], ${column('at')}::timestamp(3)[])
+          AS u(session, teammate, account, at)
+        GROUP BY 1, 2, 3
+      ) r
+      WHERE t."workspaceId" = ${runner.workspaceId} AND t."sessionId" = r.session
+        AND t."teammateId" = r.teammate AND t."accountId" = r.account
+        AND t."seq" IS NOT NULL AND t."responseId" IS NULL AND NOT t."replaced"
+        AND t."at" >= r.first`
   })
 }
 
@@ -242,33 +414,45 @@ export async function usageReport(
   const where = Prisma.sql`"workspaceId" = ${scope.workspaceId} AND "at" >= ${since}${
     all ? Prisma.empty : Prisma.sql` AND "memberId" = ${scope.memberId}`
   }`
-  const sums = Prisma.sql`sum("inputTokens")::bigint AS input, sum("cacheReadTokens")::bigint AS cache_read,
-    sum("cacheWriteTokens")::bigint AS cache_write, sum("outputTokens")::bigint AS output`
+  // A turn counted by response keeps its row, to count the turn, but not its tokens (replaced).
+  const counted = Prisma.sql`FILTER (WHERE NOT "replaced")`
+  const sums = Prisma.sql`sum("inputTokens") ${counted}::bigint AS input,
+    sum("cacheReadTokens") ${counted}::bigint AS cache_read,
+    sum("cacheWriteTokens") ${counted}::bigint AS cache_write,
+    sum("outputTokens") ${counted}::bigint AS output`
+  // Turns and runs: a response's row is neither.
+  const turns = Prisma.sql`count(*) FILTER (WHERE "responseId" IS NULL)`
   const grouped = (
     by: keyof typeof GROUP_COLUMNS,
-    options: { limit?: number; runs?: 'rows' | 'threads'; notNull?: boolean } = {},
+    options: {
+      limit?: number
+      runs?: 'rows' | 'threads'
+      notNull?: boolean
+      /** Only what spent tokens: a model only a replaced row names spent none. */
+      spent?: boolean
+    } = {},
   ) => {
     const column = GROUP_COLUMNS[by]
-    const runs =
-      options.runs === 'threads' ? Prisma.sql`count(DISTINCT "sessionId")` : Prisma.sql`count(*)`
+    const runs = options.runs === 'threads' ? Prisma.sql`count(DISTINCT "sessionId")` : turns
     return prisma.$queryRaw<Row[]>`
       SELECT ${column} AS id, ${sums}, ${runs}::bigint AS runs
       FROM "TokenUsage"
       WHERE ${where}${options.notNull ? Prisma.sql` AND ${column} IS NOT NULL` : Prisma.empty}
       GROUP BY 1
-      ORDER BY sum("inputTokens") + sum("outputTokens") DESC
+      ${options.spent ? Prisma.sql`HAVING sum("inputTokens"::bigint + "outputTokens") ${counted} > 0` : Prisma.empty}
+      ORDER BY coalesce(sum("inputTokens"::bigint + "outputTokens") ${counted}, 0) DESC
       ${options.limit ? Prisma.sql`LIMIT ${options.limit}` : Prisma.empty}`
   }
   const [total, daily, byProvider, bySource, byTeammate, byModel, byMember, threads, schedules] =
     await Promise.all([
       prisma.$queryRaw<
         Row[]
-      >`SELECT NULL AS id, ${sums}, count(*)::bigint AS runs FROM "TokenUsage" WHERE ${where}`,
+      >`SELECT NULL AS id, ${sums}, ${turns}::bigint AS runs FROM "TokenUsage" WHERE ${where}`,
       grouped('day'),
       grouped('provider'),
       grouped('source'),
       grouped('teammate', { limit: 20 }),
-      grouped('model', { limit: 10 }),
+      grouped('model', { limit: 10, spent: true }),
       all ? grouped('member', { limit: 20 }) : Promise.resolve([]),
       grouped('thread', { limit: 15, notNull: true }),
       grouped('schedule', { limit: 10, runs: 'threads', notNull: true }),

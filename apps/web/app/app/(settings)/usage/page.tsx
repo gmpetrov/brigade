@@ -73,7 +73,7 @@ export default function UsagePage() {
 
       {!data ? (
         !usage.error && <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : data.totals.runs === 0 ? (
+      ) : data.totals.runs === 0 && data.totals.input + data.totals.output === 0 ? (
         <p className="text-sm text-muted-foreground">
           Nothing spent in the last {PERIODS.find((p) => p.days === days)!.label}. Usage shows after
           a teammate&apos;s next turn.

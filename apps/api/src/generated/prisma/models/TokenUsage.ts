@@ -69,6 +69,8 @@ export type TokenUsageMinAggregateOutputType = {
   reasoningTokens: number | null
   at: Date | null
   createdAt: Date | null
+  responseId: string | null
+  replaced: boolean | null
 }
 
 export type TokenUsageMaxAggregateOutputType = {
@@ -92,6 +94,8 @@ export type TokenUsageMaxAggregateOutputType = {
   reasoningTokens: number | null
   at: Date | null
   createdAt: Date | null
+  responseId: string | null
+  replaced: boolean | null
 }
 
 export type TokenUsageCountAggregateOutputType = {
@@ -115,6 +119,8 @@ export type TokenUsageCountAggregateOutputType = {
   reasoningTokens: number
   at: number
   createdAt: number
+  responseId: number
+  replaced: number
   _all: number
 }
 
@@ -158,6 +164,8 @@ export type TokenUsageMinAggregateInputType = {
   reasoningTokens?: true
   at?: true
   createdAt?: true
+  responseId?: true
+  replaced?: true
 }
 
 export type TokenUsageMaxAggregateInputType = {
@@ -181,6 +189,8 @@ export type TokenUsageMaxAggregateInputType = {
   reasoningTokens?: true
   at?: true
   createdAt?: true
+  responseId?: true
+  replaced?: true
 }
 
 export type TokenUsageCountAggregateInputType = {
@@ -204,6 +214,8 @@ export type TokenUsageCountAggregateInputType = {
   reasoningTokens?: true
   at?: true
   createdAt?: true
+  responseId?: true
+  replaced?: true
   _all?: true
 }
 
@@ -314,6 +326,8 @@ export type TokenUsageGroupByOutputType = {
   reasoningTokens: number
   at: Date
   createdAt: Date
+  responseId: string | null
+  replaced: boolean
   _count: TokenUsageCountAggregateOutputType | null
   _avg: TokenUsageAvgAggregateOutputType | null
   _sum: TokenUsageSumAggregateOutputType | null
@@ -360,6 +374,8 @@ export type TokenUsageWhereInput = {
   reasoningTokens?: Prisma.IntFilter<"TokenUsage"> | number
   at?: Prisma.DateTimeFilter<"TokenUsage"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"TokenUsage"> | Date | string
+  responseId?: Prisma.StringNullableFilter<"TokenUsage"> | string | null
+  replaced?: Prisma.BoolFilter<"TokenUsage"> | boolean
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
 }
@@ -385,6 +401,8 @@ export type TokenUsageOrderByWithRelationInput = {
   reasoningTokens?: Prisma.SortOrder
   at?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  responseId?: Prisma.SortOrderInput | Prisma.SortOrder
+  replaced?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   session?: Prisma.SessionOrderByWithRelationInput
 }
@@ -392,6 +410,7 @@ export type TokenUsageOrderByWithRelationInput = {
 export type TokenUsageWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   sessionId_seq?: Prisma.TokenUsageSessionIdSeqCompoundUniqueInput
+  workspaceId_responseId?: Prisma.TokenUsageWorkspaceIdResponseIdCompoundUniqueInput
   AND?: Prisma.TokenUsageWhereInput | Prisma.TokenUsageWhereInput[]
   OR?: Prisma.TokenUsageWhereInput[]
   NOT?: Prisma.TokenUsageWhereInput | Prisma.TokenUsageWhereInput[]
@@ -414,9 +433,11 @@ export type TokenUsageWhereUniqueInput = Prisma.AtLeast<{
   reasoningTokens?: Prisma.IntFilter<"TokenUsage"> | number
   at?: Prisma.DateTimeFilter<"TokenUsage"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"TokenUsage"> | Date | string
+  responseId?: Prisma.StringNullableFilter<"TokenUsage"> | string | null
+  replaced?: Prisma.BoolFilter<"TokenUsage"> | boolean
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
-}, "id" | "sessionId_seq">
+}, "id" | "sessionId_seq" | "workspaceId_responseId">
 
 export type TokenUsageOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -439,6 +460,8 @@ export type TokenUsageOrderByWithAggregationInput = {
   reasoningTokens?: Prisma.SortOrder
   at?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  responseId?: Prisma.SortOrderInput | Prisma.SortOrder
+  replaced?: Prisma.SortOrder
   _count?: Prisma.TokenUsageCountOrderByAggregateInput
   _avg?: Prisma.TokenUsageAvgOrderByAggregateInput
   _max?: Prisma.TokenUsageMaxOrderByAggregateInput
@@ -470,6 +493,8 @@ export type TokenUsageScalarWhereWithAggregatesInput = {
   reasoningTokens?: Prisma.IntWithAggregatesFilter<"TokenUsage"> | number
   at?: Prisma.DateTimeWithAggregatesFilter<"TokenUsage"> | Date | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"TokenUsage"> | Date | string
+  responseId?: Prisma.StringNullableWithAggregatesFilter<"TokenUsage"> | string | null
+  replaced?: Prisma.BoolWithAggregatesFilter<"TokenUsage"> | boolean
 }
 
 export type TokenUsageCreateInput = {
@@ -491,6 +516,8 @@ export type TokenUsageCreateInput = {
   reasoningTokens?: number
   at: Date | string
   createdAt?: Date | string
+  responseId?: string | null
+  replaced?: boolean
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTokenUsageInput
   session?: Prisma.SessionCreateNestedOneWithoutTokenUsageInput
 }
@@ -516,6 +543,8 @@ export type TokenUsageUncheckedCreateInput = {
   reasoningTokens?: number
   at: Date | string
   createdAt?: Date | string
+  responseId?: string | null
+  replaced?: boolean
 }
 
 export type TokenUsageUpdateInput = {
@@ -537,6 +566,8 @@ export type TokenUsageUpdateInput = {
   reasoningTokens?: Prisma.IntFieldUpdateOperationsInput | number
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  responseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replaced?: Prisma.BoolFieldUpdateOperationsInput | boolean
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTokenUsageNestedInput
   session?: Prisma.SessionUpdateOneWithoutTokenUsageNestedInput
 }
@@ -562,6 +593,8 @@ export type TokenUsageUncheckedUpdateInput = {
   reasoningTokens?: Prisma.IntFieldUpdateOperationsInput | number
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  responseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replaced?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type TokenUsageCreateManyInput = {
@@ -585,6 +618,8 @@ export type TokenUsageCreateManyInput = {
   reasoningTokens?: number
   at: Date | string
   createdAt?: Date | string
+  responseId?: string | null
+  replaced?: boolean
 }
 
 export type TokenUsageUpdateManyMutationInput = {
@@ -606,6 +641,8 @@ export type TokenUsageUpdateManyMutationInput = {
   reasoningTokens?: Prisma.IntFieldUpdateOperationsInput | number
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  responseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replaced?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type TokenUsageUncheckedUpdateManyInput = {
@@ -629,6 +666,8 @@ export type TokenUsageUncheckedUpdateManyInput = {
   reasoningTokens?: Prisma.IntFieldUpdateOperationsInput | number
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  responseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replaced?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type TokenUsageListRelationFilter = {
@@ -644,6 +683,11 @@ export type TokenUsageOrderByRelationAggregateInput = {
 export type TokenUsageSessionIdSeqCompoundUniqueInput = {
   sessionId: string
   seq: number
+}
+
+export type TokenUsageWorkspaceIdResponseIdCompoundUniqueInput = {
+  workspaceId: string
+  responseId: string
 }
 
 export type TokenUsageCountOrderByAggregateInput = {
@@ -667,6 +711,8 @@ export type TokenUsageCountOrderByAggregateInput = {
   reasoningTokens?: Prisma.SortOrder
   at?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  responseId?: Prisma.SortOrder
+  replaced?: Prisma.SortOrder
 }
 
 export type TokenUsageAvgOrderByAggregateInput = {
@@ -699,6 +745,8 @@ export type TokenUsageMaxOrderByAggregateInput = {
   reasoningTokens?: Prisma.SortOrder
   at?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  responseId?: Prisma.SortOrder
+  replaced?: Prisma.SortOrder
 }
 
 export type TokenUsageMinOrderByAggregateInput = {
@@ -722,6 +770,8 @@ export type TokenUsageMinOrderByAggregateInput = {
   reasoningTokens?: Prisma.SortOrder
   at?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  responseId?: Prisma.SortOrder
+  replaced?: Prisma.SortOrder
 }
 
 export type TokenUsageSumOrderByAggregateInput = {
@@ -836,6 +886,8 @@ export type TokenUsageCreateWithoutWorkspaceInput = {
   reasoningTokens?: number
   at: Date | string
   createdAt?: Date | string
+  responseId?: string | null
+  replaced?: boolean
   session?: Prisma.SessionCreateNestedOneWithoutTokenUsageInput
 }
 
@@ -859,6 +911,8 @@ export type TokenUsageUncheckedCreateWithoutWorkspaceInput = {
   reasoningTokens?: number
   at: Date | string
   createdAt?: Date | string
+  responseId?: string | null
+  replaced?: boolean
 }
 
 export type TokenUsageCreateOrConnectWithoutWorkspaceInput = {
@@ -911,6 +965,8 @@ export type TokenUsageScalarWhereInput = {
   reasoningTokens?: Prisma.IntFilter<"TokenUsage"> | number
   at?: Prisma.DateTimeFilter<"TokenUsage"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"TokenUsage"> | Date | string
+  responseId?: Prisma.StringNullableFilter<"TokenUsage"> | string | null
+  replaced?: Prisma.BoolFilter<"TokenUsage"> | boolean
 }
 
 export type TokenUsageCreateWithoutSessionInput = {
@@ -932,6 +988,8 @@ export type TokenUsageCreateWithoutSessionInput = {
   reasoningTokens?: number
   at: Date | string
   createdAt?: Date | string
+  responseId?: string | null
+  replaced?: boolean
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTokenUsageInput
 }
 
@@ -955,6 +1013,8 @@ export type TokenUsageUncheckedCreateWithoutSessionInput = {
   reasoningTokens?: number
   at: Date | string
   createdAt?: Date | string
+  responseId?: string | null
+  replaced?: boolean
 }
 
 export type TokenUsageCreateOrConnectWithoutSessionInput = {
@@ -1003,6 +1063,8 @@ export type TokenUsageCreateManyWorkspaceInput = {
   reasoningTokens?: number
   at: Date | string
   createdAt?: Date | string
+  responseId?: string | null
+  replaced?: boolean
 }
 
 export type TokenUsageUpdateWithoutWorkspaceInput = {
@@ -1024,6 +1086,8 @@ export type TokenUsageUpdateWithoutWorkspaceInput = {
   reasoningTokens?: Prisma.IntFieldUpdateOperationsInput | number
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  responseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replaced?: Prisma.BoolFieldUpdateOperationsInput | boolean
   session?: Prisma.SessionUpdateOneWithoutTokenUsageNestedInput
 }
 
@@ -1047,6 +1111,8 @@ export type TokenUsageUncheckedUpdateWithoutWorkspaceInput = {
   reasoningTokens?: Prisma.IntFieldUpdateOperationsInput | number
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  responseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replaced?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type TokenUsageUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -1069,6 +1135,8 @@ export type TokenUsageUncheckedUpdateManyWithoutWorkspaceInput = {
   reasoningTokens?: Prisma.IntFieldUpdateOperationsInput | number
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  responseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replaced?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type TokenUsageCreateManySessionInput = {
@@ -1091,6 +1159,8 @@ export type TokenUsageCreateManySessionInput = {
   reasoningTokens?: number
   at: Date | string
   createdAt?: Date | string
+  responseId?: string | null
+  replaced?: boolean
 }
 
 export type TokenUsageUpdateWithoutSessionInput = {
@@ -1112,6 +1182,8 @@ export type TokenUsageUpdateWithoutSessionInput = {
   reasoningTokens?: Prisma.IntFieldUpdateOperationsInput | number
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  responseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replaced?: Prisma.BoolFieldUpdateOperationsInput | boolean
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTokenUsageNestedInput
 }
 
@@ -1135,6 +1207,8 @@ export type TokenUsageUncheckedUpdateWithoutSessionInput = {
   reasoningTokens?: Prisma.IntFieldUpdateOperationsInput | number
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  responseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replaced?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type TokenUsageUncheckedUpdateManyWithoutSessionInput = {
@@ -1157,6 +1231,8 @@ export type TokenUsageUncheckedUpdateManyWithoutSessionInput = {
   reasoningTokens?: Prisma.IntFieldUpdateOperationsInput | number
   at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  responseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replaced?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 
@@ -1182,6 +1258,8 @@ export type TokenUsageSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   reasoningTokens?: boolean
   at?: boolean
   createdAt?: boolean
+  responseId?: boolean
+  replaced?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.TokenUsage$sessionArgs<ExtArgs>
 }, ExtArgs["result"]["tokenUsage"]>
@@ -1207,6 +1285,8 @@ export type TokenUsageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   reasoningTokens?: boolean
   at?: boolean
   createdAt?: boolean
+  responseId?: boolean
+  replaced?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.TokenUsage$sessionArgs<ExtArgs>
 }, ExtArgs["result"]["tokenUsage"]>
@@ -1232,6 +1312,8 @@ export type TokenUsageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   reasoningTokens?: boolean
   at?: boolean
   createdAt?: boolean
+  responseId?: boolean
+  replaced?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.TokenUsage$sessionArgs<ExtArgs>
 }, ExtArgs["result"]["tokenUsage"]>
@@ -1257,9 +1339,11 @@ export type TokenUsageSelectScalar = {
   reasoningTokens?: boolean
   at?: boolean
   createdAt?: boolean
+  responseId?: boolean
+  replaced?: boolean
 }
 
-export type TokenUsageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "seq" | "teammateId" | "accountId" | "memberId" | "projectId" | "scheduleId" | "provider" | "model" | "source" | "inputTokens" | "cacheReadTokens" | "cacheWriteTokens" | "outputTokens" | "reasoningTokens" | "at" | "createdAt", ExtArgs["result"]["tokenUsage"]>
+export type TokenUsageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "seq" | "teammateId" | "accountId" | "memberId" | "projectId" | "scheduleId" | "provider" | "model" | "source" | "inputTokens" | "cacheReadTokens" | "cacheWriteTokens" | "outputTokens" | "reasoningTokens" | "at" | "createdAt" | "responseId" | "replaced", ExtArgs["result"]["tokenUsage"]>
 export type TokenUsageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.TokenUsage$sessionArgs<ExtArgs>
@@ -1319,6 +1403,17 @@ export type $TokenUsagePayload<ExtArgs extends runtime.Types.Extensions.Internal
     reasoningTokens: number
     at: Date
     createdAt: Date
+    /**
+     * The model response it is, by the id its provider gave it: what a teammate's turn spent, read
+     * from the harness's own log on the computer (usage.responses). Null for a usage.updated
+     * event's row or a run's.
+     */
+    responseId: string | null
+    /**
+     * A usage.updated event's row whose turn is counted by response rows instead (responseId) of
+     * the stream's totals: kept to count the turn, its tokens no longer counted.
+     */
+    replaced: boolean
   }, ExtArgs["result"]["tokenUsage"]>
   composites: {}
 }
@@ -1764,6 +1859,8 @@ export interface TokenUsageFieldRefs {
   readonly reasoningTokens: Prisma.FieldRef<"TokenUsage", 'Int'>
   readonly at: Prisma.FieldRef<"TokenUsage", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"TokenUsage", 'DateTime'>
+  readonly responseId: Prisma.FieldRef<"TokenUsage", 'String'>
+  readonly replaced: Prisma.FieldRef<"TokenUsage", 'Boolean'>
 }
     
 

@@ -39,7 +39,8 @@ async function reachable() {
 const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env DATABASE_URL)'
 
 const { prisma } = await import('../src/db.js')
-const { noteTokenUsage, noteUsageRun, usageReport } = await import('../src/usage.js')
+const { noteLoggedResponses, noteTokenUsage, noteUsageRun, usageReport } =
+  await import('../src/usage.js')
 
 const id = randomUUID().slice(0, 8)
 const ids = {
@@ -319,5 +320,166 @@ test(
     ])
     await prisma.session.delete({ where: { id: t.id } })
     assert.equal((await usageReport(owner(), 7, now)).totals.input, all.totals.input + 7)
+  },
+)
+
+test(
+  "a turn is counted response by response from its log, and its stream's totals no longer count",
+  { skip },
+  async () => {
+    // A workspace of its own: its report counts only this.
+    const workspace = await prisma.workspace.create({
+      data: { organizationId: ids.organization, name: 'Logged usage' },
+    })
+    const w = { organizationId: ids.organization, workspaceId: workspace.id }
+    const rey = (await prisma.teammate.create({ data: { ...w, name: 'Rey' } })).id
+    const cloud = (await prisma.computer.create({ data: { ...w, kind: 'cloud', name: 'Cloud' } }))
+      .id
+    const mac = (
+      await prisma.computer.create({ data: { ...w, kind: 'member_machine', name: 'Mac' } })
+    ).id
+    const claude = (
+      await prisma.account.create({
+        data: {
+          ...w,
+          memberId: ids.members[0]!,
+          computerId: cloud,
+          provider: 'claude_code',
+          label: 'Claude',
+        },
+      })
+    ).id
+    const own = (
+      await prisma.account.create({
+        data: {
+          ...w,
+          memberId: ids.members[1]!,
+          computerId: mac,
+          provider: 'claude_code',
+          source: 'machine',
+          label: 'Claude on the Mac',
+        },
+      })
+    ).id
+    const t = await prisma.session.create({
+      data: {
+        ...w,
+        teammateId: rey,
+        startedByMemberId: ids.members[0]!,
+        computerId: cloud,
+        accountId: claude,
+        title: 'Logged',
+        status: 'idle',
+      },
+    })
+    const session = { ...t, accountId: claude }
+    const turn = (minutesAgo: number, e: Record<string, unknown>) =>
+      ({
+        sessionId: t.id,
+        seq: ++seq,
+        event: { at: at(minutesAgo), type: 'usage.updated', teammateId: rey, ...e },
+      }) as unknown as SequencedEvent
+    const response = (id: string, minutesAgo: number, r: Record<string, unknown> = {}) => ({
+      id,
+      sessionId: t.id,
+      teammateId: rey,
+      accountId: claude,
+      provider: 'claude_code' as const,
+      model: 'claude-opus-5-5',
+      at: at(minutesAgo),
+      inputTokens: 1_000,
+      cacheReadTokens: 900,
+      cacheWriteTokens: 50,
+      outputTokens: 10,
+      reasoningTokens: 0,
+      ...r,
+    })
+
+    // Before its log begins (an older runner's turn): the stream's totals count.
+    await noteTokenUsage(session, [
+      turn(120, {
+        inputTokens: 5_000,
+        outputTokens: 50,
+        accountId: claude,
+        model: 'claude-opus-5-5',
+      }),
+    ])
+    // A turn noted before its responses came.
+    await noteTokenUsage(session, [
+      turn(50, {
+        inputTokens: 1_500,
+        outputTokens: 20,
+        accountId: claude,
+        model: 'claude-opus-5-5',
+      }),
+    ])
+    const cloudRunner = { ...w, computerId: cloud }
+    await noteLoggedResponses(cloudRunner, [
+      response('msg_1', 55),
+      // A subagent on another model.
+      response('msg_2', 52, { model: 'claude-haiku-5-5', inputTokens: 400, outputTokens: 5 }),
+      // Read again as its log was written on: its output grew. One row, the most read.
+      response('msg_1', 55, { outputTokens: 4 }),
+      response('msg_1', 55, { outputTokens: 30 }),
+      // Not this runner's or this workspace's to count.
+      response('msg_x1', 50, { sessionId: 'no-such-thread' }),
+      response('msg_x2', 50, { teammateId: riley }),
+      response('msg_x3', 50, { accountId: own }),
+    ])
+    // A later turn whose responses came first: its stream's totals never count, nor those of a
+    // stream that only repeated them (a turn split by background work).
+    await noteLoggedResponses(cloudRunner, [response('msg_3', 20, { inputTokens: 2_000 })])
+    // Sent again after a lost answer: nothing counts twice.
+    await noteLoggedResponses(cloudRunner, [response('msg_3', 20, { inputTokens: 2_000 })])
+    await noteTokenUsage(session, [
+      turn(15, {
+        inputTokens: 2_000,
+        outputTokens: 10,
+        accountId: claude,
+        model: 'claude-opus-5-5',
+      }),
+      turn(14, { inputTokens: 2_000, outputTokens: 10, accountId: claude }),
+    ])
+    // A member's machine names no account: its own login is.
+    await noteLoggedResponses({ ...w, computerId: mac }, [
+      { ...response('msg_4', 10, { inputTokens: 100, outputTokens: 1 }), accountId: undefined },
+    ])
+
+    const rows = await prisma.tokenUsage.findMany({
+      where: { workspaceId: workspace.id },
+      orderBy: { at: 'asc' },
+    })
+    assert.deepEqual(
+      rows.map((r) => [r.responseId, r.inputTokens, r.outputTokens, r.replaced, r.accountId]),
+      [
+        [null, 5_000, 50, false, claude],
+        ['msg_1', 1_000, 30, false, claude],
+        ['msg_2', 400, 5, false, claude],
+        [null, 1_500, 20, true, claude],
+        ['msg_3', 2_000, 10, false, claude],
+        [null, 2_000, 10, true, claude],
+        [null, 2_000, 10, true, claude],
+        ['msg_4', 100, 1, false, own],
+      ],
+    )
+    assert.equal(rows[1]!.memberId, ids.members[0])
+    assert.equal(rows[7]!.memberId, ids.members[1])
+
+    const report = await usageReport({ ...w, memberId: ids.members[0]!, role: 'owner' }, 7, now)
+    assert.equal(report.totals.input, 5_000 + 1_000 + 400 + 2_000 + 100)
+    assert.equal(report.totals.output, 50 + 30 + 5 + 10 + 1)
+    // Each turn still counts once; a response is no turn.
+    assert.equal(report.totals.runs, 4)
+    assert.deepEqual(
+      report.byModel.map((m) => [m.label, m.input, m.runs]),
+      [
+        ['claude-opus-5-5', 5_000 + 1_000 + 2_000 + 100, 3],
+        ['claude-haiku-5-5', 400, 0],
+      ],
+    )
+    assert.deepEqual(
+      report.topThreads.map((th) => [th.label, th.input, th.runs]),
+      [['Logged', 8_500, 4]],
+    )
   },
 )
