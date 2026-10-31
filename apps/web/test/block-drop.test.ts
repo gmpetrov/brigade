@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { Schema, type Node } from '@tiptap/pm/model'
 import { EditorState, NodeSelection } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
-import { blockDropCursor, blockDropExtension } from '../components/document-block-drop'
+import { blockDropCursor, blockDropExtension, dropTarget } from '../components/document-block-drop'
 
 // BlockNote's nesting, without its content types: a line holds its text, then its sub-lines.
 const schema = new Schema({
@@ -33,7 +33,8 @@ const LEFT = 100
 
 /**
  * An editor over `lines` with the first `dragged` line dragged by its handle: each line's
- * text a row of 24 px from the top, indented by its depth.
+ * text a row of 24 px from the top, indented by its depth. Lines whose text starts with `~`
+ * are hidden, as a list's filter hides them: they take no row.
  */
 function dragging(lines: Node[], dragged: number) {
   const doc = schema.node('doc', null, schema.node('blockGroup', null, lines))
@@ -43,8 +44,16 @@ function dragging(lines: Node[], dragged: number) {
   doc.descendants((node, pos) => {
     if (node.type.name !== 'blockContainer') return true
     const depth = (doc.resolve(pos).depth - 1) / 2
-    const top = row++ * ROW
-    rects.set(pos, { top, bottom: top + 24, height: 24, left: LEFT + depth * INDENT } as DOMRect)
+    const hidden = node.firstChild!.textContent.startsWith('~')
+    const top = hidden ? 0 : row++ * ROW
+    const height = hidden ? 0 : 24
+    rects.set(pos, {
+      top,
+      bottom: top + height,
+      height,
+      left: LEFT + depth * INDENT,
+      right: 800,
+    } as DOMRect)
     starts.push(pos)
     return true
   })
@@ -62,6 +71,8 @@ function dragging(lines: Node[], dragged: number) {
   }
   const at = (x: number, y: number) => ({ clientX: x, clientY: y }) as DragEvent
   return {
+    /** The height of the drop line for the pointer at (x, y). */
+    lineY: (x: number, y: number) => dropTarget(view as unknown as EditorView, x, y)?.line.y,
     /** Where the drop line goes for the pointer at (x, y). */
     line: (x: number, y: number) =>
       blockDropCursor().hooks!.computeDropPosition!({
@@ -130,4 +141,26 @@ test('dropped onto itself, nothing moves', () => {
   const editor = dragging([A(), line('B')], 1)
   assert.equal(editor.drop(LEFT + 50, 35), 'A, B')
   assert.equal(editor.drop(LEFT + 50, 50), 'A, B')
+})
+
+test('with lines hidden by a filter, a drop after a line goes past its hidden ones', () => {
+  // On screen: H1 0, H2 30, H3 60; each heading's paragraph hidden.
+  const lines = () => [line('H1'), line('~p1'), line('H2'), line('~p2'), line('H3')]
+  // H1 moves alone (its hidden paragraph stays): after H2's paragraph, before H3.
+  assert.equal(dragging(lines(), 0).drop(LEFT + 50, 50), '~p1, H2, ~p2, H1, H3')
+})
+
+test('with lines hidden by a filter, the drop line sits in the gap on screen', () => {
+  const editor = dragging([line('H1'), line('~p1'), line('H2'), line('~p2'), line('H3')], 0)
+  // Below H2 (30–54), above H3 (60–84): halfway between them.
+  assert.equal(editor.lineY(LEFT + 50, 50), 57)
+  // Above H2: between H1 (0–24) and H2.
+  assert.equal(editor.lineY(LEFT + 50, 35), 27)
+  // Below the last line: at its bottom.
+  assert.equal(editor.lineY(LEFT + 50, 80), 84)
+})
+
+test('a line whose sub-lines are all hidden: the drop goes after them', () => {
+  const editor = dragging([line('A'), line('B', [line('~c')]), line('D')], 0)
+  assert.equal(editor.drop(LEFT + 50, 50), 'B(~c), A, D')
 })
