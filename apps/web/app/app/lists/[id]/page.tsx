@@ -6,11 +6,12 @@ import { useParams } from 'next/navigation'
 import { useMemo } from 'react'
 import { useDocumentDiscussion } from '@/components/document-discussion'
 import { DocumentEditor } from '@/components/document-editor'
-import { LIST_LIVE, useHandOff } from '@/components/list-items'
+import { LIST_LIVE, RecentlyDone, useHandOff } from '@/components/list-items'
 import { ListProgress, type ListFilter, LIST_FILTERS, useListFilter } from '@/components/lists'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useApi } from '@/lib/api'
+import { recentlyDone } from '@/lib/recently-done'
 import { cn } from '@/lib/utils'
 
 /**
@@ -49,6 +50,7 @@ export default function ListPage() {
     needs_you: data.needsYou,
     done: data.done,
   }
+  const recent = filter === 'done' ? recentlyDone(data.items) : []
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -93,6 +95,14 @@ export default function ListPage() {
           </button>
         ))}
       </div>
+      {recent.length > 0 && (
+        <>
+          <RecentlyDone days={recent} />
+          <h2 className="-mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            In the list
+          </h2>
+        </>
+      )}
       <div className={cn('list-view -mx-2', filter !== 'all' && `list-filter-${filter}`)}>
         <DocumentEditor
           target={{ kind: 'library', id: data.documentId }}

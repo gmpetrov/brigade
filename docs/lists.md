@@ -133,6 +133,12 @@ mission; threads stay where the work happens.
   its threads (state dot, teammate, title, "needs you"), pull requests (what remains after one,
   in its tooltip) and "Stopped, still open" when stalled (`components/list-items.tsx`); the same
   chips show wherever the file opens, such as the document panel.
+- **Recently done**: above the Done filter's lines, the items Brigade ticked in the last 14 days
+  (a merged pull request, `complete_item`, a tick from a thread's card), newest first, by day,
+  each with who ticked it and its pull requests and threads (`lib/recently-done.ts`). Only those
+  have a date (`ListItem.doneAt`): a line a person ticks in the file has none, so it shows only
+  in the list below, in the file's order. Brigade does not date people's own ticks: it would mean
+  marking every ticked line and comparing each save of the file, for what they already know.
 - **Hand over**: select lines in the editor, then **Hand to <teammate>** in its toolbar. A dialog
   asks how: one thread, one thread each, or a thread that runs already, with an optional note.
   The lines get their markers in the editor at once; the API marks them in the stored file too
