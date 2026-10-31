@@ -6,7 +6,15 @@
 // also plays under its paragraph), and code blocks are highlighted
 // (highlight.js's common languages: JSON, YAML, XML/HTML, CSS, JS/TS, Python,
 // shell, SQL, diff and more; colors in globals.css).
-import { MENTION_KINDS, STORED_FILE, STORED_FILE_NAME, type MentionKind } from '@brigade/contracts'
+import {
+  DESIGN_THUMBNAIL,
+  designName,
+  MENTION_KINDS,
+  STORED_FILE,
+  STORED_FILE_NAME,
+  type LibraryFile,
+  type MentionKind,
+} from '@brigade/contracts'
 import { Check, Copy, ImageIcon } from 'lucide-react'
 import {
   createContext,
@@ -26,9 +34,9 @@ import {
   relativeFile,
   useFileLinks,
 } from '@/components/file-links'
-import { MentionChip, MessageText } from '@/components/mention'
+import { MentionChip, MentionIcon, MessageText } from '@/components/mention'
 import { Hint } from '@/components/ui/tooltip'
-import { storedFileUrl, threadImageUrl } from '@/lib/api'
+import { storedFileUrl, threadImageUrl, useApi } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 import { playedFiles, type PlayedFile } from '@/lib/played-files'
 import { cn } from '@/lib/utils'
@@ -324,16 +332,138 @@ function LibraryPlayer({ file }: { file: PlayedFile }) {
   )
 }
 
-/** A block, then the players of the library files its text mentions. */
+const libraryContent = (id: string) => `${API_URL}/api/library/${encodeURIComponent(id)}/content`
+
+/** How many images of one block show as tiles; the last says how many more there are. */
+const IMAGE_TILES = 4
+
+/**
+ * The library images a block mentions, under it. One shows whole, within the same bounds as a
+ * video; several show as a row of tiles. A click opens one over the page. One that cannot load
+ * (gone, or not this person's to read) leaves just its chip.
+ */
+function LibraryImages({ files }: { files: PlayedFile[] }) {
+  const [open, setOpen] = useState<PlayedFile>()
+  const [failed, setFailed] = useState<string[]>([])
+  const shown = files.filter((f) => !failed.includes(f.id))
+  if (shown.length === 0) return null
+  const fail = (id: string) => setFailed((f) => [...f, id])
+  const nameOf = (f: PlayedFile) => f.name.split('/').pop() ?? f.name
+  const single = shown.length === 1
+  const tiles = shown.slice(0, IMAGE_TILES)
+  const more = shown.length - tiles.length
+  return (
+    <span className="my-3 flex flex-wrap gap-2 first:mt-0 last:mb-0">
+      {tiles.map((f, i) => (
+        <Hint key={f.id} label={`Preview ${nameOf(f)}`}>
+          <button
+            type="button"
+            aria-label={`Preview ${nameOf(f)}`}
+            onClick={() => setOpen(f)}
+            className={cn(
+              'relative block cursor-zoom-in overflow-hidden rounded-lg border bg-muted/40',
+              !single && 'size-32',
+            )}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- a library file through the API */}
+            <img
+              src={libraryContent(f.id)}
+              alt={nameOf(f)}
+              loading="lazy"
+              onError={() => fail(f.id)}
+              className={cn(
+                'block',
+                single
+                  ? 'max-h-[min(20rem,50vh)] max-w-[min(100%,36rem)]'
+                  : 'size-full object-cover',
+              )}
+            />
+            {more > 0 && i === tiles.length - 1 && (
+              <span className="absolute inset-0 grid place-items-center bg-black/55 text-lg font-semibold text-white">
+                +{more}
+              </span>
+            )}
+          </button>
+        </Hint>
+      ))}
+      <MediaPreview
+        media={
+          open ? { name: nameOf(open), src: libraryContent(open.id), kind: 'image' } : undefined
+        }
+        onClose={() => setOpen(undefined)}
+      />
+    </span>
+  )
+}
+
+/**
+ * The designs a block mentions, under it: a card each with the picture save_design renders and
+ * the design's name; it opens beside the thread. A design without a picture yet shows its name.
+ */
+function LibraryDesigns({ designs }: { designs: PlayedFile[] }) {
+  const links = useFileLinks()
+  const library = useApi<LibraryFile[]>('/library')
+  return (
+    <span className="my-3 flex flex-wrap gap-3 first:mt-0 last:mb-0">
+      {designs.map((d) => {
+        const thumbnail = library.data?.find((f) => f.path === `${d.id}/${DESIGN_THUMBNAIL}`)
+        const name = designName(d.id)
+        const card = (
+          <>
+            <span className="flex aspect-[16/10] items-center justify-center overflow-hidden border-b bg-muted/50">
+              {thumbnail ? (
+                // eslint-disable-next-line @next/next/no-img-element -- a library file through the API
+                <img
+                  src={libraryContent(thumbnail.id)}
+                  alt=""
+                  loading="lazy"
+                  className="size-full object-cover object-top"
+                />
+              ) : (
+                <MentionIcon kind="design" />
+              )}
+            </span>
+            <span className="block truncate px-3 py-2 text-left text-sm font-medium">{name}</span>
+          </>
+        )
+        const box = 'block w-64 max-w-full overflow-hidden rounded-lg border bg-card'
+        return links ? (
+          <Hint key={d.id} label={`Open ${d.id}`}>
+            <button
+              type="button"
+              aria-label={`Open ${name}`}
+              onClick={() => links.open({ path: d.id })}
+              className={cn(box, 'cursor-pointer transition-colors hover:border-primary/50')}
+            >
+              {card}
+            </button>
+          </Hint>
+        ) : (
+          <span key={d.id} className={box}>
+            {card}
+          </span>
+        )
+      })}
+    </span>
+  )
+}
+
+/** A block, then what its text mentions of the library: images, designs, videos and sounds. */
 function withPlayers(node: unknown, block: ReactNode) {
   const files = playedFiles(node as Parameters<typeof playedFiles>[0])
   if (files.length === 0) return block
+  const images = files.filter((f) => f.kind === 'image')
+  const designs = files.filter((f) => f.kind === 'design')
   return (
     <>
       {block}
-      {files.map((file) => (
-        <LibraryPlayer key={file.id} file={file} />
-      ))}
+      {images.length > 0 && <LibraryImages files={images} />}
+      {designs.length > 0 && <LibraryDesigns designs={designs} />}
+      {files
+        .filter((f) => f.kind === 'video' || f.kind === 'audio')
+        .map((file) => (
+          <LibraryPlayer key={file.id} file={file} />
+        ))}
     </>
   )
 }

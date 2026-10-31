@@ -61,3 +61,25 @@ test('a link that is no library mention, or a mention in code, plays nothing', (
     [],
   )
 })
+
+test('a library image or a design a paragraph mentions shows under it, once', () => {
+  assert.deepEqual(
+    played(
+      'Shot @[Projects/a/shot.PNG](document:i1), the page @[Projects/home.design](design:Projects/home.design/), ' +
+        'a doc @[a/notes.pdf](document:n1) and the shot again @[Projects/a/shot.PNG](document:i1).',
+    ),
+    [
+      {
+        tag: 'p',
+        files: [
+          { id: 'i1', name: 'Projects/a/shot.PNG', kind: 'image' },
+          { id: 'Projects/home.design', name: 'Projects/home.design', kind: 'design' },
+        ],
+      },
+    ],
+  )
+})
+
+test('a design system or a project shows nothing under the text', () => {
+  assert.deepEqual(played('Follow @[Acme](design-system:Brand/acme) in @[Web](project:p1).'), [])
+})
