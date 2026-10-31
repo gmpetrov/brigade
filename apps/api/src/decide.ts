@@ -574,6 +574,12 @@ export async function resolveTicket(
     }
     // Whoever may write in the thread, but a write on a member's own account (an App account
     // only they use) is theirs to allow, or an admin's.
+    // A playbook's writes measure how far it may act alone (playbook-autonomy.ts): the member
+    // whose run it is decides them, or an admin.
+    if (payload.playbookInstallationId && !isAdmin && !isStarter)
+      throw new HTTPException(403, {
+        message: 'Only the member who started the thread, or an admin, can decide',
+      })
     if (!isAdmin && (!ticket.session || !mayAnswer(scope, ticket.session)))
       throw new HTTPException(403, {
         message: 'Only who may write in the thread, or an admin, can decide',
