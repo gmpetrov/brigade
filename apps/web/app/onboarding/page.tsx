@@ -425,55 +425,64 @@ function ConnectAI({
   // The live update and the timer can both see the account ready: start one thread.
   const started = useRef(false)
 
-  /** Meet the chief: a new workspace starts by setting up its team with it. */
-  const finish = useCallback(async () => {
-    if (started.current) return
-    started.current = true
-    setFinishing(true)
-    try {
-      const [teammates, ready] = await Promise.all([
-        api<Teammate[]>('/teammates'),
-        api<Account[]>('/accounts'),
-      ])
-      const chief = teammates.find((t) => t.kind === 'chief')
-      const works = (a: Account) => ['ready', 'unverified', 'exhausted'].includes(a.status)
-      // Only a Codex account: the chief runs on Codex.
-      if (
-        chief &&
-        !ready.some((a) => works(a) && a.provider === chief.harness) &&
-        ready.some((a) => works(a))
-      ) {
-        const harness = ready.find(works)!.provider
-        await api(`/teammates/${chief.id}`, { method: 'PATCH', body: { harness, model: null } })
-        chief.harness = harness
-      }
-      const account = ready.find((a) => works(a) && a.provider === chief?.harness)
-      const others = teammates.filter((t) => t.kind !== 'chief')
-      if (chief && account && others.length === 0) {
-        const started = await api<ThreadSummary[]>(`/threads?teammateId=${chief.id}`)
-        if (started.length === 0) {
-          const thread = await api<{ id: string }>('/threads', {
-            body: {
-              teammateId: chief.id,
-              computerId: account.computer.id,
-              accountId: account.id,
-              text: SETUP_MESSAGE,
-            },
-          })
-          return router.replace(`/app/threads/${thread.id}`)
+  /**
+   * Meet the chief: a new workspace starts by setting up its team with it, its owner or admin.
+   * Anyone else (a member who joined, a workspace with a team already) goes to the dashboard.
+   */
+  const finish = useCallback(
+    async (me: Me) => {
+      if (started.current) return
+      started.current = true
+      setFinishing(true)
+      try {
+        const [teammates, ready] = await Promise.all([
+          api<Teammate[]>('/teammates'),
+          api<Account[]>('/accounts'),
+        ])
+        const chief = teammates.find((t) => t.kind === 'chief')
+        const others = teammates.filter((t) => t.kind !== 'chief')
+        // Changing the chief is an owner's or admin's: a member's account would be refused.
+        if (others.length > 0 || (me.role !== 'owner' && me.role !== 'admin'))
+          return router.replace('/app')
+        const works = (a: Account) => ['ready', 'unverified', 'exhausted'].includes(a.status)
+        // Only a Codex account: the chief runs on Codex.
+        if (
+          chief &&
+          !ready.some((a) => works(a) && a.provider === chief.harness) &&
+          ready.some((a) => works(a))
+        ) {
+          const harness = ready.find(works)!.provider
+          await api(`/teammates/${chief.id}`, { method: 'PATCH', body: { harness, model: null } })
+          chief.harness = harness
         }
+        const account = ready.find((a) => works(a) && a.provider === chief?.harness)
+        if (chief && account) {
+          const started = await api<ThreadSummary[]>(`/threads?teammateId=${chief.id}`)
+          if (started.length === 0) {
+            const thread = await api<{ id: string }>('/threads', {
+              body: {
+                teammateId: chief.id,
+                computerId: account.computer.id,
+                accountId: account.id,
+                text: SETUP_MESSAGE,
+              },
+            })
+            return router.replace(`/app/threads/${thread.id}`)
+          }
+        }
+        router.replace('/app')
+      } catch (e) {
+        setError((e as Error).message)
+        started.current = false
+        setFinishing(false)
       }
-      router.replace('/app')
-    } catch (e) {
-      setError((e as Error).message)
-      started.current = false
-      setFinishing(false)
-    }
-  }, [router])
+    },
+    [router],
+  )
 
   const check = useCallback(async () => {
     const me = await onReady()
-    if (me?.aiReady) await finish()
+    if (me?.aiReady) await finish(me)
   }, [onReady, finish])
 
   useLive((message) => {
