@@ -943,9 +943,18 @@ model TokenUsage {
   reasoningTokens  Int       @default(0)
   at               DateTime
   createdAt        DateTime  @default(now())
+  /// The model response it is, by the id its provider gave it: what a teammate's turn spent, read
+  /// from the harness's own log on the computer (usage.responses). Null for a usage.updated
+  /// event's row or a run's.
+  responseId       String?
+  /// A usage.updated event's row whose turn is counted by response rows instead (responseId) of
+  /// the stream's totals: kept to count the turn, its tokens no longer counted.
+  replaced         Boolean   @default(false)
 
   @@unique([sessionId, seq])
+  @@unique([workspaceId, responseId])
   @@index([workspaceId, at])
+  @@index([sessionId, teammateId, at])
 }
 
 // ---------------------------------------------------------------------------

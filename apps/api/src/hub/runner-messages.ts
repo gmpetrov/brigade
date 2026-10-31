@@ -39,7 +39,7 @@ import { handleScheduleCall } from '../schedules.js'
 import { packCommand, takesParts } from '../spec-parts.js'
 import { readableEvents, storableForms, storableJson } from '../storable-json.js'
 import { handleTaskCall } from '../tasks.js'
-import { noteTokenUsage, noteUsageRun } from '../usage.js'
+import { noteLoggedResponses, noteTokenUsage, noteUsageRun } from '../usage.js'
 import { handoffThread, titleThread } from '../work.js'
 import type { RunnerConn } from './host.js'
 import {
@@ -195,6 +195,23 @@ async function handle(hub: WorkspaceHub, conn: RunnerConn, raw: string) {
   if (message.type === 'thread.title') {
     void titleThread(runner, message).catch((error) =>
       console.warn(`runner ${runner.id}: thread title failed: ${String(error)}`),
+    )
+    return
+  }
+
+  if (message.type === 'usage.responses') {
+    // Answered once kept: the runner then moves past them in its logs, else reads them again.
+    void noteLoggedResponses(runner, message.responses).then(
+      () => send({ type: 'connector.result', callId: message.callId, ok: true }),
+      (error: unknown) => {
+        console.warn(`runner ${runner.id}: usage of a turn's responses not kept: ${String(error)}`)
+        send({
+          type: 'connector.result',
+          callId: message.callId,
+          ok: false,
+          error: 'Usage not kept; it is sent again later',
+        })
+      },
     )
     return
   }

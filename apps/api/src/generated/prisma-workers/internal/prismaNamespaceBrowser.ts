@@ -626,7 +626,9 @@ export const TokenUsageScalarFieldEnum = {
   outputTokens: 'outputTokens',
   reasoningTokens: 'reasoningTokens',
   at: 'at',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  responseId: 'responseId',
+  replaced: 'replaced'
 } as const
 
 export type TokenUsageScalarFieldEnum = (typeof TokenUsageScalarFieldEnum)[keyof typeof TokenUsageScalarFieldEnum]

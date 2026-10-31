@@ -43,6 +43,31 @@ import { UsageRunKind } from './usage.js'
 export const CLIPBOARD_MAX = 1_000_000
 
 export const HarnessId = z.enum(['claude_code', 'codex'])
+
+/** Most responses in one usage.responses. */
+export const LOGGED_RESPONSES_MAX = 500
+
+/**
+ * One model response of a teammate's turn in a thread, from the harness's own session log: named
+ * by the id its provider gave it, with what it spent. Input counts the cache's reads and writes.
+ */
+export const LoggedResponse = z.object({
+  id: z.string().min(1).max(200),
+  sessionId: z.string().min(1).max(64),
+  teammateId: z.string().min(1).max(64),
+  /** The account it ran on; unset for the computer's own login (a member's machine). */
+  accountId: z.string().min(1).max(64).optional(),
+  provider: HarnessId,
+  model: z.string().max(200).optional(),
+  /** When the response came. */
+  at: z.iso.datetime(),
+  inputTokens: z.number().int().nonnegative(),
+  cacheReadTokens: z.number().int().nonnegative(),
+  cacheWriteTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  reasoningTokens: z.number().int().nonnegative(),
+})
+export type LoggedResponse = z.infer<typeof LoggedResponse>
 export type HarnessId = z.infer<typeof HarnessId>
 
 /**
@@ -664,6 +689,16 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     teammateId: z.string().optional(),
     at: z.iso.datetime(),
     ...TokenCounts.shape,
+  }),
+  /**
+   * What a teammate's turns spent, response by response, as the harness's own session log on the
+   * computer records it (apps/runner/src/usage-logs.ts). Sent again, a response counts once.
+   * Answered with connector.result, after which the runner moves past them.
+   */
+  z.object({
+    type: z.literal('usage.responses'),
+    callId: z.string(),
+    responses: z.array(LoggedResponse).max(LOGGED_RESPONSES_MAX),
   }),
 ])
 export type RunnerToApi = z.infer<typeof RunnerToApi>

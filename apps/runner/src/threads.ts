@@ -354,6 +354,8 @@ export class Threads {
     private readonly options: {
       concurrency: number
       emit: (sessionId: string, event: AgentEvent) => void
+      /** A teammate's stream in a thread ended: what it spent is in its harness's log (usage-logs.ts). */
+      streamEnded?: (teammateId: string, sessionId: string, workDir: string) => void
       callConnector: (
         sessionId: string,
         teammateId: string,
@@ -1777,6 +1779,13 @@ export class Threads {
             event = { ...event, message: memoryStopped(thread.memoryStop) }
           // In a thread with several teammates, each event says whose it is.
           this.options.emit(spec.sessionId, { ...event, teammateId })
+          // A stream that ended, or a turn cut short: its log has what it spent.
+          if (
+            (event.type === 'usage.updated' && event.inputTokens !== undefined) ||
+            event.type === 'turn.completed' ||
+            event.type === 'error'
+          )
+            this.options.streamEnded?.(teammateId, spec.sessionId, folder.workDir)
           if (event.type === 'message.done' && event.text.trim()) {
             this.note(spec, teammateId, spec.teammate.name, event.text)
             seat!.turn.push({ kind: 'message', chars: visibleChars(event.text), text: event.text })
