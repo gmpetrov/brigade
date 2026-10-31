@@ -242,7 +242,7 @@ export function DocumentBlockNoteView({
           formattingToolbar={!ask}
           sideMenu={false}
         >
-          <SideMenuController sideMenu={DocumentSideMenu} />
+          <SideMenuController sideMenu={DocumentSideMenu} floatingUIOptions={SIDE_MENU_OPTIONS} />
           {ask && (
             <AskContext.Provider value={ask}>
               <FormattingToolbarController formattingToolbar={AskToolbar} />
@@ -273,6 +273,41 @@ function DocumentSideMenu(props: SideMenuProps) {
       </span>
     </SideMenu>
   )
+}
+
+/**
+ * The side menu centred on its block's first line, as measured. BlockNote shifts it down by
+ * fixed amounts made for its own heading sizes, larger than ours (globals.css), which left the
+ * handles below the headings they move.
+ */
+const SIDE_MENU_OPTIONS = {
+  useFloatingOptions: {
+    middleware: [
+      {
+        name: 'firstLine',
+        fn: ({ y, elements, rects }: FirstLineState) => ({
+          y: y + firstLineOffset(elements.reference, rects.floating.height),
+        }),
+      },
+    ],
+  },
+}
+
+type FirstLineState = {
+  y: number
+  elements: { reference: Element | { contextElement?: Element } }
+  rects: { floating: { height: number } }
+}
+
+function firstLineOffset(reference: FirstLineState['elements']['reference'], height: number) {
+  const block = reference instanceof Element ? reference : reference.contextElement
+  // The block's own content comes before its sub-lines, so the first one is its own.
+  const line = block?.querySelector('.bn-block-content')?.querySelector('.bn-inline-content')
+  if (!block || !line) return 0
+  const lineHeight = parseFloat(getComputedStyle(line).lineHeight)
+  if (!lineHeight) return 0
+  const top = line.getBoundingClientRect().top - block.getBoundingClientRect().top
+  return top + lineHeight / 2 - height / 2
 }
 
 /** The press on the handle itself, not on its menu (portaled, yet inside in React's tree). */
