@@ -32,3 +32,7 @@ PostgreSQL comes from `docker-compose.yml` when Docker works, else from the `emb
 # Adding a built-in App
 
 An account row shows only the account itself (the Gmail address, the Linear workspace, the Mixpanel organization), never just the App's name. Before writing the code that names an account (`mcp.account` for an MCP App), call that tool or URL once with a real account and read its actual reply; write the parser for that reply and keep it as the test's fixture, rather than guessing its shape from the docs. Then, in a Preview, connect a real account and check that its row shows the name before opening the pull request. A real account may be live: call only read tools while testing.
+
+# Text too long for its space
+
+Cut text fades out at its end; it never ends in an ellipsis (…). Use Tailwind's `truncate` (one line) or `line-clamp-*` (several lines): `apps/web/app/globals.css` makes them fade, only while the text overflows, so nothing else is needed. Do not write `text-overflow: ellipsis` or add "…" to text cut to fit. The fade covers the box's background and border too, so on a bordered or tinted box, put `truncate` on a span inside it. "…" on a word that says something is in progress ("Loading…") is not a cut and stays.

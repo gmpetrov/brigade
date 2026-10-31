@@ -96,6 +96,64 @@
   }
 }
 
+/* Text too long for its box fades out at its end, never an ellipsis (…): Tailwind's
+ * truncate, text-ellipsis and line-clamp-* do so here, with their variants, so text cut
+ * anywhere in Brigade fades without a class of its own. Only when it overflows: the box
+ * is a scroll container, and its scroll timeline is inactive while nothing overflows, so
+ * a short title keeps its last letters. The mask fades the box's background and border
+ * too: cut a bordered or tinted box's text in a span inside it. Without scroll-driven
+ * animations (Firefox), the ellipsis stays. */
+@property --fade-end {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes fade-end {
+  from,
+  to {
+    --fade-end: 2rem;
+  }
+}
+@utility truncate {
+  @supports (animation-timeline: scroll()) {
+    /* A field's text scrolls as it is typed: it keeps its usual end. */
+    &:not(input, textarea) {
+      text-overflow: clip;
+      mask-image: linear-gradient(to right, #000 calc(100% - var(--fade-end)), transparent);
+      animation: fade-end linear both;
+      animation-timeline: scroll(self inline);
+    }
+  }
+}
+@utility text-ellipsis {
+  @supports (animation-timeline: scroll()) {
+    &:not(input, textarea) {
+      text-overflow: clip;
+      mask-image: linear-gradient(to right, #000 calc(100% - var(--fade-end)), transparent);
+      animation: fade-end linear both;
+      animation-timeline: scroll(self inline);
+    }
+  }
+}
+/* Several lines: cut at their height rather than by -webkit-line-clamp, which always
+ * ends in an ellipsis; the last line fades out at its end. */
+@utility line-clamp-* {
+  @supports (animation-timeline: scroll()) {
+    -webkit-line-clamp: unset;
+    max-height: calc(--value(integer) * 1lh);
+    mask-image:
+      linear-gradient(to right, #000 calc(100% - var(--fade-end)), transparent),
+      linear-gradient(#000, #000);
+    mask-size:
+      100% 1lh,
+      100% calc(100% - 1lh);
+    mask-position: bottom, top;
+    mask-repeat: no-repeat;
+    animation: fade-end linear both;
+    animation-timeline: scroll(self block);
+  }
+}
+
 /* App-specific pieces that can't take Tailwind classes. */
 /* The edges of .scroll-fade-y, animated with its scroll (below). */
 @property --fade-top {
@@ -1037,12 +1095,10 @@
     display: none;
   }
   & .bn-inline-content {
+    @apply truncate;
     min-width: 0;
-    overflow: hidden;
     font-size: 12px;
     color: var(--muted-foreground);
-    text-overflow: ellipsis;
-    white-space: nowrap;
     text-decoration: none;
   }
   & .bn-inline-content::before {
