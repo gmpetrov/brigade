@@ -15,7 +15,8 @@
 // Inside Threads, the latest thread waiting on a person shows first, and the others behind a
 // "+N waiting on you".
 // A thread's child threads stay out of the list: folded under it, unfolded by the caret
-// after its title (SubThreads). The thread already shows their
+// after its title (SubThreads); a list's threads fold theirs the same way, one level further
+// in. The thread already shows their
 // state: working while one it waits for works, waiting while one waits on a person.
 import {
   Archive,
@@ -26,6 +27,7 @@ import {
   ListChecks,
   ListFilter,
   MessagesSquare,
+  Play,
   Plus,
   Settings,
   X,
@@ -174,13 +176,16 @@ function useOpenChildren() {
 
 /**
  * A child thread's branch: a line down from its parent, which the last one ends in a rounded
- * elbow, as in a tree.
+ * elbow at its own row, as in a tree, above any child threads of its own.
  */
 const BRANCH =
-  'relative pl-3.5 before:pointer-events-none before:absolute before:top-0 before:bottom-0 before:left-0 before:border-l before:border-sidebar-border last:before:bottom-1/2 last:before:w-2 last:before:rounded-bl-lg last:before:border-b'
+  'relative pl-3.5 before:pointer-events-none before:absolute before:top-0 before:bottom-0 before:left-0 before:border-l before:border-sidebar-border last:before:bottom-auto last:before:h-4 last:before:w-2 last:before:rounded-bl-lg last:before:border-b'
 /** A row under a thread: a child thread or a control, the height of the list's rows. */
 const SUB_ROW =
   'flex h-8 w-full min-w-0 items-center gap-2 rounded-[10px] px-2 text-left text-sm text-sidebar-foreground outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground'
+
+/** Which rows under a thread show their own child threads, and how to fold them. */
+type Unfolded = { set: Record<string, boolean>; toggle: (id: string, open: boolean) => void }
 
 /**
  * A thread's child threads, under it: folded, nothing but a button for the keyboard; unfolded, the first
@@ -193,110 +198,193 @@ function SubThreads({
   onToggle,
   activeId,
   needsYou,
+  unfolded,
   noun = 'sub-thread',
 }: {
   items: SidebarChild[]
   open: boolean
   onToggle: () => void
+  /** The thread open, here or deeper. */
   activeId: string | null
   needsYou: Record<string, string>
+  unfolded: Unfolded
   /** What its rows are, for the keyboard's buttons: a list's threads are no sub-threads. */
   noun?: string
+}) {
+  return (
+    // Folded, it takes no room: the caret after the parent's title unfolds it, and from the
+    // keyboard a "Show N sub-threads" button, shown once focused.
+    <SidebarMenuItem className={cn(!open && 'sr-only has-focus-visible:not-sr-only')}>
+      <SubThreadList
+        className="ml-[18px] group-data-[collapsible=icon]:hidden"
+        items={items}
+        open={open}
+        onToggle={onToggle}
+        activeId={activeId}
+        needsYou={needsYou}
+        unfolded={unfolded}
+        noun={noun}
+      />
+    </SidebarMenuItem>
+  )
+}
+
+/**
+ * The rows of SubThreads. A row with child threads of its own (a list's thread) has a caret
+ * after its title, which folds them under it, one level further in.
+ */
+function SubThreadList({
+  className,
+  items,
+  open,
+  onToggle,
+  activeId,
+  needsYou,
+  unfolded,
+  noun,
+}: {
+  className: string
+  items: SidebarChild[]
+  open: boolean
+  onToggle: () => void
+  activeId: string | null
+  needsYou: Record<string, string>
+  unfolded: Unfolded
+  noun: string
 }) {
   const [all, setAll] = useState(false)
   const { openPreview } = useThreadPanel()
   // What waits on this member is more than its own status, as for the list's threads.
   const { shown, hidden } = subThreadRows(items, { needsYou, activeId, all, cap: CHILD_CAP })
   return (
-    // Folded, it takes no room: the caret after the parent's title unfolds it, and from the
-    // keyboard a "Show N sub-threads" button, shown once focused.
-    <SidebarMenuItem className={cn(!open && 'sr-only has-focus-visible:not-sr-only')}>
-      <ul className="ml-[18px] flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
-        {open ? (
-          <>
-            {/* Folds them again from the keyboard: the caret is a mouse's only. Shown once
-                focused, so the list keeps no row for it. */}
-            <li className={cn(BRANCH, 'sr-only has-focus-visible:not-sr-only')}>
-              <button
-                type="button"
-                aria-expanded
-                onClick={onToggle}
-                className={cn(SUB_ROW, 'text-muted-foreground')}
-              >
-                Hide {noun}s
-              </button>
-            </li>
-            {shown.map((c) => {
-              const status = { status: c.status, unread: c.unread, ask: c.ask }
-              const group = groupOf(c.status)
-              const state = group !== 'rest' || c.status === 'failed' || c.unread
-              return (
-                <li key={c.id} className={BRANCH}>
-                  <Link
-                    title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
-                    href={`/app/threads/${c.id}`}
-                    data-active={c.id === activeId}
-                    {...preloadOnPoint(c.id, c.id === activeId)}
-                    onClick={(e) => clickInPlace(e, `/app/threads/${c.id}`)}
-                    className={SUB_ROW}
-                  >
-                    <FadeText
-                      className="flex-1"
-                      textClassName={cn(group === 'working' && 'text-shimmer-dim')}
-                    >
-                      <StreamedTitle threadId={c.id} text={c.title} />
-                    </FadeText>
-                    {/* Its preview is up, as on its parent's row: a click opens it. */}
-                    {c.previewRunning && (
-                      <span
-                        title="Open preview"
-                        className="hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          openPreview(c.id)
-                        }}
-                      >
-                        <Globe aria-hidden className="size-3 opacity-50" />
-                        <span className="sr-only">Preview running</span>
-                      </span>
-                    )}
-                    {state ? (
-                      <ThreadStatusIcon {...status} />
-                    ) : (
-                      <span aria-hidden className="size-4 shrink-0" />
-                    )}
-                  </Link>
-                </li>
-              )
-            })}
-            {hidden > 0 && (
-              <li className={BRANCH}>
-                <button
-                  type="button"
-                  onClick={() => setAll(true)}
-                  className={cn(SUB_ROW, 'text-muted-foreground')}
-                >
-                  {`+${hidden} more`}
-                </button>
-              </li>
-            )}
-          </>
-        ) : (
-          <li className={BRANCH}>
+    <ul className={cn('flex min-w-0 flex-col', className)}>
+      {open ? (
+        <>
+          {/* Folds them again from the keyboard: the caret is a mouse's only. Shown once
+              focused, so the list keeps no row for it. */}
+          <li className={cn(BRANCH, 'sr-only has-focus-visible:not-sr-only')}>
             <button
               type="button"
-              aria-expanded={false}
+              aria-expanded
               onClick={onToggle}
               className={cn(SUB_ROW, 'text-muted-foreground')}
             >
-              Show {items.length} {noun}
-              {items.length === 1 ? '' : 's'}
+              Hide {noun}s
             </button>
           </li>
-        )}
-      </ul>
-    </SidebarMenuItem>
+          {shown.map((c) => {
+            const status = { status: c.status, unread: c.unread, ask: c.ask }
+            const group = groupOf(c.status)
+            const state = group !== 'rest' || c.status === 'failed' || c.unread
+            const kids = c.children ?? []
+            // Folded unless the member unfolded them, or one of them is open.
+            const kidsOpen =
+              kids.length > 0 &&
+              (unfolded.set[c.id] ?? (!!activeId && kids.some((k) => holds(k, activeId))))
+            const toggleKids = () => unfolded.toggle(c.id, kidsOpen)
+            return (
+              <li key={c.id} className={BRANCH}>
+                <Link
+                  title={`${c.title} · ${state ? `${threadStatusLabel(status)} · ` : ''}${shortAgo(c.updatedAt)}`}
+                  href={`/app/threads/${c.id}`}
+                  data-active={c.id === activeId}
+                  {...preloadOnPoint(c.id, c.id === activeId)}
+                  onClick={(e) => clickInPlace(e, `/app/threads/${c.id}`)}
+                  className={SUB_ROW}
+                >
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                    <FadeText textClassName={cn(group === 'working' && 'text-shimmer-dim')}>
+                      <StreamedTitle threadId={c.id} text={c.title} />
+                    </FadeText>
+                    {/* As after a thread's title in the list (ThreadRow). */}
+                    {kids.length > 0 && (
+                      <span
+                        aria-hidden
+                        // Folds in place: on a phone, the sidebar stays open (ui/sidebar.tsx).
+                        data-keeps-sidebar
+                        title={
+                          kidsOpen
+                            ? 'Hide sub-threads'
+                            : `Show ${kids.length} sub-thread${kids.length === 1 ? '' : 's'}`
+                        }
+                        className="text-muted-foreground hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          toggleKids()
+                        }}
+                      >
+                        <Play
+                          className={cn(
+                            'size-2 fill-current transition-transform',
+                            kidsOpen && 'rotate-90',
+                          )}
+                        />
+                      </span>
+                    )}
+                  </span>
+                  {/* Its preview is up, as on its parent's row: a click opens it. */}
+                  {c.previewRunning && (
+                    <span
+                      title="Open preview"
+                      className="hover:text-sidebar-foreground -m-1 flex shrink-0 p-1"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        openPreview(c.id)
+                      }}
+                    >
+                      <Globe aria-hidden className="size-3 opacity-50" />
+                      <span className="sr-only">Preview running</span>
+                    </span>
+                  )}
+                  {state ? (
+                    <ThreadStatusIcon {...status} />
+                  ) : (
+                    <span aria-hidden className="size-4 shrink-0" />
+                  )}
+                </Link>
+                {kids.length > 0 && (
+                  <SubThreadList
+                    className={cn('ml-2.5', !kidsOpen && 'sr-only has-focus-visible:not-sr-only')}
+                    items={kids}
+                    open={kidsOpen}
+                    onToggle={toggleKids}
+                    activeId={activeId}
+                    needsYou={needsYou}
+                    unfolded={unfolded}
+                    noun="sub-thread"
+                  />
+                )}
+              </li>
+            )
+          })}
+          {hidden > 0 && (
+            <li className={BRANCH}>
+              <button
+                type="button"
+                onClick={() => setAll(true)}
+                className={cn(SUB_ROW, 'text-muted-foreground')}
+              >
+                {`+${hidden} more`}
+              </button>
+            </li>
+          )}
+        </>
+      ) : (
+        <li className={BRANCH}>
+          <button
+            type="button"
+            aria-expanded={false}
+            onClick={onToggle}
+            className={cn(SUB_ROW, 'text-muted-foreground')}
+          >
+            Show {items.length} {noun}
+            {items.length === 1 ? '' : 's'}
+          </button>
+        </li>
+      )}
+    </ul>
   )
 }
 
@@ -654,6 +742,7 @@ export function SidebarWork({
   const [extra, setExtra] = useState(0)
   const [folded, toggleFolded] = useFolded()
   const [childrenSet, toggleChildren] = useOpenChildren()
+  const unfolded = { set: childrenSet, toggle: toggleChildren }
   // Whether the list shows every thread waiting on a person, not only the latest.
   const [allWaiting, setAllWaiting] = useState(false)
   // Threads older than the latest the panel loads, asked for from the end of the list; and
@@ -1001,9 +1090,13 @@ export function SidebarWork({
     const state = !!(statusKey(t) || t.eventsWaitingSince)
     // Its child threads, folded under it unless the member unfolded them or one is open.
     const children = t.children ?? []
+    // The thread open among them, here or under a list's thread.
     const activeChild =
-      children.find((c) => c.id === threadId && (expanded || pathname === `/app/threads/${c.id}`))
-        ?.id ?? null
+      threadId &&
+      (expanded || pathname === `/app/threads/${threadId}`) &&
+      children.some((c) => holds(c, threadId))
+        ? threadId
+        : null
     const open = children.length > 0 && (childrenSet[t.id] ?? !!activeChild)
     const toggle = () => toggleChildren(t.id, open)
     if (isListRow(t)) {
@@ -1034,6 +1127,7 @@ export function SidebarWork({
             onToggle={toggle}
             activeId={activeChild}
             needsYou={needsYou}
+            unfolded={unfolded}
             noun="thread"
           />
         </Fragment>
@@ -1071,6 +1165,7 @@ export function SidebarWork({
             onToggle={toggle}
             activeId={activeChild}
             needsYou={needsYou}
+            unfolded={unfolded}
           />
         )}
       </Fragment>

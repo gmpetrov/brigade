@@ -478,6 +478,8 @@ export type SidebarChild = {
   unread: boolean
   /** Its preview is starting or running, on a computer that is up. */
   previewRunning?: boolean
+  /** Its own child threads, for a thread under a list's row (lib/list-groups.ts). */
+  children?: SidebarChild[]
 }
 
 /** A thread started from another (start_child, or a schedule's run that reports there), shown in it. */

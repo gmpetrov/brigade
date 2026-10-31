@@ -60,3 +60,14 @@ test('unfolded: waiting, then working, then the latest, capped, with the open on
   assert.equal(every.shown.length, 7)
   assert.equal(every.hidden, 0)
 })
+
+test("a list's row holds its threads' child threads, and keeps the one holding the open one", () => {
+  const list = { id: 'list:L', children: [{ ...child('t'), children: [child('t-c')] }] }
+  assert.equal(holds(list, 't-c'), true)
+  const items = [child('a'), child('b'), { ...child('t'), children: [child('t-c')] }]
+  const { shown } = subThreadRows(items, { needsYou: {}, activeId: 't-c', all: false, cap: 1 })
+  assert.deepEqual(
+    shown.map((c) => c.id),
+    ['a', 't'],
+  )
+})

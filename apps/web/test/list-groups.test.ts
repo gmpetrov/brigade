@@ -57,3 +57,15 @@ test("a list's threads keep their preview, which their rows show", () => {
     [true, false],
   )
 })
+
+test("a list's threads keep their own child threads, which fold under them", () => {
+  const parent = {
+    ...thread('a', 'idle', 'L'),
+    children: [{ id: 'a1', title: 'a1', status: 'running', updatedAt: '', unread: false }],
+  } as ThreadSummary
+  const [row] = groupByList([parent, thread('b', 'idle', 'L')])
+  assert.deepEqual(
+    row!.children?.map((c) => c.children?.map((k) => k.id)),
+    [['a1'], []],
+  )
+})

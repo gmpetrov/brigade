@@ -12,14 +12,19 @@ export const groupOf = (status: string): Group =>
       ? 'working'
       : 'rest'
 
-/** The thread `id` is this one, or one of its child threads. */
-export const holds = (t: { id: string; children?: { id: string }[] }, id: string) =>
-  t.id === id || !!t.children?.some((c) => c.id === id)
+type Tree = { id: string; children?: Tree[] }
+
+/**
+ * The thread `id` is this one, or one of its child threads, at any depth: a list's row holds
+ * its threads and their own child threads.
+ */
+export const holds = (t: Tree, id: string): boolean =>
+  t.id === id || !!t.children?.some((c) => holds(c, id))
 
 /**
  * A thread's child threads as they show unfolded: waiting on a person (a ticket for this
- * member counts), then working, then the latest; the first `cap` and the one open, or all
- * of them. `hidden`: how many the "+N more" stands for.
+ * member counts), then working, then the latest; the first `cap` and the one open (or the
+ * one holding it), or all of them. `hidden`: how many the "+N more" stands for.
  */
 export function subThreadRows(
   items: SidebarChild[],
@@ -40,6 +45,8 @@ export function subThreadRows(
     })
     .sort((a, b) => rank[groupOf(a.row.status)] - rank[groupOf(b.row.status)] || a.i - b.i)
     .map(({ row }) => row)
-  const shown = all ? ordered : ordered.filter((c, i) => i < cap || c.id === activeId)
+  const shown = all
+    ? ordered
+    : ordered.filter((c, i) => i < cap || (!!activeId && holds(c, activeId)))
   return { shown, hidden: ordered.length - shown.length }
 }
