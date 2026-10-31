@@ -316,7 +316,9 @@ function LibraryPlayer({ file }: { file: PlayedFile }) {
         preload="metadata"
         aria-label={name}
         onError={() => setFailed(true)}
-        className="block max-h-[min(28rem,60vh)] max-w-full"
+        // Bounded like an image in a chat: a 16:9 film stays about 36rem wide, a vertical one
+        // about 20rem tall, so a reply never turns into a wall of video. Full screen is a click away.
+        className="block max-h-[min(20rem,50vh)] max-w-[min(100%,36rem)]"
       />
     </span>
   )
