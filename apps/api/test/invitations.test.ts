@@ -744,3 +744,73 @@ test("a removed member's open dashboards close", { skip }, async () => {
     socket.onClose()
   }
 })
+
+test('a dashboard whose membership changed unnoticed closes all the same', { skip }, async () => {
+  const org = await founder('lapse')
+  const target = await joined(org.cookie, 'lapse-target', 'member')
+  const member = await prisma.member.findUniqueOrThrow({ where: { id: target.memberId } })
+  const { browserSocket, localHub } = await import('../src/hub/memory-host.js')
+  const closed: number[] = []
+  const ws = {
+    send() {},
+    close: (code: number) => void closed.push(code),
+    readyState: 1,
+  } as unknown as Parameters<ReturnType<typeof browserSocket>['onOpen']>[0]
+  const open = () => {
+    const socket = browserSocket({
+      organizationId: org.organizationId,
+      workspaceId: org.workspaceId,
+      userId: member.userId,
+      memberId: member.id,
+      role: 'member',
+    })
+    socket.onOpen(ws)
+    return socket
+  }
+  // As if the hub never heard of the change (a failed dropMember).
+  await prisma.member.update({ where: { id: member.id }, data: { role: 'viewer' } })
+  const first = open()
+  const subscribe = JSON.stringify({ type: 'subscribe', sessionId: 'none', afterSeq: 0 })
+  await first.onMessage(subscribe, ws)
+  assert.deepEqual(closed, [4003])
+  // And on the hub's tick.
+  const second = open()
+  await localHub(org.workspaceId).tick()
+  assert.deepEqual(closed, [4003, 4003])
+  // Its membership as it is: kept.
+  await prisma.member.update({ where: { id: member.id }, data: { role: 'member' } })
+  const third = open()
+  await first.onMessage('{"type":"keepalive"}', ws)
+  await localHub(org.workspaceId).tick()
+  assert.deepEqual(closed, [4003, 4003])
+  for (const s of [first, second, third]) s.onClose()
+})
+
+test('asking a role again closes what a failed change left open', { skip }, async () => {
+  const org = await founder('retry')
+  const target = await joined(org.cookie, 'retry-target', 'member')
+  const member = await prisma.member.findUniqueOrThrow({ where: { id: target.memberId } })
+  const { browserSocket } = await import('../src/hub/memory-host.js')
+  const closed: number[] = []
+  const socket = browserSocket({
+    organizationId: org.organizationId,
+    workspaceId: org.workspaceId,
+    userId: member.userId,
+    memberId: member.id,
+    role: 'member',
+  })
+  socket.onOpen({
+    send() {},
+    close: (code: number) => void closed.push(code),
+    readyState: 1,
+  } as unknown as Parameters<typeof socket.onOpen>[0])
+  await prisma.member.update({ where: { id: member.id }, data: { role: 'viewer' } })
+  const again = await call(`/api/members/${member.id}`, {
+    method: 'PATCH',
+    body: { role: 'viewer' },
+    cookie: org.cookie,
+  })
+  assert.equal(again.status, 200)
+  assert.deepEqual(closed, [4003])
+  socket.onClose()
+})

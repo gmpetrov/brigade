@@ -200,8 +200,9 @@ export const members = new Hono<AppEnv>()
         target: { type: 'member', id },
         data: { from, to: role },
       })
-      await dropMemberSockets(scope.organizationId, id)
     }
+    // Also when unchanged: asked again after a failure, it closes what that one left open.
+    await dropMemberSockets(scope.organizationId, id)
     return c.json({ id, role })
   })
 

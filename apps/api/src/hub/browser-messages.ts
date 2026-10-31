@@ -37,6 +37,8 @@ export async function onBrowserMessage(hub: WorkspaceHub, conn: BrowserConn, raw
     hub.sendToRunner(terminal.computerId, message)
     return
   }
+  // What opens a thread or a terminal finds the membership as the socket knows it, or closes it.
+  if ((await hub.dropLapsed([conn])).size) return
   if (message.type === 'terminal.open') return openTerminal(hub, conn, message)
 
   const session = await prisma.session.findFirst({
