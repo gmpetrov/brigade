@@ -219,7 +219,7 @@ export async function closeAnswered(scope: Scope, sessionId: string) {
  * another reply still answers).
  */
 export async function reopenUnanswered(
-  db: ScopedDb,
+  db: Pick<ScopedDb, 'mailMessage'>,
   mail: { box: string; conversationId: string },
 ) {
   const conversation = { box: mail.box, conversationId: mail.conversationId }

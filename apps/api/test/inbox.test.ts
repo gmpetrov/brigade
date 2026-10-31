@@ -2469,6 +2469,61 @@ describe('a thread’s reply from Gmail', { skip }, () => {
     assert.equal((await inbox.readItem(db, as(0), `mail:${mail.id}`)).activity, null)
   })
 
+  test('settling a cut-off email is all or nothing: interrupted, it is settled on a later tick', async () => {
+    const db = scoped(scope)
+    const { holdGmail, sendDueGmail } = await import('../src/mail/gmail-outbound.js')
+    const { closeAnswered } = await import('../src/mail/outcomes.js')
+    const connection = await prisma.connection.findUniqueOrThrow({ where: { id: gmailShared } })
+    const ruled = await thread(cody.id)
+    const mail = await received(gmailShared, ruled.id, 'atomic')
+    const held = await holdGmail(db, scope, {
+      connection,
+      session: ruled,
+      teammateId: cody.id,
+      email: {
+        to: ['client@outside.test'],
+        subject: '',
+        body: 'Coming.',
+        replyToMessageId: mail.sourceId!,
+      },
+    })
+    // Its turn ended: Brigade closed the conversation for this reply.
+    assert.equal(await closeAnswered(scope, ruled.id), 1)
+    await prisma.mailMessage.update({
+      where: { id: held.id },
+      data: { attempts: 1, updatedAt: new Date(Date.now() - 11 * 60_000) },
+    })
+    // The database refuses the thread's wake-up: an interruption after the row was marked.
+    const name = `fail_wakeup_${id.replace(/-/g, '_')}`
+    await prisma.$executeRawUnsafe(
+      `CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'refused'; END $$`,
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE TRIGGER ${name} BEFORE INSERT ON "Wakeup" FOR EACH ROW WHEN (NEW."sessionId" = '${ruled.id}') EXECUTE FUNCTION ${name}()`,
+    )
+    const later = new Date(Date.now() + 3600_000)
+    const gmail = gmailFake()
+    try {
+      await sendDueGmail(later, scope.workspaceId)
+    } finally {
+      gmail.restore()
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${name} ON "Wakeup"`)
+      await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${name}()`)
+    }
+    // Nothing of it was kept: still cut off, the conversation still closed, nobody told.
+    let row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: held.id } })
+    assert.equal(row.status, 'scheduled')
+    assert.equal((await inbox.readItem(db, as(0), `mail:${mail.id}`)).status, 'done')
+    assert.equal(await prisma.wakeup.count({ where: { sourceId: `email-status:${held.id}` } }), 0)
+
+    // The next tick settles all of it.
+    await sendDueGmail(later, scope.workspaceId)
+    row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: held.id } })
+    assert.equal(row.status, 'bounced')
+    assert.equal((await inbox.readItem(db, as(0), `mail:${mail.id}`)).status, 'handled')
+    assert.equal(await prisma.wakeup.count({ where: { sourceId: `email-status:${held.id}` } }), 1)
+  })
+
   test('gmail_no_reply: what needs a person goes To do with its reason', async () => {
     const db = scoped(scope)
     const { gmail } = await import('../src/connectors/gmail.js')

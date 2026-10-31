@@ -18,8 +18,7 @@ import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
 import { endWatch, watchingNote, watchReplies } from '../replies.js'
 import { syncConnection } from '../subscriptions/index.js'
 import { bareAddress } from './names.js'
-import { reopenUnanswered } from './outcomes.js'
-import { leavingAt, takeFromBox, tellThread } from './outbound.js'
+import { failSent, leavingAt, takeFromBox } from './outbound.js'
 
 /**
  * What a held Gmail email keeps to be sent as asked: the fields its row has no column for, and
@@ -255,14 +254,11 @@ async function settleCutOff(now: Date, workspaceId?: string) {
     const db = scoped({ organizationId: row.organizationId, workspaceId: row.workspaceId })
     const reason =
       'Brigade was cut off while sending it, so it may or may not have left: check the account’s sent mail before sending it again'
-    const settled = await db.mailMessage.updateMany({
-      where: { id: row.id, status: 'scheduled', attempts: { gt: 0 } },
-      data: { status: 'bounced', error: reason },
-    })
-    if (!settled.count) continue
-    const mail = await db.mailMessage.findFirstOrThrow({ where: { id: row.id } })
-    await reopenUnanswered(db, mail)
-    if (mail.sessionId) await tellThread(db, mail, reason)
+    // Marked, given back and told in one transaction: once marked it is no longer cut off. One
+    // that fails stays cut off, and is settled on a later tick.
+    await failSent(db, row.id, reason, {
+      guard: { status: 'scheduled', attempts: { gt: 0 } },
+    }).catch((error) => console.warn(`mail ${row.id}: cut off, not settled yet`, error))
   }
 }
 
@@ -358,12 +354,7 @@ async function sendOne(db: ScopedDb, scope: Scope, id: string) {
   } catch (error) {
     const reason = (error instanceof Error ? error.message : String(error)).slice(0, 500)
     console.warn(`mail ${row.id}: Gmail could not send it`, error)
-    await db.mailMessage.updateMany({
-      where: { id: row.id },
-      data: { status: 'bounced', error: reason },
-    })
-    await reopenUnanswered(db, row)
-    if (row.sessionId) await tellThread(db, row, reason)
+    await failSent(db, row.id, reason)
     return false
   }
 }

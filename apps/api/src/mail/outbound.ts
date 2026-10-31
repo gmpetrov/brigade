@@ -6,7 +6,7 @@ import { SEND_LATER_MAX_DAYS } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { attachmentKey, presignGet } from '../bucket.js'
-import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
+import { Prisma, prisma, scoped, type Scope, type ScopedDb } from '../db.js'
 import { watchReplies } from '../replies.js'
 import { fireNow } from '../wakeups.js'
 import { boxKey, senderOfBox } from './addresses.js'
@@ -409,21 +409,44 @@ export async function statusChanged(type: string, data: StatusEvent) {
       data.bounce?.message ??
       data.failed?.reason ??
       (type === 'email.bounced' ? 'it bounced' : 'it failed')
-    await db.mailMessage.updateMany({
-      where: { id: row.id },
-      data: { status: 'bounced', error: reason.slice(0, 500), messageId },
-    })
-    // It answers nothing: a conversation Brigade closed for it is the teammate's again.
-    await reopenUnanswered(db, row)
-    if (row.sessionId) await tellThread(db, row, reason)
+    await failSent(db, row.id, reason, { data: { messageId } })
     return true
   }
   return false
 }
 
-/** A sent mail that failed: the thread that sent it hears it, once. */
-export async function tellThread(
+/**
+ * A sent mail that failed (bounced, refused, or cut off while it left), in one transaction: marked
+ * so, its conversation given back to the teammate if Brigade had closed it for this reply (it
+ * answers nothing), and its thread's wake-up queued, so a restart between them loses none. The
+ * wake-up fires after; one that cannot fire now does on the next tick. Whether `guard` matched.
+ */
+export async function failSent(
   db: ScopedDb,
+  id: string,
+  reason: string,
+  options: {
+    guard?: Prisma.MailMessageWhereInput
+    data?: Prisma.MailMessageUpdateManyMutationInput
+  } = {},
+) {
+  const wakeupId = await db.$transaction(async (tx) => {
+    const settled = await tx.mailMessage.updateMany({
+      where: { id, ...options.guard },
+      data: { ...options.data, status: 'bounced', error: reason.slice(0, 500) },
+    })
+    if (!settled.count) return false
+    const row = await tx.mailMessage.findFirstOrThrow({ where: { id } })
+    await reopenUnanswered(tx, row)
+    return row.sessionId ? ((await queueFailure(tx, row, reason)) ?? true) : true
+  })
+  if (typeof wakeupId === 'string') await fireNow(wakeupId)
+  return wakeupId !== false
+}
+
+/** The thread that sent a failed mail hears it, once: its wake-up, queued. Its id, if new. */
+async function queueFailure(
+  tx: Pick<ScopedDb, 'session' | 'wakeup'>,
   row: {
     id: string
     sessionId: string | null
@@ -434,11 +457,13 @@ export async function tellThread(
   },
   reason: string,
 ) {
-  const session = await db.session.findFirst({
+  const session = await tx.session.findFirst({
     where: { id: row.sessionId! },
     select: { id: true, teammateId: true },
   })
-  if (!session) return
+  if (!session) return null
+  const sourceId = `email-status:${row.id}`
+  if (await tx.wakeup.count({ where: { sessionId: session.id, sourceId } })) return null
   const note = triggerEventText({
     summary:
       `The email you sent from this thread to ${row.to.join(', ')} ("${row.subject}") could not be delivered: ${reason}. ` +
@@ -451,21 +476,17 @@ export async function tellThread(
     received: new Date().toISOString(),
     payload: { to: row.to, subject: row.subject, reason },
   })
-  try {
-    const wakeup = await db.wakeup.create({
-      data: {
-        sessionId: session.id,
-        teammateId: row.teammateId ?? session.teammateId,
-        kind: 'reply',
-        note,
-        wakeAt: new Date(),
-        sourceId: `email-status:${row.id}`,
-      } as never,
-    })
-    await fireNow(wakeup.id)
-  } catch (error) {
-    if ((error as { code?: string }).code !== 'P2002') throw error
-  }
+  const wakeup = await tx.wakeup.create({
+    data: {
+      sessionId: session.id,
+      teammateId: row.teammateId ?? session.teammateId,
+      kind: 'reply',
+      note,
+      wakeAt: new Date(),
+      sourceId,
+    } as never,
+  })
+  return wakeup.id
 }
 
 /** A sent mail whose Message-ID Resend has not reported yet: asked for, once it has left. */
