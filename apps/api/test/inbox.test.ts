@@ -2089,6 +2089,239 @@ describe('what a thread did without replying', { skip }, () => {
     }).catch((e: Error) => e.message)
     assert.match(String(problem), /A person already replied/)
   })
+
+  test('a row says where its teammate is: at work, asking a person, or replied', async () => {
+    const db = scoped(scope)
+    const handed = await thread(riley.id, { status: 'running' })
+    const received = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    const item = async () =>
+      (await inbox.listInbox(db, as(0), { status: 'all' })).items.find(
+        (i) => i.id === `mail:${received.id}`,
+      )
+    assert.deepEqual((await item())?.activity, { kind: 'working' })
+    await prisma.session.update({ where: { id: handed.id }, data: { status: 'waiting' } })
+    assert.deepEqual((await item())?.activity, { kind: 'needs_you' })
+    await prisma.session.update({ where: { id: handed.id }, data: { status: 'idle' } })
+    assert.equal((await item())?.activity, null)
+    const reply = await sent(received)
+    assert.deepEqual((await item())?.activity, {
+      kind: 'replied',
+      at: reply.receivedAt.toISOString(),
+    })
+    // A reply that was cancelled before it left answers nothing.
+    await prisma.mailMessage.update({ where: { id: reply.id }, data: { status: 'cancelled' } })
+    assert.equal((await item())?.activity, null)
+  })
+
+  test('a turn that ends after replying, or after handling it, closes the conversation', async () => {
+    const db = scoped(scope)
+    const { closeAnswered } = await import('../src/mail/outcomes.js')
+    const handed = await thread(riley.id)
+    const answered = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    const unanswered = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    const handled = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    // Another thread's conversation, answered: its own turn closes it, not this one's.
+    const others = await mail(agent, {
+      route: 'handed',
+      sessionId: (await thread(riley.id)).id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    await sent(answered)
+    await sent(others)
+    await call('email_no_reply', handed, { id: handled.id, reason: 'Filed it', handled: true })
+    const status = async (m: { id: string }) =>
+      (await inbox.readItem(db, as(0), `mail:${m.id}`)).status
+
+    assert.equal(await closeAnswered(scope, handed.id), 2)
+    assert.equal(await status(answered), 'done')
+    assert.equal(await status(handled), 'done')
+    assert.equal(await status(unanswered), 'handled')
+    assert.equal(await status(others), 'handled')
+    // Brigade closed it: no person did.
+    const row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: answered.id } })
+    assert.equal(row.doneByMemberId, null)
+    // Once only.
+    assert.equal(await closeAnswered(scope, handed.id), 0)
+
+    // A new mail in it: with the teammate again, until its next turn answers it.
+    const again = await mail(agent, {
+      route: 'conversation',
+      sessionId: handed.id,
+      box: answered.box,
+      conversationId: answered.conversationId,
+      receivedAt: new Date(),
+    })
+    assert.equal(await status(again), 'handled')
+    assert.equal(await closeAnswered(scope, handed.id), 0)
+    assert.equal(await status(again), 'handled')
+
+    // A person's "Not done" stands: its turn's end does not close it again.
+    await inbox.setDone(db, as(0), `mail:${handled.id}`, false)
+    assert.equal(await status(handled), 'handled')
+    assert.equal(await closeAnswered(scope, handed.id), 0)
+    assert.equal(await status(handled), 'handled')
+  })
+
+  test('a reply cancelled before it leaves gives its conversation back to the teammate', async () => {
+    const db = scoped(scope)
+    const { closeAnswered } = await import('../src/mail/outcomes.js')
+    const { cancelMail } = await import('../src/mail/outbound.js')
+    const handed = await thread(riley.id)
+    const received = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    const reply = await sent(received, {
+      status: 'scheduled',
+      sendAt: new Date(Date.now() + 3600_000),
+    })
+    assert.equal(await closeAnswered(scope, handed.id), 1)
+    await cancelMail(db, scope, reply.id, { type: 'member', id: members[0]! })
+    assert.equal((await inbox.readItem(db, as(0), `mail:${received.id}`)).status, 'handled')
+
+    // Marked done by a person: it stays done.
+    const mine = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    const later = await sent(mine, { status: 'scheduled', sendAt: new Date(Date.now() + 3600_000) })
+    await inbox.setDone(db, as(0), `mail:${mine.id}`, true)
+    await cancelMail(db, scope, later.id, { type: 'member', id: members[0]! })
+    assert.equal((await inbox.readItem(db, as(0), `mail:${mine.id}`)).status, 'done')
+  })
+
+  test('a reply that bounces or fails gives its conversation back, unless another answers it', async () => {
+    const db = scoped(scope)
+    const { closeAnswered } = await import('../src/mail/outcomes.js')
+    const { statusChanged } = await import('../src/mail/outbound.js')
+    const handed = await thread(riley.id)
+    const status = async (m: { id: string }) =>
+      (await inbox.readItem(db, as(0), `mail:${m.id}`)).status
+    const received = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    await sent(received, { resendId: `bounce-${id}`, sessionId: handed.id })
+    const twice = await mail(agent, {
+      route: 'handed',
+      sessionId: handed.id,
+      receivedAt: new Date(Date.now() - 5_000),
+    })
+    await sent(twice, { resendId: `fail-${id}`, sessionId: handed.id })
+    await sent(twice)
+    assert.equal(await closeAnswered(scope, handed.id), 2)
+
+    assert.equal(
+      await statusChanged('email.bounced', {
+        email_id: `bounce-${id}`,
+        bounce: { message: 'No such user' },
+      }),
+      true,
+    )
+    assert.equal(await status(received), 'handled')
+    // Its other reply still answers it: done it stays.
+    await statusChanged('email.failed', { email_id: `fail-${id}`, failed: { reason: 'x' } })
+    assert.equal(await status(twice), 'done')
+  })
+})
+
+describe('a thread’s reply from Gmail', { skip }, () => {
+  before(async () => {
+    computerFor ??= (
+      await prisma.computer.create({
+        data: { ...scope, kind: 'member_machine', memberId: members[0]!, name: 'Laptop' },
+      })
+    ).id
+  })
+
+  test('kept in the conversation the Inbox keeps, shown even where only taken mail shows', async () => {
+    const db = scoped(scope)
+    const { keepGmail, keepGmailSent } = await import('../src/mail/gmail-inbox.js')
+    // Bob's own account shows only what went to a thread.
+    const connection = await prisma.connection.findUniqueOrThrow({ where: { id: gmailBobs } })
+    const ruled = await thread(cody.id)
+    await keepGmail(
+      connection,
+      {
+        id: `gs-in-${id}`,
+        threadId: `gs-thread-${id}`,
+        from: 'Client <client@outside.test>',
+        to: connection.externalAccount ?? '',
+        subject: 'test',
+        date: new Date(Date.now() - 5_000).toUTCString(),
+        snippet: 'This is a test',
+        labels: ['INBOX'],
+        cc: undefined,
+        body: 'This is a test',
+        attachments: [],
+        automatic: false,
+      },
+      { route: 'rule', sessionId: ruled.id },
+    )
+    const received = await prisma.mailMessage.findFirstOrThrow({
+      where: { connectionId: gmailBobs, sourceId: `gs-in-${id}` },
+    })
+    const reply = {
+      connection,
+      sessionId: ruled.id,
+      teammateId: cody.id,
+      input: {
+        to: ['client@outside.test'],
+        subject: 'Re: test',
+        body: 'Your test message came through.',
+      },
+      attachments: [],
+      output: { id: `gs-out-${id}`, threadId: `gs-thread-${id}` },
+    }
+    await keepGmailSent(db, reply)
+    // The same call kept again, and an email outside any kept conversation: one copy, none.
+    await keepGmailSent(db, reply)
+    await keepGmailSent(db, {
+      ...reply,
+      output: { id: `gs-other-${id}`, threadId: `gs-elsewhere-${id}` },
+    })
+    assert.equal(
+      await prisma.mailMessage.count({ where: { connectionId: gmailBobs, direction: 'out' } }),
+      1,
+    )
+
+    const detail = await inbox.readItem(db, as(1), `mail:${received.id}`)
+    assert.equal(detail.count, 2)
+    const out = detail.messages.at(-1)!
+    assert.equal(out.direction, 'out')
+    assert.equal(out.from, `bob-${id}@acme.test`)
+    assert.deepEqual(out.to, ['client@outside.test'])
+    assert.equal(out.text, 'Your test message came through.')
+    assert.equal(out.sent, 'sent')
+    assert.equal(detail.activity?.kind, 'replied')
+    // Its words are found.
+    const found = await inbox.listInbox(db, as(1), { status: 'all', q: 'came through' })
+    assert.ok(found.items.some((i) => i.id === `mail:${received.id}`))
+
+    // Its turn's end closes it.
+    const { closeAnswered } = await import('../src/mail/outcomes.js')
+    assert.equal(await closeAnswered(scope, ruled.id), 1)
+    assert.equal((await inbox.readItem(db, as(1), `mail:${received.id}`)).status, 'done')
+  })
 })
 
 describe('mailboxes', { skip }, () => {

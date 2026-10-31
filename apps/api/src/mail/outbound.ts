@@ -11,6 +11,7 @@ import { watchReplies } from '../replies.js'
 import { fireNow } from '../wakeups.js'
 import { boxKey, senderOfBox } from './addresses.js'
 import { contactFor } from './identity.js'
+import { reopenUnanswered } from './outcomes.js'
 import { bareAddress } from './names.js'
 import { cancelEmail, sendEmail, sentEmail, type SendInput } from './resend.js'
 import { secretIn } from './text.js'
@@ -347,6 +348,8 @@ export async function cancelMail(
     throw new HTTPException(409, { message: 'It has left already: it cannot be cancelled' })
   if (row.resendId) await cancelEmail(row.resendId)
   await db.mailMessage.updateMany({ where: { id: row.id }, data: { status: 'cancelled' } })
+  // Brigade closed its conversation for this reply, at the end of its thread's turn.
+  await reopenUnanswered(db, row)
   await audit({
     ...scope,
     actor,
@@ -395,6 +398,8 @@ export async function statusChanged(type: string, data: StatusEvent) {
       where: { id: row.id },
       data: { status: 'bounced', error: reason.slice(0, 500), messageId },
     })
+    // It answers nothing: a conversation Brigade closed for it is the teammate's again.
+    await reopenUnanswered(db, row)
     if (row.sessionId) await tellThread(db, row, reason)
     return true
   }

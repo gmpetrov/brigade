@@ -2723,8 +2723,10 @@ model MailMessage {
   approvedByMemberId String?
   /// out: when Resend sends it; it can be cancelled until then.
   sendAt             DateTime?
-  /// The Inbox: a person marked it done (nothing more to do with it).
+  /// The Inbox: a person marked it done (nothing more to do with it), or Brigade did once its
+  /// thread's turn ended after replying (src/mail/outcomes.ts), with no doneByMemberId then.
   doneAt             DateTime?
+  /// Who marked it done, or not done again: Brigade no longer closes it on its own.
   doneByMemberId     String?
   /// The Inbox: the person who handed it to a teammate (its thread is sessionId, route handed).
   handedByMemberId   String?

@@ -63,7 +63,15 @@ export type InboxItem = {
    * since: no_reply puts it To do, with the thread's reason; handled leaves it with the teammate.
    */
   outcome: InboxOutcome | null
+  /**
+   * Where its teammate is with it, while it is not done: at work in its thread now, waiting on a
+   * person there (a ticket, a question), or it replied after its latest received mail.
+   */
+  activity: InboxActivity | null
 }
+
+export type InboxActivity =
+  { kind: 'working' } | { kind: 'needs_you' } | { kind: 'replied'; at: string }
 
 /** What a thread did with a mail it did not answer, in its own words. */
 export type InboxOutcome = { kind: 'no_reply' | 'handled'; note: string; at: string }
@@ -71,7 +79,10 @@ export type InboxOutcome = { kind: 'no_reply' | 'handled'; note: string; at: str
 /** One mail of a conversation. */
 export type InboxMessage = {
   id: string
-  /** in: received; out: sent from Brigade's address (Gmail's sent mail is not kept). */
+  /**
+   * in: received; out: sent from Brigade's address, or a thread's reply from Gmail (Gmail's
+   * other sent mail is not kept).
+   */
   direction: 'in' | 'out'
   from: string
   fromName: string

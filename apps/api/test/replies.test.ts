@@ -356,6 +356,44 @@ test(
   },
 )
 
+test('a reply sent in a conversation the Inbox keeps is kept there too', { skip }, async () => {
+  await scoped(scope).grant.upsert({
+    where: { teammateId_connectionId: { teammateId, connectionId: connection.id } },
+    create: { teammateId, connectionId: connection.id, scope: 'read_write' } as never,
+    update: { scope: 'read_write' },
+  })
+  const t = await thread()
+  const { keepGmail } = await import('../src/mail/gmail-inbox.js')
+  await keepGmail(
+    connection,
+    {
+      ...emailPayload('m-kept', 'conv-kept'),
+      to: 'georges@acme.test',
+      body: 'Help',
+      attachments: [],
+      automatic: false,
+    } as never,
+    { route: 'rule', sessionId: t.id },
+  )
+  const sent = await gmailSend(t, 'conv-kept')
+  assert.equal(sent.ok, true, sent.error)
+  const out = await prisma.mailMessage.findFirstOrThrow({
+    where: { connectionId: connection.id, conversationId: 'conv-kept', direction: 'out' },
+  })
+  assert.equal(out.sourceId, (sent.output as { id: string }).id)
+  assert.equal(out.sessionId, t.id)
+  assert.equal(out.teammateId, teammateId)
+  assert.equal(out.text, 'Details inside.')
+  // One in a conversation the Inbox does not keep is not.
+  await gmailSend(t, 'conv-not-kept')
+  assert.equal(
+    await prisma.mailMessage.count({
+      where: { connectionId: connection.id, conversationId: 'conv-not-kept' },
+    }),
+    0,
+  )
+})
+
 test('a wait started while the inbox is being read still gets its reply', { skip }, async () => {
   const t = await thread()
   const sub = await subscribed()

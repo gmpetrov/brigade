@@ -38,6 +38,7 @@ import {
 import { playbookAccepts, playbookAccount, playbookActionOf, threadPlaybook } from './playbooks.js'
 import { notePullRequestCall } from './pull-requests.js'
 import { reviewOnCreate } from './reviews.js'
+import { keepGmailSent } from './mail/gmail-inbox.js'
 import { endWatch, watchingNote, watchReplies } from './replies.js'
 import { syncConnection } from './subscriptions/index.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
@@ -518,6 +519,19 @@ export async function handleConnectorCall(
             return undefined
           })
         : undefined
+    // A reply in a conversation the Inbox keeps: kept there too, as the teammate's answer.
+    if (connection.kind === 'gmail' && call.operation === 'gmail_send')
+      await keepGmailSent(db, {
+        connection,
+        sessionId: session.id,
+        teammateId: teammate.id,
+        ...(decision ? { approvedByMemberId: decision.memberId } : {}),
+        input: input.data as Parameters<typeof keepGmailSent>[1]['input'],
+        attachments: ((input.data as { attachments?: string[] }).attachments ?? []).filter(
+          (a): a is string => typeof a === 'string',
+        ),
+        output,
+      }).catch((error) => console.warn(`sent mail not kept: ${String(error)}`))
     // An email sent from a person's thread: a reply in its conversation wakes the thread.
     const replies =
       connection.kind === 'gmail' && call.operation === 'gmail_send'

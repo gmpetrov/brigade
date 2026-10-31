@@ -8,6 +8,18 @@
 const LIST_EVENTS = new Set(['mail.updated', 'connections.updated', 'tickets.updated'])
 export const reloadsInboxList = (type: string) => LIST_EVENTS.has(type)
 
+/**
+ * A thread started or stopped working: asked again only when a row shown is its conversation's,
+ * which says whether its teammate is at work. Other threads' changes leave the list alone.
+ */
+export const reloadsForThread = (
+  message: { type: string; sessionId?: string },
+  shown: { thread: { id: string } | null }[],
+) =>
+  message.type === 'thread.updated' &&
+  !!message.sessionId &&
+  shown.some((i) => i.thread?.id === message.sessionId)
+
 /** An email a teammate asks to send, as far as approving it goes. */
 export type DraftEmail = {
   to: string[]

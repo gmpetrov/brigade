@@ -180,7 +180,14 @@ has to keep its messages there.
   status is the head's, in the query (SQL, `DISTINCT ON` box and conversation, so paging is right
   whatever the view): `waiting` (nobody took it: `box`, `cap`, `loop`, or not delivered yet, and not
   done), `handled` (a thread has it, or its route needs nobody), `done` (`MailMessage.doneAt`, set on
-  all its received mails; its next mail waits again).
+  all its received mails; its next mail waits again). Brigade marks it done itself once its thread's
+  turn ends idle after replying to its head (a reply sent or on its way) or saying it handled it
+  (`closeAnswered`, `src/mail/outcomes.ts`), with no `doneByMemberId`; cancelling that reply before
+  it leaves gives it back to the teammate. A person's Done or Not done keeps their `doneByMemberId`
+  on the head, and Brigade leaves that head as they set it.
+- **Where its teammate is** (`InboxItem.activity`), on its row while it is not done: at work in its
+  thread (`starting`, `running`), waiting on a person there (`waiting`, or an open ticket), or
+  replied after its head. The list is asked again when a shown row's thread changes.
 - **What its thread did without replying** (`InboxItem.outcome`), on its row and above the
   conversation, with its reason: "Riley didn't reply" puts it To do, with Ask Riley to reply (a
   message in its thread, and the conversation is the teammate's again, `POST
@@ -198,8 +205,9 @@ has to keep its messages there.
 - **Filters**: source, agent, project, words; a conversation shows when any of its mails matches
   (words: its senders, or the words of its mails received or sent).
   Pages of 50, newest first.
-- **Opened** (by any of its mails' ids): each mail, received and sent from Brigade's address
-  (Gmail's sent mail is not kept), oldest first, with its words (the quote apart), files,
+- **Opened** (by any of its mails' ids): each mail, received and sent from Brigade's address, or a
+  thread's `gmail_send` reply in a Gmail conversation the Inbox keeps (`keepGmailSent`, kept by
+  `connector-calls.ts`; Gmail's other sent mail is not kept), oldest first, with its words (the quote apart), files,
   authentication. A sign-up's conversation, with the replies sent in it (they can quote its code),
   is shown and searched only for its thread's starter and admins; others see that it came.
 - **Files** open from the page (`/api/inbox/items/:id/files/:fileId`), never through the API's
