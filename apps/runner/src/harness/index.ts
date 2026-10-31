@@ -1695,7 +1695,7 @@ export class HarnessThread {
               ...env,
               ...terminalTools(tools),
               // Claude Code's own schedules, memory and the like are off (claude-settings.ts).
-              ...claudeSettingsEnv((this.spec.skills ?? []).map((s) => s.name)),
+              ...claudeSettingsEnv(),
               ...(this.spec.suggestions ? { BRIGADE_PROMPT_SUGGESTIONS: '1' } : {}),
             },
       ...(this.runAs ? { runAs: this.runAs, thread: this.spec.sessionId } : {}),
