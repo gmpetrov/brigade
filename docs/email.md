@@ -144,7 +144,7 @@ The approval card lets the person edit the draft first (`ResolveApproval.edited`
 (`POST /api/email/messages/:id/cancel`), or with `email_cancel` / `gmail_cancel`. Brigade's
 addresses' mail is handed to Resend scheduled; Gmail's, whose API has no scheduled send, is held by
 Brigade as a scheduled out `MailMessage` in the account's box (`mail/gmail-outbound.ts`) and sent by
-the `gmail-outbound` job (every 30 seconds) once due, claimed first so it leaves once at most; one
+the `gmail-outbound` job (every 30 seconds) once due, claimed first so it leaves once at most (one cut off between its claim and Gmail's answer is never sent again: after 10 minutes it is marked failed and its thread told to check the sent mail); one
 Gmail refuses is marked `bounced` and goes back to its thread. Its replies are followed from when it
 leaves. Resend's events (`email.sent`, `delivered`, `bounced`, `failed`) give its `Message-ID` and its
 fate; a bounce wakes the thread.

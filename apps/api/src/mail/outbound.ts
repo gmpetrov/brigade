@@ -71,7 +71,13 @@ export const threadBox = (
  */
 export async function checkDraft(
   db: ScopedDb,
-  input: { address: Address; thread: SendingThread; draft: Draft },
+  input: {
+    address: Address
+    thread: SendingThread
+    draft: Draft
+    /** A person writes it (Reply myself): they may write again after their own reply. */
+    byPerson?: boolean
+  },
 ): Promise<string | null> {
   const { address, thread, draft } = input
   const box = threadBox(address, thread.projectId)
@@ -143,14 +149,17 @@ export async function checkDraft(
     )
     if (human)
       return `Someone already replied in this conversation from the mailbox itself, at ${human.receivedAt.toISOString()}. Read the conversation (email_read) before replying, and tell the person rather than answer twice.`
-    // A person replied from the Inbox after it (Reply myself).
-    const person = conversation.find(
-      (m) =>
-        m.direction === 'out' &&
-        m.sentByMemberId &&
-        m.status !== 'cancelled' &&
-        m.receivedAt > original.receivedAt,
-    )
+    // A person replied from the Inbox after it (Reply myself): the teammate does not answer twice.
+    const person =
+      !input.byPerson &&
+      conversation.find(
+        (m) =>
+          m.direction === 'out' &&
+          m.sentByMemberId &&
+          m.status !== 'cancelled' &&
+          m.status !== 'bounced' &&
+          m.receivedAt > original.receivedAt,
+      )
     if (person)
       return `A person already replied in this conversation from the Inbox, at ${person.receivedAt.toISOString()}. Read the conversation (email_read) before replying, and tell the person rather than answer twice.`
   }
@@ -213,7 +222,12 @@ export async function sendDraft(
   },
 ) {
   const { address, thread, draft } = input
-  const problem = await checkDraft(db, { address, thread, draft })
+  const problem = await checkDraft(db, {
+    address,
+    thread,
+    draft,
+    byPerson: !!input.sentByMemberId,
+  })
   if (problem) throw new HTTPException(400, { message: problem })
   const box = threadBox(address, thread.projectId)
   const from = await senderOfBox(db, address, box.projectId)

@@ -3,7 +3,10 @@
 // as a scheduled out MailMessage in the account's box, which leaves UNDO_SECONDS later or at its
 // sendAt, and can be cancelled until then (cancelMail). Gmail's API has no scheduled send, so a
 // job sends what is due (sendDueGmail, every 30 seconds). Each held email is claimed before it is
-// sent, so it leaves once at most; one that cannot leave goes back to its thread, as a bounce.
+// sent (attempts 1), so it leaves once at most; one that cannot leave goes back to its thread, as
+// a bounce. One whose sending was cut off (the API restarted between its claim and Gmail's answer)
+// is not sent again, as it may have left: after CUT_OFF_MS its thread is told to check, as a held
+// call cut off is (src/held-calls.ts).
 import { randomUUID } from 'node:crypto'
 import { SEND_LATER_MAX_DAYS } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -43,17 +46,26 @@ export async function timeWhenSent(db: ScopedDb, id: unknown, runId: string) {
 
 const boxOf = (connectionId: string) => `gmail:${connectionId}`
 
+/** How long a claimed email may take to leave before it counts as cut off. */
+const CUT_OFF_MS = 10 * 60_000
+
 /**
- * Why a Gmail email cannot go, before anyone is asked about it: too far ahead, or a reply in a
- * conversation a person already answered from the Inbox. Null when it can.
+ * Why a Gmail email cannot go, before anyone is asked about it: too far ahead, or a teammate's
+ * reply in a conversation a person already answered from the Inbox (a person may write again).
+ * Null when it can.
  */
-export async function checkGmail(db: ScopedDb, connectionId: string, input: GmailCompose) {
+export async function checkGmail(
+  db: ScopedDb,
+  connectionId: string,
+  input: GmailCompose,
+  options: { byPerson?: boolean } = {},
+) {
   if (input.sendAt) {
     const at = new Date(input.sendAt).getTime()
     if (at > Date.now() + SEND_LATER_MAX_DAYS * 86_400_000)
       return `An email can be set to leave up to ${SEND_LATER_MAX_DAYS} days ahead.`
   }
-  if (!input.replyToMessageId) return null
+  if (!input.replyToMessageId || options.byPerson) return null
   const original = await db.mailMessage.findFirst({
     where: { box: boxOf(connectionId), sourceId: input.replyToMessageId },
   })
@@ -64,7 +76,7 @@ export async function checkGmail(db: ScopedDb, connectionId: string, input: Gmai
       conversationId: original.conversationId,
       direction: 'out',
       sentByMemberId: { not: null },
-      status: { not: 'cancelled' },
+      status: { notIn: ['cancelled', 'bounced'] },
       receivedAt: { gt: original.receivedAt },
     },
   })
@@ -92,7 +104,9 @@ export async function holdGmail(
   },
 ) {
   const { connection, session, email } = input
-  const problem = await checkGmail(db, connection.id, email)
+  const problem = await checkGmail(db, connection.id, email, {
+    byPerson: !!input.sentByMemberId,
+  })
   if (problem) throw new HTTPException(400, { message: problem })
   const box = boxOf(connection.id)
   const original = email.replyToMessageId
@@ -197,27 +211,64 @@ async function watchGmail(
   return watchingNote(watch.until)
 }
 
-/** Held Gmail email due to leave, of one workspace or all. */
+/** Held Gmail email due to leave, not claimed yet, of one workspace or all. */
 const due = (now: Date, workspaceId?: string) => ({
   direction: 'out' as const,
   status: 'scheduled' as const,
   connectionId: { not: null },
+  attempts: 0,
   sendAt: { lte: now },
   ...(workspaceId ? { workspaceId } : {}),
 })
 
-/** Workspaces with held Gmail email due to leave (src/jobs.ts). */
+/** Claimed Gmail email that never got Gmail's answer: its sending was cut off. */
+const cutOff = (now: Date, workspaceId?: string) => ({
+  direction: 'out' as const,
+  status: 'scheduled' as const,
+  connectionId: { not: null },
+  attempts: { gt: 0 },
+  updatedAt: { lt: new Date(now.getTime() - CUT_OFF_MS) },
+  ...(workspaceId ? { workspaceId } : {}),
+})
+
+/** Workspaces with held Gmail email due to leave, or cut off while it left (src/jobs.ts). */
 export async function dueGmailSends(now = new Date()) {
   const rows = await prisma.mailMessage.findMany({
-    where: due(now),
+    where: { OR: [due(now), cutOff(now)] },
     distinct: ['workspaceId'],
     select: { workspaceId: true },
   })
   return rows.map((r) => r.workspaceId)
 }
 
+/**
+ * Held Gmail email whose sending was cut off: never sent again, as it may have left. It is
+ * marked failed and its thread told to check the account's sent mail, once.
+ */
+async function settleCutOff(now: Date, workspaceId?: string) {
+  const rows = await prisma.mailMessage.findMany({
+    where: cutOff(now, workspaceId),
+    take: 20,
+    select: { id: true, organizationId: true, workspaceId: true },
+  })
+  for (const row of rows) {
+    const db = scoped({ organizationId: row.organizationId, workspaceId: row.workspaceId })
+    const reason =
+      'Brigade was cut off while sending it, so it may or may not have left: check the account’s sent mail before sending it again'
+    const settled = await db.mailMessage.updateMany({
+      where: { id: row.id, status: 'scheduled', attempts: { gt: 0 } },
+      data: { status: 'bounced', error: reason },
+    })
+    if (!settled.count) continue
+    const mail = await db.mailMessage.findFirstOrThrow({ where: { id: row.id } })
+    await reopenUnanswered(db, mail)
+    if (mail.sessionId) await tellThread(db, mail, reason)
+  }
+}
+
 /** Send the held Gmail email that is due, of one workspace or all: each once at most. */
 export async function sendDueGmail(now = new Date(), workspaceId?: string) {
+  await settleCutOff(now, workspaceId)
   const rows = await prisma.mailMessage.findMany({
     where: due(now, workspaceId),
     orderBy: { sendAt: 'asc' },
@@ -228,10 +279,11 @@ export async function sendDueGmail(now = new Date(), workspaceId?: string) {
   for (const row of rows) {
     const scope: Scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
     const db = scoped(scope)
-    // Claimed: another run, or a retry of this one, never sends it again.
+    // Claimed: another run, or a retry of this one, never sends it again. Still scheduled until
+    // Gmail answers; cut off before then, settleCutOff says so.
     const claimed = await db.mailMessage.updateMany({
-      where: { id: row.id, status: 'scheduled', sendAt: { lte: now } },
-      data: { status: 'sent' },
+      where: { id: row.id, status: 'scheduled', attempts: 0, sendAt: { lte: now } },
+      data: { attempts: 1 },
     })
     if (!claimed.count) continue
     if (await sendOne(db, scope, row.id)) sent++
@@ -285,7 +337,11 @@ async function sendOne(db: ScopedDb, scope: Scope, id: string) {
     const known = !row.conversationId.startsWith('out:')
     await db.mailMessage.updateMany({
       where: { id: row.id },
-      data: { sourceId: out.id, ...(known ? {} : { conversationId: out.threadId }) },
+      data: {
+        status: 'sent',
+        sourceId: out.id,
+        ...(known ? {} : { conversationId: out.threadId }),
+      },
     })
     // A new conversation: its answer wakes the thread from now on.
     if (!known && row.session)

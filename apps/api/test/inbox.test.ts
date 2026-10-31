@@ -2088,6 +2088,15 @@ describe('what a thread did without replying', { skip }, () => {
       replyTo: received.id,
     }).catch((e: Error) => e.message)
     assert.match(String(problem), /A person already replied/)
+
+    // The person may write again: a correction, before any new mail.
+    const beforeAgain = globalThis.fetch
+    globalThis.fetch = (async () => json({ id: `own-out-2-${id}` })) as typeof fetch
+    try {
+      assert.ok((await inbox.replyItem(db, as(0), item, 'One more thing.')).id)
+    } finally {
+      globalThis.fetch = beforeAgain
+    }
   })
 
   test('a row says where its teammate is: at work, asking a person, or replied', async () => {
@@ -2414,6 +2423,50 @@ describe('a thread’s reply from Gmail', { skip }, () => {
       ),
       /A person already replied/,
     )
+    // The person may write again: a correction, before any new mail.
+    const again = await inbox.replyItem(db, as(0), item, 'Sorry, one more thing.')
+    assert.ok(again.id)
+  })
+
+  test('a Gmail email cut off while it left is never sent again: its thread is told to check', async () => {
+    const db = scoped(scope)
+    const { holdGmail, sendDueGmail } = await import('../src/mail/gmail-outbound.js')
+    const connection = await prisma.connection.findUniqueOrThrow({ where: { id: gmailShared } })
+    const ruled = await thread(cody.id)
+    const mail = await received(gmailShared, ruled.id, 'cut')
+    const held = await holdGmail(db, scope, {
+      connection,
+      session: ruled,
+      teammateId: cody.id,
+      email: {
+        to: ['client@outside.test'],
+        subject: '',
+        body: 'On its way.',
+        replyToMessageId: mail.sourceId!,
+      },
+    })
+    // Claimed, then the API restarted before Gmail answered.
+    await prisma.mailMessage.update({
+      where: { id: held.id },
+      data: { attempts: 1, updatedAt: new Date(Date.now() - 11 * 60_000) },
+    })
+    const gmail = gmailFake()
+    try {
+      await sendDueGmail(new Date(Date.now() + 3600_000), scope.workspaceId)
+    } finally {
+      gmail.restore()
+    }
+    // Other tests' held mail may leave now; this one does not.
+    assert.ok(!gmail.sent.some((m) => m.includes('On its way.')), 'not sent again')
+    const row = await prisma.mailMessage.findUniqueOrThrow({ where: { id: held.id } })
+    assert.equal(row.status, 'bounced')
+    assert.match(row.error ?? '', /may or may not have left/)
+    const told = await prisma.wakeup.findFirstOrThrow({
+      where: { sourceId: `email-status:${held.id}` },
+    })
+    assert.equal(told.sessionId, ruled.id)
+    // Not counted as an answer: the conversation is the teammate's again.
+    assert.equal((await inbox.readItem(db, as(0), `mail:${mail.id}`)).activity, null)
   })
 
   test('gmail_no_reply: what needs a person goes To do with its reason', async () => {
