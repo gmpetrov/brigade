@@ -4209,9 +4209,13 @@ export type $MailMessagePayload<ExtArgs extends runtime.Types.Extensions.Interna
      */
     sendAt: Date | null
     /**
-     * The Inbox: a person marked it done (nothing more to do with it).
+     * The Inbox: a person marked it done (nothing more to do with it), or Brigade did once its
+     * thread's turn ended after replying (src/mail/outcomes.ts), with no doneByMemberId then.
      */
     doneAt: Date | null
+    /**
+     * Who marked it done, or not done again: Brigade no longer closes it on its own.
+     */
     doneByMemberId: string | null
     /**
      * The Inbox: the person who handed it to a teammate (its thread is sessionId, route handed).

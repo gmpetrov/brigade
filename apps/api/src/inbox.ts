@@ -13,6 +13,7 @@ import {
   triggerEventText,
   unmention,
   type InboxDetail,
+  type InboxActivity,
   type InboxDraft,
   type InboxItem,
   type InboxNext,
@@ -133,12 +134,14 @@ const ofSources = (sources: InboxSource[]): Prisma.MailMessageWhereInput => ({
 /**
  * Of a conversation's mails, those these sources show: of a Gmail account showing only what went
  * to a thread, never its other mail (kept while it was in the Inbox), opened, counted or searched.
+ * A thread's replies in it show (Gmail's sent mail is kept only for them).
  */
 const shownOf = (sources: InboxSource[]): Prisma.MailMessageWhereInput => ({
   OR: [
     { connectionId: null },
     { connectionId: { notIn: gmailIds(sources, false) } },
     { route: { in: TAKEN_ROUTES } },
+    { direction: 'out' },
   ],
 })
 
@@ -245,7 +248,7 @@ function matchSql(scope: WorkspaceScope, filters: InboxFilters, sources: InboxSo
       where x."workspaceId" = ${scope.workspaceId} and x.status <> 'cancelled'
         ${received ? sql`and x.direction = 'in'` : sql``}
         and (x."connectionId" is null or not ${anyOf(sql`x."connectionId"`, gmailIds(sources, false))}
-          or x.route in (${Prisma.join(TAKEN_ROUTES)}))
+          or x.route in (${Prisma.join(TAKEN_ROUTES)}) or x.direction = 'out')
         and x.box = h.box and x."conversationId" = h."conversationId" and ${condition})`
   if (filters.teammateId)
     conditions.push(sql`(x."addressId" in (select id from "MailAddress" where "teammateId" = ${filters.teammateId})
@@ -338,6 +341,7 @@ const include = {
       projectId: true,
       startedByMemberId: true,
       othersMayPrompt: true,
+      status: true,
       computer: { select: { kind: true } },
     },
   },
@@ -400,6 +404,14 @@ async function toItems(
       : [],
   ])
   const drafts = await draftsOf(db, scope, mails)
+  const sessions = [...new Set(rows.flatMap((r) => (r.sessionId ? [r.sessionId] : [])))]
+  const asking = sessions.length
+    ? await db.ticket.groupBy({
+        by: ['sessionId'],
+        where: { status: 'open', sessionId: { in: sessions } },
+        _count: { _all: true },
+      })
+    : []
   const later = laterThan()
   return rows.map((m) => {
     const masked =
@@ -450,6 +462,14 @@ async function toItems(
         1,
       next: masked ? null : nextOf(m, mails, drafts, later, teammates),
       outcome: masked ? null : outcome,
+      activity:
+        masked || m.doneAt
+          ? null
+          : activityOf(
+              m,
+              mails,
+              asking.some((a) => a.sessionId === m.sessionId),
+            ),
     }
   })
 }
@@ -476,6 +496,34 @@ function outcomeOf(
   return answered
     ? null
     : { kind: head.outcome, note: head.outcomeNote ?? '', at: head.outcomeAt.toISOString() }
+}
+
+/** Out of the thread, it answers its conversation: sent, or on its way. */
+const ANSWERING = new Set(['scheduled', 'sent', 'delivered'])
+
+/**
+ * Where a conversation's teammate is with it (its head's thread): at work, asking a person, or
+ * done replying to its latest received mail.
+ */
+function activityOf(
+  head: Pick<Row, 'box' | 'conversationId' | 'receivedAt' | 'session'>,
+  mails: ConversationMail[],
+  asking: boolean,
+): InboxActivity | null {
+  const status = head.session?.status
+  if (status === 'starting' || status === 'running') return { kind: 'working' }
+  if (status === 'waiting' || asking) return { kind: 'needs_you' }
+  const reply = mails
+    .filter(
+      (x) =>
+        x.box === head.box &&
+        x.conversationId === head.conversationId &&
+        x.direction === 'out' &&
+        ANSWERING.has(x.status) &&
+        x.receivedAt > head.receivedAt,
+    )
+    .reduce<ConversationMail | null>((a, x) => (a && a.receivedAt >= x.receivedAt ? a : x), null)
+  return reply ? { kind: 'replied', at: reply.receivedAt.toISOString() } : null
 }
 
 type ConversationMail = {
@@ -809,7 +857,8 @@ export async function setDone(db: ScopedDb, scope: WorkspaceScope, itemId: strin
     where: { box: m.box, conversationId: m.conversationId, direction: 'in' },
     data: done
       ? { doneAt: new Date(), doneByMemberId: scope.memberId }
-      : { doneAt: null, doneByMemberId: null },
+      : // Who reopened it stays: the end of its thread's turn does not close it again.
+        { doneAt: null, doneByMemberId: scope.memberId },
   })
   await audit({
     ...scope,

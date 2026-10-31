@@ -1,13 +1,27 @@
 // The Inbox page's decisions (lib/inbox): when its list is asked again, what a draft shows.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { draftFacts, filtersToRestore, keptFilters, reloadsInboxList } from '../lib/inbox'
+import {
+  draftFacts,
+  filtersToRestore,
+  keptFilters,
+  reloadsForThread,
+  reloadsInboxList,
+} from '../lib/inbox'
 
 test('the list follows tickets too: a reply to approve moves a conversation into To do', () => {
   assert.equal(reloadsInboxList('tickets.updated'), true)
   assert.equal(reloadsInboxList('mail.updated'), true)
   assert.equal(reloadsInboxList('connections.updated'), true)
   assert.equal(reloadsInboxList('thread.updated'), false)
+})
+
+test('a thread that starts or stops working reloads the list only when a row shown is its own', () => {
+  const shown = [{ thread: { id: 't1' } }, { thread: null }]
+  assert.equal(reloadsForThread({ type: 'thread.updated', sessionId: 't1' }, shown), true)
+  assert.equal(reloadsForThread({ type: 'thread.updated', sessionId: 't2' }, shown), false)
+  assert.equal(reloadsForThread({ type: 'thread.updated' }, shown), false)
+  assert.equal(reloadsForThread({ type: 'mail.updated', sessionId: 't1' }, shown), false)
 })
 
 test('a draft to approve shows its Cc, subject and files, not only whom it goes to', () => {

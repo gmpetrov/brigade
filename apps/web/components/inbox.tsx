@@ -60,6 +60,7 @@ import {
   filtersToRestore,
   type KeptFilters,
   keptFilters,
+  reloadsForThread,
   reloadsInboxList,
 } from '@/lib/inbox'
 import { addToReply } from '@/lib/reply-drafts'
@@ -84,7 +85,7 @@ const EMPTY: Record<StatusFilter, string> = {
   waiting: 'Nothing to do. Every email has a teammate, and no reply waits for you.',
   handled: 'No conversation with a teammate right now.',
   scheduled: 'No reply set to leave later.',
-  done: 'Nothing marked done yet.',
+  done: 'Nothing done yet.',
   all: 'No email here.',
 }
 
@@ -331,10 +332,17 @@ export function InboxView() {
   // Live: a mail came or changed anywhere in the list (older pages too, so they go and come
   // back on asking), a mailbox came in or out of the Inbox, or a reply to approve opened or was
   // decided (it moves its conversation in or out of To do). The sidebar's count follows
-  // the same messages by itself.
+  // the same messages by itself. A shown row's thread starting or stopping work changes what
+  // the row says of its teammate.
+  const shown = useRef(items)
+  shown.current = items
   useLive(
     (message) => {
-      if (!reloadsInboxList(message.type)) return
+      if (
+        !reloadsInboxList(message.type) &&
+        !reloadsForThread(message as { type: string; sessionId?: string }, shown.current)
+      )
+        return
       generation.current++
       setOlder(undefined)
       void reloadList()
@@ -720,6 +728,12 @@ function NextStep({ item }: { item: InboxItem }) {
       <span className="font-semibold text-warning">
         {trouble ? destination(item) : 'No teammate on it'}
       </span>
+    ) : item.activity?.kind === 'working' ? (
+      <span>is on it…</span>
+    ) : item.activity?.kind === 'needs_you' ? (
+      <span className="font-semibold text-warning">needs you</span>
+    ) : item.activity?.kind === 'replied' ? (
+      <span>replied {timeAgo(item.activity.at)}</span>
     ) : item.outcome?.kind === 'handled' ? (
       <Hint label={item.outcome.note}>
         <span className="min-w-0 truncate">handled it without a reply</span>

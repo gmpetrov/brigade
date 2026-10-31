@@ -3,6 +3,7 @@
 // the conversation To do, handled leaves it with the teammate. A turn that ends with a mail of the
 // thread neither answered nor accounted for gets asked once what it did with it.
 import { Prisma, prisma, scoped, type Scope, type ScopedDb } from '../db.js'
+import { hubs } from '../hub.js'
 import { fireNow } from '../wakeups.js'
 
 export type MailOutcome = 'no_reply' | 'handled'
@@ -140,6 +141,10 @@ export async function noteMailLeft(
   ended: boolean,
 ) {
   if (!ended) return
+  await closeAnswered(
+    { organizationId: session.organizationId, workspaceId: session.workspaceId },
+    session.id,
+  )
   const holds = await prisma.mailMessage.count({
     where: { sessionId: session.id, direction: 'in', outcome: null, outcomeAskedAt: null },
   })
@@ -148,4 +153,76 @@ export async function noteMailLeft(
     { organizationId: session.organizationId, workspaceId: session.workspaceId },
     session,
   )
+}
+
+/** Mail out of the thread that answers a conversation: sent, or on its way. */
+const ANSWER_STATUSES = ['scheduled', 'sent', 'delivered']
+
+/**
+ * Once a turn ended with the thread idle: the conversations it answered (a reply after their
+ * latest received mail, sent or on its way) or said it handled without a reply are done, as if a
+ * person marked them. A new mail in one, or a person's "Not done", brings it back; so does
+ * cancelling the reply before it leaves (src/mail/outbound.ts). doneByMemberId stays empty:
+ * Brigade marked it. A latest mail a person marked done or not done is theirs: left as it is.
+ */
+export async function closeAnswered(scope: Scope, sessionId: string) {
+  const closed = await prisma.$executeRaw`
+    update "MailMessage" m set "doneAt" = now(), "updatedAt" = now()
+    from (
+      select distinct on (h.box, h."conversationId") h.box, h."conversationId", h."receivedAt",
+        h.outcome, h."doneAt", h."doneByMemberId"
+      from "MailMessage" h
+      where h."workspaceId" = ${scope.workspaceId} and h.direction = 'in'
+        and (h.box, h."conversationId") in (select s.box, s."conversationId" from "MailMessage" s
+          where s."workspaceId" = ${scope.workspaceId} and s."sessionId" = ${sessionId}
+            and s.direction = 'in')
+      order by h.box, h."conversationId", h."receivedAt" desc, h.id desc
+    ) head
+    where m."workspaceId" = ${scope.workspaceId} and m.direction = 'in'
+      and m.box = head.box and m."conversationId" = head."conversationId"
+      and m."doneAt" is null and head."doneAt" is null and head."doneByMemberId" is null
+      and (coalesce(head.outcome, '') = 'handled' or exists (select 1 from "MailMessage" o
+        where o."workspaceId" = ${scope.workspaceId} and o.box = head.box
+          and o."conversationId" = head."conversationId" and o.direction = 'out'
+          and o.status::text in (${Prisma.join(ANSWER_STATUSES)})
+          and o."receivedAt" > head."receivedAt"))`
+  if (closed) void hubs.get(scope.workspaceId).notifyList('mail.updated')
+  return closed
+}
+
+/**
+ * A reply cancelled before it left: its conversation, which Brigade marked done for it, is the
+ * teammate's again (a person's own "Done" stays).
+ */
+export async function reopenUnanswered(
+  db: ScopedDb,
+  mail: { box: string; conversationId: string },
+) {
+  const conversation = { box: mail.box, conversationId: mail.conversationId }
+  const head = await db.mailMessage.findFirst({
+    where: { ...conversation, direction: 'in' },
+    orderBy: [{ receivedAt: 'desc' }, { id: 'desc' }],
+    select: { receivedAt: true, outcome: true, doneAt: true, doneByMemberId: true },
+  })
+  if (!head?.doneAt || head.doneByMemberId || head.outcome === 'handled') return
+  // Another reply still answers it.
+  const answered = await db.mailMessage.count({
+    where: {
+      ...conversation,
+      direction: 'out',
+      status: { in: ANSWER_STATUSES as never },
+      receivedAt: { gt: head.receivedAt },
+    },
+  })
+  if (answered) return
+  await db.mailMessage.updateMany({
+    where: {
+      box: mail.box,
+      conversationId: mail.conversationId,
+      direction: 'in',
+      doneAt: { not: null },
+      doneByMemberId: null,
+    },
+    data: { doneAt: null },
+  })
 }
