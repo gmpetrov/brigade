@@ -63,10 +63,10 @@ export function dropTarget(view: EditorView, x: number, y: number): Target | und
     return { pos, line: between(shown[i - 1]?.rect, rect, rect) }
   const line = (level: DOMRect) => between(rect, shown[i + 1]?.rect, level)
   const node = doc.nodeAt(pos)!
-  // Sub-lines on screen: before the first one (hidden ones belong with the line).
+  // Sub-lines on screen: before the first one (hidden ones belong with the line), at its level.
   const next = shown[i + 1]
   if (node.childCount > 1 && next && next.pos < pos + node.nodeSize)
-    return { pos: pos + 1 + node.firstChild!.nodeSize + 1, line: line(rect) }
+    return { pos: pos + 1 + node.firstChild!.nodeSize + 1, line: line(next.rect) }
   let at = pos
   let level = rect
   for (;;) {
@@ -104,6 +104,17 @@ function placeLine(view: EditorView, line: Target['line']) {
     if (element.style[key as 'left'] !== value) element.style[key as 'left'] = value
 }
 
+/** Whether only lines a list's filter hides lie between `from` and `to`, in one group. */
+function onlyHidden(view: EditorView, from: number, to: number) {
+  if (to <= from) return false
+  const $from = view.state.doc.resolve(from)
+  const $to = view.state.doc.resolve(to)
+  if ($from.parent !== $to.parent) return false
+  for (let i = $from.index(), pos = from; i < $to.index(); pos += $from.parent.child(i++).nodeSize)
+    if (contentRect(view, pos)) return false
+  return true
+}
+
 /** The drop line, at the gap `dropTarget` picks. */
 export const blockDropCursor = (): DropCursorOptions => ({
   hooks: {
@@ -139,8 +150,8 @@ export const blockDropExtension = () => {
             const tr = view.state.tr
             if (moved) {
               const { from, to } = tr.selection
-              // Onto themselves: nothing moves.
-              if (target >= from && target <= to) return true
+              // Onto themselves, or past only hidden lines: nothing moves.
+              if ((target >= from && target <= to) || onlyHidden(view, to, target)) return true
               tr.deleteSelection()
             }
             const at = tr.mapping.map(target)

@@ -71,6 +71,8 @@ function dragging(lines: Node[], dragged: number) {
   }
   const at = (x: number, y: number) => ({ clientX: x, clientY: y }) as DragEvent
   return {
+    /** The gap and the drop line for the pointer at (x, y). */
+    target: (x: number, y: number) => dropTarget(view as unknown as EditorView, x, y),
     /** The height of the drop line for the pointer at (x, y). */
     lineY: (x: number, y: number) => dropTarget(view as unknown as EditorView, x, y)?.line.y,
     /** Where the drop line goes for the pointer at (x, y). */
@@ -163,4 +165,20 @@ test('with lines hidden by a filter, the drop line sits in the gap on screen', (
 test('a line whose sub-lines are all hidden: the drop goes after them', () => {
   const editor = dragging([line('A'), line('B', [line('~c')]), line('D')], 0)
   assert.equal(editor.drop(LEFT + 50, 50), 'B(~c), A, D')
+})
+
+test('with lines hidden by a filter, dropped onto itself, nothing moves', () => {
+  // Its lower half: the gap past its hidden paragraph, still its own place.
+  const lines = () => [line('H1'), line('~p1'), line('H2')]
+  assert.equal(dragging(lines(), 0).drop(LEFT + 50, 20), 'H1, ~p1, H2')
+  assert.equal(dragging(lines(), 0).drop(LEFT + 50, 5), 'H1, ~p1, H2')
+  // Just above the next line on screen: the same gap.
+  assert.equal(dragging(lines(), 0).drop(LEFT + 50, 32), 'H1, ~p1, H2')
+})
+
+test('the gap before a first sub-line is drawn at its level, from either side', () => {
+  const editor = dragging([line('A'), line('B', [line('C')])], 0)
+  // B's lower half (30–54) and C's upper half (60–84).
+  assert.deepEqual(editor.target(LEFT + 50, 50), editor.target(LEFT + 50, 65))
+  assert.equal(editor.target(LEFT + 50, 50)?.line.left, LEFT + INDENT)
 })
