@@ -3,7 +3,6 @@
 // Never the sign-in pages, the dashboard or the demo.
 export const PUBLIC_PAGES = [
   '/',
-  '/how-it-works',
   '/privacy',
   '/terms',
   '/dpa',

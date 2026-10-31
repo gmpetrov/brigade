@@ -106,7 +106,7 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
         { source: '/:page(sign-in|onboarding)', destination: '/app', permanent: false },
         { source: '/sign-up', destination: 'https://www.brigade.lol/sign-up', permanent: false },
         {
-          source: '/:page(how-it-works|privacy|terms|dpa|subprocessors|legal)',
+          source: '/:page(privacy|terms|dpa|subprocessors|legal)',
           destination: 'https://www.brigade.lol/:page',
           permanent: false,
         },
@@ -120,6 +120,8 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
         destination: 'https://www.brigade.lol/:path+',
         permanent: true,
       },
+      // /how-it-works was taken down: links shared before open the home page.
+      { source: '/how-it-works', destination: '/', permanent: true },
       // Automations became Routines: links saved before still open the page.
       { source: '/app/automations', destination: '/app/routines', permanent: false },
       {

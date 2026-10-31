@@ -27,8 +27,8 @@ project must have cookieless mode turned on in its settings, or it drops the web
 
 ## The website
 
-`components/landing/site-analytics.tsx`, mounted in the site's header (`/`, `/how-it-works`,
-the legal pages). Never in the dashboard (`/app`), the sign-in pages or the demo's build: only
+`components/landing/site-analytics.tsx`, mounted in the site's header (`/`, the
+legal pages). Never in the dashboard (`/app`), the sign-in pages or the demo's build: only
 those pages import it, `posthog-js` loads with a dynamic import once the page runs, and
 `next.config.ts` empties the key in the demo's build.
 
@@ -45,7 +45,7 @@ address instead (`lib/signup-source.ts`):
    referrer's host when it is another site's (`ref`), its own path (`lp`), and whether an ad's
    click id was there (`paid`).
 2. The site's Sign up and Sign in links carry them (`components/landing/auth-link.tsx`):
-   `/sign-up?utm_source=hn&ref=news.ycombinator.com&lp=%2Fhow-it-works`.
+   `/sign-up?utm_source=hn&ref=news.ycombinator.com&lp=%2Fchangelog`.
 3. The sign-up and sign-in pages send them to the API: with the code
    (`signupSource` in `POST /api/auth/sign-in/email-otp`), or through Google's round trip
    (`additionalData.signupSource`, kept in the OAuth state).

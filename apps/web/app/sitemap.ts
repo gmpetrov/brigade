@@ -14,7 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       .filter((path) => path !== '/legal' || OPERATOR.company)
       .map((path) => ({
         url: path === '/' ? `${SITE_URL}/` : `${SITE_URL}${path}`,
-        priority: path === '/' ? 1 : path === '/how-it-works' ? 0.8 : 0.3,
+        priority: path === '/' ? 1 : 0.3,
       })),
     // Each release's page (app/changelog/[slug]), dated by its day.
     ...RELEASES.map((r) => ({
