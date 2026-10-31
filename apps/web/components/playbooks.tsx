@@ -675,7 +675,9 @@ function Numbers({ metrics: m }: { metrics: PlaybookMetrics }) {
               <tbody className="tabular-nums">
                 {m.cases.map((c) => (
                   <tr key={c.case ?? ''}>
-                    <td className="w-full max-w-0 truncate px-4 py-1.5">{caseName(c.case)}</td>
+                    <td className="w-full max-w-0 px-4 py-1.5">
+                      <div className="truncate">{caseName(c.case)}</div>
+                    </td>
                     <td className="px-2 py-1.5 text-right">{c.runs}</td>
                     <td className="px-2 py-1.5 text-right">{percent(c.unattended) ?? '—'}</td>
                     {m.responds && (

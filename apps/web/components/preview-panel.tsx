@@ -644,10 +644,10 @@ function LivePreviewPanel({
                   )}
                   {lastLine && (
                     <p
-                      className="max-w-full truncate rounded bg-muted px-2 py-1 font-mono text-xs"
+                      className="max-w-full rounded bg-muted px-2 py-1 font-mono text-xs"
                       title={lastLine}
                     >
-                      {lastLine}
+                      <span className="block truncate">{lastLine}</span>
                     </p>
                   )}
                 </>

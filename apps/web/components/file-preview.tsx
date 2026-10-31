@@ -207,10 +207,10 @@ function Table({ rows, note }: { rows: string[][]; note?: string }) {
                 {Array.from({ length: width }, (_, j) => (
                   <td
                     key={j}
-                    className="max-w-72 truncate border px-2 py-1 align-top whitespace-nowrap"
+                    className="border px-2 py-1 align-top whitespace-nowrap"
                     title={row[j]}
                   >
-                    {row[j] ?? ''}
+                    <div className="max-w-72 truncate">{row[j] ?? ''}</div>
                   </td>
                 ))}
               </tr>

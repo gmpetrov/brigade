@@ -98,7 +98,7 @@ export function MentionChip({
       : mention.label
   const Tag = open ? 'button' : 'span'
   const chip =
-    'mx-px inline-flex max-w-[28ch] items-center gap-1.5 overflow-hidden rounded-md border bg-card px-1.5 align-baseline leading-relaxed text-ellipsis whitespace-nowrap text-card-foreground [&>svg]:flex-none [&>svg]:text-muted-foreground'
+    'mx-px inline-flex max-w-[28ch] items-center gap-1.5 overflow-hidden rounded-md border bg-card px-1.5 align-baseline leading-relaxed whitespace-nowrap text-card-foreground [&>svg]:flex-none [&>svg]:text-muted-foreground'
   // An email opens its conversation in the Inbox.
   if (mention.kind === 'email')
     return (

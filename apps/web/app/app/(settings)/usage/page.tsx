@@ -287,7 +287,9 @@ function Table({
               const share = total > 0 ? value / total : 0
               return (
                 <tr key={r.id || r.label}>
-                  <td className="w-full max-w-0 truncate px-4 py-1.5">{name(r)}</td>
+                  <td className="w-full max-w-0 px-4 py-1.5">
+                    <div className="truncate">{name(r)}</div>
+                  </td>
                   <td className="px-2 py-1.5 text-right whitespace-nowrap">{tokens(value)}</td>
                   <td className="hidden w-28 px-2 py-1.5 sm:table-cell">
                     <div className="flex items-center gap-2">

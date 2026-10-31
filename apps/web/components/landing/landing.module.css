@@ -5291,3 +5291,29 @@ a.lgr:hover .tt {
     padding-left: 0;
   }
 }
+
+/* Text too long for its line fades out at its end rather than ending in an ellipsis, only
+ * while it overflows, as in the app (truncate, app/globals.css). */
+@supports (animation-timeline: scroll()) {
+  .it .tt,
+  .it .mt,
+  .lgr .tt,
+  .lgr .mt,
+  .ir b {
+    text-overflow: clip;
+    mask-image: linear-gradient(to right, #000 calc(100% - var(--fade-end)), transparent);
+    animation: fade-end linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+@property --fade-end {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes fade-end {
+  from,
+  to {
+    --fade-end: 2rem;
+  }
+}
