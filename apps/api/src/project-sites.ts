@@ -15,6 +15,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { parse, serializeOuter, type DefaultTreeAdapterTypes } from 'parse5'
+import { usableBy } from './account-sharing.js'
 import { publicUrl } from './connectors/mcp.js'
 import type { ScopedDb } from './db.js'
 import { hubs } from './hub.js'
@@ -627,7 +628,7 @@ export async function readSite(scope: WorkspaceScope, url: string): Promise<Site
 type DescribeResult = Extract<RunnerToApi, { type: 'project.describe.result' }>
 
 /**
- * The account the brief is written with: the member's own, never another's,
+ * The account the brief is written with: one the member may run on (src/account-sharing.ts),
  * on a computer online now with a runner that knows project.describe. The
  * default first, Claude before Codex, accounts out of usage never.
  */
@@ -635,7 +636,7 @@ async function briefAccount(db: ScopedDb, scope: WorkspaceScope) {
   const { memberId } = scope
   const now = new Date()
   const rows = await db.account.findMany({
-    where: { memberId, status: { in: ['ready', 'unverified'] } },
+    where: { ...usableBy(memberId), status: { in: ['ready', 'unverified'] } },
     orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
   })
   if (rows.length === 0)
@@ -648,7 +649,8 @@ async function briefAccount(db: ScopedDb, scope: WorkspaceScope) {
     .get(scope.workspaceId)
     .presence([...new Set(fresh.map((r) => r.computerId))])
   const online = fresh.filter((r) => presence[r.computerId]?.online)
-  if (online.length === 0) return { reason: 'None of the computers with your accounts is online.' }
+  if (online.length === 0)
+    return { reason: 'None of the computers with an account you can use is online.' }
   const ready = online
     .filter((r) => (presence[r.computerId]?.protocolVersion ?? 0) >= DESCRIBE_PROTOCOL)
     .sort(

@@ -1091,7 +1091,7 @@ export const threads = new Hono<AppEnv>()
     if (!computer || (computer.kind === 'member_machine' && computer.memberId !== scope.memberId)) {
       throw new HTTPException(404, { message: 'Computer not found' })
     }
-    // A thread runs on the starting member's accounts, never anyone else's.
+    // A thread runs on the accounts its starter may use (src/account-sharing.ts).
     // The title is what the message is about, not the command it starts with.
     const skill = input.text.startsWith('/')
       ? skillCommand(

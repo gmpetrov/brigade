@@ -460,7 +460,7 @@ async function startClaimed(
     if (parent.startedByMemberId !== by.memberId && !parent.othersMayPrompt)
       throw new HTTPException(403, {
         message:
-          "This pull request's thread runs on another member's subscription. They can ask for the review, or let others prompt in the thread.",
+          "Only the member who started this pull request's thread can ask for its review, unless they let others prompt in it.",
       })
     if (parent.controlledByMemberId)
       throw new HTTPException(409, {

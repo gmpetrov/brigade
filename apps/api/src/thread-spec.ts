@@ -87,7 +87,7 @@ export async function actingTeammate(
 
 export const noAccount = (harness: string) =>
   new HTTPException(409, {
-    message: `No ${harness === 'codex' ? 'Codex' : 'Claude'} account of yours on this computer is ready. Add or sign in to one under Accounts.`,
+    message: `No ${harness === 'codex' ? 'Codex' : 'Claude'} account you can use on this computer is ready. Add or sign in to one under Accounts.`,
   })
 
 /** The thread's latest arrival on its computer, as a spec says it (ThreadSpec.moved). */
@@ -108,7 +108,7 @@ export function movedOf(thread: {
 
 /**
  * The thread's spec, with the account it should run on next: its current
- * account if still usable, else the starter's next one. Never another member's.
+ * account if still usable, else the next one its starter may run on (src/account-sharing.ts).
  */
 export async function specFor(
   db: ScopedDb,
@@ -325,7 +325,7 @@ export async function specFor(
   }
 }
 
-/** Prompting or approving spends the starter's subscription: only they may, unless they allow it. */
+/** Prompting or approving is the starter's: only they may, unless they allow others. */
 export function requireMayPrompt(
   scope: WorkspaceScope,
   thread: {
@@ -336,7 +336,7 @@ export function requireMayPrompt(
 ) {
   if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt) {
     throw new HTTPException(403, {
-      message: "This thread runs on another member's subscription. Fork it to continue.",
+      message: 'Only the member who started this thread writes in it. Fork it to continue.',
     })
   }
   if (thread.controlledByMemberId) {
