@@ -172,7 +172,7 @@ export function DesignSystemsBar({
         </SidePanel>
       )}
       {/* After the panel, so it opens on top of it. */}
-      {preview && <DesignPanel folder={preview} onClose={() => setPreview(undefined)} />}
+      {preview && <DesignPanel folder={preview} expand onClose={() => setPreview(undefined)} />}
     </>
   )
 }
