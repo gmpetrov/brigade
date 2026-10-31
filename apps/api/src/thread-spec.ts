@@ -327,10 +327,10 @@ export async function specFor(
 }
 
 /**
- * The member whose request a thread's teammate works on now (Session.askedByMemberId): who last
- * wrote or answered in it, or who had asked for the work a teammate passed on to it. Null when
- * no person asked (a trigger's, a routine's thread). Threads from before it was kept: the
- * author of their latest person's input.
+ * Whose requests a thread's teammate works on (Session.askedByMemberId): the one member who
+ * wrote, answered or decided in it, or who had asked for the work a teammate passed on to it;
+ * SEVERAL_ASKERS once another took part. Null when no person asked (a trigger's, a routine's
+ * thread). Threads from before it was kept: the author of their latest person's input.
  */
 export async function askedBy(db: ScopedDb, sessionId: string): Promise<string | null> {
   const thread = await db.session.findFirst({
@@ -354,9 +354,32 @@ export async function askedBy(db: ScopedDb, sessionId: string): Promise<string |
   return null
 }
 
-/** A member wrote, answered or decided in a thread: its teammate works on their request now. */
+/** Several members asked in a thread: no one member's own App account answers it any more. */
+export const SEVERAL_ASKERS = '*'
+
+/**
+ * A member wrote, answered or decided in a thread. Its teammate works on its asker's requests
+ * alone while nobody else takes part; once another member does, on several members' for good
+ * (SEVERAL_ASKERS), whatever is queued or under way: a member's own Apps stay out of it.
+ */
 export async function noteAsker(db: ScopedDb, sessionId: string, memberId: string) {
-  await db.session.updateMany({ where: { id: sessionId }, data: { askedByMemberId: memberId } })
+  // Another's, or several already: several. A change made at once never loses this.
+  await db.session.updateMany({
+    where: { id: sessionId, askedByMemberId: { not: memberId } },
+    data: { askedByMemberId: SEVERAL_ASKERS },
+  })
+  // Unknown (a thread from before it was kept): read from what people wrote in it.
+  const thread = await db.session.findFirst({
+    where: { id: sessionId },
+    select: { askedByMemberId: true },
+  })
+  if (thread && thread.askedByMemberId === null) {
+    const before = await askedBy(db, sessionId)
+    await db.session.updateMany({
+      where: { id: sessionId, askedByMemberId: null },
+      data: { askedByMemberId: !before || before === memberId ? memberId : SEVERAL_ASKERS },
+    })
+  }
 }
 
 /** Prompting or approving: its starter, or any member but a viewer once it is open (mayWrite). */

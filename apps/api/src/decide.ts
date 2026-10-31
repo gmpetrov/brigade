@@ -74,7 +74,7 @@ export async function answerQuestion(
     }
   }
   const thread = await loadThread(db, ticket.sessionId)
-  // What they answer the teammate goes on with: their request now.
+  // What they answer the teammate goes on with: they ask in it too.
   if (answer.action !== 'declined') await noteAsker(db, thread.id, scope.memberId)
   const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
     type: 'thread.answer',
@@ -231,7 +231,7 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
   for (const grant of grants) holders.push(await accessHolder(db, asker, grant.app.teammate))
   for (const [i, account] of accounts.entries())
     await grantAccount(db, scope, holders[i]!.id, account, grants[i]!.app.scope)
-  // What they answer the teammate goes on with: their request now.
+  // What they answer the teammate goes on with: they ask in it too.
   if (answer.action !== 'declined') await noteAsker(db, thread.id, scope.memberId)
   const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
     type: 'thread.ticket',
@@ -604,7 +604,7 @@ export async function resolveTicket(
     if (!ticket.sessionId || !payload.approvalId)
       throw new HTTPException(409, { message: 'This approval has no thread' })
     const thread = await loadThread(db, ticket.sessionId)
-    // Allowed, or told why not: what the teammate goes on with is theirs now.
+    // Allowed, or told why not: they ask in it too.
     if (input.approved || input.reason) await noteAsker(db, thread.id, scope.memberId)
     const sent = await hubs.get(thread.computer.workspaceId).dispatch(thread.computer, {
       type: 'thread.approval',

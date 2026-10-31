@@ -46,7 +46,7 @@ type Prompt = {
   replyTo?: ReplyTo
   /**
    * Written by a teammate for a member's request elsewhere (message_thread, a task comment):
-   * that member asks it now (Session.askedByMemberId). A person's own message: memberId does.
+   * that member asks it too (Session.askedByMemberId). A person's own message: memberId does.
    */
   onBehalfOf?: string | null
 }
@@ -103,7 +103,7 @@ export async function promptThread(
 ): Promise<'sent' | 'queued' | 'offline' | 'paused'> {
   // Every turn starts here: none in a workspace being deleted, whose computer and Apps are going.
   await refuseWhileDeleting(scope.workspaceId)
-  // Whose request it works on from now: Brigade's own notes (a wake-up, a report) change nothing.
+  // Whose requests it works on: Brigade's own notes (a wake-up, a report) change nothing.
   const asker = prompt.memberId ?? prompt.onBehalfOf
   if (asker) await noteAsker(db, thread.id, asker)
   // Moving, the thread is on neither computer for good: what is sent now could be lost on

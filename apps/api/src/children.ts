@@ -813,7 +813,7 @@ export async function messageChild(
   const outcome = await promptThread(db, scope, thread, {
     text: parentMessage({ from: teammate.name, parentTitle: parent.title, text }),
     memberId: null,
-    // Whoever asked for it in the parent asks the child now.
+    // Whoever asked for it in the parent asks in the child too.
     onBehalfOf: await askedBy(db, parent.id),
   })
   if (outcome === 'offline') return { error: "That child thread's computer is offline." }

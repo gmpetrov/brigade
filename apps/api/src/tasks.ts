@@ -1333,7 +1333,7 @@ export async function handleTaskCall(
         const outcome = await promptThread(db, scope, target, {
           text: taskComment({ from: teammate.name, threadTitle: session.title, text: op.text }),
           memberId: null,
-          // Whoever asked for it here asks that thread now.
+          // Whoever asked for it here asks in that thread too.
           onBehalfOf: await askedBy(db, session.id),
           ...(task.teammateId && target.teammates.some((t) => t.teammateId === task.teammateId)
             ? { teammateIds: [task.teammateId] }

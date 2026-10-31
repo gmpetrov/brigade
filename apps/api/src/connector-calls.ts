@@ -191,14 +191,14 @@ export async function handleConnectorCall(
       error: `${connection.label} belongs to another member and is used only in their threads`,
     })
   }
-  // In a thread others write in, a member's own account answers only what they asked for.
+  // A member's own account answers only their requests: not in a thread another member asks in.
   if (connection.reach === 'mine') {
     const asker = await askedBy(db, session.id)
     if (asker && asker !== connection.createdByMemberId) {
       await record({ result: 'denied', target, error: 'asked by another member' })
       return result({
         ok: false,
-        error: `${connection.label} is the account of the member who started this thread: it is used only when they ask, not for another member's request. Ask them, or use an account the whole workspace shares.`,
+        error: `${connection.label} is a member's own account: it is used only in threads where they alone ask, and another member takes part in this one. Ask them to use it in a thread of their own, or use an account the whole workspace shares.`,
       })
     }
   }

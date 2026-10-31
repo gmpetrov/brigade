@@ -15242,9 +15242,10 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      */
     controlledByMemberId: string | null
     /**
-     * The member whose request its teammate works on now: who last wrote or answered in it, or,
-     * for work a teammate passed on (a child, a task, message_thread), who had asked for it there.
-     * A member's own App account answers only them (src/connector-calls.ts).
+     * The one member whose requests its teammate works on: who wrote or answered in it, or, for
+     * work a teammate passed on (a child, a task, message_thread), who had asked for it there;
+     * '*' once another member took part. A member's own App account answers only them
+     * (src/connector-calls.ts, src/thread-spec.ts).
      */
     askedByMemberId: string | null
     /**
