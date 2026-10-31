@@ -15,29 +15,48 @@ import type { EditorView } from '@tiptap/pm/view'
 const isBlocks = (slice: Slice | undefined) =>
   !!slice && slice.content.firstChild?.type.name === 'blockContainer'
 
+/** The rect of a line's own content, not its sub-lines. */
+const contentRect = (view: EditorView, pos: number) =>
+  (view.nodeDOM(pos) as HTMLElement | null)
+    ?.querySelector(':scope > .bn-block > .bn-block-content')
+    ?.getBoundingClientRect()
+
 /**
- * The gap nearest to `y` (viewport px): before the line whose own content (not its
- * sub-lines) is nearest, when `y` is in its top half; else after it, which for a line with
- * sub-lines is before its first one, where the gap shows.
+ * The gap nearest to the pointer at (`x`, `y`, viewport px): before the line whose own
+ * content (not its sub-lines) is nearest `y`, when `y` is in its top half; else after it,
+ * which for a line with sub-lines is before its first one, where the gap shows. Below a
+ * last sub-line, the gap is also its parent's end: the pointer left of the sub-line's text
+ * takes it out a level, and on, as in Notion. (BlockNote moves a drop beside the lines onto
+ * their left edge, so the margin beside them is the outermost level.)
  */
-function dropTarget(view: EditorView, y: number) {
-  let best: { pos: number; distance: number } | undefined
+export function dropTarget(view: EditorView, x: number, y: number) {
+  let best: { pos: number; distance: number; below: boolean } | undefined
   view.state.doc.descendants((node, pos) => {
     if (node.type.name !== 'blockContainer') return true
-    const content = (view.nodeDOM(pos) as HTMLElement | null)?.querySelector(
-      ':scope > .bn-block > .bn-block-content',
-    )
-    const rect = content?.getBoundingClientRect()
+    const rect = contentRect(view, pos)
     // A line a list's filter hides takes no room.
     if (!rect || rect.height === 0) return true
     const distance = y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0
-    if (best && distance >= best.distance) return true
-    const children = node.childCount > 1
-    const after = children ? pos + 1 + node.firstChild!.nodeSize + 1 : pos + node.nodeSize
-    best = { pos: y < (rect.top + rect.bottom) / 2 ? pos : after, distance }
+    if (!best || distance < best.distance)
+      best = { pos, distance, below: y >= (rect.top + rect.bottom) / 2 }
     return true
   })
-  return best?.pos
+  if (!best) return undefined
+  const { doc } = view.state
+  let pos = best.pos
+  let node = doc.nodeAt(pos)!
+  if (!best.below) return pos
+  if (node.childCount > 1) return pos + 1 + node.firstChild!.nodeSize + 1
+  for (;;) {
+    const $pos = doc.resolve(pos)
+    const last = $pos.index() === $pos.parent.childCount - 1
+    const left = contentRect(view, pos)?.left
+    // The root group sits in the document: a line there has no parent line.
+    if (!last || $pos.depth < 3 || left === undefined || x >= left) break
+    pos = $pos.before($pos.depth - 1)
+    node = doc.nodeAt(pos)!
+  }
+  return pos + node.nodeSize
 }
 
 /** The drop line, at the gap `dropTarget` picks. */
@@ -45,7 +64,7 @@ export const blockDropCursor = (): DropCursorOptions => ({
   hooks: {
     computeDropPosition: ({ view, event, defaultPosition }) => {
       if (!isBlocks(view.dragging?.slice)) return defaultPosition
-      const pos = dropTarget(view, event.clientY)
+      const pos = dropTarget(view, event.clientX, event.clientY)
       return pos === undefined ? defaultPosition : { pos, orientation: 'block-horizontal' }
     },
   },
@@ -66,7 +85,7 @@ export const blockDropExtension = () => {
             if (!isBlocks(slice)) return false
             const transfer = event.dataTransfer
             if (transfer && done.has(transfer)) return true
-            const target = dropTarget(view, event.clientY)
+            const target = dropTarget(view, event.clientX, event.clientY)
             if (target === undefined) return false
             if (transfer) done.add(transfer)
             const tr = view.state.tr
