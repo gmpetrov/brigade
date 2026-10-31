@@ -2,7 +2,8 @@
 // Search everything from anywhere: ⌘K (Ctrl+K), or the box at the top of the
 // sidebar. Pages match as you type; the rest comes from the API, which applies
 // the same rules as each page, so nothing turns up that the member can't open.
-import type { SearchKind, SearchResult } from '@brigade/contracts'
+// The best match leads, then each kind in the order of its best match.
+import { SCORE, titleScore, type SearchKind, type SearchResult } from '@brigade/contracts'
 import {
   ArrowRight,
   Bot,
@@ -41,6 +42,8 @@ type Item = {
   detail: string | null
   snippet: string | null
   href: string
+  /** How well it matches (SCORE); none for recent rows. */
+  score?: number
 }
 
 const GROUPS: { kind: Item['kind']; label: string; icon: LucideIcon }[] = [
@@ -229,7 +232,7 @@ export function SearchDialog({
       wanted.every((w) => p.title.toLowerCase().includes(w)),
     )
     const items: Item[] = [
-      ...matchingPages,
+      ...matchingPages.map((p) => ({ ...p, score: titleScore(trimmed, p.title) })),
       ...(found?.results ?? []).map((r) => ({
         key: `${r.kind}:${r.id}`,
         kind: r.kind,
@@ -237,12 +240,24 @@ export function SearchDialog({
         detail: r.detail,
         snippet: r.snippet,
         href: hrefOf(r),
+        score: r.score,
       })),
     ]
-    return GROUPS.map((g) => ({
-      label: g.label,
-      items: items.filter((i) => i.kind === g.kind),
-    })).filter((g) => g.items.length > 0)
+    // A name that matches leads on its own; the rest keep their kind's group.
+    const best = items.reduce<Item | undefined>(
+      (top, i) => ((i.score ?? 0) > (top?.score ?? 0) ? i : top),
+      undefined,
+    )
+    const top = best && (best.score ?? 0) >= SCORE.inside ? best : undefined
+    const groups = GROUPS.map((g) => {
+      const kept = items
+        .filter((i) => i.kind === g.kind && i !== top)
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      return { label: g.label, items: kept, score: kept[0]?.score ?? 0 }
+    })
+      .filter((g) => g.items.length > 0)
+      .sort((a, b) => b.score - a.score)
+    return top ? [{ label: 'Top hit', items: [top] }, ...groups] : groups
   }, [trimmed, recent, pages, found])
   const flat = useMemo(() => groups.flatMap((g) => g.items), [groups])
   const searching = Boolean(trimmed) && found?.query !== trimmed && !error

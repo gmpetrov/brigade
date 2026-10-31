@@ -686,6 +686,7 @@ model Session {
   listItems ListItemThread[]
 
   @@index([workspaceId, createdAt])
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([projectId, createdAt])
   @@index([teammateId])
   @@index([triggerId, conversationKey])
@@ -749,6 +750,7 @@ model Task {
   @@index([workspaceId, completedAt])
   @@index([workspaceId, archivedAt])
   @@index([workspaceId, trashedAt])
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([teammateId])
   @@index([projectId])
   @@index([parentId])
@@ -1068,6 +1070,7 @@ model PullRequest {
   listItems ListItemPull[]
 
   @@unique([workspaceId, repository, number])
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([sessionId])
   @@index([reviewSessionId])
   @@index([mergeStatus])
@@ -1539,6 +1542,7 @@ model Ticket {
   createdAt          DateTime     @default(now())
 
   @@index([workspaceId, status])
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([sessionId])
 }
 
@@ -1617,6 +1621,7 @@ model Document {
 
   @@unique([workspaceId, kind, path])
   @@index([search], type: Gin)
+  @@index([path(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([workspaceId, deletedAt])
   @@index([objectKey])
 }
