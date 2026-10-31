@@ -163,6 +163,65 @@ test('a Codex rollout: each request once with its turn’s model, never a member
   ])
 })
 
+test("reading one Codex thread's log leaves the others' where they were", async () => {
+  const home = join(root, 'codex-two')
+  const day = join(home, 'sessions', '2026', '10', '31')
+  await mkdir(day, { recursive: true })
+  const rollout = (thread: string) =>
+    line({
+      timestamp: '2026-10-31T10:00:00.000Z',
+      type: 'session_meta',
+      payload: { cwd: `/home/bt-sam/threads/${thread}` },
+    }) +
+    line({
+      timestamp: '2026-10-31T10:00:00.000Z',
+      type: 'turn_context',
+      payload: { model: 'gpt-6.1-sol' },
+    }) +
+    line({
+      timestamp: '2026-10-31T10:00:01.000Z',
+      type: 'token_usage_record',
+      payload: {
+        thread_id: thread,
+        response_id: `resp-${thread}`,
+        usage: { input_tokens: 100, output_tokens: 10 },
+      },
+    })
+  await writeFile(join(day, 'rollout-t1.jsonl'), rollout('t1'))
+  await writeFile(join(day, 'rollout-t2.jsonl'), rollout('t2'))
+  // A rollout Codex is still writing its first line of.
+  const fresh = join(day, 'rollout-t3.jsonl')
+  const third = rollout('t3')
+  await writeFile(fresh, third.slice(0, 30))
+  const input = {
+    configs: [{ dir: home, account: 'acc3' }],
+    accountsDirs: [],
+    prefixes: [projectFolder('/home/bt-sam/threads/')],
+    max: 1000,
+  }
+  // After a turn of t1: only t1's.
+  const t1 = await scan({
+    ...input,
+    folders: [projectFolder('/home/bt-sam/threads/t1')],
+    offsets: {},
+  })
+  assert.deepEqual(
+    t1.responses.map((r) => r.id),
+    ['t1:resp-t1'],
+  )
+  assert.deepEqual(Object.keys(t1.offsets), [join(day, 'rollout-t1.jsonl')])
+  // The next sweep: t2's, and t3's once its first line is whole.
+  await writeFile(fresh, third)
+  const sweep = await scan({ ...input, offsets: t1.offsets })
+  assert.deepEqual(
+    sweep.responses.map((r) => [r.id, r.model]),
+    [
+      ['t2:resp-t2', 'gpt-6.1-sol'],
+      ['t3:resp-t3', 'gpt-6.1-sol'],
+    ],
+  )
+})
+
 test("a project folder is its thread's and teammate's", () => {
   const home = process.env.BRIGADE_HOME!
   assert.deepEqual(localThread(projectFolder(`${home}/teammates/cmteam1/threads/cmthread1`)), {

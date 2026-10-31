@@ -200,6 +200,20 @@ async function readLines(file: string, offset: number, take: (line: string) => b
   return position
 }
 
+/**
+ * A Codex rollout's working directory, from its first line: null when that line names none,
+ * undefined while it is still being written.
+ */
+async function firstCwd(file: string) {
+  let cwd: string | null = null
+  const read = await readLines(file, 0, (line) => {
+    const meta = codexLine(line)
+    if (meta && 'cwd' in meta) cwd = meta.cwd
+    return false
+  })
+  return read > 0 ? cwd : undefined
+}
+
 export async function scan(input: ScanInput): Promise<ScanOutput> {
   const configs = [...input.configs]
   for (const dir of input.accountsDirs) {
@@ -207,9 +221,10 @@ export async function scan(input: ScanInput): Promise<ScanOutput> {
     for (const a of accounts)
       if (a.isDirectory()) configs.push({ dir: join(dir, a.name), account: a.name })
   }
+  // A thread's working directory, for good; and one this scan reads (a turn's own, or all).
+  const thread = (folder: string) => input.prefixes.some((p) => folder.startsWith(p))
   const wanted = (folder: string) =>
-    input.prefixes.some((p) => folder.startsWith(p)) &&
-    (!input.folders || input.folders.includes(folder))
+    thread(folder) && (!input.folders || input.folders.includes(folder))
   const offsets: Record<string, LogMark> = {}
   const byId = new Map<string, ScannedResponse>()
   const full = () => byId.size >= input.max
@@ -254,34 +269,33 @@ export async function scan(input: ScanInput): Promise<ScanOutput> {
       if (full()) return { responses: [...byId.values()], offsets, more: true }
       const start = await from(file)
       if (!start) continue
-      const mark: LogMark = { at: start.at, ...(start.cwd ? { cwd: start.cwd } : {}) }
-      if (start.model) mark.model = start.model
+      const cwd = start.cwd ?? (start.at === 0 ? await firstCwd(file) : null)
+      // Its first line still being written: read once it is whole.
+      if (cwd === undefined) continue
       // A rollout of no thread's (a memory run's, a member's own): never read past its first line.
-      if (mark.cwd !== undefined && !wanted(projectFolder(mark.cwd))) {
-        offsets[file] = { ...mark, at: start.size }
+      if (cwd === null || !thread(projectFolder(cwd))) {
+        offsets[file] = { at: start.size, ...(cwd === null ? {} : { cwd }) }
         continue
       }
-      mark.at = await readLines(file, start.at, (line) => {
+      // Another thread's, when this scan reads one: left where it was, for its own or the next sweep.
+      if (!wanted(projectFolder(cwd))) continue
+      const folder = projectFolder(cwd)
+      let model = start.model
+      const at = await readLines(file, start.at, (line) => {
         const read = codexLine(line)
-        if (!read) return mark.cwd !== undefined || mark.at > 0 || !line
-        if ('cwd' in read) {
-          mark.cwd = read.cwd
-          return wanted(projectFolder(read.cwd))
-        }
-        if ('model' in read) mark.model = read.model
-        else if (mark.cwd !== undefined)
+        if (!read || 'cwd' in read) return true
+        if ('model' in read) model = read.model
+        else
           add({
             provider: 'codex',
             account: config.account,
-            folder: projectFolder(mark.cwd),
+            folder,
             ...read.response,
-            ...(mark.model ? { model: mark.model } : {}),
+            ...(model ? { model } : {}),
           })
         return !full()
       })
-      // Of no thread's after all: skipped to its end, never read again.
-      if (mark.cwd === undefined || !wanted(projectFolder(mark.cwd))) mark.at = start.size
-      offsets[file] = mark
+      offsets[file] = { at, cwd, ...(model ? { model } : {}) }
     }
   }
   return { responses: [...byId.values()], offsets, more: false }
