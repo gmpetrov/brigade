@@ -11,10 +11,10 @@ import {
   DocumentBlockNoteView,
   editorFiles,
   editorSchema,
-  steadyDropCursor,
   type DocumentBlockEditor,
 } from '@/components/document-blocks'
 import type { DocumentEditorProps } from '@/components/document-editor'
+import { blockDropCursor, blockDropExtension } from '@/components/document-block-drop'
 import { checkboxTapExtension } from '@/components/document-checkbox'
 import { checklistLookExtension } from '@/components/document-checklist'
 import { agentTyping, typeNextUpdate, type Writer } from '@/components/document-typing'
@@ -124,8 +124,13 @@ function LiveEditor({
     withCollaboration({
       schema: editorSchema,
       ...editorFiles(documentId, self),
-      dropCursor: steadyDropCursor(),
-      extensions: [agentTyping(setTyping), checklistLookExtension(), checkboxTapExtension()],
+      dropCursor: blockDropCursor(),
+      extensions: [
+        agentTyping(setTyping),
+        checklistLookExtension(),
+        checkboxTapExtension(),
+        blockDropExtension(),
+      ],
       collaboration: {
         provider,
         fragment: doc.getXmlFragment(DOCUMENT_FRAGMENT),
@@ -284,8 +289,8 @@ function SavedDocument({
   const editor = useCreateBlockNote({
     schema: editorSchema,
     ...editorFiles(session.documentId, self),
-    dropCursor: steadyDropCursor(),
-    extensions: [checklistLookExtension(), checkboxTapExtension()],
+    dropCursor: blockDropCursor(),
+    extensions: [checklistLookExtension(), checkboxTapExtension(), blockDropExtension()],
   })
   self.current = editor
   const [saved, setSaved] = useState(session.text)
