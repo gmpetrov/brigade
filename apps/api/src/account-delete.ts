@@ -7,20 +7,9 @@
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { billingEnabled, entitles, workspacePlan } from './billing.js'
-import { prisma, scoped } from './db.js'
-import type { SessionStatus } from './generated/prisma/enums.js'
-import type { WorkspaceScope } from './scope.js'
-import { deleteThread } from './thread-delete.js'
+import { prisma } from './db.js'
+import { checkMemberIdle, removeMember, type Membership } from './member-remove.js'
 import { checkWorkspaceIdle, deleteWorkspace } from './workspace-delete.js'
-
-const BUSY: SessionStatus[] = ['starting', 'running']
-
-type Membership = {
-  id: string
-  role: string
-  organizationId: string
-  organization: { name: string }
-}
 
 /** How each of the person's organizations goes: with them, or without them. */
 async function planFor(userId: string) {
@@ -69,73 +58,7 @@ async function check(plan: Awaited<ReturnType<typeof planFor>>) {
         })
     }
   }
-  for (const membership of plan.leaving) {
-    const busy = await prisma.session.count({
-      where: {
-        organizationId: membership.organizationId,
-        status: { in: BUSY },
-        OR: [
-          { startedByMemberId: membership.id },
-          { parent: { startedByMemberId: membership.id } },
-        ],
-      },
-    })
-    if (busy)
-      throw new HTTPException(409, {
-        message: `A teammate is working in a thread you started in ${membership.organization.name}. Stop it first, or wait for it to finish.`,
-      })
-  }
-}
-
-/**
- * The person leaves an organization others stay in: the threads they started go first, each with
- * its files (their rows would go with the membership, but not what they left in the bucket), and
- * the accounts they connected for themselves alone are disconnected.
- */
-async function leave(userId: string, membership: Membership) {
-  const { disconnect } = await import('./routes/connections.js')
-  const workspaces = await prisma.workspace.findMany({
-    where: { organizationId: membership.organizationId },
-    select: { id: true },
-  })
-  for (const { id: workspaceId } of workspaces) {
-    const scope: WorkspaceScope = {
-      organizationId: membership.organizationId,
-      workspaceId,
-      userId,
-      memberId: membership.id,
-      role: membership.role as WorkspaceScope['role'],
-    }
-    const db = scoped(scope)
-    const actor = { type: 'member' as const, id: membership.id }
-    const started = await db.session.findMany({
-      where: { startedByMemberId: membership.id },
-      select: { id: true },
-      orderBy: { createdAt: 'asc' },
-    })
-    for (const { id } of started) {
-      // A child thread went with its parent already.
-      if (!(await db.session.findFirst({ where: { id }, select: { id: true } }))) continue
-      await deleteThread(db, scope, actor, id)
-    }
-    const own = await db.connection.findMany({
-      where: { createdByMemberId: membership.id, reach: 'mine', status: { not: 'removed' } },
-      select: { id: true, kind: true, vaultSecretId: true, appId: true },
-    })
-    for (const connection of own)
-      await disconnect(scope, db, connection).catch((error: unknown) =>
-        console.warn(`deleting ${userId}: ${connection.id} not disconnected`, error),
-      )
-  }
-  await prisma.member.deleteMany({ where: { id: membership.id } })
-  await audit({
-    organizationId: membership.organizationId,
-    workspaceId: null,
-    actor: { type: 'member', id: membership.id },
-    action: 'member.removed',
-    target: { type: 'member', id: membership.id },
-    data: { reason: 'account deleted', userId },
-  })
+  for (const membership of plan.leaving) await checkMemberIdle(membership)
 }
 
 /** Delete the person's account, and the organizations they are alone in. */
@@ -164,7 +87,11 @@ export async function deleteAccount(userId: string) {
       })
     }
   }
-  for (const membership of plan.leaving) await leave(userId, membership)
+  for (const membership of plan.leaving)
+    await removeMember(userId, membership, {
+      actor: { type: 'member', id: membership.id },
+      reason: 'account deleted',
+    })
   // Their sign-ins, sessions, devices and the invitations they sent go with them.
   await prisma.user.deleteMany({ where: { id: userId } })
 }

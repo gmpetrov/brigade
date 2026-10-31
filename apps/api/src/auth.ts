@@ -256,12 +256,13 @@ export const auth = betterAuth({
 export type AuthSession = typeof auth.$Infer.Session
 
 /**
- * The plugin's invitation routes, closed over HTTP: the dashboard invites, cancels and joins
- * through src/routes/members.ts, which keeps the sending budget (src/invitation-budget.ts) and
- * calls them with auth.api.
+ * The plugin's invitation and member routes, closed over HTTP: the dashboard invites, cancels
+ * and joins through src/routes/members.ts, which keeps the sending budget
+ * (src/invitation-budget.ts) and calls them with auth.api, and changes roles and removes members
+ * there too, where a removed member's threads and files go with them (src/member-remove.ts).
  */
-const INVITATION_ROUTES =
-  /^\/api\/auth\/organization\/(invite-member|accept-invitation|reject-invitation|cancel-invitation)\/?$/
+const CLOSED_ROUTES =
+  /^\/api\/auth\/organization\/(invite-member|accept-invitation|reject-invitation|cancel-invitation|update-member-role|remove-member|leave)\/?$/
 
 export const authRouteClosed = (request: Request) =>
-  INVITATION_ROUTES.test(new URL(request.url).pathname)
+  CLOSED_ROUTES.test(new URL(request.url).pathname)

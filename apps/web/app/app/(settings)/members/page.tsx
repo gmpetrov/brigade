@@ -2,7 +2,8 @@
 // Members: the people of the organization, in every one of its workspaces, with their role.
 // Owners and admins invite more by email (only an owner invites an owner): the invited person
 // gets a link, signs in with that address and joins. Open invitations show below, to mail
-// again or cancel.
+// again or cancel. Owners and admins also change a member's role or remove them (only an owner
+// touches an owner); the organization keeps at least one owner.
 import { EllipsisVertical, Mail, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
@@ -13,6 +14,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
@@ -26,7 +31,8 @@ import {
 } from '@/components/ui/select'
 import { api, useApi, type MembersResponse } from '@/lib/api'
 
-type Role = MembersResponse['members'][number]['role']
+type Member = MembersResponse['members'][number]
+type Role = Member['role']
 
 const ROLES: { value: Role; label: string; description: string }[] = [
   {
@@ -101,6 +107,43 @@ export default function MembersPage() {
     )
     await data.reload()
   }
+
+  async function changeRole(member: Member, to: Role) {
+    if (to === member.role) return
+    setError(undefined)
+    setNote(undefined)
+    try {
+      await api(`/members/${member.id}`, { method: 'PATCH', body: { role: to } })
+      setNote(`${member.name || member.email} is now ${roleLabel(to).toLowerCase()}.`)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+    await data.reload()
+  }
+
+  async function remove(member: Member) {
+    const who = member.name || member.email
+    const from = organization?.name ?? 'the organization'
+    if (
+      !confirm(
+        `Remove ${who} from ${from}? They lose access to every workspace, and the threads they started are deleted with their files.`,
+      )
+    )
+      return
+    setError(undefined)
+    setNote(undefined)
+    try {
+      await api(`/members/${member.id}`, { method: 'DELETE' })
+      setNote(`${who} was removed from ${from}.`)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+    await data.reload()
+  }
+
+  /** An owner changes anyone, their own role too; an admin anyone but an owner, and not themselves. */
+  const canChange = (m: Member) =>
+    admin && (me.role === 'owner' || (m.role !== 'owner' && m.id !== me.memberId))
 
   // An admin may not invite an owner: the choice isn't offered.
   const roles = ROLES.filter((r) => r.value !== 'owner' || me.role === 'owner')
@@ -192,7 +235,10 @@ export default function MembersPage() {
       {data.data && (
         <Card className="gap-0 divide-y py-0">
           {data.data.members.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 py-2.5 pr-4 pl-4">
+            <div
+              key={m.id}
+              className={`flex items-center gap-3 py-2.5 pl-4 ${admin ? 'pr-3' : 'pr-4'}`}
+            >
               <Avatar className="size-8">
                 {m.image && <AvatarImage src={m.image} alt="" referrerPolicy="no-referrer" />}
                 <AvatarFallback className="bg-secondary text-sm font-bold">
@@ -209,6 +255,49 @@ export default function MembersPage() {
                 <span className="truncate text-xs text-muted-foreground">{m.email}</span>
               </div>
               <span className="text-sm text-muted-foreground">{roleLabel(m.role)}</span>
+              {canChange(m) ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`${m.name || m.email} options`}
+                    >
+                      <EllipsisVertical aria-hidden />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                      Role
+                    </DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={m.role}
+                      onValueChange={(v) => void changeRole(m, v as Role)}
+                    >
+                      {roles.map((r) => (
+                        <DropdownMenuRadioItem
+                          key={r.value}
+                          value={r.value}
+                          className="flex-col items-start gap-0 [&>span:first-child]:top-2.5"
+                        >
+                          {r.label}
+                          <span className="text-xs text-muted-foreground">{r.description}</span>
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                    {m.id !== me.memberId && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={() => void remove(m)}>
+                          Remove from {organization?.name ?? 'the organization'}
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                admin && <span aria-hidden className="size-8 shrink-0" />
+              )}
             </div>
           ))}
         </Card>

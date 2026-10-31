@@ -397,12 +397,15 @@ test('an address is mailed at most 3 times a day', { skip }, async () => {
   )
 })
 
-test("the plugin's invitation routes are closed over HTTP", { skip }, async () => {
+test("the plugin's invitation and member routes are closed over HTTP", { skip }, async () => {
   for (const path of [
     'invite-member',
     'accept-invitation',
     'reject-invitation',
     'cancel-invitation',
+    'update-member-role',
+    'remove-member',
+    'leave',
   ]) {
     const response = await call(`/api/auth/organization/${path}`, {
       body: { email: address('lee'), role: 'member', invitationId: 'x' },
@@ -519,4 +522,107 @@ test('a viewer joins, looks around and changes nothing', { skip }, async () => {
     cookie,
   })
   assert.equal(saved.status, 403)
+})
+
+/** Someone invited to the organization of `by` with `role`, joined: their cookie and member id. */
+async function joined(by: string, name: string, role: string) {
+  const email = address(name)
+  const id = await invite(by, email, role)
+  const cookie = await signIn(email)
+  assert.equal((await call(`/api/invitations/${id}/accept`, { body: {}, cookie })).status, 200)
+  const listed = (await (await call('/api/members', { cookie })).json()) as {
+    members: { id: string; email: string }[]
+  }
+  return { cookie, memberId: listed.members.find((m) => m.email === email)!.id }
+}
+
+const roleOf = async (id: string) =>
+  (await prisma.member.findUnique({ where: { id }, select: { role: true } }))?.role
+
+test('owners and admins change roles; an owner stays', { skip }, async () => {
+  const org = await founder('rolf')
+  const [owner] = await prisma.member.findMany({ where: { organizationId: org.organizationId } })
+  const admin = await joined(org.cookie, 'rolf-admin', 'admin')
+  const member = await joined(org.cookie, 'rolf-member', 'member')
+  const patch = (cookie: string, id: string, role: string) =>
+    call(`/api/members/${id}`, { method: 'PATCH', body: { role }, cookie })
+
+  // An admin changes a member, never into an owner, and never an owner.
+  assert.equal((await patch(admin.cookie, member.memberId, 'viewer')).status, 200)
+  assert.equal(await roleOf(member.memberId), 'viewer')
+  const toOwner = await patch(admin.cookie, member.memberId, 'owner')
+  assert.equal(toOwner.status, 403)
+  assert.equal(
+    ((await toOwner.json()) as { error: string }).error,
+    'Only an owner can make someone an owner',
+  )
+  assert.equal((await patch(admin.cookie, owner!.id, 'member')).status, 403)
+  assert.equal(await roleOf(owner!.id), 'owner')
+  // A member or viewer changes no one.
+  assert.equal((await patch(member.cookie, admin.memberId, 'viewer')).status, 403)
+  assert.equal(await roleOf(admin.memberId), 'admin')
+  // The only owner can't step down; once another owner exists, they can.
+  assert.equal((await patch(org.cookie, owner!.id, 'admin')).status, 409)
+  assert.equal((await patch(org.cookie, admin.memberId, 'owner')).status, 200)
+  assert.equal((await patch(org.cookie, owner!.id, 'admin')).status, 200)
+  assert.equal(await roleOf(owner!.id), 'admin')
+  // Not a member of another organization.
+  const other = await founder('rolf-other')
+  assert.equal((await patch(other.cookie, member.memberId, 'member')).status, 404)
+
+  const audited = await prisma.auditEntry.findMany({
+    where: { organizationId: org.organizationId, action: 'member.role_changed' },
+    select: { data: true },
+    orderBy: { at: 'asc' },
+  })
+  assert.deepEqual(
+    audited.map((a) => a.data),
+    [
+      { from: 'member', to: 'viewer' },
+      { from: 'admin', to: 'owner' },
+      { from: 'owner', to: 'admin' },
+    ],
+  )
+})
+
+test('owners and admins remove members, who leave the organization', { skip }, async () => {
+  const org = await founder('remy')
+  const [owner] = await prisma.member.findMany({ where: { organizationId: org.organizationId } })
+  const admin = await joined(org.cookie, 'remy-admin', 'admin')
+  const member = await joined(org.cookie, 'remy-member', 'member')
+  const remove = (cookie: string, id: string) =>
+    call(`/api/members/${id}`, { method: 'DELETE', cookie })
+
+  assert.equal((await remove(member.cookie, admin.memberId)).status, 403)
+  assert.equal((await remove(admin.cookie, owner!.id)).status, 403)
+  assert.equal((await remove(admin.cookie, admin.memberId)).status, 400)
+  assert.equal((await remove(admin.cookie, member.memberId)).status, 204)
+  assert.equal(await roleOf(member.memberId), undefined)
+  // Out of it: no longer in it, nor shown its members.
+  const me = await meOf(member.cookie)
+  assert.equal(me.activeOrganizationId, null)
+  assert.deepEqual(me.organizations, [])
+  assert.equal((await call('/api/members', { cookie: member.cookie })).status, 409)
+  assert.equal((await remove(admin.cookie, member.memberId)).status, 404)
+  // An owner removes an admin.
+  assert.equal((await remove(org.cookie, admin.memberId)).status, 204)
+  const listed = (await (await call('/api/members', { cookie: org.cookie })).json()) as {
+    members: { id: string }[]
+  }
+  assert.deepEqual(
+    listed.members.map((m) => m.id),
+    [owner!.id],
+  )
+  const audited = await prisma.auditEntry.findMany({
+    where: { organizationId: org.organizationId, action: 'member.removed' },
+    select: { actorId: true, targetId: true },
+    orderBy: { at: 'asc' },
+  })
+  assert.deepEqual(
+    audited.map((a) => [a.actorId, a.targetId]),
+    [
+      [admin.memberId, member.memberId],
+      [owner!.id, admin.memberId],
+    ],
+  )
 })
