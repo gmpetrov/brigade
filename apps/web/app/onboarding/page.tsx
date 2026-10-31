@@ -31,6 +31,7 @@ import {
   type AccountLogin,
   type ComputersResponse,
   type Me,
+  type OpenInvitation,
   type Teammate,
   type ThreadSummary,
 } from '@/lib/api'
@@ -116,6 +117,28 @@ export default function Onboarding() {
     void reload()
   }, [reload])
 
+  // Someone invited and not in an organization yet: join one rather than start their own.
+  const [invitations, setInvitations] = useState<OpenInvitation[]>([])
+  const noOrganization = !!me && !me.activeOrganizationId
+  useEffect(() => {
+    if (!noOrganization) return
+    api<OpenInvitation[]>('/invitations')
+      .then(setInvitations)
+      .catch(() => setInvitations([]))
+  }, [noOrganization])
+
+  async function join(invitation: OpenInvitation) {
+    setBusy(true)
+    setError(undefined)
+    try {
+      await api(`/invitations/${encodeURIComponent(invitation.id)}/accept`, { body: {} })
+      await reload()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+    setBusy(false)
+  }
+
   /** A new organization and its first workspace, both named after the project. */
   async function createProject(form: FormData) {
     setBusy(true)
@@ -165,6 +188,26 @@ export default function Onboarding() {
         title="What are you building?"
         description="Name your project. Your AI team works on it, and you can rename it later."
       >
+        {invitations.length > 0 && (
+          <Card>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-sm text-muted-foreground">You were invited to join:</p>
+              {invitations.map((i) => (
+                <div key={i.id} className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-semibold">{i.organization}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      Invited by {i.invitedBy}
+                    </span>
+                  </div>
+                  <Button disabled={busy} onClick={() => void join(i)}>
+                    Join
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardContent>
             <form action={createProject} className="flex flex-col gap-5">

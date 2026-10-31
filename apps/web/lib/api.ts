@@ -321,6 +321,47 @@ export type Me = {
   autoMerge: boolean
 }
 
+/** Settings › Members (GET /api/members): invitations only for owners and admins. */
+export type MembersResponse = {
+  members: {
+    id: string
+    name: string
+    email: string
+    image: string | null
+    role: 'owner' | 'admin' | 'member'
+    joinedAt: string
+  }[]
+  invitations: {
+    id: string
+    email: string
+    role: 'owner' | 'admin' | 'member'
+    invitedBy: string
+    expiresAt: string
+  }[]
+}
+
+/** An invitation as its invited person sees it at /invite/<id> (GET /api/invitations/:id). */
+export type InvitationView =
+  | { id: string; forYou: false; signedInAs: string }
+  | {
+      id: string
+      forYou: true
+      signedInAs: string
+      organization: string
+      invitedBy: string
+      role: 'owner' | 'admin' | 'member'
+      /** A member of it already. */
+      member: boolean
+    }
+
+/** The invitations open for the signed-in address (GET /api/invitations). */
+export type OpenInvitation = {
+  id: string
+  organization: string
+  invitedBy: string
+  role: 'owner' | 'admin' | 'member'
+}
+
 export type Teammate = {
   id: string
   name: string

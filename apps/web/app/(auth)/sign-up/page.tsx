@@ -7,7 +7,7 @@ import { GoogleSignIn } from '@/components/google-sign-in'
 import { AuthLink } from '@/components/landing/auth-link'
 import { LegalConsent } from '@/components/legal-consent'
 import { Card, CardContent } from '@/components/ui/card'
-import { markSignedIn } from '@/lib/signed-in'
+import { afterSignIn, markSignedIn } from '@/lib/signed-in'
 
 export default function SignUp() {
   const router = useRouter()
@@ -34,7 +34,10 @@ export default function SignUp() {
               submitLabel="Create account"
               onSignedIn={() => {
                 markSignedIn()
-                router.push('/onboarding')
+                // On to ?next= (an invitation, say), else onboarding.
+                const next = afterSignIn()
+                if (next === '/app') router.push('/onboarding')
+                else location.assign(next)
               }}
             />
             <LegalConsent />

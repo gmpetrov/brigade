@@ -16,7 +16,11 @@ export function afterSignIn() {
   if (!next) return '/app'
   try {
     const url = new URL(next, location.origin)
-    if (url.origin === location.origin && url.pathname.startsWith('/app')) return url.href
+    if (
+      url.origin === location.origin &&
+      (url.pathname.startsWith('/app') || url.pathname.startsWith('/invite/'))
+    )
+      return url.href
     if (
       url.origin === new URL(API_URL).origin &&
       url.pathname.startsWith('/api/connections/oauth/')

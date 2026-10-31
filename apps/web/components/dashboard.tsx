@@ -26,6 +26,7 @@ import {
   SlidersHorizontal,
   Sun,
   UserRound,
+  Users,
   UsersRound,
   FolderKanban,
   type LucideIcon,
@@ -173,6 +174,7 @@ export const SETTINGS_GROUPS: {
     label: 'Workspace',
     items: [
       { href: '/app/workspace', label: 'General', icon: Building2, search: 'Workspace' },
+      { href: '/app/members', label: 'Members', icon: Users },
       { href: '/app/computers', label: 'Computers', icon: Monitor },
       { href: '/app/usage', label: 'Usage', icon: ChartColumn },
       { href: '/app/billing', label: 'Billing', icon: CreditCard },
@@ -416,6 +418,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     window.location.href = '/app'
   }
 
+  /** To another organization the member belongs to (one they were invited to, say). */
+  async function switchOrganization(organizationId: string) {
+    await api('/organizations/switch', { body: { organizationId } })
+    window.location.href = '/app'
+  }
+  const otherOrganizations = data.organizations.filter((o) => o.id !== data.activeOrganizationId)
+
   async function signOut() {
     // The demo has no account to leave: the way out is signing up for real.
     if (DEMO) return signUp()
@@ -485,6 +494,22 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                             <DropdownMenuItem onSelect={() => router.push('/onboarding')}>
                               <Plus /> New workspace
                             </DropdownMenuItem>
+                          </>
+                        )}
+                        {otherOrganizations.length > 0 && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="text-muted-foreground text-xs">
+                              Other organizations
+                            </DropdownMenuLabel>
+                            {otherOrganizations.map((o) => (
+                              <DropdownMenuItem
+                                key={o.id}
+                                onSelect={() => void switchOrganization(o.id)}
+                              >
+                                <Building2 /> {o.name}
+                              </DropdownMenuItem>
+                            ))}
                           </>
                         )}
                       </DropdownMenuContent>
