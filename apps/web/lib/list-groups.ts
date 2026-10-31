@@ -13,7 +13,7 @@ export const listRowId = (documentId: string) => `${PREFIX}${documentId}`
  * The threads with those of each list replaced by one row for the list, where its first
  * thread was. Its status is its threads' most pressing (waiting on a person, then working),
  * so a thread that needs someone is never hidden behind a quiet row; its threads are its
- * children.
+ * children, each with its own child threads.
  */
 export function groupByList(threads: ThreadSummary[]): ThreadSummary[] {
   const lists = new Map<string, ThreadSummary[]>()
@@ -51,6 +51,8 @@ function listRow(threads: ThreadSummary[]): ThreadSummary {
     updatedAt: t.updatedAt,
     unread: !!t.unread,
     previewRunning: !!t.previewRunning,
+    // Its child threads fold under it, as under a thread outside a list.
+    children: t.children ?? [],
   }))
   return {
     ...first,
