@@ -341,22 +341,29 @@ export async function askedBy(db: ScopedDb, sessionId: string): Promise<string |
   return askedByEvents(db, sessionId)
 }
 
-/** Whose request a thread from before Session.askedByMemberId works on: its latest person's input. */
-async function askedByEvents(db: ScopedDb, sessionId: string) {
-  const latest = await db.sessionEvent.findMany({
-    where: {
-      sessionId,
-      type: { in: ['message.user', 'question.answered', 'ticket.answered', 'approval.resolved'] },
-    },
-    orderBy: { seq: 'desc' },
-    select: { data: true },
-    take: 20,
-  })
-  for (const { data } of latest) {
+/** The person's inputs that tell whose request a thread from before askedByMemberId works on. */
+const personInputs = (sessionId: string) => ({
+  where: {
+    sessionId,
+    type: { in: ['message.user', 'question.answered', 'ticket.answered', 'approval.resolved'] },
+  },
+  orderBy: { seq: 'desc' as const },
+  select: { data: true },
+  take: 20,
+})
+
+/** The member who wrote the latest of them. */
+const latestAsker = (rows: { data: unknown }[]) => {
+  for (const { data } of rows) {
     const memberId = (data as { memberId?: string | null } | null)?.memberId
     if (memberId) return memberId
   }
   return null
+}
+
+/** Whose request a thread from before Session.askedByMemberId works on: its latest person's input. */
+async function askedByEvents(db: ScopedDb, sessionId: string) {
+  return latestAsker(await db.sessionEvent.findMany(personInputs(sessionId)))
 }
 
 /** Several members asked in a thread: no one member's own App account answers it any more. */
@@ -376,7 +383,9 @@ export async function noteAsker(db: ScopedDb, sessionId: string, memberId: strin
       SELECT "askedByMemberId" FROM "Session" WHERE id = ${thread.id} FOR UPDATE`
     if (!row) return
     // Unknown (a thread from before it was kept): read from what people wrote in it.
-    const before = row.askedByMemberId ?? (await askedByEvents(db, thread.id))
+    // On the transaction's own connection: it holds the lock, and needs no other from the pool.
+    const before =
+      row.askedByMemberId ?? latestAsker(await tx.sessionEvent.findMany(personInputs(thread.id)))
     const next = !before || before === memberId ? memberId : SEVERAL_ASKERS
     if (next !== row.askedByMemberId)
       await tx.session.update({ where: { id: thread.id }, data: { askedByMemberId: next } })

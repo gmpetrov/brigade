@@ -620,6 +620,47 @@ describe('threads others write in', { skip: !database && 'no database answers' }
     assert.match(((await edit.json()) as { error: string }).error, /only they can change it/)
   })
 
+  test('settling a thread from before needs no second connection from a full pool', async () => {
+    const { newPrismaClient, withPrismaClient } = await import('../src/db.js')
+    const { noteAsker } = await import('../src/thread-spec.js')
+    const id = await legacy(await thread('ada', cloud))
+    await say(id, 1, 'message.user', member('ada'))
+    const url = new URL(process.env.DATABASE_URL!)
+    const name = `review-note-${suffix}`
+    url.searchParams.set('application_name', name)
+    const limited = newPrismaClient(url.toString(), { max: 3 })
+    let results!: Promise<PromiseSettledResult<unknown>[]>
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "Session" WHERE id = ${id} FOR UPDATE`
+        results = withPrismaClient(limited, () => {
+          const limitedDb = scoped({ organizationId: org, workspaceId })
+          return Promise.allSettled(
+            ['ada', 'bob', 'ada'].map((p) => noteAsker(limitedDb, id, member(p as Person))),
+          )
+        })
+        let waiting = 0
+        for (let i = 0; i < 150; i++) {
+          const rows = await tx.$queryRaw<
+            { n: bigint }[]
+          >`SELECT count(*) as n FROM pg_stat_activity WHERE application_name = ${name} AND wait_event_type = 'Lock'`
+          waiting = Number(rows[0]?.n)
+          if (waiting === 3) break
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        assert.equal(waiting, 3, 'all three transaction connections wait on the same row')
+      })
+      const settled = await results
+      assert.deepEqual(
+        settled.map((r) => r.status),
+        ['fulfilled', 'fulfilled', 'fulfilled'],
+      )
+    } finally {
+      await results?.catch(() => {})
+      await limited.$disconnect()
+    }
+  })
+
   test('a removed member’s threads stay with the team, but those on their own computer', async () => {
     const { removeMember } = await import('../src/member-remove.js')
     const mac = (
