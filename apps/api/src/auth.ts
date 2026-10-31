@@ -9,6 +9,7 @@ import { guardOrganizationDeletion } from './billing.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { desktopSignIn } from './desktop-sign-in.js'
+import { INVITATION_DAYS, sendInvitation } from './invitation-mail.js'
 import { passwordSignIn } from './password-sign-in.js'
 import { CODE_MINUTES, sendSignInCode } from './sign-in-code.js'
 
@@ -118,6 +119,16 @@ export const auth = betterAuth({
     organization({
       // An invitation goes to an address: only its proven owner may take it.
       requireEmailVerificationOnInvitation: true,
+      invitationExpiresIn: INVITATION_DAYS * 24 * 60 * 60,
+      // Settings › Members invites (src/routes/members.ts); the link leads to /invite/<id>.
+      sendInvitationEmail: ({ id, email, role, organization, inviter }) =>
+        sendInvitation({
+          id,
+          email,
+          role,
+          organization: organization.name,
+          inviter: { name: inviter.user.name, email: inviter.user.email },
+        }),
       organizationHooks: {
         afterCreateOrganization: async ({ organization, user }) =>
           audit({
@@ -196,6 +207,25 @@ export const auth = betterAuth({
             action: 'invitation.created',
             target: { type: 'invitation', id: invitation.id },
             data: { email: invitation.email, role: invitation.role },
+          }),
+        afterCancelInvitation: async ({ invitation, cancelledBy, organization }) =>
+          audit({
+            organizationId: organization.id,
+            workspaceId: null,
+            actor: await memberActor(organization.id, cancelledBy.id),
+            action: 'invitation.canceled',
+            target: { type: 'invitation', id: invitation.id },
+            data: { email: invitation.email },
+          }),
+        // Joined by their invitation: the same entry as a member added, by the one who joined.
+        afterAcceptInvitation: async ({ invitation, member, organization }) =>
+          audit({
+            organizationId: organization.id,
+            workspaceId: null,
+            actor: { type: 'member', id: member.id },
+            action: 'member.added',
+            target: { type: 'member', id: member.id },
+            data: { role: member.role, invitationId: invitation.id },
           }),
       },
     }),

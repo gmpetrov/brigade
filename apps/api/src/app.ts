@@ -59,6 +59,7 @@ import { runnerInstall } from './routes/runner-install.js'
 import { teammates } from './routes/teammates.js'
 import { threads } from './routes/threads.js'
 import { workspaces } from './routes/workspaces.js'
+import { members } from './routes/members.js'
 import { mcpClientDocument } from './connectors/mcp.js'
 import { resolveScope, signInFirst } from './scope.js'
 import { serverTiming } from './timing.js'
@@ -154,6 +155,7 @@ app.use('/api/connections/oauth/*', signInFirst)
 app.route('/api/bucket', localBucket)
 app.route('/api/errors', errors)
 app.route('/api', workspaces)
+app.route('/api', members)
 app.route('/api/teammates', teammates)
 app.route('/api/computers', computers)
 app.route('/api/billing', billing)
