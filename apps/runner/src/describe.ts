@@ -99,7 +99,6 @@ export async function describeProject(request: Request): Promise<Result> {
         account: request.account,
         teammate: { harness: request.account.provider, model: null },
       },
-      noTools: true,
       workDir,
       prompt: describePrompt(request.url, request.text, request.logos),
       model: TITLE_MODEL[request.account.provider],

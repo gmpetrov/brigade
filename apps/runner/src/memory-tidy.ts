@@ -11,11 +11,13 @@ import {
   MEMORY_TIDY_AT,
   MemoryLayout,
   memoryLineCount,
+  memoryLineKey,
   parseMemoryFile,
   tidyTakesTooMuch,
   type MemoryFileRef,
   type MemoryLineMeta,
   type MemoryScope,
+  withoutShownDay,
 } from '@brigade/contracts'
 import { z } from 'zod'
 import { memoryDay, numberedMemory } from './memory-layers.js'
@@ -67,6 +69,15 @@ export function inWords(reason: string | undefined, lines: string[]) {
 
 /** Lines named by number, or by their text when a run writes that instead. */
 export const LineRef = z.union([z.number().int(), z.string()])
+/**
+ * The line a run names, by its number or its text: its text as the file has it, which is
+ * how the API finds it. A text is matched with or without the day the run read after it.
+ */
+export function lineAt(lines: string[], ref: number | string): string | null {
+  if (typeof ref === 'number') return lines[ref - 1] ?? null
+  const key = memoryLineKey(withoutShownDay(ref))
+  return lines.find((l) => memoryLineKey(withoutShownDay(l)) === key) ?? (ref.trim() || null)
+}
 /** A list that keeps the items it can read and drops the others. */
 export const lenientList = <T extends z.ZodTypeAny>(item: T) =>
   z
@@ -131,7 +142,7 @@ export function tidyRun(file: TidyFile, now = new Date()) {
     'Reply with only one JSON object and nothing else, in this shape:',
     '{"core": [1, 4], "topics": [{"name": "Sidebar", "description": "What the sidebar shows and how it behaves", "lines": [12, 13]}], "merge": [{"lines": [40, 41], "text": "…", "topic": "Sidebar"}], "archive": [{"line": 33, "reason": "…"}]}',
     [
-      `- core: the lines nearly every thread needs before it starts: how the team wants work done, decisions that hold everywhere, pitfalls that can do harm (a live account, production data). At most ${budget.toLocaleString('en')} characters in all, merged lines put in the core included (the core has ${numbered.coreChars.toLocaleString('en')} now); everything else goes in topics.`,
+      `- core: the lines nearly every thread needs before it starts: how the team wants work done, decisions that hold everywhere, pitfalls that can do harm (a live account, production data). At most ${budget.toLocaleString('en')} characters in all, merged lines put in the core included (the core has ${numbered.coreChars.toLocaleString('en')} now); everything else goes in topics.${file.scope === 'workspace' ? ' Every thread of every project loads this core: a line about one product, app or client rather than the workspace as a whole goes in a topic named after it.' : ''}`,
       '- topics: the other lines, grouped by what a thread would be working on when it needs them: a part of the product, a tool, a provider, a kind of task. Short names, each with a one-line description of when to read it; about 3 to 15 topics, none of a single line unless nothing else fits. Keep an existing topic and its name when it still fits.',
       '- merge: lines that each say part of the same thing, said once in a line that holds today, under a topic (null: the core); or a single line said again in the words of today (a feature renamed since). List those lines only in the merge, not in a topic too.',
       '- archive: lines that leave the file, each with a reason of a few words: a newer line replaced or contradicted it (say which in words), it is outdated (a plan since shipped, a "for now" or "until" whose time has passed, a feature since removed, a bug of a version long replaced), or another line already says all of it. A line about something still there stays, even if it is being phased out. When two lines disagree about the same case, the newer one wins; lines about different cases both stay. A line a person wrote outranks one a teammate learned, and goes only when a newer line replaces it. Never archive a line only because it is old, long or rarely useful: archived lines leave every thread.',
@@ -158,8 +169,7 @@ export function tidyRun(file: TidyFile, now = new Date()) {
     const parsed = Answer.safeParse(json)
     if (!parsed.success) return null
     const answer = parsed.data
-    const line = (ref: number | string) =>
-      typeof ref === 'number' ? (numbered.lines[ref - 1] ?? null) : ref.trim() || null
+    const line = (ref: number | string) => lineAt(numbered.lines, ref)
     const lines = (refs: (number | string)[]) =>
       refs.flatMap((r) => {
         const text = line(r)
@@ -178,10 +188,7 @@ export function tidyRun(file: TidyFile, now = new Date()) {
       merge: answer.merge
         .map((m) => ({
           from: lines(m.lines).slice(0, 20),
-          text: m.text
-            .trim()
-            .replace(/\s*\n\s*/g, ' ')
-            .slice(0, 1000),
+          text: withoutShownDay(m.text.trim().replace(/\s*\n\s*/g, ' ')).slice(0, 1000),
           topic: m.topic?.trim().slice(0, 60) || null,
         }))
         .filter((m) => m.from.length >= 1 && m.text)

@@ -126,3 +126,32 @@ test('files that need tidying once the update is applied are named, with the new
   assert.ok(files[0]!.fresh.has(memoryLineKey('A new lesson.')))
   assert.equal(files[0]!.lastTidied, null)
 })
+
+test('a line a run writes keeps none of the days it read, and a line it names by its text is found', () => {
+  const { parse } = run()
+  const update = parse(
+    JSON.stringify({
+      summary: 'x',
+      project: {
+        add: [{ text: 'Sections collapse by their title. (21 Oct)', topic: 'Sidebar' }],
+        replace: [{ line: 3, text: 'The ⋮ menu shows on hover or focus. (19 Oct) (21 Oct)' }],
+        // Named as the run read it, with its day.
+        confirm: ['Esc never stops a run. (19 Oct, by Ada)'],
+      },
+    }),
+  )!
+  assert.deepEqual(update.project?.lines, [
+    { text: 'Sections collapse by their title.', topic: 'Sidebar' },
+  ])
+  assert.deepEqual(update.project?.replace, [
+    { from: 'The ⋮ menu shows on hover.', to: 'The ⋮ menu shows on hover or focus.' },
+  ])
+  assert.deepEqual(update.project?.confirm, ['Esc never stops a run.'])
+})
+
+test('workspace memory keeps lines about one product out of its core', () => {
+  assert.match(
+    run().prompt,
+    /A line about one product, app or client rather than the workspace as a whole goes under a topic named after it, never in the core/,
+  )
+})

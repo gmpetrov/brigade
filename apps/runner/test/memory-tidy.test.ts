@@ -137,3 +137,32 @@ test('a layout is judged by what its result takes away, however it does it', () 
   }))
   assert.equal(run.parse(JSON.stringify({ merge })), null)
 })
+
+test("a merged line keeps none of the days the run read, and workspace memory's core is the whole workspace's", () => {
+  const run = tidyRun(file(flat))
+  const layout = run.parse(
+    JSON.stringify({
+      core: [1, 2, 3, 4],
+      merge: [
+        {
+          lines: [5, "Stripe MCP can't delete webhooks. (21 Oct)"],
+          text: "Stripe's MCP can't delete webhooks. (21 Oct)",
+          topic: null,
+        },
+      ],
+    }),
+  )!
+  assert.deepEqual(layout.merge, [
+    {
+      from: ["Stripe's MCP cannot delete webhooks.", "Stripe MCP can't delete webhooks."],
+      text: "Stripe's MCP can't delete webhooks.",
+      topic: null,
+    },
+  ])
+  assert.doesNotMatch(run.prompt, /a line about one product/)
+  const workspace = tidyRun(file(flat, { scope: 'workspace', about: "the workspace's memory" }))
+  assert.match(
+    workspace.prompt,
+    /Every thread of every project loads this core: a line about one product/,
+  )
+})

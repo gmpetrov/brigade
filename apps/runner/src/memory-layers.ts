@@ -11,6 +11,7 @@ import {
   type MemoryLineMeta,
   type MemoryScope,
   type ThreadSpec,
+  withoutShownDay,
 } from '@brigade/contracts'
 
 /** What the runner knows of memory, from the library manifest. */
@@ -133,7 +134,9 @@ function topic(name: string, description: string, lines: DatedLine[], now: Date)
   }
 }
 
-const bullet = (line: DatedLine) => `- ${line.text}${line.note}`
+/** A line with its day after it; a day a run copied into its text once is not shown again. */
+const dated = (text: string, note: string) => `${note ? withoutShownDay(text) : text}${note}`
+const bullet = (line: DatedLine) => `- ${dated(line.text, line.note)}`
 
 /** A topic's file: its name, what it holds, and its lines. */
 export function topicFile(topic: LayeredTopic, of: string) {
@@ -250,7 +253,7 @@ export function memoryNews(memory: ThreadMemory, loaded: ReadonlySet<string>, to
       for (const line of lines) {
         if (loaded.has(line.key) || told.has(line.key)) continue
         const note = line.note ? line.note.replace(/\)$/, `, ${where})`) : ` (${where})`
-        const text = `- ${line.text}${note}`
+        const text = `- ${dated(line.text, note)}`
         if (news.length >= NEWS_LINES || size + text.length > NEWS_CHARS) return
         news.push(text)
         size += text.length
@@ -286,7 +289,7 @@ export function numberedMemory(
   const show = (line: { text: string; key: string }) => {
     lines.push(line.text)
     const note = fresh.has(line.key) ? today : lineNote(meta[line.key], now)
-    return `[${lines.length}] ${line.text}${note}`
+    return `[${lines.length}] ${dated(line.text, note)}`
   }
   const out = ['Core:', ...(layers.core.length ? layers.core.map(show) : ['(nothing yet)'])]
   for (const topic of layers.topics)

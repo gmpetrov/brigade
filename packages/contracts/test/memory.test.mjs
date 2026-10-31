@@ -354,3 +354,23 @@ test('the limit is checked on the file as written, separators and emptied topics
   assert.equal(tight.dropped, 1)
   assert.equal(tight.text, '# M\n')
 })
+
+test('the days memory shows after a line come off its text, and nothing else does', async () => {
+  const { withoutShownDay } = await import('../dist/memory.js')
+  assert.equal(
+    withoutShownDay('Stripe connects live accounts. (30 Oct)'),
+    'Stripe connects live accounts.',
+  )
+  // Copied twice, a past year, before a day, by a person.
+  assert.equal(withoutShownDay('A line. (30 Oct) (29 Oct)'), 'A line.')
+  assert.equal(withoutShownDay('A line. (2 Dec 2025)'), 'A line.')
+  assert.equal(withoutShownDay('A line. (before 20 Oct, by Ada)'), 'A line.')
+  // Brackets that are not a day stay, and so does a day inside the line.
+  assert.equal(withoutShownDay('Runs 8 turns at once (not 4)'), 'Runs 8 turns at once (not 4)')
+  assert.equal(withoutShownDay('Asked by Ada (by mail)'), 'Asked by Ada (by mail)')
+  assert.equal(
+    withoutShownDay('Since (30 Oct) PRs are squash-merged.'),
+    'Since (30 Oct) PRs are squash-merged.',
+  )
+  assert.equal(withoutShownDay('Talks at 10 Oct.'), 'Talks at 10 Oct.')
+})

@@ -177,3 +177,23 @@ test('a running session is told, once, the lines memory learned since it started
   // Nothing new: nothing said.
   assert.equal(memoryNews(started, loaded, new Set()), '')
 })
+
+test('a day a run once copied into a line is not shown twice', () => {
+  const copied = '# Brigade memory\n\n- Stripe connects live accounts. (30 Oct)\n'
+  const at = {
+    [memoryLineKey('Stripe connects live accounts. (30 Oct)')]: { at: '2026-10-31T09:00:00Z' },
+  }
+  assert.equal(
+    memorySection(layerMemory(copied, 'project', at, now), '/work', 'project'),
+    '- Stripe connects live accounts. (31 Oct)',
+  )
+  const numbered = numberedMemory(copied, at, now)
+  assert.equal(numbered.text, 'Core:\n[1] Stripe connects live accounts. (31 Oct)')
+  // Its text as the file has it, which is how the API finds it.
+  assert.deepEqual(numbered.lines, ['Stripe connects live accounts. (30 Oct)'])
+  // With no day of its own, the one in its text is all it has: it stays.
+  assert.equal(
+    memorySection(layerMemory(copied, 'project', {}, now), '/work', 'project'),
+    '- Stripe connects live accounts. (30 Oct)',
+  )
+})

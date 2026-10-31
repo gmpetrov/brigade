@@ -15,10 +15,11 @@ import {
   type MemoryFileRef,
   type MemoryScope,
   type ThreadSpec,
+  withoutShownDay,
 } from '@brigade/contracts'
 import { z } from 'zod'
 import { numberedMemory, type MemorySnapshot } from './memory-layers.js'
-import { inWords, lenientList, LineRef, needsTidy, type TidyFile } from './memory-tidy.js'
+import { inWords, lenientList, lineAt, LineRef, needsTidy, type TidyFile } from './memory-tidy.js'
 
 /** How much of the conversation a memory run reads. */
 const CONVERSATION_CHARS = 60_000
@@ -139,7 +140,7 @@ export function memoryRun(input: {
         (input.summary ? ' (update the previous summary below with what happened since).' : '.'),
       spec.private
         ? '- workspace: leave every list empty; this thread is private.'
-        : `- workspace: what any teammate should know before starting an unrelated thread next month, and could not find out on its own: how the team wants things done (rules, preferences, decisions as they stand), who is who on the team, where something is when that is not obvious, and pitfalls (such as a connector that reaches a test account, not the live one).${project ? ` Only what holds for all of the workspace's work: what is about the project "${project.name}" goes in project.` : ''}`,
+        : `- workspace: what any teammate should know before starting an unrelated thread next month, and could not find out on its own: how the team wants things done (rules, preferences, decisions as they stand), who is who on the team, where something is when that is not obvious, and pitfalls (such as a connector that reaches a test account, not the live one).${project ? ` Only what holds for all of the workspace's work: what is about the project "${project.name}" goes in project.` : ''} A line about one product, app or client rather than the workspace as a whole goes under a topic named after it, never in the core: every thread of every project loads the core.`,
       project &&
         (spec.private
           ? '- project: leave every list empty; this thread is private.'
@@ -243,13 +244,9 @@ export function memoryRun(input: {
 /** A run's edit of one file, its line numbers turned back into the lines' text. */
 function toEdit(edit: FileEdit | undefined, file: RunFile): MemoryEdit {
   if (!edit) return NO_MEMORY_EDIT
-  const line = (ref: number | string) =>
-    typeof ref === 'number' ? (file.lines[ref - 1] ?? null) : ref.trim() || null
+  const line = (ref: number | string) => lineAt(file.lines, ref)
   const clip = (text: string) =>
-    text
-      .trim()
-      .replace(/\s*\n\s*/g, ' ')
-      .slice(0, 1000)
+    withoutShownDay(text.trim().replace(/\s*\n\s*/g, ' ')).slice(0, 1000)
   const replace = edit.replace.flatMap((r) => {
     const from = line(r.line)
     const to = clip(r.text)

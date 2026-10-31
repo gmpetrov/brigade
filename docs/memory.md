@@ -36,7 +36,9 @@ repeats piled up where nothing read them. Memory now has layers, dates and an ar
   corrects (`replace`: the new text takes the old one's place), lines to archive with
   why, and lines the conversation showed still true (`confirm`: their date moves to
   today). The runner turns numbers back into the lines' text, which is how the API finds
-  them, so edits that cross never apply to the wrong line.
+  them, so edits that cross never apply to the wrong line. A day a run copies from what it
+  read into a line it writes is taken off (`withoutShownDay`), so a line never shows two;
+  one copied before that is not shown again when the line has a day of its own.
 - **Verified where it is used.** No run audits the code for memory's sake: the teammate
   with the repository open checks a line before relying on it and says in its reply when
   one is wrong; the memory run then replaces or archives it, and confirms the lines that
@@ -58,6 +60,12 @@ repeats piled up where nothing read them. Memory now has layers, dates and an ar
   admin's approval, which would make tickets nobody asked for.
 - **Cost.** One-off runs (memory, tidy, titles) use Claude Code's 5-minute prompt cache:
   their prompt is read once, and the one-hour cache writes it at twice the input price.
+  Their prompt holds all they need, so they get no tools and, on Claude Code, a system
+  prompt of their own: Claude Code's, written for its tools, was most of each run (about
+  20,000 tokens to name a thread, a few hundred now).
+- **One product, one topic.** Every thread of every project loads the workspace's core, so
+  memory and tidy runs keep a line about one product, app or client in a topic named after
+  it.
 
 ## Where it is
 

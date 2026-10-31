@@ -73,6 +73,7 @@ import {
   type WaitingApproval,
   type WaitingCall,
 } from './closed-turn.js'
+import { claudeSettingsEnv } from './claude-settings.js'
 import { harnessEnv } from './env.js'
 import { reportRunUsage } from '../usage.js'
 import {
@@ -1684,12 +1685,14 @@ export class HarnessThread {
       port: await freePort(),
       // The runner, not Claude Code, asks for a reply the turn did not give (ReplyWatch). After
       // each turn, Claude Code guesses the person's next message where the thread wants it.
+      // Claude Code's own schedules, memory and the like are off (claude-settings.ts).
       env:
         this.spec.teammate.harness === 'codex'
           ? env
           : {
               ...env,
               ...terminalTools(tools),
+              ...claudeSettingsEnv(),
               ...(this.spec.suggestions ? { BRIGADE_PROMPT_SUGGESTIONS: '1' } : {}),
             },
       ...(this.runAs ? { runAs: this.runAs, thread: this.spec.sessionId } : {}),
@@ -1938,21 +1941,26 @@ async function listAs(folder: string, runAs?: string): Promise<string[]> {
 const resolvePath = (workDir: string, file: string) =>
   file.startsWith('/') ? file : join(workDir, file)
 
+/** A run of runOnce's whole system prompt on Claude Code, instead of Claude Code's own. */
+const RUN_SYSTEM =
+  'You do one short job for Brigade, a workspace where people work with AI teammates. ' +
+  'Do only what the message asks, and answer with only what it asks for.'
+
 /**
- * One short harness run outside any thread, with no tools: a prompt in, its
- * final text out. Used to take memory from a thread that went quiet, to name a
- * new one, and to write a new project's brief from its website.
+ * One short harness run outside any thread: a prompt in, its final text out.
+ * Used to take memory from a thread that went quiet, to tidy a memory file, to
+ * name a new thread, and to write a new project's brief from its website.
+ * Its prompt holds everything it needs, and text from outside (a conversation,
+ * a website) that could ask for more, so it gets no tools, not even the
+ * harness's own (reading files, search). On Claude Code it gets a system
+ * prompt of its own: Claude Code's, written for its tools, was most of each
+ * run (about 20k tokens to name a thread).
  */
 export async function runOnce(input: {
   /** A thread's spec, or for a run of no thread an id to name it by, the account and harness. */
   spec: Pick<ThreadSpec, 'sessionId' | 'account'> & {
     teammate: Pick<ThreadSpec['teammate'], 'harness' | 'model'>
   }
-  /**
-   * Not even the harness's built-in tools (reading files, search): for a prompt
-   * that holds text from outside, such as a website, which could ask for them.
-   */
-  noTools?: boolean
   workDir: string
   runAs?: string
   prompt: string
@@ -1965,17 +1973,19 @@ export async function runOnce(input: {
   usage: { kind: UsageRunKind; sessionId?: string; teammateId?: string }
 }): Promise<string> {
   const { spec, workDir, runAs, purpose = 'memory' } = input
+  const codex = spec.teammate.harness === 'codex'
   const env = {
     ...(await prepare(workDir, spec.account, spec.sessionId, runAs)),
     // Its prompt is read once: a one-hour cache write costs twice the input, a five-minute one 1.25 times.
     CLAUDE_CODE_PROMPT_CACHE_TTL: '5m',
+    ...(codex ? {} : { BRIGADE_OWN_SYSTEM_PROMPT: '1' }),
   }
-  const codex = spec.teammate.harness === 'codex'
   const settings = { auth: {} }
   const agent = new HarnessAgent({
     harness: codex ? createCodex(settings) : createClaudeCode(settings),
     tools: {},
-    ...(input.noTools ? { activeTools: [] } : {}),
+    activeTools: [],
+    ...(codex ? {} : { instructions: RUN_SYSTEM }),
     ...(input.model ? { model: input.model } : withModel(spec.teammate)),
     // Nothing to do but answer; Codex cannot ask, so it gets an empty directory.
     permissionMode: codex ? 'allow-all' : 'allow-reads',

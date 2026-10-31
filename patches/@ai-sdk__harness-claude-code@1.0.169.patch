@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index e3a9230..8dcfb46 100644
+index e3a92309bd1eaa2ec0444a6fc0cec1360d793987..43b982e145ba6df8eac317e56be6e723b117dd5e 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1126,6 +1126,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
@@ -39,7 +39,7 @@ index e3a9230..8dcfb46 100644
  		}, async (...handlerArgs) => {
  			const [input, extra] = handlerArgs;
  			const metadataToolCallId = extra._meta?.["claudecode/toolUseId"];
-@@ -1724,9 +1732,15 @@ async function runTurn(start, turn) {
+@@ -1724,9 +1732,20 @@ async function runTurn(start, turn) {
  			toolUseId
  		})
  	});
@@ -48,6 +48,11 @@ index e3a9230..8dcfb46 100644
 +	const suggesting = env.BRIGADE_PROMPT_SUGGESTIONS === "1";
 +	let draining = false;
 +	let drainTimer;
++	// Brigade: what it turns off in Claude Code, as settings above every settings file (the
++	// runner's claude-settings.ts), and for a run of its own, its own system prompt instead of
++	// Claude Code's (a title or memory run needs none of Claude Code's).
++	const brigadeSettings = env.BRIGADE_CLAUDE_SETTINGS ? JSON.parse(env.BRIGADE_CLAUDE_SETTINGS) : void 0;
++	const ownSystemPrompt = env.BRIGADE_OWN_SYSTEM_PROMPT === "1";
  	const q = claudeSdk.query({
  		prompt: queryInput.input,
  		options: {
@@ -55,7 +60,17 @@ index e3a9230..8dcfb46 100644
  			...start.model ? { model: start.model } : {},
  			...start.maxTurns !== void 0 ? { maxTurns: start.maxTurns } : {},
  			...start.agentProgressSummaries !== void 0 ? { agentProgressSummaries: start.agentProgressSummaries } : {},
-@@ -1773,6 +1787,11 @@ async function runTurn(start, turn) {
+@@ -1738,7 +1757,8 @@ async function runTurn(start, turn) {
+ 			...skillsOption ? { skills: skillsOption } : {},
+ 			...nativeTools !== void 0 ? { tools: nativeTools } : {},
+ 			...inactiveNativeTools.length > 0 ? { disallowedTools: inactiveNativeTools } : {},
+-			systemPrompt: createClaudeCodeSystemPrompt(start.instructions),
++			...brigadeSettings ? { settings: brigadeSettings } : {},
++			systemPrompt: ownSystemPrompt ? start.instructions ?? "" : createClaudeCodeSystemPrompt(start.instructions),
+ 			thinking: start.thinking,
+ 			...start.effort !== void 0 ? { effort: start.effort } : {},
+ 			...start.responseFormat?.type === "json" && start.responseFormat.schema != null ? { outputFormat: {
+@@ -1773,6 +1793,11 @@ async function runTurn(start, turn) {
  	let emittedTerminalError = false;
  	let emittedTerminalFinish = false;
  	const emitTerminalError = (message) => {
@@ -67,7 +82,7 @@ index e3a9230..8dcfb46 100644
  		const normalized = message?.trim();
  		if (!normalized || emittedTerminalError || emittedTerminalFinish) return;
  		streamEventState.observedTerminalError = normalized;
-@@ -1792,6 +1811,73 @@ async function runTurn(start, turn) {
+@@ -1792,6 +1817,73 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -141,7 +156,7 @@ index e3a9230..8dcfb46 100644
  	try {
  		for await (const msg of q) {
  			if (abortCtl.signal.aborted) break;
-@@ -1799,7 +1885,48 @@ async function runTurn(start, turn) {
+@@ -1799,7 +1891,48 @@ async function runTurn(start, turn) {
  			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
@@ -190,7 +205,7 @@ index e3a9230..8dcfb46 100644
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -1835,28 +1962,45 @@ async function runTurn(start, turn) {
+@@ -1835,28 +1968,45 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -244,7 +259,7 @@ index e3a9230..8dcfb46 100644
  		if (hardAbortTimer != null) clearTimeout(hardAbortTimer);
  		turn.abortSignal.removeEventListener("abort", onHostAbort);
  		queryInput.close();
-@@ -1865,6 +2009,9 @@ async function runTurn(start, turn) {
+@@ -1865,6 +2015,9 @@ async function runTurn(start, turn) {
  		} catch {}
  	}
  	if (emittedTerminalError) return;
@@ -254,27 +269,9 @@ index e3a9230..8dcfb46 100644
  	emittedTerminalFinish = true;
  	emit({
  		type: "finish",
-diff --git a/dist/index.js b/dist/index.js
-index 1463dac..c6d7cca 100644
---- a/dist/index.js
-+++ b/dist/index.js
-@@ -1059,9 +1059,13 @@ function createClaudeCode(settings = {}) {
- 					token: coords.token
- 				});
- 				const attachChannel = new SandboxChannel({
-+					// Brigade: attaching to a bridge handed over by an update retries for as long as a start
-+					// does, as before 1.0.168, rather than give up at once and start a second one.
- 					connect: createBridgeWebSocketConnect({
- 						endpoint: attachEndpoint,
- 						webSocketConstructor: WebSocket,
-+						openRetryTimeoutMs: timeoutMs,
-+						startAbortSignal: startOpts.abortSignal,
- 						onHello
- 					}),
- 					outboundSchema: outboundMessageSchema,
 diff --git a/dist/bridge/pnpm-lock.yaml b/dist/bridge/pnpm-lock.yaml
 new file mode 100644
-index 0000000..719cf20
+index 0000000000000000000000000000000000000000..719cf20d9b12324f7244c4e0d715ce6023d9e9d7
 --- /dev/null
 +++ b/dist/bridge/pnpm-lock.yaml
 @@ -0,0 +1,1036 @@
@@ -1314,3 +1311,21 @@ index 0000000..719cf20
 +      zod: 4.4.3
 +
 +  zod@4.4.3: {}
+diff --git a/dist/index.js b/dist/index.js
+index 1463daca117dc0f4121cad4647d54cb262e57bb0..c6d7cca6e314472a1d61658acf6573b925e41688 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1059,9 +1059,13 @@ function createClaudeCode(settings = {}) {
+ 					token: coords.token
+ 				});
+ 				const attachChannel = new SandboxChannel({
++					// Brigade: attaching to a bridge handed over by an update retries for as long as a start
++					// does, as before 1.0.168, rather than give up at once and start a second one.
+ 					connect: createBridgeWebSocketConnect({
+ 						endpoint: attachEndpoint,
+ 						webSocketConstructor: WebSocket,
++						openRetryTimeoutMs: timeoutMs,
++						startAbortSignal: startOpts.abortSignal,
+ 						onHello
+ 					}),
+ 					outboundSchema: outboundMessageSchema,

@@ -82,6 +82,13 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   in a new harness session in the same directory, whose first message is a summary of the thread so far. With none
   left the thread pauses (`account.switched` with no target) and a `usage_limit` ticket is opened.
 - **Codex** threads run with built-in tools allowed: the adapter cannot ask before them (spec known limit).
+- **Claude Code's own ways are off where Brigade has its own.** Its schedules (Cron, ScheduleWakeup, `/loop`,
+  `/schedule`), its memory, other sessions on the computer (ListAgents), workflows, cloud routines, phone
+  notifications, worktrees, its design and review cards, and the bundled skills about Claude Code itself would work
+  outside Brigade, where nobody sees them, and cost context every turn. The runner gives them to Claude Code as
+  settings above every settings file (`apps/runner/src/harness/claude-settings.ts`, read by the bridge patch from
+  `BRIGADE_CLAUDE_SETTINGS`); a member's own `~/.claude` on a Mac keeps the rest of what it sets. Sub-agents stay,
+  with SendMessage to go on with one.
 - **Cloud computer install.** The API creates the VM through `ComputerProvider` (no account secrets reach it), then
   runs a generic Ubuntu bootstrap (`apps/api/src/cloud-bootstrap.ts`): a `brigade` user, Node.js and the runner in
   `/opt/brigade` from the API's own bundle (`pnpm --filter @brigade/runner bundle`), a one-time link code, and a
