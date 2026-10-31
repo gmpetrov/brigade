@@ -177,3 +177,26 @@ test('a running session is told, once, the lines memory learned since it started
   // Nothing new: nothing said.
   assert.equal(memoryNews(started, loaded, new Set()), '')
 })
+
+test('a line whose text already ends with its day shows it once, and other dates stay', () => {
+  const copied =
+    '# Brigade memory\n\n- Stripe connects live accounts. (31 Oct)\n- Acme renews (1 Nov)\n'
+  const at = {
+    [memoryLineKey('Stripe connects live accounts. (31 Oct)')]: { at: '2026-10-31T09:00:00Z' },
+    [memoryLineKey('Acme renews (1 Nov)')]: { at: '2026-10-31T09:00:00Z' },
+  }
+  assert.equal(
+    memorySection(layerMemory(copied, 'project', at, now), '/work', 'project'),
+    '- Stripe connects live accounts. (31 Oct)\n- Acme renews (1 Nov) (31 Oct)',
+  )
+  const numbered = numberedMemory(copied, at, now)
+  assert.equal(
+    numbered.text,
+    'Core:\n[1] Stripe connects live accounts. (31 Oct)\n[2] Acme renews (1 Nov) (31 Oct)',
+  )
+  assert.deepEqual(numbered.lines, [
+    'Stripe connects live accounts. (31 Oct)',
+    'Acme renews (1 Nov)',
+  ])
+  assert.deepEqual(numbered.notes, [' (31 Oct)', ' (31 Oct)'])
+})

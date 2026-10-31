@@ -126,3 +126,54 @@ test('files that need tidying once the update is applied are named, with the new
   assert.ok(files[0]!.fresh.has(memoryLineKey('A new lesson.')))
   assert.equal(files[0]!.lastTidied, null)
 })
+
+test('a line a run rewrites loses the day it read after the old one, never a day of its own', () => {
+  const { parse } = run(false, {
+    projects: {
+      p1: `${project}\n## Customers\n\n- Acme renews (1 Nov)\n- Contoso renews (1 Dec)\n`,
+    },
+  })
+  const update = parse(
+    JSON.stringify({
+      summary: 'x',
+      project: {
+        // Line 2 was read as "Esc never stops a run. (19 Oct, by Ada)": that day is memory's.
+        replace: [
+          { line: 2, text: 'Esc never stops a run, nor a click outside. (19 Oct, by Ada)' },
+          // A day in the line's own text is the line's: it stays.
+          { line: 4, text: 'Acme renews (1 Nov)' },
+        ],
+        // A new line's date is a fact, kept as written.
+        add: [{ text: 'Initech renews (1 Jan)', topic: 'Customers' }],
+      },
+    }),
+  )!
+  assert.deepEqual(update.project?.replace, [
+    { from: 'Esc never stops a run.', to: 'Esc never stops a run, nor a click outside.' },
+    { from: 'Acme renews (1 Nov)', to: 'Acme renews (1 Nov)' },
+  ])
+  assert.deepEqual(update.project?.lines, [{ text: 'Initech renews (1 Jan)', topic: 'Customers' }])
+})
+
+test('a line named by its text is that line, as the file has it or as the run read it', () => {
+  const { parse } = run(false, {
+    projects: {
+      p1: `${project}\n## Customers\n\n- Acme renews (1 Nov)\n- Contoso renews (1 Dec)\n`,
+    },
+  })
+  const update = parse(
+    JSON.stringify({
+      summary: 'x',
+      project: {
+        // Its own text, which holds a date: that line, not one that only looks like it.
+        remove: [{ line: 'Contoso renews (1 Dec)', reason: 'Lost the customer.' }],
+        // As the run read it, with its day after it.
+        confirm: ['Esc never stops a run. (19 Oct, by Ada)'],
+      },
+    }),
+  )!
+  assert.deepEqual(update.project?.archive, [
+    { text: 'Contoso renews (1 Dec)', reason: 'Lost the customer.' },
+  ])
+  assert.deepEqual(update.project?.confirm, ['Esc never stops a run.'])
+})

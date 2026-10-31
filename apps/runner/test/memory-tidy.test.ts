@@ -137,3 +137,32 @@ test('a layout is judged by what its result takes away, however it does it', () 
   }))
   assert.equal(run.parse(JSON.stringify({ merge })), null)
 })
+
+test('a merged line loses the days the run read after its lines, and names them by their text', () => {
+  const run = tidyRun(
+    file(flat, {
+      meta: {
+        [memoryLineKey("Stripe MCP can't delete webhooks.")]: { at: '2026-10-19T09:00:00Z' },
+      },
+    }),
+  )
+  const layout = run.parse(
+    JSON.stringify({
+      core: [1, 2, 3, 4],
+      merge: [
+        {
+          lines: [5, "Stripe MCP can't delete webhooks. (19 Oct)"],
+          text: "Stripe's MCP can't delete webhooks. (19 Oct)",
+          topic: null,
+        },
+      ],
+    }),
+  )!
+  assert.deepEqual(layout.merge, [
+    {
+      from: ["Stripe's MCP cannot delete webhooks.", "Stripe MCP can't delete webhooks."],
+      text: "Stripe's MCP can't delete webhooks.",
+      topic: null,
+    },
+  ])
+})
