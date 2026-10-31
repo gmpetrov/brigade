@@ -655,6 +655,8 @@ async function briefAccount(db: ScopedDb, scope: WorkspaceScope) {
     .filter((r) => (presence[r.computerId]?.protocolVersion ?? 0) >= DESCRIBE_PROTOCOL)
     .sort(
       (a, b) =>
+        // Their own before a shared one (src/account-sharing.ts).
+        Number(b.memberId === memberId) - Number(a.memberId === memberId) ||
         Number(b.isDefault) - Number(a.isDefault) ||
         Number(a.provider === 'codex') - Number(b.provider === 'codex'),
     )

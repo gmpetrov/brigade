@@ -58,6 +58,7 @@ import {
   type Teammate,
   type ThreadSummary,
 } from '@/lib/api'
+import { defaultAccount, pickAccount } from '@/lib/account-pick'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { newThreadId, pendingThreads } from '@/lib/pending-threads'
 import { preloadThreadEvents } from '@/lib/use-thread-events'
@@ -496,8 +497,7 @@ export function NewThread({
       (a.status === 'ready' || a.status === 'unverified') &&
       !(a.exhaustedUntil && new Date(a.exhaustedUntil) > new Date()),
   )
-  const account =
-    usable.find((a) => a.id === accountId) ?? usable.find((a) => a.isDefault) ?? usable[0]
+  const account = pickAccount(usable, accountId)
 
   const loaded = computers.data && accounts.data
   const ready =
@@ -747,7 +747,7 @@ export function NewThread({
         ]
       : []),
   ]
-  const defaultAccount = usable.find((a) => a.isDefault) ?? usable[0]
+  const byDefault = defaultAccount(usable)
   const where = (
     <>
       {computer && computer !== online[0] && (
@@ -758,7 +758,7 @@ export function NewThread({
           onReset={() => setComputerId(undefined)}
         />
       )}
-      {account && defaultAccount && account !== defaultAccount && (
+      {account && byDefault && account !== byDefault && (
         <NotDefault
           icon={<CircleUser aria-hidden />}
           label={account.label}
