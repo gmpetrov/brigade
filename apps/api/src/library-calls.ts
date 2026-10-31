@@ -3,7 +3,8 @@
 // the API checks the thread is on that runner's computer and the teammate's grant.
 import {
   formatMention,
-  LIBRARY_SAVE_MAX,
+  LIBRARY_FILE_MAX,
+  LIBRARY_READ_MAX,
   TRASH_DAYS,
   type ApiToRunner,
   type RunnerToApi,
@@ -159,8 +160,8 @@ export async function handleLibraryCall(
     const owner = { computerId: runner.computerId, sessionId: session.id }
     try {
       const upload = await readyUpload(db, owner, op.upload.id, 'library')
-      if (upload.size > LIBRARY_SAVE_MAX)
-        return fail('Files saved from a thread can be up to 10 MB')
+      if (upload.size > LIBRARY_FILE_MAX)
+        return fail('Files saved from a thread can be up to 500 MB')
       row = await saveLibraryFile(
         db,
         scope,
@@ -180,8 +181,10 @@ export async function handleLibraryCall(
   } else {
     // A runner before DIRECT_UPLOAD_PROTOCOL: the bytes in the message. Remove with it.
     const bytes = Buffer.from(op.content ?? '', 'base64')
-    if (bytes.byteLength > LIBRARY_SAVE_MAX)
-      return fail('Files saved from a thread can be up to 10 MB')
+    if (bytes.byteLength > LIBRARY_READ_MAX)
+      return fail(
+        "Files saved from a thread can be up to 25 MB until this computer's runner is updated",
+      )
     row = await saveLibraryFile(
       db,
       scope,

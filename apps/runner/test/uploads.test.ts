@@ -1,23 +1,25 @@
 import assert from 'node:assert/strict'
 import { createHash, randomBytes } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { access, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, test } from 'node:test'
-import { LIBRARY_SAVE_MAX } from '@brigade/contracts'
+import { Readable } from 'node:stream'
+import { LIBRARY_FILE_MAX } from '@brigade/contracts'
 
 // The attachments cache goes to a folder of the test's own.
 const home = await mkdtemp(join(tmpdir(), 'brigade-uploads-'))
 process.env.BRIGADE_HOME = home
 const { Attachments } = await import('../src/attachments.js')
-const { bundleStore, libraryMessage, uploadForTeammate } = await import('../src/uploads.js')
+const { bundleStore, libraryMessage, stageStream, uploadForTeammate } =
+  await import('../src/uploads.js')
 const { libraryTools } = await import('../src/harness/tools.js')
 
 const sha256 = (b: Buffer) => createHash('sha256').update(b).digest('hex')
 
-type Seen = { method: string; url: string; auth?: string; body: Buffer }
+type Seen = { method: string; url: string; auth?: string; length?: string; body: Buffer }
 
 const listen = (server: Server) =>
   new Promise<string>((done) =>
@@ -54,6 +56,7 @@ async function fakeApi(options: { r2?: boolean; failFirst?: boolean } = {}) {
       method: req.method!,
       url: `bucket${req.url}`,
       ...(req.headers.authorization ? { auth: req.headers.authorization } : {}),
+      ...(req.headers['content-length'] ? { length: req.headers['content-length'] } : {}),
       body,
     })
     held.set(new URL(req.url!, 'http://x').searchParams.get('key')!, body)
@@ -68,6 +71,7 @@ async function fakeApi(options: { r2?: boolean; failFirst?: boolean } = {}) {
       method: req.method!,
       url: req.url!,
       ...(req.headers.authorization ? { auth: req.headers.authorization } : {}),
+      ...(req.headers['content-length'] ? { length: req.headers['content-length'] } : {}),
       body,
     })
     res.setHeader('content-type', 'application/json')
@@ -203,21 +207,65 @@ test('a library save sends the upload, not the bytes; one too large for a thread
   assert.ok(api.held.get('up1')!.equals(bytes))
 
   const before = api.seen.length
+  // Its size as staged, without holding 500 MB here; the staged file goes all the same.
+  const big = join(home, 'big.bin')
+  await writeFile(big, 'x')
   await assert.rejects(
     libraryMessage(
       { apiUrl: api.apiUrl, token: 'tok' },
       { sessionId: 's1' },
-      { name: 'save', path: 'big.bin', bytes: Buffer.alloc(LIBRARY_SAVE_MAX + 1) },
+      {
+        name: 'save',
+        path: 'big.bin',
+        file: { path: big, size: LIBRARY_FILE_MAX + 1, sha256: '0'.repeat(64) },
+      },
     ),
-    /can be up to 10 MB/,
+    /can be up to 500 MB/,
   )
   assert.equal(api.seen.length, before, 'nothing was sent')
+  await assert.rejects(access(big), 'the staged file was removed')
   // Other operations go as they are.
   const search = { name: 'search' as const, query: 'refunds', limit: 8 }
   assert.equal(
     await libraryMessage({ apiUrl: api.apiUrl, token: 'tok' }, { sessionId: 's1' }, search),
     search,
   )
+})
+
+for (const r2 of [false, true])
+  test(`a staged save streams to the ${r2 ? 'bucket' : "API's stand-in"} with its length, and is removed once sent`, async () => {
+    const api = await fakeApi({ r2 })
+    const bytes = randomBytes(300_000)
+    const file = await stageStream(
+      Readable.from([bytes.subarray(0, 100_000), bytes.subarray(100_000)]),
+      bytes.length,
+      'Files saved to the library',
+    )
+    assert.equal(file.size, bytes.length)
+    assert.equal(file.sha256, sha256(bytes))
+    const operation = await libraryMessage(
+      { apiUrl: api.apiUrl, token: 'tok' },
+      { sessionId: 's1', teammateId: 't1' },
+      { name: 'save', path: 'films/demo.mp4', file },
+    )
+    assert.deepEqual(operation, { name: 'save', path: 'films/demo.mp4', upload: { id: 'up1' } })
+    assert.ok(api.held.get('up1')!.equals(bytes))
+    const put = api.seen.find((r) => r.method === 'PUT')!
+    assert.equal(put.auth, undefined, 'the signed URL needs no token')
+    assert.equal(put.length, String(bytes.length), 'the bucket takes no upload of unknown length')
+    await assert.rejects(access(file.path), 'the staged file was removed')
+  })
+
+test('staging refuses a stream past its limit and leaves nothing behind', async () => {
+  await assert.rejects(
+    stageStream(
+      Readable.from([Buffer.alloc(6), Buffer.alloc(6)]),
+      10,
+      'Files saved to the library',
+    ),
+    /Files saved to the library can be up to 0 MB/,
+  )
+  assert.deepEqual(await readdir(join(home, 'staging')), [])
 })
 
 test('propose_skill uploads its text files and the proposal names them by SHA-256', async () => {
@@ -281,13 +329,14 @@ test('propose_skill uploads its text files and the proposal names them by SHA-25
   )
 })
 
-test('save_to_library hands the bytes to the caller, which uploads them', async () => {
-  const bytes = Buffer.from('hello')
+test('save_to_library stages the file and hands it to the caller, which uploads it', async () => {
+  const file = { path: '/staging/1', size: 5, sha256: 'a'.repeat(64) }
   const operations: unknown[] = []
   const tools = libraryTools({
     access: 'read_write',
     libraryDir: '/library',
-    readFile: async () => bytes,
+    readFile: async () => assert.fail('save_to_library never reads the file whole'),
+    stageFile: async (path) => (path === 'a.txt' ? file : assert.fail(path)),
     listFiles: async () => [],
     renderDesign: async () => ({ screenshots: [], errors: [] }),
     call: async (call) => {
@@ -299,7 +348,7 @@ test('save_to_library hands the bytes to the caller, which uploads them', async 
     toolCallId: 'c1',
     messages: [],
   } as never)
-  assert.deepEqual(operations, [{ name: 'save', path: 'notes/a.txt', bytes }])
+  assert.deepEqual(operations, [{ name: 'save', path: 'notes/a.txt', file }])
 })
 
 test('a file for a connector call goes to the bucket, and its id comes back once checked', async () => {

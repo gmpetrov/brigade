@@ -3,14 +3,21 @@
 // the API to check what arrived (its size and SHA-256). Without R2 (development) the
 // ticket is a signed path of the API's own stand-in, resolved against its address.
 // Hub messages then carry only the upload's reference.
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
+import { createReadStream, createWriteStream } from 'node:fs'
+import { mkdir, rm } from 'node:fs/promises'
+import { request as httpRequest } from 'node:http'
+import { request as httpsRequest } from 'node:https'
+import { join } from 'node:path'
+import { pipeline } from 'node:stream/promises'
 import {
-  LIBRARY_SAVE_MAX,
+  LIBRARY_FILE_MAX,
   type FileUploadInfo,
   type RunnerToApi,
   type SkillFileRef,
   type SkillProposal,
 } from '@brigade/contracts'
+import { HOME } from './config.js'
 import type { BackupName, BundleStore } from './repos.js'
 
 export type Api = { apiUrl: string; token: string }
@@ -51,6 +58,78 @@ export async function answer<T>(response: Response, step: string): Promise<T> {
 }
 
 /**
+ * A file read once, as the teammate sees it, into the runner's own folder: uploaded from there
+ * as it streams, never held whole (a video can be hundreds of MB). Removed once sent.
+ */
+export type StagedFile = { path: string; size: number; sha256: string }
+
+/** Where staged files wait to be sent. Only the runner reads it. */
+const STAGING_DIR = join(HOME, 'staging')
+
+/**
+ * Stage what a stream holds: written to a file of the runner's as it comes, hashed on the way.
+ * Refused once more than `max` bytes came, saying `what` can be up to that.
+ */
+export async function stageStream(
+  source: AsyncIterable<Uint8Array>,
+  max: number,
+  what: string,
+): Promise<StagedFile> {
+  await mkdir(STAGING_DIR, { recursive: true, mode: 0o700 })
+  const path = join(STAGING_DIR, randomUUID())
+  const hash = createHash('sha256')
+  let size = 0
+  try {
+    await pipeline(
+      source,
+      async function* (chunks: AsyncIterable<Uint8Array>) {
+        for await (const chunk of chunks) {
+          size += chunk.byteLength
+          if (size > max)
+            throw new Error(`${what} can be up to ${Math.round(max / (1024 * 1024))} MB`)
+          hash.update(chunk)
+          yield chunk
+        }
+      },
+      createWriteStream(path, { mode: 0o600 }),
+    )
+  } catch (error) {
+    await rm(path, { force: true })
+    throw error
+  }
+  return { path, size, sha256: hash.digest('hex') }
+}
+
+/** Staged files a runner stopped before sending: removed when it starts. */
+export const cleanStaging = () => rm(STAGING_DIR, { recursive: true, force: true })
+
+/**
+ * PUT a staged file at a ticket's URL as it streams, with its length: the bucket takes no
+ * upload of unknown length. Never with the runner's token: the URL is signed.
+ */
+export async function putFile(api: Api, ticket: Ticket, file: StagedFile) {
+  const url = new URL(ticket.url, api.apiUrl)
+  const send = url.protocol === 'https:' ? httpsRequest : httpRequest
+  const status = await new Promise<number>((done, fail) => {
+    const req = send(url, {
+      method: 'PUT',
+      headers: { ...ticket.headers, 'content-length': String(file.size) },
+    })
+    req.on('response', (res) => {
+      res.resume()
+      res.on('end', () => done(res.statusCode ?? 0))
+      res.on('error', fail)
+    })
+    req.on('error', fail)
+    pipeline(createReadStream(file.path), req).catch(fail)
+  })
+  if (status < 200 || status >= 300) {
+    const where = url.origin === new URL(api.apiUrl).origin ? 'API' : 'bucket'
+    throw new UploadError(`the ${where} refused the upload (${status})`, status)
+  }
+}
+
+/**
  * PUT the bytes at a ticket's URL: the bucket's, or the API's signed stand-in (a path).
  * Never with the runner's token: the URL is signed.
  */
@@ -76,7 +155,7 @@ export async function putBytes(api: Api, ticket: Ticket, bytes: Uint8Array) {
  */
 export async function upload<T, K>(
   api: Api,
-  bytes: Uint8Array,
+  bytes: Uint8Array | StagedFile,
   steps: {
     start: () => Promise<K>
     put?: (ticket: K) => Promise<void>
@@ -85,7 +164,11 @@ export async function upload<T, K>(
 ): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     const ticket = await steps.start()
-    await (steps.put ? steps.put(ticket) : putBytes(api, ticket as Ticket, bytes))
+    await (steps.put
+      ? steps.put(ticket)
+      : bytes instanceof Uint8Array
+        ? putBytes(api, ticket as Ticket, bytes)
+        : putFile(api, ticket as Ticket, bytes))
     try {
       return await steps.complete(ticket)
     } catch (error) {
@@ -106,16 +189,17 @@ export function uploadForTeammate(
     sessionId: string
     teammateId?: string
     name: string
-    bytes: Uint8Array
     contentType?: string
-  },
+  } & ({ bytes: Uint8Array } | { file: StagedFile }),
 ): Promise<FileUploadInfo> {
-  const { bytes, ...rest } = input
-  const sha256 = sha256Hex(bytes)
-  return upload(api, bytes, {
+  const { bytes, file, ...rest } = { bytes: undefined, file: undefined, ...input }
+  const body = file ?? bytes!
+  const size = file ? file.size : bytes!.length
+  const sha256 = file ? file.sha256 : sha256Hex(bytes!)
+  return upload(api, body, {
     start: async () =>
       answer<Ticket & { id: string }>(
-        await apiPost(api, '/runner/uploads', { ...rest, size: bytes.length, sha256 }),
+        await apiPost(api, '/runner/uploads', { ...rest, size, sha256 }),
         `the upload of ${input.name}`,
       ),
     complete: async (ticket) =>
@@ -136,6 +220,8 @@ export type LibraryOperation =
       { name: 'save' } | { name: 'skill_proposal' }
     >
   | { name: 'save'; path: string; bytes: Buffer }
+  /** save_to_library's: a file staged on this computer, removed once sent. */
+  | { name: 'save'; path: string; file: StagedFile }
   | {
       name: 'skill_proposal'
       proposal: Omit<SkillProposal, 'refs'>
@@ -149,15 +235,26 @@ export async function libraryMessage(
   operation: LibraryOperation,
 ): Promise<Extract<RunnerToApi, { type: 'library.call' }>['operation']> {
   if (operation.name === 'save') {
-    if (operation.bytes.length > LIBRARY_SAVE_MAX)
-      throw new Error(`Files saved from a thread can be up to ${LIBRARY_SAVE_MAX / 1024 / 1024} MB`)
-    const { id } = await uploadForTeammate(api, {
-      purpose: 'library',
-      ...seat,
-      name: operation.path,
-      bytes: operation.bytes,
-    })
-    return { name: 'save', path: operation.path, upload: { id } }
+    const staged = 'file' in operation ? operation.file : undefined
+    const body: { file: StagedFile } | { bytes: Uint8Array } = staged
+      ? { file: staged }
+      : { bytes: (operation as { bytes: Buffer }).bytes }
+    try {
+      const size = 'file' in body ? body.file.size : body.bytes.length
+      if (size > LIBRARY_FILE_MAX)
+        throw new Error(
+          `Files saved from a thread can be up to ${LIBRARY_FILE_MAX / 1024 / 1024} MB`,
+        )
+      const { id } = await uploadForTeammate(api, {
+        purpose: 'library',
+        ...seat,
+        name: operation.path,
+        ...body,
+      })
+      return { name: 'save', path: operation.path, upload: { id } }
+    } finally {
+      if (staged) await rm(staged.path, { force: true })
+    }
   }
   if (operation.name === 'skill_proposal') {
     const refs: SkillFileRef[] = []

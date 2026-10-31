@@ -5,8 +5,7 @@
 // other files in the file panel.
 import {
   ATTACHMENTS_PER_MESSAGE,
-  isVideoType,
-  uploadMax,
+  UPLOAD_FILE_MAX,
   type AttachmentInfo,
   EFFORTS,
   type MessageAttachment,
@@ -160,10 +159,8 @@ export function useUploads(draftKey?: string) {
         const error =
           draft.list.filter((u) => !u.error).length >= ATTACHMENTS_PER_MESSAGE
             ? `A message takes up to ${ATTACHMENTS_PER_MESSAGE} files`
-            : file.size > uploadMax(file.type)
-              ? isVideoType(file.type)
-                ? 'Larger than 500 MB'
-                : 'Larger than 25 MB'
+            : file.size > UPLOAD_FILE_MAX
+              ? 'Larger than 500 MB'
               : undefined
         commit([...draft.list, error ? { ...upload, error } : upload])
         if (error) continue

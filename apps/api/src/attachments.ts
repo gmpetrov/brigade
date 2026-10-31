@@ -11,7 +11,7 @@ import {
   ATTACHMENTS_TOTAL_MAX,
   isVideoType,
   safeFileName,
-  uploadMax,
+  UPLOAD_FILE_MAX,
   type AttachmentInfo,
   type AttachmentSource,
   type ThreadAttachmentRef,
@@ -278,8 +278,8 @@ export async function startUpload(
   const name = safeFileName(input.name)
   // The type the bucket stores and the browser sends; checked against the bytes on completion.
   const contentType = contentTypeFor(name, input.contentType)
-  if (input.size > uploadMax(contentType))
-    throw new HTTPException(413, { message: 'Files can be up to 25 MB, videos up to 500 MB' })
+  if (input.size > UPLOAD_FILE_MAX)
+    throw new HTTPException(413, { message: 'Files can be up to 500 MB' })
   const row = await db.attachment.create({
     data: {
       name,
@@ -360,9 +360,9 @@ export async function finishUpload(
   const size = await objectSize(key)
   if (size === null)
     throw new HTTPException(409, { message: 'The file has not reached storage; upload it again' })
-  if (size !== row.size || size > uploadMax(row.contentType)) throw await mismatch()
+  if (size !== row.size || size > UPLOAD_FILE_MAX) throw await mismatch()
   // A video has no text, and no type is checked against its bytes (none shows inline from a sniff).
-  const video = row.size > ATTACHMENT_MAX
+  const video = isVideoType(row.contentType)
   const inspected = await inspectObject(key, {
     name: row.name,
     contentType: row.contentType,
@@ -485,15 +485,6 @@ export async function attachToThread(
   })
   if (rows.length !== ids.length)
     throw new HTTPException(400, { message: 'An attached file was not found or was already sent' })
-  const total = rows.reduce(
-    (sum, r) => sum + (r.status === 'ready' && !isVideoType(r.contentType) ? r.size : 0),
-    0,
-  )
-  if (check && total > ATTACHMENTS_TOTAL_MAX)
-    throw new HTTPException(413, {
-      message: 'One message can carry up to 50 MB of files, besides videos',
-    })
-
   const refs: ThreadAttachmentRef[] = []
   const created: string[] = []
   for (const id of ids) {

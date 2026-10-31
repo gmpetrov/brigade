@@ -6,6 +6,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { extname } from 'node:path'
 import {
   LIBRARY_FILE_MAX,
+  LIBRARY_READ_MAX,
   LIBRARY_VIEWS_PROTOCOL,
   libraryAccessFor,
   MEMORY_MAX,
@@ -182,12 +183,17 @@ export const isEditable = (row: { contentType: string; size: number }) =>
 export const isMarkdown = (row: { kind?: string; contentType: string; size: number }) =>
   row.kind !== 'thread_summary' && row.contentType === 'text/markdown' && row.size <= EDITABLE_BYTES
 
-/** A document's whole text: a library file's bytes (its `text` is cut for search), or memory. */
+/**
+ * A document's whole text: a library file's bytes (its `text` is cut for search), or memory. A
+ * library file the API may not read whole is refused.
+ */
 export async function documentText(
   scope: Scope,
-  row: { id: string; kind: string; text: string; objectKey: string | null },
+  row: { id: string; kind: string; text: string; objectKey: string | null; size: number },
 ) {
   if (row.kind !== 'library') return row.text
+  if (row.size > LIBRARY_READ_MAX)
+    throw new HTTPException(413, { message: 'The file is too large to open as text' })
   return new TextDecoder().decode(await readLibraryFile(scope, row))
 }
 
@@ -396,7 +402,7 @@ async function writeLibraryFile(
 ) {
   const size = 'bytes' in input ? input.bytes.byteLength : input.upload.size
   if (size > LIBRARY_FILE_MAX)
-    throw new HTTPException(413, { message: 'Files in the library can be up to 25 MB' })
+    throw new HTTPException(413, { message: 'Files in the library can be up to 500 MB' })
   const contentType = contentTypeFor(input.path, input.contentType)
   const hash = 'bytes' in input ? sha256(input.bytes) : input.upload.sha256
   const existing = await db.document.findFirst({

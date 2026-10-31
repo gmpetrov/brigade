@@ -57,7 +57,7 @@ import { EventFiles } from './event-files.js'
 import { Outbox } from './outbox.js'
 import { SeenCommands } from './seen-commands.js'
 import { imageStore } from './reply-images.js'
-import { bundleStore, libraryMessage } from './uploads.js'
+import { bundleStore, cleanStaging, libraryMessage } from './uploads.js'
 import { MemoryGuard, memoryRoom, turnsAtOnce } from './memory-guard.js'
 import { runnerCgroups } from './preview-cgroup.js'
 import { Previews } from './previews.js'
@@ -172,6 +172,8 @@ async function start() {
   const eventFiles = new EventFiles({ store: imageStore(config), outbox })
   const library = new Library(config)
   void library.cleanTemp()
+  // Files staged for a save the runner before never sent.
+  void cleanStaging().catch(() => undefined)
   const attachments = new Attachments(config)
   void attachments.cleanCache()
   const specParts = new SpecParts(config)

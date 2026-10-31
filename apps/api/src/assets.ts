@@ -8,6 +8,7 @@
 import {
   ASSET_MAX,
   ASSET_MAX_THROUGH_API,
+  LIBRARY_READ_MAX,
   safeFileName,
   type DocumentAsset,
 } from '@brigade/contracts'
@@ -203,6 +204,8 @@ async function holder(row: {
     if (own) {
       if (own.text.includes(reference)) return own.id
       // A long library file: its stored text stops short; read the file itself.
+      // One too large to read whole may refer to it: kept.
+      if (own.kind === 'library' && own.size > LIBRARY_READ_MAX) return own.id
       if (own.kind === 'library' && own.text.length >= INDEXED_CHARS) {
         const bytes = await readLibraryFile(scope, own).catch(() => null)
         if (!bytes || new TextDecoder().decode(bytes).includes(reference)) return own.id

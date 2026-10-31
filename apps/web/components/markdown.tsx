@@ -2,7 +2,8 @@
 // Markdown in the thread: teammates' replies, thinking and questions. Raw HTML
 // is never rendered (react-markdown escapes it), remote images are not loaded
 // (a link instead), an image in a teammate's folder opens over the page,
-// mentions a teammate echoes back show as chips, and code blocks are highlighted
+// mentions a teammate echoes back show as chips (a video or a sound of the library
+// also plays under its paragraph), and code blocks are highlighted
 // (highlight.js's common languages: JSON, YAML, XML/HTML, CSS, JS/TS, Python,
 // shell, SQL, diff and more; colors in globals.css).
 import { MENTION_KINDS, STORED_FILE, STORED_FILE_NAME, type MentionKind } from '@brigade/contracts'
@@ -28,6 +29,8 @@ import {
 import { MentionChip, MessageText } from '@/components/mention'
 import { Hint } from '@/components/ui/tooltip'
 import { storedFileUrl, threadImageUrl } from '@/lib/api'
+import { API_URL } from '@/lib/config'
+import { playedFiles, type PlayedFile } from '@/lib/played-files'
 import { cn } from '@/lib/utils'
 
 const MENTION_HREF = new RegExp(`^(${MENTION_KINDS.join('|')}):([^\\s]+)$`)
@@ -282,8 +285,60 @@ function MarkdownImage({ src, alt }: { src?: unknown; alt?: string }) {
   )
 }
 
+/**
+ * A video or a sound of the library, played in the thread under the text that names it. Only its
+ * start loads until it plays; the bytes come from the bucket, by ranges. One that cannot load
+ * (gone, or not this person's to read) leaves just its chip.
+ */
+function LibraryPlayer({ file }: { file: PlayedFile }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) return null
+  const src = `${API_URL}/api/library/${encodeURIComponent(file.id)}/content`
+  const name = file.name.split('/').pop() ?? file.name
+  if (file.kind === 'audio')
+    return (
+      <audio
+        src={src}
+        controls
+        preload="metadata"
+        aria-label={name}
+        onError={() => setFailed(true)}
+        className="my-2 block w-full max-w-md first:mt-0 last:mb-0"
+      />
+    )
+  return (
+    <span className="my-3 block w-fit max-w-full overflow-hidden rounded-lg border bg-black first:mt-0 last:mb-0">
+      <video
+        // Its first frame shows before it plays.
+        src={`${src}#t=0.1`}
+        controls
+        playsInline
+        preload="metadata"
+        aria-label={name}
+        onError={() => setFailed(true)}
+        className="block max-h-[min(28rem,60vh)] max-w-full"
+      />
+    </span>
+  )
+}
+
+/** A block, then the players of the library files its text mentions. */
+function withPlayers(node: unknown, block: ReactNode) {
+  const files = playedFiles(node as Parameters<typeof playedFiles>[0])
+  if (files.length === 0) return block
+  return (
+    <>
+      {block}
+      {files.map((file) => (
+        <LibraryPlayer key={file.id} file={file} />
+      ))}
+    </>
+  )
+}
+
 const components: Components = {
-  p: ({ node: _, ...props }) => <p className="my-2 first:mt-0 last:mb-0" {...props} />,
+  p: ({ node, ...props }) =>
+    withPlayers(node, <p className="my-2 first:mt-0 last:mb-0" {...props} />),
   h1: ({ node: _, ...props }) => (
     <h1 className="mt-5 mb-2 text-xl font-bold first:mt-0" {...props} />
   ),
@@ -314,8 +369,11 @@ const components: Components = {
       {...props}
     />
   ),
-  li: ({ node: _, ...props }) => (
-    <li className="pl-1 [&>input]:mr-2 [&>input]:align-middle [&>ol]:my-1 [&>ul]:my-1" {...props} />
+  // A tight list's item holds its text itself: its players go inside it, after the text.
+  li: ({ node, children, ...props }) => (
+    <li className="pl-1 [&>input]:mr-2 [&>input]:align-middle [&>ol]:my-1 [&>ul]:my-1" {...props}>
+      {withPlayers(node, children)}
+    </li>
   ),
   blockquote: ({ node: _, ...props }) => (
     <blockquote

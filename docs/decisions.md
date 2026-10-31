@@ -27,12 +27,14 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   checked out inside it (see "Code from GitHub"). Idle harness sessions are stopped after 5 minutes and resumed from saved state.
 - **Attachments.** A file given to a thread, uploaded in the dashboard (picked, dropped or pasted) or taken from a
   connection (an email's attachments, fetched once per file even when several triggers match), is an `Attachment`:
-  bytes in the bucket, up to 25 MB, its type checked against its bytes. With R2 the browser uploads straight to the
+  bytes in the bucket, its type checked against its bytes. With R2 the browser uploads straight to the
   bucket: the API signs a PUT URL for 10 minutes that takes exactly the declared size and type (the bucket's CORS
   rule must allow the dashboard's origins, method `PUT`, header `content-type`), then reads the file back to check
-  it. A member's video can be up to 500 MB, outside a message's 50 MB total: the API never holds it whole (its size
-  from the bucket, its SHA-256 as it streams by), and the dashboard and the runner get it from a signed bucket URL
-  the API redirects to; the runner writes it to its cache as it arrives. Without R2 uploads go through the API. Unfinished uploads go after an hour, unsent ones after a day. `ThreadAttachment` puts it in a thread at
+  it. A member's file can be up to 500 MB, of any type, as on Claude and ChatGPT (500 and 512 MB), 10 to a message:
+  the API never holds it whole (its size from the bucket, its SHA-256 and text as it streams by), and the dashboard
+  and the runner get a large one, audio or video from a signed bucket URL the API redirects to; the runner writes it
+  to its cache as it arrives. Files from a connection or a teammate stay at 25 MB (Gmail's own limit; the API or the
+  runner holds them), 50 MB in all. Without R2 uploads go through the API, up to 25 MB. Unfinished uploads go after an hour, unsent ones after a day. `ThreadAttachment` puts it in a thread at
   `attachments/<name>` (`-2` on a clash). The thread's spec lists all of them; before each turn the runner copies the
   ones a teammate's folder lacks, once (its edits stay), never executable, and the prompt says where they are.
   Programs and installers are not taken from outside, and small inline images (signatures) are left out; a file not
@@ -320,8 +322,15 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   file to the trash: its path becomes `.trash/<id>/<path>` (no live path starts with "."), so nothing else finds
   it; restore puts it back (beside a file that took its place), and the hourly sweep deletes it 30 days on. A file
   is served inline only for types that cannot run script (`Content-Security-Policy: sandbox` always); anything else
-  downloads. Word documents, spreadsheets and decks are read on the API (`apps/api/src/previews.ts`) for previews:
-  Word as HTML in a frame that runs no script, the first rows of each sheet, the text of each slide.
+  downloads. A file can be up to 500 MB, from a member or a teammate (`LIBRARY_FILE_MAX`): its bytes go straight to
+  the bucket and are copied inside it, never held whole by the API. Audio, video and files over 25 MB
+  (`LIBRARY_READ_MAX`) are served from a signed bucket URL the API redirects to, which answers a player's ranges, as
+  are the files runners mirror; the runner writes them as they arrive, and stages a teammate's save on its disk to
+  send it as it streams. Past 25 MB a file is not previewed nor opened as text, and a restore copies its version
+  inside the bucket. A library video or sound a teammate's reply mentions plays under the text that names it
+  (`apps/web/lib/played-files.ts`). Word documents, spreadsheets and decks are read on the API
+  (`apps/api/src/previews.ts`) for previews: Word as HTML in a frame that runs no script, the first rows of each
+  sheet, the text of each slide.
 - **Editing documents** (`apps/web/components/document-editor.tsx`, `apps/api/src/collab.ts`, `apps/collab`). Markdown
   library files and memory open in one BlockNote editor, live: everyone with a document open sees the others'
   edits and cursors, and edits save as people type. Each document is a room on the collab server (a Durable
