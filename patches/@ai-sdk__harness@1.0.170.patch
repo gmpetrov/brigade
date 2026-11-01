@@ -1,36 +1,37 @@
 diff --git a/dist/agent/index.js b/dist/agent/index.js
-index 31b5cd678894b72c2bc98ef8cedb38c7c7f0cc39..fe1702e0e06cd43862e924ba7876e0120a6fca55 100644
+index 7867f724a4d667a8e74498d8c5fb39f3be1564e5..8ac8d9b94f4b90b002400c262a6b0ac72c34c270 100644
 --- a/dist/agent/index.js
 +++ b/dist/agent/index.js
-@@ -1744,6 +1744,10 @@ function runPrompt(input) {
- 		let deferredPauseFinishStep;
+@@ -1745,6 +1745,11 @@ function runPrompt(input) {
  		let ignoredFinishStep;
  		const hostToolCallIdsAwaitingEcho = /* @__PURE__ */ new Set();
+ 		const submittedHostToolResults = /* @__PURE__ */ new Map();
 +		// Brigade: the tool calls whose result the harness already echoed. One it settled on its own
 +		// (Claude Code rejects input its MCP schema refuses) echoes before our own result goes in,
-+		// which then would wait for an echo that never comes, and keep every later pause from happening.
++		// which then would wait for an echo that never comes, and keep every later pause from
++		// happening; nor is that result one to hand over at the next pause, to go in again.
 +		const echoedHostToolCallIds = /* @__PURE__ */ new Set();
  		const buildModelCallContent = () => {
  			const parts = [];
  			if (stepText) parts.push({
-@@ -1914,7 +1918,7 @@ function runPrompt(input) {
+@@ -1947,8 +1952,10 @@ function runPrompt(input) {
  				});
  			}
  			if (!input.isTurnSuspending?.()) {
 -				if (!settledHostToolCallIds.has(submission.toolCallId)) hostToolCallIdsAwaitingEcho.add(submission.toolCallId);
-+				if (!settledHostToolCallIds.has(submission.toolCallId) && !echoedHostToolCallIds.has(submission.toolCallId)) hostToolCallIdsAwaitingEcho.add(submission.toolCallId);
+-				submittedHostToolResults.set(submission.toolCallId, submission);
++				if (!echoedHostToolCallIds.has(submission.toolCallId)) {
++					if (!settledHostToolCallIds.has(submission.toolCallId)) hostToolCallIdsAwaitingEcho.add(submission.toolCallId);
++					submittedHostToolResults.set(submission.toolCallId, submission);
++				}
  				return control.submitToolResult(submission);
  			}
  			const toolCall = rawToolCallsByToolCallId.get(submission.toolCallId) ?? pendingResultsByToolCallId.get(submission.toolCallId) ?? pendingToolApprovals.find((approval) => approval.toolCallId === submission.toolCallId);
-@@ -2109,7 +2113,10 @@ function runPrompt(input) {
- 					result.enqueueRaw(value.rawValue);
- 					continue;
- 				}
--				if (value.type === "tool-result") hostToolCallIdsAwaitingEcho.delete(value.toolCallId);
-+				if (value.type === "tool-result") {
-+					hostToolCallIdsAwaitingEcho.delete(value.toolCallId);
+@@ -2154,6 +2161,7 @@ function runPrompt(input) {
+ 					hostToolCallIdsAwaitingEcho.delete(value.toolCallId);
+ 					submittedHostToolResults.delete(value.toolCallId);
+ 					pendingResultsByToolCallId.delete(value.toolCallId);
 +					echoedHostToolCallIds.add(value.toolCallId);
-+				}
+ 				}
  				if (pendingStopBoundary != null) {
  					if (value.type === "finish") releasePendingStopBoundary();
- 					else if ((await Promise.all(input.stopConditions.map((condition) => condition({ steps: completedSteps })))).some(Boolean)) {

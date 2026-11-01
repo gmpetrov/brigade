@@ -2,6 +2,10 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
+# `pnpm deploy` (the runner bundle, the API's Docker image) as in pnpm 8: the new one needs
+# injectWorkspacePackages, which would copy the workspace packages into every app.
+forceLegacyDeploy: true
+
 # pnpm 10 runs no dependency's install scripts unless it is listed here: these need theirs
 # (Prisma's engines, the esbuild and workerd binaries). A new one shows in `pnpm install`
 # as "Ignored build scripts"; add it here when it needs its script.
@@ -12,12 +16,8 @@ onlyBuiltDependencies:
   - workerd
 
 patchedDependencies:
-  '@ai-sdk/harness-claude-code@1.0.169': patches/@ai-sdk__harness-claude-code@1.0.169.patch
-  '@ai-sdk/harness-codex@1.0.167': patches/@ai-sdk__harness-codex@1.0.167.patch
-  '@ai-sdk/harness@1.0.165': patches/@ai-sdk__harness@1.0.165.patch
+  '@ai-sdk/harness-claude-code@1.0.174': patches/@ai-sdk__harness-claude-code@1.0.174.patch
+  '@ai-sdk/harness-codex@1.0.172': patches/@ai-sdk__harness-codex@1.0.172.patch
+  '@ai-sdk/harness@1.0.170': patches/@ai-sdk__harness@1.0.170.patch
   '@opennextjs/cloudflare@1.20.7': patches/@opennextjs__cloudflare@1.20.7.patch
   pg-cloudflare@1.4.1: patches/pg-cloudflare@1.4.1.patch
-
-# `pnpm deploy` (the runner bundle, the API's Docker image) as in pnpm 8: the new one needs
-# injectWorkspacePackages, which would copy the workspace packages into every app.
-forceLegacyDeploy: true

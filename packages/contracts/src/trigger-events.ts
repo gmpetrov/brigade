@@ -160,6 +160,18 @@ export function mailbox(value: string): { name: string | null; address: string }
 }
 
 /**
+ * A thread's title for a received email: its subject first, then who sent it by name (their
+ * address when it has none), so a cut title still says what it is about.
+ */
+export function emailTitle(subject: string | undefined, from: string | undefined) {
+  const sender = from ? mailbox(from) : null
+  // A name quoted in it ('Brigade alerts' via support, as Google Groups write it) without its quotes.
+  const who = (sender?.name ?? sender?.address ?? '').replace(/^(['"])(.*?)\1/, '$2').trim()
+  const what = subject?.trim() || '(no subject)'
+  return who ? `${what} · ${who}` : what
+}
+
+/**
  * An email's own words and the earlier messages it quotes below them ("On … wrote:" then
  * lines starting with >), so the quote can be folded.
  */

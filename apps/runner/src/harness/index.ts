@@ -75,6 +75,7 @@ import {
   type WaitingCall,
 } from './closed-turn.js'
 import { claudeSettingsEnv } from './claude-settings.js'
+import { CODEX_SETTINGS } from './codex-settings.js'
 import { harnessEnv } from './env.js'
 import { reportRunUsage } from '../usage.js'
 import {
@@ -97,7 +98,6 @@ import { stageStream } from '../uploads.js'
 import { readCommand, reportWithFiles } from './report-files.js'
 import {
   ASK_USER_TOOL,
-  alwaysLoaded,
   appTools,
   askUserTool,
   computerUseTools,
@@ -266,16 +266,23 @@ function createAgent(
   // config directory.
   const settings = { auth: {}, mcpServers }
   const codex = spec.teammate.harness === 'codex'
+  const chief = spec.teammate.kind === 'chief'
   // The thread's effort; none leaves each CLI on its own default.
   const effort = spec.effort ?? undefined
   const harness = codex
     ? createCodex({
         ...settings,
         // Codex reads 32 KiB of AGENTS.md by default; Brigade's, with memory last, is longer.
-        codexConfig: { project_doc_max_bytes: INSTRUCTIONS_MAX_BYTES },
+        codexConfig: { ...CODEX_SETTINGS, project_doc_max_bytes: INSTRUCTIONS_MAX_BYTES },
         ...(effort ? { reasoningEffort: effort } : {}),
       })
-    : createClaudeCode({ ...settings, ...(effort ? { effort } : {}) })
+    : createClaudeCode({
+        ...settings,
+        ...(effort ? { effort } : {}),
+        // Never deferred behind tool search: a card comes right before the answer, with no tool
+        // load between.
+        ...(chief ? { toolHints: { [PROPOSE_TEAM_TOOL]: { alwaysLoad: true } } } : {}),
+      })
   const tools = {
     // Connector tools grow with each account connected; Codex loads them on demand.
     ...connectorTools(spec.connectors, callConnector, { defer: codex }),
@@ -310,9 +317,7 @@ function createAgent(
     [SHOW_WIDGET_TOOL]: showWidgetTool,
     [WIDGET_GUIDE_TOOL]: widgetGuideTool,
     // Replies and choices are blocks in the reply (replyCard); the team, with its long instructions, a tool.
-    ...(spec.teammate.kind === 'chief'
-      ? { [PROPOSE_TEAM_TOOL]: codex ? proposeTeamTool : alwaysLoaded(proposeTeamTool) }
-      : {}),
+    ...(chief ? { [PROPOSE_TEAM_TOOL]: proposeTeamTool } : {}),
   }
   return {
     agent: new HarnessAgent({
@@ -2020,7 +2025,9 @@ export async function runOnce(input: {
   const codex = spec.teammate.harness === 'codex'
   const settings = { auth: {} }
   const agent = new HarnessAgent({
-    harness: codex ? createCodex(settings) : createClaudeCode(settings),
+    harness: codex
+      ? createCodex({ ...settings, codexConfig: CODEX_SETTINGS })
+      : createClaudeCode(settings),
     tools: {},
     ...(input.noTools ? { activeTools: [] } : {}),
     ...(input.model ? { model: input.model } : withModel(spec.teammate)),
@@ -2081,7 +2088,7 @@ export async function generateImage(input: {
   const dir = join(input.workDir, '.codex-image')
   const env = await prepare(dir, account, input.sessionId, runAs)
   const agent = new HarnessAgent({
-    harness: createCodex({ auth: {} }),
+    harness: createCodex({ auth: {}, codexConfig: CODEX_SETTINGS }),
     model: CODEX_DEFAULT_MODEL,
     tools: {},
     permissionMode: 'allow-all',

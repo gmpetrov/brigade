@@ -31,6 +31,13 @@ test('what Brigade relies on in Claude Code stays on, skills included', () => {
 
 test('the settings reach the bridge as one JSON value', () => {
   const env = claudeSettingsEnv()
-  assert.deepEqual(Object.keys(env), ['BRIGADE_CLAUDE_SETTINGS'])
+  assert.deepEqual(Object.keys(env).sort(), [
+    'BRIGADE_CLAUDE_SETTINGS',
+    'CLAUDE_CODE_FORK_SUBAGENT',
+  ])
   assert.deepEqual(JSON.parse(env.BRIGADE_CLAUDE_SETTINGS!), CLAUDE_SETTINGS)
+})
+
+test('fork sub-agents stay off, as before Claude Code turned them on in SDK sessions', () => {
+  assert.equal(claudeSettingsEnv().CLAUDE_CODE_FORK_SUBAGENT, '0')
 })

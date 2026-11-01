@@ -57,6 +57,12 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   Cloudflare Turnstile's check.
 - **The runner ships its own pinned pnpm** (10.x), because the Claude Code adapter installs its bridge with
   `pnpm install --frozen-lockfile` and older global pnpm versions reject its lockfile.
+- **Threads run the Claude Code and Codex each harness bridge installs**, not the `claude` or `codex` on the
+  computer (those only sign in and read Codex's usage limits). Each adapter pins them in its bridge's `package.json`
+  and lockfile (`dist/bridge/pnpm-lockfile.yaml`), installed per OS user under `~/.ai-sdk-harness/.harness-bootstrap/`.
+  New adapter releases can keep pinning old CLIs, so Brigade's patches of the adapters (`patches/`) set the versions it
+  runs; the lockfile covers every platform's binary (Linux and macOS, both CPUs). Upgrading the adapters means
+  redoing those patches.
 - **Sign-in never needs access to the computer** (changes the spec's "sign in through takeover"). The runner runs the
   vendor's own login command into a config directory per account (`~/.brigade/accounts/<id>`, via
   `CLAUDE_CONFIG_DIR` / `CODEX_HOME`). Codex uses its device-code flow: the dashboard shows the vendor URL and code,
@@ -88,9 +94,13 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   other sessions on the computer (ListAgents), workflows, cloud routines, phone notifications, worktrees and its design
   sync would work outside Brigade, where nobody sees them. The runner gives them to Claude Code as settings above every
   settings file (`apps/runner/src/harness/claude-settings.ts`, read by the bridge patch from `BRIGADE_CLAUDE_SETTINGS`);
-  a member's own `~/.claude` on a Mac keeps the rest of what it sets. Sub-agents stay, with SendMessage to go on with
-  one. Its bundled skills stay: Claude Code turns a skill off by name, whatever it comes from, so it would also turn
-  off a member's or a repository's skill of the same name.
+  a member's own `~/.claude` on a Mac keeps the rest of what it sets. The bridge joins them with the settings it makes
+  itself (the permission rules of its permission mode), never replaces them. Sub-agents stay, with SendMessage to go
+  on with one; fork sub-agents, on by default in SDK sessions since Claude Code 2.1.302, stay off
+  (`CLAUDE_CODE_FORK_SUBAGENT=0`) until that is decided on its own. Its bundled skills stay: Claude Code turns a skill
+  off by name, whatever it comes from, so it would also turn off a member's or a repository's skill of the same name.
+- **Codex's own memory is off** (`apps/runner/src/harness/codex-settings.ts`, in the config every Codex run starts
+  with): off by default, but a member's own `config.toml` could turn it on, and Brigade's memory is its own.
 - **Cloud computer install.** The API creates the VM through `ComputerProvider` (no account secrets reach it), then
   runs a generic Ubuntu bootstrap (`apps/api/src/cloud-bootstrap.ts`): a `brigade` user, Node.js and the runner in
   `/opt/brigade` from the API's own bundle (`pnpm --filter @brigade/runner bundle`), a one-time link code, and a

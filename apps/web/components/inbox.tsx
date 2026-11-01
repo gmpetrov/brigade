@@ -404,7 +404,8 @@ export function InboxView() {
   const gmail = sources.filter((s) => s.kind === 'gmail')
 
   return (
-    <div className="flex min-w-0 lg:h-dvh">
+    // data-inbox: on a wide screen the page holds still behind its two columns (globals.css).
+    <div data-inbox className="flex min-w-0 lg:h-dvh">
       <section
         aria-label="Emails"
         className={cn(
@@ -590,7 +591,10 @@ export function InboxView() {
           </div>
         </header>
 
-        <div ref={scroller} className="flex min-h-0 flex-1 flex-col lg:overflow-y-auto">
+        <div
+          ref={scroller}
+          className="flex min-h-0 flex-1 flex-col lg:overflow-y-auto lg:overscroll-contain"
+        >
           {list.error && (
             <p className="px-5 py-4 text-sm text-destructive-text">{list.error.message}</p>
           )}
@@ -629,7 +633,10 @@ export function InboxView() {
 
       <section
         aria-label="Email"
-        className={cn('min-w-0 flex-1 lg:overflow-y-auto', item ? 'block' : 'hidden lg:block')}
+        className={cn(
+          'min-w-0 flex-1 lg:overflow-y-auto lg:overscroll-contain',
+          item ? 'block' : 'hidden lg:block',
+        )}
       >
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 pt-6 pb-16 md:px-10 md:pt-8">
           {item ? (
@@ -701,7 +708,8 @@ function SenderAvatar({
         className,
       )}
     >
-      {(name || address).trim().charAt(0).toUpperCase() || '?'}
+      {/* Its first letter or digit: a name in quotes ('Brigade alerts' via …) starts with neither. */}
+      {(name || address).match(/[\p{L}\p{N}]/u)?.[0]?.toUpperCase() ?? '?'}
     </span>
   )
 }
@@ -714,7 +722,13 @@ function NextStep({ item }: { item: InboxItem }) {
     item.next?.kind === 'draft' ? (
       <span className="font-semibold text-primary">Draft to approve</span>
     ) : item.status === 'done' ? (
-      <span>Done</span>
+      item.outcome?.kind === 'handled' ? (
+        <Hint label={item.outcome.note}>
+          <span className="min-w-0 truncate">handled it without a reply</span>
+        </Hint>
+      ) : (
+        <span>Done</span>
+      )
     ) : item.next?.kind === 'scheduled' ? (
       <span className="inline-flex items-center gap-1">
         <Clock aria-hidden className="size-3" />
@@ -866,9 +880,10 @@ function Reader({
   const unowned = d.status === 'waiting' && !d.thread
   const trouble = d.route === 'cap' || d.route === 'loop' || d.route === 'bounce'
   const state = d.reason ? 'No teammate is on it' : destination(d)
-  const about = [d.teammate && `${d.teammate.name}’s mailbox`, d.project?.name]
-    .filter(Boolean)
-    .join(' · ')
+  // Gmail's mail came to the account, not to the mailbox of the teammate who took it.
+  const mailboxName =
+    d.source.kind === 'gmail' ? `Gmail ${d.to}` : d.teammate && `${d.teammate.name}’s mailbox`
+  const about = [mailboxName, d.project?.name].filter(Boolean).join(' · ')
   // Once a thread has it, handing it over starts a new thread: worth offering only when the
   // mailbox has another teammate than the one on it.
   const handOver = d.handTo.some((t) => t.id !== d.teammate?.id)
@@ -942,7 +957,7 @@ function Reader({
               )}
             </div>
           </div>
-        ) : d.outcome && d.thread && !done ? (
+        ) : d.outcome && d.thread && (!done || d.outcome.kind === 'handled') ? (
           <OutcomeLine detail={d} about={about} onChanged={reload} />
         ) : (
           <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">

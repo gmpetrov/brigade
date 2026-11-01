@@ -1,6 +1,6 @@
 // Gmail connector (Gmail API v1), on the mailbox's OAuth credential in the vault.
 import { randomUUID } from 'node:crypto'
-import { ATTACHMENT_MAX, SEND_LATER_MAX_DAYS } from '@brigade/contracts'
+import { ATTACHMENT_MAX, SEND_LATER_MAX_DAYS, emailTitle } from '@brigade/contracts'
 import { z } from 'zod'
 import {
   ConnectorError,
@@ -469,7 +469,7 @@ export const gmail: ConnectorDefinition = {
       describe: ({ payload }) => {
         const email = payload as ReceivedEmail
         return {
-          title: `Email from ${email.from ?? 'unknown'}: ${email.subject || '(no subject)'}`,
+          title: emailTitle(email.subject, email.from),
           summary: [
             `From: ${email.from ?? ''}`,
             `To: ${email.to ?? ''}`,

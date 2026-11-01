@@ -428,7 +428,8 @@ async function toItems(
         (x) => x.box === m.box && x.conversationId === m.conversationId && hidden(scope, x),
       )
     const projectId = m.projectId ?? m.address?.projectId ?? m.session?.projectId ?? null
-    const outcome = m.doneAt ? null : outcomeOf(m, mails)
+    // Kept once done too: what its thread did with it is still worth saying.
+    const outcome = outcomeOf(m, mails)
     const teammateId = m.session?.teammateId ?? m.address?.teammateId ?? null
     // The address it came to as people know it: the mailbox's own on the workspace's domain,
     // unless it came to a sign-up's or a project's variant on Brigade's.

@@ -61,6 +61,7 @@ export type InboxItem = {
   /**
    * What its thread said it did without replying (email_no_reply), while no reply went out
    * since: no_reply puts it To do, with the thread's reason; handled leaves it with the teammate.
+   * Still there once done, to say how it ended.
    */
   outcome: InboxOutcome | null
   /**
