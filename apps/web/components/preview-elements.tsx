@@ -66,6 +66,11 @@ function ElementCard({ element, picture }: PickedElement) {
             </span>
           </Row>
         )}
+        {element.note && (
+          <Row name="Change">
+            <span className="whitespace-pre-wrap">{element.note}</span>
+          </Row>
+        )}
         {element.text && (
           <Row name="Text">
             <span className="line-clamp-4">{element.text}</span>
@@ -180,6 +185,31 @@ export function PreviewElementChips({
   className?: string
 }) {
   if (!elements.length) return null
+  // Sent as pending edits: each with what should change on it, numbered as they were.
+  if (elements.some((e) => e.element.note))
+    return (
+      <ol className={cn('flex max-w-full flex-col items-end gap-1.5', className)}>
+        {elements.map((picked, i) => (
+          <li
+            key={`${picked.element.page} ${picked.element.selector} ${i}`}
+            className="flex max-w-full min-w-0 flex-col items-end gap-0.5"
+          >
+            <span className="flex max-w-full min-w-0 items-center gap-1.5">
+              <span className="text-xs text-muted-foreground tabular-nums">{i + 1}.</span>
+              <PreviewElementChip
+                {...picked}
+                {...(onRemove ? { onRemove: () => onRemove(i) } : {})}
+              />
+            </span>
+            {picked.element.note && (
+              <span className="max-w-full text-sm break-words whitespace-pre-wrap">
+                {picked.element.note}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    )
   return (
     <div className={cn('flex max-w-full flex-wrap gap-1', className)}>
       {elements.map((picked, i) => (

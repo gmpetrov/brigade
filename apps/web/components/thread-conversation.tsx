@@ -72,7 +72,7 @@ import {
   useThreadPreview,
   useThreadRepositories,
 } from '@/components/preview-panel'
-import { PreviewElementChips } from '@/components/preview-elements'
+import { PendingEdits, type PendingEditRow } from '@/components/pending-edits'
 import type { PickHandlers } from '@/components/preview-panel'
 import { usePreviewStart } from '@/components/preview-start'
 import { ThreadProjectMenu } from '@/components/projects'
@@ -100,6 +100,16 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useIsMobile } from '@/hooks/use-mobile'
+import {
+  designEditText,
+  removeDesignEdit,
+  restoreDesignEdits,
+  setDesignEdits,
+  setEditsSender,
+  updateDesignEdit,
+  useDesignEdits,
+  withUnsent,
+} from '@/lib/pending-edits'
 import { pendingThreads, useOpenedMessage } from '@/lib/pending-threads'
 import {
   api,
@@ -151,10 +161,21 @@ export type ThreadHeading = {
  * An element picked in the preview, by the id its page gave it, and the upload of its
  * picture; `drawing` while its page draws it, when the message waits for the picture.
  */
-type Picked = { id: string; element: PreviewElement; upload?: string; drawing?: boolean }
+type Picked = {
+  id: string
+  element: PreviewElement
+  upload?: string
+  drawing?: boolean
+  /** When it was picked: the pending edits go in that order, with the design comments. */
+  at: number
+  /** What should change on it, written in its row. */
+  note?: string
+}
 
 /** Elements picked in each thread's preview, kept when another thread opens. */
 const keptElements = new Map<string, Picked[]>()
+
+const editsCount = (n: number) => (n === 1 ? '1 edit' : `${n} edits`)
 
 /** How long a message waits for a picture its page is drawing (it may have gone away). */
 const DRAWING_MS = 15_000
@@ -351,8 +372,9 @@ export function ThreadConversation({
             (e) => e.element.page === element.page && e.element.selector === element.selector,
           )
             ? list
-            : [...list, { id: pickId, element, drawing: true }],
+            : [...list, { id: pickId, element, drawing: true, at: Date.now() }],
         )
+        setFocusEdit(pickId)
         setTimeout(() => drawn(pickId), DRAWING_MS)
       },
       picture: (pickId, image) => {
@@ -377,16 +399,56 @@ export function ThreadConversation({
       list.map((e) => {
         if (!failed.some((f) => f.id === e.id)) return e
         const { image: _image, ...element } = e.element
-        return { id: e.id, element }
+        return { id: e.id, element, at: e.at, ...(e.note !== undefined && { note: e.note }) }
       }),
     )
   }, [elements, files.uploads, removeUpload])
   const pictureKeys = new Set(elements.flatMap((e) => (e.upload ? [e.upload] : [])))
-  const removeElement = (index: number) => {
-    const upload = elements[index]?.upload
+  const removeElement = (pickId: string) => {
+    const upload = elements.find((e) => e.id === pickId)?.upload
     if (upload) files.remove(upload)
-    setElements((list) => list.filter((_, i) => i !== index))
+    setElements((list) => list.filter((e) => e.id !== pickId))
   }
+  // Comments made on a design's canvas beside the thread wait here too, with the elements:
+  // one numbered list, in the order they were made, sent in one message.
+  const designEdits = useDesignEdits(id)
+  const [focusEdit, setFocusEdit] = useState<string>()
+  const lastDesignEdit = designEdits.at(-1)?.id
+  useEffect(() => {
+    if (lastDesignEdit) setFocusEdit(undefined)
+  }, [lastDesignEdit])
+  const pendingEdits = [
+    ...elements.map((e) => ({ at: e.at, element: e, design: undefined })),
+    ...designEdits.map((d) => ({ at: d.at, element: undefined, design: d })),
+  ].sort((a, b) => a.at - b.at)
+  const editRows: PendingEditRow[] = pendingEdits.map(({ element: e, design: d }) =>
+    e
+      ? {
+          kind: 'element',
+          key: e.id,
+          picked: {
+            element: e.element,
+            ...(e.drawing && { drawing: true }),
+            ...(e.upload && {
+              picture: files.uploads.find((u) => u.key === e.upload)?.preview,
+            }),
+          },
+          where: e.element.page || '/',
+          note: e.note ?? '',
+          onNote: (note: string) =>
+            setElements((list) => list.map((x) => (x.id === e.id ? { ...x, note } : x))),
+          onRemove: () => removeElement(e.id),
+        }
+      : {
+          kind: 'design',
+          key: d!.id,
+          label: d!.label,
+          where: d!.folder,
+          note: d!.note,
+          onNote: (note: string) => updateDesignEdit(id, d!.id, note),
+          onRemove: () => removeDesignEdit(id, d!.id),
+        },
+  )
   const drop = useFileDrop(files.add)
   const root = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
@@ -894,7 +956,11 @@ export function ThreadConversation({
   }
 
   const ready =
-    (text.trim() || files.ids.length > 0 || elements.length > 0 || moveTo) &&
+    (text.trim() ||
+      files.ids.length > 0 ||
+      elements.length > 0 ||
+      designEdits.length > 0 ||
+      moveTo) &&
     !files.busy &&
     !elements.some((e) => e.drawing) &&
     !files.failed
@@ -911,18 +977,34 @@ export function ThreadConversation({
     const replying = replyTo
     const moving = moveTo
     const picked = elements
-    if (moving && !written && files.ids.length === 0 && picked.length === 0) {
+    const commented = designEdits
+    if (
+      moving &&
+      !written &&
+      files.ids.length === 0 &&
+      picked.length === 0 &&
+      commented.length === 0
+    ) {
       setMoveTo(undefined)
       return moveThread(moving.id).catch(() => setMoveTo((current) => current ?? moving))
     }
-    // The elements after what the person wrote, so a preview of the message starts with it.
-    const sending = [written, ...picked.map((p) => formatPreviewElement(p.element))]
+    // The edits after what the person wrote, so a preview of the message starts with it,
+    // in the order they were made.
+    const sending = [
+      written,
+      ...pendingEdits.map(({ element: e, design: d }) =>
+        e
+          ? formatPreviewElement({ ...e.element, ...(e.note?.trim() && { note: e.note }) })
+          : designEditText(d!),
+      ),
+    ]
       .filter(Boolean)
       .join('\n\n')
     setText('')
     setReplyTo(undefined)
     setMoveTo(undefined)
     setElements([])
+    setDesignEdits(id, [])
     try {
       await deliver(sending, files.ids, undefined, replying, moving)
       files.clear()
@@ -931,10 +1013,39 @@ export function ThreadConversation({
       setText((current) => current || written)
       setReplyTo((current) => current ?? replying)
       setMoveTo((current) => current ?? moving)
-      setElements((current) => (current.length ? current : picked))
+      // Edits added while it was on its way stay, after the ones it took.
+      setElements((current) => withUnsent(current, picked))
+      restoreDesignEdits(id, commented)
       setError((err as Error).message)
     }
   }
+
+  // The canvas of a design beside the thread adds its comments here while this composer can take
+  // them; over the page, it hides the composer and sends the edits from there.
+  const sendRef = useRef(send)
+  sendRef.current = send
+  const sendEdits = useCallback(() => void sendRef.current().catch(() => undefined), [])
+  const editsDisabled = deciding
+    ? 'Approve or deny the request above first'
+    : !ready
+      ? 'Wait for the pictures to finish'
+      : undefined
+  useEffect(() => {
+    setEditsSender(
+      id,
+      // Without the right to write here, no composer takes them: the canvas sends at once.
+      t.mayPrompt
+        ? {
+            count: editRows.length,
+            order: editRows.map((r) => r.key),
+            send: sendEdits,
+            ...(editsDisabled && { disabled: editsDisabled }),
+          }
+        : undefined,
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the order by its keys
+  }, [id, t.mayPrompt, editRows.map((r) => r.key).join('\n'), sendEdits, editsDisabled])
+  useEffect(() => () => setEditsSender(id, undefined), [id])
 
   /** Continue the thread on another computer without a message: its teammate picks up where it was. */
   async function moveThread(computerId: string) {
@@ -1547,17 +1658,7 @@ export function ThreadConversation({
                     </div>
                   )}
                   <AskedDocument text={text} />
-                  <PreviewElementChips
-                    elements={elements.map((e) => ({
-                      element: e.element,
-                      ...(e.drawing && { drawing: true }),
-                      ...(e.upload && {
-                        picture: files.uploads.find((u) => u.key === e.upload)?.preview,
-                      }),
-                    }))}
-                    onRemove={removeElement}
-                    className="px-1"
-                  />
+                  <PendingEdits rows={editRows} focus={focusEdit} onDone={focusComposer} />
                   <UploadList
                     uploads={files.uploads.filter((u) => !pictureKeys.has(u.key))}
                     onRemove={files.remove}
@@ -1599,7 +1700,11 @@ export function ThreadConversation({
                         onSubmit={() => void send().catch(() => undefined)}
                         rows={1}
                         typeToFocus
-                        placeholder={`Chat with ${answering.name}`}
+                        placeholder={
+                          editRows.length
+                            ? 'Add a note for all the edits'
+                            : `Chat with ${answering.name}`
+                        }
                         suggestion={suggestion}
                       />
                     </div>
@@ -1643,7 +1748,7 @@ export function ThreadConversation({
                         Use
                       </Button>
                     )}
-                    {(text.trim() || files.uploads.length > 0 || moveTo) && (
+                    {(text.trim() || files.uploads.length > 0 || editRows.length > 0 || moveTo) && (
                       <Button
                         size="icon-sm"
                         className="mb-1 rounded-full [&_svg:not([class*='size-'])]:size-5"
@@ -1651,9 +1756,11 @@ export function ThreadConversation({
                         aria-label={
                           moveTo
                             ? `Continue on ${moveTo.name}`
-                            : busy
-                              ? 'Queue for after this turn'
-                              : 'Send'
+                            : editRows.length
+                              ? `${busy ? 'Queue' : 'Send'} ${editsCount(editRows.length)}`
+                              : busy
+                                ? 'Queue for after this turn'
+                                : 'Send'
                         }
                         tooltip={
                           deciding
@@ -1662,9 +1769,13 @@ export function ThreadConversation({
                               ? busy
                                 ? `Continue on ${moveTo.name} after this turn (↵)`
                                 : `Continue on ${moveTo.name} (↵)`
-                              : busy
-                                ? 'Queue for after this turn (↵)'
-                                : 'Send (↵) · New line (⇧↵)'
+                              : editRows.length
+                                ? busy
+                                  ? `Queue ${editsCount(editRows.length)} for after this turn (↵)`
+                                  : `Send ${editsCount(editRows.length)} (↵)`
+                                : busy
+                                  ? 'Queue for after this turn (↵)'
+                                  : 'Send (↵) · New line (⇧↵)'
                         }
                       >
                         <ArrowUp aria-hidden />

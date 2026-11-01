@@ -436,7 +436,10 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   spliced into the original text and saved as a new version by the member (`design.edited` audit); the canvas
   undoes by sending the reverse change, and saves a new `thumbnail.png` (`PUT /api/designs/thumbnail`) after
   the first board's page changes. A comment is a message to the thread that saved the design last (the files'
-  `updatedInSessionId`, when the member may prompt it), else a new thread to the same teammate. Knobs are saved
+  `updatedInSessionId`, when the member may prompt it), else a new thread to the same teammate. Beside its
+  thread, a comment waits instead in the thread's composer as a pending edit (a numbered pin on its element),
+  with the elements picked in the preview, and they all go in one message: the teammate makes every change and
+  saves once, and the person can reread, change or remove each before it goes. Knobs are saved
   into `knobs.json` (`PUT /api/designs/knobs`) and applied to the page as `:root:root` custom properties.
   Export: the folder as a zip (`GET /api/designs/zip`), PDF, PNG, and for decks PowerPoint (one picture per
   slide with its notes, pptxgenjs). A message mentions a design as `@[path](design:path)`; Hand off starts a

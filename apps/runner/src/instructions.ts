@@ -234,7 +234,7 @@ function designs(spec: ThreadSpec) {
   return [
     '## Designs',
     'When asked for a visual design (a page, a screen, a prototype, slides, a one-pager), to change one, or in a ' +
-      'message that starts with "Comment on the design", read the `brigade-designs` skill before you start: how to ' +
+      'message with a comment that starts with "Comment on the design", read the `brigade-designs` skill before you start: how to ' +
       'make, check and save one, and which design system it follows. When asked for a design system, read ' +
       '`brigade-design-systems`.',
   ].join('\n\n')
@@ -297,9 +297,10 @@ function designSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
       'any design there): go on from that path, and leave the options where they are, so the thread still shows them. ' +
       `When they answer in their own words instead (mix two, change one), save new options into the same folder under new ` +
       `names and offer them again, or save the result as the design itself (\`acme/pricing${DESIGN_SUFFIX}\`) once they settle.`,
-    'People comment on a design from its canvas: such a message starts with "Comment on the design" and names the ' +
-      'board (its file and width), the element by its `data-id` (or a CSS path) and its line in the file. Change the ' +
-      'design, check it and save it again.',
+    'People comment on a design from its canvas: each comment starts with "Comment on the design" and names the ' +
+      'board (its file and width), the element by its `data-id` (or a CSS path) and its line in the file. Several ' +
+      'comments often come in one message, after a note on all of them: make every change, check the design and ' +
+      'save it again once.',
     systems.length > 0
       ? [
           '## Design systems',

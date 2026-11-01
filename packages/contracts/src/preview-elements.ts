@@ -4,7 +4,8 @@
 // (runner/src/preview-select.ts). The composer holds them as chips and writes each
 // into the message as a <preview-element> block: the teammate reads where it is
 // and its HTML; the dashboard shows a chip in its place. Its picture, when the page
-// could draw it, goes with the message as an image the block names.
+// could draw it, goes with the message as an image the block names. What the person
+// wants changed on it, written beside it in the composer's pending edits, is its note.
 import { z } from 'zod'
 
 export const PreviewElement = z.object({
@@ -27,6 +28,8 @@ export const PreviewElement = z.object({
   text: z.string().max(500).optional(),
   /** The name of the image of it attached to the same message. */
   image: z.string().max(200).optional(),
+  /** What the person wants changed on it, written beside it before the message went. */
+  note: z.string().max(4000).optional(),
   /** Its HTML, clipped. */
   html: z.string().max(4000),
 })
@@ -34,7 +37,14 @@ export type PreviewElement = z.infer<typeof PreviewElement>
 
 const escape = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/\s+/g, ' ')
-const unescape = (value: string) => value.replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+/** A note keeps its line breaks. */
+const escapeNote = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/\r?\n/g, '&#10;')
+const unescape = (value: string) =>
+  value
+    .replace(/&quot;/g, '"')
+    .replace(/&#10;/g, '\n')
+    .replace(/&amp;/g, '&')
 
 /** The block a message carries for one element. */
 export function formatPreviewElement(element: PreviewElement) {
@@ -52,10 +62,11 @@ export function formatPreviewElement(element: PreviewElement) {
     ['size', element.size],
     ['text', element.text],
     ['image', element.image],
+    ['note', element.note?.trim()],
   ]
   const head = attributes
     .filter((a): a is [string, string] => !!a[1])
-    .map(([name, value]) => ` ${name}="${escape(value)}"`)
+    .map(([name, value]) => ` ${name}="${name === 'note' ? escapeNote(value) : escape(value)}"`)
     .join('')
   const html = element.html.replace(/<\/preview-element/gi, '<\\/preview-element')
   return `<preview-element${head}>\n${html}\n</preview-element>`
@@ -80,6 +91,7 @@ export function splitPreviewElements(text: string): { text: string; elements: Pr
       ...(attributes.size ? { size: attributes.size } : {}),
       ...(attributes.text ? { text: attributes.text } : {}),
       ...(attributes.image ? { image: attributes.image } : {}),
+      ...(attributes.note ? { note: attributes.note } : {}),
       html,
     })
     return ''
@@ -99,11 +111,13 @@ function parseProps(json: string): Record<string, string> {
   }
 }
 
-/** Elements reduced to their labels, for titles and previews. */
+/** Elements reduced to their labels (and notes), for titles and previews. */
 export const previewElementsToText = (text: string) =>
   text.includes('<preview-element')
     ? text.replace(BLOCK, (_, head: string) => {
         const label = /\slabel="([^"]*)"/.exec(head)?.[1]
-        return `[${label ? unescape(label) : 'Element'}]`
+        const note = /\snote="([^"]*)"/.exec(head)?.[1]
+        const name = label ? unescape(label) : 'Element'
+        return note ? `[${name}: ${unescape(note).replace(/\s+/g, ' ')}]` : `[${name}]`
       })
     : text

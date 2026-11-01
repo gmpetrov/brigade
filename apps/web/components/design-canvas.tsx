@@ -143,6 +143,7 @@ function DesignCanvasInner({
   groups,
   mode,
   selection,
+  pins,
   onSelect,
   onMessage,
   onKeyDown,
@@ -154,6 +155,8 @@ function DesignCanvasInner({
   /** Select: pick elements; Hand: drag anywhere to move the view; Play: the pages work. */
   mode: 'select' | 'hand' | 'play'
   selection: Selected[]
+  /** Comments waiting in the thread's composer: a numbered pin on each element. */
+  pins?: { key: string; board: string; rect: Rect; n: number }[]
   onSelect: (selection: Selected[]) => void
   onMessage: (board: CanvasBoard, message: PageMessage) => void
   /** Keys the canvas does not take itself (Escape, undo). */
@@ -1073,6 +1076,9 @@ function DesignCanvasInner({
             kind="selected"
           />
         ))}
+        {pins?.map((p) => (
+          <Pin key={p.key} box={outline(p.board, p.rect)} n={p.n} />
+        ))}
       </div>
 
       {/* While panning, nothing below takes the pointer. */}
@@ -1101,6 +1107,25 @@ function Outline({
       )}
       style={{ left: box.left - 1, top: box.top - 1, width: box.width + 2, height: box.height + 2 }}
     />
+  )
+}
+
+/** A comment waiting in the composer, by its number there, at its element's top-left corner. */
+function Pin({
+  box,
+  n,
+}: {
+  box: { left: number; top: number; width: number; height: number } | null
+  n: number
+}) {
+  if (!box) return null
+  return (
+    <div
+      className="absolute flex size-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-[0.6875rem] font-semibold text-primary-foreground tabular-nums shadow-sm ring-2 ring-background"
+      style={{ left: box.left, top: box.top }}
+    >
+      {n}
+    </div>
   )
 }
 
