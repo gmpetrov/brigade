@@ -16,7 +16,12 @@ import { parseEnv } from 'node:util'
 // - a merge under way gives up when its thread goes back to work, or when what it would merge is
 //   no longer the head its review approved;
 // - checks GitHub fails to list are never taken for none: not set merging, and a merge under way
-//   waits; without the Checks permission it never merges on its own.
+//   waits; without the Checks permission it never merges on its own;
+// - opened in a child whose report wakes its parent (a schedule's run): not before the turn its
+//   report's wake-up brought ended (its message found by the wake-up's id, never its text),
+//   whatever other turn ends first; one delivered before wake-ups kept the report holds nothing;
+//   one whose report wakes nobody, once it is delivered, which looks again; an awaited child's,
+//   as before.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -32,7 +37,8 @@ process.env.GITHUB_APP_ID = '1'
 process.env.GITHUB_APP_SLUG = 'brigade-test'
 process.env.GITHUB_APP_PRIVATE_KEY = privateKey
 
-const { prisma, scoped } = await import('../src/db.js')
+const { prisma, scoped, Prisma } = await import('../src/db.js')
+const { wakeupMessageId } = await import('../src/wakeups.js')
 const database = await Promise.race([
   prisma.$queryRaw`select 1`.then(() => true),
   new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
@@ -446,5 +452,292 @@ describe('auto-merge', { skip: !database && 'no database answers' }, () => {
     )
     assert.equal((await row(13)).mergeStatus, 'none')
     assert.ok(!merged.has(13))
+  })
+
+  /**
+   * Pull request #number opened in a child of a new idle thread of Riley's, whose report is
+   * delivered as its turn ends (deliverReport): the child, its parent, and the parent's wake-up.
+   */
+  async function openedInChild(number: number, child: { awaited: boolean; status?: string }) {
+    const parent = await db.session.create({
+      data: {
+        teammateId: ids.riley,
+        startedByMemberId: ids.owner,
+        computerId: ids.computer,
+        title: `Parent of ${number}`,
+        status: 'idle',
+        lastSeq: 0,
+      } as never,
+    })
+    const id = await opened(number)
+    await db.session.updateMany({
+      where: { id },
+      data: {
+        parentId: parent.id,
+        parentTeammateId: ids.riley,
+        awaited: child.awaited,
+        origin: child.awaited ? 'child' : 'schedule',
+        report: {
+          status: child.status ?? 'report',
+          summary: `Opened #${number}`,
+          at: new Date().toISOString(),
+        },
+      },
+    })
+    return { child: id, parent: parent.id }
+  }
+
+  /** The child's report reached its parent: what happens as the child's turn ends. */
+  async function delivered(child: string) {
+    const { deliverReport } = await import('../src/children.js')
+    await deliverReport(scope, child)
+  }
+
+  /** The thread's latest wake-up for a report, if any. */
+  const reportWakeup = (sessionId: string) =>
+    db.wakeup.findFirst({ where: { sessionId, kind: 'report' }, orderBy: { createdAt: 'desc' } })
+
+  /** An event of the thread, as its runner noted it. */
+  const event = (sessionId: string, seq: number, type: string, data: object = {}) =>
+    db.sessionEvent.create({
+      data: { sessionId, seq, type, data: { type, ...data }, at: new Date() } as never,
+    })
+
+  test("a schedule's run's pull request waits for the turn its report woke", async () => {
+    const { child, parent } = await openedInChild(20, { awaited: false })
+    await delivered(child)
+    await turnEnded(child)
+    assert.ok(!merged.has(20), 'its parent has not read the report')
+    const wakeup = await reportWakeup(parent)
+    assert.ok(wakeup, 'the report wakes its parent')
+
+    // The wake-up went: its message waits behind a turn of the parent already under way.
+    await db.wakeup.updateMany({
+      where: { id: wakeup.id },
+      data: { status: 'fired', firedAt: new Date() },
+    })
+    await event(parent, 1, 'turn.started')
+    await event(parent, 2, 'turn.completed')
+    await turnEnded(parent)
+    assert.ok(!merged.has(20), 'that turn did not show the report')
+
+    // The turn that reads it.
+    await db.session.updateMany({ where: { id: parent }, data: { status: 'running' } })
+    await event(parent, 3, 'message.user', {
+      text: wakeup.note,
+      memberId: null,
+      messageId: wakeupMessageId(wakeup.id),
+    })
+    await event(parent, 4, 'turn.started')
+    await turnEnded(child)
+    assert.ok(!merged.has(20), 'its parent is reading it')
+
+    await event(parent, 5, 'turn.completed')
+    await db.session.updateMany({ where: { id: parent }, data: { status: 'idle' } })
+    await turnEnded(parent)
+    assert.ok(merged.has(20), "its parent's woken turn ended")
+  })
+
+  test('an unrelated hand-back turn does not stand for reading a pending report', async () => {
+    const { child, parent } = await openedInChild(30, { awaited: false })
+    await db.session.updateMany({
+      where: { id: parent },
+      data: { controlledByMemberId: ids.owner, status: 'paused' },
+    })
+    await delivered(child)
+    const row = await db.session.findFirstOrThrow({ where: { id: child } })
+    const wakeup = await reportWakeup(parent)
+    assert.ok(row.reportDeliveredAt)
+    assert.equal(wakeup?.status, 'pending')
+    // Handed back with a note: a turn of its own, which ends before the wake-up goes.
+    await db.session.updateMany({
+      where: { id: parent },
+      data: { controlledByMemberId: null, status: 'running' },
+    })
+    await event(parent, 1, 'message.user', { text: 'Handed back', memberId: ids.owner })
+    await event(parent, 2, 'turn.started')
+    await event(parent, 3, 'turn.completed')
+    await db.session.updateMany({ where: { id: parent }, data: { status: 'idle' } })
+    await turnEnded(parent)
+    assert.equal(
+      (await db.wakeup.findFirstOrThrow({ where: { id: wakeup!.id } })).status,
+      'pending',
+    )
+    assert.ok(!merged.has(30), 'the unrelated turn did not read the pending report')
+  })
+
+  test('a run whose report is not in yet waits; one that wakes nobody merges once in', async () => {
+    const { child } = await openedInChild(21, { awaited: false })
+    await db.session.updateMany({ where: { id: child }, data: { report: Prisma.DbNull } })
+    await turnEnded(child)
+    assert.ok(!merged.has(21), 'its report is not in yet')
+
+    // Checked before its quiet report was delivered: the delivery looks again, as no turn follows.
+    const quiet = await openedInChild(31, { awaited: false, status: 'nothing' })
+    await turnEnded(quiet.child)
+    assert.ok(!merged.has(31), 'held until delivery')
+    await delivered(quiet.child)
+    const { advanceMerges } = await import('../src/pull-requests.js')
+    await advanceMerges(ids.workspace)
+    assert.ok(merged.has(31), 'a quiet delivery tries auto-merge again')
+  })
+
+  test("an awaited child's pull request merges as before, once its report is delivered", async () => {
+    const { child } = await openedInChild(23, { awaited: true })
+    await db.session.updateMany({ where: { id: child }, data: { reportDeliveredAt: new Date() } })
+    await turnEnded(child)
+    assert.ok(merged.has(23))
+  })
+
+  test('an older message with the same note does not stand for reading the current report', async () => {
+    await autoMerge(ids.owner, false)
+    const { child, parent } = await openedInChild(40, { awaited: false })
+    // The first report is really read while auto-merge is off.
+    await db.session.updateMany({
+      where: { id: parent },
+      data: { controlledByMemberId: ids.owner, status: 'paused' },
+    })
+    await delivered(child)
+    const first = await reportWakeup(parent)
+    assert.ok(first)
+    await db.wakeup.updateMany({
+      where: { id: first.id },
+      data: { status: 'fired', firedAt: new Date() },
+    })
+    await event(parent, 1, 'message.user', {
+      text: first.note,
+      memberId: null,
+      messageId: wakeupMessageId(first.id),
+    })
+    await event(parent, 2, 'turn.started')
+    await event(parent, 3, 'turn.completed')
+    await db.session.updateMany({
+      where: { id: parent },
+      data: { controlledByMemberId: null, status: 'idle' },
+    })
+    await turnEnded(parent)
+    assert.ok(!merged.has(40))
+
+    // The same child reports the same summary again: a new report.at, the same note.
+    const old = await db.session.findFirstOrThrow({ where: { id: child } })
+    await db.session.updateMany({
+      where: { id: child },
+      data: {
+        report: { ...(old.report as object), at: new Date().toISOString() },
+        reportDeliveredAt: null,
+      },
+    })
+    await db.session.updateMany({
+      where: { id: parent },
+      data: { controlledByMemberId: ids.owner, status: 'paused' },
+    })
+    await delivered(child)
+    const second = await reportWakeup(parent)
+    assert.ok(second)
+    assert.notEqual(second.id, first.id)
+    assert.equal(second.note, first.note)
+    // Its prompt is only queued: no message.user for it yet.
+    await db.wakeup.updateMany({
+      where: { id: second.id },
+      data: { status: 'fired', firedAt: new Date() },
+    })
+    await db.session.updateMany({
+      where: { id: parent },
+      data: { controlledByMemberId: null, status: 'idle' },
+    })
+    await autoMerge(ids.owner, true)
+    await turnEnded(child)
+    assert.ok(!merged.has(40), 'the older message must not stand for reading the second report')
+
+    // Its own message shows, and the turn that reads it ends.
+    await event(parent, 4, 'message.user', {
+      text: second.note,
+      memberId: null,
+      messageId: wakeupMessageId(second.id),
+    })
+    await event(parent, 5, 'turn.started')
+    await event(parent, 6, 'turn.completed')
+    await turnEnded(parent)
+    assert.ok(merged.has(40), 'the second report was read')
+  })
+
+  test('a report delivered before this change holds nothing, as before', async () => {
+    const { child, parent } = await openedInChild(50, { awaited: false })
+    await delivered(child)
+    const wakeup = await reportWakeup(parent)
+    assert.ok(wakeup)
+    // The state main left before this change: no reportSource, and a random message id.
+    await db.wakeup.updateMany({
+      where: { id: wakeup.id },
+      data: { sourceId: null, status: 'fired', firedAt: new Date() },
+    })
+    await event(parent, 1, 'message.user', {
+      text: wakeup.note,
+      memberId: null,
+      messageId: 'legacy-random-id',
+    })
+    await event(parent, 2, 'turn.started')
+    await event(parent, 3, 'turn.completed')
+    await turnEnded(parent)
+    assert.ok(merged.has(50), 'a report delivered by the old code holds nothing')
+  })
+
+  test('a waking report is not delivered as an earlier quiet one', async () => {
+    await autoMerge(ids.owner, true)
+    const { child, parent } = await openedInChild(61, { awaited: false, status: 'nothing' })
+    await db.session.updateMany({ where: { id: child }, data: { status: 'running' } })
+    let pending: Promise<void> | undefined
+    await db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "Session" WHERE id = ${child} FOR UPDATE`
+        const [{ pid }] = await tx.$queryRaw<{ pid: number }[]>`SELECT pg_backend_pid() AS pid`
+        // Delivery reads the old quiet report, then its UPDATE waits for this row lock.
+        pending = delivered(child)
+        let waiting = false
+        for (let n = 0; n < 300; n++) {
+          const blockers = await tx.$queryRaw<{ pid: number }[]>`
+            SELECT pid FROM pg_stat_activity WHERE ${pid} = ANY(pg_blocking_pids(pid))`
+          if (blockers.length) {
+            waiting = true
+            break
+          }
+          await new Promise((resolve) => setTimeout(resolve, 5))
+        }
+        assert.ok(waiting, 'deliverReport read the old report and waits to claim its row')
+        // A new report call lands meanwhile, resetting reportDeliveredAt as the tool does.
+        const { handleChildCall } = await import('../src/children.js')
+        const current = await tx.session.findFirstOrThrow({ where: { id: child } })
+        await handleChildCall(
+          tx as never,
+          scope,
+          current as never,
+          { id: ids.riley, name: 'Riley' },
+          { name: 'report', status: 'report', summary: 'New work: please review this PR' } as never,
+        )
+      },
+      { timeout: 10000 },
+    )
+    await pending
+    const after = await db.session.findFirstOrThrow({ where: { id: child } })
+    assert.equal((after.report as { status: string }).status, 'report')
+    assert.equal(after.reportDeliveredAt, null, 'the stale delivery claimed nothing')
+    assert.equal(await reportWakeup(parent), null)
+
+    await db.session.updateMany({ where: { id: child }, data: { status: 'idle' } })
+    const { noteChildEvents } = await import('../src/children.js')
+    await Promise.all([
+      turnEnded(child),
+      noteChildEvents({ ...scope, id: child, parentId: parent }, [
+        { event: { type: 'turn.completed', at: new Date().toISOString() } },
+      ]),
+    ])
+    const delivered2 = await db.session.findFirstOrThrow({ where: { id: child } })
+    assert.ok(delivered2.reportDeliveredAt, 'the new report is delivered as its turn ends')
+    const wakeup = await reportWakeup(parent)
+    assert.equal(wakeup?.status, 'pending', 'with its own wake-up')
+    assert.ok(
+      !merged.has(61),
+      'the fresh report is not taken for an old one and has not reached its parent',
+    )
   })
 })

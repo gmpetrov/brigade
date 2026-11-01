@@ -162,6 +162,13 @@ export async function cancelWakeup(
     throw new HTTPException(404, { message: 'No pending wake-up with that id in this thread' })
 }
 
+/**
+ * The id a report's wake-up gives its message in the thread: the runner keeps it on the message,
+ * queued and shown (message.user), so auto-merge knows which turn read which report
+ * (src/pull-requests.ts). Stable, so a prompt tried again after a restart keeps it too.
+ */
+export const wakeupMessageId = (wakeupId: string) => `wakeup-${wakeupId}`
+
 /** The prompt a wake-up brings back. */
 function prompt(
   wakeup: { note: string; wakeAt: Date; createdAt: Date },
@@ -227,6 +234,7 @@ async function fire(wakeup: {
           : wakeup.note,
       memberId: null,
       ...(seat && !seat.teammate.archivedAt ? { teammateIds: [wakeup.teammateId] } : {}),
+      ...(wakeup.kind === 'report' ? { messageId: wakeupMessageId(wakeup.id) } : {}),
     },
     { commandId: `wakeup:${wakeup.id}` },
   ).catch((error: unknown) => {

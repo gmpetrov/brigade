@@ -139,3 +139,31 @@ test('a turn waiting for a slot says so, and starts when one is free', async () 
   await sleep(50)
   end()
 })
+
+test("a prompt's own id stays on its message, queued then shown (a report's wake-up)", async () => {
+  message('own', 'Working')
+  await sleep(50)
+  assert.equal(of('own').filter((e) => e.type === 'turn.started').length, 1)
+  threads.handle({
+    type: 'thread.prompt',
+    commandId: 'wakeup:w1',
+    thread: spec('own'),
+    text: 'The child thread reported',
+    memberId: null,
+    messageId: 'wakeup-w1',
+    then: [],
+    attachments: [],
+  })
+  await sleep(50)
+  const queued = of('own').findLast((e) => e.type === 'message.queued')
+  assert.ok(queued?.type === 'message.queued')
+  assert.equal(queued.messageId, 'wakeup-w1')
+  end()
+  await sleep(50)
+  const shown = of('own').findLast((e) => e.type === 'message.user')
+  assert.ok(shown?.type === 'message.user')
+  assert.equal(shown.text, 'The child thread reported')
+  assert.equal(shown.messageId, 'wakeup-w1')
+  end()
+  await sleep(50)
+})
