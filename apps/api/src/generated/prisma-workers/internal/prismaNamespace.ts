@@ -7895,6 +7895,10 @@ export const SessionScalarFieldEnum = {
   conversationKey: 'conversationKey',
   scheduleId: 'scheduleId',
   archivedAt: 'archivedAt',
+  doneAt: 'doneAt',
+  doneSummary: 'doneSummary',
+  doneByType: 'doneByType',
+  doneById: 'doneById',
   lastSeq: 'lastSeq',
   move: 'move',
   movedAt: 'movedAt',
@@ -9469,6 +9473,20 @@ export type ListEnumSessionOriginFieldRefInput<$PrismaModel> = FieldRefInputType
 
 
 /**
+ * Reference to a field of type 'ActorType'
+ */
+export type EnumActorTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActorType'>
+    
+
+
+/**
+ * Reference to a field of type 'ActorType[]'
+ */
+export type ListEnumActorTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActorType[]'>
+    
+
+
+/**
  * Reference to a field of type 'TaskPriority'
  */
 export type EnumTaskPriorityFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TaskPriority'>
@@ -9731,20 +9749,6 @@ export type EnumDocumentKindFieldRefInput<$PrismaModel> = FieldRefInputType<$Pri
  * Reference to a field of type 'DocumentKind[]'
  */
 export type ListEnumDocumentKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DocumentKind[]'>
-    
-
-
-/**
- * Reference to a field of type 'ActorType'
- */
-export type EnumActorTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActorType'>
-    
-
-
-/**
- * Reference to a field of type 'ActorType[]'
- */
-export type ListEnumActorTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActorType[]'>
     
 
 

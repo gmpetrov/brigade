@@ -1019,10 +1019,6 @@ export type EnumDocumentKindFieldUpdateOperationsInput = {
   set?: $Enums.DocumentKind
 }
 
-export type NullableEnumActorTypeFieldUpdateOperationsInput = {
-  set?: $Enums.ActorType | null
-}
-
 export type DocumentCreateNestedOneWithoutListItemsInput = {
   create?: Prisma.XOR<Prisma.DocumentCreateWithoutListItemsInput, Prisma.DocumentUncheckedCreateWithoutListItemsInput>
   connectOrCreate?: Prisma.DocumentCreateOrConnectWithoutListItemsInput
