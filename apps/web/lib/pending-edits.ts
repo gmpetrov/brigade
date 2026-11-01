@@ -82,6 +82,20 @@ export function removeDesignEdit(threadId: string, id: string) {
   )
 }
 
+/**
+ * Edits that were sent, back with the ones added meanwhile, after a send that failed:
+ * none lost or doubled (by id), in the order they were made.
+ */
+export function withUnsent<T extends { id: string; at: number }>(current: T[], unsent: T[]): T[] {
+  const ids = new Set(current.map((e) => e.id))
+  return [...unsent.filter((e) => !ids.has(e.id)), ...current].sort((a, b) => a.at - b.at)
+}
+
+/** After a failed send, the design edits it took go back with those added meanwhile. */
+export function restoreDesignEdits(threadId: string, unsent: DesignEdit[]) {
+  if (unsent.length) setDesignEdits(threadId, withUnsent(designEditsOf(threadId), unsent))
+}
+
 /** The design edits waiting in a thread's composer. */
 export function useDesignEdits(threadId: string | undefined): DesignEdit[] {
   return useSyncExternalStore(

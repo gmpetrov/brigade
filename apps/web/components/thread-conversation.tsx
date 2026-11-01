@@ -102,12 +102,13 @@ import { Card } from '@/components/ui/card'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   designEditText,
-  designEditsOf,
   removeDesignEdit,
+  restoreDesignEdits,
   setDesignEdits,
   setEditsSender,
   updateDesignEdit,
   useDesignEdits,
+  withUnsent,
 } from '@/lib/pending-edits'
 import { pendingThreads, useOpenedMessage } from '@/lib/pending-threads'
 import {
@@ -1012,8 +1013,9 @@ export function ThreadConversation({
       setText((current) => current || written)
       setReplyTo((current) => current ?? replying)
       setMoveTo((current) => current ?? moving)
-      setElements((current) => (current.length ? current : picked))
-      if (!designEditsOf(id).length) setDesignEdits(id, commented)
+      // Edits added while it was on its way stay, after the ones it took.
+      setElements((current) => withUnsent(current, picked))
+      restoreDesignEdits(id, commented)
       setError((err as Error).message)
     }
   }
