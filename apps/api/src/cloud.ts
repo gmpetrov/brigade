@@ -56,7 +56,15 @@ const state = () =>
     keptAlive: new Map<string, number>(),
     /** Idle ones backing up before their stop. */
     stoppingIdle: new Set<string>(),
+    /** Starts under way with the provider: a "starting" row without one here was cut off. */
+    starting: new Set<string>(),
   }))
+
+/**
+ * How long a "starting" row is trusted without a start under way in this hub: a hub that restarts
+ * (an eviction, a deploy) drops its start, and its computer stayed "starting", never started again.
+ */
+const START_LOST_MS = 2 * 60_000
 
 /** In the hub: mark a cloud computer as in use, which postpones its idle stop. */
 export function touch(computerId: string) {
@@ -304,21 +312,28 @@ async function bringUp(computerId: string) {
   if (computer?.kind === 'cloud') await refuseWhileDeleting(computer.workspaceId)
   const ref = computer && refOf(computer)
   if (computer?.kind === 'cloud' && (await unfinished(computer))) return reprovision(computer)
+  if (!computer || computer.kind !== 'cloud' || !ref || computer.status === 'creating') return
   if (
-    !computer ||
-    computer.kind !== 'cloud' ||
-    !ref ||
-    computer.status === 'starting' ||
-    computer.status === 'creating'
+    computer.status === 'starting' &&
+    (state().starting.has(computer.id) ||
+      Date.now() - computer.updatedAt.getTime() < START_LOST_MS)
   )
     return
+  if (computer.status === 'starting') console.warn(`start of ${computer.id} lost: started again`)
   // A stopping computer can still be connected for a few seconds; trust our own status.
   if (computer.status !== 'stopped' && currentHub().isOnline(computerId)) return
   const status = await provider.status(ref)
-  if (status === 'running' && computer.status !== 'stopped') return // booting or reconnecting
+  if (status === 'running' && computer.status !== 'stopped') {
+    // A start cut off once the VM was up: running, so its runner's hello or the idle check
+    // (checkIdle) takes it from there.
+    if (computer.status === 'starting') await setStatus(computer, 'running')
+    return // booting or reconnecting
+  }
   if (status === 'destroyed') return setStatus(computer, 'error')
   // An 'error' computer (a failed resume, say) gets another start: it resumes from its last snapshot.
   await setStatus(computer, 'starting')
+  const { starting } = state()
+  starting.add(computer.id)
   void provider
     .start(ref)
     .then(() =>
@@ -334,6 +349,7 @@ async function bringUp(computerId: string) {
       console.error(`starting ${computer.id} failed: ${await providerReason(error)}`, error)
       await setStatus(computer, 'error')
     })
+    .finally(() => starting.delete(computer.id))
 }
 
 /**
