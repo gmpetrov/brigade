@@ -129,6 +129,7 @@ async function reportWakeup(
   parentId: string,
   teammateId: string | null,
   note: string,
+  sourceId?: string,
 ) {
   const parent = await db.session.findFirst({
     where: { id: parentId },
@@ -143,14 +144,29 @@ async function reportWakeup(
       note,
       kind: 'report',
       wakeAt: new Date(),
+      ...(sourceId ? { sourceId } : {}),
     } as never,
   })
   return wakeup.id
 }
 
+/**
+ * What a parent's wake-up for one child's report delivered at `deliveredAt` keeps as its
+ * sourceId: auto-merge finds it by this, to hold the child's pull requests until the parent
+ * read the report (src/pull-requests.ts).
+ */
+export const reportSource = (childId: string, deliveredAt: Date) =>
+  `report:${childId}:${deliveredAt.getTime()}`
+
 /** Wake the parent with a note: the teammate that started the child, else the parent's own. */
-async function wakeParent(scope: Scope, parentId: string, teammateId: string | null, note: string) {
-  const id = await reportWakeup(scoped(scope), parentId, teammateId, note)
+async function wakeParent(
+  scope: Scope,
+  parentId: string,
+  teammateId: string | null,
+  note: string,
+  sourceId?: string,
+) {
+  const id = await reportWakeup(scoped(scope), parentId, teammateId, note, sourceId)
   // At once, rather than at the next minute's tick; it waits like any wake-up when it cannot go yet.
   if (id) await fireNow(id)
 }
@@ -222,12 +238,23 @@ export async function deliverReport(scope: Scope, childId: string) {
   const report = reportOf(child?.report)
   if (!child?.parentId || !report || child.reportDeliveredAt) return
   if (child.awaited) return settleAwaited(scope, child.parentId)
+  const stamp = new Date()
   const { count } = await db.session.updateMany({
     where: { id: child.id, reportDeliveredAt: null },
-    data: { reportDeliveredAt: new Date() },
+    data: { reportDeliveredAt: stamp },
   })
   await parentChanged(scope, child.parentId)
-  if (!count || !wakesParent(report.status)) return
+  if (!count) return
+  if (!wakesParent(report.status)) {
+    // No turn of the parent follows to look at the child's pull requests again: auto-merge held
+    // them while the report was not in (src/pull-requests.ts), so it looks now. Imported here:
+    // pull-requests.ts reaches this file through reviews.ts.
+    const { autoMergeTurnEnded } = await import('./pull-requests.js')
+    await autoMergeTurnEnded(scope, child.id).catch((error: unknown) =>
+      console.warn(`auto-merge after ${child.id}'s report failed: ${String(error)}`),
+    )
+    return
+  }
   await wakeParent(
     scope,
     child.parentId,
@@ -241,6 +268,7 @@ export async function deliverReport(scope: Scope, childId: string) {
       // It was waited for once (start_child, message_thread), and the wait ran out.
       late: !!child.awaitUntil,
     }),
+    reportSource(child.id, stamp),
   )
 }
 

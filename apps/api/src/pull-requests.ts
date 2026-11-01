@@ -8,7 +8,6 @@
 // their threads once it is ready (autoMerge).
 import { mayWrite } from './account-sharing.js'
 import {
-  ChildReport,
   MergeMethod,
   type CheckRun,
   type DiffFile,
@@ -26,6 +25,7 @@ import { HTTPException } from 'hono/http-exception'
 import { personOfThread, trackLater } from './analytics.js'
 import { previewStates, stopThreadPreview } from './app-previews.js'
 import { audit, type Actor } from './audit.js'
+import { reportOf, reportSource } from './children.js'
 import { GITHUB_API, githubHeaders, installationToken } from './connectors/github-app.js'
 import { ConnectorError, json } from './connectors/types.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
@@ -1347,31 +1347,80 @@ const autoInclude = {
       awaited: true,
       report: true,
       reportDeliveredAt: true,
-      parent: {
-        select: {
-          status: true,
-          // Its latest turn's start: whether it read a report that woke it (autoMergeHold).
-          events: {
-            where: { type: 'turn.started' },
-            orderBy: { seq: 'desc' },
-            take: 1,
-            select: { at: true },
-          },
-        },
-      },
+      parent: { select: { status: true } },
       startedBy: { select: { id: true, role: true, autoMerge: true } },
     },
   },
   ...reviewInclude,
 } as const
-type AutoRow = Prisma.PullRequestGetPayload<{ include: typeof autoInclude }>
+/** With whether the thread that started its child thread has yet to read the child's report. */
+type AutoRow = Prisma.PullRequestGetPayload<{ include: typeof autoInclude }> & {
+  reportUnread: string | null
+}
+
+/** A pull request as autoMergeHold reads it. */
+async function autoRow(db: ScopedDb, id: string): Promise<AutoRow | null> {
+  const row = await db.pullRequest.findFirst({ where: { id }, include: autoInclude })
+  return row && { ...row, reportUnread: await reportUnread(db, row) }
+}
+
+const UNREAD = 'the thread that started it has not read its report yet'
+
+/**
+ * Why a child nobody awaited (a schedule's run) still holds its pull request: the thread that
+ * started it has not read its report, nor asked for the review it may ask for. Its report wakes
+ * that thread through a wake-up (src/children.ts, kept with reportSource), which goes once the
+ * thread can take it, after the child's turn ended; another turn of the thread meanwhile (a hand
+ * back, a person's message) did not read it. So it holds until that wake-up fired and a turn ended
+ * after its message showed in the thread. A report not in yet holds too (one made from the child's
+ * last message is settled as its turn ends, alongside this check): its delivery wakes the thread,
+ * whose turn's end looks again, or, a report that wakes nobody, looks again itself. A wake-up that
+ * never went (missed, cancelled) holds nothing more.
+ */
+async function reportUnread(
+  db: ScopedDb,
+  row: Prisma.PullRequestGetPayload<{ include: typeof autoInclude }>,
+): Promise<string | null> {
+  const thread = row.session
+  if (!thread?.parentId || thread.awaited || !row.sessionId) return null
+  const report = reportOf(thread.report)
+  if (!report || !thread.reportDeliveredAt)
+    return 'its report has not reached the thread that started it'
+  if (!wakesParent(report.status)) return null
+  const wakeup = await db.wakeup.findFirst({
+    where: {
+      sessionId: thread.parentId,
+      kind: 'report',
+      sourceId: reportSource(row.sessionId, thread.reportDeliveredAt),
+    },
+    select: { status: true, note: true },
+  })
+  if (!wakeup || wakeup.status === 'pending') return UNREAD
+  if (wakeup.status !== 'fired') return null
+  // Fired: its message is kept for the thread, which shows it when its turn comes.
+  const shown = await db.sessionEvent.findFirst({
+    where: {
+      sessionId: thread.parentId,
+      type: 'message.user',
+      data: { path: ['text'], equals: wakeup.note },
+    },
+    orderBy: { seq: 'desc' },
+    select: { seq: true },
+  })
+  if (!shown) return UNREAD
+  const ended = await db.sessionEvent.findFirst({
+    where: { sessionId: thread.parentId, type: 'turn.completed', seq: { gt: shown.seq } },
+    select: { seq: true },
+  })
+  return ended ? null : UNREAD
+}
 
 /**
  * Why Brigade may not merge it on its own now, as far as Brigade knows; null when it may. Its
  * thread's member turned Auto-merge on and may merge; a teammate opened it in that thread, which
  * is done with nothing asked (a child's, once its report reached the thread that started it, done
  * too: that one decides whether it gets a review; a report that wakes it, a schedule's run's say,
- * once a turn of it that started after the report ended); no review of it is starting or under way, and
+ * once the turn that read it ended: reportUnread); no review of it is starting or under way, and
  * its latest one, if any, approved it. headSha, once GitHub was asked: that approval read it.
  */
 export function autoMergeHold(row: AutoRow, now: Date, headSha?: string): string | null {
@@ -1388,8 +1437,7 @@ export function autoMergeHold(row: AutoRow, now: Date, headSha?: string): string
       return 'its report has not reached the thread that started it'
     if (!thread.parent || !AT_REST.includes(thread.parent.status))
       return 'the thread that started it is at work or asks something'
-    if (!thread.awaited && unreadReport(thread.report, thread.reportDeliveredAt, thread.parent))
-      return 'the thread that started it has not read its report yet'
+    if (row.reportUnread) return row.reportUnread
   }
   if (row.reviewClaimedAt && now.getTime() - row.reviewClaimedAt.getTime() < REVIEW_CLAIM_MS)
     return 'a review of it is starting'
@@ -1401,30 +1449,8 @@ export function autoMergeHold(row: AutoRow, now: Date, headSha?: string): string
   return null
 }
 
-/**
- * A report nobody awaited (a schedule's run's) wakes its parent only through a wake-up, which goes
- * after the child's turn ended: until a turn of the parent that started after it ends, the parent
- * has not read it, nor asked for the review it may ask for. None yet holds too: one made from the
- * child's last message is settled as its turn ends, alongside this check, and a conversation's
- * goes once the person is quiet; either wakes the parent, whose turn's end looks again
- * (autoMergeTurnEnded). A report that wakes nobody holds nothing. The parent's turn's start is the
- * runner's clock: one ahead of the API's by more than the time between that turn starting and the
- * report arriving would let a turn already under way count.
- */
-function unreadReport(
-  value: unknown,
-  deliveredAt: Date | null,
-  parent: { events: { at: Date }[] },
-): boolean {
-  const report = value ? ChildReport.safeParse(value).data : undefined
-  if (!report || !deliveredAt) return true
-  if (!wakesParent(report.status)) return false
-  const started = parent.events[0]?.at
-  return !started || started.getTime() <= deliveredAt.getTime()
-}
-
 const autoMergeHeld = async (db: ScopedDb, id: string, now: Date, headSha?: string) => {
-  const row = await db.pullRequest.findFirst({ where: { id }, include: autoInclude })
+  const row = await autoRow(db, id)
   return row ? autoMergeHold(row, now, headSha) : 'it is gone'
 }
 
@@ -1452,7 +1478,7 @@ async function autoMergeOff(db: ScopedDb, scope: Scope, row: MergeRow, reason: s
  */
 export async function autoMerge(scope: Scope, id: string, now = new Date()) {
   const db = scoped(scope)
-  const row = await db.pullRequest.findFirst({ where: { id }, include: autoInclude })
+  const row = await autoRow(db, id)
   if (!row || row.state !== 'open' || row.mergeStatus !== 'none') return false
   if (autoMergeHold(row, now)) return false
   const gh = await github(db, scope, row.repository)
