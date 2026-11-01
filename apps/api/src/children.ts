@@ -159,14 +159,8 @@ export const reportSource = (childId: string, deliveredAt: Date) =>
   `report:${childId}:${deliveredAt.getTime()}`
 
 /** Wake the parent with a note: the teammate that started the child, else the parent's own. */
-async function wakeParent(
-  scope: Scope,
-  parentId: string,
-  teammateId: string | null,
-  note: string,
-  sourceId?: string,
-) {
-  const id = await reportWakeup(scoped(scope), parentId, teammateId, note, sourceId)
+async function wakeParent(scope: Scope, parentId: string, teammateId: string | null, note: string) {
+  const id = await reportWakeup(scoped(scope), parentId, teammateId, note)
   // At once, rather than at the next minute's tick; it waits like any wake-up when it cannot go yet.
   if (id) await fireNow(id)
 }
@@ -238,14 +232,40 @@ export async function deliverReport(scope: Scope, childId: string) {
   const report = reportOf(child?.report)
   if (!child?.parentId || !report || child.reportDeliveredAt) return
   if (child.awaited) return settleAwaited(scope, child.parentId)
+  const parentId = child.parentId
   const stamp = new Date()
-  const { count } = await db.session.updateMany({
-    where: { id: child.id, reportDeliveredAt: null },
-    data: { reportDeliveredAt: stamp },
+  const wakes = wakesParent(report.status)
+  // Claimed and its parent's wake-up stored in one transaction: a report delivered that wakes its
+  // parent always has its wake-up (reportSource), which is what auto-merge holds by. One without
+  // was delivered before wake-ups kept it, and holds nothing (src/pull-requests.ts).
+  const { count, wakeupId } = await db.$transaction(async (tx) => {
+    const { count } = await tx.session.updateMany({
+      where: { id: child.id, reportDeliveredAt: null },
+      data: { reportDeliveredAt: stamp },
+    })
+    const wakeupId =
+      count && wakes
+        ? await reportWakeup(
+            tx,
+            parentId,
+            child.parentTeammateId,
+            singleNote({
+              id: child.id,
+              title: child.title,
+              teammate: child.teammate.name,
+              schedule: child.schedule?.title ?? null,
+              report,
+              // It was waited for once (start_child, message_thread), and the wait ran out.
+              late: !!child.awaitUntil,
+            }),
+            reportSource(child.id, stamp),
+          )
+        : null
+    return { count, wakeupId }
   })
-  await parentChanged(scope, child.parentId)
+  await parentChanged(scope, parentId)
   if (!count) return
-  if (!wakesParent(report.status)) {
+  if (!wakes) {
     // No turn of the parent follows to look at the child's pull requests again: auto-merge held
     // them while the report was not in (src/pull-requests.ts), so it looks now. Imported here:
     // pull-requests.ts reaches this file through reviews.ts.
@@ -255,21 +275,8 @@ export async function deliverReport(scope: Scope, childId: string) {
     )
     return
   }
-  await wakeParent(
-    scope,
-    child.parentId,
-    child.parentTeammateId,
-    singleNote({
-      id: child.id,
-      title: child.title,
-      teammate: child.teammate.name,
-      schedule: child.schedule?.title ?? null,
-      report,
-      // It was waited for once (start_child, message_thread), and the wait ran out.
-      late: !!child.awaitUntil,
-    }),
-    reportSource(child.id, stamp),
-  )
+  // At once, rather than at the next minute's tick; it waits like any wake-up when it cannot go yet.
+  if (wakeupId) await fireNow(wakeupId)
 }
 
 /**

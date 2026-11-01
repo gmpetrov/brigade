@@ -1376,7 +1376,8 @@ const UNREAD = 'the thread that started it has not read its report yet'
  * after its message (wakeupMessageId) showed in the thread. A report not in yet holds too (one made from the child's
  * last message is settled as its turn ends, alongside this check): its delivery wakes the thread,
  * whose turn's end looks again, or, a report that wakes nobody, looks again itself. A wake-up that
- * never went (missed, cancelled) holds nothing more.
+ * never went (missed, cancelled) holds nothing more, nor a report delivered before its wake-up
+ * kept reportSource.
  */
 async function reportUnread(
   db: ScopedDb,
@@ -1396,7 +1397,10 @@ async function reportUnread(
     },
     select: { id: true, status: true },
   })
-  if (!wakeup || wakeup.status === 'pending') return UNREAD
+  // None: delivered before its wake-up kept reportSource (deliverReport stores both at once), as
+  // auto-merge then did not wait for it. Not held, as before.
+  if (!wakeup) return null
+  if (wakeup.status === 'pending') return UNREAD
   if (wakeup.status !== 'fired') return null
   // Fired: its message is kept for the thread, which shows it, with its id, when its turn comes.
   // By that id, not its text: two reports of the same child can read the same.

@@ -19,8 +19,9 @@ import { parseEnv } from 'node:util'
 //   waits; without the Checks permission it never merges on its own;
 // - opened in a child whose report wakes its parent (a schedule's run): not before the turn its
 //   report's wake-up brought ended (its message found by the wake-up's id, never its text),
-//   whatever other turn ends first; one whose report wakes nobody,
-//   once it is delivered, which looks again; an awaited child's, as before.
+//   whatever other turn ends first; one delivered before wake-ups kept the report holds nothing;
+//   one whose report wakes nobody, once it is delivered, which looks again; an awaited child's,
+//   as before.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -658,5 +659,26 @@ describe('auto-merge', { skip: !database && 'no database answers' }, () => {
     await event(parent, 6, 'turn.completed')
     await turnEnded(parent)
     assert.ok(merged.has(40), 'the second report was read')
+  })
+
+  test('a report delivered before this change holds nothing, as before', async () => {
+    const { child, parent } = await openedInChild(50, { awaited: false })
+    await delivered(child)
+    const wakeup = await reportWakeup(parent)
+    assert.ok(wakeup)
+    // The state main left before this change: no reportSource, and a random message id.
+    await db.wakeup.updateMany({
+      where: { id: wakeup.id },
+      data: { sourceId: null, status: 'fired', firedAt: new Date() },
+    })
+    await event(parent, 1, 'message.user', {
+      text: wakeup.note,
+      memberId: null,
+      messageId: 'legacy-random-id',
+    })
+    await event(parent, 2, 'turn.started')
+    await event(parent, 3, 'turn.completed')
+    await turnEnded(parent)
+    assert.ok(merged.has(50), 'a report delivered by the old code holds nothing')
   })
 })
