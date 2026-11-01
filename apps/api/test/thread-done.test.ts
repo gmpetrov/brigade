@@ -474,6 +474,69 @@ describe("a thread's done", { skip: !database && 'no database answers' }, () => 
     }
   })
 
+  test('a reopen that fails is tried again with its events, never lost once they are acknowledged', async () => {
+    const { withPrismaClient } = await import('../src/db.js')
+    const { fakeRunner } = await import('./in-hub.js')
+    const { localHub } = await import('../src/hub/memory-host.js')
+    const { onRunnerMessage } = await import('../src/hub/runner-messages.js')
+    const t = await thread({ status: 'running' })
+    await markDone(t)
+    const runner = await fakeRunner(scope, mac)
+    const hub = localHub(scope.workspaceId)
+    const conn = hub.runners.get(mac)!
+    let failures = 0
+    // The reopen's write fails once, as a connection reset would.
+    const failing = prisma.$extends({
+      query: {
+        session: {
+          async updateMany({ args, query }) {
+            const data = args.data as Record<string, unknown>
+            if (args.where?.id === t && data.doneAt === null && failures === 0) {
+              failures++
+              throw new Error('connection reset during the reopen')
+            }
+            return query(args)
+          },
+        },
+      },
+    })
+    const payload = JSON.stringify({
+      type: 'events',
+      events: [
+        {
+          sessionId: t,
+          seq: 1,
+          event: {
+            type: 'message.queued',
+            at: new Date().toISOString(),
+            messageId: 'late',
+            text: 'Also the PDF',
+            memberId: member('ada'),
+            waitingFor: 'turn',
+          },
+        },
+      ],
+    })
+    const send = () => runner.run(() => onRunnerMessage(hub, conn, payload))
+    try {
+      await withPrismaClient(failing as never, send)
+      await until(() => failures === 1, 'the failed reopen')
+      await conn.queue
+      const row = await db.session.findFirstOrThrow({ where: { id: t } })
+      assert.equal(row.lastSeq, 0, 'the checkpoint did not move past the event')
+      assert.ok(row.doneAt)
+      assert.ok(!runner.sent.some((m) => m.type === 'ack' && m.seq === 1), 'not acknowledged')
+      // The runner sends what was not acknowledged again.
+      await send()
+      await conn.queue
+      await until(async () => (await doneOf(t)).doneAt === null, 'the reopen')
+      assert.equal((await db.session.findFirstOrThrow({ where: { id: t } })).lastSeq, 1)
+    } finally {
+      for (const timer of conn.retries.values()) clearTimeout(timer)
+      runner.close()
+    }
+  })
+
   test('never in a child, which reports, nor in a schedule’s run', async () => {
     const t = await thread()
     const child = await thread({ parentId: t })

@@ -600,6 +600,18 @@ async function advance(hub: WorkspaceHub, conn: RunnerConn, session: Session) {
   }
   if (lastSeq !== session.lastSeq) {
     if (!(await noteEvents(session, fresh))) return advanceLater(hub, conn, session.id)
+    // A person's message reaching the teammate reopens its done thread (src/thread-done.ts), as
+    // the message route does on sending it: one queued while the thread was being declared done
+    // is not left unanswered behind it. Before the checkpoint moves, so that a failure is tried
+    // again with these events rather than lost once they are acknowledged. Not a wake-up's nor a
+    // child's report, which carry no member.
+    if (fresh.some(fromPerson))
+      try {
+        await reopenThread(session, session.id)
+      } catch (error) {
+        console.warn(`thread ${session.id}: not reopened yet: ${String(error)}`)
+        return advanceLater(hub, conn, session.id)
+      }
     const status = fresh.reduce<SessionStatus>(
       (current, e) => statusAfter(current, e.event),
       session.status,
@@ -639,17 +651,6 @@ async function advance(hub: WorkspaceHub, conn: RunnerConn, session: Session) {
     // way when it was put away. A child's do not, a schedule's quiet runs among them.
     if (!session.parentId && fresh.some((e) => e.event.type === 'message.user'))
       void bringBackFromLater(session, session.id).catch(console.error)
-    // A person's message reaching the teammate reopens its done thread (src/thread-done.ts),
-    // as the message route does on sending it: a message queued while it was being declared
-    // done is not left unanswered behind it. Not a wake-up's nor a child's report.
-    if (
-      fresh.some(
-        (e) =>
-          (e.event.type === 'message.user' || e.event.type === 'message.queued') &&
-          !!(e.event as { memberId?: string | null }).memberId,
-      )
-    )
-      void reopenThread(session, session.id).catch(console.error)
     // A child's report goes to its parent once its turn ends.
     if (session.parentId) void noteChildEvents(session, fresh).catch(console.error)
     // A dry run's event is done once its turn ends: the next one starts.
@@ -657,6 +658,10 @@ async function advance(hub: WorkspaceHub, conn: RunnerConn, session: Session) {
   }
   hub.send(conn, { type: 'ack', sessionId: session.id, seq: lastSeq })
 }
+
+/** A person's message, queued or reaching the teammate: wake-ups and reports carry no member. */
+const fromPerson = (e: SequencedEvent) =>
+  (e.event.type === 'message.user' || e.event.type === 'message.queued') && !!e.event.memberId
 
 /** The thread's events once more, after a while: what they open or close failed to be done. */
 function advanceLater(hub: WorkspaceHub, conn: RunnerConn, sessionId: string) {
