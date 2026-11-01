@@ -17,7 +17,7 @@ import { requireAccountManager } from '../apps.js'
 import { audit } from '../audit.js'
 import { desktopClipboard } from '../cloud.js'
 import type { ScopedDb } from '../db.js'
-import { watchDesktop } from '../desktop-proxy.js'
+import { COMPUTER_ASLEEP, watchDesktop } from '../desktop-proxy.js'
 import { refuseChiefName } from '../chief.js'
 import { deleteTriggers, resync } from './triggers.js'
 import { usageToday } from '../caps.js'
@@ -63,16 +63,21 @@ export const teammates = new Hono<AppEnv>()
   /**
    * The workspace computer's desktop, from a teammate: the screen its threads run
    * on, its own browser among them. To watch, or to record a task on it (Teach a
-   * task), which wakes a stopped computer as a thread's control does.
+   * task), which wakes a stopped computer as a thread's control does, and so does
+   * `?wake=1`, the panel's Wake up button.
    */
   .post('/:id/desktop', async (c) => {
     const { scope, db } = c.var
     const { teammate, computer } = await teammateComputer(db, c.req.param('id'))
-    if (computer.status !== 'running' && recorder(computer.id) === scope.memberId) {
+    if (
+      computer.status !== 'running' &&
+      (recorder(computer.id) === scope.memberId || c.req.query('wake') === '1')
+    ) {
       await hubs.get(computer.workspaceId).ensureRunning(computer.id)
       // 503: the dashboard asks again until the computer is up.
       throw new HTTPException(503, { message: 'Starting the cloud computer…' })
     }
+    if (computer.status !== 'running') return c.json({ error: COMPUTER_ASLEEP, asleep: true }, 409)
     const view = await watchDesktop(computer)
     await audit({
       ...scope,

@@ -27,16 +27,16 @@ function live(id: string) {
   return view
 }
 
+/** A stopped cloud computer, to a desktop view: the panel offers Wake up instead. */
+export const COMPUTER_ASLEEP = 'The cloud computer is asleep. It starts with the next message.'
+
 /**
  * The workspace computer's desktop to watch, relayed through this API: a thread's,
  * or a teammate's (the same screen; each teammate has its own browser on it).
  * 409 while it is not up.
  */
 export async function watchDesktop(computer: { status: string; providerRef: unknown }) {
-  if (computer.status !== 'running')
-    throw new HTTPException(409, {
-      message: 'The cloud computer is not running. It starts with the next message.',
-    })
+  if (computer.status !== 'running') throw new HTTPException(409, { message: COMPUTER_ASLEEP })
   const url = await desktopUrl(computer)
   if (!url)
     throw new HTTPException(409, {

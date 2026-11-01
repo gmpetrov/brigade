@@ -69,7 +69,7 @@ import {
 } from '../app-previews.js'
 import { desktopClipboard, hostedPort } from '../cloud.js'
 import { applyPick, checkPick } from '../designs.js'
-import { watchDesktop } from '../desktop-proxy.js'
+import { COMPUTER_ASLEEP, watchDesktop } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, mayAnswer, resolveTicket } from '../decide.js'
 import { prisma, type ScopedDb } from '../db.js'
 import { hubs, scheduleUpdated, taskUpdated, threadUpdated } from '../hub.js'
@@ -1520,7 +1520,9 @@ export const threads = new Hono<AppEnv>()
 
   /**
    * The computer's desktop: watch the teammate work, or use it after taking
-   * over. Watching never wakes a stopped computer; having control does.
+   * over. Watching never wakes a stopped computer on its own: having control
+   * does, and so does `?wake=1`, the panel's Wake up button. Asleep, the reply
+   * says so (`asleep: true`) for the panel to offer it.
    */
   .post('/:id/desktop', async (c) => {
     const { scope, db } = c.var
@@ -1531,14 +1533,12 @@ export const threads = new Hono<AppEnv>()
       })
     }
     if (thread.computer.status !== 'running') {
-      if (thread.controlledByMemberId === scope.memberId) {
+      if (thread.controlledByMemberId === scope.memberId || c.req.query('wake') === '1') {
         await hubs.get(thread.workspaceId).ensureRunning(thread.computer.id)
         // 503: the dashboard asks again until the computer is up.
         throw new HTTPException(503, { message: 'Starting the cloud computer…' })
       }
-      throw new HTTPException(409, {
-        message: 'The cloud computer is not running. It starts with the next message.',
-      })
+      return c.json({ error: COMPUTER_ASLEEP, asleep: true }, 409)
     }
     const view = await watchDesktop(thread.computer)
     // The screen is shared by every thread on the computer: show this one's tab,
