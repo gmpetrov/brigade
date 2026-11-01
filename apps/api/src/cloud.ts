@@ -58,6 +58,8 @@ const state = () =>
     stoppingIdle: new Set<string>(),
     /** Starts under way with the provider: a "starting" row without one here was cut off. */
     starting: new Set<string>(),
+    /** When each last had its runner's service started for it (startRunnerService). */
+    runnerStarted: new Map<string, number>(),
   }))
 
 /**
@@ -693,6 +695,10 @@ export async function checkIdle(computer: Computer) {
         )
       return
     }
+    if (status === 'running')
+      await startRunnerService(computer, ref).catch((error) =>
+        console.error(`starting the runner on ${computer.id} failed`, error),
+      )
   }
   const busy = await prisma.session.count({
     where: { computerId: computer.id, status: 'running' },
@@ -710,6 +716,31 @@ export async function checkIdle(computer: Computer) {
     }
   }
   await keepAlive(computer)
+}
+
+/** How long a running computer goes without its runner before its service is started for it. */
+const RUNNER_LOST_MS = 3 * 60_000
+/** How often, at most, while it stays away. */
+const RUNNER_START_EVERY_MS = 5 * 60_000
+
+/**
+ * In the hub: a cloud computer up without its runner gets the runner's service started. A resume
+ * whose own start of the VM's services failed (boat's "reboot semantics", whose daemon-reload
+ * timed out on Nov 1) left the enabled service down, and its threads waiting until the idle stop,
+ * or for good with one of them running. Already running, the start changes nothing.
+ */
+async function startRunnerService(computer: Computer, ref: ComputerRef) {
+  // Its status just changed: its runner may still be on its way.
+  if (Date.now() - computer.updatedAt.getTime() < RUNNER_LOST_MS) return
+  const { runnerStarted } = state()
+  if (Date.now() - (runnerStarted.get(computer.id) ?? 0) < RUNNER_START_EVERY_MS) return
+  runnerStarted.set(computer.id, Date.now())
+  console.warn(`computer ${computer.id} up without its runner: starting its service`)
+  const result = await provider!.exec(ref, 'sudo systemctl start brigade-runner')
+  if (result.exitCode !== 0)
+    console.error(
+      `starting the runner on ${computer.id} failed (${result.exitCode}): ${result.stderr.slice(-2000)}`,
+    )
 }
 
 /**
