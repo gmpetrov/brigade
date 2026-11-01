@@ -18,7 +18,8 @@ import { parseEnv } from 'node:util'
 // - checks GitHub fails to list are never taken for none: not set merging, and a merge under way
 //   waits; without the Checks permission it never merges on its own;
 // - opened in a child whose report wakes its parent (a schedule's run): not before the turn its
-//   report's wake-up brought ended, whatever other turn ends first; one whose report wakes nobody,
+//   report's wake-up brought ended (its message found by the wake-up's id, never its text),
+//   whatever other turn ends first; one whose report wakes nobody,
 //   once it is delivered, which looks again; an awaited child's, as before.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
@@ -36,6 +37,7 @@ process.env.GITHUB_APP_SLUG = 'brigade-test'
 process.env.GITHUB_APP_PRIVATE_KEY = privateKey
 
 const { prisma, scoped, Prisma } = await import('../src/db.js')
+const { wakeupMessageId } = await import('../src/wakeups.js')
 const database = await Promise.race([
   prisma.$queryRaw`select 1`.then(() => true),
   new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
@@ -520,7 +522,11 @@ describe('auto-merge', { skip: !database && 'no database answers' }, () => {
 
     // The turn that reads it.
     await db.session.updateMany({ where: { id: parent }, data: { status: 'running' } })
-    await event(parent, 3, 'message.user', { text: wakeup.note, memberId: null })
+    await event(parent, 3, 'message.user', {
+      text: wakeup.note,
+      memberId: null,
+      messageId: wakeupMessageId(wakeup.id),
+    })
     await event(parent, 4, 'turn.started')
     await turnEnded(child)
     assert.ok(!merged.has(20), 'its parent is reading it')
@@ -580,5 +586,77 @@ describe('auto-merge', { skip: !database && 'no database answers' }, () => {
     await db.session.updateMany({ where: { id: child }, data: { reportDeliveredAt: new Date() } })
     await turnEnded(child)
     assert.ok(merged.has(23))
+  })
+
+  test('an older message with the same note does not stand for reading the current report', async () => {
+    await autoMerge(ids.owner, false)
+    const { child, parent } = await openedInChild(40, { awaited: false })
+    // The first report is really read while auto-merge is off.
+    await db.session.updateMany({
+      where: { id: parent },
+      data: { controlledByMemberId: ids.owner, status: 'paused' },
+    })
+    await delivered(child)
+    const first = await reportWakeup(parent)
+    assert.ok(first)
+    await db.wakeup.updateMany({
+      where: { id: first.id },
+      data: { status: 'fired', firedAt: new Date() },
+    })
+    await event(parent, 1, 'message.user', {
+      text: first.note,
+      memberId: null,
+      messageId: wakeupMessageId(first.id),
+    })
+    await event(parent, 2, 'turn.started')
+    await event(parent, 3, 'turn.completed')
+    await db.session.updateMany({
+      where: { id: parent },
+      data: { controlledByMemberId: null, status: 'idle' },
+    })
+    await turnEnded(parent)
+    assert.ok(!merged.has(40))
+
+    // The same child reports the same summary again: a new report.at, the same note.
+    const old = await db.session.findFirstOrThrow({ where: { id: child } })
+    await db.session.updateMany({
+      where: { id: child },
+      data: {
+        report: { ...(old.report as object), at: new Date().toISOString() },
+        reportDeliveredAt: null,
+      },
+    })
+    await db.session.updateMany({
+      where: { id: parent },
+      data: { controlledByMemberId: ids.owner, status: 'paused' },
+    })
+    await delivered(child)
+    const second = await reportWakeup(parent)
+    assert.ok(second)
+    assert.notEqual(second.id, first.id)
+    assert.equal(second.note, first.note)
+    // Its prompt is only queued: no message.user for it yet.
+    await db.wakeup.updateMany({
+      where: { id: second.id },
+      data: { status: 'fired', firedAt: new Date() },
+    })
+    await db.session.updateMany({
+      where: { id: parent },
+      data: { controlledByMemberId: null, status: 'idle' },
+    })
+    await autoMerge(ids.owner, true)
+    await turnEnded(child)
+    assert.ok(!merged.has(40), 'the older message must not stand for reading the second report')
+
+    // Its own message shows, and the turn that reads it ends.
+    await event(parent, 4, 'message.user', {
+      text: second.note,
+      memberId: null,
+      messageId: wakeupMessageId(second.id),
+    })
+    await event(parent, 5, 'turn.started')
+    await event(parent, 6, 'turn.completed')
+    await turnEnded(parent)
+    assert.ok(merged.has(40), 'the second report was read')
   })
 })

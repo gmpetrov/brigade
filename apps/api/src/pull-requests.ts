@@ -38,6 +38,7 @@ import type { WorkspaceScope } from './scope.js'
 import { settleOnMerge } from './tasks.js'
 import { noteInThread, pullNote } from './thread-notes.js'
 import { loadThread } from './thread-spec.js'
+import { wakeupMessageId } from './wakeups.js'
 import { promptThread, startThread } from './work.js'
 
 /** The author's turns at resolving a merge's conflicts or failed checks before it stops and asks a person. */
@@ -1372,7 +1373,7 @@ const UNREAD = 'the thread that started it has not read its report yet'
  * that thread through a wake-up (src/children.ts, kept with reportSource), which goes once the
  * thread can take it, after the child's turn ended; another turn of the thread meanwhile (a hand
  * back, a person's message) did not read it. So it holds until that wake-up fired and a turn ended
- * after its message showed in the thread. A report not in yet holds too (one made from the child's
+ * after its message (wakeupMessageId) showed in the thread. A report not in yet holds too (one made from the child's
  * last message is settled as its turn ends, alongside this check): its delivery wakes the thread,
  * whose turn's end looks again, or, a report that wakes nobody, looks again itself. A wake-up that
  * never went (missed, cancelled) holds nothing more.
@@ -1393,16 +1394,17 @@ async function reportUnread(
       kind: 'report',
       sourceId: reportSource(row.sessionId, thread.reportDeliveredAt),
     },
-    select: { status: true, note: true },
+    select: { id: true, status: true },
   })
   if (!wakeup || wakeup.status === 'pending') return UNREAD
   if (wakeup.status !== 'fired') return null
-  // Fired: its message is kept for the thread, which shows it when its turn comes.
+  // Fired: its message is kept for the thread, which shows it, with its id, when its turn comes.
+  // By that id, not its text: two reports of the same child can read the same.
   const shown = await db.sessionEvent.findFirst({
     where: {
       sessionId: thread.parentId,
       type: 'message.user',
-      data: { path: ['text'], equals: wakeup.note },
+      data: { path: ['messageId'], equals: wakeupMessageId(wakeup.id) },
     },
     orderBy: { seq: 'desc' },
     select: { seq: true },
