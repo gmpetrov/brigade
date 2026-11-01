@@ -39,7 +39,15 @@ export const CLAUDE_SETTINGS = {
   permissions: { deny: DENIED_TOOLS },
 }
 
+/**
+ * Claude Code's environment for what no setting turns off. Fork sub-agents (an Agent call
+ * with subagent_type "fork", which starts from the whole conversation), on by default in SDK
+ * sessions since Claude Code 2.1.302, stay off as before it: turning them on is a choice of its own.
+ */
+const CLAUDE_ENV = { CLAUDE_CODE_FORK_SUBAGENT: '0' }
+
 /** The environment that gives a Claude Code session Brigade's settings. */
 export const claudeSettingsEnv = (): Record<string, string> => ({
+  ...CLAUDE_ENV,
   BRIGADE_CLAUDE_SETTINGS: JSON.stringify(CLAUDE_SETTINGS),
 })

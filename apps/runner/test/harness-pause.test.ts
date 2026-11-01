@@ -75,6 +75,12 @@ function scriptedHarness(submitted: string[]) {
         }
       },
       doContinueTurn: async () => ({ submitToolResult: async () => {}, done: Promise.resolve() }),
+      doSuspendTurn: async () => ({
+        type: 'continue-turn',
+        harnessId: 'scripted',
+        specificationVersion: 'harness-v1',
+        data: {},
+      }),
       doStop: async () => ({
         type: 'resume-session',
         harnessId: 'scripted',
@@ -129,6 +135,13 @@ test('a turn pauses on a ticket even after the harness settled a host call on it
     assert.ok(session.hasUnfinishedTurn())
     // The host's own result for the refused call still went in; the bridge ignores it.
     assert.ok(submitted.includes('bad'))
+    // The turn, saved to go on later, waits on the ticket alone: the call the harness settled
+    // is not one to give a result again when it goes on.
+    const saved = (await session.suspendTurn()) as { pendingToolResults?: { toolCallId: string }[] }
+    assert.deepEqual(
+      saved.pendingToolResults?.map((p) => p.toolCallId),
+      ['ticket'],
+    )
   } finally {
     await sandbox.destroy()
     await rm(dir, { recursive: true, force: true })

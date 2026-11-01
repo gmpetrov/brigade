@@ -3,10 +3,10 @@
 // thread-net.ts). The computer itself is the sandbox.
 import { spawn as spawnChild, type ChildProcess } from 'node:child_process'
 import { createReadStream } from 'node:fs'
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { dirname, isAbsolute, resolve } from 'node:path'
-import { Readable, type Writable } from 'node:stream'
+import { Readable, Writable } from 'node:stream'
 import type { HarnessV1NetworkSandboxSession } from '@ai-sdk/harness'
 import { runnerCgroups, type TurnCgroup } from '../preview-cgroup.js'
 import { processGroups } from '../process-groups.js'
@@ -14,6 +14,18 @@ import { asTeammate, threadNet, type ThreadNet } from '../thread-net.js'
 
 type SandboxSession = ReturnType<HarnessV1NetworkSandboxSession['restricted']>
 type ProcessOptions = Parameters<SandboxSession['spawn']>[0]
+type FileStat = NonNullable<Awaited<ReturnType<SandboxSession['stat']>>>
+type DirectoryEntry = NonNullable<Awaited<ReturnType<SandboxSession['listDirectory']>>>[number]
+type SandboxProcess = {
+  pid?: number
+  stdout: ReadableStream<Uint8Array>
+  stderr: ReadableStream<Uint8Array>
+  wait: () => Promise<{ exitCode: number }>
+  kill: () => Promise<void>
+}
+
+/** Node's error code, such as ENOENT. */
+const code = (error: unknown) => (error as NodeJS.ErrnoException | undefined)?.code
 
 /** Stop a process group. One a teammate's sudo started is killed as that teammate, who owns it. */
 export function stopGroup(pid: number, runAs?: string) {
@@ -93,12 +105,14 @@ export function createLocalSandboxSession(options: {
     env: Record<string, string>,
     thread: ThreadNet | null,
     gated: boolean,
+    stdin: boolean,
   ) => {
+    const input = stdin ? 'pipe' : 'ignore'
     if (!runAs)
       return spawnChild('sh', ['-c', command], {
         cwd,
         env,
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: [input, 'pipe', 'pipe'],
         detached: true,
       })
     // sudo -E passes the environment without putting it on the command line. On a cloud
@@ -120,13 +134,25 @@ export function createLocalSandboxSession(options: {
       ? spawnChild('sh', ['-c', 'read -r _ <&3; exec "$@"', 'sh', file, ...argv], {
           cwd: '/',
           env,
-          stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
+          stdio: [input, 'pipe', 'pipe', 'pipe'],
           detached: true,
         })
-      : spawnChild(file, argv, { cwd: '/', env, stdio: ['ignore', 'pipe', 'pipe'], detached: true })
+      : spawnChild(file, argv, { cwd: '/', env, stdio: [input, 'pipe', 'pipe'], detached: true })
   }
 
-  const spawn = async ({ command, workingDirectory, env, abortSignal }: ProcessOptions) => {
+  // With stdin, the process reads what is written to its stdin stream; without, it reads nothing.
+  function spawn(
+    options: ProcessOptions & { stdin: true },
+  ): Promise<SandboxProcess & { stdin: WritableStream<Uint8Array> }>
+  function spawn(options: ProcessOptions & { stdin?: false }): Promise<SandboxProcess>
+  function spawn(options: ProcessOptions): Promise<SandboxProcess>
+  async function spawn({
+    command,
+    workingDirectory,
+    env,
+    abortSignal,
+    stdin,
+  }: ProcessOptions): Promise<SandboxProcess & { stdin?: WritableStream<Uint8Array> }> {
     const cgroup = (await turnCgroup())?.cgroup
     const child = spawnAs(
       env?.BRIDGE_WS_PORT ? outliving(command) : command,
@@ -134,6 +160,7 @@ export function createLocalSandboxSession(options: {
       { ...options.env, ...env },
       await net,
       Boolean(cgroup && runAs),
+      stdin === true,
     )
     children.add(child)
     processGroups.add(child.pid, `turn ${options.id}`)
@@ -159,10 +186,13 @@ export function createLocalSandboxSession(options: {
       killGroup(child.pid)
     }
     abortSignal?.addEventListener('abort', () => void kill(), { once: true })
+    // A process that exits before reading all its input closes the pipe: its exit code says why.
+    child.stdin?.on('error', () => undefined)
     return {
       ...(child.pid === undefined ? {} : { pid: child.pid }),
       stdout: Readable.toWeb(child.stdout!) as ReadableStream<Uint8Array>,
       stderr: Readable.toWeb(child.stderr!) as ReadableStream<Uint8Array>,
+      ...(child.stdin ? { stdin: Writable.toWeb(child.stdin) as WritableStream<Uint8Array> } : {}),
       wait: () => exited,
       kill,
     }
@@ -215,6 +245,50 @@ export function createLocalSandboxSession(options: {
     await writeFile(at(path), bytes)
   }
 
+  // As the teammate, a missing path exits 3 and a directory where none goes 4 (a cloud
+  // computer's GNU stat and find). Symbolic links are followed by stat, and not in a listing.
+  const statAs = async (path: string): Promise<FileStat | null> => {
+    const r = await asUser('[ -e "$0" ] || exit 3; stat -L -c "%F/%s" -- "$0"', [at(path)])
+    if (r.code === 3) return null
+    if (r.code !== 0) throw new Error(`Could not read ${path}`)
+    const out = r.stdout.toString().trim()
+    const slash = out.lastIndexOf('/')
+    const kind = out.slice(0, slash)
+    return {
+      type: kind.startsWith('regular') ? 'file' : kind === 'directory' ? 'directory' : 'other',
+      size: Number(out.slice(slash + 1)),
+    }
+  }
+  const listAs = async (path: string): Promise<DirectoryEntry[] | null> => {
+    const r = await asUser(
+      '[ -e "$0" ] || exit 3; [ -d "$0" ] || exit 4; find -H "$0" -mindepth 1 -maxdepth 1 -printf "%y%f\\0"',
+      [at(path)],
+    )
+    if (r.code === 3) return null
+    if (r.code === 4) throw new Error(`${path} is not a directory`)
+    if (r.code !== 0) throw new Error(`Could not list ${path}`)
+    const types: Record<string, DirectoryEntry['type']> = {
+      f: 'file',
+      d: 'directory',
+      l: 'symlink',
+    }
+    return r.stdout
+      .toString()
+      .split('\0')
+      .filter(Boolean)
+      .map((entry) => ({ name: entry.slice(1), type: types[entry[0]!] ?? 'other' }))
+  }
+  const deleteAs = async (path: string) => {
+    const r = await asUser(
+      'if [ ! -L "$0" ]; then [ -e "$0" ] || exit 3; [ -d "$0" ] && exit 4; fi; rm -f -- "$0"',
+      [at(path)],
+    )
+    if (r.code === 3) return false
+    if (r.code === 4) throw new Error(`${path} is a directory`)
+    if (r.code !== 0) throw new Error(`Could not delete ${path}`)
+    return true
+  }
+
   const restricted: SandboxSession = {
     description: `Local computer. Working directory: ${options.workingDirectory}`,
     readFile: async ({ path }) => {
@@ -240,6 +314,51 @@ export function createLocalSandboxSession(options: {
       writeBytes(path, new Uint8Array(await new Response(content).arrayBuffer())),
     writeBinaryFile: async ({ path, content }) => writeBytes(path, content),
     writeTextFile: async ({ path, content }) => writeBytes(path, new TextEncoder().encode(content)),
+    stat: async ({ path }) => {
+      if (runAs) return statAs(path)
+      const s = await stat(at(path)).catch((error: unknown) => {
+        // A file where a folder of the path should be: no such path either.
+        if (code(error) === 'ENOENT' || code(error) === 'ENOTDIR') return null
+        throw error
+      })
+      if (!s) return null
+      return { type: s.isFile() ? 'file' : s.isDirectory() ? 'directory' : 'other', size: s.size }
+    },
+    listDirectory: async ({ path }) => {
+      if (runAs) return listAs(path)
+      const entries = await readdir(at(path), { withFileTypes: true }).catch((error: unknown) => {
+        if (code(error) === 'ENOENT') return null
+        throw error
+      })
+      return (
+        entries?.map((entry) => ({
+          name: entry.name,
+          type: entry.isSymbolicLink()
+            ? ('symlink' as const)
+            : entry.isFile()
+              ? ('file' as const)
+              : entry.isDirectory()
+                ? ('directory' as const)
+                : ('other' as const),
+        })) ?? null
+      )
+    },
+    deleteFile: async ({ path }) => {
+      if (runAs) return deleteAs(path)
+      const s = await lstat(at(path)).catch((error: unknown) => {
+        if (code(error) === 'ENOENT' || code(error) === 'ENOTDIR') return null
+        throw error
+      })
+      if (!s) return false
+      if (s.isDirectory()) throw new Error(`${path} is a directory`)
+      return unlink(at(path)).then(
+        () => true,
+        (error: unknown) => {
+          if (code(error) === 'ENOENT') return false
+          throw error
+        },
+      )
+    },
     spawn,
     run: async (processOptions) => {
       const child = await spawn(processOptions)
