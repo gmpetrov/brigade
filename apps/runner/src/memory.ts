@@ -18,7 +18,15 @@ import {
 } from '@brigade/contracts'
 import { z } from 'zod'
 import { numberedMemory, type MemorySnapshot } from './memory-layers.js'
-import { inWords, lenientList, LineRef, needsTidy, type TidyFile } from './memory-tidy.js'
+import {
+  inWords,
+  lenientList,
+  lineAt,
+  LineRef,
+  needsTidy,
+  withoutCopiedDay,
+  type TidyFile,
+} from './memory-tidy.js'
 
 /** How much of the conversation a memory run reads. */
 const CONVERSATION_CHARS = 60_000
@@ -41,6 +49,8 @@ type RunFile = {
   text: string
   /** Each line's text, by its number less one. */
   lines: string[]
+  /** The day shown after each line ('' for none). */
+  notes: string[]
   shown: string
 }
 
@@ -90,7 +100,16 @@ export function memoryRun(input: {
     text: string,
   ): RunFile => {
     const numbered = numberedMemory(text, meta[memoryFilePath(ref)], now)
-    return { ref, scope, label, about, text, lines: numbered.lines, shown: numbered.text }
+    return {
+      ref,
+      scope,
+      label,
+      about,
+      text,
+      lines: numbered.lines,
+      notes: numbered.notes,
+      shown: numbered.text,
+    }
   }
   const project = spec.project
   const workspace = file(
@@ -243,8 +262,7 @@ export function memoryRun(input: {
 /** A run's edit of one file, its line numbers turned back into the lines' text. */
 function toEdit(edit: FileEdit | undefined, file: RunFile): MemoryEdit {
   if (!edit) return NO_MEMORY_EDIT
-  const line = (ref: number | string) =>
-    typeof ref === 'number' ? (file.lines[ref - 1] ?? null) : ref.trim() || null
+  const line = (ref: number | string) => lineAt(file, ref)
   const clip = (text: string) =>
     text
       .trim()
@@ -252,7 +270,7 @@ function toEdit(edit: FileEdit | undefined, file: RunFile): MemoryEdit {
       .slice(0, 1000)
   const replace = edit.replace.flatMap((r) => {
     const from = line(r.line)
-    const to = clip(r.text)
+    const to = from && withoutCopiedDay(clip(r.text), file, [from])
     return from && to ? [{ from, to }] : []
   })
   return {
