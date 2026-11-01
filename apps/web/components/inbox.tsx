@@ -404,7 +404,8 @@ export function InboxView() {
   const gmail = sources.filter((s) => s.kind === 'gmail')
 
   return (
-    <div className="flex min-w-0 lg:h-dvh">
+    // data-inbox: on a wide screen the page holds still behind its two columns (globals.css).
+    <div data-inbox className="flex min-w-0 lg:h-dvh">
       <section
         aria-label="Emails"
         className={cn(
@@ -590,7 +591,10 @@ export function InboxView() {
           </div>
         </header>
 
-        <div ref={scroller} className="flex min-h-0 flex-1 flex-col lg:overflow-y-auto">
+        <div
+          ref={scroller}
+          className="flex min-h-0 flex-1 flex-col lg:overflow-y-auto lg:overscroll-contain"
+        >
           {list.error && (
             <p className="px-5 py-4 text-sm text-destructive-text">{list.error.message}</p>
           )}
@@ -629,7 +633,10 @@ export function InboxView() {
 
       <section
         aria-label="Email"
-        className={cn('min-w-0 flex-1 lg:overflow-y-auto', item ? 'block' : 'hidden lg:block')}
+        className={cn(
+          'min-w-0 flex-1 lg:overflow-y-auto lg:overscroll-contain',
+          item ? 'block' : 'hidden lg:block',
+        )}
       >
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 pt-6 pb-16 md:px-10 md:pt-8">
           {item ? (
