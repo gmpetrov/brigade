@@ -140,23 +140,28 @@ export function AppAccessAsk({
   const reach = useApi<{ connections: string[] }>(
     repository ? `/repositories/${repository}/reach?fresh=1` : null,
   )
-  // An MCP server, by the URL the teammate gave: its App once someone has added it. With no
-  // URL, the server added under the name it asked for, as the API finds it.
-  const serverUrl = kind === 'mcp' ? ask.app.url : undefined
+  // An MCP server, by its App's id when the teammate gave one (list_apps), whose URL is then
+  // none to add (serverOnlyUrl); else by the URL it gave: its App once someone has added it.
+  // With neither, the server added under the name it asked for, as the API finds it.
+  const serverId = kind === 'mcp' ? ask.app.server : undefined
+  const serverUrl = kind === 'mcp' && !serverId ? ask.app.url : undefined
   const server =
     kind !== 'mcp'
       ? undefined
-      : serverUrl
-        ? data.data?.apps.find((a) => a.mcp && sameServer(a.mcp.url, serverUrl))
-        : data.data?.apps.find(
-            (a) => a.mcp && a.name?.toLowerCase() === ask.what.trim().toLowerCase(),
-          )
-  const name = server?.name ?? (serverUrl ? ask.what : data.data?.catalog[kind]?.name) ?? ask.what
+      : serverId
+        ? data.data?.apps.find((a) => a.mcp && a.id === serverId)
+        : serverUrl
+          ? data.data?.apps.find((a) => a.mcp && sameServer(a.mcp.url, serverUrl))
+          : data.data?.apps.find(
+              (a) => a.mcp && a.name?.toLowerCase() === ask.what.trim().toLowerCase(),
+            )
+  const name =
+    server?.name ?? (serverId || serverUrl ? ask.what : data.data?.catalog[kind]?.name) ?? ask.what
   const connected = (data.data?.connections ?? []).filter(
     (c) =>
       c.kind === kind &&
       c.status === 'active' &&
-      (!(serverUrl || server) || c.appId === server?.id),
+      (!(serverId || serverUrl || server) || c.appId === server?.id),
   )
   const mayGive = (c: Connection) =>
     c.createdByMemberId === me.memberId || (isAdmin(me) && c.reach === 'workspace')
@@ -169,7 +174,7 @@ export function AppAccessAsk({
   // The person's own accounts whose sign-in expired: reconnecting one here gives it. Not for a
   // server added by its URL (its card signs in) nor a GitHub repository (its installation reaches it).
   const expired =
-    repository || serverUrl || server
+    repository || serverId || serverUrl || server
       ? []
       : (data.data?.connections ?? []).filter(
           (c) =>

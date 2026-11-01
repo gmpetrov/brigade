@@ -16,6 +16,60 @@ test('an App access ask keeps its App and access, and is named after it', () => 
   })
 })
 
+test('an MCP server named by its id goes by it, with an url no server has for older APIs', () => {
+  const ticket = ticketAsks({
+    title: 'Team Notes',
+    asks: [
+      {
+        type: 'access',
+        kind: 'connection',
+        what: 'Team Notes',
+        app: { kind: 'mcp', scope: 'read', server: 'app-1', account: 'notes-production' },
+      },
+    ],
+  })
+  assert.deepEqual(ticket?.asks[0], {
+    id: 'a1',
+    type: 'access',
+    kind: 'connection',
+    what: 'Team Notes',
+    app: {
+      kind: 'mcp',
+      scope: 'read',
+      server: 'app-1',
+      account: 'notes-production',
+      // An API that drops app.server finds no server by it, rather than the first "Team Notes".
+      url: 'https://brigade.invalid/mcp-servers/app-1',
+    },
+  })
+  // Only an MCP server goes by one.
+  assert.equal(
+    ticketAsks({
+      title: 'Notion',
+      asks: [
+        { type: 'access', kind: 'connection', app: { kind: 'notion', scope: 'read', server: 'x' } },
+      ],
+    }),
+    undefined,
+  )
+  // Without one, its url stays as given.
+  assert.equal(
+    (
+      ticketAsks({
+        title: 'Sentry',
+        asks: [
+          {
+            type: 'access',
+            kind: 'connection',
+            app: { kind: 'mcp', scope: 'read', url: 'https://mcp.sentry.dev/mcp' },
+          },
+        ],
+      })!.asks[0] as { app: { url: string } }
+    ).app.url,
+    'https://mcp.sentry.dev/mcp',
+  )
+})
+
 test('a granted App tells the teammate its tools are there', () => {
   const asks = ticketAsks({
     title: 't',

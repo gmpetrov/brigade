@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { ScheduleOperation } from '@brigade/contracts'
-import { appTools, type ScheduleCaller } from '../src/harness/tools.js'
+import { appTools, openTicketTool, type ScheduleCaller } from '../src/harness/tools.js'
 
 const options = { toolCallId: 'call-1', messages: [] } as never
 
@@ -44,4 +44,12 @@ test('an API from before list_apps says so, rather than "try again differently"'
   await assert.rejects(appTools(down, { playbook: false }).list_apps!.execute!({}, options), {
     message: 'The API did not answer in time',
   })
+})
+
+test("open_ticket takes the MCP server's id list_apps gives (app.server)", () => {
+  const schema = (openTicketTool.inputSchema as unknown as { jsonSchema: Record<string, any> })
+    .jsonSchema
+  const app = schema.properties.asks.items.properties.app.properties
+  assert.equal(app.server.type, 'string')
+  assert.match(app.server.description, /list_apps/)
 })

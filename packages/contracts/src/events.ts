@@ -253,6 +253,14 @@ export const QuestionAnswer = z.discriminatedUnion('action', [
 export type QuestionAnswer = z.infer<typeof QuestionAnswer>
 
 /**
+ * The url a runner gives an access ask that names its MCP server by id (app.server): an address
+ * no server has, so an API from before app.server, which drops the id, finds no server by it and
+ * grants nothing, rather than the first server of the ask's name. Newer ones go by the id.
+ */
+export const serverOnlyUrl = (server: string) =>
+  `https://brigade.invalid/mcp-servers/${encodeURIComponent(server)}`
+
+/**
  * One thing a teammate needs from a person, in a ticket it opens itself
  * (open_ticket). A ticket holds one or more asks; the teammate waits until
  * every one is answered.
@@ -293,6 +301,11 @@ export const Ask = z.discriminatedUnion('type', [
         /** kind mcp: the MCP server's URL, which the person adds from the ticket if it is not yet. */
         url: z.string().max(500).optional(),
         /**
+         * kind mcp: a server already added, by its App's id, as list_apps gives it: the ticket finds
+         * that one, whatever its name (two can have the same). Never its URL, which may hold its key.
+         */
+        server: z.string().max(100).optional(),
+        /**
          * kind github: the repository (owner/name) the teammate needs. The account given must
          * reach it; the person installs the GitHub app on its owner, or adds it, from the ticket.
          */
@@ -314,6 +327,10 @@ export const Ask = z.discriminatedUnion('type', [
       .refine((app) => !app.repository || app.kind === 'github', {
         message: 'repository is for kind github',
         path: ['repository'],
+      })
+      .refine((app) => !app.server || app.kind === 'mcp', {
+        message: 'server is for kind mcp',
+        path: ['server'],
       })
       .optional(),
     /**

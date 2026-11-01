@@ -6,6 +6,7 @@ import {
   OFFER_CHOICES_TOOL,
   Question,
   replyCard,
+  serverOnlyUrl,
   SUGGEST_REPLIES_TOOL,
   type AgentEvent,
   type QuestionAnswer,
@@ -103,6 +104,17 @@ export function ticketAsks(input: unknown): { title: string; asks: Ask[] } | und
               (a.app as { kind: string; url?: string }).kind === 'mcp'
                 ? ((a.app as { url?: string }).url ?? 'an MCP server')
                 : (a.app as { kind: string }).kind,
+          }
+        : {}),
+      // An MCP server named by its id: with a URL no server has too, so that an API from before
+      // app.server, which drops it, grants nothing rather than the first server of its name.
+      ...((a.app as { kind?: string; server?: unknown } | undefined)?.kind === 'mcp' &&
+      typeof (a.app as { server?: unknown }).server === 'string'
+        ? {
+            app: {
+              ...(a.app as object),
+              url: serverOnlyUrl((a.app as { server: string }).server),
+            },
           }
         : {}),
       ...(Array.isArray(a.options)

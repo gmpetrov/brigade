@@ -161,7 +161,7 @@ describe("a teammate's list_apps", { skip: !database && 'no database answers' },
                   url: normalUrl(input.url),
                   transport: 'streamable',
                   auth: 'none',
-                  prefix: input.name!.toLowerCase(),
+                  prefix: (input.name ?? 'mcp').toLowerCase(),
                   icons: [],
                   description: null,
                   tools: [],
@@ -329,11 +329,14 @@ describe("a teammate's list_apps", { skip: !database && 'no database answers' },
     assert.ok(connectable.some((l) => l.startsWith('- Notion (app.kind notion)')))
     // Ada's MCP server is hers alone: offered by its name, never with her account.
     assert.ok(
-      connectable.includes(
-        '- Sentry (app.kind mcp, what "Sentry"): an MCP server added in the workspace',
+      connectable.some(
+        (l) =>
+          l.startsWith('- Sentry (app.kind mcp, what "Sentry", app.server "') &&
+          l.endsWith('"): an MCP server added in the workspace'),
       ),
-      'a name no other server has, and no URL',
+      'by its id',
     )
+    assert.doesNotMatch(text, /sentry\.example\.com/, 'never its URL')
     assert.ok(
       connectable.at(-1)!.startsWith('- MCP server (app.kind mcp, with its url): Any MCP server'),
     )
@@ -386,47 +389,118 @@ describe("a teammate's list_apps", { skip: !database && 'no database answers' },
     assert.match(reply.error!, /only the Apps the playbook declares/)
   })
 
-  // Last: the servers it adds would show in the listings above.
-  test('two MCP servers of one name: the ticket list_apps suggests gives the account it lists', async () => {
+  /** An MCP server's URL that holds its key in its path, as Zapier's do: one for each server. */
+  const keyed = () =>
+    `https://mcp.zapier.example/api/mcp/s/key${randomUUID().replace(/-/g, '')}/mcp`
+  /** Every MCP server URL the tests below add: none ever shows. */
+  const urls: string[] = []
+  /** No part of an MCP server's URL in a listing: not whole, nor its host, path or key. */
+  const noUrl = (text: string) => {
+    for (const raw of urls) {
+      const url = new URL(raw)
+      const key = url.pathname.split('/').find((part) => part.startsWith('key'))!
+      for (const part of [url.href, url.host, url.pathname, key])
+        assert.ok(!text.includes(part), `${part} (of ${raw}) shows`)
+    }
+  }
+  /** An account on an MCP server of that name (null: none of its own), at a URL of its own. */
+  const server = (
+    name: string | null,
+    externalAccount: string,
+    by: string,
+    reach: 'mine' | 'workspace',
+  ) => {
+    const url = keyed()
+    urls.push(url)
+    return account({
+      url,
+      kind: 'mcp',
+      label: name ?? 'MCP server',
+      externalAccount,
+      by,
+      reach,
+      ...(name ? { name } : {}),
+    })
+  }
+  const appOf = async (connectionId: string) =>
+    (await db.connection.findFirstOrThrow({ where: { id: connectionId } })).appId
+
+  /** A ticket of Riley's in the thread, with its asks as Riley's runner makes them of open_ticket's input. */
+  async function ticketFor(app: Record<string, unknown>) {
+    const { ticketAsks } = await import('../../runner/src/harness/events.js')
+    const opened = ticketAsks({
+      title: 'Team Notes',
+      asks: [{ id: 'a', type: 'access', kind: 'connection', what: 'Team Notes', app }],
+    })
+    assert.ok(opened, 'open_ticket takes it')
+    return opened.asks
+  }
+  async function answer(sessionId: string, asks: unknown[], connectionId: string) {
     const { answerTicket } = await import('../src/decide.js')
     const { fakeRunner } = await import('./in-hub.js')
+    const ticket = await db.ticket.create({
+      data: {
+        sessionId,
+        type: 'request',
+        title: 'Team Notes',
+        payload: { source: 'harness', requestId: randomUUID(), teammateId: ids.riley, asks },
+      } as never,
+    })
+    const runner = await fakeRunner(scope, ids.computer)
+    try {
+      // Ada, an owner, gives the account picked in the ticket.
+      return await runner.run(() =>
+        answerTicket(
+          { ...scope, memberId: ids.ada, userId: `ada-${suffix}`, role: 'owner' },
+          ticket.id,
+          { action: 'answered', replies: { a: { type: 'access', granted: true, connectionId } } },
+        ),
+      )
+    } finally {
+      runner.close()
+    }
+  }
+  const given = async () =>
+    (
+      await db.grant.findMany({
+        where: { teammateId: ids.riley, connection: { label: 'Team Notes' } },
+      })
+    ).map((g) => [g.connectionId, g.scope])
+
+  // Last: the servers they add would show in the listings above.
+  test('two MCP servers of one name: the ticket list_apps suggests gives the account it lists', async () => {
     // Staging and production, both "Team Notes", each with an account the workspace shares; a
     // third of that name that only Carol signed in to.
-    const notes = (where: string, by: string, reach: 'mine' | 'workspace') =>
-      account({
-        url: `https://notes.example.com/${where}/mcp`,
-        kind: 'mcp',
-        label: 'Team Notes',
-        externalAccount: `notes-${where}`,
-        by,
-        reach,
-        name: 'Team Notes',
-      })
-    await notes('staging', ids.ada, 'workspace')
-    const production = await notes('production', ids.ada, 'workspace')
-    await notes('archive', ids.carol, 'mine')
+    const staging = await server('Team Notes', 'notes-staging', ids.ada, 'workspace')
+    const production = await server('Team Notes', 'notes-production', ids.ada, 'workspace')
+    const archive = await server('Team Notes', 'notes-archive', ids.carol, 'mine')
     const sessionId = await thread(ids.bob, ids.bob)
     const { others, connectable, text } = await listed(sessionId)
     assert.deepEqual(
       others.filter((l) => l.includes('Team Notes')),
       [
-        '- Team Notes · notes-production: app.kind mcp, what "Team Notes", app.url "https://notes.example.com/production/mcp", app.account "notes-production"',
-        '- Team Notes · notes-staging: app.kind mcp, what "Team Notes", app.url "https://notes.example.com/staging/mcp", app.account "notes-staging"',
+        `- Team Notes · notes-production: app.kind mcp, what "Team Notes", app.server "${await appOf(production)}", app.account "notes-production"`,
+        `- Team Notes · notes-staging: app.kind mcp, what "Team Notes", app.server "${await appOf(staging)}", app.account "notes-staging"`,
       ],
     )
-    // Carol's is hers: the server, by its URL, never her account.
+    // Carol's is hers: the server, by its id, never her account.
     assert.ok(
       connectable.includes(
-        '- Team Notes (app.kind mcp, what "Team Notes", app.url "https://notes.example.com/archive/mcp"): an MCP server added in the workspace',
+        `- Team Notes (app.kind mcp, what "Team Notes", app.server "${await appOf(archive)}"): an MCP server added in the workspace`,
       ),
     )
     assert.doesNotMatch(text, /notes-archive/)
-    // A name no other server has goes without its URL, which may hold the server's key.
-    assert.doesNotMatch(text, /sentry\.example\.com/)
+    noUrl(text)
 
-    // The ticket as the teammate writes it from the production line, given as an owner picks it.
+    // The ticket as Riley writes it from the production line, and its runner opens it.
     const line = others.find((l) => l.includes('app.account "notes-production"'))!
-    const url = /app\.url "([^"]+)"/.exec(line)?.[1]
+    const id = /app\.server "([^"]+)"/.exec(line)?.[1]
+    const asks = await ticketFor({
+      kind: 'mcp',
+      scope: 'read',
+      account: 'notes-production',
+      ...(id ? { server: id } : {}),
+    })
     await db.account.create({
       data: {
         memberId: ids.bob,
@@ -437,53 +511,75 @@ describe("a teammate's list_apps", { skip: !database && 'no database answers' },
         isDefault: true,
       } as never,
     })
-    const ticket = await db.ticket.create({
-      data: {
+    await answer(sessionId, asks, production)
+    assert.deepEqual(await given(), [[production, 'read']])
+  })
+
+  // With the servers the test above adds.
+  test('an API from before app.server, which drops it, gives no account rather than the wrong server', async () => {
+    const [staging, production] = await db.connection.findMany({
+      where: { label: 'Team Notes', reach: 'workspace' },
+      orderBy: { createdAt: 'asc' },
+    })
+    const sessionId = await thread(ids.bob, ids.bob)
+    const [ask] = (await ticketFor({
+      kind: 'mcp',
+      scope: 'read',
+      account: 'notes-production',
+      server: production!.appId,
+    })) as { app: Record<string, unknown> }[]
+    // Its Ask schema strips the field it does not know: the url the runner added is left.
+    const { server: _dropped, ...older } = ask!.app
+    // What its ticket card offers then, by the name: the first server's account. Not given.
+    await assert.rejects(answer(sessionId, [{ ...ask, app: older }], staging!.id), {
+      message: /Connect the MCP server first/,
+    })
+    assert.ok(!(await given()).some(([id]) => id === staging!.id), 'not the staging account')
+    // As no server has the url it goes by.
+    assert.match(String(older.url), /^https:\/\/brigade\.invalid\//)
+    // A server no longer in the workspace is said to be gone.
+    await assert.rejects(
+      answer(
         sessionId,
-        type: 'request',
-        title: 'Team Notes',
-        payload: {
-          source: 'harness',
-          requestId: randomUUID(),
-          teammateId: ids.riley,
-          asks: [
-            {
-              id: 'a',
-              type: 'access',
-              kind: 'connection',
-              what: 'Team Notes',
-              app: {
-                kind: 'mcp',
-                scope: 'read',
-                account: 'notes-production',
-                ...(url ? { url } : {}),
-              },
-            },
-          ],
-        },
-      } as never,
-    })
-    const runner = await fakeRunner(scope, ids.computer)
-    try {
-      await runner.run(() =>
-        answerTicket(
-          { ...scope, memberId: ids.ada, userId: `ada-${suffix}`, role: 'owner' },
-          ticket.id,
-          {
-            action: 'answered',
-            replies: { a: { type: 'access', granted: true, connectionId: production } },
-          },
-        ),
-      )
-    } finally {
-      runner.close()
-    }
-    const given = await db.grant.findMany({
-      where: { teammateId: ids.riley, connection: { label: 'Team Notes' } },
-    })
-    assert.deepEqual(
-      given.map((g) => [g.connectionId, g.scope]),
-      [[production, 'read']],
+        await ticketFor({ kind: 'mcp', scope: 'read', server: 'gone' }),
+        staging!.id,
+      ),
+      { message: /no longer in the workspace/ },
     )
+  })
+
+  test("no part of an MCP server's URL shows, whatever its name or whose its account", async () => {
+    // Shared, under a name of its own or another's or none; Carol's own, under the same.
+    await server('Lone Tracker', 'tracker', ids.ada, 'workspace')
+    await server('Wiki', 'wiki-one', ids.ada, 'workspace')
+    await server('Wiki', 'wiki-two', ids.ada, 'workspace')
+    await server(null, 'nameless', ids.ada, 'workspace')
+    await server('Ledger', 'carol-ledger', ids.carol, 'mine')
+    await server('Wiki', 'carol-wiki', ids.carol, 'mine')
+    await server(null, 'carol-nameless', ids.carol, 'mine')
+    // One given to Riley too, which it uses here.
+    const used = await server('Docs Search', 'docs', ids.ada, 'workspace')
+    await db.grant.create({
+      data: { teammateId: ids.riley, connectionId: used, scope: 'read' } as never,
+    })
+    for (const [who, sessionId] of [
+      ['Bob, alone', await thread(ids.bob, ids.bob)],
+      ['several people', await thread(ids.bob, '*')],
+      ['Carol, alone', await thread(ids.carol, ids.carol)],
+    ] as const) {
+      const { yours, others, connectable, text } = await listed(sessionId)
+      assert.ok(yours.includes('- Docs Search · docs: read'), who)
+      assert.ok(
+        others.some((l) => l.startsWith('- Wiki · wiki-two: app.kind mcp')),
+        who,
+      )
+      assert.ok(
+        others.some((l) =>
+          l.startsWith('- MCP server · nameless: app.kind mcp, what "MCP server", app.server "'),
+        ),
+        who,
+      )
+      noUrl(text)
+    }
   })
 })
