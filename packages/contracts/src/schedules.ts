@@ -3,6 +3,7 @@
 // and compute runs with these same helpers.
 import { Cron } from 'croner'
 import { z } from 'zod'
+import { AppOperations } from './apps.js'
 import { ChildOperations } from './children.js'
 import { ListOperations } from './lists.js'
 import { PlaybookOperations } from './playbooks.js'
@@ -120,6 +121,7 @@ export const ScheduleOperation = z.discriminatedUnion('name', [
   ...ReviewOperations,
   ...TriggerOperations,
   ...ListOperations,
+  ...AppOperations,
 ])
 export type ScheduleOperation = z.infer<typeof ScheduleOperation>
 

@@ -282,14 +282,27 @@ async function accountToGrant(
   db: ScopedDb,
   scope: WorkspaceScope,
   thread: { startedByMemberId: string },
-  app: { kind: string; scope: 'read' | 'read_write'; url?: string; repository?: string },
+  app: {
+    kind: string
+    scope: 'read' | 'read_write'
+    url?: string
+    repository?: string
+    server?: string
+  },
   what: string,
   connectionId: string | undefined,
 ) {
-  // An MCP server added by its URL: the App for that URL, whatever its name.
   let key: string | undefined
+  // An MCP server named by its App's id (from list_apps): that one, whatever its name. Its URL
+  // is then serverOnlyUrl, for older APIs: never read.
+  if (app.kind === 'mcp' && app.server) {
+    key = (await db.app.findFirst({ where: { id: app.server, key: { startsWith: 'mcp:' } } }))?.key
+    if (!key)
+      throw new HTTPException(404, { message: 'That MCP server is no longer in the workspace' })
+  }
+  // An MCP server added by its URL: the App for that URL, whatever its name.
   try {
-    key = app.kind === 'mcp' && app.url ? mcpAppKey(app.url) : undefined
+    key ??= app.kind === 'mcp' && app.url ? mcpAppKey(app.url) : undefined
   } catch {
     // not a URL
   }

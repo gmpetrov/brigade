@@ -233,7 +233,7 @@ export const openTicketTool = tool({
             app: {
               type: 'object',
               description:
-                'access to an App (kind connection): which, and the access you need. The person grants it from the ticket, or connects the App there first. Ask read_write only when you must send or change something there. For an MCP server, such as one the person gives you a URL for, use kind mcp with its url: they add it and sign in from the ticket. For an MCP server already added, such as one a message mentions as an App, use kind mcp and put its name in what; the url can be left out',
+                'access to an App (kind connection): which, and the access you need. The person grants it from the ticket, or connects the App there first. Ask read_write only when you must send or change something there. For an MCP server, such as one the person gives you a URL for, use kind mcp with its url: they add it and sign in from the ticket. For an MCP server already added, such as one a message mentions as an App, use kind mcp and put its name in what, and its server id when list_apps gives one; the url can be left out',
               properties: {
                 kind: {
                   type: 'string',
@@ -268,6 +268,11 @@ export const openTicketTool = tool({
                 url: {
                   type: 'string',
                   description: 'kind mcp: the MCP server URL, e.g. https://mcp.example.com/mcp',
+                },
+                server: {
+                  type: 'string',
+                  description:
+                    'kind mcp: a server already added, by its id as list_apps gives it (app.server): the ticket finds that one, whatever its name',
                 },
                 repository: {
                   type: 'string',
@@ -1866,6 +1871,43 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
           toolName: 'cancel_wakeup',
           input,
         }),
+    }),
+  }
+}
+
+/** What list_apps says on an API from before it, which cannot read the call. */
+const LIST_APPS_UNKNOWN =
+  "Brigade's server does not have list_apps yet: it is older than this computer's runner. Until it updates, " +
+  "ask for an App with open_ticket's access ask, whose app.kind names every App you can ask for."
+
+/**
+ * The Apps a teammate can suggest from what a person needs: its accounts here, the workspace's
+ * it may ask for, and those a person may connect (src/app-calls.ts in the API). Names only; an
+ * account's tools still come with its grant. None in a playbook's run, which has only the Apps
+ * the playbook declares (the API refuses it too).
+ */
+export function appTools(
+  call: ScheduleCaller,
+  options: { playbook: boolean },
+): Record<string, Tool> {
+  if (options.playbook) return {}
+  return {
+    list_apps: tool({
+      description:
+        'List the Apps, one line each: the accounts you use here, the accounts of the workspace not granted to you, ' +
+        'and the Apps nobody has connected for you yet, each with the app.kind an open_ticket access ask takes. ' +
+        'Call it when a person wants to use a service you have no account for ("track my Google rankings", ' +
+        '"connect my Gmail"), then propose granting or connecting one with a ticket.',
+      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+      execute: (input, { toolCallId }) =>
+        call({ operation: { name: 'list_apps' }, toolCallId, toolName: 'list_apps', input }).catch(
+          (error: unknown) => {
+            // An API from before it answers that it cannot read the call (hub/runner-messages.ts).
+            if (errorMessage(error).includes('could not read this call'))
+              throw new Error(LIST_APPS_UNKNOWN)
+            throw error
+          },
+        ),
     }),
   }
 }

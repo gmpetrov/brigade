@@ -788,13 +788,16 @@ const playbook = (playbook: NonNullable<ThreadSpec['playbook']>, child: boolean)
 export type Browser = { ready: true } | { ready: false; error?: string }
 
 /**
- * Getting an App account the teammate lacks: one connected to the workspace but
- * not granted to it does not show, and it would otherwise guess why.
+ * Getting an App account the teammate lacks: list_apps shows the workspace's it may ask for and
+ * the Apps a person may connect, where it would otherwise guess why one is missing.
  */
 const APP_ACCOUNTS =
   '## App accounts\n\n' +
-  "Each App tool's description ends with the account it reaches, in brackets. You have only the accounts granted " +
-  'to you: one connected to the workspace but not granted to you does not show at all. When the work needs an ' +
+  "Each App tool's description ends with the account it reaches, in brackets. You have the tools of the accounts " +
+  'granted to you, and `list_apps` shows every App: those accounts, the accounts of the workspace not granted to ' +
+  'you, and the Apps nobody has connected for you yet, each with its kind. When a person wants to use a service you ' +
+  'have no account for ("track my Google rankings", "connect my Gmail"), call `list_apps` and propose the App that ' +
+  'fits with a ticket, to grant you its account or connect it. When the work needs an ' +
   'account your tools do not reach (a message names one, or your tools reach another account of that App), do not ' +
   'stop to explain it or guess why: open a ticket (`open_ticket`) with an `access` ask of kind `connection`, `app` ' +
   "of that App's kind with the scope you need and `account` naming it as the person wrote it. Once they grant it, " +

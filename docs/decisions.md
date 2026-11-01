@@ -164,6 +164,25 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   made by the minute's tick; one a restart cut off while it was being made is not made again, and the thread is told
   to check. Vendor errors are scrubbed of anything that looks like a key or token before they are logged or
   returned, since Stripe echoes a masked key.
+- **Apps a teammate can ask for** (`list_apps`, `apps/api/src/app-calls.ts`). A thread's spec gives only the
+  accounts granted to its teammate, as tools. `list_apps`, a `schedule.call` operation, lists Apps by name, one line
+  each and no tools: the accounts the spec gives (`usableGrants`, shared with `specFor`), the workspace's accounts
+  not granted to it, and the catalog's Apps with no account it may use (those this server can connect,
+  `availableApps`), plus MCP servers added by URL. Each comes with the `app.kind` of an `open_ticket` access ask:
+  `askableKinds()`, every App of the catalog but custom apps (they only receive webhooks) and the Email App (given from
+  its own pages), which a test keeps equal to `open_ticket`'s enum. An MCP server added by URL is asked for by its
+  App's id (`app.server`), as two can share a name (staging and production both "Team Notes") or have none: the
+  ticket's grant step and its account picker find that server by it. Never by its URL, whole or in part, which
+  `list_apps` does not even read: some providers put the server's key in its path, which would reach the server
+  around every grant. For an API from before `app.server`, which drops the field, the runner also gives such an ask
+  a URL no server has (`serverOnlyUrl`, `https://brigade.invalid/…`): it then finds no server and grants nothing,
+  rather than the first server of the ask's name. It is scoped to the person the thread works for
+  (`askedBy`), never to the teammate, which works for every member and in threads events start: shared accounts, and
+  the starter's own (reach `mine`) while no other member asks in the thread; no member's own once one does. A
+  playbook's run has no `list_apps` (the runner leaves it out and the API refuses it): it has only the Apps the
+  playbook declares. In Claude Code it stays deferred, like Brigade's other tools: its name is in the deferred list
+  and the instructions name it, so it costs a tool search when a person needs an App rather than its description in
+  every request. An API from before it cannot read the call; the runner says so instead of "try again differently".
 - **Connections** are kept as `removed` when disconnected, so their call log survives; the credential is revoked at
   the provider (Google) and deleted from the vault. Gmail and Google Calendar connect through Google OAuth; Stripe
   signs in on Stripe's MCP server (`mcp.stripe.com`, its own OAuth). Each call there names a Stripe account
