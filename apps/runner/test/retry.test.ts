@@ -29,7 +29,13 @@ test.after(async () => {
   await rm(home, { recursive: true, force: true })
 })
 
-type Outcome = { status: 'idle' | 'failed'; error?: string; memoryStop?: string }
+type Outcome = {
+  status: 'idle' | 'failed'
+  error?: string
+  memoryStop?: string
+  /** What the turn runs in the background when it ends (Claude Code's tasks). */
+  background?: { kind: 'agent' | 'command'; description: string }[]
+}
 
 /**
  * A thread whose teammate's turns end as `outcomes` say, in order (then idle). `memoryRoom`:
@@ -60,8 +66,24 @@ function setup(sessionId: string, outcomes: Outcome[], memoryRoom?: () => Promis
       const outcome = outcomes.shift() ?? { status: 'idle' }
       // The memory guard stops the turn while it runs: its harness's process goes with it.
       if (outcome.memoryStop) threads.stoppedForMemory(spec.sessionId, outcome.memoryStop)
+      if (outcome.background) seat.background = outcome.background
+      // Its error goes through the runner, as a harness's does.
       if (outcome.error)
-        events.push({ at: new Date().toISOString(), type: 'error', message: outcome.error })
+        events.push(
+          (
+            threads as unknown as {
+              harnessEvent: (thread: unknown, event: AgentEvent) => AgentEvent
+              threads: Map<string, unknown>
+            }
+          ).harnessEvent(
+            (threads as unknown as { threads: Map<string, unknown> }).threads.get(spec.sessionId),
+            {
+              at: new Date().toISOString(),
+              type: 'error',
+              message: outcome.error,
+            },
+          ),
+        )
       else
         events.push({ at: new Date().toISOString(), type: 'turn.completed', finishReason: 'stop' })
       void spec
@@ -85,6 +107,7 @@ function setup(sessionId: string, outcomes: Outcome[], memoryRoom?: () => Promis
     turn: [],
     waiting: false,
     told: new Set(),
+    background: [] as NonNullable<Outcome['background']>,
   }
   seats.push(seat)
   ;(threads as unknown as { harness: () => unknown }).harness = () => seat
@@ -255,4 +278,58 @@ test('a person taking control while a try waits for memory: it does not run', as
   // Past the wait's next check of memory.
   await sleep(5_300)
   assert.equal(turns(t.events), 1, 'the try ran despite the takeover')
+})
+
+test('a turn stopped for memory with sub-agents at work says it goes on, and the try resumes them', async () => {
+  const t = setup(
+    'agents',
+    [
+      {
+        status: 'failed',
+        error: BRIDGE_CLOSED,
+        memoryStop: 'pressure',
+        background: [
+          { kind: 'agent', description: 'Research Linear and Copilot agents' },
+          { kind: 'command', description: 'npm test' },
+        ],
+      },
+    ],
+    async () => true,
+  )
+  t.message('Go')
+  await sleep(400)
+  // Its error says the runner tries again: a child's report waits for the try (children.ts).
+  const [error] = t.events.filter((e) => e.type === 'error')
+  assert.deepEqual(
+    {
+      message: (error as { message: string }).message,
+      retrying: (error as { retrying?: boolean }).retrying,
+    },
+    { message: 'Stopped to give the computer memory back: pressure.', retrying: true },
+  )
+  assert.equal(turns(t.events), 2)
+  assert.match(t.prompts[1]!, /This was running in the background, and stopped with it:/)
+  assert.match(t.prompts[1]!, /- agent: Research Linear and Copilot agents\n- command: npm test/)
+  assert.match(t.prompts[1]!, /resume each one with SendMessage to its id/)
+})
+
+test('an error no try follows says nothing of one', async () => {
+  const t = setup('no-try', [{ status: 'failed', error: 'Claude Code process exited with code 1' }])
+  t.message('Do it')
+  await sleep(200)
+  const [error] = t.events.filter((e) => e.type === 'error')
+  assert.equal((error as { retrying?: boolean }).retrying, undefined)
+})
+
+test('the last try that fails says no more come', async () => {
+  const t = setup(
+    'last-try',
+    Array.from({ length: 4 }, () => ({ status: 'failed' as const, error: 'socket hang up' })),
+  )
+  t.message('Go')
+  await sleep(900)
+  const retrying = t.events
+    .filter((e) => e.type === 'error')
+    .map((e) => (e as { retrying?: boolean }).retrying ?? false)
+  assert.deepEqual(retrying, [true, true, true, false])
 })

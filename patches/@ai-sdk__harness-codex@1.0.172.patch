@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index 59446ad400847d4818d89c59746eb28afea49f2c..d0a10bf9c443e5e082bdebbd7a40e864d17fa378 100644
+index 59446ad400847d4818d89c59746eb28afea49f2c..ad7eb7183e6a001a0163bf522b781ceebacda9bb 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -875,6 +875,7 @@ function createAppServerEventHandler({ stepTracker, emitStreamEvent, emitWarning
@@ -50,7 +50,17 @@ index 59446ad400847d4818d89c59746eb28afea49f2c..d0a10bf9c443e5e082bdebbd7a40e864
  		const normalized = normalizeItem({
  			item,
  			textByItem,
-@@ -1668,24 +1702,39 @@ function createDynamicTools(tools) {
+@@ -1414,6 +1448,9 @@ function createCodexAppServerRuntime() {
+ 				onRequest: (request) => {
+ 					const active = activeTurn;
+ 					const params = asRecord(request.params);
++					// Brigade: one of Codex's sub-agents (a thread of its own) calling one of Brigade's tools,
++					// which are the thread's: refused with a reason it can act on, rather than as a stray call.
++					if (client === created && active != null && request.method === "item/tool/call" && typeof params?.threadId === "string" && params.threadId !== active.threadId) return Promise.reject(/* @__PURE__ */ new Error("Only the thread itself may call Brigade's tools (report, start_child, open_ticket and the others): you are a sub-agent working for it. Do not try again: put what you found, or what you would have done with this tool, in your final answer, and the thread does the rest."));
+ 					if (client !== created || active == null || params?.threadId !== active.threadId || params?.turnId !== active.turnId || active.turnId == null) return Promise.reject(/* @__PURE__ */ new Error("Codex app-server requested a tool for an inactive turn."));
+ 					return handleAppServerRequest({
+ 						request,
+@@ -1668,24 +1705,39 @@ function createDynamicTools(tools) {
  	const validOriginalNames = new Set(tools.map((tool) => tool.name).filter(isValidDynamicToolName));
  	const usedAliases = /* @__PURE__ */ new Set();
  	const originalNameByAlias = /* @__PURE__ */ new Map();

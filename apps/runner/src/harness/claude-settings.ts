@@ -1,3 +1,5 @@
+import { threadToolsEnv } from './thread-tools.js'
+
 // What Brigade turns off in Claude Code. Claude Code ships its own ways of doing
 // what Brigade does (schedules, memory, other sessions, cloud routines),
 // which would work outside Brigade where nobody sees them, and each costs
@@ -46,8 +48,12 @@ export const CLAUDE_SETTINGS = {
  */
 const CLAUDE_ENV = { CLAUDE_CODE_FORK_SUBAGENT: '0' }
 
-/** The environment that gives a Claude Code session Brigade's settings. */
+/**
+ * The environment that gives a Claude Code session Brigade's settings, and the thread's own
+ * tools its sub-agents may not call (thread-tools.ts).
+ */
 export const claudeSettingsEnv = (): Record<string, string> => ({
   ...CLAUDE_ENV,
   BRIGADE_CLAUDE_SETTINGS: JSON.stringify(CLAUDE_SETTINGS),
+  ...threadToolsEnv(),
 })

@@ -677,7 +677,16 @@ export const AgentEvent = z.discriminatedUnion('type', [
     type: z.literal('repositories.changed'),
     repositories: z.array(z.string().max(200)).max(50),
   }),
-  z.object({ ...base, type: z.literal('error'), message: z.string() }),
+  z.object({
+    ...base,
+    type: z.literal('error'),
+    message: z.string(),
+    /**
+     * The runner tries the turn again on its own (stopped for memory, a passing error): the turn
+     * is not over, so a child's report waits for the try's end.
+     */
+    retrying: z.boolean().optional(),
+  }),
   z.object({ ...base, type: z.literal('raw'), source: z.string(), value: z.unknown() }),
 ])
 export type AgentEvent = z.infer<typeof AgentEvent>

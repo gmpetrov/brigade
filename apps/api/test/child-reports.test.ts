@@ -261,3 +261,43 @@ test('a child that ends without a report sends its whole last message', { skip }
   assert.equal(read.lastMessage, undefined)
   assert.equal(read.files, undefined)
 })
+
+test('a turn stopped and tried again sends no report until the try ends', { skip }, async () => {
+  const { parent, child } = await family()
+  // What it reported before the computer ran out of memory, its sub-agents still at work.
+  await handleChildCall(scoped(scope), scope, child, cody, {
+    name: 'report',
+    status: 'report',
+    summary: 'Half of it.',
+  })
+  const stopped = 'Stopped to give the computer memory back: it held the most (0.3 GB).'
+  await noteChildEvents(child, [
+    { event: { type: 'error', at: new Date().toISOString(), message: stopped, retrying: true } },
+  ])
+  assert.deepEqual(await notes(parent), [])
+  const held = await prisma.session.findUniqueOrThrow({
+    where: { id: child.id },
+    select: { reportDeliveredAt: true },
+  })
+  assert.equal(held.reportDeliveredAt, null)
+
+  // The try ends: its report goes, once.
+  await handleChildCall(scoped(scope), scope, child, cody, {
+    name: 'report',
+    status: 'report',
+    summary: 'All of it.',
+  })
+  await endTurn(child, 'Reported.')
+  const [note, ...more] = await notes(parent)
+  assert.equal(more.length, 0)
+  assert.match(note!, /All of it\./)
+})
+
+test('an error with no try after it sends what the child has', { skip }, async () => {
+  const { parent, child } = await family()
+  await noteChildEvents(child, [
+    { event: { type: 'error', at: new Date().toISOString(), message: 'It broke.' } },
+  ])
+  const [note] = await notes(parent)
+  assert.match(note!, /It broke\./)
+})
