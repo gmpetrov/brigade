@@ -544,8 +544,17 @@ export async function handleScheduleCall(
     })
     // Held for an admin's decision: the result comes once they decide (src/held-calls.ts).
     if ('held' in answer) return
-    const { decision, ...result } = answer
-    // With the decision, for the thread to show it on the approval.
+    const { decision: made, ...result } = answer
+    // With the decision, for the thread to show it on the approval: also when a check made again
+    // once a person decided refuses the call (another member asked in the thread meanwhile).
+    const decided = options.resume?.decision
+    const decision =
+      made ??
+      (decided && {
+        ticketId: decided.ticketId,
+        approved: decided.approved,
+        memberId: decided.memberId,
+      })
     return reply({
       type: 'connector.result',
       callId: call.callId,

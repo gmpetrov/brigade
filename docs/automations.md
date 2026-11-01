@@ -184,6 +184,16 @@ are `list_triggers` and `create_trigger`, sent as `schedule.call` operations
 - **What can trigger.** `list_triggers` lists each App account's events from the catalog,
   with their options, and the teammate's own triggers. Any other service that can send a
   webhook is a new custom app: `customApp` (its name) with the event `received`.
+- **Whose accounts.** As `list_apps`, scoped to the person the thread works for, never to the
+  teammate (`shownAccounts()` in `thread-spec.ts`, one rule for the three tools): shared
+  accounts, and the starter's own (reach `mine`) while no other member asks in the thread.
+  Another member's own account is never listed, even granted to the teammate, and
+  `create_trigger` refuses its `connectionId` with the message of an unknown one, before any
+  ticket, so the thread learns nothing of it. Checked again once a person approves.
+- **Its own triggers** (`yourTriggers`) are those its starter set up, on accounts the thread
+  shows, with a custom app's URL: only in a member's thread working for them alone. The URL is
+  a key that starts threads on the starter's accounts, so a thread several people ask in, or
+  one an event, a schedule or a playbook started, lists none.
 - **Instructions.** Each trigger has standing instructions (`Trigger.instructions`). They
   open each thread it starts, before the event. Admins can also give them on the Apps page.
 - **An owner or admin approves each one.** A trigger lets an outside event start work on
@@ -202,7 +212,9 @@ are `list_triggers` and `create_trigger`, sent as `schedule.call` operations
   credential (kind `other`) that only that teammate may use, without asking. The teammate
   loads it with `use_credential` to set up a sender it controls.
 - **Refused** in a thread started by an event, a schedule or a playbook's run, as for
-  schedules.
+  schedules; and in a thread several people ask in, also when that changes while the ticket
+  waits: the trigger's threads would run on the starter's accounts at another member's
+  request.
 
 ## Build order
 

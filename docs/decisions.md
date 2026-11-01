@@ -177,8 +177,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   around every grant. For an API from before `app.server`, which drops the field, the runner also gives such an ask
   a URL no server has (`serverOnlyUrl`, `https://brigade.invalid/…`): it then finds no server and grants nothing,
   rather than the first server of the ask's name. It is scoped to the person the thread works for
-  (`askedBy`), never to the teammate, which works for every member and in threads events start: shared accounts, and
-  the starter's own (reach `mine`) while no other member asks in the thread; no member's own once one does. A
+  (`shownAccounts()` in `thread-spec.ts`, from `askedBy`), never to the teammate, which works for every member and in
+  threads events start: shared accounts, and the starter's own (reach `mine`) while no other member asks in the
+  thread; no member's own once one does. `list_triggers` and `create_trigger` take the same rule from that one
+  function (docs/automations.md), so a change to who may see whose accounts is made once. A
   playbook's run has no `list_apps` (the runner leaves it out and the API refuses it): it has only the Apps the
   playbook declares. In Claude Code it stays deferred, like Brigade's other tools: its name is in the deferred list
   and the instructions name it, so it costs a tool search when a person needs an App rather than its description in

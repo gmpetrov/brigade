@@ -14,7 +14,11 @@ import { triggerEvent, type ScheduleOperation } from '@brigade/contracts'
 //   accounts, in the thread's project, and keeps a custom app's signing secret in the vault
 //   for the teammate alone;
 // - declined, nothing is made; refused from a thread an event or a schedule started;
-// - each event's thread starts with the instructions, and still reads as a trigger's event.
+// - each event's thread starts with the instructions, and still reads as a trigger's event;
+// - scoped to the person the thread works for, never to the teammate (as list_apps): another
+//   member's own account never shows nor is taken, even granted to the teammate; a thread several
+//   people ask in shows no member's own account nor any trigger, and sets up none, also when that
+//   changes while the ticket waits.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -41,7 +45,19 @@ type Reply = {
 describe("a teammate's triggers", { skip: !database && 'no database answers' }, () => {
   const suffix = randomUUID().slice(0, 8)
   const ids = {} as Record<
-    'org' | 'workspace' | 'owner' | 'bob' | 'computer' | 'riley' | 'project' | 'stripe',
+    | 'org'
+    | 'workspace'
+    | 'owner'
+    | 'bob'
+    | 'carol'
+    | 'computer'
+    | 'riley'
+    | 'project'
+    | 'stripe'
+    | 'bobStripe'
+    | 'carolGmail'
+    | 'ownerGithub'
+    | 'typeform',
     string
   >
   let db: ReturnType<typeof scoped>
@@ -53,12 +69,20 @@ describe("a teammate's triggers", { skip: !database && 'no database answers' }, 
     userId: memberId === ids.owner ? `owner-${suffix}` : `bob-${suffix}`,
   })
 
-  /** A thread of Riley's that Bob, a member, started (or another member). */
-  const thread = async (origin: 'member' | 'trigger' = 'member', startedBy = ids.bob) => {
+  /**
+   * A thread of Riley's that Bob, a member, started (or another member), working for `askedBy`
+   * ('*': several people; null: as no person asked yet, or in an event's or a routine's thread).
+   */
+  const thread = async (
+    origin: 'member' | 'trigger' | 'schedule' = 'member',
+    startedBy = ids.bob,
+    askedBy: string | null = null,
+  ) => {
     const session = await db.session.create({
       data: {
         teammateId: ids.riley,
         startedByMemberId: startedBy,
+        askedByMemberId: askedBy,
         computerId: ids.computer,
         title: 'Errors',
         projectId: ids.project,
@@ -135,6 +159,7 @@ describe("a teammate's triggers", { skip: !database && 'no database answers' }, 
     for (const [who, role] of [
       ['owner', 'owner'],
       ['bob', 'member'],
+      ['carol', 'member'],
     ] as const) {
       await prisma.user.create({
         data: { id: `${who}-${suffix}`, name: who, email: `${who}-${suffix}@test.local` },
@@ -170,6 +195,38 @@ describe("a teammate's triggers", { skip: !database && 'no database answers' }, 
         } as never,
       })
     ).id
+    // Members' own accounts: Bob's Stripe; Carol's Gmail, given to Riley (as a teammate works for
+    // everyone); the owner's GitHub. A custom app the workspace shares.
+    const own = async (
+      key: string,
+      kind: string,
+      externalAccount: string,
+      by: string,
+      reach: 'mine' | 'workspace' = 'mine',
+    ) => {
+      const app =
+        (await db.app.findFirst({ where: { key } })) ??
+        (await db.app.create({ data: { key, createdByMemberId: by } as never }))
+      return (
+        await db.connection.create({
+          data: {
+            appId: app.id,
+            kind,
+            label: kind === 'webhook' ? 'Typeform' : kind,
+            externalAccount,
+            reach,
+            createdByMemberId: by,
+          } as never,
+        })
+      ).id
+    }
+    ids.bobStripe = await own('stripe', 'stripe', 'bob-shop', ids.bob)
+    ids.carolGmail = await own('gmail', 'gmail', `carol-${suffix}@acme.test`, ids.carol)
+    await db.grant.create({
+      data: { teammateId: ids.riley, connectionId: ids.carolGmail, scope: 'read_write' } as never,
+    })
+    ids.ownerGithub = await own('github', 'github', 'owner-gh', ids.owner)
+    ids.typeform = await own(`custom:${suffix}`, 'webhook', 'typeform', ids.owner, 'workspace')
   })
 
   after(async () => {
@@ -177,7 +234,7 @@ describe("a teammate's triggers", { skip: !database && 'no database answers' }, 
     await prisma.member.deleteMany({ where: { organizationId: ids.org } })
     await prisma.organization.deleteMany({ where: { id: ids.org } })
     await prisma.user.deleteMany({
-      where: { id: { in: [`owner-${suffix}`, `bob-${suffix}`] } },
+      where: { id: { in: ['owner', 'bob', 'carol'].map((who) => `${who}-${suffix}`) } },
     })
   })
 
@@ -334,5 +391,186 @@ describe("a teammate's triggers", { skip: !database && 'no database answers' }, 
     const event = triggerEvent(text)
     assert.equal(event?.trigger, 'New Sentry errors')
     assert.deepEqual(event?.payload, { type: 'error', message: 'boom' })
+  })
+
+  /** list_triggers in a thread: the accounts it lists, by id, and its whole output. */
+  async function listed(sessionId: string) {
+    const reply = await call(sessionId, { name: 'list_triggers' })
+    assert.equal(reply.ok, true, reply.error)
+    const output = reply.output as {
+      note?: string
+      apps: { connectionId: string; app: string }[]
+      yourTriggers: { triggerId: string; app: string; url?: string }[]
+    }
+    return { ...output, ids: output.apps.map((a) => a.connectionId), text: JSON.stringify(output) }
+  }
+
+  /** A trigger of Riley's that Bob set up on that account (as an admin can on the Apps page). */
+  const bobsTrigger = async (connectionId: string, label: string) =>
+    (
+      await db.trigger.create({
+        data: {
+          connectionId,
+          teammateId: ids.riley,
+          label,
+          event: 'received',
+          pathToken: `token-${randomUUID()}`,
+          verification: 'none',
+          createdByMemberId: ids.bob,
+        } as never,
+      })
+    ).id
+
+  const stripeEvent = async () =>
+    Object.keys((await import('../src/connectors/index.js')).triggersOf('stripe'))[0]!
+
+  test("a member's thread: the shared accounts and their own, never another member's", async () => {
+    const onTypeform = await bobsTrigger(ids.typeform, 'Bob on Typeform')
+    const onCarols = await bobsTrigger(ids.carolGmail, "Bob on Carol's Gmail")
+    for (const sessionId of [
+      await thread('member', ids.bob, ids.bob),
+      // From before askedByMemberId was kept, with no person's input yet: still Bob's.
+      await thread('member', ids.bob, null),
+    ]) {
+      const { ids: shown, note, yourTriggers, text } = await listed(sessionId)
+      assert.ok(shown.includes(ids.stripe), 'a shared account')
+      assert.ok(shown.includes(ids.typeform), 'a shared custom app')
+      assert.ok(shown.includes(ids.bobStripe), 'his own')
+      assert.ok(!shown.includes(ids.carolGmail), "Carol's own, though Riley has it")
+      assert.ok(!shown.includes(ids.ownerGithub), "the owner's own")
+      assert.doesNotMatch(text, /carol-|owner-gh/)
+      assert.equal(note, undefined)
+      const triggers = yourTriggers.map((t) => t.triggerId)
+      assert.ok(triggers.includes(onTypeform), 'his trigger, with its URL')
+      assert.ok(yourTriggers.find((t) => t.triggerId === onTypeform)?.url)
+      assert.ok(!triggers.includes(onCarols), "not his trigger on Carol's own account")
+    }
+    // Carol's own thread has hers, and none of Bob's.
+    const { ids: hers, yourTriggers } = await listed(await thread('member', ids.carol, ids.carol))
+    assert.ok(hers.includes(ids.carolGmail))
+    assert.ok(!hers.includes(ids.bobStripe))
+    assert.deepEqual(yourTriggers, [])
+    await db.trigger.deleteMany({ where: { id: { in: [onTypeform, onCarols] } } })
+  })
+
+  test('a thread several people ask in: no member’s own account, no trigger, and none set up', async () => {
+    const onTypeform = await bobsTrigger(ids.typeform, 'Bob on Typeform')
+    const asked = await db.ticket.count()
+    for (const sessionId of [
+      await thread('member', ids.bob, '*'),
+      // Carol alone asks in a thread Bob started: his accounts are not hers to use.
+      await thread('member', ids.bob, ids.carol),
+    ]) {
+      const { ids: shown, note, yourTriggers, text } = await listed(sessionId)
+      assert.ok(shown.includes(ids.stripe) && shown.includes(ids.typeform), 'shared accounts')
+      for (const own of [ids.bobStripe, ids.carolGmail, ids.ownerGithub])
+        assert.ok(!shown.includes(own), own)
+      assert.doesNotMatch(text, /bob-shop|carol-|owner-gh/)
+      assert.match(note!, /^Several people ask in this thread/)
+      // Bob's trigger runs on his accounts, and its URL is a key: not for this thread.
+      assert.deepEqual(yourTriggers, [])
+      assert.doesNotMatch(text, /token-/)
+
+      for (const op of [
+        sentry,
+        { ...sentry, customApp: undefined, connectionId: ids.stripe, event: await stripeEvent() },
+      ]) {
+        const refused = await call(sessionId, op)
+        assert.equal(refused.ok, false)
+        assert.match(refused.error!, /^Several people ask in this thread/)
+      }
+    }
+    assert.equal(await db.ticket.count(), asked, 'no ticket')
+    await db.trigger.deleteMany({ where: { id: onTypeform } })
+  })
+
+  test("an event's or a routine's thread: its starter's own accounts, nobody else's", async () => {
+    for (const origin of ['trigger', 'schedule'] as const) {
+      const { ids: shown, note, yourTriggers } = await listed(await thread(origin, ids.bob, null))
+      assert.ok(shown.includes(ids.stripe), origin)
+      assert.ok(shown.includes(ids.bobStripe), `${origin}: Bob's own`)
+      assert.ok(!shown.includes(ids.carolGmail), `${origin}: not Carol's`)
+      assert.ok(!shown.includes(ids.ownerGithub), `${origin}: not the owner's`)
+      assert.equal(note, undefined)
+      assert.deepEqual(yourTriggers, [])
+    }
+  })
+
+  test("create_trigger on another member's own account: as an unknown one, and no ticket", async () => {
+    const asked = await db.ticket.count()
+    const held = await db.heldCall.count()
+    const sessionId = await thread('member', ids.bob, ids.bob)
+    const unknown = await call(sessionId, {
+      ...sentry,
+      customApp: undefined,
+      connectionId: 'nope',
+    })
+    for (const [connectionId, event] of [
+      [ids.carolGmail, 'email_received'],
+      [ids.ownerGithub, 'issue_opened'],
+    ]) {
+      const refused = await call(sessionId, {
+        ...sentry,
+        customApp: undefined,
+        connectionId,
+        event,
+      })
+      assert.equal(refused.ok, false)
+      assert.equal(refused.error, unknown.error, 'it does not say the account exists')
+      assert.equal(refused.error, 'No App account has that connectionId; list_triggers shows them')
+    }
+    assert.equal(await db.ticket.count(), asked, 'no ticket')
+    assert.equal(await db.heldCall.count(), held)
+  })
+
+  test('once a person decides, refused if another member asked in the thread meanwhile', async () => {
+    const { resolveTicket } = await import('../src/decide.js')
+    const { noteAsker } = await import('../src/thread-spec.js')
+    const before = await db.trigger.count()
+    const propose = async (label: string) => {
+      const sessionId = await thread('member', ids.bob, ids.bob)
+      const replies: Reply[] = []
+      const done = call(
+        sessionId,
+        {
+          name: 'create_trigger',
+          connectionId: ids.bobStripe,
+          event: await stripeEvent(),
+          options: {},
+          label,
+          instructions: 'Thank the customer.',
+        },
+        replies,
+      )
+      const ticketId = await waiting(replies)
+      // Carol writes in Bob's thread while the ticket waits.
+      await noteAsker(db, sessionId, ids.carol)
+      return { ticketId, done }
+    }
+
+    const approved = await propose('Bob payments')
+    await resolveTicket(as(ids.owner, 'owner'), approved.ticketId, { approved: true })
+    const reply = await approved.done
+    assert.equal(reply.ok, false)
+    assert.match(reply.error!, /^Several people ask in this thread/)
+    // The thread still shows the decision on its approval.
+    assert.deepEqual(reply.decision, {
+      ticketId: approved.ticketId,
+      approved: true,
+      memberId: ids.owner,
+    })
+    assert.equal(await db.trigger.count(), before, 'nothing made')
+
+    // Declined meanwhile: it says so.
+    const declined = await propose('Bob refunds')
+    await resolveTicket(as(ids.owner, 'owner'), declined.ticketId, {
+      approved: false,
+      reason: 'No',
+    })
+    const no = await declined.done
+    assert.equal(no.ok, false)
+    assert.match(no.error!, /declined this trigger: No/)
+    assert.equal(no.decision?.approved, false)
+    assert.equal(await db.trigger.count(), before)
   })
 })
