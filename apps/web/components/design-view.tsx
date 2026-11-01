@@ -35,6 +35,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Palette,
+  Plus,
   Pencil,
   Play,
   Send,
@@ -94,6 +95,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { api, blobOfDataUrl, uploadFile } from '@/lib/api'
 import { stepOption } from '@/lib/design-options'
+import { addDesignEdit, useDesignEdits, useEditsSender } from '@/lib/pending-edits'
 import { API_URL } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
@@ -114,7 +116,8 @@ const FOLDED = 'brigade:design-panel-folded'
 
 const mention = (folder: string) => formatMention({ kind: 'design', id: folder, label: folder })
 
-function commentText(input: { folder: string; target: Target | null; body: string }) {
+/** Where a comment is, for the teammate: the design, its board, the element and its line. */
+function commentWhere(input: { folder: string; target: Target | null }) {
   const t = input.target
   const board = t
     ? ` on the board ${t.board.title ? `“${t.board.title}” (\`${t.board.file}\`, ` : `\`${t.board.file}\` (`}${t.board.width}px wide)`
@@ -128,7 +131,19 @@ function commentText(input: { folder: string; target: Target | null; body: strin
   const quote = t?.element?.label
     ? `\n\n> <${t.element.tag}> ${t.element.label.replace(/`/g, "'")}`
     : ''
-  return `Comment on the design ${mention(input.folder)}${board}${on}${line}:${quote}\n\n${input.body.trim()}`
+  return `Comment on the design ${mention(input.folder)}${board}${on}${line}:${quote}`
+}
+
+function commentText(input: { folder: string; target: Target | null; body: string }) {
+  return `${commentWhere(input)}\n\n${input.body.trim()}`
+}
+
+/** What a pending comment's row names: its element, else its board, else the design. */
+function commentLabel(target: Target | null, folder: string) {
+  if (!target) return designName(folder)
+  const e = target.element
+  if (e) return e.label || e.dataId || e.tag
+  return target.board.title ?? target.board.file
 }
 
 const handoffText = (folder: string) =>
@@ -509,7 +524,35 @@ function DesignFrame({
     : null
   const commentFolder = lastBoard?.folder ?? folder
 
+  // Beside its thread, a comment waits in the thread's composer with the other edits, to go
+  // in one message (lib/pending-edits.ts); elsewhere it goes at once.
+  const pending = !!threadId
+  const designEdits = useDesignEdits(threadId)
+  const editsSender = useEditsSender(threadId)
+  const boardKeys = new Set(groups.flatMap((g) => g.boards.map((b) => b.key)))
+  const ownEdits = designEdits.filter(
+    (e) => folders.includes(e.folder) || (e.board && boardKeys.has(e.board)),
+  )
+  const pins = ownEdits.flatMap((e) => {
+    if (!e.board || !e.rect) return []
+    const at = editsSender?.order.indexOf(e.id) ?? -1
+    return [
+      { key: e.id, board: e.board, rect: e.rect, n: at >= 0 ? at + 1 : designEdits.indexOf(e) + 1 },
+    ]
+  })
+
   async function sendComment(body: string) {
+    if (pending && threadId) {
+      addDesignEdit(threadId, {
+        folder: commentFolder,
+        board: target?.board.key ?? null,
+        rect: target?.element ? (lastInspected?.rect ?? null) : null,
+        label: commentLabel(target, commentFolder),
+        where: commentWhere({ folder: commentFolder, target }),
+        note: body.trim(),
+      })
+      return true
+    }
     const text = commentText({ folder: commentFolder, target, body })
     if (!commentThread) {
       onStart({
@@ -616,6 +659,13 @@ function DesignFrame({
       }
       onClear={() => setSelection([])}
       onSend={sendComment}
+      {...(pending && {
+        pending: {
+          count: editsSender?.count ?? designEdits.length,
+          ...(editsSender && { send: editsSender.send }),
+          ...(editsSender?.disabled && { disabled: editsSender.disabled }),
+        },
+      })}
     />
   )
 
@@ -728,14 +778,25 @@ function DesignFrame({
               type="button"
               variant={tab === 'ask' ? 'secondary' : 'ghost'}
               size={compact ? 'icon-sm' : 'sm'}
-              tooltip="Comment"
-              aria-label={compact ? 'Comment' : undefined}
+              tooltip={
+                ownEdits.length ? `Comment · ${ownEdits.length} waiting in the composer` : 'Comment'
+              }
+              aria-label={
+                compact || ownEdits.length
+                  ? `Comment${ownEdits.length ? `, ${ownEdits.length} waiting` : ''}`
+                  : undefined
+              }
               aria-pressed={tab === 'ask'}
               disabled={!view}
               onClick={() => setTab(tab === 'ask' ? null : 'ask')}
             >
               <MessageSquarePlus aria-hidden />
               {!compact && 'Comment'}
+              {ownEdits.length > 0 && (
+                <span className="rounded-full bg-primary px-1.5 text-[0.6875rem] leading-4 font-semibold text-primary-foreground tabular-nums">
+                  {ownEdits.length}
+                </span>
+              )}
             </Button>
             {view && view.knobs.length > 0 && (
               <Button
@@ -869,6 +930,7 @@ function DesignFrame({
             groups={groups}
             mode={mode}
             selection={selection}
+            pins={pins}
             onSelect={setSelection}
             onMessage={onPage}
             onKeyDown={onKeyDown}
@@ -1005,11 +1067,14 @@ function CommentBox({
   to,
   onClear,
   onSend,
+  pending,
 }: {
   target: Target | null
   to: string
   onClear: () => void
   onSend: (body: string) => Promise<boolean>
+  /** Comments wait in the thread's composer: how many wait there, and its send. */
+  pending?: { count: number; send?: () => void; disabled?: string }
 }) {
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
@@ -1068,23 +1133,60 @@ function CommentBox({
           className="max-h-60 min-h-20 resize-none rounded-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
         />
         <div className="flex items-center gap-2 py-1.5 pr-1.5 pl-3">
-          <span
-            className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
-            title={`To ${to}`}
-          >
-            To {to}
-          </span>
-          <Button
-            size="icon-sm"
-            tooltip="Send (⌘↵)"
-            aria-label="Send"
-            disabled={!body.trim() || sending}
-            onClick={() => void send()}
-          >
-            <Send aria-hidden />
-          </Button>
+          {pending ? (
+            <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+              {pending.count
+                ? `${pending.count} waiting in the composer`
+                : 'Waits in the composer with your other edits'}
+            </span>
+          ) : (
+            <span
+              className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
+              title={`To ${to}`}
+            >
+              To {to}
+            </span>
+          )}
+          {pending ? (
+            <Button
+              size="sm"
+              tooltip="Add to the edits (⌘↵)"
+              disabled={!body.trim() || sending}
+              onClick={() => void send()}
+            >
+              <Plus aria-hidden />
+              Add to edits
+            </Button>
+          ) : (
+            <Button
+              size="icon-sm"
+              tooltip="Send (⌘↵)"
+              aria-label="Send"
+              disabled={!body.trim() || sending}
+              onClick={() => void send()}
+            >
+              <Send aria-hidden />
+            </Button>
+          )}
         </div>
       </div>
+      {pending?.send && pending.count > 0 && (
+        <div className="mt-2 flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!!pending.disabled}
+            tooltip={
+              pending.disabled ?? 'Send them in one message, with what is written in the composer'
+            }
+            onClick={pending.send}
+          >
+            <Send aria-hidden />
+            Send {pending.count === 1 ? '1 edit' : `${pending.count} edits`}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

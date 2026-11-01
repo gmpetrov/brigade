@@ -470,7 +470,7 @@ function LivePreviewPanel({
               title={
                 select.on === 'mention'
                   ? 'Stop selecting (Esc)'
-                  : 'Select an element in the page to mention it in your message'
+                  : 'Select elements in the page and say what should change on each, then send them together'
               }
               pressed={select.on === 'mention'}
               onClick={() => select.set(select.on === 'mention' ? false : 'mention')}
@@ -593,7 +593,7 @@ function LivePreviewPanel({
               )}
               {select.on === 'mention' && (
                 <Notice icon={<SquareMousePointer aria-hidden className="size-4 shrink-0" />}>
-                  Click an element to add it to your message
+                  Click an element to add it to your edits, then say what should change there
                   {picked > 0 && ` · ${picked} added`}. Esc to stop.
                 </Notice>
               )}

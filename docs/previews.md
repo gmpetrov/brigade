@@ -140,8 +140,12 @@ Partitioned`, no `Domain`, path `/`: this host only, kept for the
     `/__brigade/screenshot.mjs` and loaded only then) and sends the PNG, which
     the message carries as an image attachment named in the block; its chip
     shows it, as Claude's does, rather than the files list. A click on a chip
-    opens what the teammate gets. The composer shows it as a chip and the
-    message carries it as a `<preview-element>` block
+    opens what the teammate gets. The composer shows it as a numbered row of
+    its pending edits, with a note for what should change there (the
+    block's `note`), beside the comments made on a design's canvas
+    (`apps/web/lib/pending-edits.ts`): all go in one message with what is
+    written, in the order they were made. The message carries it as a
+    `<preview-element>` block
     (`packages/contracts/src/preview-elements.ts`), so the teammate reads it as
     text, with no new field for the API or runner to pass on, and the thread
     shows the chip in its place. Esc in the page turns select mode off; it stays

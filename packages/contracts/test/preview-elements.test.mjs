@@ -48,3 +48,20 @@ test('previews and titles show an element by its label', () => {
   )
   assert.equal(splitPreviewElements('plain').text, 'plain')
 })
+
+test('a note written beside an element goes with it, line breaks and quotes kept', () => {
+  const note = 'Make it "violet"\nand bold & bigger'
+  const { elements } = splitPreviewElements(formatPreviewElement({ ...hero, note: `  ${note} ` }))
+  assert.equal(elements[0].note, note)
+  assert.ok(PreviewElement.safeParse(elements[0]).success)
+  assert.equal(
+    mentionsToText(formatPreviewElement({ ...hero, note })),
+    '[HeroCopy › h1.title: Make it "violet" and bold & bigger]',
+  )
+})
+
+test('an empty note is left out', () => {
+  const block = formatPreviewElement({ ...hero, note: '  ' })
+  assert.ok(!block.includes('note='))
+  assert.equal(splitPreviewElements(block).elements[0].note, undefined)
+})
