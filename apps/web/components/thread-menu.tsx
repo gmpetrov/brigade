@@ -1,17 +1,19 @@
 'use client'
-// A thread's menu: Pin, Do later, Rename, Archive and Delete, each with its letter, as in
-// Claude: with the menu open, the letter does it. The same in its sidebar row and in its
+// A thread's menu: Pin, Do later, Rename, Mark done, Archive and Delete, each with its letter, as
+// in Claude: with the menu open, the letter does it. The same in its sidebar row and in its
 // details panel, so a thread out of the sidebar (filtered, past "+N more", archived, put away
 // for later) can be changed from inside.
 import {
   Archive,
   ArchiveRestore,
+  CircleCheck,
   Clock,
   EllipsisVertical,
   Globe,
   Pencil,
   Pin,
   PinOff,
+  RotateCcw,
   Trash2,
   Undo2,
 } from 'lucide-react'
@@ -31,11 +33,18 @@ import { renamedHere } from '@/components/streamed-title'
 import { useThreadPanel } from '@/components/thread-panel'
 import { api, type Thread, type ThreadSummary } from '@/lib/api'
 
-type Action = 'preview' | 'pin' | 'later' | 'rename' | 'archive' | 'delete'
+type Action = 'preview' | 'pin' | 'later' | 'rename' | 'done' | 'archive' | 'delete'
 
 export type MenuThread = Pick<
   ThreadSummary,
-  'id' | 'title' | 'pinnedAt' | 'laterAt' | 'archivedAt' | 'othersMayPrompt' | 'previewRunning'
+  | 'id'
+  | 'title'
+  | 'pinnedAt'
+  | 'laterAt'
+  | 'archivedAt'
+  | 'othersMayPrompt'
+  | 'previewRunning'
+  | 'doneAt'
 > & { startedBy: { id: string }; parent?: { id: string } | null }
 
 /** What the menu shows for this member, and what each item does. */
@@ -61,13 +70,14 @@ export function useThreadMenu({
   const { openPreview } = useThreadPanel()
 
   const starter = thread.startedBy.id === memberId
-  // As the API decides (routes/threads.ts): who may write in it renames and archives it,
-  // its starter deletes it, and admins do all of them.
+  // As the API decides (routes/threads.ts): who may write in it renames, marks done and
+  // archives it, its starter deletes it, and admins do all of them.
   const mayChange = starter || !!thread.othersMayPrompt || admin
   const mayDelete = starter || admin
   const pinned = !!thread.pinnedAt
   const archived = !!thread.archivedAt
   const later = !!thread.laterAt
+  const done = !!thread.doneAt
 
   async function run(action: Action) {
     setOpen(false)
@@ -79,6 +89,7 @@ export function useThreadMenu({
     try {
       if (action === 'pin') await api(`${path}/pin`, { method: pinned ? 'DELETE' : 'POST' })
       else if (action === 'later') await api(`${path}/later`, { method: later ? 'DELETE' : 'POST' })
+      else if (action === 'done') await api(`${path}/done`, { method: done ? 'DELETE' : 'POST' })
       else if (action === 'archive')
         await api(`${path}/archive`, { method: archived ? 'DELETE' : 'POST' })
       else {
@@ -118,6 +129,14 @@ export function useThreadMenu({
       show: later || (!archived && !thread.parent),
     },
     { action: 'rename', label: 'Rename', icon: <Pencil />, key: 'R', show: mayChange },
+    // The work asked in it is delivered, as its teammate declares it; a child shows in its parent.
+    {
+      action: 'done',
+      label: done ? 'Reopen' : 'Mark done',
+      icon: done ? <RotateCcw /> : <CircleCheck />,
+      key: 'M',
+      show: mayChange && !thread.parent,
+    },
     {
       action: 'archive',
       label: archived ? 'Unarchive' : 'Archive',

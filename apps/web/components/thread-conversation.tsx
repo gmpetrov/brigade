@@ -10,6 +10,7 @@ import {
   ArrowUp,
   CalendarClock,
   ChevronDown,
+  CircleCheck,
   CircleStop,
   CloudUpload,
   FolderKanban,
@@ -56,7 +57,7 @@ import {
 } from '@/components/attachments'
 import { EffortButton, type EffortPick } from '@/components/effort'
 import { Composer } from '@/components/composer'
-import { TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { useTouchScreen } from '@/components/desktop-touch'
 import { ComputerPanel, ExpandedComputer } from '@/components/computer-panel'
 import { TeachTask } from '@/components/teach-task'
@@ -1412,6 +1413,9 @@ export function ThreadConversation({
                 reportDueAt={t.mayPrompt ? t.reportDueAt : null}
               />
             )}
+            {t.doneAt && (
+              <DoneLine at={t.doneAt} summary={t.doneSummary ?? null} by={t.doneBy ?? null} />
+            )}
             <ThreadItemsCard threadId={t.id} />
 
             {notices.length > 0 && ticketCard(notices, 'mb-4')}
@@ -1810,6 +1814,25 @@ const END_SLACK = 48
 /** Over the whole conversation while files are dragged on it: dropping attaches them. */
 // The thread's name in its details: one line, cut with an ellipsis; when cut, a tap anywhere on
 // it shows it whole, and the chevron after it says so.
+/**
+ * The work asked in it was declared done (docs/board.md): a quiet line at its top, what was
+ * delivered cut to fit, then who and when. A person's new message reopens it.
+ */
+function DoneLine({ at, summary, by }: { at: string; summary: string | null; by: string | null }) {
+  const when = timeAgo(at)
+  return (
+    <div className="mb-4 flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+      <CircleCheck aria-hidden className="size-3.5 shrink-0 text-primary" />
+      <span className="min-w-0 truncate" title={summary ?? undefined}>
+        Done{summary ? ` · ${summary}` : ''}
+      </span>
+      <span className="shrink-0" title={new Date(at).toLocaleString()}>
+        · {by ? `${by}, ${when}` : when}
+      </span>
+    </div>
+  )
+}
+
 function ThreadName({ title }: { title: string }) {
   const [open, setOpen] = useState(false)
   const [cut, setCut] = useState(false)

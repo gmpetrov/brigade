@@ -29,12 +29,13 @@ const appTool = (name: string) => [name, `${name}_*`]
 /** Brigade's tools that are the thread's alone, by name; a name ending in "*" is a prefix. */
 export const THREAD_TOOLS = [
   // Its result and its end: a child's report, a playbook run's case and outcome, the task and
-  // list items it was given.
+  // list items it was given, the thread declared done.
   'report',
   'playbook_triage',
   'playbook_report',
   'complete_task',
   'complete_item',
+  'complete_thread',
   // What it waits on and what wakes it: child threads, wake-ups and reviews, whose news comes
   // back to the thread, not to the sub-agent that asked.
   'start_child',

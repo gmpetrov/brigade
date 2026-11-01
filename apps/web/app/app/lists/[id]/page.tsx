@@ -1,6 +1,6 @@
 'use client'
 import type { ListDetail } from '@brigade/contracts'
-import { ChevronRight, MessageSquare } from 'lucide-react'
+import { ChevronRight, MessageSquare, SquareKanban } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useMemo } from 'react'
@@ -64,12 +64,21 @@ export default function ListPage() {
           <ChevronRight aria-hidden className="size-3.5 shrink-0" />
           <span className="truncate font-mono">{data.path}</span>
         </nav>
-        {discussion?.teammate && (
-          <Button variant="outline" size="sm" onClick={() => void discussion.ask()}>
-            <MessageSquare aria-hidden />
-            Ask {discussion.teammate.name}
+        <div className="flex items-center gap-2">
+          {/* Its lines across the Board's columns, with the routines that work on it. */}
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/app/board?list=${encodeURIComponent(data.documentId)}`}>
+              <SquareKanban aria-hidden />
+              Board
+            </Link>
           </Button>
-        )}
+          {discussion?.teammate && (
+            <Button variant="outline" size="sm" onClick={() => void discussion.ask()}>
+              <MessageSquare aria-hidden />
+              Ask {discussion.teammate.name}
+            </Button>
+          )}
+        </div>
       </div>
       <ListProgress list={data} />
       <div

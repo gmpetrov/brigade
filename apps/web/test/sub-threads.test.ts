@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { holds, subThreadRows } from '../lib/sub-threads'
+import { groupWith, holds, subThreadRows } from '../lib/sub-threads'
 
 const child = (id: string, status = 'idle') => ({
   id,
@@ -70,4 +70,23 @@ test("a list's row holds its threads' child threads, and keeps the one holding t
     shown.map((c) => c.id),
     ['a', 't'],
   )
+})
+
+test('a failed child waiting on the member keeps its red dot, listed with those waiting', () => {
+  const items = [child('a'), child('b', 'running'), child('f', 'failed'), child('x', 'failed')]
+  const { shown } = subThreadRows(items, {
+    needsYou: { f: 'failed' },
+    activeId: null,
+    all: true,
+    cap: 3,
+  })
+  assert.deepEqual(
+    shown.map((c) => c.id),
+    ['f', 'b', 'a', 'x'],
+  )
+  assert.equal(shown[0]?.status, 'failed')
+  assert.equal(groupWith('failed', 'failed'), 'waiting')
+  // Nobody's to mend (a child's, which its parent's teammate hears of): with the rest.
+  assert.equal(groupWith('failed', undefined), 'rest')
+  assert.equal(groupWith('idle', 'approve'), 'rest')
 })

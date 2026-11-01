@@ -93,7 +93,8 @@ mission; threads stay where the work happens.
   judgment (a video, copy, a design), the teammate shows it and leaves the tick to the person,
   with a "Tick it" reply.
 - **Where a line stands comes from its threads**: done when ticked; needs you when one of its
-  threads waits on a person; in progress when one works or a pull request on it is open; else
+  threads waits on a person (a failed one too, once its runner's own retries are over:
+  `src/failed.ts`); in progress when one works or a pull request on it is open; else
   open. The list's counts and filters read the same. An open line with threads, none of them
   working or waiting, no open pull request and no open remaining line, is **stalled**: nothing
   will tick it, so it shows "Stopped, still open" for someone to tick it or say what remains.
@@ -105,6 +106,9 @@ mission; threads stay where the work happens.
   it is opened and again when it merges; elsewhere it is only part of the work.
 - **The Tasks board is set aside, not removed.** Lists replace it in the navigation; the board
   stays at `/app/tasks` and its data is kept. A line nobody has started is the backlog.
+- **The Board shows the lines that move** (docs/board.md): every list's lines with work on them,
+  across Needs you, In progress and Done, with the threads on no list and the routines. A list's
+  page links to the Board on that list. Its lines are planned here, in the file.
 
 ## Dashboard
 

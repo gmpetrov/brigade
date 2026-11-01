@@ -18,6 +18,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
+import { failedWaitingAmong } from './failed.js'
 import { messageChild } from './children.js'
 import { prisma, scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
 import { hubs, taskUpdated } from './hub.js'
@@ -77,36 +78,47 @@ const boardRows = (
 const ACTIVE = ['starting', 'running']
 
 /**
- * No thread: backlog. An open ticket, a waiting thread, or an open pull request the
- * teammate opened and stopped at, once its review is done (for the person to merge):
- * needs you, as Home and the sidebar say (pullWaitsOnPerson). Its merge marks the task
- * done (see settleOnMerge).
+ * No thread: backlog. An open ticket, a waiting thread, a thread that failed and waits on a
+ * person (`failedWaits`: src/failed.ts, failedWaitingAmong), or an open pull request the
+ * teammate opened and stopped at, once its review is done (for the person to merge): needs
+ * you, as Home and the sidebar say (pullWaitsOnPerson). Its merge marks the task done (see
+ * settleOnMerge).
  */
-export function columnOf(task: {
-  completedAt: Date | null
-  session: {
-    status: string
-    _count: { tickets: number }
-    pullRequests: Parameters<typeof pullWaitsOnPerson>[0][]
-  } | null
-}): TaskColumn {
+export function columnOf(
+  task: {
+    completedAt: Date | null
+    session: {
+      status: string
+      _count: { tickets: number }
+      pullRequests: Parameters<typeof pullWaitsOnPerson>[0][]
+    } | null
+  },
+  failedWaits: boolean,
+): TaskColumn {
   if (task.completedAt) return 'done'
   if (!task.session) return 'backlog'
   if (task.session._count.tickets > 0 || task.session.status === 'waiting') return 'needs_you'
-  // Only an open one waits on a person: once merged or closed, a reopened task is Doing. Not
-  // while its thread failed before it was done either: that thread shows as failed.
-  if (
-    task.session.pullRequests.some(pullWaitsOnPerson) &&
-    !ACTIVE.includes(task.session.status) &&
-    task.session.status !== 'failed'
-  )
+  // Failed: needs you once no retry of its own may still come; its pull requests with it, not
+  // on their own. Until then it is Doing.
+  if (task.session.status === 'failed') return failedWaits ? 'needs_you' : 'doing'
+  // Only an open one waits on a person: once merged or closed, a reopened task is Doing.
+  if (task.session.pullRequests.some(pullWaitsOnPerson) && !ACTIVE.includes(task.session.status))
     return 'needs_you'
   return 'doing'
 }
 
-const view = ({ session, ...task }: BoardRow) => ({
+/** The board's views of these tasks, their failed threads read once for them all. */
+async function viewsOf(db: ScopedDb, rows: BoardRow[]) {
+  const failing = await failedWaitingAmong(
+    db,
+    rows.flatMap((r) => (r.session?.status === 'failed' ? [r.session.id] : [])),
+  )
+  return rows.map((row) => view(row, failing.has(row.session?.id ?? '')))
+}
+
+const view = ({ session, ...task }: BoardRow, failedWaits: boolean) => ({
   ...task,
-  column: columnOf({ completedAt: task.completedAt, session }),
+  column: columnOf({ completedAt: task.completedAt, session }, failedWaits),
   thread: session
     ? {
         id: session.id,
@@ -127,16 +139,18 @@ const view = ({ session, ...task }: BoardRow) => ({
  * first. `project`: a project's id, or "none".
  */
 export async function listTasks(db: ScopedDb, project?: string) {
-  return (await boardRows(db, { archivedAt: null, trashedAt: null, ...projectWhere(project) })).map(
-    view,
+  return viewsOf(
+    db,
+    await boardRows(db, { archivedAt: null, trashedAt: null, ...projectWhere(project) }),
   )
 }
 
 /** The Trash, most recently trashed first. */
 export async function listTrashedTasks(db: ScopedDb) {
-  return (
-    await boardRows(db, { trashedAt: { not: null } }, [{ trashedAt: 'desc' }, { id: 'desc' }])
-  ).map(view)
+  return viewsOf(
+    db,
+    await boardRows(db, { trashedAt: { not: null } }, [{ trashedAt: 'desc' }, { id: 'desc' }]),
+  )
 }
 
 /** Archived tasks shown at a time. */
@@ -166,7 +180,7 @@ export async function listArchivedTasks(db: ScopedDb, before?: string) {
   const page = rows.slice(0, ARCHIVE_PAGE)
   const last = page.at(-1)
   return {
-    tasks: page.map(view),
+    tasks: await viewsOf(db, page),
     next:
       rows.length > ARCHIVE_PAGE && last ? `${last.archivedAt!.toISOString()}_${last.id}` : null,
   }
@@ -200,10 +214,12 @@ export async function getTask(db: ScopedDb, id: string) {
       })
     : []
   // A mission's sub-tasks, in the order they were made; in the Trash ones left out.
-  const children = (
-    await boardRows(db, { parentId: id, trashedAt: null }, [{ createdAt: 'asc' }, { id: 'asc' }])
-  ).map(view)
-  return { ...view(row), pullRequests, children }
+  const children = await viewsOf(
+    db,
+    await boardRows(db, { parentId: id, trashedAt: null }, [{ createdAt: 'asc' }, { id: 'asc' }]),
+  )
+  const [task] = await viewsOf(db, [row])
+  return { ...task!, pullRequests, children }
 }
 
 async function loadTask(db: ScopedDb, id: string) {

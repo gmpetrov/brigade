@@ -34,6 +34,7 @@ import { REVIEW_DONE, REVIEW_THREAD, reviewUnderWay } from './review-state.js'
 import { cancelReview, REVIEW_CLAIM_MS } from './reviews.js'
 import type { WorkspaceScope } from './scope.js'
 import { settleOnMerge } from './tasks.js'
+import { reopenThread, wakeOnMerge } from './thread-done.js'
 import { noteInThread, pullNote } from './thread-notes.js'
 import { loadThread } from './thread-spec.js'
 import { promptThread, startThread } from './work.js'
@@ -249,7 +250,13 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
     await stopThreadPreview(db, row.sessionId, `Stopped: the pull request was ${state}`)
     await noteInThread(db, row.sessionId, await pullNote(row, state))
   }
-  if (state === 'merged' && row.state !== state) await settleItemsOnMerge(db, scope, row)
+  if (state === 'merged' && row.state !== state) {
+    await settleItemsOnMerge(db, scope, row)
+    // Its thread's teammate is woken, to declare the thread done or say what remains.
+    await wakeOnMerge(scope, row).catch((error) =>
+      console.warn(`pull request ${row.id}: its thread not woken: ${String(error)}`),
+    )
+  }
   // Closed without merging, it needs no verdict. A merged one's review goes on: what it finds
   // after the merge is still worth a follow-up.
   if (state === 'closed' && row.state !== state) await cancelReview(scope, row.id)
@@ -656,11 +663,14 @@ export async function notePullRequestCall(
     })
     // GitHub's webhook may have recorded it first, without its thread.
     if (existing) {
-      if (!existing.sessionId && !existing.authorTeammateId)
-        await db.pullRequest.updateMany({
-          where: { id: existing.id },
+      if (!existing.sessionId && !existing.authorTeammateId) {
+        const { count } = await db.pullRequest.updateMany({
+          where: { id: existing.id, sessionId: null },
           data: { sessionId: call.sessionId, authorTeammateId: call.teammateId },
         })
+        // Open in the thread now, as one made here would be: it is no longer done.
+        if (count && existing.state === 'open') await reopenThread(scope, call.sessionId)
+      }
     }
     const row =
       existing ??
@@ -1218,7 +1228,13 @@ async function mergeOnGitHub(gh: GitHub, repo: string, p: GhPull, method: MergeM
 async function recordMerge(
   db: ScopedDb,
   scope: Scope,
-  row: { id: string; repository: string; number: number; sessionId: string | null },
+  row: {
+    id: string
+    repository: string
+    number: number
+    sessionId: string | null
+    authorTeammateId?: string | null
+  },
   actor: Actor,
   method: MergeMethod,
   data: Record<string, unknown> = {},
@@ -1248,6 +1264,11 @@ async function recordMerge(
     await noteInThread(db, row.sessionId, await pullNote(row, 'merged', by))
   }
   await settleItemsOnMerge(db, scope, row)
+  // Its thread's teammate is woken, to declare the thread done or say what remains; not when it
+  // merged it itself, in its turn.
+  await wakeOnMerge(scope, row).catch((error) =>
+    console.warn(`pull request ${row.id}: its thread not woken: ${String(error)}`),
+  )
 }
 
 /** An owner or admin merges now. */

@@ -464,6 +464,13 @@ export type EnumSessionOriginFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumSessionOriginFilter<$PrismaModel> | $Enums.SessionOrigin
 }
 
+export type EnumActorTypeNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActorType | Prisma.EnumActorTypeFieldRefInput<$PrismaModel> | null
+  in?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel> | $Enums.ActorType | null
+}
+
 export type EnumSessionStatusWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.SessionStatus | Prisma.EnumSessionStatusFieldRefInput<$PrismaModel>
   in?: $Enums.SessionStatus[] | Prisma.ListEnumSessionStatusFieldRefInput<$PrismaModel>
@@ -482,6 +489,16 @@ export type EnumSessionOriginWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumSessionOriginFilter<$PrismaModel>
   _max?: Prisma.NestedEnumSessionOriginFilter<$PrismaModel>
+}
+
+export type EnumActorTypeNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActorType | Prisma.EnumActorTypeFieldRefInput<$PrismaModel> | null
+  in?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumActorTypeNullableWithAggregatesFilter<$PrismaModel> | $Enums.ActorType | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel>
 }
 
 export type EnumTaskPriorityFilter<$PrismaModel = never> = {
@@ -797,13 +814,6 @@ export type EnumDocumentKindFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel> | $Enums.DocumentKind
 }
 
-export type EnumActorTypeNullableFilter<$PrismaModel = never> = {
-  equals?: $Enums.ActorType | Prisma.EnumActorTypeFieldRefInput<$PrismaModel> | null
-  in?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
-  notIn?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
-  not?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel> | $Enums.ActorType | null
-}
-
 export type EnumDocumentKindWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.DocumentKind | Prisma.EnumDocumentKindFieldRefInput<$PrismaModel>
   in?: $Enums.DocumentKind[] | Prisma.ListEnumDocumentKindFieldRefInput<$PrismaModel>
@@ -812,16 +822,6 @@ export type EnumDocumentKindWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel>
   _max?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel>
-}
-
-export type EnumActorTypeNullableWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.ActorType | Prisma.EnumActorTypeFieldRefInput<$PrismaModel> | null
-  in?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
-  notIn?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
-  not?: Prisma.NestedEnumActorTypeNullableWithAggregatesFilter<$PrismaModel> | $Enums.ActorType | null
-  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel>
 }
 
 export type EnumActorTypeFilter<$PrismaModel = never> = {
@@ -1488,6 +1488,13 @@ export type NestedEnumSessionOriginFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumSessionOriginFilter<$PrismaModel> | $Enums.SessionOrigin
 }
 
+export type NestedEnumActorTypeNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActorType | Prisma.EnumActorTypeFieldRefInput<$PrismaModel> | null
+  in?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel> | $Enums.ActorType | null
+}
+
 export type NestedEnumSessionStatusWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.SessionStatus | Prisma.EnumSessionStatusFieldRefInput<$PrismaModel>
   in?: $Enums.SessionStatus[] | Prisma.ListEnumSessionStatusFieldRefInput<$PrismaModel>
@@ -1506,6 +1513,16 @@ export type NestedEnumSessionOriginWithAggregatesFilter<$PrismaModel = never> = 
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumSessionOriginFilter<$PrismaModel>
   _max?: Prisma.NestedEnumSessionOriginFilter<$PrismaModel>
+}
+
+export type NestedEnumActorTypeNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActorType | Prisma.EnumActorTypeFieldRefInput<$PrismaModel> | null
+  in?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumActorTypeNullableWithAggregatesFilter<$PrismaModel> | $Enums.ActorType | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel>
 }
 
 export type NestedEnumTaskPriorityFilter<$PrismaModel = never> = {
@@ -1821,13 +1838,6 @@ export type NestedEnumDocumentKindFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel> | $Enums.DocumentKind
 }
 
-export type NestedEnumActorTypeNullableFilter<$PrismaModel = never> = {
-  equals?: $Enums.ActorType | Prisma.EnumActorTypeFieldRefInput<$PrismaModel> | null
-  in?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
-  notIn?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
-  not?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel> | $Enums.ActorType | null
-}
-
 export type NestedEnumDocumentKindWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.DocumentKind | Prisma.EnumDocumentKindFieldRefInput<$PrismaModel>
   in?: $Enums.DocumentKind[] | Prisma.ListEnumDocumentKindFieldRefInput<$PrismaModel>
@@ -1836,16 +1846,6 @@ export type NestedEnumDocumentKindWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel>
   _max?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel>
-}
-
-export type NestedEnumActorTypeNullableWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.ActorType | Prisma.EnumActorTypeFieldRefInput<$PrismaModel> | null
-  in?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
-  notIn?: $Enums.ActorType[] | Prisma.ListEnumActorTypeFieldRefInput<$PrismaModel> | null
-  not?: Prisma.NestedEnumActorTypeNullableWithAggregatesFilter<$PrismaModel> | $Enums.ActorType | null
-  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumActorTypeNullableFilter<$PrismaModel>
 }
 
 export type NestedEnumActorTypeFilter<$PrismaModel = never> = {

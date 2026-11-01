@@ -32,6 +32,7 @@ import { gitProxy } from './routes/git.js'
 import { githubWebhook } from './routes/github-webhook.js'
 import { library } from './routes/library.js'
 import { lists } from './routes/lists.js'
+import { boardRoutes } from './routes/board.js'
 import { notifications } from './routes/notifications.js'
 import { projects } from './routes/projects.js'
 import { home } from './routes/home.js'
@@ -179,6 +180,7 @@ app.route('/api/projects', projects)
 app.route('/api/library/assets', documentAssets)
 app.route('/api/library', library)
 app.route('/api/lists', lists)
+app.route('/api/board', boardRoutes)
 app.route('/api/design-systems', designSystems)
 app.route('/api/skills', skills)
 app.route('/api/designs', designs)

@@ -60,6 +60,8 @@ function progress(task: Task) {
   if (!task.thread) return `Added ${timeAgo(task.createdAt)}`
   if (task.thread.openTickets > 0)
     return `${task.thread.openTickets} open ticket${task.thread.openTickets > 1 ? 's' : ''}`
+  // Failed: what waits is the thread, its pull requests with it.
+  if (task.column === 'needs_you' && task.thread.status === 'failed') return 'Failed'
   const [pull, ...more] = task.column === 'needs_you' ? task.thread.openPullRequests : []
   if (pull) return more.length ? `${more.length + 1} PRs to review` : `PR #${pull.number} to review`
   return `Updated ${timeAgo(task.thread.updatedAt)}`

@@ -132,7 +132,8 @@ export const WIDGET_GUIDE_TOOL = 'widget_guide'
 /**
  * Steps that are no work of their own, by bare tool name: the reply written
  * before one still answers the turn. A closing card counts even when it was
- * refused and called again; so do a wake-up and a task closed after the reply.
+ * refused and called again; so do a wake-up, a task closed and a thread declared done after the
+ * reply.
  */
 export const ASIDE_TOOLS: ReadonlySet<string> = new Set([
   'ToolSearch',
@@ -147,6 +148,7 @@ export const ASIDE_TOOLS: ReadonlySet<string> = new Set([
   'set_wakeup',
   'cancel_wakeup',
   'complete_task',
+  'complete_thread',
 ])
 
 /** How many characters of a text a person sees: spaces and zero-width ones do not count. */

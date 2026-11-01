@@ -8,11 +8,14 @@ import { NeedsYou } from '@/components/needs-you'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
 import {
+  failuresWaiting,
   isViewer,
   useApi,
+  useRecheck,
   waitingItemKey,
   waitsOn,
   type HomeFeed,
+  type HomeWaiting,
   type PullWaiting,
   type ThreadSummary,
   type Ticket,
@@ -39,23 +42,36 @@ export default function Home() {
   const tickets = useApi<Ticket[]>('/tickets')
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention')
   const feed = useApi<HomeFeed>('/home')
+  // Failed threads and routines waiting on the member (apps/api/src/failed.ts).
+  const failures = useApi<HomeWaiting>('/home/waiting')
+  useRecheck(failures.data?.recheckAt, failures.reload)
   const [chosen, choose] = useLastTeammate()
   const teammate = teammates.find((t) => t.id === chosen) ?? teammates[0]
 
   useLive((message) => {
-    if (message.type === 'tickets.updated') void Promise.all([tickets.reload(), feed.reload()])
+    if (message.type === 'tickets.updated')
+      // A routine that could not start waits by its ticket while it is open.
+      void Promise.all([tickets.reload(), feed.reload(), failures.reload()])
     if (message.type === 'pulls.updated') void Promise.all([pulls.reload(), feed.reload()])
+    if (message.type === 'schedule.updated') void failures.reload()
     if (message.type !== 'thread.updated') return
     void threads.reload()
     void tickets.reload()
     // A thread's pull requests wait on a person once its teammate stops.
     void pulls.reload()
     void feed.reload()
+    // And it waits on them once it failed.
+    void failures.reload()
   })
 
   const waiting = (tickets.data ?? []).filter((t) => waitsOn(t, me))
+  const failed = failuresWaiting(failures.data, waiting)
   // A playbook's approvals are one item, as the sidebar counts them.
-  const waitingCount = new Set(waiting.map(waitingItemKey)).size + (pulls.data?.pulls.length ?? 0)
+  const waitingCount =
+    new Set(waiting.map(waitingItemKey)).size +
+    (pulls.data?.pulls.length ?? 0) +
+    failed.threads.length +
+    failed.routines.length
   // Only when nothing waits: then Waiting on you is hidden, and this line says so.
   const calm =
     tickets.data && pulls.data && feed.data && waitingCount === 0
@@ -117,8 +133,9 @@ export default function Home() {
         <NeedsYou
           tickets={waiting}
           pulls={pulls.data.pulls}
+          failed={failed}
           onChange={async () => {
-            await Promise.all([tickets.reload(), pulls.reload(), feed.reload()])
+            await Promise.all([tickets.reload(), pulls.reload(), feed.reload(), failures.reload()])
           }}
         />
       )}

@@ -39,6 +39,9 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
 - **Lists replace the board in the navigation (2026-10-29).** A person organizes a mission as a
   checklist in a library file and hands its lines to teammates (docs/lists.md); the board is set
   aside, still at /app/tasks with its data, not removed.
+- **The Board comes back as a view (2026-11-01).** `/app/board` (docs/board.md) shows what moves
+  across lists, threads and routines, computed from them: no task needed. The Tasks board stays
+  at /app/tasks with its data meanwhile; a thread whose task was completed shows as done there.
 - **A thread to do later is put away, not made a task.** Its ⋮ menu's Do later
   takes it out of the member's list and of what waits on them (Home, sidebar,
   app badge, notifications), for them only, like a pin; the sidebar filter's
@@ -85,12 +88,12 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
 
 The column is derived, never stored:
 
-| Column    | Rule                                                       |
-| --------- | ---------------------------------------------------------- |
-| Backlog   | no thread yet (nobody assigned)                            |
-| Needs you | has a thread with an open ticket, or the thread is waiting |
-| Doing     | has a thread and is not done                               |
-| Done      | `completedAt` is set                                       |
+| Column    | Rule                                                                                                                                                 |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backlog   | no thread yet (nobody assigned)                                                                                                                      |
+| Needs you | has a thread with an open ticket, the thread is waiting, it failed and waits on a person (`src/failed.ts`), or it stopped at a pull request to merge |
+| Doing     | has a thread and is not done                                                                                                                         |
+| Done      | `completedAt` is set                                                                                                                                 |
 
 Archived (`archivedAt`) and trashed (`trashedAt`) tasks are off the board.
 

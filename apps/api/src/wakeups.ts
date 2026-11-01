@@ -29,6 +29,12 @@ type WakeupOperation = Extract<
 /** A wake-up whose computer stays offline this long after it was due is given up. */
 const MISSED_AFTER_MS = 24 * 60 * 60_000
 
+/**
+ * A merge's wake-up (src/thread-done.ts), by its sourceId: `merged:<repository>#<number>`. Brigade
+ * set it, not the teammate, so its note is the prompt itself.
+ */
+export const MERGE_SOURCE = 'merged:'
+
 export const isWakeupOperation = (op: ScheduleOperation): op is WakeupOperation =>
   op.name === 'wake' || op.name === 'list_wakeups' || op.name === 'cancel_wakeup'
 
@@ -182,6 +188,7 @@ async function fire(wakeup: {
   kind: 'wakeup' | 'report' | 'reply'
   wakeAt: Date
   createdAt: Date
+  sourceId: string | null
 }) {
   const scope: Scope = { organizationId: wakeup.organizationId, workspaceId: wakeup.workspaceId }
   const db = scoped(scope)
@@ -213,9 +220,9 @@ async function fire(wakeup: {
     scope,
     thread,
     {
-      // A report's and a reply's note is the message itself.
+      // A report's and a reply's note is the message itself, and so is a merge's.
       text:
-        wakeup.kind === 'wakeup'
+        wakeup.kind === 'wakeup' && !wakeup.sourceId?.startsWith(MERGE_SOURCE)
           ? prompt(wakeup, now, await memberTimezone(db, thread.startedByMemberId))
           : wakeup.note,
       memberId: null,

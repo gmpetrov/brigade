@@ -7,6 +7,9 @@ import {
   CHILD_WAIT_MINUTES,
   CHILDREN_AT_WORK,
   CHIEF_NAME,
+  COMPLETE_THREAD_TOOL,
+  DONE_SUMMARY_MAX,
+  DoneSummary,
   FOLLOWERS_PER_THREAD,
   isChiefName,
   DESIGN_ENTRY,
@@ -1909,6 +1912,61 @@ export function appTools(
             throw error
           },
         ),
+    }),
+  }
+}
+
+/** What complete_thread says on an API from before it, which cannot read the call. */
+const COMPLETE_THREAD_UNKNOWN =
+  "Brigade's server does not have complete_thread yet: it is older than this computer's runner. Until it " +
+  'updates, say in your reply, in a line, what was delivered; a person marks the thread done.'
+
+/**
+ * Done (docs/board.md): the teammate declares the work asked in its thread delivered, with a line
+ * on what was. Only in a thread a person talks to: a child reports, and a playbook's run ends with
+ * its report (the API refuses them too, and a schedule's run, which the spec does not tell).
+ */
+export function doneTools(
+  call: ScheduleCaller,
+  options: { child: boolean; playbook: boolean },
+): Record<string, Tool> {
+  if (options.child || options.playbook) return {}
+  return {
+    [COMPLETE_THREAD_TOOL]: tool({
+      description:
+        'Declare this thread done: the work asked here is delivered (merged, sent, saved, answered with a ' +
+        'result) and nothing is pending. Call it in the turn that delivers it, with one line on what was ' +
+        'delivered. Brigade refuses it while something is still open here, and lists what: a ticket or ' +
+        'question, a pull request not yet merged or closed, a child thread or a review that has not ' +
+        'reported, a wake-up you set, a list item not ticked. A new message from a person reopens the ' +
+        'thread. Not in a scheduled run: it ends with its turn.',
+      inputSchema: jsonSchema<{ summary: string }>({
+        type: 'object',
+        properties: {
+          summary: {
+            type: 'string',
+            description: `One line on what was delivered, at most ${DONE_SUMMARY_MAX} characters, e.g. "CSV export merged (#412) and live"`,
+          },
+        },
+        required: ['summary'],
+      }),
+      execute: async (input, { toolCallId }) => {
+        // Checked here, so that the API's "could not read this call" means only that it is older.
+        const summary = DoneSummary.safeParse(input.summary)
+        if (!summary.success)
+          throw new Error(summary.error.issues[0]?.message ?? 'Say in a line what was delivered')
+        return call({
+          operation: { name: COMPLETE_THREAD_TOOL, summary: summary.data },
+          toolCallId,
+          toolName: COMPLETE_THREAD_TOOL,
+          input,
+        }).catch((error: unknown) => {
+          // An API from before it answers that it cannot read the call (hub/runner-messages.ts).
+          if (errorMessage(error).includes('could not read this call'))
+            throw new Error(COMPLETE_THREAD_UNKNOWN)
+          throw error
+        })
+      },
     }),
   }
 }

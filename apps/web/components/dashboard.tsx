@@ -29,6 +29,7 @@ import {
   Users,
   UsersRound,
   FolderKanban,
+  SquareKanban,
   type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -97,12 +98,15 @@ import {
 } from '@/components/ui/sidebar'
 import {
   api,
+  failuresWaiting,
   isAdmin,
   isViewer,
   useApi,
+  useRecheck,
   waitingItemKey,
   waitsOn,
   type Account,
+  type HomeWaiting,
   type Me,
   type ProjectSummary,
   type PullWaiting,
@@ -151,6 +155,7 @@ export { isAdmin }
 const WORK_NAV = [
   { href: '/app', label: 'Home', icon: House },
   { href: '/app/inbox', label: 'Inbox', icon: Mail },
+  { href: '/app/board', label: 'Board', icon: SquareKanban },
   { href: '/app/lists', label: 'Lists', icon: ListChecks },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
@@ -298,6 +303,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Pull requests waiting on a person: with the tickets, what Home's Waiting on you counts.
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention', ['pulls.updated'])
   const reloadPulls = pulls.reload
+  // Failed threads and routines waiting on this member (apps/api/src/failed.ts): a thread's
+  // status, a routine's firing, or the ticket of one that could not start changes them; and a
+  // failure its runner may still try again on its own waits from `recheckAt` on.
+  const failedWaiting = useApi<HomeWaiting>('/home/waiting', [
+    'thread.updated',
+    'schedule.updated',
+    'tickets.updated',
+  ])
+  const reloadFailures = failedWaiting.reload
+  useRecheck(failedWaiting.data?.recheckAt, reloadFailures)
   // The Inbox's To do beside it (mail nobody took, replies to approve): live, and again when the
   // window comes back (a phone that slept missed what its socket would have said).
   const inboxCount = useApi<{ waiting: number }>('/inbox/count', [
@@ -331,8 +346,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     void reloadTickets()
     void reloadTasks()
     void reloadPulls()
+    void reloadFailures()
     void reloadInboxCount()
-  }, [pathname, reloadTickets, reloadTasks, reloadPulls, reloadInboxCount])
+  }, [pathname, reloadTickets, reloadTasks, reloadPulls, reloadFailures, reloadInboxCount])
 
   useEffect(() => {
     if (me.error?.status === 401) {
@@ -389,9 +405,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
   // What Home's Waiting on you holds, counted beside Home in the sidebar: the one count of
   // what waits on this member (folded sections show none). A playbook's approvals are one.
+  const waitingTickets = (tickets.data ?? []).filter((t) => waitsOn(t, data))
+  const failing = failuresWaiting(failedWaiting.data, waitingTickets)
   const waitingOnYou =
-    new Set((tickets.data ?? []).filter((t) => waitsOn(t, data)).map(waitingItemKey)).size +
-    (pulls.data?.pulls.length ?? 0)
+    new Set(waitingTickets.map(waitingItemKey)).size +
+    (pulls.data?.pulls.length ?? 0) +
+    failing.threads.length +
+    failing.routines.length
   // Threads with a ticket waiting on this member, and what the ticket asks of them.
   const needsYou: Record<string, string> = {}
   // What the app icon badge counts: those threads, but a playbook's approvals once, whichever
@@ -407,10 +427,26 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       const item = waitingItemKey(t)
       badge.add(item.startsWith('playbook:') ? item : thread)
     }
+  // Failed threads waiting on this member: their dot stays red, in the list with those
+  // waiting (sidebar-threads.tsx). A routine by its latest run, under the thread it reports to.
+  for (const t of failing.threads) {
+    needsYou[t.id] ??= 'failed'
+    badge.add(t.id)
+  }
+  for (const r of failing.routines) {
+    if (r.runId) needsYou[r.runId] ??= 'failed'
+    if (r.runParentId) needsYou[r.runParentId] ??= 'routine failed'
+    badge.add(`routine:${r.scheduleId}`)
+  }
   // And threads whose task is in Needs you, so the list agrees with the board.
   for (const t of tasks.data ?? [])
     if (t.column === 'needs_you' && t.thread && !t.thread.later) {
-      needsYou[t.thread.id] ??= t.thread.openPullRequests.length ? 'review PR' : 'needs you'
+      needsYou[t.thread.id] ??=
+        t.thread.status === 'failed'
+          ? 'failed'
+          : t.thread.openPullRequests.length
+            ? 'review PR'
+            : 'needs you'
       badge.add(t.thread.id)
     }
 
@@ -573,6 +609,19 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                               </span>
                             </Hint>
                           )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    {/* What moves across lists, threads and routines (docs/board.md); no badge: Home counts what waits. */}
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip="Board"
+                        isActive={pathname.startsWith('/app/board')}
+                      >
+                        <Link href="/app/board">
+                          <SquareKanban />
+                          <span>Board</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -12,6 +12,14 @@ export const groupOf = (status: string): Group =>
       ? 'working'
       : 'rest'
 
+/**
+ * Where a row goes: by its status, but a failed one that asks something of the member (it waits
+ * on them, src/failed.ts in the API, or a ticket in it does) goes with those waiting, its dot
+ * still red.
+ */
+export const groupWith = (status: string, ask: string | undefined): Group =>
+  status === 'failed' && ask ? 'waiting' : groupOf(status)
+
 type Tree = { id: string; children?: Tree[] }
 
 /**
@@ -23,8 +31,9 @@ export const holds = (t: Tree, id: string): boolean =>
 
 /**
  * A thread's child threads as they show unfolded: waiting on a person (a ticket for this
- * member counts), then working, then the latest; the first `cap` and the one open (or the
- * one holding it), or all of them. `hidden`: how many the "+N more" stands for.
+ * member counts, and a failed one waiting on them, still red), then working, then the latest;
+ * the first `cap` and the one open (or the one holding it), or all of them. `hidden`: how many
+ * the "+N more" stands for.
  */
 export function subThreadRows(
   items: SidebarChild[],
@@ -40,10 +49,16 @@ export function subThreadRows(
     .map((c, i) => {
       const ask = needsYou[c.id] as string | undefined
       const row =
-        ask && groupOf(c.status) === 'rest' ? { ...c, status: 'waiting', ask } : { ...c, ask }
+        ask && groupOf(c.status) === 'rest' && c.status !== 'failed'
+          ? { ...c, status: 'waiting', ask }
+          : { ...c, ask }
       return { row, i }
     })
-    .sort((a, b) => rank[groupOf(a.row.status)] - rank[groupOf(b.row.status)] || a.i - b.i)
+    .sort(
+      (a, b) =>
+        rank[groupWith(a.row.status, a.row.ask)] - rank[groupWith(b.row.status, b.row.ask)] ||
+        a.i - b.i,
+    )
     .map(({ row }) => row)
   const shown = all
     ? ordered

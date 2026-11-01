@@ -1,7 +1,8 @@
-// Home's loose ends and results, for the member asking (src/home.ts).
+// Home's loose ends and results, for the member asking (src/home.ts), and the failed threads and
+// routines waiting on them (src/failed.ts).
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { dismissLooseEnd, homeFor, LOOSE_END_KEY } from '../home.js'
+import { dismissLooseEnd, homeFor, homeWaiting, LOOSE_END_KEY } from '../home.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 const Dismiss = z.object({ key: z.string().regex(LOOSE_END_KEY) })
@@ -10,6 +11,12 @@ export const home = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
   .get('/', async (c) => c.json(await homeFor(c.var.db, c.var.scope.memberId)))
+
+  /**
+   * Failed threads and routines waiting on the member, for Waiting on you, the count beside Home,
+   * the sidebar and the app badge. `recheckAt`: when one a retry may still mend starts waiting.
+   */
+  .get('/waiting', async (c) => c.json(await homeWaiting(c.var.db, c.var.scope.memberId)))
 
   /** Set one aside: it comes back once what it names changes. */
   .post('/dismiss', async (c) => {

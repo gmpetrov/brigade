@@ -722,6 +722,8 @@ const routes: [string, RegExp, Handler][] = [
   // Lists (docs/lists.md) were recorded before they existed: none, and handing lines over is off.
   ['GET', /^\/lists$/, () => []],
   ['GET', /^\/lists\/pins$/, () => []],
+  // The Board needs the API's reading of lists, threads and routines: the demo shows it empty.
+  ['GET', /^\/board$/, () => ({ cards: [], stopped: [], closed: [], routines: [], lists: [] })],
   ['POST', /^\/lists\/.+$/, () => ({ status: 403, body: { error: OFF } })],
   ['PUT', /^\/lists\/.+$/, () => ({ status: 403, body: { error: OFF } })],
   [

@@ -4,7 +4,7 @@
 // per playbook that ran this week. Each section shows only when it has something, so a quiet
 // day leaves the composer alone on the page.
 import type { PlaybookHomeLine } from '@brigade/contracts'
-import { BookOpenCheck, CircleAlert, Clock, X } from 'lucide-react'
+import { BookOpenCheck, Clock, X } from 'lucide-react'
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
 import { StatusBadge, TeammateAvatar } from '@/components/dashboard'
@@ -184,53 +184,8 @@ function LooseEndRow({ item, onChange }: { item: LooseEnd; onChange: () => Promi
     )
   }
 
-  if (item.kind === 'failed') {
-    const href = `/app/threads/${item.thread.id}`
-    return (
-      <Row
-        icon={
-          <Icon tone="bad">
-            <CircleAlert />
-          </Icon>
-        }
-        title={item.thread.title}
-        meta={meta(
-          item.error
-            ? `${item.teammate.name} ran into a problem: ${item.error}`
-            : `${item.teammate.name} ran into a problem · ${when(item.at)}`,
-        )}
-        href={href}
-      >
-        <Button variant="outline" size="sm" className="rounded-full" asChild>
-          <Link href={href}>Open</Link>
-        </Button>
-        {dismiss}
-      </Row>
-    )
-  }
-
-  const href = item.run ? `/app/threads/${item.run.id}` : '/app/routines'
-  return (
-    <Row
-      icon={
-        <Icon tone="bad">
-          <CircleAlert />
-        </Icon>
-      }
-      title={item.schedule.title}
-      meta={meta(
-        item.error
-          ? `Routine · couldn't start: ${item.error}`
-          : `Routine · last run failed · ${when(item.at)}`,
-      )}
-      href={href}
-    >
-      <Button variant="outline" size="sm" className="rounded-full" asChild>
-        <Link href={href}>Open</Link>
-      </Button>
-      {dismiss}
-    </Row>
-  )
+  // A kind this page does not know (failed threads and routines moved to Waiting on you).
+  return null
 }
 
 /** Rows of Needs a nudge shown before Show more. */

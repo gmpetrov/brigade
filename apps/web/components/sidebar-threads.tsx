@@ -87,7 +87,7 @@ import {
 } from '@/lib/api'
 import { latestSave } from '@/lib/latest-save'
 import { groupByList, isListRow, listRowId } from '@/lib/list-groups'
-import { groupOf, holds, subThreadRows, type Group } from '@/lib/sub-threads'
+import { groupOf, groupWith, holds, subThreadRows, type Group } from '@/lib/sub-threads'
 import { clickInPlace } from '@/lib/thread-address'
 import { cn } from '@/lib/utils'
 
@@ -518,9 +518,11 @@ export function threadStatusLabel({
   const group = groupOf(status)
   return stuck
     ? 'updates not arriving'
-    : group === 'waiting' && ask
-      ? ask
-      : (LABELS[status] ?? status) + (group === 'rest' ? (unread ? ', unread' : ', read') : '')
+    : status === 'failed' && ask && ask !== 'failed'
+      ? `failed · ${ask}`
+      : group === 'waiting' && ask
+        ? ask
+        : (LABELS[status] ?? status) + (group === 'rest' ? (unread ? ', unread' : ', read') : '')
 }
 
 export function ThreadStatusIcon({
@@ -616,6 +618,25 @@ const statusKey = (t: ThreadSummary): StatusKey | undefined => {
 }
 
 /**
+ * Where a row goes among those waiting, working and the rest: a failed thread that asks
+ * something of the member waits on them, its dot still red; so does a list's row with one.
+ */
+const groupIn = (t: ThreadSummary, asks: Map<string, string>): Group =>
+  isListRow(t)
+    ? groupOf(t.status) === 'rest' &&
+      !!t.children?.some((c) => c.status === 'failed' && asks.has(c.id))
+      ? 'waiting'
+      : groupOf(t.status)
+    : groupWith(t.status, asks.get(t.id))
+
+/** What the filter finds a thread under: a failed one waiting on the member under both. */
+const statusKeys = (t: ThreadSummary, asks: Map<string, string>): StatusKey[] => {
+  const key = statusKey(t)
+  if (key === 'failed' && groupIn(t, asks) === 'waiting') return ['waiting', 'failed']
+  return key ? [key] : []
+}
+
+/**
  * What the list shows. A teammate or project picked from its row (`byRow`) goes with the
  * page it opened: leaving for another page ends it. One picked from the menu stays.
  */
@@ -675,7 +696,8 @@ function saveFilter(saved: SavedFilter) {
 function withAsks(threads: ThreadSummary[], needsYou: Record<string, string>) {
   const asks = new Map<string, string>()
   const all = threads.map((t) => {
-    // A failed thread's pull request is not ready for a person: its red dot says what to do.
+    // A failed thread's pull request is not ready for a person: the thread waits on them, its
+    // red dot says what to do (src/failed.ts in the API).
     const ask =
       needsYou[t.id] ??
       (t.pullsWaiting && t.status !== 'failed'
@@ -687,7 +709,8 @@ function withAsks(threads: ThreadSummary[], needsYou: Record<string, string>) {
     if (!ask)
       return t.childrenWorking && groupOf(t.status) === 'rest' ? { ...t, status: 'running' } : t
     asks.set(t.id, ask)
-    return groupOf(t.status) === 'rest' ? { ...t, status: 'waiting' } : t
+    // Failed, it keeps its red dot; it is listed with those waiting all the same (groupIn).
+    return groupOf(t.status) === 'rest' && t.status !== 'failed' ? { ...t, status: 'waiting' } : t
   })
   return { all, asks }
 }
@@ -964,17 +987,17 @@ export function SidebarWork({
           (later ? !!t.laterAt : !t.laterAt) &&
           (!filter.teammateId || inThread(t, filter.teammateId)) &&
           (!filter.projectId || t.projectId === filter.projectId) &&
-          (!filter.statuses.length || filter.statuses.includes(statusKey(t)!)),
+          (!filter.statuses.length || statusKeys(t, asks).some((k) => filter.statuses.includes(k))),
       ),
-    [all, filter, instead, later, onPinnedList],
+    [all, asks, filter, instead, later, onPinnedList],
   )
   const groups = useMemo(() => {
     const by: Record<Group, ThreadSummary[]> = { waiting: [], working: [], rest: [] }
     // The threads on a list's items go under that list, one row for it (lib/list-groups.ts);
     // the archived or later threads stay as they come.
-    for (const t of instead ? shown : groupByList(shown)) by[groupOf(t.status)].push(t)
+    for (const t of instead ? shown : groupByList(shown)) by[groupIn(t, asks)].push(t)
     return by
-  }, [shown, instead])
+  }, [shown, instead, asks])
   // Another filter starts from the cap again.
   useEffect(() => {
     setExtra(0)

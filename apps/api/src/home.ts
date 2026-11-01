@@ -1,9 +1,9 @@
 // Home under the composer, for one member: their loose ends (nobody is blocked, but
 // nothing moves on its own) and what came back since they last looked. Only what
 // Brigade knows for sure: a reply ending on buttons nobody clicked, a running thread
-// with no event for a while, a thread that failed, a routine whose last run failed. Pull requests and
-// tickets that wait on a person are Waiting on you, not here. With the results, a line per active
-// playbook that ran this week (playbook-metrics.ts).
+// with no event for a while. Pull requests, tickets, failed threads and failing routines that
+// wait on a person are Waiting on you, not here (failuresWaitingOn, src/failed.ts). With the
+// results, a line per active playbook that ran this week (playbook-metrics.ts).
 import {
   bareToolName,
   OFFER_CHOICES_TOOL,
@@ -13,8 +13,8 @@ import {
   THREAD_NOTE_SOURCE,
 } from '@brigade/contracts'
 import type { ScopedDb } from './db.js'
+import { failuresWaitingOn } from './failed.js'
 import { hubs } from './hub.js'
-import { latestEvents } from './latest-events.js'
 import { playbookLines } from './playbook-metrics.js'
 import { waitingOnPerson } from './pull-requests.js'
 
@@ -53,24 +53,6 @@ export type LooseEnd =
       quietSince: string
       offline: boolean
     }
-  | {
-      kind: 'failed'
-      key: string
-      at: string
-      thread: { id: string; title: string }
-      teammate: { id: string; name: string }
-      /** What the teammate's last error said, when it said something. */
-      error: string | null
-    }
-  | {
-      kind: 'routine'
-      key: string
-      at: string
-      schedule: { id: string; title: string }
-      /** The failed run, when one started. */
-      run: { id: string } | null
-      error: string | null
-    }
 
 /** A thread with a teammate's reply the member has not read. */
 export type HomeResult = {
@@ -102,13 +84,12 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
       status: true,
       lastSeq: true,
       updatedAt: true,
-      scheduleId: true,
       workspaceId: true,
       teammate: { select: { id: true, name: true } },
     },
   })
   const ids = threads.map((t) => t.id)
-  const [latest, reads, tickets, pullsWaiting, dismissed, schedules, lines] = await Promise.all([
+  const [latest, reads, tickets, pullsWaiting, dismissed, lines] = await Promise.all([
     ids.length
       ? db.sessionEvent.groupBy({
           by: ['sessionId', 'type'],
@@ -140,20 +121,6 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
         })
       : [],
     db.homeDismissal.findMany({ where: { memberId }, select: { key: true } }),
-    db.schedule.findMany({
-      where: { ownerMemberId: memberId, pausedAt: null },
-      select: {
-        id: true,
-        title: true,
-        lastError: true,
-        updatedAt: true,
-        sessions: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-          select: { id: true, status: true, updatedAt: true },
-        },
-      },
-    }),
     // A line per active playbook that ran this week, shown with the results.
     playbookLines(db, memberId, now),
   ])
@@ -265,44 +232,15 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
     })
   }
 
-  // Threads that failed: until someone writes in them again, nothing moves. A routine's
-  // run is its routine's loose end, below.
-  const failed = threads.filter((t) => t.status === 'failed' && !t.scheduleId && !held.has(t.id))
-  const errors = failed.length
-    ? await latestEvents(
-        db,
-        failed.map((t) => t.id),
-        'error',
-      )
-    : []
-  loose.push(...failedLooseEnds(failed, errors, gone))
-
-  // Routines whose last firing could not start, or whose last run failed.
-  for (const s of schedules) {
-    const run = s.sessions[0]
-    const failedRun = run?.status === 'failed' ? run : null
-    if (!s.lastError && !failedRun) continue
-    const key = s.lastError
-      ? `routine:${s.id}:error:${s.updatedAt.getTime()}`
-      : `routine:${s.id}:${failedRun!.id}`
-    if (gone.has(key)) continue
-    loose.push({
-      kind: 'routine',
-      key,
-      at: (s.lastError ? s.updatedAt : failedRun!.updatedAt).toISOString(),
-      schedule: { id: s.id, title: s.title },
-      run: failedRun ? { id: failedRun.id } : null,
-      error: s.lastError,
-    })
-  }
   loose.sort((a, b) => b.at.localeCompare(a.at))
 
   // What came back: threads with a teammate's reply they have not read. Not their own
-  // decisions: they made them; what came of one is the reply that follows.
-  const looseThreads = new Set(loose.flatMap((l) => ('thread' in l ? [l.thread.id] : [])))
+  // decisions: they made them; what came of one is the reply that follows. Not a failed one
+  // either: its last turn did not come back, and once it waits on them it is Waiting on you.
+  const looseThreads = new Set(loose.map((l) => l.thread.id))
   const unread = threads.filter((t) => {
     if (looseThreads.has(t.id) || held.has(t.id)) return false
-    if (t.status === 'running' || t.status === 'starting') return false
+    if (t.status === 'running' || t.status === 'starting' || t.status === 'failed') return false
     const turn = max(t.id, 'turn.completed')?.at
     const seen = reads.find((r) => r.sessionId === t.id)?.seenAt
     return !!turn && (!seen || turn > seen)
@@ -344,45 +282,13 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
   return { looseEnds: loose, results: results.slice(0, LISTED), playbooks: lines }
 }
 
-/**
- * Failed threads as loose ends: reading one does not mend it, so it stays until the thread
- * runs again (it is no longer failed) or the member sets it aside. Its last error says
- * when and why; a thread that never ran (its computer offline) has no error event.
- */
-export function failedLooseEnds(
-  failed: {
-    id: string
-    title: string
-    lastSeq: number
-    updatedAt: Date
-    teammate: { id: string; name: string }
-  }[],
-  errors: { sessionId: string; at: Date; data: unknown }[],
-  gone: Set<string>,
-): LooseEnd[] {
-  return failed.flatMap((t): LooseEnd[] => {
-    // The thread's events so far: a new failure after another message is a new loose end.
-    const key = `failed:${t.id}:${t.lastSeq}`
-    if (gone.has(key)) return []
-    const error = errors.find((e) => e.sessionId === t.id)
-    const message = (error?.data as { message?: unknown } | undefined)?.message
-    return [
-      {
-        kind: 'failed',
-        key,
-        at: (error?.at ?? t.updatedAt).toISOString(),
-        thread: { id: t.id, title: t.title },
-        teammate: t.teammate,
-        error: typeof message === 'string' && message.trim() ? message.trim() : null,
-      },
-    ]
-  })
-}
-
 /** The keys a loose end can have, one prefix per kind built above. */
-export const LOOSE_END_KEY = /^(proposal|stalled|routine|failed):[\w:-]{1,200}$/
+export const LOOSE_END_KEY = /^(proposal|stalled):[\w:-]{1,200}$/
 
-/** Set a loose end aside: it stays gone until the thing it names changes. */
+/**
+ * Set a loose end aside: it stays gone until the thing it names changes. Not what waits on the
+ * member: a failed thread is put away for later or archived instead.
+ */
 export async function dismissLooseEnd(
   db: ScopedDb,
   scope: { organizationId: string; workspaceId: string; memberId: string },
@@ -398,4 +304,31 @@ export async function dismissLooseEnd(
     },
     update: { dismissedAt: new Date() },
   })
+}
+
+/**
+ * Home's Waiting on you beside its tickets and pull requests: the failed threads and failing
+ * routines waiting on this member (src/failed.ts), and when to ask again.
+ */
+export async function homeWaiting(db: ScopedDb, memberId: string, now = new Date()) {
+  const { threads, routines, recheckAt } = await failuresWaitingOn(db, memberId, now)
+  return {
+    threads: threads.map((t) => ({
+      id: t.id,
+      title: t.title,
+      teammate: t.teammate,
+      at: t.at.toISOString(),
+      error: t.error,
+    })),
+    routines: routines.map((r) => ({
+      scheduleId: r.scheduleId,
+      title: r.title,
+      runId: r.runId,
+      runParentId: r.runParentId,
+      couldNotStart: r.couldNotStart,
+      at: r.at.toISOString(),
+      error: r.error,
+    })),
+    recheckAt: recheckAt?.toISOString() ?? null,
+  }
 }
