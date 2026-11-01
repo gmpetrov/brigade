@@ -8,6 +8,7 @@
 // their threads once it is ready (autoMerge).
 import { mayWrite } from './account-sharing.js'
 import {
+  ChildReport,
   MergeMethod,
   type CheckRun,
   type DiffFile,
@@ -19,6 +20,7 @@ import {
   type PullReview,
   type TeammateReview,
   resolveConflictsMessage,
+  wakesParent,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { personOfThread, trackLater } from './analytics.js'
@@ -1343,8 +1345,20 @@ const autoInclude = {
       controlledByMemberId: true,
       parentId: true,
       awaited: true,
+      report: true,
       reportDeliveredAt: true,
-      parent: { select: { status: true } },
+      parent: {
+        select: {
+          status: true,
+          // Its latest turn's start: whether it read a report that woke it (autoMergeHold).
+          events: {
+            where: { type: 'turn.started' },
+            orderBy: { seq: 'desc' },
+            take: 1,
+            select: { at: true },
+          },
+        },
+      },
       startedBy: { select: { id: true, role: true, autoMerge: true } },
     },
   },
@@ -1356,7 +1370,8 @@ type AutoRow = Prisma.PullRequestGetPayload<{ include: typeof autoInclude }>
  * Why Brigade may not merge it on its own now, as far as Brigade knows; null when it may. Its
  * thread's member turned Auto-merge on and may merge; a teammate opened it in that thread, which
  * is done with nothing asked (a child's, once its report reached the thread that started it, done
- * too: that one decides whether it gets a review); no review of it is starting or under way, and
+ * too: that one decides whether it gets a review; a report that wakes it, a schedule's run's say,
+ * once a turn of it that started after the report ended); no review of it is starting or under way, and
  * its latest one, if any, approved it. headSha, once GitHub was asked: that approval read it.
  */
 export function autoMergeHold(row: AutoRow, now: Date, headSha?: string): string | null {
@@ -1373,6 +1388,8 @@ export function autoMergeHold(row: AutoRow, now: Date, headSha?: string): string
       return 'its report has not reached the thread that started it'
     if (!thread.parent || !AT_REST.includes(thread.parent.status))
       return 'the thread that started it is at work or asks something'
+    if (!thread.awaited && unreadReport(thread.report, thread.reportDeliveredAt, thread.parent))
+      return 'the thread that started it has not read its report yet'
   }
   if (row.reviewClaimedAt && now.getTime() - row.reviewClaimedAt.getTime() < REVIEW_CLAIM_MS)
     return 'a review of it is starting'
@@ -1382,6 +1399,28 @@ export function autoMergeHold(row: AutoRow, now: Date, headSha?: string): string
   const last = row.reviews[0]
   if (last && headSha && last.sha !== headSha) return 'commits came after its review approved it'
   return null
+}
+
+/**
+ * A report nobody awaited (a schedule's run's) wakes its parent only through a wake-up, which goes
+ * after the child's turn ended: until a turn of the parent that started after it ends, the parent
+ * has not read it, nor asked for the review it may ask for. None yet holds too: one made from the
+ * child's last message is settled as its turn ends, alongside this check, and a conversation's
+ * goes once the person is quiet; either wakes the parent, whose turn's end looks again
+ * (autoMergeTurnEnded). A report that wakes nobody holds nothing. The parent's turn's start is the
+ * runner's clock: one ahead of the API's by more than the time between that turn starting and the
+ * report arriving would let a turn already under way count.
+ */
+function unreadReport(
+  value: unknown,
+  deliveredAt: Date | null,
+  parent: { events: { at: Date }[] },
+): boolean {
+  const report = value ? ChildReport.safeParse(value).data : undefined
+  if (!report || !deliveredAt) return true
+  if (!wakesParent(report.status)) return false
+  const started = parent.events[0]?.at
+  return !started || started.getTime() <= deliveredAt.getTime()
 }
 
 const autoMergeHeld = async (db: ScopedDb, id: string, now: Date, headSha?: string) => {
