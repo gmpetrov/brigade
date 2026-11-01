@@ -10,6 +10,7 @@ import type { ScheduleOperation } from '@brigade/contracts'
 import { appCatalog, connectors } from './connectors/index.js'
 import type { ConnectorKind } from './connectors/types.js'
 import type { ScopedDb } from './db.js'
+import { customMcp } from './mcp-servers.js'
 import { availableApps } from './routes/connections.js'
 import { askedBy, teammateGrants, usableGrants } from './thread-spec.js'
 
@@ -71,7 +72,7 @@ export async function handleAppCall(
     // MCP servers added by their URL, by their own names.
     db.app.findMany({
       where: { key: { startsWith: 'mcp:' } },
-      select: { id: true, name: true },
+      select: { id: true, name: true, mcp: true },
       orderBy: { createdAt: 'asc' },
     }),
     askedBy(db, session.id),
@@ -83,6 +84,19 @@ export async function handleAppCall(
   const shown = (c: { reach: string; createdByMemberId: string }) =>
     c.reach === 'workspace' || c.createdByMemberId === person
   const serverName = new Map(servers.map((s) => [s.id, s.name ?? appCatalog.mcp.name]))
+  // An MCP server is asked for by its name (what), which a ticket finds it by; by its URL too
+  // when that name does not tell it apart (staging and production both "Team Notes", or no name
+  // of its own), else the ticket takes the first of that name. Only then: a URL may hold the
+  // server's key (some providers put one in its path).
+  const same = (name: string) => name.trim().toLowerCase()
+  const named = new Map<string, number>()
+  for (const { name } of servers) if (name) named.set(same(name), (named.get(same(name)) ?? 0) + 1)
+  const server = (appId: string) => {
+    const found = servers.find((s) => s.id === appId)
+    const url = found && customMcp(found)?.url
+    const unique = !!found?.name && named.get(same(found.name)) === 1
+    return `what "${serverName.get(appId) ?? appCatalog.mcp.name}"${url && !unique ? `, app.url "${url}"` : ''}`
+  }
   const app = (c: Account) =>
     c.kind === 'mcp' ? (serverName.get(c.appId) ?? appCatalog.mcp.name) : appCatalog[c.kind].name
   const account = (c: Account) =>
@@ -110,13 +124,14 @@ export async function handleAppCall(
   lines.push(
     '',
     'Connected in the workspace, not granted to you: ask for one with open_ticket, an access ask of kind ' +
-      'connection with app.kind and app.account as shown (and what, for an MCP server), and the scope you need.',
+      'connection with app.kind and app.account as shown (and what and app.url, for an MCP server), and the scope ' +
+      'you need.',
   )
   lines.push(
     ...listed(
       others.map(
         (c) =>
-          `- ${account(c)}: app.kind ${c.kind}${c.kind === 'mcp' ? `, what "${app(c)}"` : ''}, ` +
+          `- ${account(c)}: app.kind ${c.kind}${c.kind === 'mcp' ? `, ${server(c.appId)}` : ''}, ` +
           `app.account "${c.externalAccount ?? c.label}"`,
       ),
     ),
@@ -124,15 +139,16 @@ export async function handleAppCall(
   lines.push(
     '',
     'Apps you can connect, with no account here yet: ask for one with open_ticket, an access ask of kind ' +
-      'connection with its app.kind; the person connects it from the ticket.',
+      'connection with its app.kind (and what and app.url, for an MCP server); the person connects it from the ' +
+      'ticket.',
   )
   for (const kind of askable)
     if (kind !== 'mcp' && available[kind] && !kinds.has(kind))
       lines.push(`- ${appCatalog[kind].name} (app.kind ${kind}): ${appCatalog[kind].description}`)
-  for (const server of servers)
-    if (!apps.has(server.id))
+  for (const { id } of servers)
+    if (!apps.has(id))
       lines.push(
-        `- ${serverName.get(server.id)} (app.kind mcp, what "${serverName.get(server.id)}"): an MCP server added in the workspace`,
+        `- ${serverName.get(id)} (app.kind mcp, ${server(id)}): an MCP server added in the workspace`,
       )
   lines.push(`- ${appCatalog.mcp.name} (app.kind mcp, with its url): ${appCatalog.mcp.description}`)
   return { output: lines.join('\n') }

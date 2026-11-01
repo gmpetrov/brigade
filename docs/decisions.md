@@ -160,7 +160,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   not granted to it, and the catalog's Apps with no account it may use (those this server can connect,
   `availableApps`), plus MCP servers added by URL. Each comes with the `app.kind` of an `open_ticket` access ask:
   `askableKinds()`, every App of the catalog but custom apps (they only receive webhooks) and the Email App (given from
-  its own pages), which a test keeps equal to `open_ticket`'s enum. It is scoped to the person the thread works for
+  its own pages), which a test keeps equal to `open_ticket`'s enum. An MCP server added by URL is asked for by its
+  name (`what`), and by its URL too when its name does not tell it apart from another server's (staging and
+  production both "Team Notes"), since a ticket takes the first server of a name; only then, as a URL may hold the
+  server's key. It is scoped to the person the thread works for
   (`askedBy`), never to the teammate, which works for every member and in threads events start: shared accounts, and
   the starter's own (reach `mine`) while no other member asks in the thread; no member's own once one does. A
   playbook's run has no `list_apps` (the runner leaves it out and the API refuses it): it has only the Apps the
