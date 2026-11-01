@@ -4,6 +4,10 @@
 // the Apps page is theirs alone. The call waits for the decision (like a connector write),
 // so the teammate gets the trigger's URL in the same turn and can finish setting it up; decided
 // after the call stopped waiting, the trigger is made then and the thread told (src/held-calls.ts).
+// Like list_apps, scoped to the person the thread works for, never to the teammate
+// (shownAccounts): another member's own account (reach mine) is never listed nor taken, and a
+// thread several people ask in lists no member's own account, nor any trigger, and sets up none,
+// as a trigger's threads run on the accounts of the member who started it.
 import type { ApiToRunner, ScheduleOperation, TriggerProposalPayload } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
@@ -15,6 +19,7 @@ import { createConnection } from './routes/connections.js'
 import { createTrigger, urlOf } from './routes/triggers.js'
 import type { WorkspaceScope } from './scope.js'
 import { unavailable } from './subscriptions/index.js'
+import { shownAccounts } from './thread-spec.js'
 import { sealSecret } from './vault.js'
 
 type Operation = Extract<ScheduleOperation, { name: 'list_triggers' | 'create_trigger' }>
@@ -32,6 +37,11 @@ type Output = ({ error: string } | { output: unknown }) & { decision?: Decided }
 /** How the header goes, for a sender the teammate sets up. */
 const SIGNATURE =
   'X-Brigade-Signature: sha256=<hex HMAC-SHA256 of the raw body, keyed with the secret>'
+
+/** Why a thread several people ask in sets up no trigger. */
+const SEVERAL =
+  "Several people ask in this thread, and a trigger's threads run on the accounts of the member " +
+  'who started it: a person sets one up with you in a thread of their own.'
 
 /** "Stripe · acme", "Custom app · Sentry": an App's account as people name it. */
 const accountName = (c: { kind: string; label: string; externalAccount: string | null }) =>
@@ -58,28 +68,37 @@ export async function handleTriggerCall(
   },
 ): Promise<Output | { held: true }> {
   if (op.name === 'list_triggers') {
+    const { person, shown } = await shownAccounts(db, session)
+    // An account as it is named, and whose it is.
+    const account = {
+      kind: true,
+      label: true,
+      externalAccount: true,
+      reach: true,
+      createdByMemberId: true,
+    } as const
     const [connections, mine] = await Promise.all([
       db.connection.findMany({
         where: { status: { not: 'removed' } },
-        select: { id: true, kind: true, label: true, externalAccount: true },
+        select: { id: true, ...account },
         orderBy: { createdAt: 'asc' },
       }),
       // Only those on the accounts of the person in this thread, which a custom app's URL is a key to:
-      // none to a thread an event, a schedule or a playbook started, which no person is in.
-      session.origin === 'member' && !session.playbookRunId
+      // none to a thread an event, a schedule or a playbook started, which no person is in, nor to
+      // one several people ask in, which works for no one person.
+      session.origin === 'member' && !session.playbookRunId && person
         ? db.trigger.findMany({
-            where: { teammateId: teammate.id, createdByMemberId: session.startedByMemberId },
-            include: {
-              connection: { select: { kind: true, label: true, externalAccount: true } },
-            },
+            where: { teammateId: teammate.id, createdByMemberId: person },
+            include: { connection: { select: account } },
             orderBy: { createdAt: 'asc' },
           })
         : [],
     ])
     const catalog = triggerCatalog() as Record<string, ReturnType<typeof triggerCatalog>[string]>
     const output = {
+      ...(person ? {} : { note: SEVERAL }),
       apps: connections
-        .filter((c) => (catalog[c.kind]?.length ?? 0) > 0)
+        .filter((c) => (catalog[c.kind]?.length ?? 0) > 0 && shown(c))
         .map((c) => ({
           connectionId: c.id,
           app: accountName(c),
@@ -101,17 +120,28 @@ export async function handleTriggerCall(
       customApp:
         'Any other app or service that can send a webhook: create_trigger with customApp (its name) and ' +
         'event "received" adds it, with a URL of its own for the trigger.',
-      yourTriggers: mine.map((t) => ({
-        triggerId: t.id,
-        label: t.label,
-        app: accountName(t.connection),
-        event: t.event,
-        ...(t.pathToken ? { url: urlOf(t.pathToken) } : {}),
-        instructions: t.instructions ?? '',
-      })),
+      // Not one an admin set up on the Apps page on another member's own account.
+      yourTriggers: mine
+        .filter((t) => shown(t.connection))
+        .map((t) => ({
+          triggerId: t.id,
+          label: t.label,
+          app: accountName(t.connection),
+          event: t.event,
+          ...(t.pathToken ? { url: urlOf(t.pathToken) } : {}),
+          instructions: t.instructions ?? '',
+        })),
     }
     return { output }
   }
+
+  // Declined, nothing is made, whatever the checks below would say by now.
+  const declined = call.resume && !call.resume.decision.approved ? call.resume.decision : null
+  if (declined)
+    return {
+      error: `A person declined this trigger${declined.reason ? `: ${declined.reason}` : ''}`,
+      decision: { ticketId: declined.ticketId, approved: false, memberId: declined.memberId },
+    }
 
   // An event cannot set up more work for events, nor a schedule's run, nor a playbook's.
   if (session.playbookRunId) return { error: "A playbook's run sets up no trigger." }
@@ -122,11 +152,15 @@ export async function handleTriggerCall(
       error: 'Give either connectionId (from list_triggers) or customApp (a new custom app)',
     }
 
-  // Checked now, so a person approves only what can be made.
+  // Checked now, so a person approves only what can be made; and again once they decided
+  // (resume), as another member may have asked in the thread meanwhile, or the account changed.
+  const { person, shown } = await shownAccounts(db, session)
+  if (!person) return { error: SEVERAL }
   const connection = op.connectionId
     ? await db.connection.findFirst({ where: { id: op.connectionId, status: { not: 'removed' } } })
     : null
-  if (op.connectionId && !connection)
+  // Another member's own account reads as no account at all: the thread learns nothing of it.
+  if (op.connectionId && (!connection || !shown(connection)))
     return { error: 'No App account has that connectionId; list_triggers shows them' }
   const kind = (connection?.kind ?? 'webhook') as ConnectorKind
   const definition = triggersOf(kind)[op.event]
@@ -201,11 +235,6 @@ export async function handleTriggerCall(
   const decided = call.resume.decision
   const ticket = { id: decided.ticketId }
   const decision = { ticketId: ticket.id, approved: decided.approved, memberId: decided.memberId }
-  if (!decided.approved)
-    return {
-      error: `A person declined this trigger${decided.reason ? `: ${decided.reason}` : ''}`,
-      decision,
-    }
 
   try {
     const approver = await db.member.findFirst({

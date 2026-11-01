@@ -13,7 +13,7 @@ import { appCatalog, connectors } from './connectors/index.js'
 import type { ConnectorKind } from './connectors/types.js'
 import type { ScopedDb } from './db.js'
 import { availableApps } from './routes/connections.js'
-import { askedBy, teammateGrants, usableGrants } from './thread-spec.js'
+import { shownAccounts, teammateGrants, usableGrants } from './thread-spec.js'
 
 type Operation = Extract<ScheduleOperation, { name: 'list_apps' }>
 type Session = {
@@ -54,7 +54,7 @@ export async function handleAppCall(
 ): Promise<{ error: string } | { output: string }> {
   if (session.playbookRunId)
     return { error: "A playbook's run has only the Apps the playbook declares." }
-  const [granted, connections, servers, asker] = await Promise.all([
+  const [granted, connections, servers, { person, shown }] = await Promise.all([
     teammateGrants(db, teammate.id),
     db.connection.findMany({
       where: { status: { not: 'removed' } },
@@ -76,14 +76,9 @@ export async function handleAppCall(
       select: { id: true, name: true },
       orderBy: { createdAt: 'asc' },
     }),
-    askedBy(db, session.id),
+    // Whose own accounts may show: the thread's starter's while nobody else asks in it.
+    shownAccounts(db, session),
   ])
-  // Whose own accounts may show: the thread's starter while nobody else asks in it (an event's or
-  // a routine's thread runs on its starter's accounts, and nobody asks there); no one's once another
-  // member does.
-  const person = !asker || asker === session.startedByMemberId ? session.startedByMemberId : null
-  const shown = (c: { reach: string; createdByMemberId: string }) =>
-    c.reach === 'workspace' || c.createdByMemberId === person
   const serverName = new Map(servers.map((s) => [s.id, s.name ?? appCatalog.mcp.name]))
   // An MCP server is asked for by its App's id (app.server), which a ticket finds it by: two may
   // have one name (staging and production both "Team Notes"), or none of their own.

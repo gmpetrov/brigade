@@ -358,6 +358,28 @@ export async function askedBy(db: ScopedDb, sessionId: string): Promise<string |
   return askedByEvents(db, sessionId)
 }
 
+/**
+ * Which App accounts a teammate is shown and offered in a thread (list_apps, list_triggers,
+ * create_trigger): scoped to the person the thread works for, never to the teammate, which works
+ * for every member and in threads an event or a routine started. The workspace's shared accounts
+ * (reach workspace) always; a member's own (reach mine) only its starter's, while nobody else asks
+ * in it (an event's or a routine's thread runs on its starter's accounts, and nobody asks there).
+ * Once another member asks, no member's own account shows, as none answers there
+ * (connector-calls.ts). person: whose own accounts show; null, nobody's.
+ */
+export async function shownAccounts(
+  db: ScopedDb,
+  thread: { id: string; startedByMemberId: string },
+) {
+  const asker = await askedBy(db, thread.id)
+  const person = !asker || asker === thread.startedByMemberId ? thread.startedByMemberId : null
+  return {
+    person,
+    shown: (c: { reach: string; createdByMemberId: string }) =>
+      c.reach === 'workspace' || c.createdByMemberId === person,
+  }
+}
+
 /** The person's inputs that tell whose request a thread from before askedByMemberId works on. */
 const personInputs = (sessionId: string) => ({
   where: {
