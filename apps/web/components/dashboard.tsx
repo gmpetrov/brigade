@@ -29,6 +29,7 @@ import {
   Users,
   UsersRound,
   FolderKanban,
+  SquareKanban,
   type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -151,6 +152,7 @@ export { isAdmin }
 const WORK_NAV = [
   { href: '/app', label: 'Home', icon: House },
   { href: '/app/inbox', label: 'Inbox', icon: Mail },
+  { href: '/app/board', label: 'Board', icon: SquareKanban },
   { href: '/app/lists', label: 'Lists', icon: ListChecks },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
@@ -573,6 +575,19 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                               </span>
                             </Hint>
                           )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    {/* What moves across lists, threads and routines (docs/board.md); no badge: Home counts what waits. */}
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip="Board"
+                        isActive={pathname.startsWith('/app/board')}
+                      >
+                        <Link href="/app/board">
+                          <SquareKanban />
+                          <span>Board</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -618,6 +618,14 @@ model Session {
   schedule             Schedule?          @relation("ScheduleRuns", fields: [scheduleId], references: [id], onDelete: SetNull)
   /// Set while archived: out of the sidebar for everyone. A new message brings it back.
   archivedAt           DateTime?
+  /// When the work it was asked for was declared done (docs/board.md): by its teammate
+  /// (complete_thread, refused while anything is still open in it) or by a person (Mark done).
+  /// What reopens an archived thread clears it: a person's message, a ticket or a pull request.
+  doneAt               DateTime?
+  /// What was done, in a line, from whoever declared it.
+  doneSummary          String?
+  doneByType           ActorType?
+  doneById             String?
   /// Highest contiguous event sequence number stored.
   lastSeq              Int                @default(0)
   /// While it moves to another computer: where to, how far it got and the message that goes with it (src/move.ts).
@@ -703,6 +711,7 @@ model Session {
   @@index([parentId, createdAt])
   @@index([reportDueAt])
   @@index([playbookRunId])
+  @@index([workspaceId, doneAt])
 }
 
 /// One AgentEvent with its sequence number. Append-only.
