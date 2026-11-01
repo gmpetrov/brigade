@@ -6,12 +6,11 @@ import { join } from 'node:path'
 import { after, before, test } from 'node:test'
 import pg from 'pg'
 
-// An awaited child whose wait runs out as its report comes in (settleAwaited, src/children.ts),
-// against a real database: two settles at once, each held after it read the children, so the
-// wait's settle reads the child before its report and the delivery's after. Whatever order
-// their writes then land in, the parent hears the report once. The local database of
-// apps/api/.env, in an organization of its own that it removes at the end. Without a database
-// to reach, it is skipped.
+// Settles of a parent's awaited children at once (settleAwaited, src/children.ts), against a
+// real database: a report coming in as the wait runs out, two settles of one finished batch, a
+// child released before its report is claimed. The parent hears each report once, in one note.
+// The local database of apps/api/.env, in an organization of its own that it removes at the
+// end. Without a database to reach, it is skipped.
 const fromEnvFile = () => {
   try {
     const line = readFileSync(new URL('../.env', import.meta.url), 'utf8')
@@ -48,50 +47,67 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 const { prisma } = await import('../src/db.js')
 const { deliverReport, reportSource, settleAwaited } = await import('../src/children.js')
 
-// Each scoped() client is prisma.$extends(...): its session.findMany goes through `gate` first,
-// which can hold a read once it has its rows, until the test lets it go on.
-type Hold = { match: (args: any) => boolean; read: () => void; go: Promise<void> }
+// Each scoped() client is prisma.$extends(...), and its transactions' clients too: their
+// session.findMany and session.updateMany go through a hold first, which can stop a call once it
+// is done, until the test lets it go on.
+type Hold = { op: string; match: (args: any) => boolean; done: () => void; go: Promise<void> }
 const holds: Hold[] = []
-const extend = prisma.$extends.bind(prisma)
-;(prisma as any).$extends = (...args: unknown[]) => {
-  const client = (extend as any)(...args)
-  return new Proxy(client, {
+const gated = (client: any): any =>
+  new Proxy(client, {
     get(target, key, receiver) {
       const value = Reflect.get(target, key, receiver)
+      if (key === '$transaction')
+        return (fn: unknown, ...rest: unknown[]) =>
+          typeof fn === 'function'
+            ? value.call(
+                target,
+                (tx: unknown) => (fn as (t: unknown) => unknown)(gated(tx)),
+                ...rest,
+              )
+            : value.call(target, fn, ...rest)
       if (key !== 'session') return value
       return new Proxy(value, {
         get(model, op, r) {
           const fn = Reflect.get(model, op, r)
-          if (op !== 'findMany') return fn
+          if (op !== 'findMany' && op !== 'updateMany') return fn
           return async (a: any) => {
-            const rows = await fn.call(model, a)
-            const i = holds.findIndex((h) => h.match(a))
+            const result = await fn.call(model, a)
+            const i = holds.findIndex((h) => h.op === op && h.match(a))
             if (i >= 0) {
               const [hold] = holds.splice(i, 1)
-              hold!.read()
+              hold!.done()
               await hold!.go
             }
-            return rows
+            return result
           }
         },
       })
     },
   })
+const extend = prisma.$extends.bind(prisma)
+;(prisma as any).$extends = (...args: unknown[]) => gated((extend as any)(...args))
+
+function hold(op: string, match: (args: any) => boolean) {
+  let go!: () => void
+  let done!: () => void
+  const wasDone = new Promise<void>((resolve) => (done = resolve))
+  holds.push({ op, match, done, go: new Promise<void>((resolve) => (go = resolve)) })
+  return { wasDone, go }
 }
 
-/** Hold the next read of a parent's awaited children: `read` once it has its rows, `go` to go on. */
-function holdSettle(parentId: string) {
-  let go!: () => void
-  let read!: () => void
-  const wasRead = new Promise<void>((resolve) => (read = resolve))
-  const hold: Hold = {
-    match: (a) => a?.where?.parentId === parentId && a?.where?.awaited === true,
-    read,
-    go: new Promise<void>((resolve) => (go = resolve)),
-  }
-  holds.push(hold)
-  return { wasRead, go }
-}
+/** Hold the next read of a parent's awaited children, once it has its rows. */
+const holdSettle = (parentId: string) =>
+  hold('findMany', (a) => a?.where?.parentId === parentId && a?.where?.awaited === true)
+
+/** Hold the next claim of a child's report, once it is made. */
+const holdClaim = () => hold('updateMany', (a) => !!a?.data?.reportDeliveredAt)
+
+/** Whether a promise is still pending a moment from now. */
+const pending = (p: Promise<unknown>) =>
+  Promise.race([
+    p.then(() => false),
+    new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 300)),
+  ])
 
 const id = randomUUID().slice(0, 8)
 const ids = {
@@ -149,8 +165,8 @@ after(async () => {
 })
 
 let titles = 0
-/** Riley's thread, waiting for Cody's child, and the wait ran out a minute ago. */
-async function family() {
+/** Riley's thread, waiting for Cody's children; their wait ran out a minute ago, unless given. */
+async function family(awaitUntil = new Date(Date.now() - 60_000)) {
   const thread = (data: object) =>
     prisma.session.create({
       data: {
@@ -163,15 +179,17 @@ async function family() {
       } as never,
     })
   const parent = await thread({ teammateId: riley.id, origin: 'member' })
-  const child = await thread({
-    teammateId: cody.id,
-    origin: 'child',
-    parentId: parent.id,
-    parentTeammateId: riley.id,
-    awaited: true,
-    awaitUntil: new Date(Date.now() - 60_000),
-  })
-  return { parent, child }
+  const awaited = () =>
+    thread({
+      teammateId: cody.id,
+      origin: 'child',
+      parentId: parent.id,
+      parentTeammateId: riley.id,
+      awaited: true,
+      awaitUntil,
+    })
+  const child = await awaited()
+  return { parent, child, sibling: awaited }
 }
 
 const reportIn = (childId: string) =>
@@ -189,50 +207,49 @@ const wakeups = (parentId: string) =>
     select: { note: true, sourceId: true },
   })
 
-/** The wait's settle reads the child before its report, the delivery's after; then both go on. */
-async function race(first: 'wait' | 'delivery') {
+test('a report that comes in as the wait runs out reaches the parent once', { skip }, async () => {
   const { parent, child } = await family()
+  // The wait's settle reads the child before its report, and holds the parent's lock.
   const wait = holdSettle(parent.id)
   const waitDone = settleAwaited(scope, parent.id)
-  await wait.wasRead
+  await wait.wasDone
   await reportIn(child.id)
-  const delivery = holdSettle(parent.id)
+  // The report's delivery waits for the lock: it reads the child once the wait's settle is done.
   const deliveryDone = deliverReport(scope, child.id)
-  await delivery.wasRead
-  if (first === 'wait') {
-    wait.go()
-    await waitDone
-    delivery.go()
-    await deliveryDone
-  } else {
-    delivery.go()
-    await deliveryDone
-    wait.go()
-    await waitDone
-  }
-  return { parent, child }
-}
+  assert.equal(await pending(deliveryDone), true)
+  wait.go()
+  await Promise.all([waitDone, deliveryDone])
+  const notes = await wakeups(parent.id)
+  assert.equal(notes.length, 1, notes.map((n) => n.note).join('\n---\n'))
+  assert.match(notes[0]!.note, /Found the cause\./)
+  // Not also told it is still working.
+  assert.doesNotMatch(notes[0]!.note, /Still working past the time/)
+  const row = await prisma.session.findUniqueOrThrow({
+    where: { id: child.id },
+    select: { awaited: true, reportDeliveredAt: true },
+  })
+  // Delivered as awaited: never marked unfinished.
+  assert.equal(row.awaited, true)
+  assert.ok(row.reportDeliveredAt)
+})
 
-for (const first of ['wait', 'delivery'] as const)
-  test(
-    `a report that comes in as the wait runs out reaches the parent once (${first}'s write first)`,
-    { skip },
-    async () => {
-      const { parent, child } = await race(first)
-      const notes = await wakeups(parent.id)
-      assert.equal(notes.length, 1, notes.map((n) => n.note).join('\n---\n'))
-      assert.match(notes[0]!.note, /Found the cause\./)
-      // Not also told it is still working.
-      assert.doesNotMatch(notes[0]!.note, /Still working past the time/)
-      const row = await prisma.session.findUniqueOrThrow({
-        where: { id: child.id },
-        select: { awaited: true, reportDeliveredAt: true },
-      })
-      // Delivered as awaited: never marked unfinished.
-      assert.equal(row.awaited, true)
-      assert.ok(row.reportDeliveredAt)
-    },
-  )
+test('two settles of a finished batch at once wake the parent once', { skip }, async () => {
+  const { parent, child, sibling } = await family(new Date(Date.now() + 3_600_000))
+  const other = await sibling()
+  await reportIn(child.id)
+  await reportIn(other.id)
+  // A stops after its first claim, holding the parent's lock; B starts meanwhile.
+  const claim = holdClaim()
+  const first = settleAwaited(scope, parent.id)
+  await claim.wasDone
+  const second = settleAwaited(scope, parent.id)
+  assert.equal(await pending(second), true)
+  claim.go()
+  await Promise.all([first, second])
+  const notes = await wakeups(parent.id)
+  assert.equal(notes.length, 1, 'one wake-up containing both finished reports')
+  assert.match(notes[0]!.note, /2 child threads you were waiting for have finished/)
+})
 
 test(
   'a child released past the wait before its report is claimed is delivered on its own',
@@ -242,7 +259,7 @@ test(
     await reportIn(child.id)
     const delivery = holdSettle(parent.id)
     const deliveryDone = deliverReport(scope, child.id)
-    await delivery.wasRead
+    await delivery.wasDone
     // Meanwhile its wait is let go, as a release past the wait does, before the report is claimed.
     await prisma.session.update({ where: { id: child.id }, data: { awaited: false } })
     delivery.go()

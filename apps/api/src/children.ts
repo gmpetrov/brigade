@@ -158,85 +158,96 @@ async function reportWakeup(
 export const reportSource = (childId: string, deliveredAt: Date) =>
   `report:${childId}:${deliveredAt.getTime()}`
 
-/** Wake the parent with a note: the teammate that started the child, else the parent's own. */
-async function wakeParent(scope: Scope, parentId: string, teammateId: string | null, note: string) {
-  const id = await reportWakeup(scoped(scope), parentId, teammateId, note)
-  // At once, rather than at the next minute's tick; it waits like any wake-up when it cannot go yet.
-  if (id) await fireNow(id)
-}
-
 /** The report a child had when read: an update made with it applies only while it still has it. */
 const sameReport = (report: unknown) =>
   report == null ? { equals: Prisma.DbNull } : { equals: report as Prisma.InputJsonValue }
 
 /**
  * Bring the awaited children's reports to their parent once they all reported, or once
- * the wait ran out: one note for all of them. Each claim (reportDeliveredAt) and each release
- * past the wait (awaited: false) applies only to the child as this call read it, and the note
- * names only those it changed: two calls at once (two children finishing, or a report coming in
- * as the wait runs out) wake the parent once per report. A child that changed since it was read
- * is settled from what it is now: released by the other call, its report goes on its own
- * (deliverReport); still awaited, this settles once more.
+ * the wait ran out: one note for all of them. Settles of one parent take turns (a lock), so
+ * two at once wake it once per report. Each claim (reportDeliveredAt) and each release past the
+ * wait (awaited: false) applies only to the child as it was read, and the note names only those
+ * it changed. A child that changed since is settled from what it is now: released, its report
+ * goes on its own (deliverReport); still awaited, this settles once more.
  */
 export async function settleAwaited(scope: Scope, parentId: string, again = true) {
   const db = scoped(scope)
-  const waiting = await db.session.findMany({
-    where: { parentId, awaited: true, reportDeliveredAt: null },
-    select: CHILD_SELECT,
-    orderBy: { createdAt: 'asc' },
-  })
-  if (!waiting.length) return
-  const now = new Date()
-  const due = waiting.some((c) => c.awaitUntil && c.awaitUntil <= now)
-  const unfinished = waiting.filter((c) => !reportOf(c.report))
-  if (unfinished.length && !due) return
-  const finished = waiting.filter((c) => reportOf(c.report))
-  const stamp = new Date(now.getTime())
-  const unchanged = (c: (typeof waiting)[number]) => ({
-    id: c.id,
-    awaited: true,
-    reportDeliveredAt: null,
-    report: sameReport(c.report),
-  })
-  const delivered: typeof waiting = []
-  for (const c of finished) {
-    const { count } = await db.session.updateMany({
-      where: unchanged(c),
-      data: { reportDeliveredAt: stamp },
+  // One settle of a parent's children at a time: two at once (two children finishing, or a
+  // report coming in as the wait runs out) would each claim part of the batch and wake the
+  // parent twice. Reading, claiming and storing the wake-up hold the parent's lock together.
+  const settled = await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`settle:${parentId}`}, 0))`
+    const waiting = await tx.session.findMany({
+      where: { parentId, awaited: true, reportDeliveredAt: null },
+      select: CHILD_SELECT,
+      orderBy: { createdAt: 'asc' },
     })
-    if (count) delivered.push(c)
-  }
-  // Past the wait, the others no longer hold it back: they report later on their own.
-  const released: typeof waiting = []
-  for (const c of unfinished) {
-    const { count } = await db.session.updateMany({ where: unchanged(c), data: { awaited: false } })
-    if (count) released.push(c)
-  }
-  if (delivered.length || released.length) {
-    const note = batchNote(
-      delivered.map((c) => ({
-        id: c.id,
-        title: c.title,
-        teammate: c.teammate.name,
-        report: reportOf(c.report)!,
-      })),
-      released.map((c) => ({ id: c.id, title: c.title, teammate: c.teammate.name })),
-    )
-    const teammateId = (delivered[0] ?? released[0])!.parentTeammateId
-    await wakeParent(scope, parentId, teammateId, note)
-    await parentChanged(scope, parentId)
-  }
-  // Those another call changed since this one read them.
-  const missed = waiting.filter((c) => !delivered.includes(c) && !released.includes(c))
-  if (!missed.length) return
+    if (!waiting.length) return null
+    const now = new Date()
+    const due = waiting.some((c) => c.awaitUntil && c.awaitUntil <= now)
+    const unfinished = waiting.filter((c) => !reportOf(c.report))
+    if (unfinished.length && !due) return null
+    const finished = waiting.filter((c) => reportOf(c.report))
+    const stamp = new Date(now.getTime())
+    // A report written, or a release made, since it was read here (outside this lock) leaves
+    // the child to what it is now.
+    const unchanged = (c: (typeof waiting)[number]) => ({
+      id: c.id,
+      awaited: true,
+      reportDeliveredAt: null,
+      report: sameReport(c.report),
+    })
+    const delivered: typeof waiting = []
+    for (const c of finished) {
+      const { count } = await tx.session.updateMany({
+        where: unchanged(c),
+        data: { reportDeliveredAt: stamp },
+      })
+      if (count) delivered.push(c)
+    }
+    // Past the wait, the others no longer hold it back: they report later on their own.
+    const released: typeof waiting = []
+    for (const c of unfinished) {
+      const { count } = await tx.session.updateMany({
+        where: unchanged(c),
+        data: { awaited: false },
+      })
+      if (count) released.push(c)
+    }
+    const wakeupId =
+      delivered.length || released.length
+        ? await reportWakeup(
+            tx,
+            parentId,
+            (delivered[0] ?? released[0])!.parentTeammateId,
+            batchNote(
+              delivered.map((c) => ({
+                id: c.id,
+                title: c.title,
+                teammate: c.teammate.name,
+                report: reportOf(c.report)!,
+              })),
+              released.map((c) => ({ id: c.id, title: c.title, teammate: c.teammate.name })),
+            ),
+          )
+        : null
+    const missed = waiting.filter((c) => !delivered.includes(c) && !released.includes(c))
+    return { wakeupId, changed: delivered.length + released.length > 0, missed }
+  })
+  if (!settled) return
+  // At once, rather than at the next minute's tick; it waits like any wake-up when it cannot go yet.
+  if (settled.wakeupId) await fireNow(settled.wakeupId)
+  if (settled.changed) await parentChanged(scope, parentId)
+  // Those changed since they were read here.
+  if (!settled.missed.length) return
   const current = await db.session.findMany({
-    where: { id: { in: missed.map((c) => c.id) }, reportDeliveredAt: null },
+    where: { id: { in: settled.missed.map((c) => c.id) }, reportDeliveredAt: null },
     select: { id: true, awaited: true, report: true },
   })
-  // Released as the wait ran out, before this call claimed its report: it goes on its own,
-  // with the wake-up auto-merge holds the child's pull requests by.
+  // Released past the wait before its report was claimed: it goes on its own, with the wake-up
+  // auto-merge holds the child's pull requests by. Out of the lock: deliverReport takes its own.
   for (const c of current) if (!c.awaited && reportOf(c.report)) await deliverReport(scope, c.id)
-  // Its report came in after this call read it (or changed): settle from what it is now.
+  // Its report came in after it was read here (or changed): settle from what it is now.
   if (again && current.some((c) => c.awaited)) await settleAwaited(scope, parentId, false)
 }
 
