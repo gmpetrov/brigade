@@ -13,6 +13,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
     "clean": "rm -rf dist .turbo",
     "boat": "tsx scripts/boat.ts"
   },

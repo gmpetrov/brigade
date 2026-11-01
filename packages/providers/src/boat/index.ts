@@ -1,5 +1,12 @@
 // boat (https://boat.dev): persistent Ubuntu VMs with snapshots on stop.
-import { BoatApi, Configuration, execCommand, waitForDesktop, waitUntilReady } from '@boatdev/sdk'
+import {
+  BoatApi,
+  Configuration,
+  execCommand,
+  waitForDesktop,
+  waitUntilReady,
+  type Middleware,
+} from '@boatdev/sdk'
 import type {
   ComputerProvider,
   ComputerRef,
@@ -18,12 +25,58 @@ const SIZES: Record<ComputerSize, 'small' | 'default' | 'large'> = {
 /** On Cloudflare Workers, whose node:http2 is a stub, the SDK must use the global fetch. */
 const onWorkers = globalThis.navigator?.userAgent === 'Cloudflare-Workers'
 
-export function boatClient(apiKey: string, basePath = 'https://boat.dev/api/v1') {
+/** How long one request to boat may take before it is given up: it answers in about a second. */
+export const BOAT_REQUEST_MS = 60_000
+/** A command's own time limit (its timeoutSeconds) plus this, for boat to answer once it ends. */
+export const BOAT_COMMAND_GRACE_MS = 60_000
+
+/**
+ * How long a request to boat may take, or null for none. Without a limit, a request boat never
+ * answers held its caller for 10 minutes, and with it the jobs' queue (src/jobs.ts in apps/api):
+ * a cloud computer's keep-alive, on Oct 30 and 31. A command waits for as long as it may run; a
+ * stream (a command's or the events') is read for as long as its caller wants.
+ */
+export function boatDeadlineMs(url: string, init?: RequestInit): number | null {
+  const path = new URL(url).pathname
+  if (path.endsWith('/stream')) return null
+  if (init?.method === 'POST' && /\/sandboxes\/[^/]+\/commands$/.test(path)) {
+    let seconds = 30
+    try {
+      const body = typeof init.body === 'string' ? JSON.parse(init.body) : null
+      if (typeof body?.timeoutSeconds === 'number') seconds = body.timeoutSeconds
+    } catch {}
+    return seconds * 1000 + BOAT_COMMAND_GRACE_MS
+  }
+  return BOAT_REQUEST_MS
+}
+
+/** Gives each request to boat its deadline (boatDeadlineMs), besides its own signal. */
+export const deadlines: Middleware = {
+  async pre({ url, init }) {
+    const ms = boatDeadlineMs(url, init)
+    if (ms === null) return { url, init }
+    const deadline = AbortSignal.timeout(ms)
+    return {
+      url,
+      init: { ...init, signal: init.signal ? AbortSignal.any([init.signal, deadline]) : deadline },
+    }
+  },
+}
+
+/** `send`: the fetch to use (tests); else the global one on Workers, the SDK's own on Node. */
+export function boatClient(
+  apiKey: string,
+  basePath = 'https://boat.dev/api/v1',
+  send?: typeof fetch,
+) {
+  const fetchApi =
+    send ?? (onWorkers ? (...args: Parameters<typeof fetch>) => fetch(...args) : null)
   return new BoatApi(
     new Configuration({
       basePath,
       accessToken: apiKey,
-      ...(onWorkers ? { fetchApi: (...args: Parameters<typeof fetch>) => fetch(...args) } : {}),
+      middleware: [deadlines],
+      ...(fetchApi ? { fetchApi } : {}),
     }),
   )
 }
