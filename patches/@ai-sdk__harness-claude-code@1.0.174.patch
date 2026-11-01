@@ -1,0 +1,659 @@
+diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
+index 8a4d7c5c37e66b07c0fe2c256e37035dc16bc384..bd395e4e363ac616de59bf7697b4ae21dfc9492a 100644
+--- a/dist/bridge/index.mjs
++++ b/dist/bridge/index.mjs
+@@ -1127,6 +1127,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
+ 			id: block.id,
+ 			delta: event.delta.partial_json
+ 		});
++		// Brigade: a thinking block's signature says what it is, for the host to read at its end.
++		else if (block.kind === "thinking" && event.delta?.type === "signature_delta" && typeof event.delta.signature === "string") block.signature = (block.signature ?? "") + event.delta.signature;
+ 		return;
+ 	}
+ 	if (event.type === "content_block_stop") {
+@@ -1137,9 +1139,12 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
+ 			type: "text-end",
+ 			id: block.id
+ 		});
++		// Brigade: with its signature, which tells the server's summary of the text written
++		// between tool calls (narration) from reasoning.
+ 		else if (block.kind === "thinking") send({
+ 			type: "reasoning-end",
+-			id: block.id
++			id: block.id,
++			...block.signature ? { harnessMetadata: { "claude-code": { signature: block.signature } } } : {}
+ 		});
+ 		else send({
+ 			type: "tool-input-end",
+@@ -1604,6 +1609,21 @@ function createPermissionSettings(input) {
+ 	};
+ }
+ /**
++* Brigade: its settings under the bridge's own. The permission rules of both stay: the tools
++* Brigade denies, and those the permission mode asks before. Without settings of its own
++* (a run with no thread), the bridge's alone.
++*/
++function withBrigadeSettings(settings, brigade) {
++	if (brigade == null) return settings;
++	const permissions = { ...brigade.permissions };
++	for (const [key, rules] of Object.entries(settings.permissions ?? {})) permissions[key] = Array.isArray(rules) && Array.isArray(permissions[key]) ? [...new Set([...permissions[key], ...rules])] : rules;
++	return {
++		...brigade,
++		...settings,
++		...Object.keys(permissions).length > 0 ? { permissions } : {}
++	};
++}
++/**
+ * Claude Code picks a model's output limit, system prompt and default effort
+ * from its own reading of the model id, and misreads AI Gateway ids with a
+ * dotted version such as `anthropic/claude-opus-5.5`. `modelOverrides` maps
+@@ -1796,11 +1816,19 @@ async function runTurn(start, turn) {
+ 		deferredToolUseIds,
+ 		nativeToolCallNames: streamEventState.nativeToolCallNames
+ 	});
+-	const settings = {
++	// Brigade: what it turns off in Claude Code, as settings above every settings file (the
++	// runner's claude-settings.ts), under the bridge's own. See withBrigadeSettings.
++	const brigadeSettings = env.BRIGADE_CLAUDE_SETTINGS ? JSON.parse(env.BRIGADE_CLAUDE_SETTINGS) : void 0;
++	const settings = withBrigadeSettings({
+ 		...permissionOptions.settings,
+ 		...start.skillOverrides !== void 0 ? { skillOverrides: start.skillOverrides } : {},
+ 		...modelOverrides ? { modelOverrides } : {}
+-	};
++	}, brigadeSettings);
++	// Brigade: Claude Code guesses the person's next message once a turn is over, for the
++	// thread's message box (the runner sets this when the thread wants it). See drain below.
++	const suggesting = env.BRIGADE_PROMPT_SUGGESTIONS === "1";
++	let draining = false;
++	let drainTimer;
+ 	const questionPreToolUseHook = createQuestionPreToolUseHook({
+ 		turn,
+ 		emit,
+@@ -1818,6 +1846,7 @@ async function runTurn(start, turn) {
+ 	const queryArgs = {
+ 		prompt: queryInput.input,
+ 		options: {
++			...suggesting ? { promptSuggestions: true } : {},
+ 			...start.model ? { model: start.model } : {},
+ 			...start.maxTurns !== void 0 ? { maxTurns: start.maxTurns } : {},
+ 			...start.maxBudgetUsd !== void 0 ? { maxBudgetUsd: start.maxBudgetUsd } : {},
+@@ -1916,6 +1945,11 @@ async function runTurn(start, turn) {
+ 	let emittedTerminalError = false;
+ 	let emittedTerminalFinish = false;
+ 	const emitTerminalError = (message) => {
++		// Brigade: the turn was answered; a failure while Claude Code guesses only ends the guess.
++		if (draining) {
++			abortCtl.abort();
++			return;
++		}
+ 		const normalized = message?.trim();
+ 		if (!normalized || emittedTerminalError || emittedTerminalFinish) return;
+ 		streamEventState.observedTerminalError = normalized;
+@@ -1935,6 +1969,74 @@ async function runTurn(start, turn) {
+ 		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
+ 		toCommonName
+ 	});
++	// Brigade: work started in the background (agents, workflows, shells, Monitors) reports
++	// back in a turn Claude Code starts by itself. Ending the query at the first result killed
++	// it with the CLI, so the turn stays open while any runs, and until Claude Code has
++	// answered the last report.
++	const HELD_TASKS = new Set(["local_agent", "remote_agent", "local_workflow", "local_bash", "monitor_mcp"]);
++	const heldTasks = new Set();
++	// Running now; and ended, with their notification (which starts the turn that reads it) still to come.
++	let running = new Set();
++	const ended = new Set();
++	const notified = new Set();
++	// How many of Claude Code's messages the turn has seen.
++	let received = 0;
++	let reportedAt = -1;
++	let turnFrom = 0;
++	let awaitingTurn = true;
++	let reportPending = false;
++	let reportTimer;
++	let waiting = false;
++	const holding = () => running.size > 0 || ended.size > 0 || reportPending;
++	const reported = () => {
++		reportedAt = received;
++		// Between turns: Claude Code starts one to answer it.
++		if (awaitingTurn) reportPending = true;
++	};
++	// The host learns when the turn only waits on that work, and when Claude Code is at it again:
++	// a person's message then goes straight in rather than waiting for the turn to end.
++	const setWaiting = (value) => {
++		if (waiting === value) return;
++		waiting = value;
++		emit({
++			type: "raw",
++			rawValue: {
++				type: "system",
++				subtype: "brigade_waiting",
++				waiting: value
++			}
++		});
++	};
++	// A report folded into a turn already running gets no turn of its own: stop waiting for one.
++	const waitForReport = () => {
++		clearTimeout(reportTimer);
++		reportTimer = setTimeout(() => {
++			reportPending = false;
++			ended.clear();
++			if (!holding() && queryInput.hasObservedResult && !queryInput.hasActiveUserMessages() && !drain()) queryInput.close();
++		}, 6e4);
++		reportTimer.unref?.();
++	};
++	// Brigade: Claude Code sends its guess only after the turn's last result, and only while its
++	// process lives. Rather than end the query there, its input closes and the process gets to
++	// finish the guess, which it waits for before it exits. The host hears first that the turn
++	// is answered, so nothing waits on the guess; a stop from it ends the process at once.
++	const drain = () => {
++		if (!suggesting || draining) return false;
++		draining = true;
++		queryInput.close();
++		emit({
++			type: "raw",
++			rawValue: {
++				type: "system",
++				subtype: "brigade_answered"
++			}
++		});
++		gracefulAbort = void 0;
++		drainTimer = setTimeout(() => abortCtl.abort(), 2e4);
++		drainTimer.unref?.();
++		return true;
++	};
+ 	async function* messages() {
+ 		for (;;) {
+ 			if (deferredToolUseId != null) {
+@@ -1975,6 +2077,19 @@ async function runTurn(start, turn) {
+ 			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
+ 			const sessionId = msg.session_id;
+ 			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
++			// Brigade: Claude Code's guess at the person's next message goes to the host. It is no
++			// part of the turn, whose counts and timers stay as they were: a report the turn still
++			// waits on keeps its timeout. Draining, the guess was all the drain waited for, and
++			// what the closing process says besides is no part of the turn either.
++			if (type === "prompt_suggestion") {
++				emit({
++					type: "raw",
++					rawValue: msg
++				});
++				if (draining) break;
++				continue;
++			}
++			if (draining) continue;
+ 			emitStreamEvent(msg);
+ 			if (type === "result" && msg.terminal_reason === "tool_deferred" && msg.deferred_tool_use?.id != null) {
+ 				const harnessUsage = mapUsage(msg.usage ?? msg.message?.usage);
+@@ -1986,8 +2101,43 @@ async function runTurn(start, turn) {
+ 					toolName: msg.deferred_tool_use.name,
+ 					toolInput: msg.deferred_tool_use.input
+ 				});
++				// Brigade: the turn goes on once the call is decided, in a query of its own, so this
++				// result ends no turn. Claude Code's process ends with this query, and so does the
++				// work it ran in the background, which reports nothing to the next one.
++				clearTimeout(reportTimer);
++				running = new Set();
++				ended.clear();
++				reportPending = false;
+ 				continue;
+ 			}
++			received++;
++			clearTimeout(reportTimer);
++			if (type === "system" && msg.subtype === "task_started" && HELD_TASKS.has(msg.task_type)) heldTasks.add(msg.task_id);
++			if (type === "system" && msg.subtype === "background_tasks_changed" && Array.isArray(msg.tasks)) {
++				const now = new Set(msg.tasks.filter((t) => !t.ambient && HELD_TASKS.has(t.task_type)).map((t) => t.task_id));
++				for (const id of now) heldTasks.add(id);
++				// One that stopped running reports back, whether this or its notification comes first.
++				for (const id of running) if (!now.has(id) && !notified.has(id)) ended.add(id);
++				running = now;
++			}
++			// Its notification starts the turn that reads it; one stopped on purpose starts none.
++			if (type === "system" && msg.subtype === "task_notification" && heldTasks.has(msg.task_id)) {
++				notified.add(msg.task_id);
++				ended.delete(msg.task_id);
++				if (msg.status !== "stopped" && !msg.skip_transcript && !msg.ambient) reported();
++			}
++			if (awaitingTurn && msg.parent_tool_use_id == null && (type === "assistant" || type === "stream_event")) {
++				awaitingTurn = false;
++				turnFrom = received;
++				setWaiting(false);
++			}
++			if (type === "result") {
++				// A report that came in after this turn began is answered in a turn of its own.
++				reportPending = reportedAt > turnFrom;
++				awaitingTurn = true;
++			}
++			if (awaitingTurn && (reportPending || ended.size > 0) && running.size === 0) waitForReport();
++			if (awaitingTurn && holding() && queryInput.hasObservedResult && !queryInput.hasActiveUserMessages()) setWaiting(true);
+ 			if (type === "result") {
+ 				if (msg.subtype === "success") {
+ 					if (msg.is_error) {
+@@ -2023,34 +2173,54 @@ async function runTurn(start, turn) {
+ 						emit,
+ 						usage: streamEventState.pendingStepUsage ?? harnessUsage
+ 					});
+-					if (!resumingDeferredCall && !queryInput.answersSentMessage(msg)) continue;
++					if (!resumingDeferredCall && !queryInput.answersSentMessage(msg)) {
++						// The answer to the last report: nothing else to wait for.
++						if (queryInput.hasObservedResult && !queryInput.hasActiveUserMessages() && !holding()) {
++							if (drain()) continue;
++							queryInput.close();
++							break;
++						}
++						if (queryInput.hasObservedResult && !queryInput.hasActiveUserMessages()) setWaiting(true);
++						continue;
++					}
+ 					queryInput.observeResult();
+-					if (!queryInput.hasActiveUserMessages()) {
++					if (!queryInput.hasActiveUserMessages() && !holding()) {
++						if (drain()) continue;
+ 						queryInput.close();
+ 						break;
+ 					}
++					if (!queryInput.hasActiveUserMessages()) setWaiting(true);
+ 				} else emitTerminalError((Array.isArray(msg.errors) ? msg.errors.join("\n") : void 0) || streamEventState.observedTerminalError || msg.result || "Unknown error");
+ 				continue;
+ 			}
+-			if (queryInput.hasObservedResult && !queryInput.hasActiveUserMessages()) {
++			if (queryInput.hasObservedResult && !queryInput.hasActiveUserMessages() && !holding()) {
++				if (drain()) continue;
+ 				queryInput.close();
+ 				break;
+ 			}
+ 		}
+ 	} catch (err) {
+-		if (!turn.abortSignal.aborted && !(abortCtl.signal.aborted && emittedTerminalError)) turn.emitError({
+-			error: err,
+-			message: "claude-code turn failed"
+-		});
+-		return;
++		// Brigade: the turn was answered; how the process ends while it guesses changes nothing.
++		if (!draining || turn.abortSignal.aborted) {
++			if (!turn.abortSignal.aborted && !(abortCtl.signal.aborted && emittedTerminalError)) turn.emitError({
++				error: err,
++				message: "claude-code turn failed"
++			});
++			return;
++		}
+ 	} finally {
+ 		gracefulAbort = void 0;
++		clearTimeout(reportTimer);
++		clearTimeout(drainTimer);
+ 		if (hardAbortTimer != null) clearTimeout(hardAbortTimer);
+ 		turn.abortSignal.removeEventListener("abort", onHostAbort);
+ 		queryInput.close();
+ 		await disposeQuery(q);
+ 	}
+ 	if (emittedTerminalError) return;
++	// Brigade: stopped by the host while it guessed, the turn is settled there already. A finish
++	// sent now, once the process is gone, would end the host's next turn instead.
++	if (draining && turn.abortSignal.aborted) return;
+ 	emittedTerminalFinish = true;
+ 	emit({
+ 		type: "finish",
+diff --git a/dist/bridge/package.json b/dist/bridge/package.json
+index c65fbaaa7a4718894640b601eeae6486b6cbb769..a4698ef9f52556b8d5bc2f23b793aca28abaac84 100644
+--- a/dist/bridge/package.json
++++ b/dist/bridge/package.json
+@@ -4,9 +4,9 @@
+   "private": true,
+   "type": "module",
+   "dependencies": {
+-    "@anthropic-ai/claude-agent-sdk": "0.3.290",
+-    "@anthropic-ai/claude-code": "2.1.290",
+-    "@modelcontextprotocol/sdk": "1.32.1",
++    "@anthropic-ai/claude-agent-sdk": "0.3.316",
++    "@anthropic-ai/claude-code": "2.1.316",
++    "@modelcontextprotocol/sdk": "1.32.2",
+     "ws": "8.21.0",
+     "zod": "4.4.3"
+   }
+diff --git a/dist/bridge/pnpm-lockfile.yaml b/dist/bridge/pnpm-lockfile.yaml
+index 719cf20d9b12324f7244c4e0d715ce6023d9e9d7..c95372126c1636f7025e9a7c4bb72078c30ecd63 100644
+--- a/dist/bridge/pnpm-lockfile.yaml
++++ b/dist/bridge/pnpm-lockfile.yaml
+@@ -9,14 +9,14 @@ importers:
+   .:
+     dependencies:
+       '@anthropic-ai/claude-agent-sdk':
+-        specifier: 0.3.290
+-        version: 0.3.290(@anthropic-ai/sdk@0.97.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.32.1(zod@4.4.3))(zod@4.4.3)
++        specifier: 0.3.316
++        version: 0.3.316(@anthropic-ai/sdk@0.97.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.32.2(zod@4.4.3))(zod@4.4.3)
+       '@anthropic-ai/claude-code':
+-        specifier: 2.1.290
+-        version: 2.1.290
++        specifier: 2.1.316
++        version: 2.1.316
+       '@modelcontextprotocol/sdk':
+-        specifier: 1.32.1
+-        version: 1.32.1(zod@4.4.3)
++        specifier: 1.32.2
++        version: 1.32.2(zod@4.4.3)
+       ws:
+         specifier: 8.21.0
+         version: 8.21.0
+@@ -26,104 +26,104 @@ importers:
+ 
+ packages:
+ 
+-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.290':
+-    resolution: {integrity: sha512-Xy1MPSSgCAzbCzT+3w+5+jHo9OIQf90QROyO8UcZNIOyaJ0qKQNRji0SztulGfo3uQsfj07t+qJcvXU+8gWcTw==}
++  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.316':
++    resolution: {integrity: sha512-1I1oJ/YGqq4pFQvJqycD2e8pbsUQLLR+DwEzG9jQAGCoSKkxP1TBfHpjSik/0byCixyzpYObrYXPC0PKBIR91g==}
+     cpu: [arm64]
+     os: [darwin]
+ 
+-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.290':
+-    resolution: {integrity: sha512-ezuHy4rUdC0wmiXWROi2g+6mj2oVXFW0a5JwUNSrgjT5yglEOvoHXSkGXzk7n64vOxQJ/JnKOqUCfO85htchZA==}
++  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.316':
++    resolution: {integrity: sha512-gzNncKrID/6yJIKCAuF/pY1kfygQZ4dU0J+MNFl0bU+iQW65ERoIyoghYVfrAQ/gH2fuvnQtWxa8LQNScHgNMA==}
+     cpu: [x64]
+     os: [darwin]
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.290':
+-    resolution: {integrity: sha512-3sIYs6vhwBoJsiCQBb+3lXIcIeGq8aDOhiyYtSQwOhvMTwAjwuZN6mHjZGeSnGH3hn4CAXi3n3NEK49SSoFilg==}
++  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.316':
++    resolution: {integrity: sha512-1qqaEdsAs6eipEQQ4bMAWiwDjIouyA/YN5KQWS0/+kuPb+GKS8rUVW2dty2elV703hsMovb4IhMP4cv5K7R9YA==}
+     cpu: [arm64]
+     os: [linux]
+     libc: [musl]
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.290':
+-    resolution: {integrity: sha512-HR3HuBSzYtyhh6AbILvWofuqrnn91bzgEovwDfS+pS99Dp4OpvaAopCEXpirc99dcSJ11Dj1OkEBq7r/4aR2xw==}
++  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.316':
++    resolution: {integrity: sha512-+lm9XSw/em14yMZ41fbo80kfblbylfBQc9nYS6GgLoZVvgT3wSeEbv88v+mEK/jFw9g3VCH4ZI01sjNM34o7uw==}
+     cpu: [arm64]
+     os: [linux]
+     libc: [glibc]
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.290':
+-    resolution: {integrity: sha512-JRmW03yRKHKZ41T+e4eYzY3lA0pbaJG4PF1GO1cG09Pu8MBPsuWhZZMtP/fsIJ+4vv5dFhdaPmdBPhWgHSMqyw==}
++  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.316':
++    resolution: {integrity: sha512-pMG9MRkjxMMbIxpwg/cKz6JorNjZtJOA9l/fifRQ/A01zGTKrRIaSCWoGg+Asmc64QBOa3aA4vzE/od9B1R0Tw==}
+     cpu: [x64]
+     os: [linux]
+     libc: [musl]
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.290':
+-    resolution: {integrity: sha512-q9YflZoDtz/vK9vo28KvnUPvZWqPpXVD8j8RCHepi6zAiOxxJV/3s2URtA3ZQKYSo4zThJ48yrZJnGm8mkGWyA==}
++  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.316':
++    resolution: {integrity: sha512-+csYyGkHziNp4It+ZykqTmXRZBuNrieTiBnji+zwAxNmLLCWz8xEWjNmwhaLPIMpUiaYREkDhZXt/AS6xXta5w==}
+     cpu: [x64]
+     os: [linux]
+     libc: [glibc]
+ 
+-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.290':
+-    resolution: {integrity: sha512-oLHI6y0uEkGK31KNEBqNyZGbXqbEFNyWopg/5iB1hW//aQ6OBtuawGiORzTnFAqYUxIU/oHgKx5w6ZMVgrKMnQ==}
++  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.316':
++    resolution: {integrity: sha512-Xj4iTS8NsB6isGhnZEnaIXIpUcSspv/lyIVnfPZjVGwuttaVHjq4IxfDopsPaVsPuTKd+L7DLAaBram1k85U2g==}
+     cpu: [arm64]
+     os: [win32]
+ 
+-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.290':
+-    resolution: {integrity: sha512-mXgdB/OaZRAlt4E+cculWgEgmn5wAspzHO63ZfaSOVSuGJVDLBLBnwRDKkjI0cWCwAc17cetmu3TdNap/f0hxA==}
++  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.316':
++    resolution: {integrity: sha512-FzQA1zHbYJTtLR9nn1McwkGYeiEmroTmYjIg7xZqo5eweJ8U/DESZKR/QdfF04MXe2DF23oLL8WHjEa+WxbGQw==}
+     cpu: [x64]
+     os: [win32]
+ 
+-  '@anthropic-ai/claude-agent-sdk@0.3.290':
+-    resolution: {integrity: sha512-Rf2zz1kU3nyK9UCWhlZGYrCUi+0FuNmZFmzflZFKJKajuU+fsQrNht+jeUb2jyTszF/yMGobHhe3HfY4gB41Xg==}
+-    engines: {node: '>=18.0.0'}
++  '@anthropic-ai/claude-agent-sdk@0.3.316':
++    resolution: {integrity: sha512-mCMr0que5kIy80JslJub6WFDB2+GYRGWNeVgSZaBpkBwXrr4wnRMnnGHitkA2BEJ5QP5xWyc6YH/6do/edxCWg==}
++    engines: {node: '>=18.14.0'}
+     peerDependencies:
+       '@anthropic-ai/sdk': '>=0.93.0'
+       '@modelcontextprotocol/sdk': ^1.29.0
+       zod: ^4.0.0
+ 
+-  '@anthropic-ai/claude-code-darwin-arm64@2.1.290':
+-    resolution: {integrity: sha512-Gwf07acohw9mGTBIXeac1PTZKRMRsGoBFtm7OA3TMoLoF/3M2kPojkqdjxEzTVw15lJjA0N1lgZEa8jLWt4odQ==}
++  '@anthropic-ai/claude-code-darwin-arm64@2.1.316':
++    resolution: {integrity: sha512-wJiLVMzg2atF7C/a+0wt+yQShWIePsMNL86gIoIJanURY2fxrwHIxrYuxoTW8sWqfj7ai+otV/ik2r7m5aPy1g==}
+     cpu: [arm64]
+     os: [darwin]
+ 
+-  '@anthropic-ai/claude-code-darwin-x64@2.1.290':
+-    resolution: {integrity: sha512-T7VTeuPrIfK7fjzn37izXxKfru9ZNYiiHSx+8jCZJK5TLCCDPaJAFPjQRhdLtk7adHOJe5PeAK8Rm0d8mcNRFg==}
++  '@anthropic-ai/claude-code-darwin-x64@2.1.316':
++    resolution: {integrity: sha512-UVb9M3ViDyLwPE4D5TQ0G/gFC3kWU6x/m6DbDg5OuAZZGpdwi7P2ajLusJGaNk1FSxTDj0SnzA6VCEiNEOI46w==}
+     cpu: [x64]
+     os: [darwin]
+ 
+-  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.290':
+-    resolution: {integrity: sha512-MxA+W79eTB9084PMbRHW1cApY2OXJVBLRZLg+os030mPvOSsO9x300bftgwAk1LqzoJP7zQo4aiDG1xXDfE8jw==}
++  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.316':
++    resolution: {integrity: sha512-MEirZ6NFW4GQhDwHZR3EuWEIQ73AiSmr+VkBbohiwZOXW6FaJ7TQJ4ypN3CddDBn8HKPXVgpjYSsUkfbKo1NSQ==}
+     cpu: [arm64]
+     os: [linux]
+     libc: [musl]
+ 
+-  '@anthropic-ai/claude-code-linux-arm64@2.1.290':
+-    resolution: {integrity: sha512-xUcpprHxzKHAfYQeOSWLBEX58FHIpueVWUUSRbYmQQkPSm2C+RzwPYfwvAbdleyV5Bncmor9FmRUCyiq1DwDww==}
++  '@anthropic-ai/claude-code-linux-arm64@2.1.316':
++    resolution: {integrity: sha512-xqlAkhgSLCMdcaepQNIs1+ym5X9++apiEeOc0LHRVOHpfLlpYKAaAXBRccM6QVITN0T9sXLCIby7CO1Lczusgw==}
+     cpu: [arm64]
+     os: [linux]
+     libc: [glibc]
+ 
+-  '@anthropic-ai/claude-code-linux-x64-musl@2.1.290':
+-    resolution: {integrity: sha512-wUlWlEmpJ0QKBUBNA0139dhChhMg5HLPi/78sZ2dJEJ6ff89qJF5s4LEXP0tLIsUfX/CggX4J4/2prcgueUyYw==}
++  '@anthropic-ai/claude-code-linux-x64-musl@2.1.316':
++    resolution: {integrity: sha512-fjJ+xM4cSW9m/q6Zh1W9tkq0Ia44GEUh1TGcJtcrPwFCRWeMCAluOf2st51Bcaet7MAjBn9SwvKts96whjhQXA==}
+     cpu: [x64]
+     os: [linux]
+     libc: [musl]
+ 
+-  '@anthropic-ai/claude-code-linux-x64@2.1.290':
+-    resolution: {integrity: sha512-1FQDIO4tXPFyw9wR1icEedIhEmLzOiQBAGR0NgETrXK8M2YbHEDXoE5Gg/LIuIee7giUuX5F2RzLw2N2i++ofQ==}
++  '@anthropic-ai/claude-code-linux-x64@2.1.316':
++    resolution: {integrity: sha512-RQDM6N285IjNKcmlPRriayNzpTkEJreAw5/vBU+V0R3qljkQ5z6/pSbzcVUAXvasoOlvub0RIma3NWvSuZA8Cg==}
+     cpu: [x64]
+     os: [linux]
+     libc: [glibc]
+ 
+-  '@anthropic-ai/claude-code-win32-arm64@2.1.290':
+-    resolution: {integrity: sha512-QL2yNLFbj1Jx0nfNI+gKrta7RWNzYHD3OYKChieHmU1V2EJRyTUaYWeOZRHUkHc/tlK7Z/o9v43BQPEwHQmqkQ==}
++  '@anthropic-ai/claude-code-win32-arm64@2.1.316':
++    resolution: {integrity: sha512-B927x2sqr56hJZ29O1MfSSj5qPVmzqWfO7rOPiW+Osg0eA9xLFP2TdTNT5/UzyHYoN0Isa+TKwdGSk0gwb8NyA==}
+     cpu: [arm64]
+     os: [win32]
+ 
+-  '@anthropic-ai/claude-code-win32-x64@2.1.290':
+-    resolution: {integrity: sha512-wkjNwUSqEJ0d7TLkxYAjBHGqpVRTKuars/60VzcrTMkaY5iTaMJvNRjagVYx8SKWP+Zd3f5Gh+jAyRPZAl0U+A==}
++  '@anthropic-ai/claude-code-win32-x64@2.1.316':
++    resolution: {integrity: sha512-qs/GOpsQmgWECHVTpqUfTg33BaWoaH7CNOZQlOSqXbBOYst6YL1OqdutE12JsXg096NqGaE7vb5eFa6ZynOIKw==}
+     cpu: [x64]
+     os: [win32]
+ 
+-  '@anthropic-ai/claude-code@2.1.290':
+-    resolution: {integrity: sha512-N1VOjg+2Bc0unJztexfNYMTi+XkghzLe1m7Z2vswj6geJAto7mib7FeRbhuSAYHz6lmtWz1XZhLqwT+ugUaxhQ==}
++  '@anthropic-ai/claude-code@2.1.316':
++    resolution: {integrity: sha512-i3BpzyDkcCPnsa0CSkWgxGPs7WMsyqDkxkqT0SDxyEC5XMIxEmcUmluWRHG9VSeBY8Vyv+l9X34JvJ/Bj54nBQ==}
+     engines: {node: '>=22.0.0'}
+     hasBin: true
+ 
+@@ -146,8 +146,8 @@ packages:
+     peerDependencies:
+       hono: ^4
+ 
+-  '@modelcontextprotocol/sdk@1.32.1':
+-    resolution: {integrity: sha512-2DdE+SJDtzLEEWzY1ZjY7Q+VcPhcV1KisD3zI4u0XZyktsjHum1mwbMI+JaulUBi2OZk+KJAi2uPXzxichPkdw==}
++  '@modelcontextprotocol/sdk@1.32.2':
++    resolution: {integrity: sha512-SWsVtH/0vULSQStoZ6xxH2K09Li8fXYTMC64ZeogCdpZ3XSi1eCPOByV1OpuJxuI3OcmHhosDWYyii07tpPsLw==}
+     engines: {node: '>=18'}
+     peerDependencies:
+       '@cfworker/json-schema': ^4.1.1
+@@ -165,6 +165,11 @@ packages:
+ 
+   ajv-formats@3.0.1:
+     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
++    peerDependencies:
++      ajv: ^8.0.0
++    peerDependenciesMeta:
++      ajv:
++        optional: true
+ 
+   ajv@8.20.0:
+     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
+@@ -535,79 +540,79 @@ packages:
+ 
+ snapshots:
+ 
+-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.290':
++  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.290':
++  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.290':
++  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.290':
++  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.290':
++  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.290':
++  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.290':
++  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.290':
++  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk@0.3.290(@anthropic-ai/sdk@0.97.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.32.1(zod@4.4.3))(zod@4.4.3)':
++  '@anthropic-ai/claude-agent-sdk@0.3.316(@anthropic-ai/sdk@0.97.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.32.2(zod@4.4.3))(zod@4.4.3)':
+     dependencies:
+       '@anthropic-ai/sdk': 0.97.1(zod@4.4.3)
+-      '@modelcontextprotocol/sdk': 1.32.1(zod@4.4.3)
++      '@modelcontextprotocol/sdk': 1.32.2(zod@4.4.3)
+       zod: 4.4.3
+     optionalDependencies:
+-      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.290
+-      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.290
+-      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.290
+-      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.290
+-      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.290
+-      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.290
+-      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.290
+-      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.290
+-
+-  '@anthropic-ai/claude-code-darwin-arm64@2.1.290':
++      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.316
++      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.316
++      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.316
++      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.316
++      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.316
++      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.316
++      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.316
++      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.316
++
++  '@anthropic-ai/claude-code-darwin-arm64@2.1.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-code-darwin-x64@2.1.290':
++  '@anthropic-ai/claude-code-darwin-x64@2.1.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.290':
++  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-code-linux-arm64@2.1.290':
++  '@anthropic-ai/claude-code-linux-arm64@2.1.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-code-linux-x64-musl@2.1.290':
++  '@anthropic-ai/claude-code-linux-x64-musl@2.1.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-code-linux-x64@2.1.290':
++  '@anthropic-ai/claude-code-linux-x64@2.1.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-code-win32-arm64@2.1.290':
++  '@anthropic-ai/claude-code-win32-arm64@2.1.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-code-win32-x64@2.1.290':
++  '@anthropic-ai/claude-code-win32-x64@2.1.316':
+     optional: true
+ 
+-  '@anthropic-ai/claude-code@2.1.290':
++  '@anthropic-ai/claude-code@2.1.316':
+     optionalDependencies:
+-      '@anthropic-ai/claude-code-darwin-arm64': 2.1.290
+-      '@anthropic-ai/claude-code-darwin-x64': 2.1.290
+-      '@anthropic-ai/claude-code-linux-arm64': 2.1.290
+-      '@anthropic-ai/claude-code-linux-arm64-musl': 2.1.290
+-      '@anthropic-ai/claude-code-linux-x64': 2.1.290
+-      '@anthropic-ai/claude-code-linux-x64-musl': 2.1.290
+-      '@anthropic-ai/claude-code-win32-arm64': 2.1.290
+-      '@anthropic-ai/claude-code-win32-x64': 2.1.290
++      '@anthropic-ai/claude-code-darwin-arm64': 2.1.316
++      '@anthropic-ai/claude-code-darwin-x64': 2.1.316
++      '@anthropic-ai/claude-code-linux-arm64': 2.1.316
++      '@anthropic-ai/claude-code-linux-arm64-musl': 2.1.316
++      '@anthropic-ai/claude-code-linux-x64': 2.1.316
++      '@anthropic-ai/claude-code-linux-x64-musl': 2.1.316
++      '@anthropic-ai/claude-code-win32-arm64': 2.1.316
++      '@anthropic-ai/claude-code-win32-x64': 2.1.316
+ 
+   '@anthropic-ai/sdk@0.97.1(zod@4.4.3)':
+     dependencies:
+@@ -622,11 +627,11 @@ snapshots:
+     dependencies:
+       hono: 4.13.8
+ 
+-  '@modelcontextprotocol/sdk@1.32.1(zod@4.4.3)':
++  '@modelcontextprotocol/sdk@1.32.2(zod@4.4.3)':
+     dependencies:
+       '@hono/node-server': 2.1.1(hono@4.13.8)
+       ajv: 8.20.0
+-      ajv-formats: 3.0.1
++      ajv-formats: 3.0.1(ajv@8.20.0)
+       content-type: 1.0.5
+       cors: 2.8.6
+       cross-spawn: 7.0.6
+@@ -651,8 +656,8 @@ snapshots:
+       mime-types: 3.0.2
+       negotiator: 1.1.0
+ 
+-  ajv-formats@3.0.1:
+-    dependencies:
++  ajv-formats@3.0.1(ajv@8.20.0):
++    optionalDependencies:
+       ajv: 8.20.0
+ 
+   ajv@8.20.0:
+diff --git a/dist/index.js b/dist/index.js
+index 9e79280b197eef0b56c41c3fcabb0ca4a35b1a02..5d469da3577aa4282b543c5d0a4ed0c641a812a6 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1075,9 +1075,13 @@ function createClaudeCode(settings = {}) {
+ 					token: coords.token
+ 				});
+ 				const attachChannel = new SandboxChannel({
++					// Brigade: attaching to a bridge handed over by an update retries for as long as a start
++					// does, as before 1.0.168, rather than give up at once and start a second one.
+ 					connect: createBridgeWebSocketConnect({
+ 						endpoint: attachEndpoint,
+ 						webSocketConstructor: WebSocket,
++						openRetryTimeoutMs: timeoutMs,
++						startAbortSignal: startOpts.abortSignal,
+ 						onHello
+ 					}),
+ 					outboundSchema: outboundMessageSchema,
