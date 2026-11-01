@@ -275,8 +275,11 @@ function counts(list: ParsedList, items: ListItemView[]) {
   }
 }
 
-/** Every list of the library: its Markdown files with a checklist, last changed first. */
-export async function listSummaries(db: ScopedDb, scope: Scope): Promise<ListSummary[]> {
+/**
+ * Every list of the library with its items' views, last changed first: its Markdown files with a
+ * checklist. One read of the files and one of the items for them all (the Lists page, the Board).
+ */
+export async function workspaceLists(db: ScopedDb, scope: Scope) {
   const files = await db.document.findMany({
     where: { ...LIST_FILE, OR: [{ text: { contains: '[ ]' } }, { text: { contains: '[x]' } }] },
     select: { id: true, path: true, text: true, updatedAt: true },
@@ -290,17 +293,28 @@ export async function listSummaries(db: ScopedDb, scope: Scope): Promise<ListSum
     : []
   const all = await views(db, scope, rows, new Map(parsed.flatMap((f) => [...byLine(f.list)])))
   const projectOfPath = await projectFinder(db)
-  return parsed.map(({ file, list }) => {
-    const lines = byLine(list)
-    const items = all.filter((i) => rows.find((r) => r.id === i.id)?.documentId === file.id)
+  const fileOf = new Map(rows.map((r) => [r.id, r.documentId]))
+  return parsed.map(({ file, list }) => ({
+    file,
+    list,
+    lines: byLine(list),
+    title: titleOf(file.path, list),
+    projectId: projectOfPath(file.path),
+    items: all.filter((i) => fileOf.get(i.id) === file.id),
+  }))
+}
+
+/** Every list of the library: its Markdown files with a checklist, last changed first. */
+export async function listSummaries(db: ScopedDb, scope: Scope): Promise<ListSummary[]> {
+  return (await workspaceLists(db, scope)).map(({ file, list, lines, title, projectId, items }) => {
     const inOrder = items
       .filter((i) => !i.missing)
       .sort((a, b) => lines.get(a.id)!.line - lines.get(b.id)!.line)
     return {
       documentId: file.id,
       path: file.path,
-      title: titleOf(file.path, list),
-      projectId: projectOfPath(file.path),
+      title,
+      projectId,
       ...counts(list, items),
       updatedAt: file.updatedAt.toISOString(),
       next: [

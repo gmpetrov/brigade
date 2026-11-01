@@ -105,6 +105,9 @@ mission; threads stay where the work happens.
   it is opened and again when it merges; elsewhere it is only part of the work.
 - **The Tasks board is set aside, not removed.** Lists replace it in the navigation; the board
   stays at `/app/tasks` and its data is kept. A line nobody has started is the backlog.
+- **The Board shows the lines that move** (docs/board.md): every list's lines with work on them,
+  across Needs you, In progress and Done, with the threads on no list and the routines. A list's
+  page links to the Board on that list. Its lines are planned here, in the file.
 
 ## Dashboard
 
