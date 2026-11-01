@@ -136,6 +136,8 @@ function NeedsYouNote({
 }) {
   const open = task.pullRequests.filter((p) => p.state === 'open')
   const waiting = thread.openTickets > 0 || thread.status === 'waiting'
+  // Failed: its pull requests wait with the thread, which has to run again first.
+  const failed = !waiting && thread.status === 'failed'
   const [pull] = open
   return (
     <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
@@ -143,14 +145,16 @@ function NeedsYouNote({
         ? `${thread.openTickets} open ticket${thread.openTickets > 1 ? 's' : ''} on its thread.`
         : thread.status === 'waiting'
           ? 'Its thread is waiting for an approval.'
-          : open.length > 1
-            ? `${open.length} pull requests are waiting for review. Merging them marks the task done.`
-            : pull
-              ? `Pull request #${pull.number} is waiting for review. Merging it marks the task done.`
-              : task.pullRequests.some((p) => p.state === 'merged')
-                ? 'Its pull request is merged. Mark it done, or say in the thread what is left.'
-                : `${task.teammate?.name ?? 'Its teammate'} stopped at a pull request that was closed without merging.`}{' '}
-      {!waiting && pull && open.length === 1 ? (
+          : failed
+            ? `${task.teammate?.name ?? 'Its teammate'} stopped on an error. Try again or write in the thread.`
+            : open.length > 1
+              ? `${open.length} pull requests are waiting for review. Merging them marks the task done.`
+              : pull
+                ? `Pull request #${pull.number} is waiting for review. Merging it marks the task done.`
+                : task.pullRequests.some((p) => p.state === 'merged')
+                  ? 'Its pull request is merged. Mark it done, or say in the thread what is left.'
+                  : `${task.teammate?.name ?? 'Its teammate'} stopped at a pull request that was closed without merging.`}{' '}
+      {!waiting && !failed && pull && open.length === 1 ? (
         <Link href={pullHref(pull.repository, pull.number)} className="font-semibold underline">
           Review it
         </Link>

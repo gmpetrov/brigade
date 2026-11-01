@@ -88,12 +88,12 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
 
 The column is derived, never stored:
 
-| Column    | Rule                                                       |
-| --------- | ---------------------------------------------------------- |
-| Backlog   | no thread yet (nobody assigned)                            |
-| Needs you | has a thread with an open ticket, or the thread is waiting |
-| Doing     | has a thread and is not done                               |
-| Done      | `completedAt` is set                                       |
+| Column    | Rule                                                                                                                                                 |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backlog   | no thread yet (nobody assigned)                                                                                                                      |
+| Needs you | has a thread with an open ticket, the thread is waiting, it failed and waits on a person (`src/failed.ts`), or it stopped at a pull request to merge |
+| Doing     | has a thread and is not done                                                                                                                         |
+| Done      | `completedAt` is set                                                                                                                                 |
 
 Archived (`archivedAt`) and trashed (`trashedAt`) tasks are off the board.
 

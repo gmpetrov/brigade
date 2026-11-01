@@ -1,6 +1,7 @@
 'use client'
-// Home's "waiting on you": one ticket or pull request at a time, with the card that decides
-// it, the same as in its thread, so a person with enough context answers without opening it.
+// Home's "waiting on you": one ticket, pull request, failed thread or failing routine at a time,
+// with the card that decides it, the same as in its thread, so a person with enough context
+// answers without opening it.
 // Answering stops on what was sent; the next one comes when they ask for it, so a ticket's
 // second ask is never mistaken for another ticket. A playbook's approvals are one item,
 // opened to decide each (PlaybookApprovals); a push about them opens Home on it (?approvals=).
@@ -24,7 +25,15 @@ import { TicketRow } from '@/components/ticket-row'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Hint } from '@/components/ui/tooltip'
-import { api, waitingItemKey, type PullWaiting, type Ticket } from '@/lib/api'
+import { cn } from '@/lib/utils'
+import {
+  api,
+  waitingItemKey,
+  type FailedThread,
+  type FailingRoutine,
+  type PullWaiting,
+  type Ticket,
+} from '@/lib/api'
 import type { EditedEmail } from '@/components/email-cards'
 
 /** Others listed under the one shown; the rest are a link away. */
@@ -76,7 +85,7 @@ function From({
       )}
       {note && (
         <>
-          <span aria-hidden>·</span>
+          {(teammate || thread) && <span aria-hidden>·</span>}
           {/* Shrinks with the title, so a long note never widens the page on a phone. */}
           <span className="min-w-0 truncate" title={note}>
             {note}
@@ -198,12 +207,88 @@ type Queue = {
   teammate: { id: string; name: string } | null
 }
 
-/** One thing waiting: a ticket answered here, a ticket's row, a playbook's approvals, or a pull request. */
+/**
+ * One thing waiting: a ticket answered here, a ticket's row, a playbook's approvals, a pull
+ * request, a failed thread or a failing routine.
+ */
 type Waiting = { key: string; title: string; from?: string } & (
-  | { ticket: Ticket; pull?: undefined; queue?: undefined }
-  | { ticket?: undefined; pull: PullWaiting; queue?: undefined }
-  | { ticket?: undefined; pull?: undefined; queue: Queue }
+  | { ticket: Ticket; pull?: undefined; queue?: undefined; failed?: undefined; routine?: undefined }
+  | {
+      ticket?: undefined
+      pull: PullWaiting
+      queue?: undefined
+      failed?: undefined
+      routine?: undefined
+    }
+  | { ticket?: undefined; pull?: undefined; queue: Queue; failed?: undefined; routine?: undefined }
+  | {
+      ticket?: undefined
+      pull?: undefined
+      queue?: undefined
+      failed: FailedThread
+      routine?: undefined
+    }
+  | {
+      ticket?: undefined
+      pull?: undefined
+      queue?: undefined
+      failed?: undefined
+      routine: FailingRoutine
+    }
 )
+
+/**
+ * A failure as one card: what it said, where to look, and the button that starts it again: Try
+ * again on the turn that failed, as in its thread, or Run now for a routine that could not start.
+ */
+function FailureCard({
+  error,
+  href,
+  again,
+  onDone,
+}: {
+  error: string | null
+  href: string
+  /** Its button and what it calls; none for a thread that never ran (nothing to try again). */
+  again: { label: string; path: string; done: string } | null
+  onDone: (sent: string) => Promise<void>
+}) {
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState<string>()
+  return (
+    <Card className="flex-row flex-wrap items-center gap-3 px-4 py-3">
+      <p className="min-w-0 flex-1 text-sm">
+        <span className="line-clamp-2 wrap-anywhere text-destructive-text">
+          {failed ?? error ?? 'It stopped on an error.'}
+        </span>
+      </p>
+      <div className="flex flex-none items-center gap-2">
+        <Button variant="outline" size="sm" asChild>
+          <Link href={href}>Open</Link>
+        </Button>
+        {again && (
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true)
+              setFailed(undefined)
+              try {
+                await api(again.path, { body: {} })
+                await onDone(again.done)
+              } catch (e) {
+                setFailed(e instanceof Error ? e.message : String(e))
+                setBusy(false)
+              }
+            }}
+          >
+            {again.label}
+          </Button>
+        )}
+      </div>
+    </Card>
+  )
+}
 
 /**
  * Shown in place of the one just answered, until the person moves on: what was done, to
@@ -242,11 +327,14 @@ function SentLine({ sent }: { sent: Sent }) {
 export function NeedsYou({
   tickets,
   pulls,
+  failed,
   onChange,
 }: {
   /** Open tickets waiting on this member. */
   tickets: Ticket[]
   pulls: PullWaiting[]
+  /** Failed threads and routines waiting on this member (failuresWaiting). */
+  failed: { threads: FailedThread[]; routines: FailingRoutine[] }
   onChange: () => Promise<void>
 }) {
   const { me, teammates } = useDashboard()
@@ -307,6 +395,18 @@ export function NeedsYou({
       from: p.authorTeammate?.name,
       pull: p,
     })),
+    ...failed.threads.map((t) => ({
+      key: `failed:${t.id}`,
+      title: t.title,
+      from: t.teammate.name,
+      failed: t,
+    })),
+    ...failed.routines.map((r) => ({
+      key: `routine:${r.scheduleId}`,
+      title: r.title,
+      from: 'Routine',
+      routine: r,
+    })),
   ]
   // One answered elsewhere drops out: the first one left takes its place.
   const index = Math.max(
@@ -321,7 +421,12 @@ export function NeedsYou({
       label,
       // A playbook's approvals by its name, not how many were left.
       title: current?.queue?.name ?? current?.title ?? '',
-      thread: current?.ticket?.session?.id ?? current?.pull?.session?.id,
+      thread:
+        current?.ticket?.session?.id ??
+        current?.pull?.session?.id ??
+        current?.failed?.id ??
+        current?.routine?.runId ??
+        undefined,
       next: (items[index + 1] ?? items[index - 1])?.key,
     })
     await onChange()
@@ -386,8 +491,10 @@ export function NeedsYou({
 
   const others = sent ? items : items.filter((i) => i.key !== current?.key)
   const listed = others.slice(0, LISTED)
-  const moreTickets = others.slice(LISTED).filter((i) => !i.pull).length
-  const morePulls = others.length - listed.length - moreTickets
+  const rest = others.slice(LISTED)
+  const moreTickets = rest.filter((i) => i.ticket || i.queue).length
+  const morePulls = rest.filter((i) => i.pull).length
+  const moreFailed = rest.length - moreTickets - morePulls
 
   return (
     // Yellow, as needs-you is in the sidebar: what blocks a teammate comes first.
@@ -474,6 +581,55 @@ export function NeedsYou({
             onEmptied={done}
           />
         </div>
+      ) : current?.failed ? (
+        <div className="flex flex-col gap-1.5">
+          <From teammate={current.failed.teammate} thread={current.failed} note="failed" />
+          <FailureCard
+            key={current.key}
+            error={current.failed.error}
+            href={`/app/threads/${current.failed.id}`}
+            again={
+              // Never ran (its computer was offline): no turn to try again, a message starts it.
+              current.failed.error
+                ? {
+                    label: 'Try again',
+                    path: `/threads/${current.failed.id}/retry`,
+                    done: 'Tried again',
+                  }
+                : null
+            }
+            onDone={done}
+          />
+        </div>
+      ) : current?.routine ? (
+        <div className="flex flex-col gap-1.5">
+          <From
+            note={`Routine ${current.routine.title} · ${
+              current.routine.couldNotStart ? "couldn't start" : 'last run failed'
+            }`}
+          />
+          <FailureCard
+            key={current.key}
+            error={current.routine.error}
+            href={current.routine.runId ? `/app/threads/${current.routine.runId}` : '/app/routines'}
+            again={
+              current.routine.couldNotStart
+                ? {
+                    label: 'Run now',
+                    path: `/schedules/${current.routine.scheduleId}/run`,
+                    done: 'Started',
+                  }
+                : current.routine.runId && current.routine.error
+                  ? {
+                      label: 'Try again',
+                      path: `/threads/${current.routine.runId}/retry`,
+                      done: 'Tried again',
+                    }
+                  : null
+            }
+            onDone={done}
+          />
+        </div>
       ) : current?.ticket && answersHere(current.ticket) ? (
         <HarnessTicket key={current.key} ticket={current.ticket} onDone={done} />
       ) : current?.ticket ? (
@@ -494,7 +650,13 @@ export function NeedsYou({
                 onClick={() => go(i.key)}
                 className="flex w-full min-w-0 items-center gap-2 rounded-md px-1 py-1 text-left text-sm text-muted-foreground hover:bg-warning/10 hover:text-foreground"
               >
-                <span aria-hidden className="size-1.5 flex-none rounded-full bg-warning" />
+                <span
+                  aria-hidden
+                  className={cn(
+                    'size-1.5 flex-none rounded-full',
+                    i.failed || i.routine ? 'bg-destructive' : 'bg-warning',
+                  )}
+                />
                 <span className="truncate text-foreground">{i.title}</span>
                 {i.from && <span className="flex-none text-xs">· {i.from}</span>}
               </button>
@@ -502,7 +664,7 @@ export function NeedsYou({
           ))}
         </ul>
       )}
-      {(moreTickets > 0 || morePulls > 0) && (
+      {rest.length > 0 && (
         <p className="flex flex-wrap gap-x-4 px-1 text-sm">
           {moreTickets > 0 && (
             <Link href="/app/tickets" className="font-medium text-primary hover:underline">
@@ -513,6 +675,10 @@ export function NeedsYou({
             <Link href="/app/pulls" className="font-medium text-primary hover:underline">
               {morePulls} more pull {morePulls === 1 ? 'request' : 'requests'}
             </Link>
+          )}
+          {/* Failed ones have no page of their own: the arrows above go through them. */}
+          {moreFailed > 0 && (
+            <span className="text-muted-foreground">{moreFailed} more failed</span>
           )}
         </p>
       )}

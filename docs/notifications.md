@@ -15,8 +15,24 @@ in the dashboard.
 - **Whose it is.** A ticket notifies who it waits on (`waitsOn` in
   `apps/web/lib/api.ts`), but admins only for what only they decide (spending
   caps, a credential without an owner) or what has nobody else. A task in Needs
-  you without a ticket (waiting, or a pull request to review) notifies its
-  thread's starter.
+  you without a ticket (waiting, failed, or a pull request to review) notifies
+  its thread's starter.
+- **A failed thread waits on whoever started it**, everywhere at once: Home's
+  Waiting on you and the count beside Home, the sidebar (where its dot stays
+  red), the app badge, pushes ("Riley's thread failed"), Tasks' Needs you, a
+  list line's state and the Board. One rule, `apps/api/src/failed.ts`: a
+  thread of the last 14 days, not a child (its parent's teammate hears of it),
+  archived, put away for later, a playbook's run nobody joined or a routine's
+  run. After an error its runner tries again on its own (the network, an
+  overloaded API, memory; `PASSING_ERROR` in `@brigade/contracts`), it waits
+  only once those tries are over, 16 minutes after that error, so a turn that
+  comes back by itself never notifies. It counts once, by its thread: its pull
+  requests wait with it, not on their own. Home no longer offers to dismiss it:
+  Do later or Archive puts it away.
+- **A routine waits on its owner** when its last firing could not start (unless
+  the question ticket it opened is still open: that ticket is the item), or its
+  latest run failed (with the same wait after a passing error), until it runs
+  again or is paused. One item per routine ("Routine Morning digest failed").
 - **Sparse.**
   - A Needs you item is sent once it has lasted a minute, so a burst settles
     into one push, and things resolved within the minute never notify.

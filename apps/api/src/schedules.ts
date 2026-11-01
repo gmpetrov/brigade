@@ -29,6 +29,7 @@ import { actingTeammate, loadThread, shownAccounts } from './thread-spec.js'
 import { projectWhere, usableProject } from './projects.js'
 import { handleListCall, isListOperation } from './lists.js'
 import { handleWakeup, isWakeupOperation } from './wakeups.js'
+import { completeThread, isDoneOperation } from './thread-done.js'
 import { startThread } from './work.js'
 
 /** A thread still `starting` after this is taken as lost (e.g. its queued prompt went with a restart). */
@@ -529,6 +530,11 @@ export async function handleScheduleCall(
   // And a review of a pull request this thread opened.
   if (isReviewOperation(op)) {
     const output = await handleReviewCall(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
+  // And declaring the work asked here delivered (docs/board.md), refused while anything is open.
+  if (isDoneOperation(op)) {
+    const output = await completeThread(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
   // And a playbook run's case, once its event is sorted, and its report.

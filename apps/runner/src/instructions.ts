@@ -96,13 +96,15 @@ export function instructions(
     projects(spec),
     spec.teammate.kind === 'chief' && chief(spec),
     VISUALS,
-    REPLIES,
+    replies(spec),
     designs(spec),
     spec.git && code(spec),
     PREVIEWS,
     skills(spec),
     tasks(spec),
     lists(spec),
+    // A child reports, and a playbook's run ends with its report.
+    !spec.parent && !spec.playbook && DONE,
     // A playbook's run sets up none: its runs would be threads outside it.
     !spec.playbook && schedules(spec),
     children(spec),
@@ -475,6 +477,19 @@ const playbookBoard = (playbook: NonNullable<ThreadSpec['playbook']>) =>
       "to pick up (a customer's idea, say), and `update_task` adds to one already in Backlog. A playbook's run " +
       'never hands work to a teammate or writes in another thread: start a child thread for what must be done.')
 
+/**
+ * Done (docs/board.md): the teammate declares the work asked in its thread delivered, and Brigade
+ * checks nothing is still open. A thread nobody declared done stays open, however quiet.
+ */
+const DONE =
+  '## Done\n\n' +
+  'When the work asked in this thread is delivered (merged, sent, saved, answered with a result) and nothing is ' +
+  'pending, call `complete_thread` in the same turn, with a line on what was delivered. Brigade refuses it while ' +
+  'something is still open here (a ticket or question, a pull request, a child thread or a review at work, a ' +
+  'wake-up you set, a list item not ticked) and says what: deal with each, or say in your reply what remains. A ' +
+  "new message from a person reopens the thread. A merge of this thread's pull request wakes you here to do " +
+  'this. Not in a scheduled run (a thread that starts with "Scheduled run of"): it ends with its turn.'
+
 /** Lists (docs/lists.md): the library's checklists, and the items this thread works on. */
 function lists(spec: ThreadSpec) {
   const items = spec.items ?? []
@@ -550,7 +565,7 @@ const VISUALS =
   'A person can choose for you: a message that says they asked for a visual (/visual) or a design (/design) gets that one.'
 
 /** Cards a reply ends with: buttons to answer in one click, alternatives to pick (replyCard). */
-const REPLIES =
+const replies = (spec: ThreadSpec) =>
   '## Buttons and choices\n\n' +
   'When your reply ends by proposing a next step for the person to approve (send the email, post it, build it ' +
   'and open a PR), end it with the 1 to 3 answers they would most likely type, each naming the action ("Send it", ' +
@@ -561,7 +576,11 @@ const REPLIES =
   'or `!`; a button with one is not shown.\n\n' +
   'When the next step is merging the pull request you opened, write that line as `[merge] Merge #158`: it ' +
   "becomes Brigade's own merge button, shown only while the pull request can merge and to someone allowed " +
-  'to merge it, and the thread tells you once it is merged.\n\n' +
+  'to merge it, and ' +
+  // A merge wakes a thread a person talks to (docs/board.md); elsewhere it leaves a note.
+  (!spec.parent && !spec.playbook
+    ? 'you are woken here once it is merged, unless another pull request of this thread is still open.\n\n'
+    : 'the thread notes it once it is merged.\n\n') +
   "When the next step is trying the app in this thread's preview, write that line as `[preview] Start the " +
   "preview`, in the person's language: it becomes Brigade's own button, shown only while no preview runs, " +
   'which starts it as Preview at the top of the thread does, without you. When it cannot start by itself ' +

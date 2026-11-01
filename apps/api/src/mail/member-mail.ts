@@ -6,6 +6,7 @@ import { splitQuoted } from '@brigade/contracts'
 import { ingestExternal } from '../attachments.js'
 import type { Scope, ScopedDb } from '../db.js'
 import { loadThread } from '../thread-spec.js'
+import { reopenThread } from '../thread-done.js'
 import { promptWithAttachments, startThread } from '../work.js'
 import { mailFiles } from '../connectors/email.js'
 import type { Sender } from './identity.js'
@@ -72,6 +73,8 @@ export async function memberRequestThread(
     )
     // Its computer asleep: the mail waits and is tried again, as a rule's would.
     if (outcome === 'offline') throw new Error('The thread’s computer is offline')
+    // They ask again: the work is no longer done (src/thread-done.ts).
+    await reopenThread(scope, sessionId)
     return sessionId
   }
   const computer =

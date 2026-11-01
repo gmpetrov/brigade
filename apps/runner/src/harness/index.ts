@@ -103,6 +103,7 @@ import {
   computerUseTools,
   connectorTools,
   credentialTools,
+  doneTools,
   imageTools,
   libraryTools,
   OPEN_TICKET_TOOL,
@@ -308,6 +309,8 @@ function createAgent(
     ...(spec.playbook && !spec.parent ? playbookTools(callSchedule) : {}),
     // Elsewhere, a teammate may install one from the chat.
     ...(!spec.playbook && !spec.parent ? playbookInstallTools(callSchedule) : {}),
+    // Declaring the thread done, in a thread a person talks to: a child reports, a playbook decides.
+    ...doneTools(callSchedule, { child: !!spec.parent, playbook: !!spec.playbook }),
     ...previewTools(preview, credentials),
     ...(makeImage ? imageTools(makeImage) : {}),
     ...(computer ? computerUseTools(computer) : {}),

@@ -5,6 +5,7 @@
 import { onScopedWrite, scoped, type Scope } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
 import { archiveWithThread, unarchiveWithThread } from './tasks.js'
+import { reopenThread } from './thread-done.js'
 
 /** A thread and its children, archived or back; its task goes and comes back with it. */
 export async function setThreadArchived(scope: Scope, threadId: string, on: boolean) {
@@ -59,10 +60,15 @@ onScopedWrite((model, scope, operation, result) => {
   if (
     (model === 'Ticket' && row.status === 'open') ||
     (model === 'PullRequest' && row.state === 'open')
-  )
+  ) {
     void bringBack(scope, row.sessionId).catch((error) =>
       console.warn(`thread-archive: ${row.sessionId} not brought back: ${String(error)}`),
     )
+    // New work is open in it: its root is no longer done (src/thread-done.ts).
+    void reopenThread(scope, row.sessionId).catch((error) =>
+      console.warn(`thread-archive: ${row.sessionId} not reopened: ${String(error)}`),
+    )
+  }
   // A quiet thread (a mailbox rule's, an Inbox hand-over) that needs a person: in the sidebar
   // from now on. Not for a reply to approve in its own conversation: the Inbox shows it.
   if (model === 'Ticket' && row.status === 'open') {

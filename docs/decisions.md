@@ -576,7 +576,10 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   request; only owners and admins merge. Teammates merge only when a person asks, or Brigade does for Auto-merge. A pull request that conflicts
   goes back to the teammate that wrote it (Resolve conflicts): when its turn ends, Brigade merges it once GitHub
   allows it, checked every minute; failed checks and new conflicts go back to the author, three turns at most,
-  then a ticket. Merges are squash by default, audited as `pull_request.merged`.
+  then a ticket. Merges are squash by default, audited as `pull_request.merged`. A merge leaves a note in the
+  thread that opened it, and wakes its teammate once to declare the thread done or say what remains
+  (`wakeOnMerge` in `apps/api/src/thread-done.ts`, docs/board.md): a person's or a trigger's thread at the top, not
+  at work, done or archived, with no other pull request of it open.
 - **Auto-merge** (`autoMerge` in `apps/api/src/pull-requests.ts`, Preferences). An owner or admin may turn it on
   for themselves (`Member.autoMerge`, off by default). When a teammate's turn ends, Brigade looks at the pull
   requests teammates opened in that member's threads (that thread, its children, or reviewed there): once the

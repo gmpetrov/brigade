@@ -33,6 +33,7 @@ import { HTTPException } from 'hono/http-exception'
 import type { z } from 'zod'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { failedWaitingAmong } from './failed.js'
 import { hubs } from './hub.js'
 import { teammateLibraryAccess } from './library-folders.js'
 import { actorNames } from './library-history.js'
@@ -161,10 +162,15 @@ const itemRows = (
 
 /**
  * Where an item stands: ticked, else from its threads and pull requests. A thread needs you as
- * on Tasks and in the sidebar (columnOf): an open ticket, waiting, or stopped at a pull request
- * a person merges.
+ * on Tasks and in the sidebar (columnOf): an open ticket, waiting, failed and waiting on a
+ * person (`failing`: src/failed.ts, failedWaitingAmong), or stopped at a pull request a person
+ * merges. A failed thread's pull requests wait with it, not on their own.
  */
-function stateOf(done: boolean, row: ItemRow | undefined): ItemState {
+export function stateOf(
+  done: boolean,
+  row: Pick<ItemRow, 'threads' | 'pulls'> | undefined,
+  failing: { has(threadId: string): boolean },
+): ItemState {
   if (done) return 'done'
   const live = row?.threads.filter((t) => !t.session.archivedAt) ?? []
   if (
@@ -173,6 +179,7 @@ function stateOf(done: boolean, row: ItemRow | undefined): ItemState {
         s._count.tickets > 0 ||
         s.status === 'waiting' ||
         s.status === 'paused' ||
+        (s.status === 'failed' && failing.has(s.id)) ||
         (!['starting', 'running', 'failed'].includes(s.status) &&
           s.pullRequests.some(pullWaitsOnPerson)),
     )
@@ -194,7 +201,7 @@ async function views(
   lines: Map<string, ListLine>,
 ): Promise<ListItemView[]> {
   const threadIds = [...new Set(rows.flatMap((r) => r.threads.map((t) => t.session.id)))]
-  const [waiting, who, remainders] = await Promise.all([
+  const [waiting, who, remainders, failing] = await Promise.all([
     threadIds.length
       ? hubs.get(scope.workspaceId).eventsWaitingSince(threadIds)
       : ({} as Record<string, unknown>),
@@ -210,6 +217,13 @@ async function views(
           select: { id: true, remainderOfId: true },
         })
       : [],
+    failedWaitingAmong(db, [
+      ...new Set(
+        rows.flatMap((r) =>
+          r.threads.flatMap((t) => (t.session.status === 'failed' ? [t.session.id] : [])),
+        ),
+      ),
+    ]),
   ])
   // Items with a line of what remains of them still open in their file: that line carries it.
   const remaining = new Set(
@@ -220,7 +234,7 @@ async function views(
     // Gone from the file: Brigade's tick is all that is known of it.
     const done = line ? line.done : !!row.doneAt
     const by = who(row.doneByType, row.doneById)
-    const state = stateOf(done, row)
+    const state = stateOf(done, row, failing)
     return {
       id: row.id,
       text: line?.text ?? row.text,

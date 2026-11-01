@@ -58,4 +58,30 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
 
 ## Done
 
-<!-- The done fact: declared, refused while anything is open, reopened by a person. -->
+A thread's done is a fact someone declares, never one read from its silence (`Session.doneAt`,
+`doneSummary`, `doneByType`, `doneById`; `apps/api/src/thread-done.ts`).
+
+- **Its teammate declares it** with `complete_thread({ summary })`, one line on what was
+  delivered, in the turn that delivers it. Only in a top-level thread a person or a trigger
+  started: a child reports, a playbook's run ends with `playbook_report`, a schedule's run with
+  its turn. Audited as `thread.done`.
+- **Brigade refuses it while anything is open**, and says what (`openWork`): a ticket or question
+  in the thread or its children; a pull request opened from them still open; a child it waits for
+  that has not reported (a review is one); a wake-up the teammate set; a person's queued message;
+  a list item it works on not ticked, unless what remains of it is a line of its own. The write
+  checks again, so something opened meanwhile is not missed. Refusals rest on these records,
+  never on reading the brief: a teammate once declared work done without the review its brief
+  asked for in prose (Paperclip's lesson, in the investigation above).
+- **A person marks it done** (Mark done in the thread's menu, or on a Stopped row of the Board;
+  `POST /api/threads/:id/done`, optional `summary`), whatever is open: who may change the thread,
+  never a child. Reopen (`DELETE`) clears it. Audited as `thread.done` and `thread.reopened`.
+- **It reopens when a person or new work shows up**, on the root: a member's message or mail, a
+  ticket or pull request opened in it or a child. The teammate's own wake-ups, a child's report,
+  a schedule's run and Brigade's notes leave it done.
+- **A merge wakes its teammate** once per pull request, at once, asking it to declare the thread
+  done or say what remains: a merge is not done by itself (a deploy to check is often left). Not
+  while the thread works, waits or is paused, nor once done or archived, nor while another of its
+  pull requests is open, nor in a child, a schedule's or a playbook's run.
+- **Mark done stays a fallback.** Teammates declare done themselves in the common case; a thread
+  that stops without it shows as Stopped, then closes after 7 days. How often people still mark
+  threads done by hand says whether teammates need one more nudge at the end of a turn.

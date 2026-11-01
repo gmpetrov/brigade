@@ -26,7 +26,8 @@ import {
   type PushMessage,
 } from '@brigade/contracts'
 import { env } from './config.js'
-import { prisma } from './db.js'
+import { prisma, scoped, type Scope } from './db.js'
+import { FAILED_THREAD, failedWaitingAmong, failingRoutines, RECENT_FAILURES } from './failed.js'
 import { hubs } from './hub.js'
 import { laterKey, latersIn } from './later.js'
 import { waitingNow } from './pull-requests.js'
@@ -157,7 +158,9 @@ async function latestAskers(sessionIds: string[], now: Date) {
 }
 
 /** What each member of an organization may be notified of in one workspace. */
-async function workspaceItems(workspaceId: string, members: Recipient[], now: Date) {
+export async function workspaceItems(scope: Scope, members: Recipient[], now: Date) {
+  const { workspaceId } = scope
+  const db = scoped(scope)
   const fresh = new Date(now.getTime() - FRESH_MS)
   const wantsFinished = members.some((m) => m.notify !== 'needed')
   const wantsReplies = members.some((m) => m.notify === 'everything')
@@ -270,6 +273,30 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
         })
       : [],
   ])
+  // Failed threads that may wait on whoever started them (src/failed.ts), lately active, and
+  // routines waiting on their owner.
+  const [failed, routines] = await Promise.all([
+    prisma.session.findMany({
+      where: {
+        workspaceId,
+        ...FAILED_THREAD,
+        updatedAt: { gte: new Date(now.getTime() - RECENT_FAILURES) },
+      },
+      select: thread.select,
+    }),
+    failingRoutines(db, {}, now),
+  ])
+  // Which of those failed threads wait on a person, and which of the tasks' (whenever active).
+  const failing = await failedWaitingAmong(
+    db,
+    [
+      ...new Set([
+        ...failed.map((t) => t.id),
+        ...tasks.flatMap((t) => (t.session!.status === 'failed' ? [t.session!.id] : [])),
+      ]),
+    ],
+    now,
+  )
 
   const items = new Map<string, Item[]>(members.map((m) => [m.id, []]))
   /** The member put the thread away for later: nothing in it waits on them (src/later.ts). */
@@ -343,11 +370,45 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
     }
   }
 
+  // Failed threads: their starter's, as Home and the sidebar count them; told to them.
+  for (const s of failed) {
+    if (!failing.has(s.id) || !items.has(s.startedByMemberId)) continue
+    if (putAway({ id: s.startedByMemberId }, s)) continue
+    const key = `needs:${s.id}`
+    counted.get(s.startedByMemberId)!.add(key)
+    add(s.startedByMemberId, {
+      key,
+      workspaceId,
+      needs: true,
+      title: `${s.teammate.name}'s thread failed`,
+      body: s.title,
+      url: threadUrl(workspaceId, s.id),
+      tag: s.id,
+    })
+  }
+
+  // Routines whose last firing could not start or whose latest run failed: their owner's.
+  for (const r of routines) {
+    if (!items.has(r.ownerMemberId)) continue
+    const key = `routine:${r.scheduleId}`
+    counted.get(r.ownerMemberId)!.add(key)
+    add(r.ownerMemberId, {
+      key,
+      workspaceId,
+      needs: true,
+      title: r.couldNotStart ? `Routine ${r.title} could not start` : `Routine ${r.title} failed`,
+      body: r.error ?? 'Its last run failed',
+      url: r.runId ? threadUrl(workspaceId, r.runId) : `/app/routines?workspace=${workspaceId}`,
+      tag: r.runId ?? r.scheduleId,
+    })
+  }
+
   // Tasks in Needs you: every member's sidebar shows them; the thread's starter is told,
   // unless it is there for a ticket, which says whose it is.
   for (const task of tasks) {
     const s = task.session!
-    if (columnOf({ completedAt: task.completedAt, session: s }) !== 'needs_you') continue
+    if (columnOf({ completedAt: task.completedAt, session: s }, failing.has(s.id)) !== 'needs_you')
+      continue
     const key = `needs:${s.id}`
     for (const m of members) if (!putAway(m, s)) counted.get(m.id)!.add(key)
     if (
@@ -356,14 +417,16 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
       putAway({ id: s.startedByMemberId }, s)
     )
       continue
-    const review = s.status !== 'waiting'
     add(s.startedByMemberId, {
       key,
       workspaceId,
       needs: true,
-      title: review
-        ? `${s.teammate.name} opened a pull request for you to review`
-        : `${s.teammate.name} needs you`,
+      title:
+        s.status === 'failed'
+          ? `${s.teammate.name}'s thread failed`
+          : s.status === 'waiting'
+            ? `${s.teammate.name} needs you`
+            : `${s.teammate.name} opened a pull request for you to review`,
       body: task.title,
       url: threadUrl(workspaceId, s.id),
       tag: s.id,
@@ -477,7 +540,7 @@ export async function sweep(now = new Date(), organizationId?: string) {
     const items = new Map<string, Item[]>(orgMembers.map((m) => [m.id, []]))
     const badges = new Map<string, number>(orgMembers.map((m) => [m.id, 0]))
     for (const w of workspaces) {
-      const found = await workspaceItems(w.id, orgMembers, now)
+      const found = await workspaceItems({ organizationId, workspaceId: w.id }, orgMembers, now)
       for (const m of orgMembers) {
         items.get(m.id)!.push(...found.items.get(m.id)!)
         badges.set(m.id, badges.get(m.id)! + found.counted.get(m.id)!.size)

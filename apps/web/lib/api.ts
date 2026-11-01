@@ -309,6 +309,18 @@ export function useApi<T>(path: string | null, live?: readonly ApiToBrowser['typ
   return { data, error, reload, setData }
 }
 
+/**
+ * Asks again at `at` (a time the API gave), when what it said changes then without an event:
+ * a failed thread starts waiting on a person once its runner's own retries are over.
+ */
+export function useRecheck(at: string | null | undefined, reload: () => Promise<void>) {
+  useEffect(() => {
+    if (!at) return
+    const timer = setTimeout(() => void reload(), Math.max(0, Date.parse(at) - Date.now()) + 1_000)
+    return () => clearTimeout(timer)
+  }, [at, reload])
+}
+
 // Response shapes used by the dashboard.
 export type Me = {
   user: { id: string; name: string; email: string; image: string | null }
@@ -447,6 +459,12 @@ export type ThreadSummary = {
   /** Set while archived: out of the sidebar until someone writes in it. */
   archivedAt?: string | null
   /**
+   * When the work asked in it was declared done (docs/board.md), by its teammate or a person,
+   * with a line on what was delivered; a person's new message reopens it.
+   */
+  doneAt?: string | null
+  doneSummary?: string | null
+  /**
    * When this member put it away for later: out of their list (the filter's Later shows it)
    * and of what waits on them, until something new happens in it.
    */
@@ -521,6 +539,8 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   lastSeq: number
   /** In a child a person talked with: when its last message goes to the parent, unless sent sooner. */
   reportDueAt: string | null
+  /** Who declared it done, by name, while it is. */
+  doneBy?: string | null
   teammate: { id: string; name: string; title: string; harness: string; model: string | null }
   teammates: {
     joinedAt: string
@@ -1143,22 +1163,50 @@ export type LooseEnd =
       quietSince: string
       offline: boolean
     }
-  | {
-      kind: 'failed'
-      key: string
-      at: string
-      thread: { id: string; title: string }
-      teammate: { id: string; name: string }
-      error: string | null
-    }
-  | {
-      kind: 'routine'
-      key: string
-      at: string
-      schedule: { id: string; title: string }
-      run: { id: string } | null
-      error: string | null
-    }
+
+/** A failed thread waiting on this member (apps/api/src/failed.ts, from /home/waiting). */
+export type FailedThread = {
+  id: string
+  title: string
+  teammate: { id: string; name: string }
+  /** Since when it waits on them: its last error, or past the retries its runner may still make. */
+  at: string
+  /** Its last error's first line, when it said something. */
+  error: string | null
+}
+
+/** A routine waiting on its owner: its last firing could not start, or its latest run failed. */
+export type FailingRoutine = {
+  scheduleId: string
+  title: string
+  /** Its latest run, when it failed: where to try it again. */
+  runId: string | null
+  /** The thread that run reports to, when it reports to one. */
+  runParentId: string | null
+  couldNotStart: boolean
+  at: string
+  error: string | null
+}
+
+/** What failed and waits on this member, beside their tickets and pull requests (/home/waiting). */
+export type HomeWaiting = {
+  threads: FailedThread[]
+  routines: FailingRoutine[]
+  /** When one that a retry of its own may still mend starts waiting: ask again then. */
+  recheckAt: string | null
+}
+
+/**
+ * The failed threads and routines waiting on this member, as Home lists and the sidebar counts
+ * them: a failed thread with a ticket waiting on them is that ticket's item, not one more.
+ */
+export function failuresWaiting(waiting: HomeWaiting | undefined, tickets: Ticket[]) {
+  const ticketed = new Set(tickets.flatMap((t) => (t.session ? [t.session.id] : [])))
+  return {
+    threads: (waiting?.threads ?? []).filter((t) => !ticketed.has(t.id)),
+    routines: waiting?.routines ?? [],
+  }
+}
 
 /** A thread with a teammate's reply the member has not read (apps/api/src/home.ts). */
 export type HomeResult = {

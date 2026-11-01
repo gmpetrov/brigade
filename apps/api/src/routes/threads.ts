@@ -26,6 +26,7 @@ import {
   HandBack,
   InterruptThread,
   inParallel,
+  MarkThreadDone,
   mayChangeQueued,
   mentionsToText,
   MESSAGE_COMMANDS,
@@ -98,6 +99,8 @@ import { waitingOnPerson } from '../pull-requests.js'
 import { reopenOnMessage } from '../tasks.js'
 import { recorder } from '../teaching.js'
 import { setThreadArchived } from '../thread-archive.js'
+import { markDone, markReopened, reopenThread } from '../thread-done.js'
+import { actorNames } from '../library-history.js'
 import { latersOf, setLater } from '../later.js'
 import { descendants, reportConversation, reportOf } from '../children.js'
 import { deleteThread } from '../thread-delete.js'
@@ -626,11 +629,15 @@ export const threads = new Hono<AppEnv>()
     // This member's pin and later, for the thread's menu in its details.
     const mine = { memberId_sessionId: { memberId: c.var.scope.memberId, sessionId: thread.id } }
     const hub = hubs.get(c.var.scope.workspaceId)
-    const [pin, later, presence, waitingSince] = await Promise.all([
+    const [pin, later, presence, waitingSince, names] = await Promise.all([
       c.var.db.threadPin.findUnique({ where: mine, select: { pinnedAt: true } }),
       c.var.db.threadLater.findUnique({ where: mine, select: { laterAt: true } }),
       hub.presence([thread.computer.id]),
       hub.eventsWaitingSince([thread.id]),
+      // Who declared it done, by name.
+      thread.doneByType && thread.doneById
+        ? actorNames(c.var.db, [{ type: thread.doneByType, id: thread.doneById }])
+        : null,
     ])
     return c.json({
       ...thread,
@@ -642,6 +649,7 @@ export const threads = new Hono<AppEnv>()
       },
       pinnedAt: pin?.pinnedAt.toISOString() ?? null,
       laterAt: later?.laterAt.toISOString() ?? null,
+      doneBy: (thread.doneAt && names?.(thread.doneByType, thread.doneById)?.name) || null,
       // Where it is going, not the message that goes with it.
       move: movePublic(thread.move),
       attachments: thread.attachments.map((a) => toInfo(a.attachment, a.path)),
@@ -1215,6 +1223,8 @@ export const threads = new Hono<AppEnv>()
       if (picking) await applyPick(db, scope, { type: 'member', id: scope.memberId }, picking)
       if (thread.archivedAt) await setThreadArchived(scope, thread.id, false)
       await reopenOnMessage(scope, thread)
+      // A person asks again: the work is no longer done (src/thread-done.ts).
+      await reopenThread(scope, thread.id)
       return c.json({ ok: true, paused: false, delivery: 'moving' })
     }
     const outcome = await promptWithAttachments(
@@ -1247,6 +1257,8 @@ export const threads = new Hono<AppEnv>()
       ...(joined.length > 0 ? { data: { joined } } : {}),
     })
     await reopenOnMessage(scope, thread)
+    // A person asks again: the work is no longer done (src/thread-done.ts).
+    await reopenThread(scope, thread.id)
     // starting: a stopped computer starts first, and gets the message when its runner connects.
     return c.json({
       ok: true,
@@ -1923,6 +1935,29 @@ export const threads = new Hono<AppEnv>()
   /** Archive it: out of everyone's sidebar until someone writes in it; DELETE brings it back. */
   .post('/:id/archive', async (c) => archive(c, true))
   .delete('/:id/archive', async (c) => archive(c, false))
+
+  /**
+   * Mark it done (docs/board.md), with a line on what was delivered or none: who may change it,
+   * whatever is still open in it, as they decide. Not a child. DELETE reopens it.
+   */
+  .post('/:id/done', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    mayChange(scope, thread)
+    // Its line, when one came with it.
+    const { summary } = c.req.header('content-type')?.startsWith('application/json')
+      ? await parseBody(c.req.raw, MarkThreadDone)
+      : {}
+    await markDone(db, scope, thread, summary)
+    return c.json({ ok: true })
+  })
+  .delete('/:id/done', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    mayChange(scope, thread)
+    await markReopened(db, scope, thread)
+    return c.json({ ok: true })
+  })
 
   /** Delete it for good, with its files in the bucket: its starter or an admin. */
   .delete('/:id', async (c) => {

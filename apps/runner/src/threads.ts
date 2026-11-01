@@ -18,8 +18,11 @@ import {
   handbackMessage,
   mayChangeQueued,
   memoryFilePath,
+  MEMORY_STOPPED,
   mentionedIds,
   MessageAttachment,
+  PASSING_ERROR,
+  RETRY_AFTER_MS as RETRY_DEFAULTS,
   THREAD_NOTE_SOURCE,
   TURN_WAITING_SOURCE,
   turnAnswer,
@@ -89,24 +92,19 @@ const OUT_OF_TURN = new Set<AgentEvent['type']>([
   'account.switched',
 ])
 
-/**
- * Errors that pass (a full disk, the network, Claude's API down or overloaded, the harness's
- * process gone, as the kernel kills it when the computer runs out of memory): a turn that
- * failed on one is tried again on its own, after RETRY_AFTER_MS. Out of usage is not one
- * of them: that turn moves to another account, or pauses (HarnessThread.run).
- */
-const PASSING_ERROR =
-  /ENOSPC|no space left|EAI_AGAIN|ENOTFOUND|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|socket hang up|fetch failed|network error|overloaded|internal server error|api_error|service unavailable|bad gateway|gateway time-?out|\b(500|502|503|504|529)\b|bridge closed before the turn finished/i
+// Errors that pass (PASSING_ERROR, in @brigade/contracts with the waits between tries, which the
+// API reads too): a turn that failed on one is tried again on its own, after RETRY_AFTER_MS.
+// Out of usage is not one of them: that turn moves to another account, or pauses
+// (HarnessThread.run).
 /** A full disk: tried again only once this much is free on it. */
 const DISK_ERROR = /ENOSPC|no space left/i
 const FREE_BYTES = 1024 ** 3
 /** How long before each try of a turn that failed on a passing error; then a person tries again. */
 const RETRY_AFTER_MS = Number(process.env.BRIGADE_RETRY_MS)
-  ? Array<number>(3).fill(Number(process.env.BRIGADE_RETRY_MS))
-  : [60_000, 5 * 60_000, 15 * 60_000]
-/** What a turn's error says once the memory guard stopped it (stoppedForMemory). */
+  ? Array<number>(RETRY_DEFAULTS.length).fill(Number(process.env.BRIGADE_RETRY_MS))
+  : RETRY_DEFAULTS
+/** What a turn's error says once the memory guard stopped it (stoppedForMemory): MEMORY_STOPPED. */
 const memoryStopped = (why: string) => `Stopped to give the computer memory back: ${why}.`
-const MEMORY_STOPPED = /^Stopped to give the computer memory back/
 /**
  * How long a turn waits for the computer to have memory for it (memoryRoom) before it starts
  * anyway, when fewer than TURNS_ALWAYS run: none of them may end soon to give memory back.
