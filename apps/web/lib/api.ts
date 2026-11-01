@@ -41,6 +41,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** The reply's JSON body, for what it says beyond `error`. */
+    readonly body?: unknown,
   ) {
     super(message)
   }
@@ -60,7 +62,11 @@ export async function api<T = unknown>(
   if (response.status === 204) return undefined as T
   const body = await response.json().catch(() => ({}))
   if (!response.ok)
-    throw new ApiError((body as { error?: string }).error ?? response.statusText, response.status)
+    throw new ApiError(
+      (body as { error?: string }).error ?? response.statusText,
+      response.status,
+      body,
+    )
   return body as T
 }
 
