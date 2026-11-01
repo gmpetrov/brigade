@@ -12,6 +12,20 @@
 /** The MCP server Claude Code finds Brigade's tools under (the bridge's harness-tools). */
 const PREFIX = 'mcp__harness-tools__'
 
+/** App tools that are the thread's alone, through whichever account. */
+const APP_TOOLS = [
+  'github_create_pull_request',
+  'github_mark_ready_for_review',
+  'github_review_pull_request',
+  'github_merge_pull_request',
+]
+
+/**
+ * An App tool's names: bare with one account of the App, suffixed with the account's when there
+ * are several (connectorTools).
+ */
+const appTool = (name: string) => [name, `${name}_*`]
+
 /** Brigade's tools that are the thread's alone, by name; a name ending in "*" is a prefix. */
 export const THREAD_TOOLS = [
   // Its result and its end: a child's report, a playbook run's case and outcome, the task and
@@ -34,7 +48,8 @@ export const THREAD_TOOLS = [
   'open_ticket',
   'message_thread',
   // Work the thread then owns and answers for: tasks, routines, playbooks and pull requests
-  // (their reviews, and merging, are its decisions).
+  // (opening, readying, reviewing and merging one are its decisions: a review a sub-agent posted
+  // would stand as the thread's verdict).
   'create_task',
   'create_schedule',
   'update_schedule',
@@ -42,9 +57,7 @@ export const THREAD_TOOLS = [
   'configure_playbook',
   'activate_playbook',
   'update_playbook',
-  'github_create_pull_request_*',
-  'github_mark_ready_for_review_*',
-  'github_merge_pull_request_*',
+  ...APP_TOOLS.flatMap(appTool),
 ]
 
 /** What a sub-agent is told for one of them; {tool} is the tool's name. */

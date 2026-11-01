@@ -112,8 +112,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
     end (`report`, `playbook_triage`, `playbook_report`, `complete_task`, `complete_item`), what it waits on and what
     wakes it (`start_child`, `cancel_child`, `set_wakeup`, `cancel_wakeup`, `request_review`, `start_dry_run`), what
     it says to people and other threads (`open_ticket`, `message_thread`), and work the thread then owns (`create_task`,
-    schedules, triggers, playbooks, and GitHub's create, ready-for-review and merge of pull requests, whichever
-    account). The refusal says only the thread may call it, and to give the result in the sub-agent's final answer.
+    schedules, triggers, playbooks, and GitHub's create, ready-for-review, review and merge of pull requests, by the
+    tool's bare name with one GitHub account and suffixed with several). The refusal says only the thread may call it, and to give the result in the sub-agent's final answer.
     The tools that do the work (files, code, searches, the library, previews, Apps) stay the sub-agent's.
   - **A child's report waits for its own sub-agents.** Called while the thread's own sub-agents are at work, `report`
     is refused ("Not sent: … still at work"), and the teammate reports once their results are in. Background commands

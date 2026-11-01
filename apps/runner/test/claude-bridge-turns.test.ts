@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { claudeSettingsEnv } from '../src/harness/claude-settings.js'
 import { REFUSAL, THREAD_TOOLS } from '../src/harness/thread-tools.js'
+import { connectorTools } from '../src/harness/tools.js'
 import { bridgeTurn } from './fixtures/claude-bridge.js'
 
 // A turn of the Claude Code bridge (patched), with a stand-in for Claude Code that plays what
@@ -174,3 +175,42 @@ test('without the setting, a sub-agent may call report as before', async () => {
   const [sub] = await decide([{ tool: brigade('report'), agent: true }], env)
   assert.deepEqual(sub!.decisions, [])
 })
+
+/** GitHub's tools as a thread gets them: bare with one account, suffixed with several. */
+function githubTools(accounts: string[]) {
+  const operations = [
+    'github_create_pull_request',
+    'github_mark_ready_for_review',
+    'github_review_pull_request',
+    'github_merge_pull_request',
+    'github_get_pull_request',
+  ].map((name) => ({ name, description: name, write: true, inputSchema: { type: 'object' } }))
+  const grants = accounts.map((account, i) => ({
+    connectionId: `c${i}`,
+    kind: 'github',
+    label: 'GitHub',
+    externalAccount: account,
+    operations,
+  }))
+  return Object.keys(connectorTools(grants as never, async () => ({}) as never))
+}
+
+for (const accounts of [['gmpetrov'], ['gmpetrov (all repositories)', 'acme']])
+  test(`a sub-agent may not open, ready, review or merge a pull request (${accounts.length} GitHub account${accounts.length > 1 ? 's' : ''})`, async () => {
+    const names = githubTools(accounts)
+    const calls = names.flatMap((name) => [
+      { tool: brigade(name), agent: true },
+      { tool: brigade(name), agent: false },
+    ])
+    const decided = await decide(calls)
+    for (const call of decided) {
+      const denied = call.decisions.some((d) => d.permissionDecision === 'deny')
+      // Reading a pull request stays the sub-agent's; the thread's own calls all go through.
+      const threadOnly = call.agent && !call.tool.includes('github_get_pull_request')
+      assert.equal(
+        denied,
+        threadOnly,
+        `${call.tool} from ${call.agent ? 'a sub-agent' : 'the thread'}`,
+      )
+    }
+  })
