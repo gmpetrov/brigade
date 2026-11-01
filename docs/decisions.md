@@ -99,6 +99,38 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   on with one; fork sub-agents, on by default in SDK sessions since Claude Code 2.1.302, stay off
   (`CLAUDE_CODE_FORK_SUBAGENT=0`) until that is decided on its own. Its bundled skills stay: Claude Code turns a skill
   off by name, whatever it comes from, so it would also turn off a member's or a repository's skill of the same name.
+- **Background work holds the turn; sub-agents work for the thread.** A Claude Code teammate's background work
+  (sub-agents started with the Agent tool, shells and Monitors run in the background) reports back in a turn Claude
+  Code starts by itself, and dies with Claude Code's process. So the bridge patch keeps the turn open, and the process
+  alive, while any of it runs and until the teammate has answered the last result: the thread stays Working, lists
+  that work, and a person's message goes straight in (`brigade_waiting`). The session is not parked while the turn is
+  open. Only the memory guard, a runner stop or a person's Stop cut it short.
+  - **Thread-level tools are refused to sub-agents.** A sub-agent inherits every Brigade tool but sees only its part
+    of the work: one that called `report` sent its partial result to the parent as the child's final one. Claude Code
+    gives a PreToolUse hook `agent_id` only for a sub-agent's call, so the bridge's hook refuses the tools that act for
+    the whole thread (`apps/runner/src/harness/thread-tools.ts`, passed as `BRIGADE_THREAD_TOOLS`): its result and
+    end (`report`, `playbook_triage`, `playbook_report`, `complete_task`, `complete_item`), what it waits on and what
+    wakes it (`start_child`, `cancel_child`, `set_wakeup`, `cancel_wakeup`, `request_review`, `start_dry_run`), what
+    it says to people and other threads (`open_ticket`, `message_thread`), and work the thread then owns (`create_task`,
+    schedules, triggers, playbooks, and GitHub's create, ready-for-review, review and merge of pull requests, by the
+    tool's bare name with one GitHub account and suffixed with several). The refusal says only the thread may call it, and to give the result in the sub-agent's final answer.
+    The tools that do the work (files, code, searches, the library, previews, Apps) stay the sub-agent's.
+  - **A child's report waits for its own sub-agents.** Called while the thread's own sub-agents are at work, `report`
+    is refused ("Not sent: … still at work"), and the teammate reports once their results are in. Background commands
+    do not hold it. The report reaches the parent when the turn ends, which the hold above puts after the background
+    work.
+  - **A turn the memory guard stops** loses its background work with Claude Code's process. Its error event says
+    `retrying` when the runner tries the turn again on its own (stopped for memory, a passing error, tries left), and
+    then a child's report is not sent: it waits for the try's end, where the work goes on. The try is told what was
+    running in the background, and to resume each sub-agent with SendMessage to its id (Claude Code keeps their
+    transcripts and names the stopped ones) rather than start it over.
+  - **Codex.** Codex's sub-agents (its `multi_agent` feature, on by default in 0.166) are threads of their own in its
+    app-server. The bridge serves Brigade's tools only to the thread's own turn, so a sub-agent's call to any Brigade
+    tool is refused, with a reason that says to give the result to the thread (the Codex bridge patch); before, the
+    same refusal said only "a tool for an inactive turn". Codex's sub-agents run inside its turn, which Codex ends
+    itself: the bridge does not hold a Codex turn for background work, and the thread does not list it. Codex reports
+    no background tasks, so the report gate never holds a Codex child. None of this was checked in a real Codex
+    session.
 - **Codex's own memory is off** (`apps/runner/src/harness/codex-settings.ts`, in the config every Codex run starts
   with): off by default, but a member's own `config.toml` could turn it on, and Brigade's memory is its own.
 - **Cloud computer install.** The API creates the VM through `ComputerProvider` (no account secrets reach it), then

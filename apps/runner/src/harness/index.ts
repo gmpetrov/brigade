@@ -16,6 +16,7 @@ import {
   LIBRARY_FILE_MAX,
   type AccountRef,
   type AgentEvent,
+  type BackgroundWork,
   PROPOSE_TEAM_TOOL,
   type QuestionAnswer,
   SHOW_WIDGET_TOOL,
@@ -96,6 +97,7 @@ import { ReplyWatch, terminalTools } from './replies.js'
 import { callFiles } from './call-files.js'
 import { stageStream } from '../uploads.js'
 import { readCommand, reportWithFiles } from './report-files.js'
+import { backgroundTasks, reportWaitsFor } from './background.js'
 import {
   ASK_USER_TOOL,
   appTools,
@@ -434,6 +436,8 @@ export class HarnessThread {
   private handingOver = false
   /** What the person has read of the turn: a turn without a reply is asked for one. */
   private readonly replies = new ReplyWatch()
+  /** What the running turn runs in the background now (background.ts): a report waits on its agents. */
+  private background: BackgroundWork[] = []
   /**
    * The running turn is answered, and completed for everyone: Claude Code only writes its guess
    * at the person's next message before its process ends (the bridge's drain). `done` settles
@@ -1079,6 +1083,7 @@ export class HarnessThread {
           this.browserUsed(event.toolName)
         if (event.type === 'message.done') this.remember('assistant', event.text)
         this.replies.see(event)
+        this.noteBackground(event)
         // A turn's usage says whose account spent it: the stream's own, which after running out
         // of usage (switchTo) is the next account's, not the one the turn started on.
         this.emitEvent(
@@ -1674,7 +1679,7 @@ export class HarnessThread {
       },
       this.context.callTask,
       (call) =>
-        reportWithFiles(call, {
+        reportWithFiles(this.reportsWhenDone(call), {
           read: (file, max) => this.readFile(file, max, 'Files sent with a report'),
           upload: (name, bytes) =>
             this.context.uploadFile({
@@ -1871,7 +1876,23 @@ export class HarnessThread {
   }
 
   private emit(event: DistributiveOmit<AgentEvent, 'at'>) {
-    this.emitEvent({ ...event, at: new Date().toISOString() } as AgentEvent)
+    const stamped = { ...event, at: new Date().toISOString() } as AgentEvent
+    this.noteBackground(stamped)
+    this.emitEvent(stamped)
+  }
+
+  /** What the turn runs in the background now, from its events (background.ts). */
+  private noteBackground(event: AgentEvent) {
+    const background = backgroundTasks(event)
+    if (background) this.background = background
+    if (event.type === 'turn.completed' || event.type === 'error') this.background = []
+  }
+
+  /** A child's report waits for the teammate's own sub-agents (reportWaitsFor). */
+  private reportsWhenDone(call: Parameters<ScheduleCaller>[0]) {
+    const waits = call.operation.name === 'report' ? reportWaitsFor(this.background) : undefined
+    if (waits) throw new Error(waits)
+    return call
   }
 
   /**

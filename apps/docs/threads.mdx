@@ -57,6 +57,8 @@ Type **/** at the start of a message for commands: **/visual**, **/design**, and
 - **Steps.** Each command run, file read or edited, search and browser action is a line you can open. Steps in a row
   fold into one line, such as "Ran 3 commands, read 2 files". A turn longer than 30 seconds folds under
   **Worked for** its duration. While it works, the thread shows how many steps and how long.
+- **Background work.** When a teammate runs sub-agents or commands in the background, the thread lists them and
+  stays **Working** until they finish and the teammate has read their results. You can still send a message meanwhile.
 - **Cards.** Plans, approvals, questions, pull requests, and a line for each child thread started.
 - **Tickets.** What the teammate is waiting on shows in a card above the conversation, and under
   [Needs you](/needs-you).
@@ -108,7 +110,9 @@ instead.
 A teammate can hand part of the work to a child thread, for another teammate or to work in parallel. **Run in
 parallel** on a queued message makes one too. Child threads sit folded under their parent in the
 sidebar; open them with the arrow after its title. The parent shows when a child needs you, and the child's last
-message goes back to the parent.
+message goes back to the parent. A child reports to its parent once all its own work is done, its background work
+included. If its run is stopped and tried again (for example when the computer runs short of memory), the report waits
+for the new try.
 
 ## Move a thread to another computer
 
