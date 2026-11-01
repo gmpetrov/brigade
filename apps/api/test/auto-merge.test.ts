@@ -681,4 +681,63 @@ describe('auto-merge', { skip: !database && 'no database answers' }, () => {
     await turnEnded(parent)
     assert.ok(merged.has(50), 'a report delivered by the old code holds nothing')
   })
+
+  test('a waking report is not delivered as an earlier quiet one', async () => {
+    await autoMerge(ids.owner, true)
+    const { child, parent } = await openedInChild(61, { awaited: false, status: 'nothing' })
+    await db.session.updateMany({ where: { id: child }, data: { status: 'running' } })
+    let pending: Promise<void> | undefined
+    await db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "Session" WHERE id = ${child} FOR UPDATE`
+        const [{ pid }] = await tx.$queryRaw<{ pid: number }[]>`SELECT pg_backend_pid() AS pid`
+        // Delivery reads the old quiet report, then its UPDATE waits for this row lock.
+        pending = delivered(child)
+        let waiting = false
+        for (let n = 0; n < 300; n++) {
+          const blockers = await tx.$queryRaw<{ pid: number }[]>`
+            SELECT pid FROM pg_stat_activity WHERE ${pid} = ANY(pg_blocking_pids(pid))`
+          if (blockers.length) {
+            waiting = true
+            break
+          }
+          await new Promise((resolve) => setTimeout(resolve, 5))
+        }
+        assert.ok(waiting, 'deliverReport read the old report and waits to claim its row')
+        // A new report call lands meanwhile, resetting reportDeliveredAt as the tool does.
+        const { handleChildCall } = await import('../src/children.js')
+        const current = await tx.session.findFirstOrThrow({ where: { id: child } })
+        await handleChildCall(
+          tx as never,
+          scope,
+          current as never,
+          { id: ids.riley, name: 'Riley' },
+          { name: 'report', status: 'report', summary: 'New work: please review this PR' } as never,
+        )
+      },
+      { timeout: 10000 },
+    )
+    await pending
+    const after = await db.session.findFirstOrThrow({ where: { id: child } })
+    assert.equal((after.report as { status: string }).status, 'report')
+    assert.equal(after.reportDeliveredAt, null, 'the stale delivery claimed nothing')
+    assert.equal(await reportWakeup(parent), null)
+
+    await db.session.updateMany({ where: { id: child }, data: { status: 'idle' } })
+    const { noteChildEvents } = await import('../src/children.js')
+    await Promise.all([
+      turnEnded(child),
+      noteChildEvents({ ...scope, id: child, parentId: parent }, [
+        { event: { type: 'turn.completed', at: new Date().toISOString() } },
+      ]),
+    ])
+    const delivered2 = await db.session.findFirstOrThrow({ where: { id: child } })
+    assert.ok(delivered2.reportDeliveredAt, 'the new report is delivered as its turn ends')
+    const wakeup = await reportWakeup(parent)
+    assert.equal(wakeup?.status, 'pending', 'with its own wake-up')
+    assert.ok(
+      !merged.has(61),
+      'the fresh report is not taken for an old one and has not reached its parent',
+    )
+  })
 })

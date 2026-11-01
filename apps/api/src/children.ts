@@ -238,9 +238,15 @@ export async function deliverReport(scope: Scope, childId: string) {
   // Claimed and its parent's wake-up stored in one transaction: a report delivered that wakes its
   // parent always has its wake-up (reportSource), which is what auto-merge holds by. One without
   // was delivered before wake-ups kept it, and holds nothing (src/pull-requests.ts).
+  // Only the report it read: a newer one written meanwhile (the child's next turn) is not stamped
+  // with this one's wake or none; its own delivery, as that turn ends, claims it.
   const { count, wakeupId } = await db.$transaction(async (tx) => {
     const { count } = await tx.session.updateMany({
-      where: { id: child.id, reportDeliveredAt: null },
+      where: {
+        id: child.id,
+        reportDeliveredAt: null,
+        report: { equals: child.report as Prisma.InputJsonValue },
+      },
       data: { reportDeliveredAt: stamp },
     })
     const wakeupId =
