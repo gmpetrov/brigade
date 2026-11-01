@@ -135,20 +135,26 @@ export async function extractText(bytes: Uint8Array, contentType: string) {
 
 const sha256 = (data: Uint8Array | string) => createHash('sha256').update(data).digest('hex')
 
-type DocumentRow = {
-  id: string
-  path: string
-  contentType: string
-  size: number
-  indexed: boolean
-  updatedAt: Date
-  createdAt: Date
-  createdByType: string | null
-  createdById: string | null
-  updatedByType: string | null
-  updatedById: string | null
-  updatedInSessionId: string | null
-}
+/**
+ * The columns a listed library file is made from: never its `text`, which a list
+ * does not show and which would make every listing carry every file's contents.
+ */
+export const LIBRARY_FILE_COLUMNS = {
+  id: true,
+  path: true,
+  contentType: true,
+  size: true,
+  indexed: true,
+  updatedAt: true,
+  createdAt: true,
+  createdByType: true,
+  createdById: true,
+  updatedByType: true,
+  updatedById: true,
+  updatedInSessionId: true,
+} as const satisfies Prisma.DocumentSelect
+
+type DocumentRow = Prisma.DocumentGetPayload<{ select: typeof LIBRARY_FILE_COLUMNS }>
 
 /** Library files as the dashboard lists them, with who made and changed each. */
 export async function libraryFiles(db: ScopedDb, rows: DocumentRow[]): Promise<LibraryFile[]> {

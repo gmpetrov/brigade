@@ -48,6 +48,7 @@ import {
   ensureMemory,
   isEditable,
   isMarkdown,
+  LIBRARY_FILE_COLUMNS,
   libraryFile,
   libraryFileOf,
   libraryFiles,
@@ -144,6 +145,7 @@ export const library = new Hono<AppEnv>()
     const rows = await db.document.findMany({
       where: { kind: 'library', deletedAt: null },
       orderBy: { path: 'asc' },
+      select: LIBRARY_FILE_COLUMNS,
     })
     return c.json(await libraryFiles(db, rows))
   })
@@ -155,6 +157,7 @@ export const library = new Hono<AppEnv>()
       db.document.findMany({
         where: { kind: 'library', deletedAt: null },
         orderBy: { path: 'asc' },
+        select: LIBRARY_FILE_COLUMNS,
       }),
       explicitFolders(db),
       db.documentPin.findMany({
