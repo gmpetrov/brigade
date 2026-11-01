@@ -949,6 +949,15 @@
   }
 }
 
+/* The Inbox's columns each scroll on their own on a wide screen: past a column's end, the
+ * page neither scrolls nor bounces (a Mac's rubber band), so its header stays in place. */
+@media (width >= 64rem) {
+  html:has([data-inbox]) {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
 /* Narrower, the thread's details still sit beside the expanded thread, not over it. */
 @media (64rem <= width < 80rem) {
   [data-slot='sidebar-inset']:has([data-details-panel]) [data-thread-panel][data-expanded] {
