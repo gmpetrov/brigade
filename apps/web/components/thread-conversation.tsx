@@ -106,6 +106,7 @@ import {
   restoreDesignEdits,
   setDesignEdits,
   setEditsSender,
+  type EditsSender,
   updateDesignEdit,
   useDesignEdits,
   withUnsent,
@@ -761,6 +762,9 @@ export function ThreadConversation({
     ? (codeTeammateId ?? thread.data?.teammate.id)
     : undefined
   const changedFiles = useChangesCount(thread.data?.id, changesTeammate, status)
+  // Above the return while the thread loads: hooks after it would change their count.
+  const sendRef = useRef<() => Promise<void>>(async () => {})
+  const sendEdits = useCallback(() => void sendRef.current().catch(() => undefined), [])
   if (!thread.data)
     return thread.error ? (
       <p className={cn(column, 'pt-6 text-sm text-destructive-text')}>{thread.error.message}</p>
@@ -1022,30 +1026,12 @@ export function ThreadConversation({
 
   // The canvas of a design beside the thread adds its comments here while this composer can take
   // them; over the page, it hides the composer and sends the edits from there.
-  const sendRef = useRef(send)
   sendRef.current = send
-  const sendEdits = useCallback(() => void sendRef.current().catch(() => undefined), [])
   const editsDisabled = deciding
     ? 'Approve or deny the request above first'
     : !ready
       ? 'Wait for the pictures to finish'
       : undefined
-  useEffect(() => {
-    setEditsSender(
-      id,
-      // Without the right to write here, no composer takes them: the canvas sends at once.
-      t.mayPrompt
-        ? {
-            count: editRows.length,
-            order: editRows.map((r) => r.key),
-            send: sendEdits,
-            ...(editsDisabled && { disabled: editsDisabled }),
-          }
-        : undefined,
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the order by its keys
-  }, [id, t.mayPrompt, editRows.map((r) => r.key).join('\n'), sendEdits, editsDisabled])
-  useEffect(() => () => setEditsSender(id, undefined), [id])
 
   /** Continue the thread on another computer without a message: its teammate picks up where it was. */
   async function moveThread(computerId: string) {
@@ -1279,6 +1265,20 @@ export function ThreadConversation({
 
   return (
     <div ref={root} className="flex min-h-0 flex-1 flex-col">
+      <EditsSenderSync
+        threadId={id}
+        // Without the right to write here, no composer takes them: the canvas sends at once.
+        sender={
+          t.mayPrompt
+            ? {
+                count: editRows.length,
+                order: editRows.map((r) => r.key),
+                send: sendEdits,
+                ...(editsDisabled && { disabled: editsDisabled }),
+              }
+            : undefined
+        }
+      />
       {/* Beside the thread, so only expanded: docked, opening one expands it first. Outside
           what scrolls: its fade would hide them. */}
       {expanded && file && (
@@ -2001,6 +2001,23 @@ const JUMP_MARGIN = 72
  * An open ticket whose call waits on a decision: an approval before a built-in tool call, an
  * App write or its cap, a credential or a trigger. The API refuses a message until then.
  */
+/** Offers the composer's pending edits to the canvas beside the thread, once the thread is loaded. */
+function EditsSenderSync({
+  threadId,
+  sender,
+}: {
+  threadId: string
+  sender: EditsSender | undefined
+}) {
+  const order = sender?.order.join('\n')
+  useEffect(() => {
+    setEditsSender(threadId, sender)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the order by its keys
+  }, [threadId, !sender, sender?.count, order, sender?.send, sender?.disabled])
+  useEffect(() => () => setEditsSender(threadId, undefined), [threadId])
+  return null
+}
+
 const holdsCall = ({ type, payload }: Pick<Ticket, 'type' | 'payload'>) =>
   type === 'cap'
     ? !!payload.connectionId
