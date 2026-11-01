@@ -149,7 +149,8 @@ They feed the backlog's daily triage (the library's `Projects/Brigade/backlog.md
   (`src/routes/errors.ts`, signed in), never to PostHog from the browser: nothing of a third party
   loads in the dashboard, and blockers do not drop them. Left out there: the API's own refusals
   and failures (`ApiError`, reported by the API), the network gone, cancelled requests, a script
-  of an older build gone after a deploy (`ChunkLoadError`) and cross-origin `Script error.`; the
+  of an older build gone after a deploy (`ChunkLoadError`), cross-origin `Script error.` and the
+  browser's harmless `ResizeObserver loop completed with undelivered notifications.`; the
   same message once per page load, 20 at most. The API drops a report whose stack holds none of
   the dashboard's scripts (a browser extension's), and takes 30 a minute per person at most:
   past that, it answers without reading the body. It reads a body only up to 32 KB, however it

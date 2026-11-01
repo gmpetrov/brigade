@@ -15,12 +15,13 @@ const seen = new Set<string>()
 /**
  * Not worth a report: a request the API refused or failed (the API reports its own), the
  * network gone, a request cancelled, a script of a new build gone after a deploy (the update
- * pill offers the reload), or a cross-origin script's error, which says nothing.
+ * pill offers the reload), a cross-origin script's error, which says nothing, or the browser
+ * saying a ResizeObserver left changes for its next frame, which harms nothing.
  */
-function ignored(error: unknown, type: string, value: string) {
+export function ignored(error: unknown, type: string, value: string) {
   if (error instanceof ApiError) return true
   if (type === 'AbortError' || type === 'ChunkLoadError') return true
-  return /^(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?|Script error\.?)$/.test(
+  return /^(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?|Script error\.?|ResizeObserver loop (completed with undelivered notifications|limit exceeded)\.?)$/.test(
     value,
   )
 }
