@@ -131,8 +131,39 @@ export type JobName = keyof typeof JOBS
 
 const isJob = (name: string): name is JobName => name in JOBS
 
+/**
+ * How long one message's job may run before it counts as failed, and is tried again later. The
+ * queue's consumer runs a batch's messages in turn, and the queue starts no other consumer while
+ * one is busy: a job that waited 10 minutes on a provider that never answered (a cloud
+ * computer's keep-alive, Oct 30 and 31) held every job of every workspace behind it, past
+ * JOBS_LATE_MS (src/ops/checks.ts). What it started may still finish: each job is safe twice.
+ */
+export const JOB_DEADLINE_MS = 2 * 60_000
+
+/**
+ * How long the queue's consumer runs a batch's messages: those not started by then go back on the
+ * queue at once, for a consumer of their own. With JOB_DEADLINE_MS, a batch lasts at most both.
+ */
+export const BATCH_BUDGET_MS = 4 * 60_000
+
+export class JobTimeout extends Error {
+  constructor(job: string, ms: number) {
+    super(`${job} still running after ${Math.round(ms / 1000)} s: given up, tried again later`)
+    this.name = 'JobTimeout'
+  }
+}
+
+/** The job's run, or a JobTimeout once it has run `ms`. */
+function within<T>(run: Promise<T>, job: string, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new JobTimeout(job, ms)), ms)
+  })
+  return Promise.race([run, late]).finally(() => clearTimeout(timer))
+}
+
 /** Run one message's job. Throws when it failed, after counting it for the ops checks. */
-export async function runJob(message: JobMessage, now = new Date()) {
+export async function runJob(message: JobMessage, now = new Date(), deadlineMs = JOB_DEADLINE_MS) {
   if (!isJob(message.job)) {
     console.warn(`no job ${message.job}: dropped`)
     return
@@ -142,7 +173,7 @@ export async function runJob(message: JobMessage, now = new Date()) {
   // writes' hooks), as in the Api object: a fresh queue consumer has loaded none of them.
   await import('./app.js')
   try {
-    await job.run(message.key, now)
+    await within(job.run(message.key, now), message.job, deadlineMs)
   } catch (error) {
     const where = message.key ? ` (${message.key})` : ''
     console.warn(`${message.job}${where} failed: ${String(error)}`)

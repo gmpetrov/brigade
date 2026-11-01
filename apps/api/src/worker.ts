@@ -179,8 +179,15 @@ export default {
    */
   async queue(batch, env, ctx) {
     await stateless(env, ctx, async () => {
-      const { runJob } = await import('./jobs.js')
-      for (const message of batch.messages)
+      const { BATCH_BUDGET_MS, runJob } = await import('./jobs.js')
+      const started = Date.now()
+      for (const message of batch.messages) {
+        // Past the batch's time, the rest go back on the queue untried, for another consumer:
+        // they wait no longer behind a slow job of this batch.
+        if (Date.now() - started >= BATCH_BUDGET_MS) {
+          message.retry()
+          continue
+        }
         try {
           await runJob(message.body)
           message.ack()
@@ -189,6 +196,7 @@ export default {
             delaySeconds: Math.min(600, 30 * 2 ** Math.max(0, message.attempts - 1)),
           })
         }
+      }
     })
   },
 

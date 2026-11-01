@@ -41,7 +41,9 @@ async function reachable() {
 }
 const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env DATABASE_URL)'
 
-const { JOBS, dueMessages, runJob } = await import('../src/jobs.js')
+const { BATCH_BUDGET_MS, JOBS, JOB_DEADLINE_MS, JobTimeout, dueMessages, runJob } =
+  await import('../src/jobs.js')
+const { JOBS_LATE_MS } = await import('../src/ops/checks.js')
 const { failuresOf } = await import('../src/ops/failures.js')
 
 test('a job no one knows is dropped; one that throws is counted, and throws for its retry', async () => {
@@ -58,6 +60,27 @@ test('a job no one knows is dropped; one that throws is counted, and throws for 
     jobs['inbound-event']!.run = real
   }
   assert.equal(failuresOf('job:inbound-event', 60_000).length, before + 1)
+})
+
+test('a job that never ends is given up past its deadline, counted, and throws for its retry', async () => {
+  const before = failuresOf('job:inbound-event', 60_000).length
+  const jobs = JOBS as Record<string, { run: (key: string | null, now: Date) => Promise<unknown> }>
+  const real = jobs['inbound-event']!.run
+  // A provider that never answers, as boat did for 10 minutes on Oct 30 and 31.
+  jobs['inbound-event']!.run = () => new Promise(() => {})
+  try {
+    const startedAt = Date.now()
+    await assert.rejects(
+      runJob({ job: 'inbound-event', key: 'e1' }, new Date(), 50),
+      (error: Error) => error instanceof JobTimeout && /still running after/.test(error.message),
+    )
+    assert.ok(Date.now() - startedAt < 5_000)
+  } finally {
+    jobs['inbound-event']!.run = real
+  }
+  assert.equal(failuresOf('job:inbound-event', 60_000).length, before + 1)
+  // A batch's jobs, each given up in time, end well before the queue counts its oldest as late.
+  assert.ok(BATCH_BUDGET_MS + JOB_DEADLINE_MS < JOBS_LATE_MS)
 })
 
 describe('due work, by workspace', { skip }, () => {
