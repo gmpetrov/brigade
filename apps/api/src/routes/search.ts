@@ -75,12 +75,14 @@ async function nearly(
   const each = input.words.map((word, i) =>
     word.length >= NEAR_MIN ? Prisma.sql`(${exact[i]} OR ${word} <% ${near})` : exact[i],
   )
+  // Only words long enough to be near another rank by closeness. Without any, the term is left
+  // out: a bare `0` in ORDER BY is read as a column position, and Postgres rejects it.
   const similarity = close.length
-    ? Prisma.join(
+    ? Prisma.sql`${Prisma.join(
         close.map((word) => Prisma.sql`word_similarity(${word}, ${near})`),
         ' + ',
-      )
-    : Prisma.sql`0`
+      )} DESC,`
+    : Prisma.empty
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT id FROM ${column(input.table)}
     WHERE "organizationId" = ${scope.organizationId}
@@ -88,7 +90,7 @@ async function nearly(
       ${input.where ? Prisma.sql`AND ${input.where}` : Prisma.empty}
       AND ${Prisma.join(each, ' AND ')}
     ORDER BY ${name} = ${typed} DESC, ${name} LIKE ${`${typed}%`} DESC, (${starts}) DESC,
-      (${Prisma.join(exact, ' AND ')}) DESC, ${similarity} DESC, ${Prisma.raw(input.order)}
+      (${Prisma.join(exact, ' AND ')}) DESC, ${similarity} ${Prisma.raw(input.order)}
     LIMIT ${input.take ?? EACH}`
   return rows.map((r) => r.id)
 }

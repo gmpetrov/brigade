@@ -13,7 +13,8 @@ import { Hono } from 'hono'
 // - a file named as typed scores above threads that only share a word with it;
 // - a name as typed is found before newer ones that only share its words, past the limit of each kind;
 // - another workspace's rows never turn up, whatever matches;
-// - punctuation separates words, as in a file's name, and matches nothing on its own.
+// - punctuation separates words, as in a file's name, and matches nothing on its own;
+// - a query of only words under 3 characters ("pr", "#12") is found, without the typo ranking.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL || undefined
@@ -77,6 +78,7 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
         'Launch checklist review',
         'Release plan',
         ...drafts.map((n) => `Release plan draft ${n}`),
+        'AI notes on PR review',
       ],
       [
         'Projects/Brigade/launch-checklist.md',
@@ -86,6 +88,15 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
         ...drafts.map((n) => `Projects/Brigade/release-plan-draft-${n}.md`),
       ],
     )
+    await scoped({ organizationId: orgs[0]!, workspaceId: workspaces[0]! }).pullRequest.create({
+      data: {
+        repository: 'acme/web',
+        number: 12,
+        title: 'Fix the login page',
+        headRef: 'fix-login',
+        baseRef: 'main',
+      },
+    } as never)
     // Same names elsewhere: never shown here.
     await workspace(orgs[1]!, ['Launch checklist elsewhere'], ['launch-checklist.md'])
     const getSession = auth.api.getSession
@@ -168,5 +179,16 @@ describe('search', { skip: !database && 'no database answers, or without pg_trgm
     ])
     assert.deepEqual(titles(await find('100% done'), 'file'), ['notes/100% done.md'])
     assert.deepEqual(await find('%_'), [])
+  })
+
+  test('a query of only short words finds rows, alone or with a longer word', async () => {
+    assert.deepEqual(titles(await find('pr'), 'thread'), ['AI notes on PR review'])
+    assert.deepEqual(titles(await find('ai pr'), 'thread'), ['AI notes on PR review'])
+    assert.deepEqual(titles(await find('pr review'), 'thread'), ['AI notes on PR review'])
+    for (const q of ['#12', '12']) {
+      const pull = (await find(q)).find((r) => r.kind === 'pull_request')
+      assert.equal(pull?.title, 'Fix the login page', q)
+      assert.equal(pull?.score, SCORE.exact, q)
+    }
   })
 })
