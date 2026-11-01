@@ -374,11 +374,12 @@ export async function reportConversation(scope: Scope, childId: string) {
  * stands in for one it did not make) and sends it on; an error is a failed report.
  * A turn that answered a person, with no report, sends nothing yet: they may still be
  * talking it through, so its last message goes once they have been quiet a while
- * (reportConversation).
+ * (reportConversation). An error the runner tries the turn again after (stopped for memory, a
+ * passing error) ends nothing: the report waits for the try, which the child's work goes on in.
  */
 export async function noteChildEvents(
   session: { id: string; organizationId: string; workspaceId: string; parentId: string | null },
-  events: { event: { type: string; at: string; message?: string } }[],
+  events: { event: { type: string; at: string; message?: string; retrying?: boolean } }[],
 ) {
   if (!session.parentId) return
   const scope: Scope = { organizationId: session.organizationId, workspaceId: session.workspaceId }
@@ -406,7 +407,10 @@ export async function noteChildEvents(
         where: { sessionId: session.id, deliveredAt: { not: null } },
         data: { deliveredAt: null },
       })
-    } else if (event.type === 'turn.completed' || event.type === 'error') {
+    } else if (
+      event.type === 'turn.completed' ||
+      (event.type === 'error' && event.retrying !== true)
+    ) {
       const row = await db.session.findFirst({
         where: { id: session.id },
         select: { report: true, reportDeliveredAt: true },

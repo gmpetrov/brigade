@@ -48,6 +48,7 @@ import { tidyRun, type TidyFile } from './memory-tidy.js'
 import { MARKS_RULE, missedLines, type Indexed, type LogEntry } from './said.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
 import { keepReplyImages, type StoreImage } from './reply-images.js'
+import { backgroundTasks } from './harness/background.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
 import {
@@ -128,12 +129,32 @@ const SETTLE_MS = Number(process.env.BRIGADE_TURN_SETTLE_MS) || 3_000
 /** After the memory guard stopped a turn, one more turn at once each time this goes by without another stop. */
 const RAISE_MS = Number(process.env.BRIGADE_TURN_RAISE_MS) || 5 * 60_000
 /** What a teammate is told when its turn is tried again after it failed. */
-const retried = (error: string) =>
+const retried = (error: string, background: BackgroundWork[] = []) =>
   `Your last turn in this thread stopped on an error: ${error.slice(0, 2_000)}\n\n` +
   (MEMORY_STOPPED.test(error)
     ? 'Run heavy commands (tests, typechecks, builds) one at a time, and only those you need.\n\n'
     : '') +
+  stoppedBackground(background) +
   'Before you redo anything, check what is already done (files, commands you ran, messages you sent), then carry on where you left off.'
+
+/**
+ * What the failed turn ran in the background, stopped with it. A sub-agent's transcript is kept:
+ * Claude Code names each stopped one with its id, and SendMessage to that id has it go on from
+ * where it was, rather than start over.
+ */
+function stoppedBackground(background: BackgroundWork[]) {
+  if (background.length === 0) return ''
+  const agents = background.some((work) => work.kind === 'agent')
+  return (
+    'This was running in the background, and stopped with it:\n' +
+    background.map((work) => `- ${work.kind}: ${work.description}`).join('\n') +
+    '\n\n' +
+    (agents
+      ? "Your sub-agents' work so far is kept: resume each one with SendMessage to its id (Claude Code names them), rather than starting it over. "
+      : '') +
+    'Start again the commands you still need.\n\n'
+  )
+}
 
 /** A queued message's note while a person has control of its thread. */
 const HELD_FOR_HANDBACK = 'A person has control of this thread. It runs once they hand it back.'
@@ -149,7 +170,7 @@ const TURN_ENDED = new Set<AgentEvent['type']>(['turn.completed', 'error'])
 type Lost = { kind: 'lost'; running: boolean; ended: boolean }
 
 /** A failed turn tried again: the teammate is told the error, and what was said since. */
-type Retry = { kind: 'retry'; error: string }
+type Retry = { kind: 'retry'; error: string; background?: BackgroundWork[] }
 
 type Command = Extract<
   ApiToRunner,
@@ -188,31 +209,7 @@ function backgroundWait(event: AgentEvent): boolean | undefined {
   if (value?.type === 'system' && value.subtype === 'brigade_waiting') return value.waiting === true
 }
 
-/** Claude Code's task types that are agents at work, and those that are commands (a shell, a Monitor). */
-const AGENT_TASKS = new Set(['local_agent', 'remote_agent', 'local_workflow'])
-const COMMAND_TASKS = new Set(['local_bash', 'monitor_mcp'])
-
-/** What runs in the background after one of Claude Code's task messages, from a harness event. */
-export function backgroundTasks(event: AgentEvent): BackgroundWork[] | undefined {
-  if (event.type !== 'raw' || event.source !== 'harness') return
-  const value = event.value as {
-    type?: unknown
-    subtype?: unknown
-    tasks?: { task_type?: unknown; description?: unknown; ambient?: unknown }[]
-  } | null
-  if (value?.type !== 'system' || value.subtype !== 'background_tasks_changed') return
-  if (!Array.isArray(value.tasks)) return
-  return value.tasks.flatMap((task) => {
-    const type = String(task.task_type)
-    if (task.ambient || !(AGENT_TASKS.has(type) || COMMAND_TASKS.has(type))) return []
-    return [
-      {
-        kind: AGENT_TASKS.has(type) ? ('agent' as const) : ('command' as const),
-        description: String(task.description ?? '').slice(0, 500),
-      },
-    ]
-  })
-}
+export { backgroundTasks }
 
 /** A turn's answer as the thread shows it (turnAnswer), joined. */
 const answerOf = (turn: Seat['turn']) =>
@@ -321,6 +318,8 @@ type Thread = {
     spec: ThreadSpec
     error: string
     tries: number
+    /** What its turn ran in the background, stopped with it: the next try is told (retried). */
+    background?: BackgroundWork[]
     timer?: NodeJS.Timeout
     /** Its next try waits for the computer to have memory, said in the thread (tryAgain). */
     shortOfMemory?: boolean
@@ -1012,7 +1011,10 @@ export class Threads {
               : input.kind === 'retry'
                 ? {
                     kind: 'prompt' as const,
-                    text: [retried(input.error), await this.catchUp(spec, undefined, true)]
+                    text: [
+                      retried(input.error, input.background),
+                      await this.catchUp(spec, undefined, true),
+                    ]
                       .filter(Boolean)
                       .join('\n\n'),
                   }
@@ -1044,8 +1046,17 @@ export class Threads {
         const outcome = await seat.harness.run(turn, spec, controller.signal)
         const memoryStop = thread.memoryStop
         thread.memoryStop = undefined
+        // Its background work stopped with its process: the next try hears what it was.
+        const stopped = seat.background
+        seat.background = []
         if (outcome.status === 'failed' && !controller.signal.aborted)
-          this.failed(thread, spec, memoryStop ? memoryStopped(memoryStop) : (outcome.error ?? ''))
+          this.failed(
+            thread,
+            spec,
+            memoryStop ? memoryStopped(memoryStop) : (outcome.error ?? ''),
+            false,
+            stopped.length ? stopped : undefined,
+          )
         else this.settleFailure(thread)
         if (outcome.status === 'waiting' && outcome.error) {
           this.options.emit(spec.sessionId, {
@@ -1098,10 +1109,16 @@ export class Threads {
    * once there is room on it. Else, and after those tries, a person tries it again
    * (thread.retry) or writes.
    */
-  private failed(thread: Thread, spec: ThreadSpec, error: string, diskFull = false) {
+  private failed(
+    thread: Thread,
+    spec: ThreadSpec,
+    error: string,
+    diskFull = false,
+    background = thread.failed?.background ?? [],
+  ) {
     const tries = thread.failed?.tries ?? 0
     clearTimeout(thread.failed?.timer)
-    thread.failed = { spec, error, tries }
+    thread.failed = { spec, error, tries, ...(background.length ? { background } : {}) }
     const memory = MEMORY_STOPPED.test(error)
     if (!(memory || PASSING_ERROR.test(error)) || this.stopping || thread.takeover) return
     const name = spec.teammate.name
@@ -1119,6 +1136,32 @@ export class Threads {
         : `${why}${name} tries again in ${minutes(wait)}.`,
     )
     thread.failed.timer = setTimeout(() => void this.tryAgain(thread, tries + 1), wait)
+  }
+
+  /**
+   * A turn that fails on this error is tried again on its own (failed): stopped for memory or on a
+   * passing error, with tries left, the runner going on and nobody having control of the thread.
+   */
+  private retriesOnItsOwn(thread: Thread, error: string) {
+    return (
+      (MEMORY_STOPPED.test(error) || PASSING_ERROR.test(error)) &&
+      !this.stopping &&
+      !thread.takeover &&
+      RETRY_AFTER_MS[thread.failed?.tries ?? 0] !== undefined
+    )
+  }
+
+  /** A harness's event as the thread gets it: an error says what the runner does about it. */
+  private harnessEvent(thread: Thread, event: AgentEvent): AgentEvent {
+    if (event.type !== 'error') return event
+    // Its harness's process gone when the memory guard stopped it: the error says so.
+    const message = thread.memoryStop ? memoryStopped(thread.memoryStop) : event.message
+    // Tried again on its own (failed): the turn is not over, and a child's report waits.
+    return {
+      ...event,
+      message,
+      ...(this.retriesOnItsOwn(thread, message) ? { retrying: true } : {}),
+    }
   }
 
   /** A try of a failed turn, on its own (failed). */
@@ -1152,7 +1195,13 @@ export class Threads {
   private retry(spec: ThreadSpec, error: string | undefined) {
     const thread = this.thread(spec.sessionId)
     clearTimeout(thread.failed?.timer)
-    thread.failed = { spec, error: error ?? thread.failed?.error ?? 'unknown error', tries: 0 }
+    const background = thread.failed?.background
+    thread.failed = {
+      spec,
+      error: error ?? thread.failed?.error ?? 'unknown error',
+      tries: 0,
+      ...(background ? { background } : {}),
+    }
     this.retryTurn(thread, thread.failed)
   }
 
@@ -1164,7 +1213,11 @@ export class Threads {
       [...thread.waiting.values()].some((n) => n > 0)
     )
       return
-    this.enqueue(failed.spec, { kind: 'retry', error: failed.error })
+    this.enqueue(failed.spec, {
+      kind: 'retry',
+      error: failed.error,
+      ...(failed.background ? { background: failed.background } : {}),
+    })
   }
 
   /** No failed turn to try again any more: it went on, or someone wrote or stopped it. */
@@ -1777,9 +1830,7 @@ export class Threads {
         folder.workDir,
         paths.state,
         (event) => {
-          // Its harness's process gone when the memory guard stopped it: the error says so.
-          if (event.type === 'error' && thread.memoryStop)
-            event = { ...event, message: memoryStopped(thread.memoryStop) }
+          event = this.harnessEvent(thread, event)
           // In a thread with several teammates, each event says whose it is.
           this.options.emit(spec.sessionId, { ...event, teammateId })
           // A stream that ended, or a turn cut short: its log has what it spent.
