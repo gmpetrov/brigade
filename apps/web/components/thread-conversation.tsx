@@ -1018,7 +1018,8 @@ export function ThreadConversation({
     }
   }
 
-  // The canvas of a design over the page hides this composer: it sends the edits from there.
+  // The canvas of a design beside the thread adds its comments here while this composer can take
+  // them; over the page, it hides the composer and sends the edits from there.
   const sendRef = useRef(send)
   sendRef.current = send
   const sendEdits = useCallback(() => void sendRef.current().catch(() => undefined), [])
@@ -1030,7 +1031,8 @@ export function ThreadConversation({
   useEffect(() => {
     setEditsSender(
       id,
-      t.mayPrompt && editRows.length
+      // Without the right to write here, no composer takes them: the canvas sends at once.
+      t.mayPrompt
         ? {
             count: editRows.length,
             order: editRows.map((r) => r.key),

@@ -525,10 +525,11 @@ function DesignFrame({
   const commentFolder = lastBoard?.folder ?? folder
 
   // Beside its thread, a comment waits in the thread's composer with the other edits, to go
-  // in one message (lib/pending-edits.ts); elsewhere it goes at once.
-  const pending = !!threadId
+  // in one message (lib/pending-edits.ts); elsewhere, or when that composer cannot take it
+  // (the member may not write there), it goes at once.
   const designEdits = useDesignEdits(threadId)
   const editsSender = useEditsSender(threadId)
+  const pending = !!threadId && !!editsSender
   const boardKeys = new Set(groups.flatMap((g) => g.boards.map((b) => b.key)))
   const ownEdits = designEdits.filter(
     (e) => folders.includes(e.folder) || (e.board && boardKeys.has(e.board)),
@@ -659,13 +660,14 @@ function DesignFrame({
       }
       onClear={() => setSelection([])}
       onSend={sendComment}
-      {...(pending && {
-        pending: {
-          count: editsSender?.count ?? designEdits.length,
-          ...(editsSender && { send: editsSender.send }),
-          ...(editsSender?.disabled && { disabled: editsSender.disabled }),
-        },
-      })}
+      {...(pending &&
+        editsSender && {
+          pending: {
+            count: editsSender.count,
+            send: editsSender.send,
+            ...(editsSender.disabled && { disabled: editsSender.disabled }),
+          },
+        })}
     />
   )
 
