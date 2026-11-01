@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { ScheduleOperation, ThreadSpec } from '@brigade/contracts'
+import { THREAD_TOOLS } from '../src/harness/thread-tools.js'
 import { doneTools, type ScheduleCaller } from '../src/harness/tools.js'
 import { instructions } from '../src/instructions.js'
 import { threadMemory } from '../src/memory-layers.js'
@@ -18,6 +19,11 @@ test('complete_thread is only in a thread at the top, not in a child or a playbo
   assert.deepEqual(doneTools(nothing, { child: true, playbook: false }), {})
   assert.deepEqual(doneTools(nothing, { child: false, playbook: true }), {})
   assert.deepEqual(doneTools(nothing, { child: true, playbook: true }), {})
+})
+
+test('complete_thread is the thread’s own: refused to its sub-agents', () => {
+  // A sub-agent sees only its part of the work: it never declares the whole thread done.
+  assert.ok(THREAD_TOOLS.includes('complete_thread'))
 })
 
 test('complete_thread sends its line as one line, and refuses none or one too long', async () => {
