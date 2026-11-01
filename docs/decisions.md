@@ -159,7 +159,7 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   each and no tools: the accounts the spec gives (`usableGrants`, shared with `specFor`), the workspace's accounts
   not granted to it, and the catalog's Apps with no account it may use (those this server can connect,
   `availableApps`), plus MCP servers added by URL. Each comes with the `app.kind` of an `open_ticket` access ask:
-  `ASKABLE_KINDS`, every App of the catalog but custom apps (they only receive webhooks) and the Email App (given from
+  `askableKinds()`, every App of the catalog but custom apps (they only receive webhooks) and the Email App (given from
   its own pages), which a test keeps equal to `open_ticket`'s enum. It is scoped to the person the thread works for
   (`askedBy`), never to the teammate, which works for every member and in threads events start: shared accounts, and
   the starter's own (reach `mine`) while no other member asks in the thread; no member's own once one does. A

@@ -32,12 +32,13 @@ type Account = {
  * The Apps a teammate asks for in an access ticket: open_ticket's app.kind, which a test keeps
  * in step with these. Every App of the catalog but a custom app, which only receives webhooks
  * (no tools), and the Email App, whose addresses are given from its own pages (an agent's own
- * address, a project's inbox), never from a ticket.
+ * address, a project's inbox), never from a ticket. Read when called: this file is imported while
+ * the catalog's own imports still load (through schedules.ts).
  */
-export const ASKABLE_KINDS = (Object.keys(appCatalog) as ConnectorKind[]).filter(
-  (kind) => kind !== 'webhook' && kind !== 'email',
-)
-const askable = new Set<ConnectorKind>(ASKABLE_KINDS)
+export const askableKinds = (): ConnectorKind[] =>
+  (Object.keys(appCatalog) as ConnectorKind[]).filter(
+    (kind) => kind !== 'webhook' && kind !== 'email',
+  )
 
 /** Accounts by their App's name, then their own. */
 const listed = (lines: string[]) =>
@@ -91,8 +92,9 @@ export async function handleAppCall(
   const yours = (await usableGrants(db, session, teammate.id, granted, null)).filter(
     (g) => (connectors[g.connection.kind] || g.connection.kind === 'mcp') && shown(g.connection),
   )
+  const askable = askableKinds()
   const used = new Set(yours.map((g) => g.connection.id))
-  const others = connections.filter((c) => askable.has(c.kind) && !used.has(c.id) && shown(c))
+  const others = connections.filter((c) => askable.includes(c.kind) && !used.has(c.id) && shown(c))
   const accounts = [...yours.map((g) => g.connection), ...others]
   const kinds = new Set(accounts.map((c) => c.kind))
   const apps = new Set(accounts.map((c) => c.appId))
@@ -124,7 +126,7 @@ export async function handleAppCall(
     'Apps you can connect, with no account here yet: ask for one with open_ticket, an access ask of kind ' +
       'connection with its app.kind; the person connects it from the ticket.',
   )
-  for (const kind of ASKABLE_KINDS)
+  for (const kind of askable)
     if (kind !== 'mcp' && available[kind] && !kinds.has(kind))
       lines.push(`- ${appCatalog[kind].name} (app.kind ${kind}): ${appCatalog[kind].description}`)
   for (const server of servers)

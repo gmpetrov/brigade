@@ -28,7 +28,8 @@ const database = await Promise.race([
 ]).catch(() => false)
 
 test("the kinds list_apps gives are open_ticket's, and every App a ticket can ask for", async () => {
-  const { ASKABLE_KINDS } = await import('../src/app-calls.js')
+  const { askableKinds } = await import('../src/app-calls.js')
+  const askable = askableKinds()
   const { appCatalog } = await import('../src/connectors/index.js')
   // The runner's tool as teammates get it: its enum is the one a model reads.
   const { openTicketTool } = await import('../../runner/src/harness/tools.js')
@@ -36,13 +37,13 @@ test("the kinds list_apps gives are open_ticket's, and every App a ticket can as
   const enumKinds = schema.properties.asks.items.properties.app.properties.kind.enum
   assert.deepEqual(
     [...enumKinds].sort(),
-    [...ASKABLE_KINDS].sort(),
+    [...askable].sort(),
     "open_ticket's app.kind and the catalog's Apps a ticket can ask for differ: add the new App to both",
   )
   // Only a custom app (webhooks in, no tools) and the Email App (given from its own pages) are left out.
   assert.deepEqual(
     Object.keys(appCatalog)
-      .filter((kind) => !(ASKABLE_KINDS as string[]).includes(kind))
+      .filter((kind) => !(askable as string[]).includes(kind))
       .sort(),
     ['email', 'webhook'],
   )
