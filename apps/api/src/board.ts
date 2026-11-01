@@ -262,7 +262,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
             select: { sessionId: true },
           })
         : [],
-      failingRoutines(db),
+      failingRoutines(db, {}, now),
       actorNames(
         db,
         offList.flatMap((t) =>
@@ -528,7 +528,11 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
   })
   // A routine that waits on a person: its card in Needs you, the routine and not its run.
   for (const r of routines) {
-    const f = failing.get(r.id)
+    // One that could not start counts here even while its question ticket is open: that
+    // ticket has no thread, so no other card shows it.
+    const f =
+      failing.get(r.id) ??
+      (r.error && r.health !== 'paused' ? { runId: null, error: r.error, at: now } : undefined)
     if (!f) continue
     cards.push({
       key: `routine:${r.id}`,
