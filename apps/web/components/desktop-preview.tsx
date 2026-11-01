@@ -70,8 +70,11 @@ export function DesktopScreen({
   const [waiting, setWaiting] = useState<string>()
   /** The cloud computer is stopped: the screen offers Wake up. */
   const [asleep, setAsleep] = useState(false)
-  /** This member asked it to wake: ask again with it until it is up. */
-  const [waking, setWaking] = useState(false)
+  /**
+   * This member asked it to wake: ask with it until it is up. A ref, not state, so
+   * that ending it does not ask again (a refused wake keeps its error on screen).
+   */
+  const waking = useRef(false)
   const [input, setInput] = useState<DesktopInput>()
   const touch = useTouchScreen()
   const keys = touch && mode === 'open' && control
@@ -85,12 +88,12 @@ export function DesktopScreen({
     let retry: ReturnType<typeof setTimeout> | undefined
     setConnection(undefined)
     setError(undefined)
-    api<DesktopConnection>(`${base}/desktop${waking ? '?wake=1' : ''}`, { method: 'POST' })
+    api<DesktopConnection>(`${base}/desktop${waking.current ? '?wake=1' : ''}`, { method: 'POST' })
       .then((r) => {
         if (!live) return
         setWaiting(undefined)
         setAsleep(false)
-        setWaking(false)
+        waking.current = false
         setConnection(r)
       })
       .catch((e: Error) => {
@@ -98,12 +101,14 @@ export function DesktopScreen({
         // 503: the computer is starting for this member. Ask again until it is up.
         if (e instanceof ApiError && e.status === 503) {
           setAsleep(false)
-          setWaiting(waking ? 'Waking up the cloud computer… It takes a minute or so.' : e.message)
+          setWaiting(
+            waking.current ? 'Waking up the cloud computer… It takes a minute or so.' : e.message,
+          )
           retry = setTimeout(() => setAttempt((n) => n + 1), 4000)
           return
         }
         setWaiting(undefined)
-        setWaking(false)
+        waking.current = false
         if (e instanceof ApiError && (e.body as { asleep?: boolean } | undefined)?.asleep) {
           setAsleep(true)
           return
@@ -115,7 +120,7 @@ export function DesktopScreen({
       live = false
       clearTimeout(retry)
     }
-  }, [base, attempt, waking])
+  }, [base, attempt])
 
   const onLost = useCallback(
     (reason: string) => {
@@ -151,7 +156,8 @@ export function DesktopScreen({
   const wake = () => {
     setAsleep(false)
     setWaiting('Waking up the cloud computer… It takes a minute or so.')
-    setWaking(true)
+    waking.current = true
+    setAttempt((n) => n + 1)
   }
 
   const sleeping = asleep && !connection && !waiting
