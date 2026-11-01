@@ -1911,6 +1911,12 @@ describe('what a thread did without replying', { skip }, () => {
       { kind: 'handled', note: 'Filed it' },
     )
     assert.equal(await list('waiting'), undefined)
+    // Done: how it ended is still said, on its row and when it is opened.
+    await inbox.setDone(db, as(0), item, true)
+    const done = await inbox.listInbox(db, as(0), { status: 'done' })
+    assert.deepEqual(done.items.find((i) => i.id === item)?.outcome?.note, 'Filed it')
+    assert.equal((await inbox.readItem(db, as(0), item)).outcome?.kind, 'handled')
+    await inbox.setDone(db, as(0), item, false)
 
     // Only mail of its own box.
     const other = await mail(support, { receivedAt: new Date() })

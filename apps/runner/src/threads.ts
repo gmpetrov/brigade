@@ -113,6 +113,11 @@ const MEMORY_STOPPED = /^Stopped to give the computer memory back/
  */
 const MEMORY_WAIT_MS = 5 * 60_000
 /**
+ * A turn kept waiting for memory says so only past this: most waits end within seconds, and a
+ * note for each would worry people for nothing.
+ */
+const MEMORY_NOTICE_MS = Number(process.env.BRIGADE_MEMORY_NOTICE_MS) || 20_000
+/**
  * Turns that start without waiting on one another, and the fewest a computer runs at once
  * after the memory guard stopped one (stoppedForMemory).
  */
@@ -1945,14 +1950,15 @@ export class Threads {
       if (controller.signal.aborted) return false
       // Slots are taken before this wait: a cap lowered meanwhile (stoppedForMemory) is checked here.
       const fits = () => this.started < this.limit
-      const until = Date.now() + MEMORY_WAIT_MS
+      const waiting = Date.now()
+      const until = waiting + MEMORY_WAIT_MS
       let told = false
       while (!this.stopping && !controller.signal.aborted) {
         // Fits again after reading memory: the guard may lower the cap meanwhile.
         if (fits() && (await room()) && fits()) break
         // Long enough, with few turns running: none may end soon to give memory back.
         if (fits() && Date.now() >= until && this.started < TURNS_ALWAYS) break
-        if (fits() && !told) {
+        if (fits() && !told && Date.now() - waiting >= MEMORY_NOTICE_MS) {
           told = true
           this.options.emit(spec.sessionId, {
             at: new Date().toISOString(),

@@ -1250,6 +1250,8 @@ function activityLabel(group: ActivityItem[]) {
 function stepText(item: ActivityItem) {
   if (item.kind === 'thinking') return 'Thinking'
   if (item.kind === 'file') return `Changed ${item.path}`
+  const mail = mailStep(item.toolName, item.input)
+  if (mail) return mail.label
   return `${item.toolName} ${toolSummary(item.toolName, item.input)}`.trim()
 }
 
@@ -1261,8 +1263,35 @@ const VERBS: Partial<Record<ReturnType<typeof toolKind>, string>> = {
   web: 'Searched the web',
 }
 
+/**
+ * A mailbox's steps in words (Brigade's address's or Gmail's, either with _<account>): closing an
+ * email without a reply says why, reading or searching says what.
+ */
+function mailStep(toolName: string, input: unknown) {
+  const name = bareToolName(toolName)
+  const i = (input ?? {}) as Record<string, unknown>
+  const text = (value: unknown) => (typeof value === 'string' ? value : '')
+  if (/^(email|gmail)_no_reply(_|$)/.test(name))
+    return {
+      label: i.handled ? 'Handled the email without a reply' : 'Left the email without a reply',
+      detail: text(i.reason),
+    }
+  if (/^(email_read|gmail_read_message|gmail_read_thread)(_|$)/.test(name))
+    return { label: 'Read the email', detail: '' }
+  if (/^gmail_search(_|$)/.test(name)) return { label: 'Searched Gmail', detail: text(i.query) }
+  return null
+}
+
 /** A tool call's line: "Ran npm test", "Read src/app.ts", else its name and what it was given. */
 function ToolLine({ toolName, input }: { toolName: string; input: unknown }) {
+  const mail = mailStep(toolName, input)
+  if (mail)
+    return (
+      <>
+        <span className="flex-none">{mail.label}</span>
+        {mail.detail && <span className="min-w-0 truncate">{mail.detail}</span>}
+      </>
+    )
   const verb = VERBS[toolKind(toolName)]
   const summary = toolSummary(toolName, input)
   return (

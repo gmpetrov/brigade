@@ -3508,7 +3508,7 @@
       "at": "2026-10-19T20:36:39.357Z",
       "thread": {
        "id": "86dd6231-b059-4122-a5ab-34a4bdf8be3b",
-       "title": "Support mail: Email from Jonas Berg <jonas@pied-piper.test>: Our workspace is read-only",
+       "title": "Support mail: Our workspace is read-only · Jonas Berg",
        "status": "idle"
       },
       "teammate": {
@@ -4981,7 +4981,7 @@
      "recentRuns": [
       {
        "id": "9dbaf736-5c2b-46d6-95b6-54c2361c99fe",
-       "title": "Support mail: Email from Ines Moreau <ines@duff.test>: Timeline view?",
+       "title": "Support mail: Timeline view? · Ines Moreau",
        "threadId": "972d0cc3-0dfb-441b-aa86-cd560165cf84",
        "case": null,
        "status": "waiting_person",
@@ -4991,7 +4991,7 @@
       },
       {
        "id": "669599f7-7457-40f2-a177-6f3d710ac92c",
-       "title": "Support mail: Email from Marco Bianchi <marco@stark.test>: Billed for 12 seats, we are 9",
+       "title": "Support mail: Billed for 12 seats, we are 9 · Marco Bianchi",
        "threadId": "c6a949f1-7a6a-4798-8165-2afd757282a9",
        "case": null,
        "status": "waiting_person",
@@ -5001,7 +5001,7 @@
       },
       {
        "id": "1f8e92cb-e33a-4905-a53c-a7afb894d046",
-       "title": "Support mail: Email from Hannah Weber <hannah@initrode.test>: Move a task to another project",
+       "title": "Support mail: Move a task to another project · Hannah Weber",
        "threadId": "d1a42aa5-0e1d-45a0-b014-8106af764e4e",
        "case": null,
        "status": "waiting_person",
@@ -5011,7 +5011,7 @@
       },
       {
        "id": "f5cfcd02-d847-4c27-8548-a69424756d15",
-       "title": "Support mail: Email from Elena García <elena@monarch.test>: Invite link says expired",
+       "title": "Support mail: Invite link says expired · Elena García",
        "threadId": "9829c085-69d0-48e4-8150-dff6af687e36",
        "case": null,
        "status": "waiting_event",
@@ -5021,7 +5021,7 @@
       },
       {
        "id": "19b9b6a2-9dad-490d-9052-20f76f61b2b2",
-       "title": "Support mail: Email from Ravi Kumar <ravi@oscorp.test>: Automatic reply: Your Acme invoice",
+       "title": "Support mail: Automatic reply: Your Acme invoice · Ravi Kumar",
        "threadId": "d9abfdf9-9acd-4829-b36c-0bcc6ebc18f7",
        "case": "noise",
        "status": "done",
@@ -5136,7 +5136,7 @@
       "events": [
        {
         "runId": "777e507a-da07-4550-a52e-f9436de25d36",
-        "title": "Support mail: Email from Ana Souza <ana@initrode.test>: Inviting my team",
+        "title": "Support mail: Inviting my team · Ana Souza",
         "threadId": "43e5f522-4c59-4f69-8bbc-3a459b1b122e",
         "status": "done",
         "case": "documented_question",
@@ -5163,7 +5163,7 @@
        },
        {
         "runId": "6960a1af-de36-4e02-a8f0-fdfb2c9cb939",
-        "title": "Support mail: Email from Lucas Martin <lucas@cyberdyne.test>: Slack notifications stopped",
+        "title": "Support mail: Slack notifications stopped · Lucas Martin",
         "threadId": "6817ef6a-b1f4-4e6d-9f92-e4506cae5774",
         "status": "done",
         "case": "bug",
@@ -5215,7 +5215,7 @@
        },
        {
         "runId": "347dbef2-8862-4189-b9dc-bcad43e9738f",
-        "title": "Support mail: Email from Offshore Devs <sales@devs-offshore.test>: Senior developers at $25/hour",
+        "title": "Support mail: Senior developers at $25/hour · Offshore Devs",
         "threadId": "1088f021-78be-46ee-9951-c50a5b05eb2d",
         "status": "done",
         "case": "noise",
@@ -5244,7 +5244,7 @@
        },
        {
         "runId": "a4bc1e1f-60ba-41f8-86f2-d12e21ab79e0",
-        "title": "Support mail: Email from Omar Haddad <omar@globex.test>: Refund for unused seats",
+        "title": "Support mail: Refund for unused seats · Omar Haddad",
         "threadId": "820a4edb-a3f8-44f8-819e-65faaf2f19aa",
         "status": "done",
         "case": "billing_or_data",
@@ -5283,7 +5283,7 @@
        },
        {
         "runId": "cd4bc526-9a4f-4f2a-aa4e-d1506562a86d",
-        "title": "Support mail: Email from Elena García <elena@monarch.test>: Cannot add a 6th member",
+        "title": "Support mail: Cannot add a 6th member · Elena García",
         "threadId": "7e3dbe85-1a26-4efa-982d-c06da35dc410",
         "status": "done",
         "case": "account_problem",
@@ -5740,7 +5740,7 @@
      "recentRuns": [
       {
        "id": "9dbaf736-5c2b-46d6-95b6-54c2361c99fe",
-       "title": "Support mail: Email from Ines Moreau <ines@duff.test>: Timeline view?",
+       "title": "Support mail: Timeline view? · Ines Moreau",
        "threadId": "972d0cc3-0dfb-441b-aa86-cd560165cf84",
        "case": null,
        "status": "waiting_person",
@@ -5750,7 +5750,7 @@
       },
       {
        "id": "669599f7-7457-40f2-a177-6f3d710ac92c",
-       "title": "Support mail: Email from Marco Bianchi <marco@stark.test>: Billed for 12 seats, we are 9",
+       "title": "Support mail: Billed for 12 seats, we are 9 · Marco Bianchi",
        "threadId": "c6a949f1-7a6a-4798-8165-2afd757282a9",
        "case": null,
        "status": "waiting_person",
@@ -5760,7 +5760,7 @@
       },
       {
        "id": "1f8e92cb-e33a-4905-a53c-a7afb894d046",
-       "title": "Support mail: Email from Hannah Weber <hannah@initrode.test>: Move a task to another project",
+       "title": "Support mail: Move a task to another project · Hannah Weber",
        "threadId": "d1a42aa5-0e1d-45a0-b014-8106af764e4e",
        "case": null,
        "status": "waiting_person",
@@ -5770,7 +5770,7 @@
       },
       {
        "id": "f5cfcd02-d847-4c27-8548-a69424756d15",
-       "title": "Support mail: Email from Elena García <elena@monarch.test>: Invite link says expired",
+       "title": "Support mail: Invite link says expired · Elena García",
        "threadId": "9829c085-69d0-48e4-8150-dff6af687e36",
        "case": null,
        "status": "waiting_event",
@@ -5780,7 +5780,7 @@
       },
       {
        "id": "19b9b6a2-9dad-490d-9052-20f76f61b2b2",
-       "title": "Support mail: Email from Ravi Kumar <ravi@oscorp.test>: Automatic reply: Your Acme invoice",
+       "title": "Support mail: Automatic reply: Your Acme invoice · Ravi Kumar",
        "threadId": "d9abfdf9-9acd-4829-b36c-0bcc6ebc18f7",
        "case": "noise",
        "status": "done",
@@ -5895,7 +5895,7 @@
       "events": [
        {
         "runId": "777e507a-da07-4550-a52e-f9436de25d36",
-        "title": "Support mail: Email from Ana Souza <ana@initrode.test>: Inviting my team",
+        "title": "Support mail: Inviting my team · Ana Souza",
         "threadId": "43e5f522-4c59-4f69-8bbc-3a459b1b122e",
         "status": "done",
         "case": "documented_question",
@@ -5922,7 +5922,7 @@
        },
        {
         "runId": "6960a1af-de36-4e02-a8f0-fdfb2c9cb939",
-        "title": "Support mail: Email from Lucas Martin <lucas@cyberdyne.test>: Slack notifications stopped",
+        "title": "Support mail: Slack notifications stopped · Lucas Martin",
         "threadId": "6817ef6a-b1f4-4e6d-9f92-e4506cae5774",
         "status": "done",
         "case": "bug",
@@ -5974,7 +5974,7 @@
        },
        {
         "runId": "347dbef2-8862-4189-b9dc-bcad43e9738f",
-        "title": "Support mail: Email from Offshore Devs <sales@devs-offshore.test>: Senior developers at $25/hour",
+        "title": "Support mail: Senior developers at $25/hour · Offshore Devs",
         "threadId": "1088f021-78be-46ee-9951-c50a5b05eb2d",
         "status": "done",
         "case": "noise",
@@ -6003,7 +6003,7 @@
        },
        {
         "runId": "a4bc1e1f-60ba-41f8-86f2-d12e21ab79e0",
-        "title": "Support mail: Email from Omar Haddad <omar@globex.test>: Refund for unused seats",
+        "title": "Support mail: Refund for unused seats · Omar Haddad",
         "threadId": "820a4edb-a3f8-44f8-819e-65faaf2f19aa",
         "status": "done",
         "case": "billing_or_data",
@@ -6042,7 +6042,7 @@
        },
        {
         "runId": "cd4bc526-9a4f-4f2a-aa4e-d1506562a86d",
-        "title": "Support mail: Email from Elena García <elena@monarch.test>: Cannot add a 6th member",
+        "title": "Support mail: Cannot add a 6th member · Elena García",
         "threadId": "7e3dbe85-1a26-4efa-982d-c06da35dc410",
         "status": "done",
         "case": "account_problem",
@@ -6663,7 +6663,7 @@
     "recentRuns": [
      {
       "id": "9dbaf736-5c2b-46d6-95b6-54c2361c99fe",
-      "title": "Support mail: Email from Ines Moreau <ines@duff.test>: Timeline view?",
+      "title": "Support mail: Timeline view? · Ines Moreau",
       "threadId": "972d0cc3-0dfb-441b-aa86-cd560165cf84",
       "case": null,
       "status": "waiting_person",
@@ -6673,7 +6673,7 @@
      },
      {
       "id": "669599f7-7457-40f2-a177-6f3d710ac92c",
-      "title": "Support mail: Email from Marco Bianchi <marco@stark.test>: Billed for 12 seats, we are 9",
+      "title": "Support mail: Billed for 12 seats, we are 9 · Marco Bianchi",
       "threadId": "c6a949f1-7a6a-4798-8165-2afd757282a9",
       "case": null,
       "status": "waiting_person",
@@ -6683,7 +6683,7 @@
      },
      {
       "id": "1f8e92cb-e33a-4905-a53c-a7afb894d046",
-      "title": "Support mail: Email from Hannah Weber <hannah@initrode.test>: Move a task to another project",
+      "title": "Support mail: Move a task to another project · Hannah Weber",
       "threadId": "d1a42aa5-0e1d-45a0-b014-8106af764e4e",
       "case": null,
       "status": "waiting_person",
@@ -6693,7 +6693,7 @@
      },
      {
       "id": "f5cfcd02-d847-4c27-8548-a69424756d15",
-      "title": "Support mail: Email from Elena García <elena@monarch.test>: Invite link says expired",
+      "title": "Support mail: Invite link says expired · Elena García",
       "threadId": "9829c085-69d0-48e4-8150-dff6af687e36",
       "case": null,
       "status": "waiting_event",
@@ -6703,7 +6703,7 @@
      },
      {
       "id": "19b9b6a2-9dad-490d-9052-20f76f61b2b2",
-      "title": "Support mail: Email from Ravi Kumar <ravi@oscorp.test>: Automatic reply: Your Acme invoice",
+      "title": "Support mail: Automatic reply: Your Acme invoice · Ravi Kumar",
       "threadId": "d9abfdf9-9acd-4829-b36c-0bcc6ebc18f7",
       "case": "noise",
       "status": "done",
@@ -6713,7 +6713,7 @@
      },
      {
       "id": "189d38ad-52cd-4e71-8c41-06aaed323c25",
-      "title": "Support mail: Email from Grace Kim <grace@wayne.test>: Change the workspace owner",
+      "title": "Support mail: Change the workspace owner · Grace Kim",
       "threadId": "418d5434-7d0e-4d00-ab6a-5621e93c061f",
       "case": "documented_question",
       "status": "done",
@@ -6723,7 +6723,7 @@
      },
      {
       "id": "69d7f8b0-d29d-4eb1-afc7-590103c1b8bd",
-      "title": "Support mail: Email from Lucas Martin <lucas@cyberdyne.test>: Export a project to PDF",
+      "title": "Support mail: Export a project to PDF · Lucas Martin",
       "threadId": "afb88efd-307c-4729-929c-d0e93cc8b1b6",
       "case": "documented_question",
       "status": "done",
@@ -6733,7 +6733,7 @@
      },
      {
       "id": "2f1f3449-4cd5-40c0-80df-31630983ebd0",
-      "title": "Support mail: Email from Nadia Petrova <nadia@tyrell.test>: API token",
+      "title": "Support mail: API token · Nadia Petrova",
       "threadId": "a4376961-8419-443a-adce-c50c865fdd69",
       "case": "documented_question",
       "status": "done",
@@ -6743,7 +6743,7 @@
      },
      {
       "id": "7460cb86-eec8-40fd-9908-02d3958c8ef3",
-      "title": "Support mail: Email from Jonas Berg <jonas@pied-piper.test>: Our workspace is read-only",
+      "title": "Support mail: Our workspace is read-only · Jonas Berg",
       "threadId": "86dd6231-b059-4122-a5ab-34a4bdf8be3b",
       "case": "account_problem",
       "status": "done",
@@ -6763,7 +6763,7 @@
      },
      {
       "id": "28f45515-8a87-42e8-8aa1-b70fa28e2566",
-      "title": "Support mail: Email from Amara Okafor <amara@wonka.test>: Please delete our account",
+      "title": "Support mail: Please delete our account · Amara Okafor",
       "threadId": "d0543d85-1023-4f9f-b2f4-101c8cf538db",
       "case": "billing_or_data",
       "status": "done",
@@ -6773,7 +6773,7 @@
      },
      {
       "id": "ffe75072-0a93-4150-ab40-374190a4ecda",
-      "title": "Support mail: Email from Kenji Watanabe <kenji@soylent.test>: Google Calendar sync",
+      "title": "Support mail: Google Calendar sync · Kenji Watanabe",
       "threadId": "d2e3f158-cd59-4558-a36b-f61356575420",
       "case": "documented_question",
       "status": "done",
@@ -6783,7 +6783,7 @@
      },
      {
       "id": "6882b2a8-cd19-4852-ae8b-c73b31db7df1",
-      "title": "Support mail: Email from Sofia Rossi <sofia@vandelay.test>: Recurring tasks?",
+      "title": "Support mail: Recurring tasks? · Sofia Rossi",
       "threadId": "12553451-9021-4374-ade3-12ba3a925a70",
       "case": "feature_request",
       "status": "done",
@@ -6793,7 +6793,7 @@
      },
      {
       "id": "c4273610-8f6f-43ef-9390-79d83f5d325f",
-      "title": "Support mail: Email from Maxine from SEO Rocket <maxine@seo-rocket.test>: Partnership: 10x your organic traffic",
+      "title": "Support mail: Partnership: 10x your organic traffic · Maxine from SEO Rocket",
       "threadId": "cff3e6a6-01e7-4895-957e-cac5227a76d3",
       "case": "noise",
       "status": "done",
@@ -6803,7 +6803,7 @@
      },
      {
       "id": "c2331331-89ef-4973-a20f-35e3c8dc2d4d",
-      "title": "Support mail: Email from Omar Haddad <omar@globex.test>: Invites not arriving",
+      "title": "Support mail: Invites not arriving · Omar Haddad",
       "threadId": "2c64a223-32ed-4aec-8b72-60763c98aa4f",
       "case": "account_problem",
       "status": "done",
@@ -6813,7 +6813,7 @@
      },
      {
       "id": "297928bf-39b6-4ed7-8f13-b683843083eb",
-      "title": "Support mail: Email from Mei Chen <mei@umbrella.test>: Export to CSV not working",
+      "title": "Support mail: Export to CSV not working · Mei Chen",
       "threadId": "fbe19193-a2bb-4862-9c22-21ba01404980",
       "case": "bug",
       "status": "done",
@@ -6823,7 +6823,7 @@
      },
      {
       "id": "bea195aa-7e38-4297-b2b2-3705b69bfe9d",
-      "title": "Support mail: Email from Tomás Reyes <tomas@initech.test>: Billing export broken?",
+      "title": "Support mail: Billing export broken? · Tomás Reyes",
       "threadId": "dcee8ca7-1950-404e-8670-98086cbe93a2",
       "case": "bug",
       "status": "done",
@@ -6833,7 +6833,7 @@
      },
      {
       "id": "410f344b-f060-4bea-bda1-02b613553907",
-      "title": "Support mail: Email from Priya Natarajan <priya@northwind.test>: CSV export fails with an error",
+      "title": "Support mail: CSV export fails with an error · Priya Natarajan",
       "threadId": "3de63bce-fe72-4764-a54c-5df369aea089",
       "case": "bug",
       "status": "done",
@@ -6843,7 +6843,7 @@
      },
      {
       "id": "f482fd22-a251-4c67-8654-fb25ed264125",
-      "title": "Support mail: Email from Lena Fischer <lena@hooli.test>: Adding a client to one project",
+      "title": "Support mail: Adding a client to one project · Lena Fischer",
       "threadId": "6c4cf6a2-afcd-45aa-b16d-fb0b5bf66e57",
       "case": "documented_question",
       "status": "done",
@@ -6853,7 +6853,7 @@
      },
      {
       "id": "1b979404-1293-4f00-b09a-8dfeca56cdaa",
-      "title": "Support mail: Email from Ryo Tanaka <ryo@soylent.test>: Mentions don't notify",
+      "title": "Support mail: Mentions don't notify · Ryo Tanaka",
       "threadId": "969f9576-ab9a-40d1-a607-5314a989ed46",
       "case": "documented_question",
       "status": "done",
@@ -6863,7 +6863,7 @@
      },
      {
       "id": "b66139dc-7d5f-4ad4-a665-1c6064820fca",
-      "title": "Support mail: Email from Emma Johansson <emma@umbrella.test>: Dark mode",
+      "title": "Support mail: Dark mode · Emma Johansson",
       "threadId": "0ba45501-0671-4aef-8daa-245c94b9cd24",
       "case": "documented_question",
       "status": "done",
@@ -6873,7 +6873,7 @@
      },
      {
       "id": "fa19d571-65d2-4582-8c3c-8381ffcce9cd",
-      "title": "Support mail: Email from Daniel Cohen <daniel@vandelay.test>: Still paying for 10 seats",
+      "title": "Support mail: Still paying for 10 seats · Daniel Cohen",
       "threadId": "c3390e9f-b9a8-429e-818d-3c96a81df01f",
       "case": "account_problem",
       "status": "done",
@@ -6883,7 +6883,7 @@
      },
      {
       "id": "69a56189-63f0-43d1-a4ed-e8fd9b47b2b6",
-      "title": "Support mail: Email from PM Summit <events@pm-summit.test>: Webinar: AI for project managers",
+      "title": "Support mail: Webinar: AI for project managers · PM Summit",
       "threadId": "99f86149-7a85-45a2-b0fb-c84b0d83ca0d",
       "case": "noise",
       "status": "done",
@@ -6893,7 +6893,7 @@
      },
      {
       "id": "18d41856-bbd0-4fb3-b159-4668fb9c7ca1",
-      "title": "Support mail: Email from Aisha Bello <aisha@initrode.test>: Project templates",
+      "title": "Support mail: Project templates · Aisha Bello",
       "threadId": "3f7ad76d-d290-41be-b5cc-19701ee14286",
       "case": "documented_question",
       "status": "done",
@@ -6903,7 +6903,7 @@
      },
      {
       "id": "eb620244-c98e-43c4-9b57-555dcf93a9e3",
-      "title": "Support mail: Email from Hugo Lefebvre <hugo@globex.test>: Due date reminders",
+      "title": "Support mail: Due date reminders · Hugo Lefebvre",
       "threadId": "48c3b441-1070-45b1-b510-abcffd7f4f37",
       "case": "documented_question",
       "status": "done",
@@ -6913,7 +6913,7 @@
      },
      {
       "id": "948c02f1-98c0-4bd1-aaff-ca328bdf6ff5",
-      "title": "Support mail: Email from Clara Silva <clara@pied-piper.test>: Upgrading mid-month",
+      "title": "Support mail: Upgrading mid-month · Clara Silva",
       "threadId": "6ce25982-fd80-4306-a200-306e43b1e48c",
       "case": "account_problem",
       "status": "done",
@@ -6923,7 +6923,7 @@
      },
      {
       "id": "bf86e0b3-6f79-4978-a180-552a0007aa1e",
-      "title": "Support mail: Email from Noah Williams <noah@stark.test>: Two-factor authentication",
+      "title": "Support mail: Two-factor authentication · Noah Williams",
       "threadId": "ff2aa54f-4da2-439a-b1d1-16fbdb789320",
       "case": "documented_question",
       "status": "done",
@@ -6933,7 +6933,7 @@
      },
      {
       "id": "1f56f682-fa2f-480d-af3b-1fb7d8004b9c",
-      "title": "Support mail: Email from Calendar Bot <no-reply@calendar-bot.test>: Invitation: Product demo with Growthly",
+      "title": "Support mail: Invitation: Product demo with Growthly · Calendar Bot",
       "threadId": "293c227c-dd7f-4faf-ba58-98b4c9dc3dfe",
       "case": "noise",
       "status": "done",
@@ -6943,7 +6943,7 @@
      },
      {
       "id": "483e8a1f-6090-4e6c-af7b-a36b2f3f69de",
-      "title": "Support mail: Email from Mia Hoffmann <mia@duff.test>: Archive a finished project",
+      "title": "Support mail: Archive a finished project · Mia Hoffmann",
       "threadId": "73943a40-4ca7-474e-814a-30f9e03e7040",
       "case": "documented_question",
       "status": "done",
@@ -6953,7 +6953,7 @@
      },
      {
       "id": "42d1263d-677d-4afd-a785-287d07d63761",
-      "title": "Support mail: Email from Leo Novak <leo@wayne.test>: Still on Pro after cancelling?",
+      "title": "Support mail: Still on Pro after cancelling? · Leo Novak",
       "threadId": "c160c868-127a-4ab6-9983-b7a03fcd2252",
       "case": "account_problem",
       "status": "done",
@@ -7068,7 +7068,7 @@
      "events": [
       {
        "runId": "777e507a-da07-4550-a52e-f9436de25d36",
-       "title": "Support mail: Email from Ana Souza <ana@initrode.test>: Inviting my team",
+       "title": "Support mail: Inviting my team · Ana Souza",
        "threadId": "43e5f522-4c59-4f69-8bbc-3a459b1b122e",
        "status": "done",
        "case": "documented_question",
@@ -7095,7 +7095,7 @@
       },
       {
        "runId": "6960a1af-de36-4e02-a8f0-fdfb2c9cb939",
-       "title": "Support mail: Email from Lucas Martin <lucas@cyberdyne.test>: Slack notifications stopped",
+       "title": "Support mail: Slack notifications stopped · Lucas Martin",
        "threadId": "6817ef6a-b1f4-4e6d-9f92-e4506cae5774",
        "status": "done",
        "case": "bug",
@@ -7147,7 +7147,7 @@
       },
       {
        "runId": "347dbef2-8862-4189-b9dc-bcad43e9738f",
-       "title": "Support mail: Email from Offshore Devs <sales@devs-offshore.test>: Senior developers at $25/hour",
+       "title": "Support mail: Senior developers at $25/hour · Offshore Devs",
        "threadId": "1088f021-78be-46ee-9951-c50a5b05eb2d",
        "status": "done",
        "case": "noise",
@@ -7176,7 +7176,7 @@
       },
       {
        "runId": "a4bc1e1f-60ba-41f8-86f2-d12e21ab79e0",
-       "title": "Support mail: Email from Omar Haddad <omar@globex.test>: Refund for unused seats",
+       "title": "Support mail: Refund for unused seats · Omar Haddad",
        "threadId": "820a4edb-a3f8-44f8-819e-65faaf2f19aa",
        "status": "done",
        "case": "billing_or_data",
@@ -7215,7 +7215,7 @@
       },
       {
        "runId": "cd4bc526-9a4f-4f2a-aa4e-d1506562a86d",
-       "title": "Support mail: Email from Elena García <elena@monarch.test>: Cannot add a 6th member",
+       "title": "Support mail: Cannot add a 6th member · Elena García",
        "threadId": "7e3dbe85-1a26-4efa-982d-c06da35dc410",
        "status": "done",
        "case": "account_problem",
@@ -7267,7 +7267,7 @@
     "events": [
      {
       "runId": "777e507a-da07-4550-a52e-f9436de25d36",
-      "title": "Support mail: Email from Ana Souza <ana@initrode.test>: Inviting my team",
+      "title": "Support mail: Inviting my team · Ana Souza",
       "threadId": "43e5f522-4c59-4f69-8bbc-3a459b1b122e",
       "status": "done",
       "case": "documented_question",
@@ -7294,7 +7294,7 @@
      },
      {
       "runId": "6960a1af-de36-4e02-a8f0-fdfb2c9cb939",
-      "title": "Support mail: Email from Lucas Martin <lucas@cyberdyne.test>: Slack notifications stopped",
+      "title": "Support mail: Slack notifications stopped · Lucas Martin",
       "threadId": "6817ef6a-b1f4-4e6d-9f92-e4506cae5774",
       "status": "done",
       "case": "bug",
@@ -7346,7 +7346,7 @@
      },
      {
       "runId": "347dbef2-8862-4189-b9dc-bcad43e9738f",
-      "title": "Support mail: Email from Offshore Devs <sales@devs-offshore.test>: Senior developers at $25/hour",
+      "title": "Support mail: Senior developers at $25/hour · Offshore Devs",
       "threadId": "1088f021-78be-46ee-9951-c50a5b05eb2d",
       "status": "done",
       "case": "noise",
@@ -7375,7 +7375,7 @@
      },
      {
       "runId": "a4bc1e1f-60ba-41f8-86f2-d12e21ab79e0",
-      "title": "Support mail: Email from Omar Haddad <omar@globex.test>: Refund for unused seats",
+      "title": "Support mail: Refund for unused seats · Omar Haddad",
       "threadId": "820a4edb-a3f8-44f8-819e-65faaf2f19aa",
       "status": "done",
       "case": "billing_or_data",
@@ -7414,7 +7414,7 @@
      },
      {
       "runId": "cd4bc526-9a4f-4f2a-aa4e-d1506562a86d",
-      "title": "Support mail: Email from Elena García <elena@monarch.test>: Cannot add a 6th member",
+      "title": "Support mail: Cannot add a 6th member · Elena García",
       "threadId": "7e3dbe85-1a26-4efa-982d-c06da35dc410",
       "status": "done",
       "case": "account_problem",
@@ -8928,7 +8928,7 @@
     "threads": [
      {
       "id": "d1a42aa5-0e1d-45a0-b014-8106af764e4e",
-      "title": "Support mail: Email from Hannah Weber <hannah@initrode.test>: Move a task to another project",
+      "title": "Support mail: Move a task to another project · Hannah Weber",
       "status": "waiting",
       "origin": "trigger",
       "segments": [
@@ -8947,7 +8947,7 @@
      },
      {
       "id": "c6a949f1-7a6a-4798-8165-2afd757282a9",
-      "title": "Support mail: Email from Marco Bianchi <marco@stark.test>: Billed for 12 seats, we are 9",
+      "title": "Support mail: Billed for 12 seats, we are 9 · Marco Bianchi",
       "status": "waiting",
       "origin": "trigger",
       "segments": [
@@ -8966,7 +8966,7 @@
      },
      {
       "id": "972d0cc3-0dfb-441b-aa86-cd560165cf84",
-      "title": "Support mail: Email from Ines Moreau <ines@duff.test>: Timeline view?",
+      "title": "Support mail: Timeline view? · Ines Moreau",
       "status": "waiting",
       "origin": "trigger",
       "segments": [
@@ -9732,7 +9732,7 @@
      "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
      "computerId": "cmvjgibwj0001e1lwt5ubh89o",
      "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-     "title": "Support mail: Email from Jonas Berg <jonas@pied-piper.test>: Our workspace is read-only",
+     "title": "Support mail: Our workspace is read-only · Jonas Berg",
      "status": "idle",
      "private": false,
      "othersMayPrompt": false,
@@ -10740,7 +10740,7 @@
      "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
      "computerId": "cmvjgibwj0001e1lwt5ubh89o",
      "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-     "title": "Support mail: Email from Jonas Berg <jonas@pied-piper.test>: Our workspace is read-only",
+     "title": "Support mail: Our workspace is read-only · Jonas Berg",
      "status": "idle",
      "private": false,
      "othersMayPrompt": false,
@@ -11039,7 +11039,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Emma Johansson <emma@umbrella.test>: Dark mode",
+    "title": "Support mail: Dark mode · Emma Johansson",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -11358,7 +11358,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Dry run · Support mail: Email from Offshore Devs <sales@devs-offshore.test>: Senior developers at $25/hour",
+    "title": "Dry run · Support mail: Senior developers at $25/hour · Offshore Devs",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -11678,7 +11678,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Sofia Rossi <sofia@vandelay.test>: Recurring tasks?",
+    "title": "Support mail: Recurring tasks? · Sofia Rossi",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -12100,7 +12100,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Calendar Bot <no-reply@calendar-bot.test>: Invitation: Product demo with Growthly",
+    "title": "Support mail: Invitation: Product demo with Growthly · Calendar Bot",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -12422,7 +12422,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Omar Haddad <omar@globex.test>: Invites not arriving",
+    "title": "Support mail: Invites not arriving · Omar Haddad",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -12857,18 +12857,18 @@
     "schedule": null,
     "parent": {
      "id": "3de63bce-fe72-4764-a54c-5df369aea089",
-     "title": "Support mail: Email from Priya Natarajan <priya@northwind.test>: CSV export fails with an error"
+     "title": "Support mail: CSV export fails with an error · Priya Natarajan"
     },
     "children": [],
     "reportingSchedules": [],
     "followers": [
      {
       "id": "dcee8ca7-1950-404e-8670-98086cbe93a2",
-      "title": "Support mail: Email from Tomás Reyes <tomas@initech.test>: Billing export broken?"
+      "title": "Support mail: Billing export broken? · Tomás Reyes"
      },
      {
       "id": "fbe19193-a2bb-4862-9c22-21ba01404980",
-      "title": "Support mail: Email from Mei Chen <mei@umbrella.test>: Export to CSV not working"
+      "title": "Support mail: Export to CSV not working · Mei Chen"
      }
     ],
     "tickets": [],
@@ -12901,7 +12901,7 @@
       "seq": 1,
       "event": {
        "at": "2026-10-16T06:38:49.356Z",
-       "text": "Sam started this thread from the thread “Support mail: Email from Priya Natarajan <priya@northwind.test>: CSV export fails with an error” and waits for your report.\n\nExporting invoices to CSV from /billing returns a 500 for some workspaces since this morning; the PDF export works. Find the cause in acme/web, fix it with a test, open a pull request and merge it once its checks pass.\n\nWhen you are done, call `report` once, then end your turn. The thread that started you cannot see your files, /tmp included: put in your report all it needs, the answer first, and send the files it needs (scripts, logs, screenshots) with it, in `files`.",
+       "text": "Sam started this thread from the thread “Support mail: CSV export fails with an error · Priya Natarajan” and waits for your report.\n\nExporting invoices to CSV from /billing returns a 500 for some workspaces since this morning; the PDF export works. Find the cause in acme/web, fix it with a test, open a pull request and merge it once its checks pass.\n\nWhen you are done, call `report` once, then end your turn. The thread that started you cannot see your files, /tmp included: put in your report all it needs, the answer first, and send the files it needs (scripts, logs, screenshots) with it, in `files`.",
        "type": "message.user",
        "memberId": null
       }
@@ -13239,7 +13239,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Priya Natarajan <priya@northwind.test>: CSV export fails with an error",
+    "title": "Support mail: CSV export fails with an error · Priya Natarajan",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -13792,7 +13792,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Aisha Bello <aisha@initrode.test>: Project templates",
+    "title": "Support mail: Project templates · Aisha Bello",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -14111,7 +14111,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Grace Kim <grace@wayne.test>: Change the workspace owner",
+    "title": "Support mail: Change the workspace owner · Grace Kim",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -14527,7 +14527,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Dry run · Support mail: Email from Ana Souza <ana@initrode.test>: Inviting my team",
+    "title": "Dry run · Support mail: Inviting my team · Ana Souza",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -14815,7 +14815,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Hugo Lefebvre <hugo@globex.test>: Due date reminders",
+    "title": "Support mail: Due date reminders · Hugo Lefebvre",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -15209,7 +15209,7 @@
     "schedule": null,
     "parent": {
      "id": "6817ef6a-b1f4-4e6d-9f92-e4506cae5774",
-     "title": "Dry run · Support mail: Email from Lucas Martin <lucas@cyberdyne.test>: Slack notifications stopped"
+     "title": "Dry run · Support mail: Slack notifications stopped · Lucas Martin"
     },
     "children": [],
     "reportingSchedules": [],
@@ -15244,7 +15244,7 @@
       "seq": 1,
       "event": {
        "at": "2026-09-28T07:38:12.539Z",
-       "text": "Sam started this thread from the thread “Dry run · Support mail: Email from Lucas Martin <lucas@cyberdyne.test>: Slack notifications stopped” and waits for your report.\n\nAcme stops posting to a Slack channel once the channel is renamed; reconnecting Slack does not help. Find the cause in acme/web, fix it with a test and open a pull request.\n\nWhen you are done, call `report` once, then end your turn. The thread that started you cannot see your files, /tmp included: put in your report all it needs, the answer first, and send the files it needs (scripts, logs, screenshots) with it, in `files`.",
+       "text": "Sam started this thread from the thread “Dry run · Support mail: Slack notifications stopped · Lucas Martin” and waits for your report.\n\nAcme stops posting to a Slack channel once the channel is renamed; reconnecting Slack does not help. Find the cause in acme/web, fix it with a test and open a pull request.\n\nWhen you are done, call `report` once, then end your turn. The thread that started you cannot see your files, /tmp included: put in your report all it needs, the answer first, and send the files it needs (scripts, logs, screenshots) with it, in `files`.",
        "type": "message.user",
        "memberId": null
       }
@@ -15493,7 +15493,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Dry run · Support mail: Email from Lucas Martin <lucas@cyberdyne.test>: Slack notifications stopped",
+    "title": "Dry run · Support mail: Slack notifications stopped · Lucas Martin",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -15944,7 +15944,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Lena Fischer <lena@hooli.test>: Adding a client to one project",
+    "title": "Support mail: Adding a client to one project · Lena Fischer",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -16263,7 +16263,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Clara Silva <clara@pied-piper.test>: Upgrading mid-month",
+    "title": "Support mail: Upgrading mid-month · Clara Silva",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -16621,7 +16621,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Mia Hoffmann <mia@duff.test>: Archive a finished project",
+    "title": "Support mail: Archive a finished project · Mia Hoffmann",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -16940,7 +16940,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Dry run · Support mail: Email from Elena García <elena@monarch.test>: Cannot add a 6th member",
+    "title": "Dry run · Support mail: Cannot add a 6th member · Elena García",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -17268,7 +17268,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Dry run · Support mail: Email from Omar Haddad <omar@globex.test>: Refund for unused seats",
+    "title": "Dry run · Support mail: Refund for unused seats · Omar Haddad",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -17621,7 +17621,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Jonas Berg <jonas@pied-piper.test>: Our workspace is read-only",
+    "title": "Support mail: Our workspace is read-only · Jonas Berg",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -18269,7 +18269,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Ryo Tanaka <ryo@soylent.test>: Mentions don't notify",
+    "title": "Support mail: Mentions don't notify · Ryo Tanaka",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -18588,7 +18588,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Ines Moreau <ines@duff.test>: Timeline view?",
+    "title": "Support mail: Timeline view? · Ines Moreau",
     "status": "waiting",
     "private": false,
     "othersMayPrompt": false,
@@ -18950,7 +18950,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Elena García <elena@monarch.test>: Invite link says expired",
+    "title": "Support mail: Invite link says expired · Elena García",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -19423,7 +19423,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from PM Summit <events@pm-summit.test>: Webinar: AI for project managers",
+    "title": "Support mail: Webinar: AI for project managers · PM Summit",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -19745,7 +19745,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Nadia Petrova <nadia@tyrell.test>: API token",
+    "title": "Support mail: API token · Nadia Petrova",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -20384,7 +20384,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Lucas Martin <lucas@cyberdyne.test>: Export a project to PDF",
+    "title": "Support mail: Export a project to PDF · Lucas Martin",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -20703,7 +20703,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Leo Novak <leo@wayne.test>: Still on Pro after cancelling?",
+    "title": "Support mail: Still on Pro after cancelling? · Leo Novak",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -21491,27 +21491,27 @@
         "events": [
          {
           "case": "documented_question",
-          "title": "Support mail: Email from Ana Souza <ana@initrode.test>: Inviting my team",
+          "title": "Support mail: Inviting my team · Ana Souza",
           "outcome": "resolved"
          },
          {
           "case": "bug",
-          "title": "Support mail: Email from Lucas Martin <lucas@cyberdyne.test>: Slack notifications stopped",
+          "title": "Support mail: Slack notifications stopped · Lucas Martin",
           "outcome": "resolved"
          },
          {
           "case": "noise",
-          "title": "Support mail: Email from Offshore Devs <sales@devs-offshore.test>: Senior developers at $25/hour",
+          "title": "Support mail: Senior developers at $25/hour · Offshore Devs",
           "outcome": "noise"
          },
          {
           "case": "billing_or_data",
-          "title": "Support mail: Email from Omar Haddad <omar@globex.test>: Refund for unused seats",
+          "title": "Support mail: Refund for unused seats · Omar Haddad",
           "outcome": "escalated"
          },
          {
           "case": "account_problem",
-          "title": "Support mail: Email from Elena García <elena@monarch.test>: Cannot add a 6th member",
+          "title": "Support mail: Cannot add a 6th member · Elena García",
           "outcome": "resolved"
          }
         ],
@@ -21655,7 +21655,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Daniel Cohen <daniel@vandelay.test>: Still paying for 10 seats",
+    "title": "Support mail: Still paying for 10 seats · Daniel Cohen",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -22013,7 +22013,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Marco Bianchi <marco@stark.test>: Billed for 12 seats, we are 9",
+    "title": "Support mail: Billed for 12 seats, we are 9 · Marco Bianchi",
     "status": "waiting",
     "private": false,
     "othersMayPrompt": false,
@@ -22313,7 +22313,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Maxine from SEO Rocket <maxine@seo-rocket.test>: Partnership: 10x your organic traffic",
+    "title": "Support mail: Partnership: 10x your organic traffic · Maxine from SEO Rocket",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -25253,7 +25253,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Amara Okafor <amara@wonka.test>: Please delete our account",
+    "title": "Support mail: Please delete our account · Amara Okafor",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -25654,7 +25654,7 @@
       "seq": 1,
       "event": {
        "at": "2026-10-21T14:28:07.357Z",
-       "text": "Sam started this thread from the thread “Support mail: Email from Elena García <elena@monarch.test>: Invite link says expired” and waits for your report.\n\nNew invite links say \"This invite has expired\" as soon as they are opened, even right after they are sent. Find the cause in acme/web, fix it with a test, open a pull request and merge it once its checks pass.\n\nWhen you are done, call `report` once, then end your turn. The thread that started you cannot see your files, /tmp included: put in your report all it needs, the answer first, and send the files it needs (scripts, logs, screenshots) with it, in `files`.",
+       "text": "Sam started this thread from the thread “Support mail: Invite link says expired · Elena García” and waits for your report.\n\nNew invite links say \"This invite has expired\" as soon as they are opened, even right after they are sent. Find the cause in acme/web, fix it with a test, open a pull request and merge it once its checks pass.\n\nWhen you are done, call `report` once, then end your turn. The thread that started you cannot see your files, /tmp included: put in your report all it needs, the answer first, and send the files it needs (scripts, logs, screenshots) with it, in `files`.",
        "type": "message.user",
        "memberId": null
       }
@@ -25909,7 +25909,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Hannah Weber <hannah@initrode.test>: Move a task to another project",
+    "title": "Support mail: Move a task to another project · Hannah Weber",
     "status": "waiting",
     "private": false,
     "othersMayPrompt": false,
@@ -26168,7 +26168,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Kenji Watanabe <kenji@soylent.test>: Google Calendar sync",
+    "title": "Support mail: Google Calendar sync · Kenji Watanabe",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -26551,7 +26551,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Ravi Kumar <ravi@oscorp.test>: Automatic reply: Your Acme invoice",
+    "title": "Support mail: Automatic reply: Your Acme invoice · Ravi Kumar",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -26873,7 +26873,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Tomás Reyes <tomas@initech.test>: Billing export broken?",
+    "title": "Support mail: Billing export broken? · Tomás Reyes",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -27446,7 +27446,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Mei Chen <mei@umbrella.test>: Export to CSV not working",
+    "title": "Support mail: Export to CSV not working · Mei Chen",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -28019,7 +28019,7 @@
     "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
     "computerId": "cmvjgibwj0001e1lwt5ubh89o",
     "accountId": "cmvjgibwm0002e1lw7o5mqrl7",
-    "title": "Support mail: Email from Noah Williams <noah@stark.test>: Two-factor authentication",
+    "title": "Support mail: Two-factor authentication · Noah Williams",
     "status": "idle",
     "private": false,
     "othersMayPrompt": false,
@@ -29375,7 +29375,7 @@
      "createdAt": "2026-10-22T10:37:40.359Z",
      "session": {
       "id": "972d0cc3-0dfb-441b-aa86-cd560165cf84",
-      "title": "Support mail: Email from Ines Moreau <ines@duff.test>: Timeline view?",
+      "title": "Support mail: Timeline view? · Ines Moreau",
       "origin": "trigger",
       "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
       "projectId": "cmvjgibzi000de1lwmdjoai11",
@@ -29474,7 +29474,7 @@
      "createdAt": "2026-10-21T14:27:22.357Z",
      "session": {
       "id": "9829c085-69d0-48e4-8150-dff6af687e36",
-      "title": "Support mail: Email from Elena García <elena@monarch.test>: Invite link says expired",
+      "title": "Support mail: Invite link says expired · Elena García",
       "origin": "trigger",
       "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
       "projectId": "cmvjgibzi000de1lwmdjoai11",
@@ -29717,7 +29717,7 @@
      "createdAt": "2026-10-22T10:37:40.359Z",
      "session": {
       "id": "972d0cc3-0dfb-441b-aa86-cd560165cf84",
-      "title": "Support mail: Email from Ines Moreau <ines@duff.test>: Timeline view?",
+      "title": "Support mail: Timeline view? · Ines Moreau",
       "origin": "trigger",
       "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
       "projectId": "cmvjgibzi000de1lwmdjoai11",
@@ -29761,7 +29761,7 @@
      "createdAt": "2026-10-21T14:27:22.357Z",
      "session": {
       "id": "9829c085-69d0-48e4-8150-dff6af687e36",
-      "title": "Support mail: Email from Elena García <elena@monarch.test>: Invite link says expired",
+      "title": "Support mail: Invite link says expired · Elena García",
       "origin": "trigger",
       "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
       "projectId": "cmvjgibzi000de1lwmdjoai11",
@@ -29961,7 +29961,7 @@
      "createdAt": "2026-10-22T10:37:40.359Z",
      "session": {
       "id": "972d0cc3-0dfb-441b-aa86-cd560165cf84",
-      "title": "Support mail: Email from Ines Moreau <ines@duff.test>: Timeline view?",
+      "title": "Support mail: Timeline view? · Ines Moreau",
       "origin": "trigger",
       "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
       "projectId": "cmvjgibzi000de1lwmdjoai11",
@@ -30060,7 +30060,7 @@
      "createdAt": "2026-10-21T14:27:22.357Z",
      "session": {
       "id": "9829c085-69d0-48e4-8150-dff6af687e36",
-      "title": "Support mail: Email from Elena García <elena@monarch.test>: Invite link says expired",
+      "title": "Support mail: Invite link says expired · Elena García",
       "origin": "trigger",
       "startedByMemberId": "790b3199-3137-41a0-b10f-f5f18a054969",
       "projectId": "cmvjgibzi000de1lwmdjoai11",

@@ -701,7 +701,8 @@ function SenderAvatar({
         className,
       )}
     >
-      {(name || address).trim().charAt(0).toUpperCase() || '?'}
+      {/* Its first letter or digit: a name in quotes ('Brigade alerts' via …) starts with neither. */}
+      {(name || address).match(/[\p{L}\p{N}]/u)?.[0]?.toUpperCase() ?? '?'}
     </span>
   )
 }
@@ -714,7 +715,13 @@ function NextStep({ item }: { item: InboxItem }) {
     item.next?.kind === 'draft' ? (
       <span className="font-semibold text-primary">Draft to approve</span>
     ) : item.status === 'done' ? (
-      <span>Done</span>
+      item.outcome?.kind === 'handled' ? (
+        <Hint label={item.outcome.note}>
+          <span className="min-w-0 truncate">handled it without a reply</span>
+        </Hint>
+      ) : (
+        <span>Done</span>
+      )
     ) : item.next?.kind === 'scheduled' ? (
       <span className="inline-flex items-center gap-1">
         <Clock aria-hidden className="size-3" />
@@ -866,9 +873,10 @@ function Reader({
   const unowned = d.status === 'waiting' && !d.thread
   const trouble = d.route === 'cap' || d.route === 'loop' || d.route === 'bounce'
   const state = d.reason ? 'No teammate is on it' : destination(d)
-  const about = [d.teammate && `${d.teammate.name}’s mailbox`, d.project?.name]
-    .filter(Boolean)
-    .join(' · ')
+  // Gmail's mail came to the account, not to the mailbox of the teammate who took it.
+  const mailboxName =
+    d.source.kind === 'gmail' ? `Gmail ${d.to}` : d.teammate && `${d.teammate.name}’s mailbox`
+  const about = [mailboxName, d.project?.name].filter(Boolean).join(' · ')
   // Once a thread has it, handing it over starts a new thread: worth offering only when the
   // mailbox has another teammate than the one on it.
   const handOver = d.handTo.some((t) => t.id !== d.teammate?.id)
@@ -942,7 +950,7 @@ function Reader({
               )}
             </div>
           </div>
-        ) : d.outcome && d.thread && !done ? (
+        ) : d.outcome && d.thread && (!done || d.outcome.kind === 'handled') ? (
           <OutcomeLine detail={d} about={about} onChanged={reload} />
         ) : (
           <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">

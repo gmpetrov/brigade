@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+  emailTitle,
   handedEmail,
   HANDOFF_DEFAULT_NOTE,
   INBOX_HANDOFF,
@@ -146,4 +147,17 @@ test('a hand-over with no note, or from before it named its item', () => {
 test("another trigger's email is not a hand-over", () => {
   assert.equal(handedEmail(message(email)), null)
   assert.equal(handedEmail('Ask more infos'), null)
+})
+
+test('an email thread is titled by its subject, then its sender by name', () => {
+  assert.equal(
+    emailTitle('refund please', 'gmp gmp <0b10101042@gmail.com>'),
+    'refund please · gmp gmp',
+  )
+  assert.equal(
+    emailTitle('Alert', "'Brigade alerts' via support <support@example.com>"),
+    'Alert · Brigade alerts via support',
+  )
+  assert.equal(emailTitle('', 'ada@example.com'), '(no subject) · ada@example.com')
+  assert.equal(emailTitle('Hello', undefined), 'Hello')
 })

@@ -299,7 +299,7 @@ function EmailBody({
             aria-hidden
             className="grid size-8 flex-none place-items-center rounded-full bg-chart-4/20 text-[13px] font-bold text-chart-4"
           >
-            {(from.name ?? from.address).charAt(0).toUpperCase()}
+            {(from.name ?? from.address).match(/[\p{L}\p{N}]/u)?.[0]?.toUpperCase() ?? '?'}
           </span>
           <div className="min-w-0 flex-1">
             <p className="wrap-anywhere">
