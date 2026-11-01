@@ -1688,7 +1688,8 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
     }),
     list_schedules: tool({
       description:
-        'List your schedules: id, title, cron, timezone, whether paused, and the next runs.',
+        'List your schedules on the accounts of the person in this thread: id, title, cron, timezone, ' +
+        'whether paused, the next runs.',
       inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
       execute: (input, { toolCallId }) =>
         call({ operation: { name: 'list' }, toolCallId, toolName: 'list_schedules', input }),

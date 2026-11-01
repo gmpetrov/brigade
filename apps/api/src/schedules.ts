@@ -25,7 +25,7 @@ import { handleTriggerCall } from './trigger-calls.js'
 import { onDecided, type Live, type Resume } from './held-calls.js'
 import { hubs, scheduleUpdated } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
-import { actingTeammate, loadThread } from './thread-spec.js'
+import { actingTeammate, loadThread, shownAccounts } from './thread-spec.js'
 import { projectWhere, usableProject } from './projects.js'
 import { handleListCall, isListOperation } from './lists.js'
 import { handleWakeup, isWakeupOperation } from './wakeups.js'
@@ -475,9 +475,21 @@ const brief = (s: {
   nextRuns: s.pausedAt ? [] : nextRuns(s.cron, s.timezone, 3).map((d) => localTime(d, s.timezone)),
 })
 
+/** Why a thread several people ask in sets up no schedule. */
+const SEVERAL_CREATE =
+  "Several people ask in this thread, and a schedule's runs follow its instructions on the accounts of the " +
+  'member who started this thread: a person sets one up with you in a thread of their own.'
+
+/** Why it lists and changes none. */
+const SEVERAL_LIST =
+  "Several people ask in this thread, and each schedule runs on its owner's accounts: a person sees and " +
+  'changes theirs with you in a thread of their own, or on the Routines page.'
+
 /**
  * A teammate's schedule tools, from a thread a member started on this runner's
- * computer. Its schedules run on that member's accounts, so only they are touched.
+ * computer. Its schedules run on that member's accounts, so only theirs are made, listed
+ * and changed there; and none in a thread several people ask in (shownAccounts, as the
+ * trigger tools), where another member would set up or steer work on the starter's accounts.
  */
 export async function handleScheduleCall(
   runner: Runner,
@@ -575,10 +587,14 @@ export async function handleScheduleCall(
   if (session.origin !== 'member')
     return fail('Schedules are set up only from a thread a person started. Just do the work here.')
   const actor: Actor = { type: 'teammate', id: teammate.id }
+  // Whose schedules the thread works on: its starter's while nobody else asks in it; nobody's once
+  // another member does, as a schedule's runs follow its instructions on its owner's accounts.
+  const { person } = await shownAccounts(db, session)
 
   try {
     if (op.name === 'create') {
-      const timezone = op.timezone ?? (await memberTimezone(db, session.startedByMemberId))
+      if (!person) return fail(SEVERAL_CREATE)
+      const timezone = op.timezone ?? (await memberTimezone(db, person))
       const problem = cronProblem(op.cron, timezone)
       if (problem) return fail(problem)
       const schedule = await createSchedule(
@@ -595,7 +611,8 @@ export async function handleScheduleCall(
           // Its runs report to this thread, unless asked to stand alone.
           parentSessionId: op.attachToThread === false ? null : session.id,
         },
-        { memberId: session.startedByMemberId, teammateId: teammate.id },
+        // Owned by the thread's starter: they asked, and its runs spend their accounts.
+        { memberId: person, teammateId: teammate.id },
       )
       return done({
         ...brief(schedule),
@@ -609,20 +626,22 @@ export async function handleScheduleCall(
       })
     }
 
-    // A playbook's schedules are the playbook's to change.
-    const mine = await db.schedule.findMany({
-      where: { teammateId: teammate.id, playbookInstallationId: null },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    })
-    if (op.name === 'list') return done({ schedules: mine.map(brief) })
+    // Only those on the accounts of the person in this thread: not another member's, with their
+    // instructions. A playbook's schedules are the playbook's to change.
+    const theirs = person
+      ? { teammateId: teammate.id, ownerMemberId: person, playbookInstallationId: null }
+      : null
+    if (op.name === 'list') {
+      const schedules = theirs
+        ? await db.schedule.findMany({ where: theirs, orderBy: { createdAt: 'desc' }, take: 100 })
+        : []
+      return done({ ...(person ? {} : { note: SEVERAL_LIST }), schedules: schedules.map(brief) })
+    }
 
-    const schedule = mine.find((s) => s.id === op.scheduleId)
+    if (!theirs) return fail(SEVERAL_LIST)
+    // Another member's reads as no schedule at all: the thread learns nothing of it.
+    const schedule = await db.schedule.findFirst({ where: { ...theirs, id: op.scheduleId } })
     if (!schedule) return fail('No schedule of yours has that id; list_schedules shows them')
-    if (schedule.ownerMemberId !== session.startedByMemberId)
-      return fail(
-        "That schedule runs on another member's accounts; only they can change it, on the Routines page",
-      )
     const { scheduleId: _, name: __, ...changes } = op
     const updated = await applyChanges(db, scope, { ...schedule, teammate }, changes, actor)
     return done(brief(updated))
