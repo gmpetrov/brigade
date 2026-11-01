@@ -2,7 +2,7 @@
 // address: an agent's (riley@, used by each thread from its project's variant, riley.<project>@)
 // or a project's inbox. Its mail is in Brigade's database, so its tools read it there; sending
 // goes through Resend with Brigade's key. A thread only ever touches its own variant's box.
-import { SEND_LATER_MAX_DAYS } from '@brigade/contracts'
+import { SEND_LATER_MAX_DAYS, emailTitle } from '@brigade/contracts'
 import { z } from 'zod'
 import { prisma, scoped, type ScopedDb } from '../db.js'
 import { boxKey, newAlias, senderOfBox, variantLocal } from '../mail/addresses.js'
@@ -282,7 +282,7 @@ export const email: ConnectorDefinition = {
           quotedLeftOut?: boolean
         }
         return {
-          title: `Email from ${p.from ?? 'unknown'}: ${p.subject || '(no subject)'}`,
+          title: emailTitle(p.subject, p.from),
           summary: [
             `From: ${p.from ?? ''}`,
             `To: ${p.to ?? ''}`,

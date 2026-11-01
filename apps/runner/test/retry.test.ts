@@ -12,6 +12,7 @@ import type { AgentEvent, ThreadSpec } from '@brigade/contracts'
 const home = await mkdtemp(join(tmpdir(), 'brigade-retry-'))
 process.env.BRIGADE_HOME = home
 process.env.BRIGADE_RETRY_MS = '100'
+process.env.BRIGADE_MEMORY_NOTICE_MS = '300'
 await mkdir(join(home, 'state'), { recursive: true })
 const { Threads } = await import('../src/threads.js')
 
@@ -210,6 +211,9 @@ test('a turn waits for the computer to have memory before it starts', async () =
   t.message('Go')
   await sleep(100)
   assert.equal(turns(t.events), 0)
+  // A short wait says nothing; a longer one says why, once.
+  assert.deepEqual(t.notes(), [])
+  await sleep(5_200)
   assert.deepEqual(t.notes(), [
     'The computer is short of memory: Mark starts once it has some again.',
   ])
