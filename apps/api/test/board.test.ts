@@ -300,4 +300,99 @@ describe('the Board', { skip: !database && 'no database answers' }, () => {
     assert.equal(card?.column, 'needs_you', 'a failing routine waits on a person, as one card')
     assert.equal(card?.reason, 'routine_failed')
   })
+
+  test('routine runs, however many, never push out a thread that waits on a person', async () => {
+    const waiting = await thread('Waiting on a person', { status: 'waiting' }, 3 * DAY)
+    const schedule = await db.schedule.create({
+      data: {
+        teammateId: ids.riley,
+        ownerMemberId: ids.member,
+        title: 'Hourly',
+        instructions: 'Read',
+        cron: '0 * * * *',
+        timezone: 'UTC',
+      },
+    } as never)
+    await db.session.createMany({
+      data: Array.from({ length: 520 }, (_, i) => ({
+        teammateId: ids.riley,
+        startedByMemberId: ids.member,
+        computerId: ids.computer,
+        title: `Run ${i}`,
+        origin: 'schedule',
+        scheduleId: schedule.id,
+        status: 'idle',
+      })),
+    } as never)
+    const b = await board(db, scope, now)
+    assert.equal(b.cards.find((c) => c.key === `thread:${waiting}`)?.column, 'needs_you')
+  })
+
+  test('a thread whose line left its list, or whose list was deleted, is a card of its own', async () => {
+    const gone = await thread('Line removed', { status: 'running' })
+    // A row for a line no longer in the file: its marker was removed.
+    await db.listItem.create({
+      data: { id: 'cccccccccccccccc', documentId: ids.file, text: 'Removed line' },
+    } as never)
+    await db.listItemThread.create({
+      data: { itemId: 'cccccccccccccccc', sessionId: gone },
+    } as never)
+    const deleted = await thread('List deleted', { status: 'running' })
+    const other = await db.document.create({
+      data: {
+        path: 'Projects/Acme/old.md',
+        contentType: 'text/markdown',
+        size: 1,
+        text: '# Old\n\n* [ ] Ship <!-- item:dddddddddddddddd -->\n',
+        deletedAt: new Date(),
+      },
+    } as never)
+    await db.listItem.create({
+      data: { id: 'dddddddddddddddd', documentId: other.id, text: 'Ship' },
+    } as never)
+    await db.listItemThread.create({
+      data: { itemId: 'dddddddddddddddd', sessionId: deleted },
+    } as never)
+    const b = await board(db, scope, now)
+    assert.equal(b.cards.find((c) => c.key === `thread:${gone}`)?.column, 'in_progress')
+    assert.equal(b.cards.find((c) => c.key === `thread:${deleted}`)?.column, 'in_progress')
+  })
+
+  test('a line whose thread stopped shows as stopped, until that thread is marked done', async () => {
+    const library = await import('../src/library.js')
+    const file = await library.saveLibraryFile(
+      db,
+      { organizationId: ids.org, workspaceId: ids.workspace },
+      { type: 'member', id: ids.member },
+      {
+        path: 'Projects/Acme/stopped.md',
+        bytes: new TextEncoder().encode(
+          '# Stopped\n\n* [ ] Load test <!-- item:eeeeeeeeeeeeeeee -->\n',
+        ),
+      },
+    )
+    const idle = await thread('Load test', {}, DAY)
+    await db.listItem.create({
+      data: { id: 'eeeeeeeeeeeeeeee', documentId: file.id, text: 'Load test' },
+    } as never)
+    await db.listItemThread.create({
+      data: { itemId: 'eeeeeeeeeeeeeeee', sessionId: idle },
+    } as never)
+    let b = await board(db, scope, now)
+    assert.equal(b.stopped.find((s) => s.key === 'item:eeeeeeeeeeeeeeee')?.threadId, idle)
+    assert.equal(
+      b.cards.find((c) => c.key === `thread:${idle}`),
+      undefined,
+      'its line shows it',
+    )
+    await db.session.updateMany({
+      where: { id: idle },
+      data: { doneAt: new Date(), doneByType: 'member', doneById: ids.member },
+    })
+    b = await board(db, scope, now)
+    assert.equal(
+      b.stopped.find((s) => s.key === 'item:eeeeeeeeeeeeeeee'),
+      undefined,
+    )
+  })
 })

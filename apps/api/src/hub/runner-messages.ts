@@ -27,6 +27,7 @@ import { dropDeadWaiters, type Live } from '../held-calls.js'
 import type { Session } from '../generated/prisma/client.js'
 import type { SessionStatus } from '../generated/prisma/enums.js'
 import { bringBackFromLater } from '../later.js'
+import { reopenThread } from '../thread-done.js'
 import { handleLibraryCall, handleMemoryTidy, handleMemoryUpdate } from '../library-calls.js'
 import { endLogin, loginById, loginsOnComputer, updateLogin } from '../logins.js'
 import { noteMailLeft } from '../mail/outcomes.js'
@@ -638,6 +639,17 @@ async function advance(hub: WorkspaceHub, conn: RunnerConn, session: Session) {
     // way when it was put away. A child's do not, a schedule's quiet runs among them.
     if (!session.parentId && fresh.some((e) => e.event.type === 'message.user'))
       void bringBackFromLater(session, session.id).catch(console.error)
+    // A person's message reaching the teammate reopens its done thread (src/thread-done.ts),
+    // as the message route does on sending it: a message queued while it was being declared
+    // done is not left unanswered behind it. Not a wake-up's nor a child's report.
+    if (
+      fresh.some(
+        (e) =>
+          (e.event.type === 'message.user' || e.event.type === 'message.queued') &&
+          !!(e.event as { memberId?: string | null }).memberId,
+      )
+    )
+      void reopenThread(session, session.id).catch(console.error)
     // A child's report goes to its parent once its turn ends.
     if (session.parentId) void noteChildEvents(session, fresh).catch(console.error)
     // A dry run's event is done once its turn ends: the next one starts.

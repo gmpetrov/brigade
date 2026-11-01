@@ -392,6 +392,88 @@ describe("a thread's done", { skip: !database && 'no database answers' }, () => 
     assert.equal((await doneOf(t)).doneAt, null)
   })
 
+  test('the write checks again: a person’s message stored between the reads and it is not missed', async () => {
+    const { completeThread } = await import('../src/thread-done.js')
+    const t = await thread()
+    const session = await db.session.findFirstOrThrow({ where: { id: t } })
+    // Queued once every read is made, just before the write: the runner stores it, and the
+    // message route's reopen ran before there was anything to reopen.
+    const racing = db.$extends({
+      query: {
+        session: {
+          async updateMany({ args, query }) {
+            await prisma.sessionEvent.create({
+              data: {
+                ...scope,
+                sessionId: t,
+                seq: 1,
+                at: new Date(),
+                type: 'message.queued',
+                data: {
+                  type: 'message.queued',
+                  at: new Date().toISOString(),
+                  messageId: 'also-the-pdf',
+                  text: 'Also the PDF',
+                  memberId: member('ada'),
+                  waitingFor: 'turn',
+                },
+              },
+            })
+            return query(args)
+          },
+        },
+      },
+    }) as unknown as typeof db
+    const out = await completeThread(
+      racing,
+      scope,
+      session,
+      { id: riley },
+      {
+        name: 'complete_thread',
+        summary: 'Done',
+      },
+    )
+    assert.ok('error' in out, 'refused')
+    assert.match((out as { error: string }).error, /A message from a person waits for you/)
+    assert.equal((await doneOf(t)).doneAt, null)
+  })
+
+  test('a person’s message the runner reports reopens it; a wake-up’s does not', async () => {
+    const t = await thread({ computerId: cloud, status: 'running' })
+    await markDone(t)
+    const conn = await runner()
+    const { sent, say } = conn
+    try {
+      const event = (seq: number, memberId: string | null) =>
+        say({
+          type: 'events',
+          events: [
+            {
+              sessionId: t,
+              seq,
+              event: {
+                at: new Date().toISOString(),
+                type: 'message.queued',
+                messageId: `m${seq}`,
+                text: 'More',
+                memberId,
+                waitingFor: 'turn',
+              },
+            },
+          ],
+        })
+      event(1, null)
+      await until(() => sent.some((m) => m.type === 'ack' && m.seq === 1), 'the first ack')
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      assert.ok((await doneOf(t)).doneAt, 'a message nobody wrote leaves it done')
+      event(2, member('ada'))
+      await until(async () => (await doneOf(t)).doneAt === null, 'the reopen')
+    } finally {
+      conn.close()
+    }
+  })
+
   test('never in a child, which reports, nor in a schedule’s run', async () => {
     const t = await thread()
     const child = await thread({ parentId: t })
@@ -501,7 +583,11 @@ describe("a thread's done", { skip: !database && 'no database answers' }, () => 
       ws as never,
     )
     await until(() => sent.some((m) => m.type === 'welcome'), 'the welcome')
-    return { sent, close: () => handle.onClose() }
+    return {
+      sent,
+      say: (message: object) => handle.onMessage(JSON.stringify(message), ws as never),
+      close: () => handle.onClose(),
+    }
   }
 
   test('its teammate’s own wake-up leaves it done; a person’s message reopens it', async () => {

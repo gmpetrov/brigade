@@ -23,7 +23,7 @@ import {
 } from '@brigade/contracts'
 import { mayWrite } from './account-sharing.js'
 import { reportOf } from './children.js'
-import type { ScopedDb } from './db.js'
+import type { Prisma, ScopedDb } from './db.js'
 import { failedWaitingAmong, failingRoutines } from './failed.js'
 import { actorNames } from './library-history.js'
 import { workspaceLists } from './lists.js'
@@ -79,57 +79,83 @@ export function healthOf(
   return everRan ? 'ok' : 'new'
 }
 
-/** The threads the Board looks at: top-level, active lately or done this week. */
-function threadRows(db: ScopedDb, now: Date) {
-  const since = new Date(now.getTime() - LOOKED_AT_DAYS * DAY)
-  return db.session.findMany({
-    where: {
-      parentId: null,
-      AND: [
-        // A playbook's runs, once a person took part in them, as in the sidebar.
-        { OR: [{ playbookRunId: null, quiet: false }, { surfacedAt: { not: null } }] },
-        {
-          OR: [
-            { updatedAt: { gte: since } },
-            { doneAt: { gte: new Date(now.getTime() - DONE_DAYS * DAY) } },
-            { status: { in: ['starting', 'running', 'waiting', 'paused'] } },
-          ],
-        },
-      ],
-    },
+const THREAD_SELECT = {
+  id: true,
+  title: true,
+  status: true,
+  updatedAt: true,
+  archivedAt: true,
+  projectId: true,
+  startedByMemberId: true,
+  othersMayPrompt: true,
+  computer: { select: { kind: true } },
+  teammate: { select: { id: true, name: true } },
+  doneAt: true,
+  doneSummary: true,
+  doneByType: true,
+  doneById: true,
+  task: { select: { completedAt: true, summary: true } },
+  _count: { select: { tickets: { where: { status: 'open' } } } },
+  pullRequests: {
     select: {
-      id: true,
-      title: true,
-      status: true,
-      updatedAt: true,
-      archivedAt: true,
-      projectId: true,
-      scheduleId: true,
-      schedule: { select: { id: true, title: true } },
-      startedByMemberId: true,
-      othersMayPrompt: true,
-      computer: { select: { kind: true } },
-      teammate: { select: { id: true, name: true } },
-      doneAt: true,
-      doneSummary: true,
-      doneByType: true,
-      doneById: true,
-      task: { select: { completedAt: true, summary: true } },
-      _count: { select: { tickets: { where: { status: 'open' } }, listItems: true } },
-      pullRequests: {
-        select: {
-          repository: true,
-          number: true,
-          state: true,
-          mergeStatus: true,
-          reviewSession: { select: REVIEW_THREAD },
-        },
-        orderBy: { number: 'asc' },
-      },
+      repository: true,
+      number: true,
+      state: true,
+      mergeStatus: true,
+      reviewSession: { select: REVIEW_THREAD },
     },
-    orderBy: { updatedAt: 'desc' },
-    take: 500,
-  })
+    orderBy: { number: 'asc' },
+  },
+} as const
+
+/** Quiet threads read at most, for Stopped and closed: the latest first. */
+const QUIET_LISTED = 500
+
+/**
+ * The threads that may be cards: top-level, not a routine's run (never a card), not a playbook's
+ * run nobody joined (as in the sidebar). Every one with something under way or waiting on a
+ * person, or done this week, however many; then the quiet ones of the last weeks, for Stopped and
+ * closed, the latest first.
+ */
+async function threadRows(db: ScopedDb, now: Date) {
+  const cards = {
+    parentId: null,
+    scheduleId: null,
+    OR: [{ playbookRunId: null, quiet: false }, { surfacedAt: { not: null } }],
+  } satisfies Prisma.SessionWhereInput
+  const [moving, quiet] = await Promise.all([
+    db.session.findMany({
+      where: {
+        AND: [
+          cards,
+          {
+            OR: [
+              { status: { in: ['starting', 'running', 'waiting', 'paused', 'failed'] } },
+              { tickets: { some: { status: 'open' } } },
+              { children: { some: { tickets: { some: { status: 'open' } } } } },
+              { pullRequests: { some: { state: 'open' } } },
+              { wakeups: { some: { status: 'pending', kind: 'wakeup' } } },
+              { doneAt: { gte: new Date(now.getTime() - DONE_DAYS * DAY) } },
+              { task: { completedAt: { gte: new Date(now.getTime() - DONE_DAYS * DAY) } } },
+            ],
+          },
+        ],
+      },
+      select: THREAD_SELECT,
+    }),
+    db.session.findMany({
+      where: {
+        ...cards,
+        archivedAt: null,
+        updatedAt: { gte: new Date(now.getTime() - LOOKED_AT_DAYS * DAY) },
+      },
+      select: THREAD_SELECT,
+      orderBy: { updatedAt: 'desc' },
+      take: QUIET_LISTED,
+    }),
+  ])
+  const seen = new Set(moving.map((t) => t.id))
+  return [...moving, ...quiet.filter((t) => !seen.has(t.id))]
 }
 
 const pullUrl = (p: { repository: string; number: number }) =>
@@ -222,6 +248,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
             updatedAt: true,
             createdAt: true,
             archivedAt: true,
+            doneAt: true,
             scheduleId: true,
             schedule: { select: { id: true, title: true } },
             startedByMemberId: true,
@@ -234,11 +261,93 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
     ).map((t) => [t.id, t]),
   )
 
-  const offList = rows.filter((t) => t._count.listItems === 0)
+  const failedOnLines = await failedWaitingAmong(db, itemThreadIds, now)
+  const mayClose = (t: {
+    startedByMemberId: string | null
+    othersMayPrompt: boolean
+    computer: { kind: string }
+  }) => mayWrite(t, scope) || isAdmin(scope)
+
+  const cards: BoardCard[] = []
+  const stopped: BoardStopped[] = []
+  const closed: Board['closed'] = []
+
+  // ---- Lines of lists ----
+  const shownLists = new Set<string>()
+  /** Threads a line's card or stopped row shows: not cards of their own. */
+  const represented = new Set<string>()
+  for (const l of lists) {
+    for (const item of l.items) {
+      if (item.missing || (!item.threads.length && !item.pulls.length)) continue
+      const place = itemPlace(item, itemThreads, failedOnLines, now)
+      if (!place) continue
+      const threads = item.threads.flatMap((t) => {
+        const row = itemThreads.get(t.id)
+        return row ? [boardThread({ ...t, schedule: row.schedule })] : []
+      })
+      const title = plainItemText(item.text)
+      const list = { documentId: l.file.id, title: l.title, section: item.section }
+      if (place === 'stopped') {
+        const last = [...item.threads]
+          .map((t) => itemThreads.get(t.id))
+          .filter((t) => t && !t.archivedAt)
+          .sort((a, b) => b!.updatedAt.getTime() - a!.updatedAt.getTime())[0]
+        // Its last thread was marked done, the line left open: the list holds it now.
+        if (!last || last.doneAt) continue
+        for (const t of item.threads) represented.add(t.id)
+        shownLists.add(l.file.id)
+        stopped.push({
+          key: `item:${item.id}`,
+          title,
+          href: `/app/threads/${last.id}`,
+          teammate: last.teammate,
+          projectId: l.projectId,
+          list: { documentId: l.file.id, title: l.title },
+          threadId: last.id,
+          canClose: mayClose(last),
+          idleSince: last.updatedAt.toISOString(),
+          closesAt: new Date(last.updatedAt.getTime() + STOPPED_DAYS * DAY).toISOString(),
+        })
+        continue
+      }
+      shownLists.add(l.file.id)
+      // A line that waits or moves shows its threads; one done this week does not hold them.
+      if (place.column !== 'done') for (const t of item.threads) represented.add(t.id)
+      const error = item.threads.map((t) => failedOnLines.get(t.id)?.error).find(Boolean) ?? null
+      const firstThread = threads.find((t) => !itemThreads.get(t.id)?.archivedAt) ?? threads[0]
+      cards.push({
+        key: `item:${item.id}`,
+        kind: 'item',
+        column: place.column,
+        title,
+        href: firstThread ? `/app/threads/${firstThread.id}` : `/app/lists/${l.file.id}`,
+        list,
+        projectId: l.projectId,
+        threads,
+        pulls: item.pulls.map((p) => ({
+          repository: p.repository,
+          number: p.number,
+          state: p.state,
+          url: p.url,
+        })),
+        reason: place.reason,
+        note: place.reason === 'failed' ? error : null,
+        at: place.at.toISOString(),
+        done:
+          place.column === 'done' && item.doneBy
+            ? { at: item.doneBy.at, by: item.doneBy.name }
+            : null,
+      })
+    }
+  }
+
+  // Threads a line on the Board shows are not cards of their own; any other is, even one whose
+  // line left its list.
+  const offList = rows.filter((t) => !represented.has(t.id))
   const ids = offList.map((t) => t.id)
   const [failed, childTickets, childrenWorking, wakeups, routinesFailing, names] =
     await Promise.all([
-      failedWaitingAmong(db, [...ids, ...itemThreadIds], now),
+      failedWaitingAmong(db, ids, now),
       ids.length
         ? db.ticket.findMany({
             where: { status: 'open', session: { parentId: { in: ids } } },
@@ -273,83 +382,8 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
   const ticketsOfChildren = new Set(childTickets.map((t) => t.session?.parentId))
   const working = new Set(childrenWorking.map((c) => c.parentId))
   const waking = new Set(wakeups.map((w) => w.sessionId))
-  const mayClose = (t: {
-    startedByMemberId: string | null
-    othersMayPrompt: boolean
-    computer: { kind: string }
-  }) => mayWrite(t, scope) || isAdmin(scope)
-
-  const cards: BoardCard[] = []
-  const stopped: BoardStopped[] = []
-  const closed: Board['closed'] = []
-
-  // ---- Lines of lists ----
-  const shownLists = new Set<string>()
-  for (const l of lists) {
-    for (const item of l.items) {
-      if (item.missing || (!item.threads.length && !item.pulls.length)) continue
-      const place = itemPlace(item, itemThreads, failed, now)
-      if (!place) continue
-      const threads = item.threads.flatMap((t) => {
-        const row = itemThreads.get(t.id)
-        return row ? [boardThread({ ...t, schedule: row.schedule })] : []
-      })
-      const title = plainItemText(item.text)
-      const list = { documentId: l.file.id, title: l.title, section: item.section }
-      if (place === 'stopped') {
-        const last = [...item.threads]
-          .map((t) => itemThreads.get(t.id))
-          .filter((t) => t && !t.archivedAt)
-          .sort((a, b) => b!.updatedAt.getTime() - a!.updatedAt.getTime())[0]
-        if (!last) continue
-        shownLists.add(l.file.id)
-        stopped.push({
-          key: `item:${item.id}`,
-          title,
-          href: `/app/threads/${last.id}`,
-          teammate: last.teammate,
-          projectId: l.projectId,
-          list: { documentId: l.file.id, title: l.title },
-          threadId: last.id,
-          canClose: mayClose(last),
-          idleSince: last.updatedAt.toISOString(),
-          closesAt: new Date(last.updatedAt.getTime() + STOPPED_DAYS * DAY).toISOString(),
-        })
-        continue
-      }
-      shownLists.add(l.file.id)
-      const error = item.threads.map((t) => failed.get(t.id)?.error).find(Boolean) ?? null
-      const firstThread = threads.find((t) => !itemThreads.get(t.id)?.archivedAt) ?? threads[0]
-      cards.push({
-        key: `item:${item.id}`,
-        kind: 'item',
-        column: place.column,
-        title,
-        href: firstThread ? `/app/threads/${firstThread.id}` : `/app/lists/${l.file.id}`,
-        list,
-        projectId: l.projectId,
-        threads,
-        pulls: item.pulls.map((p) => ({
-          repository: p.repository,
-          number: p.number,
-          state: p.state,
-          url: p.url,
-        })),
-        reason: place.reason,
-        note: place.reason === 'failed' ? error : null,
-        at: place.at.toISOString(),
-        done:
-          place.column === 'done' && item.doneBy
-            ? { at: item.doneBy.at, by: item.doneBy.name }
-            : null,
-      })
-    }
-  }
-
   // ---- Threads on no list ----
   for (const t of offList) {
-    // A routine's runs are never cards: their routine's row, or its card when it fails.
-    if (t.scheduleId) continue
     const doneAt = t.doneAt ?? t.task?.completedAt ?? null
     const doneRecently = doneAt && now.getTime() - doneAt.getTime() < DONE_DAYS * DAY
     const base = {

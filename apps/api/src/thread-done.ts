@@ -250,11 +250,26 @@ export async function completeThread(
       error:
         "A schedule's run is not declared done: it ends with its turn. Finish the work and reply.",
     }
+  // Where the thread's events stood before the reads: a message stored after them (a person's,
+  // queued or delivered) refuses the write, so it never ends up done behind it.
+  const seen = await db.sessionEvent.aggregate({
+    where: { sessionId: session.id },
+    _max: { seq: true },
+  })
   const open = await openWork(db, session.id)
   if (open.length) return { error: refusal(open) }
   const at = new Date()
   const { count } = await db.session.updateMany({
-    where: { id: session.id, ...NOTHING_OPEN },
+    where: {
+      id: session.id,
+      ...NOTHING_OPEN,
+      events: {
+        none: {
+          seq: { gt: seen._max.seq ?? 0 },
+          type: { in: ['message.queued', 'message.user'] },
+        },
+      },
+    },
     // Its place in the list stays where it was, as when archived.
     data: {
       doneAt: at,
