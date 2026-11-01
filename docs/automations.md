@@ -40,6 +40,10 @@ The name is "schedule" because a **Task** already means an item on the Tasks boa
   - Only in a member's thread, never one started by a trigger or a schedule. An event
     cannot set up recurring work, and a schedule cannot multiply itself.
   - The owner is the thread's starter: they asked, and the runs spend their accounts.
+  - Only while the thread works for its starter alone (`shownAccounts()`, as for
+    triggers). Once another member asks in it, the teammate sets up, lists and changes no
+    schedule there: another member would otherwise set up or steer work that runs on the
+    starter's accounts, with their instructions, for good.
   - A schedule a teammate creates is active immediately and is marked as made by that
     teammate. Its runs are still bounded by the teammate's grants, policy and caps.
 
@@ -113,17 +117,33 @@ Three tools, built like `create_task`. Each is a tool in `harness/tools.ts`, sen
 the runner to the API as `schedule.call { callId, sessionId, teammateId, operation }`,
 handled by `handleScheduleCall` in `schedules.ts`, and answered with `connector.result`.
 
+- **Whose schedules.** Scoped to the person the thread works for, never to the teammate
+  (`shownAccounts()` in `thread-spec.ts`, the rule of `list_apps` and the trigger tools):
+  the thread's starter while no other member asks in it. A thread several people ask in, or
+  one another member alone asks in, has no such person: it makes, lists and changes no
+  schedule, and says why.
 - `create_schedule { title, instructions, cron, timezone? }`
   - Creates a schedule for the calling teammate, owned by the thread's starter.
-  - Refused in a thread started by a trigger or a schedule.
+  - Refused in a thread started by a trigger or a schedule, and in a thread several people
+    ask in: a person sets one up from a thread of their own.
   - If `timezone` is missing, it uses the owner's latest schedule, else UTC.
   - The result describes when it runs, in words, and gives the next 3 runs, so the
     teammate can confirm with the person in one line.
 - `list_schedules {}`
-  - Lists the schedules this teammate runs: title, when, next run, paused.
+  - Lists the schedules this teammate runs that the thread's starter owns: title, when,
+    next run, paused. Never another member's, with their instructions. In a thread several
+    people ask in, none, with a `note` saying why.
 - `update_schedule { scheduleId, title?, instructions?, cron?, timezone?, paused? }`
-  - Changes a schedule this teammate runs. Only from a thread whose starter owns it.
+  - Changes a schedule this teammate runs. Only from a thread whose starter owns it,
+    working for them alone. Another member's schedule is refused with the message of an
+    unknown id, so the thread learns nothing of it.
   - Deleting is left to people, on the Automations page.
+- **Wake-ups and runs that report to a thread** need no such rule. A wake-up (`set_wakeup`)
+  prompts the same thread again, with no member, so it works for whoever the thread already
+  works for. A run that reports to a thread several people later ask in still runs its
+  owner's instructions on their accounts, as they set it up; what it reports, the members
+  could already read in the run's own thread, and the parent's `message_thread` into the run
+  passes its askers on (`onBehalfOf`), so the run then uses no member's own Apps.
 - A schedule made from a thread reports there, and belongs to it:
   - It is in that thread's project. The Edit dialog shows the project without a picker,
     `PATCH /schedules/:id` refuses another one, and moving the thread moves the schedule

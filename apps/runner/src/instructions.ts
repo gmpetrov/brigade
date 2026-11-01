@@ -655,7 +655,7 @@ const schedules = (spec: ThreadSpec) =>
   'each run prompts you in a fresh thread with no memory of this one, so the instructions must stand alone ' +
   '(inputs by name, steps, where the result goes). By default each run is a child thread of this one, which ' +
   'wakes you here only when it has something to say; `attachToThread: false` makes runs threads of their own. ' +
-  '`list_schedules` and `update_schedule` show and change yours. ' +
+  "`list_schedules` and `update_schedule` show and change the person's. " +
   'A thread that starts with "Scheduled run of" is one of those runs: nobody is watching it live, so do the work ' +
   'and open a ticket when you need a person.\n\n' +
   'When the person asks for work to start on its own when something happens elsewhere (a payment fails, an app ' +

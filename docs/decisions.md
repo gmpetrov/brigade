@@ -180,7 +180,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   (`shownAccounts()` in `thread-spec.ts`, from `askedBy`), never to the teammate, which works for every member and in
   threads events start: shared accounts, and the starter's own (reach `mine`) while no other member asks in the
   thread; no member's own once one does. `list_triggers` and `create_trigger` take the same rule from that one
-  function (docs/automations.md), so a change to who may see whose accounts is made once. A
+  function (docs/automations.md), and so do the schedule tools (whose schedules a thread makes, lists and changes),
+  so a change to who may see whose accounts is made once. A
   playbook's run has no `list_apps` (the runner leaves it out and the API refuses it): it has only the Apps the
   playbook declares. In Claude Code it stays deferred, like Brigade's other tools: its name is in the deferred list
   and the instructions name it, so it costs a tool search when a person needs an App rather than its description in
@@ -240,7 +241,9 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   with a conditional update, which is the claim: a firing starts once, and missed firings collapse into one. A firing
   is skipped while the previous run is still going; one that cannot start opens a ticket for the owner. Only the owner
   edits a schedule; admins may pause, run or delete it. Teammates create, list and change schedules with their tools,
-  only from a member's thread (never a trigger's or a schedule's), owned by that thread's starter.
+  only from a member's thread (never a trigger's or a schedule's), owned by that thread's starter, and only that
+  member's: never another member's, whose id reads as unknown, and none in a thread several people ask in
+  (`shownAccounts()`), since a schedule's runs follow its instructions on its owner's accounts for good.
 - **Subscriptions** (`apps/api/src/subscriptions/`). Brigade subscribes the vendor itself, synced whenever a
   connection's triggers or awaited replies change: a Stripe webhook endpoint per connection listing the events
   needed, made through Stripe's MCP server (which creates, updates and disables endpoints but deletes
