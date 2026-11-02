@@ -5,7 +5,7 @@
 import { ImageIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { cidOf, type MailFrameTheme, mailDocument } from '@/lib/mail-html'
+import { cidOf, followHeight, type MailFrameTheme, mailDocument } from '@/lib/mail-html'
 import { type MailText, readMailText, tokens } from '@/lib/mail-text'
 import { cn } from '@/lib/utils'
 
@@ -122,8 +122,8 @@ function frameTheme(): MailFrameTheme {
 
 /**
  * A mail's HTML in a frame with no scripts, forms or navigation of the dashboard: same origin
- * only so the dashboard can measure its height (nothing runs in it to use that). Images from the
- * web wait for Show images.
+ * only so the dashboard can measure its height (nothing runs in it to use that). Its images wait
+ * for Show images.
  */
 export function MailHtmlFrame({
   html,
@@ -139,7 +139,7 @@ export function MailHtmlFrame({
   const [showImages, setShowImages] = useState(false)
   const [height, setHeight] = useState<number>()
   const frame = useRef<HTMLIFrameElement>(null)
-  const observer = useRef<ResizeObserver>(null)
+  const stop = useRef<() => void>(null)
   const inlineKey = JSON.stringify(inline.map((f) => [cidOf(f.cid), f.url]))
   const [doc, setDoc] = useState<ReturnType<typeof mailDocument>>()
 
@@ -149,26 +149,21 @@ export function MailHtmlFrame({
     setDoc(mailDocument(html, { showImages, inline: files, theme: frameTheme() }))
   }, [html, showImages, inlineKey, resolvedTheme])
 
-  useEffect(() => () => observer.current?.disconnect(), [])
+  useEffect(() => () => stop.current?.(), [])
 
   function measure() {
-    const root = frame.current?.contentDocument?.documentElement
-    if (!root) return
-    observer.current?.disconnect()
-    const fit = () => setHeight(Math.max(Math.ceil(root.scrollHeight), 24))
-    observer.current = new ResizeObserver(fit)
-    observer.current.observe(root)
-    fit()
+    stop.current?.()
+    if (frame.current) stop.current = followHeight(frame.current, setHeight)
   }
 
   if (!doc) return <div className="h-24 w-full" />
   return (
     <div className="flex w-full flex-col gap-2">
-      {doc.remoteImages && !showImages && (
+      {doc.images && !showImages && (
         <div className="flex w-full flex-wrap items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm">
           <ImageIcon aria-hidden className="size-4 text-muted-foreground" />
           <span className="flex-1 text-muted-foreground">
-            Images from the web are hidden: they tell the sender you opened it.
+            Images are hidden: those from the web tell the sender you opened the mail.
           </span>
           <button
             type="button"

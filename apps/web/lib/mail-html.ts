@@ -1,12 +1,19 @@
 // A received mail's HTML made into the document the Inbox's frame shows (components/mail-body.tsx),
 // in the browser. The frame is the guard: sandboxed with no scripts, no forms and no navigation
-// of the dashboard, and a CSP that fetches nothing but images. Here, what is left: what the frame
-// would refuse anyway goes (scripts, frames, <base>, <meta>), links open in a new tab, the files
-// the mail carries (cid:) come from the API, and images from the web are left out until a person
-// asks for them, since a sender learns from them that the mail was opened, and when, and where.
+// of the dashboard, and a CSP that fetches nothing at all until a person asks for its images
+// (a sender learns from one that the mail was opened, and when, and where), then only images.
+// CSS has too many ways to name an image (url(), image-set(), escapes…) to find them all: the CSP
+// is what holds, and the rewriting here only keeps hidden images from showing as broken ones.
+// Besides: what the frame would refuse anyway goes (scripts, frames, <base>, <meta>), links open
+// in a new tab, and the files the mail carries (cid:) come from the API once shown (they are
+// served by a redirect to another host, which a narrower CSP would have to name).
 
-/** Nothing fetched but images (the images from the web only once shown), and no script. */
-const CSP = "default-src 'none'; img-src * data: blob:; style-src 'unsafe-inline'; font-src data:"
+/** No script, and nothing fetched: images only once shown, from anywhere (cid: files too). */
+const csp = (showImages: boolean) =>
+  `default-src 'none'; img-src ${showImages ? '* data: blob:' : 'data:'}; style-src 'unsafe-inline'; font-src data:`
+
+/** CSS that may name an image. */
+const CSS_IMAGE = /url\(|image(-set)?\(|\\/i
 
 /** What the mail's frame can't show or use anyway. */
 const DROPPED = 'script,iframe,frame,frameset,object,embed,applet,base,meta,link,portal'
@@ -25,8 +32,8 @@ export type MailFrameTheme = {
 export type MailDocument = {
   /** The frame's whole document. */
   html: string
-  /** It has images from the web, left out unless shown. */
-  remoteImages: boolean
+  /** It has images (or may: CSS that names one), fetched only once shown. */
+  images: boolean
   /**
    * It sets its own colors (a newsletter, a receipt): shown as it was made, on white. A plain
    * mail (a person's) takes the dashboard's colors instead, so it reads the same in dark mode.
@@ -47,24 +54,25 @@ export function mailDocument(
   },
 ): MailDocument {
   const doc = new DOMParser().parseFromString(raw, 'text/html')
-  let remoteImages = false
-  // An image's address as the frame gets it: a file it carries from the API, one from the web
-  // only once shown. Null: left out.
+  let images = false
+  // An image's address as the frame gets it, once shown: a file it carries from the API, one from
+  // the web as it is. Null: left out (a data: image needs nothing fetched).
   const image = (value: string): string | null => {
     const v = value.trim()
-    if (/^cid:/i.test(v)) return options.inline.get(cidOf(v)) ?? null
     if (/^data:image\//i.test(v)) return v
-    if (REMOTE.test(v)) {
-      remoteImages = true
-      return options.showImages ? v : null
-    }
-    return null
+    if (!v) return null
+    images = true
+    if (!options.showImages) return null
+    if (/^cid:/i.test(v)) return options.inline.get(cidOf(v)) ?? null
+    return REMOTE.test(v) ? v : null
   }
-  const css = (text: string) =>
-    text.replace(/@import[^;]*;?/gi, '').replace(URL_IN_CSS, (_, __, url: string) => {
+  const css = (text: string) => {
+    if (CSS_IMAGE.test(text)) images = true
+    return text.replace(/@import[^;]*;?/gi, '').replace(URL_IN_CSS, (_, __, url: string) => {
       const kept = image(url)
       return kept ? `url("${kept.replace(/["\\\n]/g, '')}")` : 'none'
     })
+  }
 
   for (const el of doc.querySelectorAll(DROPPED)) el.remove()
   const designed =
@@ -115,7 +123,7 @@ export function mailDocument(
   const { theme } = options
   const head =
     '<meta charset="utf-8">' +
-    `<meta http-equiv="Content-Security-Policy" content="${CSP}">` +
+    `<meta http-equiv="Content-Security-Policy" content="${csp(options.showImages)}">` +
     '<meta name="referrer" content="no-referrer">' +
     '<base target="_blank">' +
     '<style>' +
@@ -126,13 +134,16 @@ export function mailDocument(
         `body{margin:0;font:15px/1.625 ${cssValue(theme.font)}}` +
         `a{color:${cssValue(theme.link)}}`) +
     'body{overflow-wrap:anywhere}img{max-width:100%;height:auto}' +
+    // Its height is its content's, whatever the mail says: the frame is sized to fit it, so a
+    // height of 100% (or 100vh) would grow with the frame, and the frame with it.
+    'html,body{height:auto!important;min-height:0!important}' +
     'blockquote{margin:0 0 0 .25em;padding-left:.75em;border-left:2px solid rgb(127 127 127 / .35)}' +
     'pre{white-space:pre-wrap}' +
     '</style>'
   // Ours first: the mail's own styles come after, and win.
   return {
     html: `<!doctype html><html><head>${head}${doc.head.innerHTML}</head>${doc.body.outerHTML}</html>`,
-    remoteImages,
+    images,
     designed,
   }
 }
@@ -150,3 +161,37 @@ export function cidOf(value: string) {
 
 /** A value from the dashboard's own stylesheet, made safe to put in a <style>. */
 const cssValue = (value: string) => value.replace(/[<>{};]/g, '')
+
+/** Taller than this, the frame stops growing (and scrolls): no mail is, unless it grows itself. */
+export const FRAME_MAX = 20_000
+
+/**
+ * Keeps a same-origin frame as tall as its document, from now on. A document that grows with its
+ * frame (a height in vh) would push the page down forever: growing on each resize, many times in
+ * a moment, it stops there (images loading grow it a few times, not frame after frame). Returns
+ * what stops it.
+ */
+export function followHeight(frame: HTMLIFrameElement, onHeight: (height: number) => void) {
+  const root = frame.contentDocument?.documentElement
+  if (!root) return () => {}
+  let last = 0
+  let growths: number[] = []
+  const fit = () => {
+    const height = Math.min(Math.max(Math.ceil(root.getBoundingClientRect().height), 24), FRAME_MAX)
+    if (Math.abs(height - last) < 1) return
+    if (height > last && last > 0) {
+      const now = performance.now()
+      growths = [...growths.filter((t) => now - t < 1000), now]
+      if (growths.length > LOOP_GROWTHS) return observer.disconnect()
+    }
+    last = height
+    onHeight(height)
+  }
+  const observer = new ResizeObserver(fit)
+  observer.observe(root)
+  fit()
+  return () => observer.disconnect()
+}
+
+/** Growths within a second that mean the document follows its frame. */
+const LOOP_GROWTHS = 12
