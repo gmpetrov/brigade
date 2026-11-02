@@ -40,7 +40,7 @@ export function ProjectRepositories() {
   }
 
   return (
-    <Card id="repositories" className="scroll-mt-6 gap-6 px-6 py-5">
+    <Card id="repositories" className="scroll-mt-16 gap-6 px-6 py-5 md:scroll-mt-8">
       <section aria-labelledby="repositories-title" className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <h2 id="repositories-title" className="text-base font-bold">
@@ -86,6 +86,7 @@ export function ProjectRepositories() {
         )}
         <div className="flex flex-wrap items-center gap-2">
           <Input
+            id="project-repository"
             list="project-repository-options"
             value={adding ?? ''}
             onChange={(e) => setAdding(e.target.value.trim().toLowerCase() || undefined)}
