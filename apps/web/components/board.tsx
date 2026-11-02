@@ -113,6 +113,8 @@ function actionText(card: BoardCard) {
       const open = card.pulls.filter((p) => p.state === 'open')
       return open.length ? `Merge ${open.map((p) => `#${p.number}`).join(', ')}` : 'Merge or decide'
     }
+    case 'choice':
+      return 'Pick one'
     case 'failed':
       return 'Failed'
     case 'routine_failed':

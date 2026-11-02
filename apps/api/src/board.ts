@@ -6,8 +6,8 @@
 // A card is a list's line with work on it, a thread on no list, or a routine that failed. A
 // routine's run threads never are cards: the routine's row says what they did, and a line they
 // work on is its card. What waits on a person is the same as everywhere else: an open ticket or
-// question, a teammate waiting on an answer, a pull request ready to merge, a failed thread or
-// routine (src/failed.ts).
+// question, a teammate waiting on an answer, a pull request ready to merge, choices nobody picked
+// (src/choices-waiting.ts), a failed thread or routine (src/failed.ts).
 import {
   type Board,
   type BoardCard,
@@ -23,6 +23,7 @@ import {
 } from '@brigade/contracts'
 import { mayWrite } from './account-sharing.js'
 import { reportOf } from './children.js'
+import { type ChoiceWaiting, choicesWaitingAmong } from './choices-waiting.js'
 import type { Prisma, ScopedDb } from './db.js'
 import { failedWaitingAmong, failingRoutines } from './failed.js'
 import { actorNames } from './library-history.js'
@@ -180,6 +181,7 @@ function itemPlace(
   item: ListItemView,
   threads: Map<string, { status: string; updatedAt: Date; archivedAt: Date | null }>,
   failed: Map<string, { at: Date; error: string | null }>,
+  choices: Map<string, ChoiceWaiting>,
   now: Date,
 ): { column: BoardCard['column']; reason: BoardReason | null; at: Date } | 'stopped' | null {
   const live = item.threads.filter((t) => !threads.get(t.id)?.archivedAt)
@@ -197,7 +199,10 @@ function itemPlace(
       ? 'failed'
       : live.some((t) => t.status === 'waiting' || t.status === 'paused')
         ? 'waiting'
-        : 'pull'
+        : // Choices nobody picked, unless a pull request of it is open: that one waits first.
+          live.some((t) => choices.has(t.id)) && !item.pulls.some((p) => p.state === 'open')
+          ? 'choice'
+          : 'pull'
     return { column: 'needs_you', reason, at: latest }
   }
   if (item.state === 'in_progress')
@@ -280,7 +285,10 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
     return times.length ? new Date(Math.min(...times)).toISOString() : null
   }
 
-  const failedOnLines = await failedWaitingAmong(db, itemThreadIds, now)
+  const [failedOnLines, choicesOnLines] = await Promise.all([
+    failedWaitingAmong(db, itemThreadIds, now),
+    choicesWaitingAmong(db, itemThreadIds, now),
+  ])
   const mayClose = (t: {
     startedByMemberId: string | null
     othersMayPrompt: boolean
@@ -298,7 +306,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
   for (const l of lists) {
     for (const item of l.items) {
       if (item.missing || (!item.threads.length && !item.pulls.length)) continue
-      const place = itemPlace(item, itemThreads, failedOnLines, now)
+      const place = itemPlace(item, itemThreads, failedOnLines, choicesOnLines, now)
       if (!place) continue
       const threads = item.threads.flatMap((t) => {
         const row = itemThreads.get(t.id)
@@ -350,7 +358,14 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
           url: p.url,
         })),
         reason: place.reason,
-        note: place.reason === 'failed' ? error : null,
+        note:
+          place.reason === 'failed'
+            ? error
+            : place.reason === 'choice'
+              ? oneLine(
+                  item.threads.map((t) => choicesOnLines.get(t.id)?.question).find(Boolean),
+                )
+              : null,
         at: place.at.toISOString(),
         done:
           place.column === 'done' && item.doneBy
@@ -370,8 +385,9 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
   // line left its list.
   const offList = rows.filter((t) => !represented.has(t.id))
   const ids = offList.map((t) => t.id)
-  const [failed, childTickets, childrenWorking, routinesFailing, names] = await Promise.all([
+  const [failed, choices, childTickets, childrenWorking, routinesFailing, names] = await Promise.all([
     failedWaitingAmong(db, ids, now),
+    choicesWaitingAmong(db, ids, now),
     ids.length
       ? db.ticket.findMany({
           where: { status: 'open', session: { parentId: { in: ids } } },
@@ -437,6 +453,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
     }
     if (t.archivedAt) continue
     const fail = failed.get(t.id)
+    const choice = choices.get(t.id)
     const needs: BoardReason | null =
       t._count.tickets > 0 || ticketsOfChildren.has(t.id)
         ? 'ticket'
@@ -448,14 +465,22 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
                 t.status !== 'failed' &&
                 t.pullRequests.some(pullWaitsOnPerson)
               ? 'pull'
-              : null
+              : choice
+                ? 'choice'
+                : null
     if (needs) {
       cards.push({
         ...base,
         column: 'needs_you',
         reason: needs,
-        note: needs === 'failed' ? (fail?.error ?? null) : null,
-        at: (needs === 'failed' ? fail!.at : t.updatedAt).toISOString(),
+        // A choice says what it asks: "Which name for Home?".
+        note:
+          needs === 'failed'
+            ? (fail?.error ?? null)
+            : needs === 'choice'
+              ? oneLine(choice!.question)
+              : null,
+        at: (needs === 'failed' ? fail!.at : needs === 'choice' ? choice!.at : t.updatedAt).toISOString(),
         done: null,
       })
       continue

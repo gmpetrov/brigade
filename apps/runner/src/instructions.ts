@@ -591,7 +591,8 @@ const replies = (spec: ThreadSpec) =>
   '```choices\n{"question": "Which card should I build?", "options": [{"id": "a", "label": "A · Bold", ' +
   '"description": "Large type, one accent"}, {"id": "b", "label": "B · Calm", "description": "Muted, more air"}]}\n```\n\n' +
   'Their pick arrives as their next message ("Go with A · Bold"), or they write their own; your reply describes the ' +
-  'options. For a choice you cannot go on without, ask a question instead. One block per reply, at its very end: ' +
+  'options. Until someone picks or writes, the thread waits on them (Needs you), so end on choices only when your ' +
+  'next step depends on the pick. One block per reply, at its very end: ' +
   'the person never sees the block itself, only the buttons or cards.'
 
 /** Previews: the app a teammate builds, run for people to try when they ask. */

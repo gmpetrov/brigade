@@ -25,10 +25,18 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
     its run (`failingRoutines`, src/failed.ts).
 - **Needs you is the same everywhere**: an open ticket or question in the thread or its
   children, a teammate waiting on an answer (or a person who took the thread over), a pull
-  request ready for a person to merge or decide, a failed thread or routine (src/failed.ts). The
-  sidebar, Home, the app badge, notifications, the Tasks board and a list's Needs you tab count
-  the same things. The Board is the workspace's, like a list's tab; Home and the badge are the
-  member's own.
+  request ready for a person to merge or decide, choices nobody picked (below), a failed thread
+  or routine (src/failed.ts). The sidebar, Home, the app badge, notifications, the Tasks board
+  and a list's Needs you tab count the same things. The Board is the workspace's, like a list's
+  tab; Home and the badge are the member's own.
+- **Choices wait on a person** (src/choices-waiting.ts). A teammate that ends its reply on a
+  choices card offered alternatives for someone to pick, and the thread stops there: without
+  this, it showed as Stopped among every other quiet thread, and the reply was lost there. Its
+  card says "Pick one", with the card's question as its note. It waits while the thread is idle,
+  until a person writes in it (a pick is a message), and on whoever started it, as a failed
+  thread does. A choice nobody made in 7 days closes with its thread, as Stopped does. Reply
+  buttons ("Build it", "Not yet") do not wait: they offer a next step a person may leave, and
+  almost every reply ends on some; Home lists those it left as loose ends.
 - **In progress** is a thread at work (or its children it waits for), one waiting on a wake-up it
   set, or one whose pull request is being reviewed or fixed. A thread that failed on an error the
   runner tries again by itself stays here until those tries are over (src/failed.ts).
