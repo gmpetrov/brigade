@@ -288,7 +288,7 @@ function PlaybookLineRow({ line }: { line: PlaybookHomeLine }) {
       <Icon>
         <BookOpenCheck />
       </Icon>
-      <Link href={`/app/routines/playbooks/${line.id}`} className="min-w-0 flex-1 rounded-sm">
+      <Link href={`/app/playbooks/${line.id}`} className="min-w-0 flex-1 rounded-sm">
         <p className="truncate text-sm font-semibold">{line.name}</p>
         <p className="text-xs text-muted-foreground">{playbookWeek(line)}</p>
       </Link>

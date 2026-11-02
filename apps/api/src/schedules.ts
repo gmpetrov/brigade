@@ -109,7 +109,7 @@ async function requireSchedule(db: ScopedDb, id: string) {
 function notThePlaybooks(schedule: { playbookInstallationId: string | null }) {
   if (schedule.playbookInstallationId)
     throw new HTTPException(409, {
-      message: 'This schedule belongs to a playbook: change it from the playbook, on Automations',
+      message: 'This schedule belongs to a playbook: change it from the playbook, on Playbooks',
     })
 }
 

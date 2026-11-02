@@ -722,7 +722,7 @@ const children = (spec: ThreadSpec) =>
 const INSTALLING =
   '## Playbooks\n\n' +
   'A playbook is a whole job Brigade ships ready to install (support, releases…). When a person asks to ' +
-  'install one, or picks one in the Routines catalog: `show_playbook` puts its card here; `configure_playbook` ' +
+  'install one, or picks one in the Playbooks catalog: `show_playbook` puts its card here; `configure_playbook` ' +
   'starts it and takes the answers, one question at a time; missing Apps are asked for with a ticket, at the ' +
   'access the playbook declares; `start_dry_run` tries it on real past events with nothing sent, and you are ' +
   'woken with its report (`dry_run_report`); `activate_playbook` puts up the card whose Activate button turns it on. ' +

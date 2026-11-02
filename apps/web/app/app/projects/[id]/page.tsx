@@ -60,7 +60,7 @@ function routines(
       status: p.status === 'active' ? 'active' : p.status === 'paused' ? 'paused' : 'pending',
       name: p.name,
       when: `${p.runsThisWeek} run${p.runsThisWeek === 1 ? '' : 's'} this week`,
-      href: `/app/routines/playbooks/${p.id}`,
+      href: `/app/playbooks/${p.id}`,
     })),
     ...schedules.map((s) => ({
       key: `schedule:${s.id}`,

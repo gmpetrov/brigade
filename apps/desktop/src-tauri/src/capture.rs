@@ -256,6 +256,7 @@ pub fn show(app: &AppHandle) {
         .hidden_title(true)
         .traffic_light_position(tauri::LogicalPosition::new(16.0, 26.0));
     crate::drag::watch();
+    crate::escape::watch(app, WINDOW);
     let window = builder.build();
     if let Ok(window) = window {
         let handle = window.clone();
@@ -273,6 +274,9 @@ fn bring_up(window: &WebviewWindow) {
     let _ = window.show();
     let _ = window.unminimize();
     let _ = window.set_focus();
+    // And the keyboard to the page, so its Esc and its typing reach it without a click first:
+    // the window's own focus leaves it where it was (escape.rs).
+    let _ = window.as_ref().set_focus();
 }
 
 #[tauri::command]

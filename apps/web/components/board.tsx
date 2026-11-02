@@ -4,18 +4,22 @@
 // themselves are on the Routines page and Home.
 // The API computes it (GET /board); this page filters it by project, list and teammate.
 import type { Board, BoardCard, BoardColumn, BoardRoutine, BoardStopped } from '@brigade/contracts'
-import { AlarmClock, ChevronDown, GitPullRequest, ListChecks, X } from 'lucide-react'
+import { AlarmClock, ChevronDown, GitPullRequest, ListChecks, ListFilter, X } from 'lucide-react'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
-import { ProjectSelect } from '@/components/projects'
+import { ProjectIcon } from '@/components/projects'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -460,83 +464,201 @@ function Stopped({ rows, onChange }: { rows: BoardStopped[]; onChange: () => voi
   )
 }
 
-function ListChips({
+type FilterKey = keyof Filters
+const FILTER_LABELS: Record<FilterKey, string> = {
+  project: 'Project',
+  lists: 'List',
+  teammate: 'Teammate',
+}
+
+/** What each filter offers, shared by the Filter menu and a filter's own pill. */
+function FilterChoices({
+  which,
+  filters,
   lists,
-  chosen,
   counts,
   onChange,
 }: {
+  which: FilterKey
+  filters: Filters
   lists: Board['lists']
-  chosen: string[]
   counts: Map<string, number>
-  onChange: (lists: string[]) => void
+  onChange: (next: Partial<Filters>) => void
 }) {
-  const toggle = (id: string) =>
-    onChange(chosen.includes(id) ? chosen.filter((l) => l !== id) : [...chosen, id])
-  const chip = (id: string, label: string) => {
-    const on = chosen.includes(id)
+  const { projects, teammates } = useDashboard()
+  if (which === 'project') {
+    const shown = projects.filter((p) => !p.archivedAt || p.id === filters.project)
     return (
-      <button
-        key={id}
-        type="button"
-        aria-pressed={on}
-        onClick={() => toggle(id)}
-        className={cn(
-          'inline-flex h-8 max-w-64 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium text-muted-foreground',
-          on && 'border-primary/50 bg-primary/15 font-semibold text-foreground',
-        )}
+      <DropdownMenuRadioGroup
+        value={filters.project}
+        onValueChange={(project) => onChange({ project })}
       >
-        <span className="truncate">{label}</span>
-        <span className="font-mono text-[11.5px]">{counts.get(id) ?? 0}</span>
-        {on && <X aria-hidden className="size-3 shrink-0" />}
-      </button>
+        {shown.map((p) => (
+          <DropdownMenuRadioItem key={p.id} value={p.id}>
+            <ProjectIcon project={p} className="size-4 text-[0.625rem]" />
+            {p.name}
+          </DropdownMenuRadioItem>
+        ))}
+        {shown.length > 0 && <DropdownMenuSeparator />}
+        <DropdownMenuRadioItem value="none">No project</DropdownMenuRadioItem>
+      </DropdownMenuRadioGroup>
     )
   }
-  return (
-    <div role="group" aria-label="Lists" className="flex min-w-0 flex-wrap items-center gap-2">
-      <button
-        type="button"
-        aria-pressed={chosen.length === 0}
-        onClick={() => onChange([])}
-        className={cn(
-          'inline-flex h-8 items-center rounded-full border px-3 text-[13px] font-medium text-muted-foreground',
-          chosen.length === 0 && 'border-primary/50 bg-primary/15 font-semibold text-foreground',
-        )}
+  if (which === 'teammate')
+    return (
+      <DropdownMenuRadioGroup
+        value={filters.teammate}
+        onValueChange={(teammate) => onChange({ teammate })}
       >
-        All lists
-      </button>
-      {lists.map((l) => chip(l.documentId, l.title))}
-      {chip(NO_LIST, 'Not on a list')}
-    </div>
+        {teammates.map((t) => (
+          <DropdownMenuRadioItem key={t.id} value={t.id}>
+            <TeammateAvatar teammate={t} className="size-4.5" />
+            {t.name}
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
+    )
+  const chosen = filters.lists
+  const toggle = (id: string) =>
+    onChange({ lists: chosen.includes(id) ? chosen.filter((l) => l !== id) : [...chosen, id] })
+  const item = (id: string, label: string) => (
+    <DropdownMenuCheckboxItem
+      key={id}
+      checked={chosen.includes(id)}
+      // Several lists at once: the menu stays open while they are ticked.
+      onSelect={(e) => e.preventDefault()}
+      onCheckedChange={() => toggle(id)}
+      className="max-w-80"
+    >
+      <span className="min-w-0 flex-1">{label}</span>
+      <span className="font-mono text-[11.5px] text-muted-foreground">{counts.get(id) ?? 0}</span>
+    </DropdownMenuCheckboxItem>
+  )
+  return (
+    <>
+      {lists.map((l) => item(l.documentId, l.title))}
+      {lists.length > 0 && <DropdownMenuSeparator />}
+      {item(NO_LIST, 'Not on a list')}
+    </>
   )
 }
 
-function TeammateFilter({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const { teammates } = useDashboard()
-  const chosen = teammates.find((t) => t.id === value)
+/**
+ * The Board's filters: a Filter button that adds one, and a pill per filter set, after it.
+ * A pill opens its filter's choices again; its × removes it.
+ */
+function FilterBar({
+  filters,
+  lists,
+  counts,
+  onChange,
+}: {
+  filters: Filters
+  lists: Board['lists']
+  counts: Map<string, number>
+  onChange: (next: Partial<Filters>) => void
+}) {
+  const { projects, teammates } = useDashboard()
+  const set: Record<FilterKey, boolean> = {
+    project: !!filters.project,
+    lists: filters.lists.length > 0,
+    teammate: !!filters.teammate,
+  }
+  const offered: FilterKey[] = (['project', 'lists', 'teammate'] as const).filter(
+    (k) =>
+      !set[k] &&
+      (k !== 'project' || projects.length > 0) &&
+      (k !== 'teammate' || teammates.length > 0),
+  )
+  const listTitle = (id: string) =>
+    id === NO_LIST ? 'Not on a list' : (lists.find((l) => l.documentId === id)?.title ?? 'A list')
+  const value: Record<FilterKey, ReactNode> = {
+    project:
+      filters.project === 'none'
+        ? 'No project'
+        : (projects.find((p) => p.id === filters.project)?.name ?? 'A project'),
+    lists: filters.lists.length ? listTitle(filters.lists[0]!) : null,
+    teammate: teammates.find((t) => t.id === filters.teammate)?.name ?? 'A teammate',
+  }
+  const cleared: Record<FilterKey, Partial<Filters>> = {
+    project: { project: '' },
+    lists: { lists: [] },
+    teammate: { teammate: '' },
+  }
+  const choices = (which: FilterKey) => (
+    <FilterChoices
+      which={which}
+      filters={filters}
+      lists={lists}
+      counts={counts}
+      onChange={onChange}
+    />
+  )
+  const active = (['project', 'lists', 'teammate'] as const).filter((k) => set[k])
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="ml-auto">
-          <span className="text-muted-foreground">Teammate:</span> {chosen?.name ?? 'Everyone'}
-          <ChevronDown aria-hidden />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuRadioGroup
-          value={value || 'all'}
-          onValueChange={(v) => onChange(v === 'all' ? '' : v)}
-        >
-          <DropdownMenuRadioItem value="all">Everyone</DropdownMenuRadioItem>
-          <DropdownMenuSeparator />
-          {teammates.map((t) => (
-            <DropdownMenuRadioItem key={t.id} value={t.id}>
-              {t.name}
-            </DropdownMenuRadioItem>
+    <div role="group" aria-label="Filters" className="flex min-w-0 flex-wrap items-center gap-2">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" disabled={offered.length === 0}>
+            <ListFilter aria-hidden />
+            Filter
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {offered.map((k) => (
+            <DropdownMenuSub key={k}>
+              <DropdownMenuSubTrigger>{FILTER_LABELS[k]}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
+                {choices(k)}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
           ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {active.map((k) => (
+        <span
+          key={k}
+          className="inline-flex h-8 max-w-72 min-w-0 items-center rounded-full border border-primary/50 bg-primary/15 text-[13px] font-semibold"
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex h-full min-w-0 items-center gap-1.5 rounded-l-full pl-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="font-medium text-muted-foreground">{FILTER_LABELS[k]}</span>
+                <span className="truncate">{value[k]}</span>
+                {k === 'lists' && filters.lists.length > 1 && (
+                  <span className="font-mono text-[11.5px] font-normal text-muted-foreground">
+                    +{filters.lists.length - 1}
+                  </span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+              {choices(k)}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <button
+            type="button"
+            aria-label={`Remove the ${FILTER_LABELS[k].toLowerCase()} filter`}
+            onClick={() => onChange(cleared[k])}
+            className="flex h-full items-center rounded-r-full pr-2.5 pl-1.5 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X aria-hidden className="size-3.5" />
+          </button>
+        </span>
+      ))}
+      {active.length > 1 && (
+        <button
+          type="button"
+          onClick={() => onChange({ project: '', lists: [], teammate: '' })}
+          className="px-1 text-[13px] font-medium text-muted-foreground hover:text-foreground"
+        >
+          Clear
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -623,24 +745,7 @@ export function BoardPage() {
         </p>
       </header>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <ProjectSelect
-          value={filters.project}
-          onChange={(project) => setFilters({ project })}
-          all
-          className="h-8 sm:w-44"
-        />
-        <ListChips
-          lists={view.lists}
-          chosen={filters.lists}
-          counts={view.counts}
-          onChange={(lists) => setFilters({ lists })}
-        />
-        <TeammateFilter
-          value={filters.teammate}
-          onChange={(teammate) => setFilters({ teammate })}
-        />
-      </div>
+      <FilterBar filters={filters} lists={view.lists} counts={view.counts} onChange={setFilters} />
 
       {/* On a phone, one column at a time. */}
       <div
