@@ -29,7 +29,10 @@ enum Permissions {
       askedScreen = true
       CGRequestScreenCaptureAccess()
     }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { exit(0) }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+      Run.shutdown()
+      exit(0)
+    }
     throw HelperError(
       "permission_missing",
       "Screen Recording is off for Brigade Computer Use. Ask the person to turn it on in System Settings → Privacy & Security → Screen Recording, then try again: the app restarts by itself to pick it up."

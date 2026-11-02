@@ -85,6 +85,35 @@ final class RunTests: XCTestCase {
     XCTAssertFalse((r["output"] as? String ?? "").contains("/etc/hosts"))
   }
 
+  func testWhatItLeavesIgnoringSigtermIsKilledBeforeTheReply() async throws {
+    // Back with the reply, not to a timer that would go if the app quit.
+    _ = try await run("(trap '' TERM; sleep 4253) & echo started")
+    let left = try await sleeping("4253")
+    XCTAssertFalse(left)
+  }
+
+  func testOneCommandAtATime() async throws {
+    async let first = run("sleep 1")
+    try await Task.sleep(nanoseconds: 300_000_000)
+    do {
+      _ = try await run("true")
+      XCTFail("a second command while one runs is refused")
+    } catch let error as HelperError {
+      XCTAssertEqual(error.code, "busy")
+    }
+    _ = try await first
+    // Free again once it ended.
+    let r = try await run("echo again")
+    XCTAssertEqual(r["output"] as? String, "again\n")
+  }
+
+  /// Under `swift test` this process belongs to the terminal's app: nothing to sweep beyond the
+  /// group (scripts/test-sweep.sh checks the sweep in an app of its own).
+  func testNoStraysWhenNotItsOwnResponsibleProcess() {
+    XCTAssertFalse(Run.ownsItsCommands)
+    XCTAssertEqual(Run.strays(), [])
+  }
+
   func testCwdMustBeADirectory() async throws {
     do {
       _ = try await run("true", cwd: "/nope")

@@ -4,8 +4,10 @@
 // which holds neither, so they can't click, type in or read the person's apps. Started
 // from here, they can, while the pill shows the teammate's name with Stop.
 //
-// The command runs in its own process group, stopped as a whole when it ends, times out,
-// or the person presses Stop: nothing keeps these permissions once the pill is gone.
+// When it ends, times out, or the person presses Stop, everything that carries this app's
+// permissions because of it stops too: its process group, and any process macOS counts
+// this app responsible for, which a process keeps when it detaches (setsid, a double fork,
+// reparented to launchd). Nothing keeps these permissions once the pill is gone.
 import Foundation
 
 enum Run {
@@ -13,6 +15,11 @@ enum Run {
   static let maxOutput = 100_000
   static let defaultTimeout: Double = 120
   static let maxTimeout: Double = 1800
+
+  /// The command running now (its process group), 0 while it starts. One at a time, so that
+  /// what is swept when it ends is its own.
+  private static var running: pid_t?
+  private static let lock = NSLock()
 
   static func run(
     command: String,
@@ -29,11 +36,14 @@ enum Run {
       throw HelperError("invalid_argument", "cwd must be an existing absolute directory: \(directory)")
     }
     let limit = min(max(timeout ?? defaultTimeout, 1), maxTimeout)
+    try claim()
+    defer { release() }
     // A file rather than a pipe: something the command leaves running can't keep the reply waiting.
     let output = NSTemporaryDirectory() + "brigade-run-\(UUID().uuidString).log"
     defer { unlink(output) }
 
     let group = try spawn(command: command, cwd: directory, env: environment(env), output: output)
+    lock.withLock { running = group }
     let started = Date()
     var status: Int32 = 0
     var ended: String?
@@ -58,9 +68,9 @@ enum Run {
       }
       try? await Task.sleep(nanoseconds: 200_000_000)
     }
-    // What it left running in the background stops with it.
-    kill(-group, SIGTERM)
-    DispatchQueue.global().asyncAfter(deadline: .now() + 3) { kill(-group, SIGKILL) }
+    // What it left running stops with it, before the reply: nothing is left to a timer that
+    // would go if this app did.
+    sweep(group)
 
     let (text, truncated) = tail(of: output)
     if ended == "stopped" {
@@ -79,6 +89,79 @@ enum Run {
     if truncated { result["truncated"] = true }
     if ended == "timeout" { result["timedOut"] = true }
     return result
+  }
+
+  private static func claim() throws {
+    try lock.withLock {
+      if running != nil {
+        throw HelperError(
+          "busy", "Another command is running through Brigade Computer Use. Wait for it to end, then try again.")
+      }
+      running = 0
+    }
+  }
+
+  private static func release() {
+    lock.withLock { running = nil }
+  }
+
+  /// Before this app quits (an update restarts it, or it quits to pick up Screen Recording):
+  /// the command running and what it left go first, rather than keep this app's permissions.
+  static func shutdown() {
+    sweep(lock.withLock { running } ?? 0)
+  }
+
+  /// Stops `group` (0: none) and the strays, SIGTERM first so that a recorder can finish its file,
+  /// then SIGKILL for what is left 2 seconds later. Returns once nothing is left.
+  static func sweep(_ group: pid_t) {
+    /// Sends `sig` to all of them; whether there was anything to send it to.
+    func send(_ sig: Int32) -> Bool {
+      // kill(-0) would signal this app's own group.
+      var left = group > 0 && kill(-group, sig) == 0
+      for pid in strays() where kill(pid, sig) == 0 { left = true }
+      return left
+    }
+    guard send(SIGTERM) else { return }
+    let until = Date().addingTimeInterval(2)
+    while Date() < until {
+      usleep(100_000)
+      if !send(0) { return }
+    }
+    for _ in 0..<20 {
+      if !send(SIGKILL) { return }
+      usleep(50_000)
+    }
+  }
+
+  private typealias ResponsibleFor = @convention(c) (pid_t) -> pid_t
+  /// The pid macOS asks about a process's permissions (private, in libsystem since macOS 10.14).
+  private static let responsibleFor: ResponsibleFor? = dlsym(
+    UnsafeMutableRawPointer(bitPattern: -2),  // RTLD_DEFAULT
+    "responsibility_get_pid_responsible_for_pid"
+  ).map { unsafeBitCast($0, to: ResponsibleFor.self) }
+
+  /// Whether macOS counts this app responsible for itself, and so for its commands: true when
+  /// opened as an app (with `open`), false under `swift test` or started from a terminal.
+  static var ownsItsCommands: Bool {
+    responsibleFor.map { $0(getpid()) == getpid() } ?? false
+  }
+
+  /// The processes that hold this app's permissions besides itself and its own direct children
+  /// (screencapture for Brigade.app's screenshot; a command's shell is reaped before this runs).
+  /// None when this app isn't its own responsible process (under `swift test`, or started from a
+  /// terminal): its commands then hold another app's permissions, not this one's.
+  static func strays() -> [pid_t] {
+    let me = getpid()
+    guard ownsItsCommands, let responsibleFor else { return [] }
+    var pids = [pid_t](repeating: 0, count: Int(max(proc_listallpids(nil, 0), 0)) * 2 + 64)
+    let count = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size))
+    return pids.prefix(Int(max(count, 0))).filter { pid in
+      guard pid > 1, pid != me, responsibleFor(pid) == me else { return false }
+      var info = proc_bsdinfo()
+      let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+      guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return false }
+      return info.pbi_ppid != UInt32(me) && info.pbi_status != UInt32(SZOMB)
+    }
   }
 
   /// The person's basics, then what the runner passes (its PATH, LANG…).

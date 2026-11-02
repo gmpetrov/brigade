@@ -199,6 +199,16 @@ func writeToken(in directory: URL) throws -> String {
 
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
+// Writing a reply to a runner that went away is an error to ignore, not a reason to quit.
+signal(SIGPIPE, SIG_IGN)
+// Quit with SIGTERM (Brigade.app restarts this app after an update): a command running goes first.
+signal(SIGTERM, SIG_IGN)
+let terminate = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .global())
+terminate.setEventHandler {
+  Run.shutdown()
+  exit(0)
+}
+terminate.resume()
 MainActor.assumeIsolated {
   do {
     let directory = try prepareDirectory()

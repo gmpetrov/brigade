@@ -52,9 +52,13 @@ token-checked socket in `~/.brigade/computer-use`. While a teammate acts, a pill
 Commands in a teammate's own shell don't get those permissions: macOS asks the app responsible for a process, the
 one that started it, and for the runner's commands that is Brigade.app, which holds neither. `computer_run` has the
 helper start the command instead (`Run.swift`), so a CLI that needs them (agent-desktop, `osascript` with System
-Events, a screen recorder) gets them, while the pill shows with Stop. It runs in its own process group, stopped as a
-whole when it ends, times out (120 seconds by default, 30 minutes at most) or the person presses Stop, and when the
-turn is interrupted (`cancel`). `swift test` in `apps/computer-use-macos` checks that.
+Events, a screen recorder) gets them, while the pill shows with Stop. One runs at a time. When it ends, times out (120
+seconds by default, 30 minutes at most), the person presses Stop or the turn is interrupted (`cancel`), the helper
+stops its process group and every other process macOS counts the helper responsible for, which a process keeps when
+it detaches (`setsid`, a double fork); it spares only its own direct children (`screencapture`). That happens before
+the reply, and when the helper quits. `swift test` in `apps/computer-use-macos` checks the command's life;
+`scripts/test-sweep.sh` checks the sweep in an app opened with `open`, as the helper is (a test process belongs to
+the terminal's app, so it has nothing to sweep).
 
 ```bash
 pnpm --filter @brigade/computer-use-macos install:app   # helper only, into ~/Applications (runner finds it there)
