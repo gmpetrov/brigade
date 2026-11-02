@@ -44,6 +44,8 @@ type Outcome = {
 function setup(sessionId: string, outcomes: Outcome[], memoryRoom?: () => Promise<boolean>) {
   const events: AgentEvent[] = []
   const prompts: string[] = []
+  /** Which turns came as a failed turn's retry (ThreadInput's `retry`). */
+  const retries: boolean[] = []
   const threads = new Threads({
     concurrency: 2,
     emit: (_, event) => events.push(event),
@@ -61,8 +63,9 @@ function setup(sessionId: string, outcomes: Outcome[], memoryRoom?: () => Promis
   made.push(threads)
   const harness = {
     active: false,
-    run: async (input: { kind: string; text?: string }, spec: ThreadSpec) => {
+    run: async (input: { kind: string; text?: string; retry?: boolean }, spec: ThreadSpec) => {
       prompts.push(input.text ?? '')
+      retries.push(!!input.retry)
       const outcome = outcomes.shift() ?? { status: 'idle' }
       // The memory guard stops the turn while it runs: its harness's process goes with it.
       if (outcome.memoryStop) threads.stoppedForMemory(spec.sessionId, outcome.memoryStop)
@@ -130,7 +133,7 @@ function setup(sessionId: string, outcomes: Outcome[], memoryRoom?: () => Promis
     })
   const notes = () =>
     events.flatMap((e) => (e.type === 'raw' && typeof e.value === 'string' ? [e.value] : []))
-  return { threads, events, prompts, spec, message, notes }
+  return { threads, events, prompts, retries, spec, message, notes }
 }
 
 const turns = (events: AgentEvent[]) => events.filter((e) => e.type === 'turn.started').length
@@ -226,6 +229,8 @@ test('a turn the memory guard stopped goes on once the computer has memory again
     /^Your last turn in this thread stopped on an error: Stopped to give the computer memory back: the computer is nearly out of memory, and it held the most \(2\.1 GB\)\./,
   )
   assert.match(t.prompts[1]!, /one at a time/)
+  // Said to be a retry: the harness tells it again the message the failed turn answered.
+  assert.deepEqual(t.retries, [false, true])
 })
 
 test('a turn waits for the computer to have memory before it starts', async () => {

@@ -1011,6 +1011,7 @@ export class Threads {
               : input.kind === 'retry'
                 ? {
                     kind: 'prompt' as const,
+                    retry: true,
                     text: [
                       retried(input.error, input.background),
                       await this.catchUp(spec, undefined, true),
