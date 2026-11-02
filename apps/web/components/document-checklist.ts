@@ -3,7 +3,8 @@
 // (`Title: details…`) folded under it, its details reduced to one grey line that fades out.
 // A line opens with its caret or a click on its details, and while the cursor is in it, so
 // nothing is ever edited unseen; it folds again from its caret, or once the cursor leaves
-// it. Decorations only: the document, its Markdown and what teammates read keep the line as
+// it. A selection opens only the line it starts in: one dragged or extended across folded
+// lines leaves them folded, so the page does not jump under the pointer. Decorations only: the document, its Markdown and what teammates read keep the line as
 // it is.
 import { createExtension } from '@blocknote/core'
 import type { Node } from '@tiptap/pm/model'
@@ -85,18 +86,20 @@ function read(doc: Node) {
   return { notes, lines }
 }
 
+/** Whether the cursor is in the line: the caret, or where a selection starts. */
+const holds = (line: Foldable, state: EditorState) =>
+  state.selection.anchor >= line.pos && state.selection.anchor <= line.pos + line.size
+
 /** Whether a line shows its details: opened, or the cursor is in it. */
 const isOpen = (line: Foldable, s: Pick<State, 'open' | 'focused'>, state: EditorState) =>
-  s.open.has(line.id) ||
-  (s.focused && state.selection.to >= line.pos && state.selection.from <= line.pos + line.size)
+  s.open.has(line.id) || (s.focused && holds(line, state))
 
 function toggle(view: EditorView, id: string, opening: boolean) {
   view.dispatch(view.state.tr.setMeta(key, { toggle: id } satisfies Meta))
   // Folding the line the cursor is in: the cursor leaves the editor, or it would hold it open.
   if (!opening && view.hasFocus()) {
     const line = key.getState(view.state)?.lines.find((l) => l.id === id)
-    const { from, to } = view.state.selection
-    if (line && to >= line.pos && from <= line.pos + line.size) (view.dom as HTMLElement).blur()
+    if (line && holds(line, view.state)) (view.dom as HTMLElement).blur()
   }
 }
 
