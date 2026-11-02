@@ -387,22 +387,15 @@ function StoppedRow({ row, onChange }: { row: BoardStopped; onChange: () => void
       setBusy(false)
     }
   }
-  const closes = Math.max(
-    0,
-    Math.ceil((new Date(row.closesAt).getTime() - Date.now()) / 86_400_000),
-  )
   return (
     <li className="flex items-center gap-3 border-t px-5 py-2">
       <TeammateAvatar teammate={row.teammate} className="size-5" />
       <Link href={row.href} className="flex min-w-0 flex-1 flex-col hover:underline-offset-2">
         <span className="truncate text-[13.5px] font-semibold">{row.title}</span>
         <span className="truncate text-xs text-muted-foreground">
-          {[
-            row.list?.title ?? 'Not on a list',
-            row.teammate.name,
-            `idle since ${timeAgo(row.idleSince)}`,
-            closes === 0 ? 'closes today' : `closes in ${closes} ${closes === 1 ? 'day' : 'days'}`,
-          ].join(' · ')}
+          {[row.list?.title ?? 'Not on a list', row.teammate.name, timeAgo(row.idleSince)].join(
+            ' · ',
+          )}
         </span>
         {error && <span className="text-xs text-destructive-text">{error}</span>}
       </Link>
