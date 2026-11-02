@@ -1034,6 +1034,47 @@
   font-size: 0.9em;
   font-style: normal;
 }
+/* A long line folded under its title (components/document-checklist.ts): a caret before the
+ * title, its details hidden and shown instead as one grey line that fades out at its end. */
+.document-editor .bn-fold {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: -1px;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background-color: var(--muted-foreground);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6l6 6-6 6'/%3E%3C/svg%3E")
+    center / 12px 12px no-repeat;
+  transition: transform 0.15s;
+}
+.document-editor .bn-fold:hover {
+  background-color: var(--foreground);
+}
+.document-editor .bn-fold:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+.document-editor .bn-fold[aria-expanded='true'] {
+  transform: rotate(90deg);
+}
+.document-editor .bn-detail {
+  display: none;
+}
+.document-editor .bn-detail-peek {
+  @apply truncate;
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 0.9em;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .document-editor .bn-fold {
+    transition: none;
+  }
+}
 
 /* A list's filters (app/app/lists/[id]): only its lines that stand so, under their headings.
  * Where a line stands comes from its marker's chips (components/list-items.tsx). A line holds
@@ -1100,7 +1141,9 @@
   > .bn-block-content {
   & > div:has(> input),
   & [data-list-item],
-  & .bn-note {
+  & .bn-note,
+  & .bn-fold,
+  & .bn-detail-peek {
     display: none;
   }
   & .bn-inline-content {
