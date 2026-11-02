@@ -40,9 +40,12 @@ struct Settings {
     /// Keep screen awake, off until the person turns it on.
     #[serde(default)]
     keep_awake: bool,
-    /// The screenshot shortcut picked in the menu (capture::SHORTCUTS); None for the default.
+    /// The screenshot shortcut picked in the menu (capture::Kind::Screenshot); None for the default.
     #[serde(default)]
     capture_shortcut: Option<String>,
+    /// The new thread shortcut picked in the menu (capture::Kind::NewThread); None for the default.
+    #[serde(default)]
+    new_thread_shortcut: Option<String>,
 }
 
 fn settings_file() -> PathBuf {
@@ -279,9 +282,6 @@ fn on_menu(app: &AppHandle, id: &str) {
         "setup" => setup::show(app),
         "capture" => capture::take(app),
         "capture-draft" => capture::show(app),
-        id if id.starts_with("shortcut:") => {
-            capture::choose_shortcut(app, &id["shortcut:".len()..])
-        }
         "restart-runner" => app.state::<Arc<Supervisor>>().start(),
         "awake" => {
             let on = app.state::<Arc<Items>>().awake.is_checked().unwrap_or(false);
@@ -314,7 +314,13 @@ fn on_menu(app: &AppHandle, id: &str) {
             app.state::<Arc<Supervisor>>().stop();
             app.exit(0);
         }
-        _ => {}
+        id => {
+            for kind in capture::KINDS {
+                if let Some(value) = id.strip_prefix(kind.prefix()) {
+                    capture::choose_shortcut(app, kind, value);
+                }
+            }
+        }
     }
 }
 
@@ -410,26 +416,30 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .map(|dir| dir.join(HELPER))
         .ok()
         .filter(|p| p.exists());
-    let chosen = settings
-        .capture_shortcut
-        .clone()
-        .unwrap_or_else(|| capture::DEFAULT_SHORTCUT.into());
-    let shortcut_items = capture::SHORTCUTS
-        .iter()
-        .map(|(id, label)| {
-            CheckMenuItem::with_id(app, format!("shortcut:{id}"), *label, true, *id == chosen, None::<&str>)
-                .map(|item| (*id, item))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    let shortcut_menu = Submenu::with_items(
-        app,
-        "Screenshot shortcut",
-        true,
-        &shortcut_items
+    // Each shortcut's submenu, its items checked by apply_shortcuts once registered.
+    let mut shortcut_items = Vec::new();
+    let mut shortcut_menus = Vec::new();
+    for kind in capture::KINDS {
+        let items = kind
+            .choices()
             .iter()
-            .map(|(_, item)| item as &dyn tauri::menu::IsMenuItem<Wry>)
-            .collect::<Vec<_>>(),
-    )?;
+            .map(|(id, label)| {
+                let menu_id = format!("{}{id}", kind.prefix());
+                CheckMenuItem::with_id(app, menu_id, *label, true, false, None::<&str>)
+                    .map(|item| (kind, *id, item))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        shortcut_menus.push(Submenu::with_items(
+            app,
+            kind.title(),
+            true,
+            &items
+                .iter()
+                .map(|(_, _, item)| item as &dyn tauri::menu::IsMenuItem<Wry>)
+                .collect::<Vec<_>>(),
+        )?);
+        shortcut_items.extend(items);
+    }
     let menu = Menu::with_items(
         app,
         &[
@@ -439,9 +449,10 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             &connect,
             &MenuItem::with_id(app, "setup", "Set up Brigade…", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "capture-draft", "New thread", true, None::<&str>)?,
             &MenuItem::with_id(app, "capture", "Take a screenshot", true, None::<&str>)?,
-            &MenuItem::with_id(app, "capture-draft", "Open screenshot draft", true, None::<&str>)?,
-            &shortcut_menu,
+            &shortcut_menus[0],
+            &shortcut_menus[1],
             &PredefinedMenuItem::separator(app)?,
             &awake,
             &login,
@@ -475,7 +486,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     app.manage(computer_use);
     app.manage(Awake::default());
     app.manage(capture::Capture::new(shortcut_items));
-    capture::apply_shortcut(app.handle(), &chosen);
+    capture::apply_shortcuts(app.handle(), &capture::KINDS);
     capture::show_count(app.handle());
     if settings.keep_awake {
         keep_awake(app.handle(), true);
@@ -513,9 +524,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app, _, event| {
+                .with_handler(|app, shortcut, event| {
                     if event.state == ShortcutState::Pressed {
-                        capture::take(app);
+                        capture::on_shortcut(app, shortcut);
                     }
                 })
                 .build(),

@@ -2,8 +2,9 @@
 // taken by Brigade Computer Use (it holds Screen Recording, Brigade.app doesn't),
 // added to a draft in ~/.brigade/captures. A small window shows the draft: the
 // dashboard's /app/capture page, the web new-thread box, which reads the captures
-// through the commands below and starts a thread with them. Closing the window
-// keeps the draft; the menu-bar icon counts its captures until it is sent.
+// through the commands below and starts a thread with them. The new thread shortcut
+// (⌘⇧1 unless changed) opens the same window as it is, with no screenshot. Closing
+// the window keeps the draft; the menu-bar icon counts its captures until it is sent.
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -28,14 +29,69 @@ use crate::setup::Helper;
 use crate::{alert, dashboard, load_settings, runner, save_settings};
 
 pub const WINDOW: &str = "capture";
-/// The shortcuts the menu offers, as stored and as shown.
-pub const SHORTCUTS: &[(&str, &str)] = &[
-    ("cmd+shift+2", "⌘⇧2"),
-    ("ctrl+shift+s", "⌃⇧S"),
-    ("ctrl+alt+cmd+b", "⌃⌥⌘B"),
-    ("off", "Off"),
-];
-pub const DEFAULT_SHORTCUT: &str = "cmd+shift+2";
+
+/// Brigade.app's global shortcuts, each picked in a submenu of its own.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Kind {
+    /// A screenshot, added to the draft's window.
+    Screenshot,
+    /// The draft's window as it is, to write without a screenshot.
+    NewThread,
+}
+
+pub const KINDS: [Kind; 2] = [Kind::Screenshot, Kind::NewThread];
+
+impl Kind {
+    /// The shortcuts the menu offers, as stored and as shown; the first is the default.
+    /// No two kinds offer the same one.
+    pub fn choices(self) -> &'static [(&'static str, &'static str)] {
+        match self {
+            Kind::Screenshot => &[
+                ("cmd+shift+2", "⌘⇧2"),
+                ("ctrl+shift+s", "⌃⇧S"),
+                ("ctrl+alt+cmd+b", "⌃⌥⌘B"),
+                ("off", "Off"),
+            ],
+            Kind::NewThread => &[
+                ("cmd+shift+1", "⌘⇧1"),
+                ("ctrl+alt+cmd+n", "⌃⌥⌘N"),
+                ("alt+space", "⌥Space"),
+                ("off", "Off"),
+            ],
+        }
+    }
+
+    /// The submenu's title.
+    pub fn title(self) -> &'static str {
+        match self {
+            Kind::Screenshot => "Screenshot shortcut",
+            Kind::NewThread => "New thread shortcut",
+        }
+    }
+
+    /// Its items' menu ids start with this, then the stored value.
+    pub fn prefix(self) -> &'static str {
+        match self {
+            Kind::Screenshot => "shortcut:",
+            Kind::NewThread => "thread-shortcut:",
+        }
+    }
+
+    /// The one picked in the menu, else the default.
+    pub fn chosen(self) -> &'static str {
+        let settings = load_settings();
+        let stored = match self {
+            Kind::Screenshot => settings.capture_shortcut,
+            Kind::NewThread => settings.new_thread_shortcut,
+        };
+        let choices = self.choices();
+        stored
+            .and_then(|value| choices.iter().find(|(id, _)| *id == value))
+            .unwrap_or(&choices[0])
+            .0
+    }
+}
+
 /// Safari's: Google's sign-in turns away the bare WebKit one, as an embedded browser.
 const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
 /// How long the person may take to pick what to capture.
@@ -44,8 +100,8 @@ const SELECTING: Duration = Duration::from_secs(10 * 60);
 pub struct Capture {
     /// A selection is on screen: the shortcut again does nothing.
     taking: AtomicBool,
-    /// The menu's shortcut items, by stored value.
-    items: Vec<(&'static str, CheckMenuItem<Wry>)>,
+    /// The menu's shortcut items, by kind and stored value.
+    items: Vec<(Kind, &'static str, CheckMenuItem<Wry>)>,
     /// Dashboard origins whose page may call the commands below.
     allowed: Mutex<HashSet<String>>,
     /// The secret of the window's sign-in through the browser, once started (`capture_sign_in`).
@@ -53,7 +109,7 @@ pub struct Capture {
 }
 
 impl Capture {
-    pub fn new(items: Vec<(&'static str, CheckMenuItem<Wry>)>) -> Self {
+    pub fn new(items: Vec<(Kind, &'static str, CheckMenuItem<Wry>)>) -> Self {
         Self {
             taking: AtomicBool::new(false),
             items,
@@ -95,47 +151,81 @@ pub fn show_count(app: &AppHandle) {
     }
 }
 
-/// The shortcut chosen in the menu, registered; an alert when another app holds it.
-pub fn apply_shortcut(app: &AppHandle, value: &str) {
+/// The shortcuts chosen in the menu, registered; an alert for each kind in `report` that
+/// another app holds.
+pub fn apply_shortcuts(app: &AppHandle, report: &[Kind]) {
     let shortcuts = app.global_shortcut();
     let _ = shortcuts.unregister_all();
     let capture = app.state::<Capture>();
-    for (id, item) in &capture.items {
-        let _ = item.set_checked(*id == value);
-    }
-    if value == "off" {
-        return;
-    }
-    let registered = value
-        .parse::<Shortcut>()
-        .map_err(|e| e.to_string())
-        .and_then(|shortcut| shortcuts.register(shortcut).map_err(|e| e.to_string()));
-    if registered.is_err() {
-        let label = SHORTCUTS
-            .iter()
-            .find(|(id, _)| *id == value)
-            .map_or(value, |(_, label)| label);
-        alert(
-            app,
-            "Screenshot shortcut unavailable",
-            &format!("Another app already uses {label}. Pick another one in Brigade's menu, under Screenshot shortcut."),
-            MessageDialogKind::Warning,
-        );
-        for (_, item) in &capture.items {
-            let _ = item.set_checked(false);
+    for kind in KINDS {
+        let value = kind.chosen();
+        let items = || capture.items.iter().filter(move |(k, _, _)| *k == kind);
+        for (_, id, item) in items() {
+            let _ = item.set_checked(*id == value);
+        }
+        if value == "off" {
+            continue;
+        }
+        let registered = value
+            .parse::<Shortcut>()
+            .map_err(|e| e.to_string())
+            .and_then(|shortcut| shortcuts.register(shortcut).map_err(|e| e.to_string()));
+        if registered.is_err() {
+            for (_, _, item) in items() {
+                let _ = item.set_checked(false);
+            }
+            if report.contains(&kind) {
+                let label = kind
+                    .choices()
+                    .iter()
+                    .find(|(id, _)| *id == value)
+                    .map_or(value, |(_, label)| label);
+                let title = kind.title();
+                alert(
+                    app,
+                    &format!("{title} unavailable"),
+                    &format!("Another app already uses {label}. Pick another one in Brigade's menu, under {title}."),
+                    MessageDialogKind::Warning,
+                );
+            }
         }
     }
 }
 
 /// From the menu: remembered, then registered.
-pub fn choose_shortcut(app: &AppHandle, value: &str) {
-    let Some((id, _)) = SHORTCUTS.iter().find(|(id, _)| *id == value) else {
+pub fn choose_shortcut(app: &AppHandle, kind: Kind, value: &str) {
+    let Some((id, _)) = kind.choices().iter().find(|(id, _)| *id == value) else {
         return;
     };
     let mut settings = load_settings();
-    settings.capture_shortcut = Some((*id).to_owned());
+    let stored = Some((*id).to_owned());
+    match kind {
+        Kind::Screenshot => settings.capture_shortcut = stored,
+        Kind::NewThread => settings.new_thread_shortcut = stored,
+    }
     save_settings(&settings);
-    apply_shortcut(app, id);
+    apply_shortcuts(app, &[kind]);
+}
+
+/// A registered shortcut was pressed: what its kind does.
+pub fn on_shortcut(app: &AppHandle, pressed: &Shortcut) {
+    let Some(kind) = KINDS
+        .into_iter()
+        .find(|kind| kind.chosen().parse::<Shortcut>().is_ok_and(|s| s == *pressed))
+    else {
+        return;
+    };
+    match kind {
+        Kind::Screenshot => take(app),
+        Kind::NewThread => {
+            // A screenshot's selection is on screen: the window would cover it.
+            if app.state::<Capture>().taking.load(Ordering::SeqCst) {
+                return;
+            }
+            let handle = app.clone();
+            let _ = app.run_on_main_thread(move || show(&handle));
+        }
+    }
 }
 
 /// The shortcut: a selection, then the draft's window with it added. Esc during the selection adds nothing.
