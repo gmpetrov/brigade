@@ -1,22 +1,14 @@
 'use client'
-// The Board (docs/board.md): what moves across the workspace's lists, threads and routines, in
-// three columns, with the routines above and the threads that stopped without being done below.
+// The Board (docs/board.md): what moves across the workspace's lists, threads and failing
+// routines, in three columns, with the threads that stopped without being done below. Routines
+// themselves are on the Routines page and Home.
 // The API computes it (GET /board); this page filters it by project, list and teammate.
 import type { Board, BoardCard, BoardColumn, BoardRoutine, BoardStopped } from '@brigade/contracts'
-import {
-  ChevronDown,
-  Clock,
-  GitPullRequest,
-  ListChecks,
-  MessageSquare,
-  RefreshCw,
-  X,
-} from 'lucide-react'
+import { ChevronDown, GitPullRequest, ListChecks, X } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { ProjectSelect } from '@/components/projects'
-import { describeCron, scheduleTime } from '@/components/schedules'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -50,7 +42,7 @@ const COLUMNS: { value: BoardColumn; label: string; dot: string; hint?: string }
   { value: 'done', label: 'Done', dot: 'bg-success', hint: '7 days' },
 ]
 
-/** "Not on a list": the list filter's value for threads and routines on no list. */
+/** "Not on a list": the list filter's value for threads on no list. */
 const NO_LIST = 'none'
 
 type Filters = { project: string; lists: string[]; teammate: string }
@@ -105,69 +97,81 @@ export function useBoard() {
 
 const cardTeammates = (card: BoardCard) => card.threads.map((t) => t.teammate.id)
 
-/** Why a card waits on a person, or what it waits on, in a few words. */
-function reasonText(card: BoardCard) {
+/** What a person does for a card in Needs you, in a few words. Other columns say nothing. */
+function actionText(card: BoardCard) {
   switch (card.reason) {
     case 'ticket':
-      return 'Ticket open'
+      return 'Answer ticket'
     case 'waiting':
-      return 'Waiting on an answer'
-    case 'pull':
-      return 'Merge or decide'
+      return 'Reply'
+    case 'pull': {
+      const open = card.pulls.filter((p) => p.state === 'open')
+      return open.length ? `Merge ${open.map((p) => `#${p.number}`).join(', ')}` : 'Merge or decide'
+    }
     case 'failed':
       return 'Failed'
     case 'routine_failed':
       return 'Last run failed'
-    case 'working':
-      return 'Working'
-    case 'wakeup':
-      return 'Wake-up set'
-    case 'review':
-      return 'Pull request in review'
     default:
       return null
   }
 }
 
+/** The list a card is a line of; nothing for a thread on no list. */
 function Source({ card }: { card: BoardCard }) {
-  const Icon =
-    card.kind === 'item' ? ListChecks : card.kind === 'routine' ? RefreshCw : MessageSquare
-  const text =
-    card.kind === 'item' && card.list
-      ? [card.list.title, card.list.section].filter(Boolean).join(' · ')
-      : card.kind === 'routine'
-        ? 'Routine'
-        : 'Not on a list'
+  if (card.kind !== 'item' || !card.list) return null
   return (
     <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-muted-foreground">
-      <Icon aria-hidden className="size-3 shrink-0" />
-      <span className="truncate">{text}</span>
+      <ListChecks aria-hidden className="size-3 shrink-0" />
+      <span className="truncate">
+        {[card.list.title, card.list.section].filter(Boolean).join(' · ')}
+      </span>
     </span>
   )
 }
 
-function PullChip({ pull }: { pull: BoardCard['pulls'][number] }) {
+/** The card's latest pull request, its color saying its state, and how many others it has. */
+function PullChip({ pulls }: { pulls: BoardCard['pulls'] }) {
+  const pull = pulls.at(-1)
+  if (!pull) return null
   const merged = pull.state === 'merged'
   return (
-    <a
-      href={pull.url}
-      target="_blank"
-      rel="noreferrer"
-      onClick={(e) => e.stopPropagation()}
-      className={cn(
-        'inline-flex h-5.5 shrink-0 items-center gap-1 rounded-full px-2 font-mono text-[11px]',
-        merged ? 'bg-success/15 text-success' : 'bg-primary/15 text-primary',
+    <span className="flex shrink-0 items-center gap-1">
+      <a
+        href={pull.url}
+        target="_blank"
+        rel="noreferrer"
+        title={`${pull.repository}#${pull.number} ${pull.state}`}
+        onClick={(e) => e.stopPropagation()}
+        className={cn(
+          'inline-flex h-5.5 items-center gap-1 rounded-full px-2 font-mono text-[11px]',
+          merged
+            ? 'bg-success/15 text-success'
+            : pull.state === 'open'
+              ? 'bg-primary/15 text-primary'
+              : 'bg-secondary text-muted-foreground',
+        )}
+      >
+        <GitPullRequest aria-hidden className="size-3" />#{pull.number}
+      </a>
+      {pulls.length > 1 && (
+        <span className="font-mono text-[11px] text-muted-foreground">+{pulls.length - 1}</span>
       )}
-    >
-      <GitPullRequest aria-hidden className="size-3" />#{pull.number} {pull.state}
-    </a>
+    </span>
   )
 }
 
 function CardView({ card }: { card: BoardCard }) {
   const bad = card.reason === 'failed' || card.reason === 'routine_failed'
-  const reason = card.column === 'done' ? null : reasonText(card)
+  const action = card.column === 'needs_you' ? actionText(card) : null
+  const working = card.column === 'in_progress' && card.reason === 'working'
   const thread = card.threads[0]
+  const who = thread ? (thread.routine?.title ?? thread.teammate.name) : null
+  const byline = [
+    who,
+    card.done?.by && card.done.by !== who ? card.done.by : null,
+    card.done && timeAgo(card.done.at),
+  ].filter(Boolean)
   const body = (
     <>
       <Source card={card} />
@@ -182,47 +186,41 @@ function CardView({ card }: { card: BoardCard }) {
       {card.note && (
         <span
           className={cn(
-            'line-clamp-2 text-[12.5px] leading-snug',
-            bad ? 'text-destructive-text' : 'text-muted-foreground',
+            'text-[12.5px] leading-snug',
+            bad ? 'line-clamp-2 text-destructive-text' : 'line-clamp-1 text-muted-foreground',
           )}
         >
           {card.note}
         </span>
       )}
-      <span className="flex flex-wrap items-center gap-1.5">
+      <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-muted-foreground">
         {thread && (
-          <span className="inline-flex h-5.5 max-w-full min-w-0 items-center gap-1.5 rounded-full border pr-2 pl-0.5 text-[11.5px] text-muted-foreground">
+          <span className="relative shrink-0" title={working ? 'Working now' : undefined}>
             <TeammateAvatar teammate={thread.teammate} className="size-4.5" />
-            <span className="truncate">{thread.routine?.title ?? thread.teammate.name}</span>
-            {thread.routine && (
-              <span className="shrink-0 rounded-full border px-1 text-[10px] leading-3.5 font-semibold">
-                routine
-              </span>
+            {working && (
+              <span
+                aria-label="Working now"
+                className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full border-2 border-card bg-primary"
+              />
             )}
           </span>
         )}
-        {card.pulls.slice(-2).map((p) => (
-          <PullChip key={`${p.repository}#${p.number}`} pull={p} />
-        ))}
-        {reason && (
-          <span
-            className={cn(
-              'text-xs font-semibold',
-              card.column === 'needs_you'
-                ? bad
-                  ? 'text-destructive-text'
-                  : 'text-warning'
-                : 'font-normal text-muted-foreground',
-            )}
-          >
-            {reason}
-          </span>
-        )}
-        {card.done && (
-          <span className="text-xs text-muted-foreground">
-            {[card.done.by, timeAgo(card.done.at)].filter(Boolean).join(' · ')}
-          </span>
-        )}
+        {byline.length > 0 && <span className="min-w-0 truncate">{byline.join(' · ')}</span>}
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
+          {card.reason !== 'pull' || card.column !== 'needs_you' ? (
+            <PullChip pulls={card.pulls} />
+          ) : null}
+          {action && (
+            <span
+              className={cn(
+                'text-xs font-semibold',
+                bad ? 'text-destructive-text' : 'text-warning',
+              )}
+            >
+              {action}
+            </span>
+          )}
+        </span>
       </span>
     </>
   )
@@ -283,14 +281,6 @@ function Column({
       {footer}
     </section>
   )
-}
-
-const HEALTH: Record<BoardRoutine['health'], { label: string; tone: string }> = {
-  ok: { label: 'OK', tone: 'text-success bg-success/15' },
-  degraded: { label: 'Degraded', tone: 'text-warning bg-warning/15' },
-  failed: { label: 'Failed', tone: 'text-destructive-text bg-destructive/15' },
-  paused: { label: 'Paused', tone: 'text-muted-foreground bg-secondary' },
-  new: { label: 'New', tone: 'text-muted-foreground bg-secondary' },
 }
 
 /** What a routine did today, or last: what it produced first, the runs that found nothing counted. */
@@ -356,86 +346,6 @@ export function RoutineLast({ routine }: { routine: BoardRoutine }) {
     <span className="min-w-0 truncate text-[12.5px] text-muted-foreground">
       {parts.flatMap((p, i) => (i ? [' · ', p] : [p]))}
     </span>
-  )
-}
-
-function Routines({ routines, filtered }: { routines: BoardRoutine[]; filtered: boolean }) {
-  const [all, setAll] = useState(false)
-  if (!routines.length) return null
-  const shown = all ? routines : routines.slice(0, 5)
-  return (
-    <section
-      aria-labelledby="board-routines"
-      className="overflow-hidden rounded-3xl border bg-card shadow-sm"
-    >
-      <div className="flex items-center gap-2 px-5 pt-3 pb-2">
-        <Clock aria-hidden className="size-4" />
-        <h2 id="board-routines" className="text-[13.5px] font-bold">
-          {filtered ? 'Routines on this list' : 'Routines'}
-        </h2>
-        <span className="text-[12.5px] text-muted-foreground">{routines.length}</span>
-        <Link
-          href="/app/routines"
-          className="ml-auto text-[12.5px] font-semibold text-muted-foreground hover:text-foreground"
-        >
-          All routines
-        </Link>
-      </div>
-      <ul>
-        {shown.map((r) => {
-          const health = HEALTH[r.health]
-          return (
-            <li
-              key={r.id}
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-t px-5 py-2 text-[13px] md:grid-cols-[minmax(0,2fr)_9rem_minmax(0,1.7fr)_6.5rem]"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="truncate font-semibold">{r.title}</span>
-                <span className="hidden shrink-0 text-[12.5px] text-muted-foreground lg:inline">
-                  {describeCron(r.cron)}
-                </span>
-              </span>
-              <span className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'inline-flex h-5 items-center gap-1.5 rounded-full px-2 text-[11px] font-semibold',
-                    health.tone,
-                  )}
-                >
-                  <span aria-hidden className="size-1.5 rounded-full bg-current" />
-                  {health.label}
-                </span>
-                {r.week.runs > 0 && (
-                  <span
-                    className="hidden font-mono text-[11px] text-muted-foreground md:inline"
-                    title="Runs that didn't fail, of the last 7 days"
-                  >
-                    {r.week.runs - r.week.failed}/{r.week.runs}
-                  </span>
-                )}
-              </span>
-              <span className="col-span-2 min-w-0 md:col-span-1">
-                <RoutineLast routine={r} />
-              </span>
-              <span className="hidden text-right text-[12.5px] whitespace-nowrap text-muted-foreground md:inline">
-                {r.health === 'paused' || !r.nextRunAt
-                  ? '—'
-                  : `Next ${scheduleTime(r.nextRunAt, r.timezone)}`}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
-      {routines.length > shown.length && (
-        <button
-          type="button"
-          onClick={() => setAll(true)}
-          className="w-full border-t px-5 py-2 text-left text-[12.5px] font-semibold text-muted-foreground hover:text-foreground"
-        >
-          Show {routines.length - shown.length} more
-        </button>
-      )}
-    </section>
   )
 }
 
@@ -652,22 +562,12 @@ export function BoardPage() {
         onLists(s.list?.documentId ?? null) &&
         byTeammate([s.teammate.id]),
     )
-    // On some lists only: the routines whose runs worked on them.
-    const listOnly = lists.length > 0 && !lists.includes(NO_LIST)
-    const routines = data.routines.filter(
-      (r) =>
-        inProject(r.projectId) &&
-        byTeammate([r.teammate.id]) &&
-        (!listOnly || r.listIds.some((id) => lists.includes(id))),
-    )
     const closed =
       lists.length && !lists.includes(NO_LIST)
         ? []
         : data.closed.filter((c) => inProject(c.projectId))
     return {
       counts,
-      routines,
-      listOnly,
       stopped,
       closed,
       lists: data.lists.filter((l) => inProject(l.projectId) || lists.includes(l.documentId)),
@@ -730,8 +630,6 @@ export function BoardPage() {
           onChange={(teammate) => setFilters({ teammate })}
         />
       </div>
-
-      <Routines routines={view.routines} filtered={view.listOnly} />
 
       {/* On a phone, one column at a time. */}
       <div
