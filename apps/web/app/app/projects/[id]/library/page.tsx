@@ -5,7 +5,9 @@ import { ProjectRedirect } from '@/components/project-redirect'
 export default function ProjectLibrary() {
   return (
     <ProjectRedirect
-      to={(p) => (p.folder ? `/app/library?folder=${encodeURIComponent(p.folder)}` : '/app/library')}
+      to={(p) =>
+        p.folder ? `/app/library?folder=${encodeURIComponent(p.folder)}` : '/app/library'
+      }
     />
   )
 }

@@ -18,15 +18,7 @@ const LISTS_SHOWN = 4
 /** Routines shown before "+N more". */
 const ROUTINES_SHOWN = 5
 
-function Section({
-  title,
-  href,
-  children,
-}: {
-  title: string
-  href?: string
-  children: ReactNode
-}) {
+function Section({ title, href, children }: { title: string; href?: string; children: ReactNode }) {
   return (
     <section aria-label={title} className="flex flex-col gap-2">
       <div className="flex items-center gap-2 px-1">
