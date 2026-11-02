@@ -127,8 +127,6 @@ export async function raise(alert: Alert, now = new Date(), lastAt = now) {
     severity: step.severity,
     title: alert.title,
     detail,
-    // Never back: a failure written since (src/ops/checks.ts, noteSeen) may be newer.
-    lastAt: row && row.lastAt > lastAt ? row.lastAt : lastAt,
     firstAt: step.firstAt,
     ...(step.reopen ? { resolvedAt: null } : {}),
     // Not sent: tried again on the next run.
@@ -140,10 +138,22 @@ export async function raise(alert: Alert, now = new Date(), lastAt = now) {
   }
   await prisma.opsAlert.upsert({
     where: { key: alert.key },
-    create: { key: alert.key, ...data },
+    create: { key: alert.key, ...data, lastAt },
     update: data,
   })
+  // Never back, and in one statement: a failure written meanwhile (src/ops/last-seen.ts), while
+  // this one read the row and told operators, may be newer.
+  await seenAt(alert.key, lastAt)
 }
+
+/**
+ * Move an alert's `lastAt` on to `at`, never back, in one statement: its writers (the checks,
+ * each failure as it comes) may race. `openOnly`: not once it is resolved.
+ */
+export const seenAt = (key: string, at: Date, { openOnly = false } = {}) =>
+  openOnly
+    ? prisma.$executeRaw`UPDATE "OpsAlert" SET "lastAt" = GREATEST("lastAt", ${at}) WHERE "key" = ${key} AND "resolvedAt" IS NULL`
+    : prisma.$executeRaw`UPDATE "OpsAlert" SET "lastAt" = GREATEST("lastAt", ${at}) WHERE "key" = ${key}`
 
 /**
  * The problem is gone. Operators who were told it started are told it ended; until that is

@@ -10,8 +10,9 @@ import { hubs } from '../hub.js'
 import type { ThreadWaiting } from '../hub/host.js'
 import { localHubs } from '../hub/memory-host.js'
 import { computersWaiting } from '../runner-commands.js'
-import { raise, resolve, settle, type Alert } from './alerts.js'
-import { failuresOf, summary, watchFailures, type Failure } from './failures.js'
+import { raise, resolve, seenAt, settle, type Alert } from './alerts.js'
+import { failuresOf, summary, type Failure } from './failures.js'
+import { opened, openNow } from './last-seen.js'
 
 const MINUTE = 60_000
 
@@ -201,47 +202,6 @@ export function judge(
   return 'keep'
 }
 
-/**
- * The keys of the open alerts, as the last check read them, or as read once for the first
- * failure after a start. A failure of one is written to its row at once (noteSeen): the next
- * check may come after a restart, which forgets the failures counted in memory.
- */
-let openKeys: Promise<Set<string>> | null = null
-/** When each kind's last-seen time was last written: at most once a minute per kind. */
-const seenWritten = new Map<string, number>()
-/** A failure this close after the last written one is not written: a burst writes once. */
-export const SEEN_WRITE_MS = MINUTE
-const seenWrites = new Set<Promise<void>>()
-
-/**
- * A failure of an open alert's kind moves the alert's `lastAt` on, in the background (the
- * request that failed never waits for it), so that its quiet time counts from it even if this
- * object restarts before the next check. Only for open alerts, and once a minute per kind.
- */
-function noteSeen(failure: Failure) {
-  const written = seenWritten.get(failure.kind)
-  if (written !== undefined && failure.at < written + SEEN_WRITE_MS) return
-  seenWritten.set(failure.kind, failure.at)
-  const write = (async () => {
-    openKeys ??= prisma.opsAlert
-      .findMany({ where: { resolvedAt: null }, select: { key: true } })
-      .then((rows) => new Set(rows.map((r) => r.key)))
-    if (!(await openKeys).has(failure.kind)) return
-    await prisma.$executeRaw`UPDATE "OpsAlert" SET "lastAt" = GREATEST("lastAt", ${new Date(failure.at)}) WHERE "key" = ${failure.kind} AND "resolvedAt" IS NULL`
-  })().catch((error: unknown) => {
-    openKeys = null
-    console.error(`ops: ${failure.kind} last seen not written: ${String(error)}`)
-  })
-  seenWrites.add(write)
-  void write.finally(() => seenWrites.delete(write))
-}
-watchFailures(noteSeen)
-
-/** Only for tests: the failures' writes under way, done. */
-export const seenWritesDone = async () => {
-  await Promise.all([...seenWrites])
-}
-
 /** Kinds no rule watches any more: an alert of one still open is resolved. */
 const RETIRED = ['api-reset']
 
@@ -258,7 +218,7 @@ async function checkFailures(now: number) {
     ).map((row) => [row.key, row.lastAt.getTime()]),
   )
   const keys = new Set(open.keys())
-  openKeys = Promise.resolve(keys)
+  openNow(keys)
   // Each job seen failing lately, and each still alerted on.
   const jobs = new Set(failuresOf('job:', 3 * 60 * MINUTE, now).map((f) => f.kind))
   for (const key of open.keys()) if (key.startsWith('job:')) jobs.add(key)
@@ -280,14 +240,10 @@ async function checkFailures(now: number) {
       await raise(verdict.alert, new Date(now), new Date(newest))
       keys.add(rule.kind)
       // Open now: its next failure is written at once, however soon.
-      seenWritten.delete(rule.kind)
+      opened(rule.kind)
     } else if (lastSeenAt !== undefined) {
       // Open, with fewer failures than raise it: they keep it open, past a restart too.
-      if (newest > lastSeenAt)
-        await prisma.opsAlert.update({
-          where: { key: rule.kind },
-          data: { lastAt: new Date(newest) },
-        })
+      if (newest > lastSeenAt) await seenAt(rule.kind, new Date(newest))
     }
   }
   for (const kind of RETIRED) await resolve(kind, new Date(now))

@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { after, beforeEach, describe, test } from 'node:test'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import pg from 'pg'
 
 // Operators' alerts (src/ops/): the rules, without a database; raising and resolving, against
@@ -45,12 +47,15 @@ const { onRaise, REMIND_MS, FLAP_MS, raise, resolve, settle } = await import('..
 const checks = await import('../src/ops/checks.js')
 const { judge, RULES, computerProblem, workerProblems, objectResetProblems, STUCK_MS, OFFLINE_MS } =
   checks
-const { noteFailure, failuresOf, summary, clearFailures } = await import('../src/ops/failures.js')
+const { noteFailure, failuresOf, summary, clearFailures, seenWritesDone } =
+  await import('../src/ops/failures.js')
+const { forgetSeen } = await import('../src/ops/last-seen.js')
 const { sendNotice, noticeText } = await import('../src/ops/send.js')
 const { diagnose, watchdog, STALLED_MS } = await import('../src/ops/watchdog.js')
 const { prisma } = await import('../src/db.js')
 
 const MIN = 60_000
+const run = promisify(execFile)
 const t0 = new Date('2026-10-26T12:00:00Z')
 const at = (ms: number) => new Date(t0.getTime() + ms)
 
@@ -398,7 +403,7 @@ describe('alerts in the database', { skip }, () => {
     const fail = async (n: number, when: number, kind = 'api') => {
       for (let i = 0; i < n; i++)
         noteFailure(kind, new Error('Failed to get session'), { at: when })
-      await running.seenWritesDone()
+      await seenWritesDone()
     }
     const resolvedAt = async (key: string) =>
       (await prisma.opsAlert.findUnique({ where: { key } }))?.resolvedAt ?? null
@@ -407,6 +412,7 @@ describe('alerts in the database', { skip }, () => {
     let running = checks
     const restart = async () => {
       clearFailures()
+      forgetSeen()
       running = await import(`../src/ops/checks.js?restart=${++restarts}`)
     }
     beforeEach(async () => {
@@ -441,7 +447,25 @@ describe('alerts in the database', { skip }, () => {
         await restart()
         await running.runChecks(start + minute * MIN)
       }
-      await fail(1, start + 14.5 * MIN)
+      // A process that just started, as the Api object after an eviction: the failure comes
+      // through failures.ts alone (Api.noteFailures), before any check loaded checks.ts.
+      const { stdout } = await run(
+        process.execPath,
+        [
+          '--import',
+          'tsx',
+          '--input-type=module',
+          '-e',
+          `const { noteFailure, seenWritesDone } = await import('./src/ops/failures.ts')
+          noteFailure('api', new Error('Failed to get session'), { at: ${start + 14.5 * MIN} })
+          await seenWritesDone()
+          console.log(JSON.stringify({ written: true }))
+          const { prisma } = await import('./src/db.ts')
+          await prisma.$disconnect()`,
+        ],
+        { cwd: new URL('..', import.meta.url).pathname, env: process.env },
+      )
+      assert.match(stdout, /"written":true/)
       await restart()
       await running.runChecks(start + 15 * MIN)
       assert.equal(await resolvedAt('api'), null)
@@ -466,6 +490,31 @@ describe('alerts in the database', { skip }, () => {
       assert.deepEqual(await written(), at(2 * MIN))
       await fail(1, start + 3 * MIN)
       assert.deepEqual(await written(), at(3 * MIN))
+    })
+
+    test('a failure written while a raise tells operators is not undone by the raise', async () => {
+      const start = t0.getTime()
+      await fail(10, start)
+      await running.runChecks(start)
+      // A reminder is due: the raise reads the row, then tells operators, held here.
+      let release = () => {}
+      let asked = () => {}
+      const telling = new Promise<void>((r) => (asked = r))
+      answer = () => {
+        asked()
+        return new Promise<Response>((r) => (release = () => r(new Response('ok'))))
+      }
+      const raising = raise(
+        { key: 'api', severity: 'warning', title: 'API requests failing (500)' },
+        at(REMIND_MS),
+        at(0),
+      )
+      await telling
+      await fail(1, start + REMIND_MS + 1000)
+      release()
+      await raising
+      const row = await prisma.opsAlert.findUniqueOrThrow({ where: { key: 'api' } })
+      assert.deepEqual(row.lastAt, at(REMIND_MS + 1000))
     })
 
     test('an alert ends its quiet time after its last failure, restarts or not', async () => {

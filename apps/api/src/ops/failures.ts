@@ -28,12 +28,23 @@ const errorListeners: ((kind: string, error: Error, workspaceId?: string) => voi
 export const onFailureError = (hear: (kind: string, error: Error, workspaceId?: string) => void) =>
   void errorListeners.push(hear)
 
-/** Who hears of each failure counted here: the checks (src/ops/checks.ts), one at a time. */
-let watcher: ((failure: Failure) => void) | null = null
+/**
+ * Each failure counted here also moves its open alert's `lastAt` on (src/ops/last-seen.ts,
+ * loaded by the first one): the writes under way, which the failing request never waits for.
+ */
+const seenWrites = new Set<Promise<void>>()
 
-/** Hear of each failure counted here, in place of whoever did before. */
-export const watchFailures = (watch: (failure: Failure) => void) => {
-  watcher = watch
+function writeSeen(failure: Failure) {
+  const write = import('./last-seen.js')
+    .then(({ noteSeen }) => noteSeen(failure))
+    .catch((error: unknown) => console.error(`ops: last seen not written: ${String(error)}`))
+  seenWrites.add(write)
+  void write.finally(() => seenWrites.delete(write))
+}
+
+/** Only for tests: the writes of the failures counted so far, done. */
+export const seenWritesDone = async () => {
+  await Promise.all([...seenWrites])
 }
 
 /** Run `fn` with its failures sent to `sink` rather than counted here. */
@@ -72,11 +83,7 @@ export function keepFailure(failure: Failure) {
   failures.push(failure)
   while (failures.length > MAX || (failures.length && failure.at - failures[0]!.at > KEEP_MS))
     failures.shift()
-  try {
-    watcher?.(failure)
-  } catch {
-    // Hearing of a failure never fails the code that had it.
-  }
+  writeSeen(failure)
 }
 
 /** The failures of a kind (or of every kind under `prefix:`) in the last `ms`. */
