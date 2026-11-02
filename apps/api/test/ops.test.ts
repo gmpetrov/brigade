@@ -492,6 +492,54 @@ describe('alerts in the database', { skip }, () => {
       assert.deepEqual(await written(), at(3 * MIN))
     })
 
+    test('an alert opened again keeps its new incident, whatever fails after', async () => {
+      const start = t0.getTime()
+      // The last incident: resolved 45 minutes ago, its last failure an hour ago.
+      await prisma.opsAlert.create({
+        data: {
+          key: 'api',
+          severity: 'warning',
+          title: 'API requests failing (500)',
+          firstAt: at(-120 * MIN),
+          lastAt: at(-60 * MIN),
+          notifiedAt: at(-120 * MIN),
+          notifiedSeverity: 'warning',
+          resolvedAt: at(-45 * MIN),
+        },
+      })
+      // The next UPDATE of the open 'api' alert fails, as on a connection the database closed.
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TestFailNext" ("key" text)`)
+      await prisma.$executeRawUnsafe(`CREATE OR REPLACE FUNCTION test_fail_next() RETURNS trigger AS $$
+        BEGIN
+          IF OLD."resolvedAt" IS NULL AND EXISTS (SELECT 1 FROM "TestFailNext" WHERE "key" = OLD."key") THEN
+            DELETE FROM "TestFailNext" WHERE "key" = OLD."key";
+            RAISE EXCEPTION 'Connection to the origin database was lost.' USING ERRCODE = '08006';
+          END IF;
+          RETURN NEW;
+        END $$ LANGUAGE plpgsql`)
+      await prisma.$executeRawUnsafe(
+        `CREATE OR REPLACE TRIGGER test_fail_next BEFORE UPDATE ON "OpsAlert" FOR EACH ROW EXECUTE FUNCTION test_fail_next()`,
+      )
+      try {
+        await prisma.$executeRawUnsafe(`INSERT INTO "TestFailNext" VALUES ('api')`)
+        await fail(10, start)
+        await running.runChecks(start)
+        assert.deepEqual(told('api'), ['firing'])
+        await prisma.$executeRawUnsafe(`DELETE FROM "TestFailNext"`)
+        await restart()
+        await running.runChecks(start + MIN)
+        assert.equal(await resolvedAt('api'), null)
+        await running.runChecks(start + 14 * MIN)
+        assert.equal(await resolvedAt('api'), null)
+        await running.runChecks(start + 15 * MIN)
+        assert.deepEqual(await resolvedAt('api'), at(15 * MIN))
+      } finally {
+        await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS test_fail_next ON "OpsAlert"`)
+        await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS test_fail_next()`)
+        await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "TestFailNext"`)
+      }
+    })
+
     test('a failure written while a raise tells operators is not undone by the raise', async () => {
       const start = t0.getTime()
       await fail(10, start)

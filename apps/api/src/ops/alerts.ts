@@ -136,14 +136,18 @@ export async function raise(alert: Alert, now = new Date(), lastAt = now) {
         ? { notifiedAt: null, notifiedSeverity: null }
         : {}),
   }
+  // Opened again: its last failure goes in the same statement that opens it, so that it never
+  // stands open with the last incident's time, whatever fails after. Nothing else writes the
+  // `lastAt` of a resolved alert (seenAt from failures is for open ones only; a check's for
+  // those it read open), so nothing newer can be overwritten.
   await prisma.opsAlert.upsert({
     where: { key: alert.key },
     create: { key: alert.key, ...data, lastAt },
-    update: data,
+    update: step.reopen ? { ...data, lastAt } : data,
   })
-  // Never back, and in one statement: a failure written meanwhile (src/ops/last-seen.ts), while
-  // this one read the row and told operators, may be newer.
-  await seenAt(alert.key, lastAt)
+  // Still open: never back, in one statement. A failure written meanwhile (src/ops/last-seen.ts),
+  // while this one read the row and told operators, may be newer.
+  if (!step.reopen) await seenAt(alert.key, lastAt)
 }
 
 /**
