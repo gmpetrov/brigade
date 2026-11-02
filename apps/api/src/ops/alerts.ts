@@ -123,31 +123,44 @@ export async function raise(alert: Alert, now = new Date(), lastAt = now) {
       firstAt: step.firstAt,
       at: now,
     }))
-  const data = {
-    severity: step.severity,
-    title: alert.title,
-    detail,
-    firstAt: step.firstAt,
-    ...(step.reopen ? { resolvedAt: null } : {}),
-    // Not sent: tried again on the next run.
-    ...(notified
-      ? { notifiedAt: now, notifiedSeverity: step.severity }
-      : step.reopen && step.notify
-        ? { notifiedAt: null, notifiedSeverity: null }
-        : {}),
-  }
-  // Opened again: its last failure goes in the same statement that opens it, so that it never
-  // stands open with the last incident's time, whatever fails after. Nothing else writes the
-  // `lastAt` of a resolved alert (seenAt from failures is for open ones only; a check's for
-  // those it read open), so nothing newer can be overwritten.
-  await prisma.opsAlert.upsert({
-    where: { key: alert.key },
-    create: { key: alert.key, ...data, lastAt },
-    update: step.reopen ? { ...data, lastAt } : data,
-  })
-  // Still open: never back, in one statement. A failure written meanwhile (src/ops/last-seen.ts),
-  // while this one read the row and told operators, may be newer.
-  if (!step.reopen) await seenAt(alert.key, lastAt)
+  const notifiedAt = notified ? now : null
+  const notifiedSeverity = notified ? step.severity : null
+  // One statement, decided on the row as it is when it applies, never on the one read above:
+  // a statement sent may wait in Postgres and apply after others wrote, even after the process
+  // that sent it died. So `lastAt` only moves on (a failure written meanwhile, by
+  // src/ops/last-seen.ts or by another raise, may be newer), and what this raise read only
+  // decides what it writes when the row is still as it read it: resolved, for a reopening.
+  //  - severity: as bad as it got while it lasts (onRaise), the row's own if still open;
+  //  - firstAt: the row's while open, this one's when this raise opens it again;
+  //  - resolvedAt: open again only when this raise reopens it, else as the row is;
+  //  - notifiedAt/notifiedSeverity: this notice's when it was sent and is not older than the
+  //    row's; owed (null) when this raise opens it again without having told it; else the row's.
+  await prisma.$executeRaw`
+    INSERT INTO "OpsAlert" ("key", "severity", "title", "detail", "firstAt", "lastAt", "notifiedAt", "notifiedSeverity", "resolvedAt")
+    VALUES (${alert.key}, ${step.severity}, ${alert.title}, ${detail}, ${step.firstAt}, ${lastAt}, ${notifiedAt}::timestamp(3), ${notifiedSeverity}::text, NULL)
+    ON CONFLICT ("key") DO UPDATE SET
+      "title" = EXCLUDED."title",
+      "detail" = EXCLUDED."detail",
+      "severity" = CASE
+        WHEN "OpsAlert"."resolvedAt" IS NULL AND "OpsAlert"."severity" = 'critical' THEN 'critical'
+        ELSE EXCLUDED."severity" END,
+      "firstAt" = CASE
+        WHEN ${step.reopen}::boolean AND "OpsAlert"."resolvedAt" IS NOT NULL THEN EXCLUDED."firstAt"
+        ELSE "OpsAlert"."firstAt" END,
+      "resolvedAt" = CASE WHEN ${step.reopen}::boolean THEN NULL ELSE "OpsAlert"."resolvedAt" END,
+      "lastAt" = GREATEST("OpsAlert"."lastAt", EXCLUDED."lastAt"),
+      "notifiedAt" = CASE
+        WHEN EXCLUDED."notifiedAt" IS NOT NULL
+          AND ("OpsAlert"."notifiedAt" IS NULL OR "OpsAlert"."resolvedAt" IS NOT NULL OR "OpsAlert"."notifiedAt" <= EXCLUDED."notifiedAt")
+          THEN EXCLUDED."notifiedAt"
+        WHEN ${step.reopen}::boolean AND "OpsAlert"."resolvedAt" IS NOT NULL THEN NULL
+        ELSE "OpsAlert"."notifiedAt" END,
+      "notifiedSeverity" = CASE
+        WHEN EXCLUDED."notifiedAt" IS NOT NULL
+          AND ("OpsAlert"."notifiedAt" IS NULL OR "OpsAlert"."resolvedAt" IS NOT NULL OR "OpsAlert"."notifiedAt" <= EXCLUDED."notifiedAt")
+          THEN EXCLUDED."notifiedSeverity"
+        WHEN ${step.reopen}::boolean AND "OpsAlert"."resolvedAt" IS NOT NULL THEN NULL
+        ELSE "OpsAlert"."notifiedSeverity" END`
 }
 
 /**

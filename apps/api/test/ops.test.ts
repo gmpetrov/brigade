@@ -540,6 +540,79 @@ describe('alerts in the database', { skip }, () => {
       }
     })
 
+    test('a reopening that applies late does not undo a newer one', async () => {
+      const start = t0.getTime()
+      await prisma.opsAlert.create({
+        data: {
+          key: 'api',
+          severity: 'warning',
+          title: 'API requests failing (500)',
+          firstAt: at(-120 * MIN),
+          lastAt: at(-60 * MIN),
+          notifiedAt: at(-120 * MIN),
+          notifiedSeverity: 'warning',
+          resolvedAt: at(-45 * MIN),
+        },
+      })
+      // A statement writing `lastAt` = the held time waits, before it takes the row, for an
+      // advisory lock this test holds: as one sent by a process that died, applied later.
+      const admin = new pg.Client({ connectionString: process.env.DATABASE_URL })
+      await admin.connect()
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TestHold" ("at" timestamp(3))`)
+      await prisma.$executeRawUnsafe(`CREATE OR REPLACE FUNCTION test_hold() RETURNS trigger AS $$
+        BEGIN
+          IF NEW."key" = 'api' AND NEW."lastAt" IN (SELECT "at" FROM "TestHold") THEN
+            PERFORM pg_advisory_xact_lock(4242);
+          END IF;
+          RETURN NEW;
+        END $$ LANGUAGE plpgsql`)
+      for (const event of ['INSERT', 'UPDATE'])
+        await prisma.$executeRawUnsafe(
+          `CREATE OR REPLACE TRIGGER test_hold_${event.toLowerCase()} BEFORE ${event} ON "OpsAlert" FOR EACH ROW EXECUTE FUNCTION test_hold()`,
+        )
+      try {
+        await prisma.$executeRaw`INSERT INTO "TestHold" VALUES (${at(0)})`
+        await admin.query('SELECT pg_advisory_lock(4242)')
+        const alert = {
+          key: 'api',
+          severity: 'warning' as const,
+          title: 'API requests failing (500)',
+        }
+        // The late one: it read the alert resolved and reopens it from failures at t=0.
+        const late = raise(alert, at(4 * MIN), at(0))
+        for (let i = 0; ; i++) {
+          const { rows } = await admin.query(
+            `SELECT count(*)::int AS n FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`,
+          )
+          if (rows[0].n) break
+          assert.ok(i < 200, 'the late statement never waited')
+          await new Promise((r) => setTimeout(r, 10))
+        }
+        // Meanwhile its replacement reopens it, and a failure comes.
+        await raise(alert, at(4.1 * MIN), at(4.1 * MIN))
+        await fail(1, start + 4.2 * MIN)
+        await admin.query('SELECT pg_advisory_unlock(4242)')
+        await late
+        const row = await prisma.opsAlert.findUniqueOrThrow({ where: { key: 'api' } })
+        assert.deepEqual(row.lastAt, at(4.2 * MIN))
+        assert.equal(row.resolvedAt, null)
+        await restart()
+        await running.runChecks(start + 15 * MIN)
+        assert.equal(await resolvedAt('api'), null)
+        await running.runChecks(start + 19 * MIN)
+        assert.equal(await resolvedAt('api'), null)
+        await running.runChecks(start + 19.2 * MIN)
+        assert.deepEqual(await resolvedAt('api'), at(19.2 * MIN))
+      } finally {
+        await admin.query('SELECT pg_advisory_unlock_all()').catch(() => {})
+        await admin.end().catch(() => {})
+        for (const event of ['insert', 'update'])
+          await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS test_hold_${event} ON "OpsAlert"`)
+        await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS test_hold()`)
+        await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "TestHold"`)
+      }
+    })
+
     test('a failure written while a raise tells operators is not undone by the raise', async () => {
       const start = t0.getTime()
       await fail(10, start)
