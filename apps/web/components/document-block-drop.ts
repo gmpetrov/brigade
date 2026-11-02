@@ -12,18 +12,11 @@ import type { DropCursorOptions } from '@blocknote/core/extensions'
 import type { Slice } from '@tiptap/pm/model'
 import { Plugin, Selection } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
+import { blockSelection, contentRect, isBlockSelection } from '@/components/document-block-select'
 
 /** Whole lines (blocks), as a drag from their handle carries them. */
 const isBlocks = (slice: Slice | undefined) =>
   !!slice && slice.content.firstChild?.type.name === 'blockContainer'
-
-/** The rect of a line's own content, not its sub-lines; none when a list's filter hides it. */
-function contentRect(view: EditorView, pos: number) {
-  const rect = (view.nodeDOM(pos) as HTMLElement | null)
-    ?.querySelector(':scope > .bn-block > .bn-block-content')
-    ?.getBoundingClientRect()
-  return rect && rect.height > 0 ? rect : undefined
-}
 
 /** Where a drop goes, and the drop line for it (viewport px). */
 type Target = { pos: number; line: { y: number; left: number; right: number } }
@@ -148,6 +141,8 @@ export const blockDropExtension = () => {
             if (target === undefined) return false
             if (transfer) done.add(transfer)
             const tr = view.state.tr
+            // Lines selected together (document-block-select) stay selected where they land.
+            const together = moved && isBlockSelection(tr.selection)
             if (moved) {
               const { from, to } = tr.selection
               // Onto themselves, or past only hidden lines: nothing moves.
@@ -156,7 +151,11 @@ export const blockDropExtension = () => {
             }
             const at = tr.mapping.map(target)
             tr.insert(at, slice.content)
-            tr.setSelection(Selection.near(tr.doc.resolve(at + 1)))
+            tr.setSelection(
+              together
+                ? blockSelection(tr.doc, at, at + slice.content.size)
+                : Selection.near(tr.doc.resolve(at + 1)),
+            )
             view.dispatch(tr.setMeta('uiEvent', 'drop'))
             return true
           },

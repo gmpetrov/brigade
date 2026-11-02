@@ -4,6 +4,7 @@ import { Schema, type Node } from '@tiptap/pm/model'
 import { EditorState, NodeSelection } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
 import { blockDropCursor, blockDropExtension, dropTarget } from '../components/document-block-drop'
+import { blockSelection, isBlockSelection } from '../components/document-block-select'
 
 // BlockNote's nesting, without its content types: a line holds its text, then its sub-lines.
 const schema = new Schema({
@@ -36,7 +37,7 @@ const LEFT = 100
  * text a row of 24 px from the top, indented by its depth. Lines whose text starts with `~`
  * are hidden, as a list's filter hides them: they take no row.
  */
-function dragging(lines: Node[], dragged: number) {
+function dragging(lines: Node[], dragged: number, together = 0) {
   const doc = schema.node('doc', null, schema.node('blockGroup', null, lines))
   const rects = new Map<number, DOMRect>()
   const starts: number[] = []
@@ -57,7 +58,17 @@ function dragging(lines: Node[], dragged: number) {
     starts.push(pos)
     return true
   })
-  let state = EditorState.create({ doc, selection: NodeSelection.create(doc, starts[dragged]!) })
+  // `together` lines from the dragged one, selected whole (document-block-select), drag with it.
+  const end = (from: number, count: number) => {
+    for (let i = 0; i < count; i++) from += doc.nodeAt(from)!.nodeSize
+    return from
+  }
+  let state = EditorState.create({
+    doc,
+    selection: together
+      ? blockSelection(doc, starts[dragged]!, end(starts[dragged]!, together))
+      : NodeSelection.create(doc, starts[dragged]!),
+  })
   const slice = state.selection.content()
   const view = {
     get state() {
@@ -96,6 +107,14 @@ function dragging(lines: Node[], dragged: number) {
         )
       return outline(state.doc)
     },
+    /** The lines selected whole after the drop, if any. */
+    selected: () =>
+      isBlockSelection(state.selection)
+        ? state.selection
+            .content()
+            .content.content.map((n) => n.firstChild!.textContent)
+            .join(', ')
+        : undefined,
   }
 }
 
@@ -181,4 +200,15 @@ test('the gap before a first sub-line is drawn at its level, from either side', 
   // B's lower half (30–54) and C's upper half (60–84).
   assert.deepEqual(editor.target(LEFT + 50, 50), editor.target(LEFT + 50, 65))
   assert.equal(editor.target(LEFT + 50, 50)?.line.left, LEFT + INDENT)
+})
+
+test('lines selected together move together, and stay selected where they land', () => {
+  const editor = dragging([A(), BwithC(), line('D'), line('E')], 0, 2)
+  // Rows: A 0, B 30, C 60, D 90, E 120: after D.
+  assert.equal(editor.drop(LEFT + 50, 105), 'D, A, B(C), E')
+  assert.equal(editor.selected(), 'A, B')
+  // A line dragged alone leaves the cursor in it, as before.
+  const alone = dragging([A(), line('B'), line('D')], 0)
+  alone.drop(LEFT + 50, 50)
+  assert.equal(alone.selected(), undefined)
 })

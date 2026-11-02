@@ -180,7 +180,12 @@ export function DocumentBlockNoteView({
   return (
     // Files dropped anywhere on the document land in it: onto the text where
     // they fall (BlockNote's own handling), elsewhere at the end.
+    // data-block-select: a drag started here, beside the lines, selects them whole
+    // (document-block-select). data-keyboard: while it is edited, Escape is the editor's (it
+    // selects the line), not the panel's around it.
     <div
+      data-block-select
+      data-keyboard={readOnly ? undefined : ''}
       className={cn(
         'min-h-full rounded-lg transition-shadow',
         dragging && 'ring-2 ring-primary/60 ring-offset-2 ring-offset-card',
