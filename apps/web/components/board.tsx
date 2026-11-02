@@ -562,8 +562,9 @@ function FilterChoices({
 }
 
 /**
- * The Board's filters: a Filter button that adds one, and a pill per filter set, after it.
- * A pill opens its filter's choices again; its × removes it.
+ * The Board's filters: a Filter button that adds or changes one, and a pill per filter set,
+ * after it. A filter already set stays in the Filter menu with its value, so it can be changed
+ * there too; its pill also opens its choices again, and its × removes it.
  */
 function FilterBar({
   filters,
@@ -584,9 +585,8 @@ function FilterBar({
   }
   const offered: FilterKey[] = (['project', 'lists', 'teammate'] as const).filter(
     (k) =>
-      !set[k] &&
-      (k !== 'project' || projects.length > 0) &&
-      (k !== 'teammate' || teammates.length > 0),
+      set[k] ||
+      ((k !== 'project' || projects.length > 0) && (k !== 'teammate' || teammates.length > 0)),
   )
   const listTitle = (id: string) =>
     id === NO_LIST ? 'Not on a list' : (lists.find((l) => l.documentId === id)?.title ?? 'A list')
@@ -625,7 +625,15 @@ function FilterBar({
         <DropdownMenuContent align="start">
           {offered.map((k) => (
             <DropdownMenuSub key={k}>
-              <DropdownMenuSubTrigger>{FILTER_LABELS[k]}</DropdownMenuSubTrigger>
+              <DropdownMenuSubTrigger>
+                <span className="flex-1">{FILTER_LABELS[k]}</span>
+                {set[k] && (
+                  <span className="max-w-36 truncate text-muted-foreground">
+                    {value[k]}
+                    {k === 'lists' && filters.lists.length > 1 && ` +${filters.lists.length - 1}`}
+                  </span>
+                )}
+              </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
                 {choices(k)}
               </DropdownMenuSubContent>
