@@ -157,3 +157,20 @@ test("a thread's first turn killed mid-way is tried again with its message and i
     await t.done()
   }
 })
+
+test('a long message is told again whole, its request at the end included', async () => {
+  const t = await setup(true)
+  try {
+    const request = 'REQUEST: only inspect issue 599; do not modify files.'
+    const brief = `Context: ${'x'.repeat(41_000)}\n${request}`
+    await t.run({ kind: 'prompt', text: brief })
+    // Tried again after the memory guard stopped it.
+    await t.run({ kind: 'prompt', text: RETRY, retry: true })
+    assert.ok(t.heard[1]?.includes(brief), 'the retry has the whole message')
+    // Then the computer restarts during a turn: continued, told the whole message again.
+    await t.run({ kind: 'resume', text: '' })
+    assert.ok(t.heard[2]?.includes(request), 'the restart has the request at its end')
+  } finally {
+    await t.done()
+  }
+})

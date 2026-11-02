@@ -532,7 +532,8 @@ export class HarnessThread {
       this.reasoning.clear()
     }
     this.saved ??= { accountId: spec.account.id, transcript: [] }
-    if (input.kind === 'prompt' && !retry) this.saved.asked = input.text.slice(0, TRANSCRIPT_CHARS)
+    // Kept whole, as the transcript keeps its latest message: a request often comes after its context.
+    if (input.kind === 'prompt' && !retry) this.saved.asked = input.text
     // Someone asked for this turn: restarts that cut off earlier ones no longer count.
     if (input.kind !== 'resume') this.saved.recoveries = 0
     // Found on disk after a stop without warning, this says the turn did not finish.
