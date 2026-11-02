@@ -479,6 +479,7 @@ export const ModelName = {
   MailProject: 'MailProject',
   MailAlias: 'MailAlias',
   MailMessage: 'MailMessage',
+  MailHtml: 'MailHtml',
   MailDomain: 'MailDomain',
   Contact: 'Contact',
   ContactHandle: 'ContactHandle',
@@ -507,7 +508,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement"
+    modelProps: "user" | "analyticsFirst" | "billingSubscription" | "authSession" | "authAccount" | "verification" | "rateLimit" | "organization" | "billingClosing" | "member" | "invitation" | "invitationSend" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "sidebarOrder" | "threadLater" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "replyWatch" | "threadTeammate" | "sessionEvent" | "tokenUsage" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "listItem" | "listItemThread" | "listItemPull" | "libraryLock" | "listPin" | "documentPin" | "memoryLine" | "documentVersion" | "libraryObjectFolder" | "libraryObject" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "bucketCleanup" | "workspaceCleanup" | "auditEntry" | "upload" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow" | "mailAddress" | "mailProject" | "mailAlias" | "mailMessage" | "mailHtml" | "mailDomain" | "contact" | "contactHandle" | "opsAlert" | "heldCall" | "runnerCommand" | "specPart" | "triggerDelivery" | "inboundEvent" | "folderBackup" | "teammateBackup" | "accountLoginBackup" | "computerReplacement"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -6579,6 +6580,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    MailHtml: {
+      payload: Prisma.$MailHtmlPayload<ExtArgs>
+      fields: Prisma.MailHtmlFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.MailHtmlFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.MailHtmlFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload>
+        }
+        findFirst: {
+          args: Prisma.MailHtmlFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.MailHtmlFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload>
+        }
+        findMany: {
+          args: Prisma.MailHtmlFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload>[]
+        }
+        create: {
+          args: Prisma.MailHtmlCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload>
+        }
+        createMany: {
+          args: Prisma.MailHtmlCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.MailHtmlCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload>[]
+        }
+        delete: {
+          args: Prisma.MailHtmlDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload>
+        }
+        update: {
+          args: Prisma.MailHtmlUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload>
+        }
+        deleteMany: {
+          args: Prisma.MailHtmlDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.MailHtmlUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.MailHtmlUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload>[]
+        }
+        upsert: {
+          args: Prisma.MailHtmlUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailHtmlPayload>
+        }
+        aggregate: {
+          args: Prisma.MailHtmlAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateMailHtml>
+        }
+        groupBy: {
+          args: Prisma.MailHtmlGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MailHtmlGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.MailHtmlCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MailHtmlCountAggregateOutputType> | number
+        }
+      }
+    }
     MailDomain: {
       payload: Prisma.$MailDomainPayload<ExtArgs>
       fields: Prisma.MailDomainFieldRefs
@@ -9014,6 +9089,17 @@ export const MailMessageScalarFieldEnum = {
 export type MailMessageScalarFieldEnum = (typeof MailMessageScalarFieldEnum)[keyof typeof MailMessageScalarFieldEnum]
 
 
+export const MailHtmlScalarFieldEnum = {
+  mailId: 'mailId',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  html: 'html',
+  createdAt: 'createdAt'
+} as const
+
+export type MailHtmlScalarFieldEnum = (typeof MailHtmlScalarFieldEnum)[keyof typeof MailHtmlScalarFieldEnum]
+
+
 export const MailDomainScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -10195,6 +10281,7 @@ export type GlobalOmitConfig = {
   mailProject?: Prisma.MailProjectOmit
   mailAlias?: Prisma.MailAliasOmit
   mailMessage?: Prisma.MailMessageOmit
+  mailHtml?: Prisma.MailHtmlOmit
   mailDomain?: Prisma.MailDomainOmit
   contact?: Prisma.ContactOmit
   contactHandle?: Prisma.ContactHandleOmit

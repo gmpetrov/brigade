@@ -9,7 +9,7 @@ import type { ReceivedEmail } from '../connectors/gmail.js'
 import { scoped, type Scope } from '../db.js'
 import { BOX_DAYS } from './inbound.js'
 import { bareAddress } from './names.js'
-import { addressesIn } from './text.js'
+import { addressesIn, keptHtml } from './text.js'
 
 /**
  * Whether the Inbox shows this account's mail: Gmail, shared with the workspace, and put in the
@@ -32,6 +32,8 @@ export async function keepGmail(
   },
   email: ReceivedEmail,
   outcome: { route: 'awaited' | 'rule' | 'cap' | 'box'; sessionId?: string; triggerId?: string },
+  /** Its HTML and inline parts' Content-IDs, for the Inbox alone (teammates read the text). */
+  body: { html?: string | null; contentIds?: Record<string, string> } = {},
 ) {
   const taken = outcome.route !== 'box'
   if (connection.kind !== 'gmail' || !(inInbox(connection) || taken)) return
@@ -42,6 +44,7 @@ export async function keepGmail(
     workspaceId: connection.workspaceId,
   }
   const db = scoped(scope)
+  const html = keptHtml(body.html)
   const from = mailbox(email.from ?? '')
   const at = Date.parse(email.date ?? '')
   const data = {
@@ -73,9 +76,11 @@ export async function keepGmail(
           contentType: a.mimeType,
           size: a.size,
           ...(a.inline ? { inline: true } : {}),
+          ...(body.contentIds?.[a.partId] ? { cid: body.contentIds[a.partId] } : {}),
         })),
         receivedAt: Number.isFinite(at) ? new Date(at) : new Date(),
         ...data,
+        ...(html ? { htmlBody: { create: { ...scope, html } } } : {}),
       } as never,
     })
   } catch (error) {

@@ -2760,6 +2760,8 @@ model MailMessage {
   outcomeAskedAt     DateTime?
   /// out: a person wrote and sent it from the Inbox (Reply myself), not the teammate.
   sentByMemberId     String?
+  /// Received mail's HTML, apart: read only when the Inbox shows one mail.
+  htmlBody           MailHtml?
   error              String?
   attempts           Int           @default(0)
   receivedAt         DateTime      @default(now())
@@ -2778,6 +2780,20 @@ model MailMessage {
   @@index([status, updatedAt])
   @@index([sessionId])
   @@index([expiresAt])
+}
+
+/// A received mail's HTML as it came (up to 1 000 000 characters, else none), for the Inbox's
+/// HTML view in a sandboxed frame. Apart from MailMessage so that lists never load it; teammates
+/// read the text.
+model MailHtml {
+  mailId         String      @id
+  mail           MailMessage @relation(fields: [mailId], references: [id], onDelete: Cascade)
+  organizationId String
+  workspaceId    String
+  html           String
+  createdAt      DateTime    @default(now())
+
+  @@index([workspaceId])
 }
 
 /// A domain of the workspace's own (lovarank.com) that its project inboxes send as, once its DNS

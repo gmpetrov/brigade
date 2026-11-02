@@ -6,7 +6,14 @@
 import { createPublicKey, verify, type JsonWebKey } from 'node:crypto'
 import { env } from '../config.js'
 import { authorisedFetch } from '../connector-calls.js'
-import { API, full, type Message, type ReceivedEmail } from '../connectors/gmail.js'
+import {
+  API,
+  contentIdsOf,
+  full,
+  htmlOf,
+  type Message,
+  type ReceivedEmail,
+} from '../connectors/gmail.js'
 import { json } from '../connectors/types.js'
 import { prisma, scoped, type Scope } from '../db.js'
 import { automatic, bounced, wakeOnReply } from '../replies.js'
@@ -178,6 +185,8 @@ export const readInbox = (subscriptionId: string) =>
                 (h) => h.name.toLowerCase() === 'message-id',
               )?.value,
             }
+            // For the Inbox alone: teammates read the text.
+            const body = { html: htmlOf(email.payload), contentIds: contentIdsOf(email.payload) }
             // A reply a thread waits on is that thread's: no trigger starts or continues another.
             // So is a mail server's word that the thread's email could not be delivered.
             const bounce = bounced(payload)
@@ -191,10 +200,12 @@ export const readInbox = (subscriptionId: string) =>
                 orderBy: { createdAt: 'desc' },
                 select: { sessionId: true },
               })
-              await keepGmail(sub.connection, payload, {
-                route: 'awaited',
-                ...(woken ? { sessionId: woken.sessionId } : {}),
-              })
+              await keepGmail(
+                sub.connection,
+                payload,
+                { route: 'awaited', ...(woken ? { sessionId: woken.sessionId } : {}) },
+                body,
+              )
               continue
             }
             const delivered = await dispatch(sub.connection, {
@@ -217,6 +228,7 @@ export const readInbox = (subscriptionId: string) =>
                       ...(delivered.triggerId ? { triggerId: delivered.triggerId } : {}),
                     }
                   : { route: 'box' },
+              body,
             )
           }
           cursor = record.id

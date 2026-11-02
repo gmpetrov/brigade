@@ -573,6 +573,7 @@ export type MailMessageWhereInput = {
   alias?: Prisma.XOR<Prisma.MailAliasNullableScalarRelationFilter, Prisma.MailAliasWhereInput> | null
   contact?: Prisma.XOR<Prisma.ContactNullableScalarRelationFilter, Prisma.ContactWhereInput> | null
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
+  htmlBody?: Prisma.XOR<Prisma.MailHtmlNullableScalarRelationFilter, Prisma.MailHtmlWhereInput> | null
 }
 
 export type MailMessageOrderByWithRelationInput = {
@@ -634,6 +635,7 @@ export type MailMessageOrderByWithRelationInput = {
   alias?: Prisma.MailAliasOrderByWithRelationInput
   contact?: Prisma.ContactOrderByWithRelationInput
   session?: Prisma.SessionOrderByWithRelationInput
+  htmlBody?: Prisma.MailHtmlOrderByWithRelationInput
 }
 
 export type MailMessageWhereUniqueInput = Prisma.AtLeast<{
@@ -700,6 +702,7 @@ export type MailMessageWhereUniqueInput = Prisma.AtLeast<{
   alias?: Prisma.XOR<Prisma.MailAliasNullableScalarRelationFilter, Prisma.MailAliasWhereInput> | null
   contact?: Prisma.XOR<Prisma.ContactNullableScalarRelationFilter, Prisma.ContactWhereInput> | null
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
+  htmlBody?: Prisma.XOR<Prisma.MailHtmlNullableScalarRelationFilter, Prisma.MailHtmlWhereInput> | null
 }, "id" | "resendId_box" | "box_sourceId">
 
 export type MailMessageOrderByWithAggregationInput = {
@@ -873,6 +876,7 @@ export type MailMessageCreateInput = {
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
+  htmlBody?: Prisma.MailHtmlCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageUncheckedCreateInput = {
@@ -928,6 +932,7 @@ export type MailMessageUncheckedCreateInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageUpdateInput = {
@@ -983,6 +988,7 @@ export type MailMessageUpdateInput = {
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
+  htmlBody?: Prisma.MailHtmlUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateInput = {
@@ -1038,6 +1044,7 @@ export type MailMessageUncheckedUpdateInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageCreateManyInput = {
@@ -1378,6 +1385,11 @@ export type MailMessageSumOrderByAggregateInput = {
   attempts?: Prisma.SortOrder
 }
 
+export type MailMessageScalarRelationFilter = {
+  is?: Prisma.MailMessageWhereInput
+  isNot?: Prisma.MailMessageWhereInput
+}
+
 export type MailMessageCreateNestedManyWithoutWorkspaceInput = {
   create?: Prisma.XOR<Prisma.MailMessageCreateWithoutWorkspaceInput, Prisma.MailMessageUncheckedCreateWithoutWorkspaceInput> | Prisma.MailMessageCreateWithoutWorkspaceInput[] | Prisma.MailMessageUncheckedCreateWithoutWorkspaceInput[]
   connectOrCreate?: Prisma.MailMessageCreateOrConnectWithoutWorkspaceInput | Prisma.MailMessageCreateOrConnectWithoutWorkspaceInput[]
@@ -1636,6 +1648,20 @@ export type NullableEnumMailSenderFieldUpdateOperationsInput = {
   set?: $Enums.MailSender | null
 }
 
+export type MailMessageCreateNestedOneWithoutHtmlBodyInput = {
+  create?: Prisma.XOR<Prisma.MailMessageCreateWithoutHtmlBodyInput, Prisma.MailMessageUncheckedCreateWithoutHtmlBodyInput>
+  connectOrCreate?: Prisma.MailMessageCreateOrConnectWithoutHtmlBodyInput
+  connect?: Prisma.MailMessageWhereUniqueInput
+}
+
+export type MailMessageUpdateOneRequiredWithoutHtmlBodyNestedInput = {
+  create?: Prisma.XOR<Prisma.MailMessageCreateWithoutHtmlBodyInput, Prisma.MailMessageUncheckedCreateWithoutHtmlBodyInput>
+  connectOrCreate?: Prisma.MailMessageCreateOrConnectWithoutHtmlBodyInput
+  upsert?: Prisma.MailMessageUpsertWithoutHtmlBodyInput
+  connect?: Prisma.MailMessageWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.MailMessageUpdateToOneWithWhereWithoutHtmlBodyInput, Prisma.MailMessageUpdateWithoutHtmlBodyInput>, Prisma.MailMessageUncheckedUpdateWithoutHtmlBodyInput>
+}
+
 export type MailMessageCreateNestedManyWithoutContactInput = {
   create?: Prisma.XOR<Prisma.MailMessageCreateWithoutContactInput, Prisma.MailMessageUncheckedCreateWithoutContactInput> | Prisma.MailMessageCreateWithoutContactInput[] | Prisma.MailMessageUncheckedCreateWithoutContactInput[]
   connectOrCreate?: Prisma.MailMessageCreateOrConnectWithoutContactInput | Prisma.MailMessageCreateOrConnectWithoutContactInput[]
@@ -1730,6 +1756,7 @@ export type MailMessageCreateWithoutWorkspaceInput = {
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
+  htmlBody?: Prisma.MailHtmlCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageUncheckedCreateWithoutWorkspaceInput = {
@@ -1784,6 +1811,7 @@ export type MailMessageUncheckedCreateWithoutWorkspaceInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageCreateOrConnectWithoutWorkspaceInput = {
@@ -1922,6 +1950,7 @@ export type MailMessageCreateWithoutSessionInput = {
   connection?: Prisma.ConnectionCreateNestedOneWithoutMailMessagesInput
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
+  htmlBody?: Prisma.MailHtmlCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageUncheckedCreateWithoutSessionInput = {
@@ -1976,6 +2005,7 @@ export type MailMessageUncheckedCreateWithoutSessionInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageCreateOrConnectWithoutSessionInput = {
@@ -2056,6 +2086,7 @@ export type MailMessageCreateWithoutConnectionInput = {
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
+  htmlBody?: Prisma.MailHtmlCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageUncheckedCreateWithoutConnectionInput = {
@@ -2110,6 +2141,7 @@ export type MailMessageUncheckedCreateWithoutConnectionInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageCreateOrConnectWithoutConnectionInput = {
@@ -2190,6 +2222,7 @@ export type MailMessageCreateWithoutAddressInput = {
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
+  htmlBody?: Prisma.MailHtmlCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageUncheckedCreateWithoutAddressInput = {
@@ -2244,6 +2277,7 @@ export type MailMessageUncheckedCreateWithoutAddressInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageCreateOrConnectWithoutAddressInput = {
@@ -2324,6 +2358,7 @@ export type MailMessageCreateWithoutAliasInput = {
   connection?: Prisma.ConnectionCreateNestedOneWithoutMailMessagesInput
   contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
+  htmlBody?: Prisma.MailHtmlCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageUncheckedCreateWithoutAliasInput = {
@@ -2378,6 +2413,7 @@ export type MailMessageUncheckedCreateWithoutAliasInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageCreateOrConnectWithoutAliasInput = {
@@ -2404,6 +2440,242 @@ export type MailMessageUpdateWithWhereUniqueWithoutAliasInput = {
 export type MailMessageUpdateManyWithWhereWithoutAliasInput = {
   where: Prisma.MailMessageScalarWhereInput
   data: Prisma.XOR<Prisma.MailMessageUpdateManyMutationInput, Prisma.MailMessageUncheckedUpdateManyWithoutAliasInput>
+}
+
+export type MailMessageCreateWithoutHtmlBodyInput = {
+  id?: string
+  organizationId: string
+  sourceId?: string | null
+  projectId?: string | null
+  box: string
+  direction: $Enums.MailDirection
+  status: $Enums.MailStatus
+  resendId?: string | null
+  messageId?: string | null
+  inReplyTo?: string | null
+  references?: Prisma.MailMessageCreatereferencesInput | string[]
+  conversationId: string
+  fromAddress: string
+  fromName?: string
+  to?: Prisma.MailMessageCreatetoInput | string[]
+  cc?: Prisma.MailMessageCreateccInput | string[]
+  replyTo?: Prisma.MailMessageCreatereplyToInput | string[]
+  subject?: string
+  text?: string
+  headers?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  authentication?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  automatic?: boolean
+  sender?: $Enums.MailSender | null
+  memberId?: string | null
+  attachments?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  route?: string | null
+  routeNote?: string | null
+  triggerId?: string | null
+  teammateId?: string | null
+  approvedByMemberId?: string | null
+  sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
+  handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
+  error?: string | null
+  attempts?: number
+  receivedAt?: Date | string
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutMailMessagesInput
+  address?: Prisma.MailAddressCreateNestedOneWithoutMessagesInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutMailMessagesInput
+  alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
+  contact?: Prisma.ContactCreateNestedOneWithoutMessagesInput
+  session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
+}
+
+export type MailMessageUncheckedCreateWithoutHtmlBodyInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  addressId?: string | null
+  connectionId?: string | null
+  sourceId?: string | null
+  projectId?: string | null
+  box: string
+  aliasId?: string | null
+  direction: $Enums.MailDirection
+  status: $Enums.MailStatus
+  resendId?: string | null
+  messageId?: string | null
+  inReplyTo?: string | null
+  references?: Prisma.MailMessageCreatereferencesInput | string[]
+  conversationId: string
+  fromAddress: string
+  fromName?: string
+  to?: Prisma.MailMessageCreatetoInput | string[]
+  cc?: Prisma.MailMessageCreateccInput | string[]
+  replyTo?: Prisma.MailMessageCreatereplyToInput | string[]
+  subject?: string
+  text?: string
+  headers?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  authentication?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  automatic?: boolean
+  sender?: $Enums.MailSender | null
+  memberId?: string | null
+  contactId?: string | null
+  attachments?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  route?: string | null
+  routeNote?: string | null
+  sessionId?: string | null
+  triggerId?: string | null
+  teammateId?: string | null
+  approvedByMemberId?: string | null
+  sendAt?: Date | string | null
+  doneAt?: Date | string | null
+  doneByMemberId?: string | null
+  handedByMemberId?: string | null
+  handedAt?: Date | string | null
+  outcome?: string | null
+  outcomeNote?: string | null
+  outcomeAt?: Date | string | null
+  outcomeAskedAt?: Date | string | null
+  sentByMemberId?: string | null
+  error?: string | null
+  attempts?: number
+  receivedAt?: Date | string
+  expiresAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type MailMessageCreateOrConnectWithoutHtmlBodyInput = {
+  where: Prisma.MailMessageWhereUniqueInput
+  create: Prisma.XOR<Prisma.MailMessageCreateWithoutHtmlBodyInput, Prisma.MailMessageUncheckedCreateWithoutHtmlBodyInput>
+}
+
+export type MailMessageUpsertWithoutHtmlBodyInput = {
+  update: Prisma.XOR<Prisma.MailMessageUpdateWithoutHtmlBodyInput, Prisma.MailMessageUncheckedUpdateWithoutHtmlBodyInput>
+  create: Prisma.XOR<Prisma.MailMessageCreateWithoutHtmlBodyInput, Prisma.MailMessageUncheckedCreateWithoutHtmlBodyInput>
+  where?: Prisma.MailMessageWhereInput
+}
+
+export type MailMessageUpdateToOneWithWhereWithoutHtmlBodyInput = {
+  where?: Prisma.MailMessageWhereInput
+  data: Prisma.XOR<Prisma.MailMessageUpdateWithoutHtmlBodyInput, Prisma.MailMessageUncheckedUpdateWithoutHtmlBodyInput>
+}
+
+export type MailMessageUpdateWithoutHtmlBodyInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  box?: Prisma.StringFieldUpdateOperationsInput | string
+  direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
+  status?: Prisma.EnumMailStatusFieldUpdateOperationsInput | $Enums.MailStatus
+  resendId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inReplyTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  references?: Prisma.MailMessageUpdatereferencesInput | string[]
+  conversationId?: Prisma.StringFieldUpdateOperationsInput | string
+  fromAddress?: Prisma.StringFieldUpdateOperationsInput | string
+  fromName?: Prisma.StringFieldUpdateOperationsInput | string
+  to?: Prisma.MailMessageUpdatetoInput | string[]
+  cc?: Prisma.MailMessageUpdateccInput | string[]
+  replyTo?: Prisma.MailMessageUpdatereplyToInput | string[]
+  subject?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  headers?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  authentication?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  automatic?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sender?: Prisma.NullableEnumMailSenderFieldUpdateOperationsInput | $Enums.MailSender | null
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachments?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  route?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  routeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attempts?: Prisma.IntFieldUpdateOperationsInput | number
+  receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutMailMessagesNestedInput
+  address?: Prisma.MailAddressUpdateOneWithoutMessagesNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutMailMessagesNestedInput
+  alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
+  contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
+  session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
+}
+
+export type MailMessageUncheckedUpdateWithoutHtmlBodyInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  addressId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  box?: Prisma.StringFieldUpdateOperationsInput | string
+  aliasId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  direction?: Prisma.EnumMailDirectionFieldUpdateOperationsInput | $Enums.MailDirection
+  status?: Prisma.EnumMailStatusFieldUpdateOperationsInput | $Enums.MailStatus
+  resendId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  messageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inReplyTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  references?: Prisma.MailMessageUpdatereferencesInput | string[]
+  conversationId?: Prisma.StringFieldUpdateOperationsInput | string
+  fromAddress?: Prisma.StringFieldUpdateOperationsInput | string
+  fromName?: Prisma.StringFieldUpdateOperationsInput | string
+  to?: Prisma.MailMessageUpdatetoInput | string[]
+  cc?: Prisma.MailMessageUpdateccInput | string[]
+  replyTo?: Prisma.MailMessageUpdatereplyToInput | string[]
+  subject?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  headers?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  authentication?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  automatic?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sender?: Prisma.NullableEnumMailSenderFieldUpdateOperationsInput | $Enums.MailSender | null
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contactId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachments?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  route?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  routeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sendAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  doneByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  handedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  outcomeAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  outcomeAskedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sentByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attempts?: Prisma.IntFieldUpdateOperationsInput | number
+  receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type MailMessageCreateWithoutContactInput = {
@@ -2458,6 +2730,7 @@ export type MailMessageCreateWithoutContactInput = {
   connection?: Prisma.ConnectionCreateNestedOneWithoutMailMessagesInput
   alias?: Prisma.MailAliasCreateNestedOneWithoutMessagesInput
   session?: Prisma.SessionCreateNestedOneWithoutMailMessagesInput
+  htmlBody?: Prisma.MailHtmlCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageUncheckedCreateWithoutContactInput = {
@@ -2512,6 +2785,7 @@ export type MailMessageUncheckedCreateWithoutContactInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedCreateNestedOneWithoutMailInput
 }
 
 export type MailMessageCreateOrConnectWithoutContactInput = {
@@ -2646,6 +2920,7 @@ export type MailMessageUpdateWithoutWorkspaceInput = {
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
+  htmlBody?: Prisma.MailHtmlUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateWithoutWorkspaceInput = {
@@ -2700,6 +2975,7 @@ export type MailMessageUncheckedUpdateWithoutWorkspaceInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -2862,6 +3138,7 @@ export type MailMessageUpdateWithoutSessionInput = {
   connection?: Prisma.ConnectionUpdateOneWithoutMailMessagesNestedInput
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
+  htmlBody?: Prisma.MailHtmlUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateWithoutSessionInput = {
@@ -2916,6 +3193,7 @@ export type MailMessageUncheckedUpdateWithoutSessionInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateManyWithoutSessionInput = {
@@ -3078,6 +3356,7 @@ export type MailMessageUpdateWithoutConnectionInput = {
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
+  htmlBody?: Prisma.MailHtmlUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateWithoutConnectionInput = {
@@ -3132,6 +3411,7 @@ export type MailMessageUncheckedUpdateWithoutConnectionInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateManyWithoutConnectionInput = {
@@ -3294,6 +3574,7 @@ export type MailMessageUpdateWithoutAddressInput = {
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
+  htmlBody?: Prisma.MailHtmlUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateWithoutAddressInput = {
@@ -3348,6 +3629,7 @@ export type MailMessageUncheckedUpdateWithoutAddressInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateManyWithoutAddressInput = {
@@ -3510,6 +3792,7 @@ export type MailMessageUpdateWithoutAliasInput = {
   connection?: Prisma.ConnectionUpdateOneWithoutMailMessagesNestedInput
   contact?: Prisma.ContactUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
+  htmlBody?: Prisma.MailHtmlUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateWithoutAliasInput = {
@@ -3564,6 +3847,7 @@ export type MailMessageUncheckedUpdateWithoutAliasInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateManyWithoutAliasInput = {
@@ -3726,6 +4010,7 @@ export type MailMessageUpdateWithoutContactInput = {
   connection?: Prisma.ConnectionUpdateOneWithoutMailMessagesNestedInput
   alias?: Prisma.MailAliasUpdateOneWithoutMessagesNestedInput
   session?: Prisma.SessionUpdateOneWithoutMailMessagesNestedInput
+  htmlBody?: Prisma.MailHtmlUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateWithoutContactInput = {
@@ -3780,6 +4065,7 @@ export type MailMessageUncheckedUpdateWithoutContactInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  htmlBody?: Prisma.MailHtmlUncheckedUpdateOneWithoutMailNestedInput
 }
 
 export type MailMessageUncheckedUpdateManyWithoutContactInput = {
@@ -3897,6 +4183,7 @@ export type MailMessageSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   alias?: boolean | Prisma.MailMessage$aliasArgs<ExtArgs>
   contact?: boolean | Prisma.MailMessage$contactArgs<ExtArgs>
   session?: boolean | Prisma.MailMessage$sessionArgs<ExtArgs>
+  htmlBody?: boolean | Prisma.MailMessage$htmlBodyArgs<ExtArgs>
 }, ExtArgs["result"]["mailMessage"]>
 
 export type MailMessageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -4084,6 +4371,7 @@ export type MailMessageInclude<ExtArgs extends runtime.Types.Extensions.Internal
   alias?: boolean | Prisma.MailMessage$aliasArgs<ExtArgs>
   contact?: boolean | Prisma.MailMessage$contactArgs<ExtArgs>
   session?: boolean | Prisma.MailMessage$sessionArgs<ExtArgs>
+  htmlBody?: boolean | Prisma.MailMessage$htmlBodyArgs<ExtArgs>
 }
 export type MailMessageIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -4111,6 +4399,10 @@ export type $MailMessagePayload<ExtArgs extends runtime.Types.Extensions.Interna
     alias: Prisma.$MailAliasPayload<ExtArgs> | null
     contact: Prisma.$ContactPayload<ExtArgs> | null
     session: Prisma.$SessionPayload<ExtArgs> | null
+    /**
+     * Received mail's HTML, apart: read only when the Inbox shows one mail.
+     */
+    htmlBody: Prisma.$MailHtmlPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -4654,6 +4946,7 @@ export interface Prisma__MailMessageClient<T, Null = never, ExtArgs extends runt
   alias<T extends Prisma.MailMessage$aliasArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MailMessage$aliasArgs<ExtArgs>>): Prisma.Prisma__MailAliasClient<runtime.Types.Result.GetResult<Prisma.$MailAliasPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   contact<T extends Prisma.MailMessage$contactArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MailMessage$contactArgs<ExtArgs>>): Prisma.Prisma__ContactClient<runtime.Types.Result.GetResult<Prisma.$ContactPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   session<T extends Prisma.MailMessage$sessionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MailMessage$sessionArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  htmlBody<T extends Prisma.MailMessage$htmlBodyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MailMessage$htmlBodyArgs<ExtArgs>>): Prisma.Prisma__MailHtmlClient<runtime.Types.Result.GetResult<Prisma.$MailHtmlPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5228,6 +5521,25 @@ export type MailMessage$sessionArgs<ExtArgs extends runtime.Types.Extensions.Int
    */
   include?: Prisma.SessionInclude<ExtArgs> | null
   where?: Prisma.SessionWhereInput
+}
+
+/**
+ * MailMessage.htmlBody
+ */
+export type MailMessage$htmlBodyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MailHtml
+   */
+  select?: Prisma.MailHtmlSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the MailHtml
+   */
+  omit?: Prisma.MailHtmlOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MailHtmlInclude<ExtArgs> | null
+  where?: Prisma.MailHtmlWhereInput
 }
 
 /**

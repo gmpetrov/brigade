@@ -61,6 +61,27 @@ function textOf(part: Part | undefined): string {
   return ''
 }
 
+/** The message's own HTML, never an attached HTML file's: for the Inbox's HTML view. */
+export function htmlOf(part: Part | undefined): string | null {
+  if (!part || part.filename) return null
+  if (part.mimeType === 'text/html' && part.body?.data) return decode(part.body.data)
+  for (const child of part.parts ?? []) {
+    const html = htmlOf(child)
+    if (html) return html
+  }
+  return null
+}
+
+/** Each inline part's Content-ID, by part id: what the HTML's cid: links name. */
+export function contentIdsOf(part: Part | undefined): Record<string, string> {
+  const ids: Record<string, string> = {}
+  for (const p of filesOf(part)) {
+    const id = partHeader(p, 'content-id')?.trim().replace(/^<|>$/g, '').trim()
+    if (id && p.partId) ids[p.partId] = id
+  }
+  return ids
+}
+
 const partHeader = (part: Part, name: string) =>
   part.headers?.find((h) => h.name.toLowerCase() === name)?.value
 

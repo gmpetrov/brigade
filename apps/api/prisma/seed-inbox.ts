@@ -1,6 +1,6 @@
 // Sample mail for the Inbox: Riley's own address, with conversations in each state (unassigned,
 // not verified, taken by a thread with replies and quoted text and a reply waiting for approval,
-// one with a reply set to leave on Monday, done). Made up, as the rest of the sample: nothing is
+// one with a reply set to leave on Monday, done, and two with HTML: a forward and a receipt). Made up, as the rest of the sample: nothing is
 // sent or received. Each part is added once, so a preview made before it gets it on its next
 // start too.
 import { randomUUID } from 'node:crypto'
@@ -26,13 +26,14 @@ export async function seedInbox() {
   })
   if (!workspace) return
   const inWorkspace = { organizationId: organization.id, workspaceId: workspace.id }
-  const [mails, scheduled] = await Promise.all([
+  const [mails, scheduled, withHtml] = await Promise.all([
     prisma.mailMessage.count({ where: { workspaceId: workspace.id } }),
     prisma.mailMessage.count({
       where: { workspaceId: workspace.id, direction: 'out', status: 'scheduled' },
     }),
+    prisma.mailHtml.count({ where: { workspaceId: workspace.id } }),
   ])
-  if (mails && scheduled) return
+  if (mails && scheduled && withHtml) return
 
   const [ada, riley] = await Promise.all([
     prisma.member.findFirst({ where: { organizationId: organization.id, role: 'owner' } }),
@@ -67,6 +68,8 @@ export async function seedInbox() {
     to?: string
     /** Sent mail set to leave later. */
     sendAt?: Date
+    /** Received mail's HTML, for the Inbox's HTML view. */
+    html?: string
   }
   const mail = (m: Mail) => {
     const out = m.direction === 'out'
@@ -94,12 +97,14 @@ export async function seedInbox() {
         sendAt: m.sendAt ?? null,
         receivedAt: m.at,
         createdAt: m.at,
+        ...(m.html ? { htmlBody: { create: { ...inWorkspace, html: m.html } } } : {}),
       },
     })
   }
   const conversation = randomUUID()
   if (!added) await firstMail()
-  await nextSteps()
+  if (!scheduled) await nextSteps()
+  if (!withHtml) await withHtmlMail()
   console.log(`created: sample Inbox mail for ${own}`)
 
   async function firstMail() {
@@ -221,6 +226,72 @@ export async function seedInbox() {
       at: hours(20),
       sessionId: thread?.id,
       sendAt: monday,
+    })
+  }
+
+  /** Mail with HTML: a person's forward, cut at 76 characters as Gmail does, and a receipt. */
+  async function withHtmlMail() {
+    await mail({
+      conversation: randomUUID(),
+      from: ['Ada Lovelace', 'ada@example.com'],
+      subject: 'Fwd: Video touch-up',
+      text: [
+        'Can you take this one?',
+        '',
+        '',
+        '',
+        '*Ada Lovelace*',
+        '',
+        '---------- Forwarded message ---------',
+        'From: Studio Deblieux <studio@deblieux.test>',
+        'Date: Mon, Nov 2, 2026 at 17:58',
+        'Subject: Video touch-up',
+        'To: ada@example.com <ada@example.com>',
+        '',
+        '',
+        'Hello Ada,',
+        '',
+        'Could you help us remove the toothpick stuck in the top fig? The goal is that',
+        'nobody can see the toothpick any more, without touching the quality of the',
+        'video, its colors, or how the figs look.',
+        '',
+        'Here is the video: https://files.example.com/t/fig-video',
+        '',
+        'Thanks a lot,',
+        'Studio Deblieux',
+      ].join('\n'),
+      html:
+        '<div dir="ltr">Can you take this one?<br><br><div><b>Ada Lovelace</b></div><br>' +
+        '<div class="gmail_quote"><div dir="ltr" class="gmail_attr">---------- Forwarded message ---------<br>' +
+        'From: <strong class="gmail_sendername" dir="auto">Studio Deblieux</strong> <span dir="auto">&lt;<a href="mailto:studio@deblieux.test">studio@deblieux.test</a>&gt;</span><br>' +
+        'Date: Mon, Nov 2, 2026 at 17:58<br>Subject: Video touch-up<br>To: &lt;<a href="mailto:ada@example.com">ada@example.com</a>&gt;<br></div><br><br>' +
+        '<div dir="ltr"><div style="color:rgb(34,34,34)">Hello Ada,</div><br><div>Could you help us remove the toothpick stuck in the top fig? ' +
+        'The goal is that nobody can see the toothpick any more, without touching the quality of the video, its colors, or how the figs look.</div><br>' +
+        '<div>Here is the video: <a href="https://files.example.com/t/fig-video">https://files.example.com/t/fig-video</a></div><br>' +
+        '<div>Thanks a lot,<br>Studio Deblieux</div></div></div></div>',
+      at: minutes(30),
+      sender: 'contact',
+    })
+    await mail({
+      conversation: randomUUID(),
+      from: ['Globex Cloud', 'receipts@globex.test'],
+      subject: 'Your receipt from Globex Cloud',
+      text: 'Globex Cloud\n\nReceipt #1042\n\nTeams plan, November: $96.00\nTax: $19.20\nTotal: $115.20\n\nView it online: https://globex.test/receipts/1042',
+      html:
+        '<body bgcolor="#f4f4f7" style="margin:0;padding:24px 0;font-family:Helvetica,Arial,sans-serif">' +
+        '<table width="560" align="center" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px">' +
+        '<tr><td style="padding:24px 32px;background:#4f46e5;color:#ffffff;border-radius:8px 8px 0 0">' +
+        '<img src="https://globex.test/logo.png" alt="Globex Cloud" height="24" style="vertical-align:middle"> ' +
+        '<strong style="font-size:18px">Globex Cloud</strong></td></tr>' +
+        '<tr><td style="padding:24px 32px;color:#111827"><h1 style="font-size:20px;margin:0 0 16px">Receipt #1042</h1>' +
+        '<table width="100%" style="font-size:14px;color:#374151">' +
+        '<tr><td>Teams plan, November</td><td align="right">$96.00</td></tr>' +
+        '<tr><td>Tax</td><td align="right">$19.20</td></tr>' +
+        '<tr><td style="padding-top:8px;border-top:1px solid #e5e7eb"><strong>Total</strong></td>' +
+        '<td align="right" style="padding-top:8px;border-top:1px solid #e5e7eb"><strong>$115.20</strong></td></tr></table>' +
+        '<p style="margin:24px 0 0"><a href="https://globex.test/receipts/1042" style="display:inline-block;padding:10px 16px;background:#4f46e5;color:#ffffff;border-radius:6px;text-decoration:none">View receipt</a></p>' +
+        '<img src="https://track.globex.test/open.gif" width="1" height="1" alt=""></td></tr></table></body>',
+      at: hours(5),
     })
   }
 }
