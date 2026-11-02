@@ -416,46 +416,55 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .map(|dir| dir.join(HELPER))
         .ok()
         .filter(|p| p.exists());
-    // Each shortcut's submenu, its items checked by apply_shortcuts once registered.
+    // The Shortcuts submenu, a section for each shortcut; apply_shortcuts checks the chosen
+    // ones once registered and shows them beside their actions.
     let mut shortcut_items = Vec::new();
-    let mut shortcut_menus = Vec::new();
+    let mut sections: Vec<Box<dyn tauri::menu::IsMenuItem<Wry>>> = Vec::new();
     for kind in capture::KINDS {
-        let items = kind
-            .choices()
-            .iter()
-            .map(|(id, label)| {
-                let menu_id = format!("{}{id}", kind.prefix());
-                CheckMenuItem::with_id(app, menu_id, *label, true, false, None::<&str>)
-                    .map(|item| (kind, *id, item))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        shortcut_menus.push(Submenu::with_items(
+        if !sections.is_empty() {
+            sections.push(Box::new(PredefinedMenuItem::separator(app)?));
+        }
+        sections.push(Box::new(MenuItem::new(
             app,
             kind.title(),
-            true,
-            &items
-                .iter()
-                .map(|(_, _, item)| item as &dyn tauri::menu::IsMenuItem<Wry>)
-                .collect::<Vec<_>>(),
-        )?);
-        shortcut_items.extend(items);
+            false,
+            None::<&str>,
+        )?));
+        for (id, label) in kind.choices() {
+            let menu_id = format!("{}{id}", kind.prefix());
+            let item = CheckMenuItem::with_id(app, menu_id, *label, true, false, None::<&str>)?;
+            sections.push(Box::new(item.clone()));
+            shortcut_items.push((kind, *id, item));
+        }
     }
+    let shortcuts_menu = Submenu::with_items(
+        app,
+        "Shortcuts",
+        true,
+        &sections
+            .iter()
+            .map(|item| item.as_ref())
+            .collect::<Vec<_>>(),
+    )?;
+    let new_thread = MenuItem::with_id(app, "capture-draft", "New thread", true, None::<&str>)?;
+    let screenshot = MenuItem::with_id(app, "capture", "Take a screenshot", true, None::<&str>)?;
+    // The actions first: what the menu is opened for. Then the dashboard, then settings.
     let menu = Menu::with_items(
         app,
         &[
             &status,
             &PredefinedMenuItem::separator(app)?,
+            &new_thread,
+            &screenshot,
+            &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "dashboard", "Open dashboard", true, None::<&str>)?,
             &connect,
             &MenuItem::with_id(app, "setup", "Set up Brigade…", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "capture-draft", "New thread", true, None::<&str>)?,
-            &MenuItem::with_id(app, "capture", "Take a screenshot", true, None::<&str>)?,
-            &shortcut_menus[0],
-            &shortcut_menus[1],
-            &PredefinedMenuItem::separator(app)?,
             &awake,
             &login,
+            &shortcuts_menu,
+            &PredefinedMenuItem::separator(app)?,
             &update,
             &MenuItem::with_id(app, "restart-runner", "Restart runner", true, None::<&str>)?,
             &MenuItem::with_id(app, "logs", "Show logs", true, None::<&str>)?,
@@ -485,7 +494,13 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     computer_use.restart();
     app.manage(computer_use);
     app.manage(Awake::default());
-    app.manage(capture::Capture::new(shortcut_items));
+    app.manage(capture::Capture::new(
+        shortcut_items,
+        vec![
+            (capture::Kind::NewThread, new_thread),
+            (capture::Kind::Screenshot, screenshot),
+        ],
+    ));
     capture::apply_shortcuts(app.handle(), &capture::KINDS);
     capture::show_count(app.handle());
     if settings.keep_awake {

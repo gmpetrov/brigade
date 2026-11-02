@@ -16,7 +16,7 @@ use base64::Engine;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use tauri::ipc::{CapabilityBuilder, Response};
-use tauri::menu::CheckMenuItem;
+use tauri::menu::{CheckMenuItem, MenuItem};
 use tauri::{
     AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent, Wry,
 };
@@ -30,7 +30,8 @@ use crate::{alert, dashboard, load_settings, runner, save_settings};
 
 pub const WINDOW: &str = "capture";
 
-/// Brigade.app's global shortcuts, each picked in a submenu of its own.
+/// Brigade.app's global shortcuts, each picked in its section of the menu's Shortcuts submenu
+/// and shown beside its action at the top of the menu.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     /// A screenshot, added to the draft's window.
@@ -61,11 +62,11 @@ impl Kind {
         }
     }
 
-    /// The submenu's title.
+    /// Its section's heading in the Shortcuts submenu.
     pub fn title(self) -> &'static str {
         match self {
-            Kind::Screenshot => "Screenshot shortcut",
-            Kind::NewThread => "New thread shortcut",
+            Kind::Screenshot => "Screenshot",
+            Kind::NewThread => "New thread",
         }
     }
 
@@ -100,8 +101,10 @@ const SELECTING: Duration = Duration::from_secs(10 * 60);
 pub struct Capture {
     /// A selection is on screen: the shortcut again does nothing.
     taking: AtomicBool,
-    /// The menu's shortcut items, by kind and stored value.
+    /// The Shortcuts submenu's items, by kind and stored value.
     items: Vec<(Kind, &'static str, CheckMenuItem<Wry>)>,
+    /// The menu's actions, which show their shortcut while it is registered.
+    actions: Vec<(Kind, MenuItem<Wry>)>,
     /// Dashboard origins whose page may call the commands below.
     allowed: Mutex<HashSet<String>>,
     /// The secret of the window's sign-in through the browser, once started (`capture_sign_in`).
@@ -109,10 +112,14 @@ pub struct Capture {
 }
 
 impl Capture {
-    pub fn new(items: Vec<(Kind, &'static str, CheckMenuItem<Wry>)>) -> Self {
+    pub fn new(
+        items: Vec<(Kind, &'static str, CheckMenuItem<Wry>)>,
+        actions: Vec<(Kind, MenuItem<Wry>)>,
+    ) -> Self {
         Self {
             taking: AtomicBool::new(false),
             items,
+            actions,
             allowed: Mutex::new(HashSet::new()),
             verifier: Mutex::new(None),
         }
@@ -151,8 +158,8 @@ pub fn show_count(app: &AppHandle) {
     }
 }
 
-/// The shortcuts chosen in the menu, registered; an alert for each kind in `report` that
-/// another app holds.
+/// The shortcuts chosen in the menu, registered and shown beside their actions; an alert for
+/// each kind in `report` that another app holds.
 pub fn apply_shortcuts(app: &AppHandle, report: &[Kind]) {
     let shortcuts = app.global_shortcut();
     let _ = shortcuts.unregister_all();
@@ -163,14 +170,14 @@ pub fn apply_shortcuts(app: &AppHandle, report: &[Kind]) {
         for (_, id, item) in items() {
             let _ = item.set_checked(*id == value);
         }
-        if value == "off" {
-            continue;
+        let registered = value != "off"
+            && value
+                .parse::<Shortcut>()
+                .is_ok_and(|shortcut| shortcuts.register(shortcut).is_ok());
+        for (_, action) in capture.actions.iter().filter(|(k, _)| *k == kind) {
+            let _ = action.set_accelerator(registered.then_some(value));
         }
-        let registered = value
-            .parse::<Shortcut>()
-            .map_err(|e| e.to_string())
-            .and_then(|shortcut| shortcuts.register(shortcut).map_err(|e| e.to_string()));
-        if registered.is_err() {
+        if value != "off" && !registered {
             for (_, _, item) in items() {
                 let _ = item.set_checked(false);
             }
@@ -183,8 +190,8 @@ pub fn apply_shortcuts(app: &AppHandle, report: &[Kind]) {
                 let title = kind.title();
                 alert(
                     app,
-                    &format!("{title} unavailable"),
-                    &format!("Another app already uses {label}. Pick another one in Brigade's menu, under {title}."),
+                    &format!("{title} shortcut unavailable"),
+                    &format!("Another app already uses {label}. Pick another one in Brigade's menu, under Shortcuts › {title}."),
                     MessageDialogKind::Warning,
                 );
             }
@@ -209,10 +216,11 @@ pub fn choose_shortcut(app: &AppHandle, kind: Kind, value: &str) {
 
 /// A registered shortcut was pressed: what its kind does.
 pub fn on_shortcut(app: &AppHandle, pressed: &Shortcut) {
-    let Some(kind) = KINDS
-        .into_iter()
-        .find(|kind| kind.chosen().parse::<Shortcut>().is_ok_and(|s| s == *pressed))
-    else {
+    let Some(kind) = KINDS.into_iter().find(|kind| {
+        kind.chosen()
+            .parse::<Shortcut>()
+            .is_ok_and(|s| s == *pressed)
+    }) else {
         return;
     };
     match kind {
