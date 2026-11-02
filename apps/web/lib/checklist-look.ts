@@ -66,18 +66,22 @@ function detailOf(pieces: Piece[], note: Range | null): Range | null {
     let i = pieces.length
     while (i > 0 && pieces[i - 1]!.aside) end -= pieces[--i]!.text.length
   }
-  let colon = -1
+  // Where code (or the marker of work) sits: a colon there does not end the title. The colon
+  // is looked for in the whole text, so one at the end of a bold or linked run still needs
+  // the space that follows it, in the next run.
+  const skip: Range[] = []
   let at = 0
   for (const p of pieces) {
-    if (at >= end) break
-    if (!p.code && !p.aside) {
-      const found = /:(?=\s|$)/.exec(p.text.slice(0, end - at))
-      if (found && at + found.index >= dot) {
-        colon = at + found.index
-        break
-      }
-    }
+    if (p.code || p.aside) skip.push({ from: at, to: at + p.text.length })
     at += p.text.length
+  }
+  let colon = -1
+  for (const found of text.slice(0, end).matchAll(/:(?=\s|$)/g)) {
+    const i = found.index
+    if (i >= dot && !skip.some((r) => i >= r.from && i < r.to)) {
+      colon = i
+      break
+    }
   }
   if (colon < 0) return null
   const doneWhen = /\bdone when\s*$/i.exec(text.slice(dot, colon))

@@ -100,15 +100,35 @@ function toggle(view: EditorView, id: string, opening: boolean) {
   }
 }
 
-/** Takes the press, so the editor neither moves its cursor nor opens the keyboard. */
-function button(view: EditorView, line: Foldable, opening: boolean, el: HTMLElement) {
+/** Whether the line shows its details now, as the editor's state says. */
+function openNow(view: EditorView, id: string) {
+  const s = key.getState(view.state)
+  const line = s?.lines.find((l) => l.id === id)
+  return !!s && !!line && isOpen(line, s, view.state)
+}
+
+/**
+ * Takes the press, so the editor neither moves its cursor nor opens the keyboard. `opening`:
+ * what a click does, or, unset, the opposite of how the line stands when it comes (the caret
+ * stays the same element as its line opens and folds, so it keeps the keyboard's focus).
+ */
+function button(view: EditorView, id: string, el: HTMLElement, opening?: boolean) {
   el.addEventListener('mousedown', (e) => e.preventDefault())
   el.addEventListener('click', (e) => {
     e.preventDefault()
     e.stopPropagation()
-    toggle(view, line.id, opening)
+    toggle(view, id, opening ?? !openNow(view, id))
   })
   return el
+}
+
+/** Each caret says whether its line is open: it is kept as the line opens and folds. */
+function syncCarets(view: EditorView) {
+  for (const caret of view.dom.querySelectorAll<HTMLElement>('.bn-fold[data-line]')) {
+    const open = openNow(view, caret.dataset.line!)
+    caret.setAttribute('aria-expanded', String(open))
+    caret.setAttribute('aria-label', open ? 'Fold details' : 'Show details')
+  }
 }
 
 function decorations(s: Omit<State, 'set'>, state: EditorState) {
@@ -123,11 +143,12 @@ function decorations(s: Omit<State, 'set'>, state: EditorState) {
           caret.type = 'button'
           caret.className = 'bn-fold'
           caret.contentEditable = 'false'
+          caret.dataset.line = line.id
           caret.setAttribute('aria-expanded', String(open))
           caret.setAttribute('aria-label', open ? 'Fold details' : 'Show details')
-          return button(view, line, !open, caret)
+          return button(view, line.id, caret)
         },
-        { side: -1, key: `fold:${line.id}:${open}`, ignoreSelection: true, stopEvent: () => true },
+        { side: -1, key: `fold:${line.id}`, ignoreSelection: true, stopEvent: () => true },
       ),
     )
     if (open) continue
@@ -141,7 +162,7 @@ function decorations(s: Omit<State, 'set'>, state: EditorState) {
           peek.contentEditable = 'false'
           peek.textContent = line.peek
           peek.title = 'Show details'
-          return button(view, line, true, peek)
+          return button(view, line.id, peek, true)
         },
         {
           side: 1,
@@ -183,6 +204,10 @@ export const checklistLookExtension = () =>
             return { ...s, set: decorations(s, state) }
           },
           apply: (tr, s, _old, state) => next(tr, s, state),
+        },
+        view: (view) => {
+          syncCarets(view)
+          return { update: syncCarets }
         },
         props: {
           decorations: (state) => key.getState(state)?.set,

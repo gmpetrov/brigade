@@ -140,3 +140,9 @@ test('italics at the end of the details stay in them', () => {
   const pieces = [plain(`Search fails: ${DETAILS} `), italic('PR #591, 1 Nov')]
   assert.equal(checklistLook(pieces).detail?.to, length(pieces))
 })
+
+test('a colon at the end of a formatted run needs the space after it', () => {
+  const bold = (text: string): Piece => ({ text, italic: false, code: false })
+  const pieces = [plain('Meet at '), bold('11:'), plain(`20 tomorrow: ${DETAILS}`)]
+  assert.equal(checklistLook(pieces).detail?.from, 'Meet at 11:20 tomorrow'.length)
+})
