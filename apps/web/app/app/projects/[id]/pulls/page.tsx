@@ -1,7 +1,7 @@
 'use client'
-import { useProject } from '@/components/project-shell'
-import { PullList } from '@/components/pull-list'
+import { ProjectRedirect } from '@/components/project-redirect'
 
+/** A project's pull requests: the Pull requests page, filtered on it. */
 export default function ProjectPulls() {
-  return <PullList projectId={useProject().project.id} />
+  return <ProjectRedirect to={(p) => `/app/pulls?project=${p.id}`} />
 }

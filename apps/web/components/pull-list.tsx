@@ -26,10 +26,17 @@ const ALL = '*'
  * Every repository's pull requests in one list, with where each review loop
  * stands. In a project (`projectId`): those of its repositories and threads.
  */
-export function PullList({ projectId }: { projectId?: string }) {
+export function PullList({
+  projectId,
+  initialFilter = '',
+}: {
+  projectId?: string
+  /** The project filter it opens with, e.g. from `?project=` (a project's page links there). */
+  initialFilter?: string
+}) {
   const [state, setState] = useState<'open' | 'closed'>('open')
   const [repository, setRepository] = useState(ALL)
-  const [filter, setFilter] = useState('')
+  const [filter, setFilter] = useState(initialFilter)
   const github = useGitHub()
   const list = useApi<PullRequestList>(
     github === 'connected'

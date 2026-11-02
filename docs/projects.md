@@ -173,37 +173,40 @@ Workspace settings
 
 ### Project page
 
-`/app/projects/<id>` replaces today's redirect in `apps/web/app/app/projects/page.tsx`.
-The project is highlighted in the sidebar; nothing else in the sidebar changes. It is a
-place, not a mode: the global pages stay unfiltered.
+`/app/projects/<id>` is one page, with no tabs (2 Nov 2026). It says what only the project
+can say, and leaves what the rest of the dashboard already shows: its threads are in the
+sidebar (clicking the project filters them), what needs a person is in the sidebar and on
+Home, and its pull requests, files and routines are the workspace's pages, filtered on it.
 
-Header: icon, name, brief, **New thread** (project preset) and a menu.
+- **Header:** icon, name, brief on one line, and the library folder with its file count,
+  which opens the library at that folder. A settings button (gear) opens `…/settings`; on
+  the settings, the same button goes back.
+- **Composer:** a new thread in the project, as before.
+- **Lists:** the project's lists (those whose file is under its folder, docs/lists.md),
+  the ones something moves on (an item in progress or waiting on a person), else the last
+  changed, four at most. "All" opens Lists. With none, a line says how to start one.
+- **Runs on its own:** its playbooks, schedules and triggers, a dot for each one's health
+  and when it runs or last ran. "All" opens Routines filtered on the project.
+- Whichever of the two has something comes first.
 
-| Tab                | URL                  | Shows                                                                                  | Built from                                    |
-| ------------------ | -------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Overview           | `/app/projects/<id>` | Needs you, running now, open tasks, PRs, repositories and previews, context, this week | New: aggregates from existing endpoints       |
-| Threads            | `…/threads`          | The threads list                                                                       | Existing list, `?project=<id>`                |
-| Tasks              | `…/tasks`            | The board                                                                              | Existing board, `?project=<id>`               |
-| Pull requests      | `…/pulls`            | PRs of its threads and repositories                                                    | Existing list, filtered                       |
-| Library            | `…/library`          | The library opened at the project's folder                                             | Existing page with a root path                |
-| Repos and previews | `…/repos`            | Each repository, its saved preview, live previews                                      | `SavedPreviews`, filtered to its repositories |
-| Routines           | `…/routines`         | Its schedules and triggers                                                             | Existing page, `?project=<id>`                |
-| Settings           | `…/settings`         | Name, icon, brief, repositories, folder, preferred connections, code review, archive   | New form                                      |
+The settings (`…/settings`) hold the name, icon, website, logo, brief, library folder,
+preferred connections, code review, mailboxes, **repositories and their saved previews**
+(once a tab of their own), memory, and archive or delete.
 
-On the overview:
+The old tabs' addresses still work: `…/threads` opens the project page, `…/pulls` the Pull
+requests page and `…/routines` the Routines page with `?project=<id>`, `…/library` the
+library at the project's folder, `…/repos` the settings at `#repositories`. The Pull requests
+and Routines pages read `?project=<id|none>` as their opening filter.
 
-- **Needs you:** open tickets of the project's threads. It comes first and is hidden
-  when nothing is open.
-- **Running now:** threads running or waiting, with live previews.
-- **Context:** what teammates receive in this project (brief, memory, folder, preferred
-  connections), each editable from there.
-- **This week:** working time, threads and merged PRs, counted from the logs as caps
-  are. It is a report, not a limit.
+What the page showed before and why it went: the latest threads and Needs you repeated the
+sidebar; the pull requests box repeated its tab, and for a project with an old repository
+listed years-old pull requests; Context (brief length, memory lines) repeated the settings;
+This week's numbers led to no decision.
 
 ### Repository page
 
 `/app/pulls/<owner>/<name>` is new. It shows a repository's open PRs and its saved
-preview, whether or not the repository is in a project. The project's Repos tab links to
+preview, whether or not the repository is in a project. The project's settings link to
 it. Saved previews leave the Computers page: `<SavedPreviews />` comes out of
 `apps/web/app/app/computers/page.tsx`, and `docs/previews.md` is updated to match.
 

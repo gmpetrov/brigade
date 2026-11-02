@@ -1,18 +1,13 @@
 'use client'
-import { Archive, MoreHorizontal, Settings } from 'lucide-react'
+import { Folder, Settings } from 'lucide-react'
 import Link from 'next/link'
-import { useParams, usePathname, useRouter } from 'next/navigation'
+import { useParams, usePathname } from 'next/navigation'
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { ProjectIcon } from '@/components/projects'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Hint } from '@/components/ui/tooltip'
 import { api, useApi, type ProjectDetail } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
@@ -27,21 +22,14 @@ export function useProject() {
   return value
 }
 
-export const PROJECT_TABS = [
-  { path: '', label: 'Overview' },
-  { path: '/threads', label: 'Threads' },
-  { path: '/pulls', label: 'Pull requests' },
-  { path: '/library', label: 'Library' },
-  { path: '/repos', label: 'Repos and previews' },
-  { path: '/routines', label: 'Routines' },
-  { path: '/settings', label: 'Settings' },
-]
-
-/** A project's page: its name and brief, then a tab per kind of thing it groups. */
+/**
+ * A project's page: its name, brief and library folder, and its settings a click away. No tabs:
+ * its threads are in the sidebar (a click on the project filters them), and its pull requests,
+ * library and routines are the workspace's pages filtered on it (docs/projects.md).
+ */
 export function ProjectShell({ children }: { children: ReactNode }) {
   const { id } = useParams<{ id: string }>()
   const pathname = usePathname()
-  const router = useRouter()
   const { reloadProjects } = useDashboard()
   const detail = useApi<ProjectDetail>(`/projects/${id}`)
   const [error, setError] = useState<string>()
@@ -50,6 +38,7 @@ export function ProjectShell({ children }: { children: ReactNode }) {
     if (message.type === 'projects.updated') void reload()
   })
   const base = `/app/projects/${id}`
+  const settings = pathname.startsWith(`${base}/settings`)
 
   if (detail.error)
     return (
@@ -87,9 +76,11 @@ export function ProjectShell({ children }: { children: ReactNode }) {
         <header className="flex items-start gap-4">
           <ProjectIcon project={project} className="size-11 rounded-lg text-lg" />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <h1 className="truncate text-3xl font-extrabold tracking-tight">{project.name}</h1>
+            <h1 className="truncate text-3xl font-extrabold tracking-tight">
+              <Link href={base}>{project.name}</Link>
+            </h1>
             {project.brief ? (
-              <p className="line-clamp-2 max-w-prose text-muted-foreground">{project.brief}</p>
+              <p className="truncate text-muted-foreground">{project.brief}</p>
             ) : (
               <p className="text-muted-foreground">
                 <Link
@@ -101,24 +92,38 @@ export function ProjectShell({ children }: { children: ReactNode }) {
                 so its threads know what it is.
               </p>
             )}
+            {project.folder && (
+              <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                <Folder className="size-3.5 shrink-0" aria-hidden />
+                <Link
+                  href={`/app/library?folder=${encodeURIComponent(project.folder)}`}
+                  className="truncate font-mono text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground"
+                >
+                  {project.folder}
+                </Link>
+                <span className="shrink-0">
+                  · {project.files} file{project.files === 1 ? '' : 's'}
+                </span>
+              </p>
+            )}
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Project menu">
-                <MoreHorizontal aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => router.push(`${base}/settings`)}>
+          {/* On its settings, the same button goes back to the project. */}
+          <Hint label={settings ? 'Back to the project' : 'Project settings'}>
+            <Button
+              asChild
+              variant="ghost"
+              size="icon-sm"
+              className={cn(settings && 'bg-accent text-foreground')}
+            >
+              <Link
+                href={settings ? base : `${base}/settings`}
+                aria-label={settings ? 'Back to the project' : 'Project settings'}
+                aria-current={settings ? 'page' : undefined}
+              >
                 <Settings aria-hidden />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => router.push('/app/projects')}>
-                <Archive aria-hidden />
-                All projects
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </Link>
+            </Button>
+          </Hint>
         </header>
 
         {project.archivedAt && (
@@ -134,30 +139,6 @@ export function ProjectShell({ children }: { children: ReactNode }) {
         )}
         {error && <p className="text-sm text-destructive-text">{error}</p>}
 
-        <nav aria-label="Project" className="-mb-2 overflow-x-auto border-b">
-          <ul className="flex gap-5 whitespace-nowrap">
-            {PROJECT_TABS.map((tab) => {
-              const href = `${base}${tab.path}`
-              const active = tab.path ? pathname.startsWith(href) : pathname === base
-              return (
-                <li key={tab.path}>
-                  <Link
-                    href={href}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(
-                      '-mb-px inline-flex border-b-2 py-2 text-sm font-semibold transition-colors',
-                      active
-                        ? 'border-foreground text-foreground'
-                        : 'border-transparent text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    {tab.label}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
         {children}
       </div>
     </Context.Provider>

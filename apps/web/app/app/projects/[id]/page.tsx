@@ -1,54 +1,36 @@
 'use client'
-import {
-  ArrowRight,
-  Brain,
-  FileText,
-  Folder,
-  GitBranch,
-  GitPullRequest,
-  Inbox,
-  Plug,
-} from 'lucide-react'
+import type { ListSummary, PlaybookInstallationView } from '@brigade/contracts'
+import { ArrowRight, Inbox } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { StatusBadge, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
-import { useDocumentPanel } from '@/components/document-panel'
+import { timeAgo, useDashboard } from '@/components/dashboard'
+import { LIST_LIVE } from '@/components/list-items'
+import { ListRow } from '@/components/list-row'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
-import { PlaybookApprovalsRow } from '@/components/playbook-approvals'
 import { useProject } from '@/components/project-shell'
-import { TicketRow } from '@/components/ticket-row'
+import { describeCron } from '@/components/schedules'
+import { StatusDot } from '@/components/status-badge'
 import { Card } from '@/components/ui/card'
-import {
-  api,
-  pullHref,
-  useApi,
-  type PullRequestList,
-  type ThreadSummary,
-  type Ticket,
-} from '@/lib/api'
-import { useLive } from '@/lib/use-live'
-import type { EditedEmail } from '@/components/email-cards'
+import { useApi, type Schedule, type Trigger } from '@/lib/api'
 
-const ACTIVE = new Set(['starting', 'running', 'waiting'])
+/** Lists shown before "All": the rest are on the Lists page. */
+const LISTS_SHOWN = 4
+/** Routines shown before "+N more". */
+const ROUTINES_SHOWN = 5
 
-function Box({
+function Section({
   title,
-  detail,
   href,
   children,
-  className,
 }: {
   title: string
-  detail?: ReactNode
   href?: string
   children: ReactNode
-  className?: string
 }) {
   return (
-    <Card className={`gap-3 px-5 py-4 ${className ?? ''}`}>
-      <div className="flex items-center gap-2">
-        <h2 className="text-sm font-bold">{title}</h2>
-        {detail !== undefined && <span className="text-sm text-muted-foreground">{detail}</span>}
+    <section aria-label={title} className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 px-1">
+        <h2 className="text-[13.5px] font-bold">{title}</h2>
         {href && (
           <Link
             href={href}
@@ -60,43 +42,155 @@ function Box({
         )}
       </div>
       {children}
-    </Card>
+    </section>
   )
 }
 
 const Quiet = ({ children }: { children: ReactNode }) => (
-  <p className="text-sm text-muted-foreground">{children}</p>
+  <p className="rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
+    {children}
+  </p>
 )
 
-/** What a project has going on, and a box to start a thread in it. */
+/** One thing that runs on its own: a dot for its health, its name, when it runs. */
+type Routine = { key: string; status: string; name: string; when: string; href: string }
+
+function routines(
+  playbooks: PlaybookInstallationView[],
+  schedules: Schedule[],
+  triggers: Trigger[],
+  /** Where a schedule that never ran yet leads: the project's routines. */
+  routinesHref: string,
+): Routine[] {
+  return [
+    ...playbooks.map((p) => ({
+      key: `playbook:${p.id}`,
+      status: p.status === 'active' ? 'active' : p.status === 'paused' ? 'paused' : 'pending',
+      name: p.name,
+      when: `${p.runsThisWeek} run${p.runsThisWeek === 1 ? '' : 's'} this week`,
+      href: `/app/routines/playbooks/${p.id}`,
+    })),
+    ...schedules.map((s) => ({
+      key: `schedule:${s.id}`,
+      status: s.lastError ? 'failed' : s.pausedAt ? 'paused' : 'active',
+      name: s.title,
+      when: [describeCron(s.cron), s.lastRun && `ran ${timeAgo(s.lastRun.createdAt)}`]
+        .filter(Boolean)
+        .join(' · '),
+      href: s.lastRun ? `/app/threads/${s.lastRun.id}` : routinesHref,
+    })),
+    ...triggers.map((t) => ({
+      key: `trigger:${t.id}`,
+      status: 'active',
+      name: t.label,
+      when: `on each event · ${t.teammate.name}`,
+      href: '/app/connections',
+    })),
+  ]
+}
+
+/**
+ * A project's page under its header: a box to start a thread in it, then how it moves along —
+ * its lists and what runs on its own. What the sidebar, Home or the settings already show
+ * (its threads, what needs a person, its context) is not repeated here.
+ */
 export default function ProjectOverview() {
   const { project } = useProject()
-  const { me, teammates } = useDashboard()
-  const documents = useDocumentPanel()
-  const base = `/app/projects/${project.id}`
-  const threads = useApi<ThreadSummary[]>(`/threads?project=${project.id}`)
-  const tickets = useApi<Ticket[]>(`/tickets?project=${project.id}`)
-  const pulls = useApi<PullRequestList>(
-    project.repositories.length > 0 ? `/pulls?state=open&project=${project.id}` : null,
-  )
+  const { teammates } = useDashboard()
+  const all = useApi<ListSummary[]>('/lists', LIST_LIVE)
+  const playbooks = useApi<PlaybookInstallationView[]>(`/playbooks?project=${project.id}`, [
+    'thread.updated',
+    'schedule.updated',
+  ])
+  const schedules = useApi<Schedule[]>(`/schedules?project=${project.id}`, [
+    'schedule.updated',
+    'thread.updated',
+  ])
+  const triggers = useApi<Trigger[]>(`/triggers?project=${project.id}`)
   const [chosen, choose] = useLastTeammate()
   const teammate = teammates.find((t) => t.id === chosen) ?? teammates[0]
-  useLive((message) => {
-    if (message.type === 'tickets.updated') void tickets.reload()
-    if (message.type === 'thread.updated') void threads.reload()
-    if (message.type === 'pulls.updated') void pulls.reload()
-  })
 
-  async function resolve(id: string, approved: boolean, always?: boolean, edited?: EditedEmail) {
-    await api(`/tickets/${id}/resolve`, {
-      body: { approved, ...(always ? { always } : {}), ...(edited ? { edited } : {}) },
-    }).catch(() => undefined)
-    await tickets.reload()
-  }
+  const lists = (all.data ?? []).filter((l) => l.projectId === project.id)
+  // The lists something moves on; with none, the last changed (the API sends those first).
+  const moving = lists.filter((l) => l.needsYou > 0 || l.inProgress > 0)
+  const shownLists = (moving.length ? moving : lists).slice(0, LISTS_SHOWN)
+  const routinesHref = `/app/routines?project=${project.id}`
+  const running =
+    playbooks.data && schedules.data && triggers.data
+      ? routines(playbooks.data, schedules.data, triggers.data, routinesHref)
+      : null
 
-  const running = (threads.data ?? []).filter((t) => ACTIVE.has(t.status))
-  const recent = (threads.data ?? []).filter((t) => !ACTIVE.has(t.status)).slice(0, 3)
-  const open = tickets.data ?? []
+  const listsSection = all.data && (
+    <Section key="lists" title="Lists" href={lists.length ? '/app/lists' : undefined}>
+      {lists.length === 0 ? (
+        <Quiet>
+          No lists yet. A Markdown file with checkboxes
+          {project.folder ? (
+            <>
+              {' in '}
+              <Link
+                href={`/app/library?folder=${encodeURIComponent(project.folder)}`}
+                className="font-mono text-foreground hover:underline"
+              >
+                {project.folder}
+              </Link>
+            </>
+          ) : null}{' '}
+          shows here, and its lines can be handed to a teammate.
+        </Quiet>
+      ) : (
+        <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+          {shownLists.map((list) => (
+            <ListRow key={list.documentId} list={list} />
+          ))}
+        </div>
+      )}
+    </Section>
+  )
+
+  const routinesSection = running && (
+    <Section key="routines" title="Runs on its own" href={routinesHref}>
+      {running.length === 0 ? (
+        <Quiet>
+          Nothing runs on its own here yet. Ask a teammate for a routine, or add one on{' '}
+          <Link href={routinesHref} className="font-medium text-primary hover:underline">
+            Routines
+          </Link>
+          .
+        </Quiet>
+      ) : (
+        <Card className="gap-0 py-1.5">
+          <ul className="flex flex-col">
+            {running.slice(0, ROUTINES_SHOWN).map((r) => (
+              <li key={r.key}>
+                <Link
+                  href={r.href}
+                  className="flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-accent/60"
+                >
+                  <StatusDot status={r.status} className="size-1.5" />
+                  <span className="min-w-0 flex-1 truncate font-medium">{r.name}</span>
+                  <span className="max-w-[55%] shrink-0 truncate text-xs text-muted-foreground">
+                    {r.when}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {running.length > ROUTINES_SHOWN && (
+            <Link
+              href={routinesHref}
+              className="px-4 pt-1 pb-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              +{running.length - ROUTINES_SHOWN} more
+            </Link>
+          )}
+        </Card>
+      )}
+    </Section>
+  )
+
+  // What has something comes first: a project without lists leads with its routines.
+  const listsFirst = lists.length > 0 || running?.length === 0
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,190 +207,7 @@ export default function ProjectOverview() {
         />
       )}
 
-      {open.length > 0 && (
-        <Box title="Needs you" detail={`${open.length} open`}>
-          <ul className="-mx-5 divide-y border-t">
-            {open.slice(0, 5).map((t) =>
-              // A playbook's approvals: one row, opened in place.
-              t.playbook ? (
-                <PlaybookApprovalsRow
-                  key={`playbook:${t.playbook.id}`}
-                  installationId={t.playbook.id}
-                  tickets={[t]}
-                  onDecided={tickets.reload}
-                />
-              ) : (
-                <TicketRow key={t.id} ticket={t} me={me} onResolve={resolve} />
-              ),
-            )}
-          </ul>
-          {open.length > 5 && (
-            <Link href="/app/tickets" className="text-xs text-muted-foreground hover:underline">
-              {open.length - 5} more on Tickets
-            </Link>
-          )}
-        </Box>
-      )}
-
-      <Box
-        title={running.length ? 'Running now' : 'Latest threads'}
-        detail={running.length ? running.length : undefined}
-        href={`${base}/threads`}
-      >
-        {threads.data && running.length + recent.length === 0 ? (
-          <Quiet>No threads yet. Start one above.</Quiet>
-        ) : (
-          <ul className="flex flex-col gap-1">
-            {(running.length ? running : recent).map((t) => (
-              <li key={t.id}>
-                <Link
-                  href={`/app/threads/${t.id}`}
-                  className="-mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-accent/50"
-                >
-                  <TeammateAvatar teammate={t.teammate} className="size-5" />
-                  <span className="min-w-0 flex-1 truncate text-sm">{t.title}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {timeAgo(t.updatedAt)}
-                  </span>
-                  <StatusBadge status={t.status} />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Box>
-
-      <Box
-        title="Pull requests"
-        detail={pulls.data ? `${pulls.data.pulls.length} open` : undefined}
-        href={`${base}/pulls`}
-      >
-        {project.repositories.length === 0 ? (
-          <Quiet>
-            <Link href={`${base}/repos`} className="font-medium text-primary hover:underline">
-              Add a repository
-            </Link>{' '}
-            to see its pull requests here.
-          </Quiet>
-        ) : pulls.data && pulls.data.pulls.length === 0 ? (
-          <Quiet>None open.</Quiet>
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {(pulls.data?.pulls ?? []).slice(0, 5).map((p) => (
-              <li key={`${p.repository}#${p.number}`} className="flex items-center gap-2 text-sm">
-                <GitPullRequest className="size-4 shrink-0 text-success" aria-hidden />
-                <Link
-                  href={pullHref(p.repository, p.number)}
-                  className="min-w-0 flex-1 truncate hover:underline"
-                >
-                  {p.title}
-                </Link>
-                <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                  #{p.number}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Box>
-
-      <Box
-        title="Repos and previews"
-        detail={project.repositories.length || undefined}
-        href={`${base}/repos`}
-      >
-        {project.repositories.length === 0 ? (
-          <Quiet>
-            No repositories yet.{' '}
-            <Link href={`${base}/repos`} className="font-medium text-primary hover:underline">
-              Add one
-            </Link>{' '}
-            so its threads know where the code is.
-          </Quiet>
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {project.repositories.map((r) => (
-              <li key={r.repository} className="flex flex-wrap items-center gap-2 text-sm">
-                <GitBranch className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                <Link href={`/app/pulls/${r.repository}`} className="font-mono hover:underline">
-                  {r.repository}
-                </Link>
-                {r.reachable === false && <StatusBadge status="failed" label="not reachable" />}
-                <span className="ml-auto truncate font-mono text-xs text-muted-foreground">
-                  {r.preview ? `${r.preview.command} · :${r.preview.port}` : 'no saved preview'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Box>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Box title="Context" detail="given to every thread in it" href={`${base}/settings`}>
-          <ul className="flex flex-col gap-2 text-sm">
-            <li className="flex items-center gap-2">
-              <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-              <span className="flex-1">Brief</span>
-              <span className="text-xs text-muted-foreground">
-                {project.brief ? `${project.brief.length} characters` : 'none yet'}
-              </span>
-            </li>
-            <li className="flex items-center gap-2">
-              <Brain className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-              <button
-                type="button"
-                className="flex-1 text-left hover:underline"
-                onClick={() =>
-                  documents.open({
-                    target: { kind: 'project_memory', projectId: project.id },
-                    title: `${project.name} memory`,
-                    subtitle: 'Loaded by every thread in the project',
-                  })
-                }
-              >
-                Memory
-              </button>
-              <span className="text-xs text-muted-foreground">
-                {project.memory ? `${project.memory.lines} lines` : 'empty'}
-              </span>
-            </li>
-            {project.folder && (
-              <li className="flex items-center gap-2">
-                <Folder className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                <Link href={`${base}/library`} className="min-w-0 flex-1 truncate hover:underline">
-                  {project.folder}
-                </Link>
-                <span className="text-xs text-muted-foreground">
-                  {project.files} file{project.files === 1 ? '' : 's'}
-                </span>
-              </li>
-            )}
-            <li className="flex items-center gap-2">
-              <Plug className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-              <span className="min-w-0 flex-1 truncate">
-                {project.preferredConnections.length
-                  ? project.preferredConnections.map((c) => c.label).join(', ')
-                  : 'No preferred connections'}
-              </span>
-            </li>
-          </ul>
-        </Box>
-
-        <Box title="This week">
-          <dl className="grid grid-cols-3 gap-3">
-            {[
-              { label: 'Working hours', value: project.week.workingHours },
-              { label: 'Threads', value: project.week.threads },
-              { label: 'PRs merged', value: project.week.merged },
-            ].map((s) => (
-              <div key={s.label} className="flex flex-col gap-0.5 rounded-lg bg-secondary/60 p-3">
-                <dt className="text-xs text-muted-foreground">{s.label}</dt>
-                <dd className="text-xl font-bold tabular-nums">{s.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </Box>
-      </div>
+      {listsFirst ? [listsSection, routinesSection] : [routinesSection, listsSection]}
 
       {!teammate && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
