@@ -4,6 +4,7 @@
 // is and what the dot means show on hover, in the row's tooltip. Rename, or a double-click on the title, edits the title in the
 // row itself. Under Pinned, a row can be dragged to another place (`drag`). A thread whose
 // preview is up shows its icon, which opens the preview on hover (and in the menu on phones).
+// One with a pending wake-up shows an alarm, its time on hover (WakeupIcon).
 // One with child threads has a caret after its title, which folds them under it (SubThreads).
 import { EllipsisVertical, Laptop, Globe, Play } from 'lucide-react'
 import Link from 'next/link'
@@ -17,6 +18,7 @@ import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/compone
 import { Hint } from '@/components/ui/tooltip'
 import { FadeText } from '@/components/fade-text'
 import { StreamedTitle } from '@/components/streamed-title'
+import { WakeupIcon } from '@/components/wakeup-icon'
 import { renameThread, useThreadMenu } from '@/components/thread-menu'
 import { preloadOnPoint } from '@/components/thread-conversation'
 import { useThreadPanel } from '@/components/thread-panel'
@@ -183,6 +185,8 @@ export function ThreadRow({
                 <span className="sr-only">Runs on {thread.computer.name}</span>
               </span>
             )}
+            {/* A teammate will check on something here, on its own: its next wake-up. */}
+            {thread.wakeAt && <WakeupIcon at={thread.wakeAt} />}
             {/* Kept empty when there is no dot, so every row's end lines up under ⋮. */}
             {dot ?? <span aria-hidden className="size-4" />}
           </span>

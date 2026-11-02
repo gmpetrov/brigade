@@ -858,6 +858,16 @@ export async function seedWorkspace(users: Users) {
       ),
     ],
   })
+  // A wake-up pending in it: its sidebar row shows an alarm.
+  await prisma.wakeup.create({
+    data: {
+      ...inWorkspace,
+      sessionId: checkout.id,
+      teammateId: riley.id,
+      note: 'Check checkout LCP on phones after a week of real traffic',
+      wakeAt: new Date(Date.now() + 7 * 24 * 60 * 60_000),
+    },
+  })
 
   // The chief setting up the team, the first day.
   const setup = await thread({

@@ -467,6 +467,20 @@ export const threads = new Hono<AppEnv>()
       ...rows.map((r) => r.id),
       ...children.map((r) => r.id),
     ])
+    // Its next wake-up, its child threads' too, the same ones its panel lists: the sidebar marks them.
+    const wakeups = rows.length
+      ? await c.var.db.wakeup.groupBy({
+          by: ['sessionId'],
+          where: {
+            sessionId: { in: [...rows.map((r) => r.id), ...children.map((r) => r.id)] },
+            status: 'pending',
+            kind: 'wakeup',
+          },
+          _min: { wakeAt: true },
+        })
+      : []
+    const wakeAt = (id: string) =>
+      wakeups.find((w) => w.sessionId === id)?._min.wakeAt?.toISOString() ?? null
     // How its computers are connected, and whose events wait on them: from the hub.
     const hub = hubs.get(c.var.scope.workspaceId)
     const [presence, waitingSince] = await Promise.all([
@@ -504,6 +518,7 @@ export const threads = new Hono<AppEnv>()
                 childTurns.find((t) => t.sessionId === child.id)?._max.at,
                 childReads.find((r) => r.sessionId === child.id)?.seenAt,
               ),
+              wakeAt: wakeAt(child.id),
               previewRunning:
                 !!previews.get(child.id) &&
                 !previewOfflineIn(presence, { id: computerId, ...computer }),
@@ -515,6 +530,7 @@ export const threads = new Hono<AppEnv>()
           eventsWaitingSince: waitingSince[row.id] ?? null,
           // Others than its starter write in it, so rename and archive it (account-sharing.ts).
           othersMayPrompt: openToOthers(row),
+          wakeAt: wakeAt(row.id),
           previewRunning:
             !!previews.get(row.id) &&
             !previewOfflineIn(presence, { id: row.computerId, ...row.computer }),

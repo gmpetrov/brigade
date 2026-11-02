@@ -479,6 +479,8 @@ export type ThreadSummary = {
   children?: SidebarChild[]
   /** Its preview is starting or running, on a computer that is up. */
   previewRunning?: boolean
+  /** When its next wake-up fires (a teammate checks on something then), while one is pending. */
+  wakeAt?: string | null
   /** The list whose items it works on (docs/lists.md): the sidebar shows it under that list. */
   list?: { documentId: string; title: string } | null
 }
@@ -502,6 +504,8 @@ export type SidebarChild = {
   unread: boolean
   /** Its preview is starting or running, on a computer that is up. */
   previewRunning?: boolean
+  /** When its next wake-up fires (a teammate checks on something then), while one is pending. */
+  wakeAt?: string | null
   /** Its own child threads, for a thread under a list's row (lib/list-groups.ts). */
   children?: SidebarChild[]
 }

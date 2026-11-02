@@ -51,6 +51,7 @@ function listRow(threads: ThreadSummary[]): ThreadSummary {
     updatedAt: t.updatedAt,
     unread: !!t.unread,
     previewRunning: !!t.previewRunning,
+    wakeAt: t.wakeAt ?? null,
     // Its child threads fold under it, as under a thread outside a list.
     children: t.children ?? [],
   }))
@@ -67,6 +68,7 @@ function listRow(threads: ThreadSummary[]): ThreadSummary {
     pullsWaiting: 0,
     childrenWorking: 0,
     previewRunning: false,
+    wakeAt: null,
     children,
   }
 }
