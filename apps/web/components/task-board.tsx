@@ -326,6 +326,7 @@ export function TaskBoard({ projectId }: { projectId?: string }) {
   const reload = useCallback(
     () =>
       view === 'archived' ? archive.reload() : view === 'trash' ? trash.reload() : tasks.reload(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the lists' reload functions, not the lists
     [view, archive.reload, trash.reload, tasks.reload],
   )
   useLive((message) => {

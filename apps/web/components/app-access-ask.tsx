@@ -215,6 +215,7 @@ export function AppAccessAsk({
         void data.reload()
       }
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- listens while waiting, reloads the latest data
   }, [waiting])
   useEffect(() => {
     if (!waiting) return
@@ -231,6 +232,7 @@ export function AppAccessAsk({
       repository ? 3000 : 2000,
     )
     return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- polls until an account shows up, not on each reload
   }, [waiting, givable.length, reconnected?.id])
 
   /** Sign in at the provider: a new account, or the one given again (the API renews it). */

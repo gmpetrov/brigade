@@ -397,8 +397,8 @@ function DesignFrame({
         const element = inspected[`${board.key}:${m.h}`]
         change(board, [{ id: m.bid, text: m.text }], element)
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- reads the latest through state setters
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reads the latest through state setters
     [folder, inspected],
   )
 

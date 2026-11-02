@@ -388,6 +388,7 @@ export function ThreadConversation({
         drawn(pickId, { ...(upload && { upload }), element: { ...picked.element, image: name } })
       },
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- files.add, not the uploads list
   }, [files.add])
   // A picture that did not upload is left out: the element goes without it.
   const removeUpload = files.remove
@@ -532,6 +533,7 @@ export function ThreadConversation({
       setPreviewing(false)
       setChangesOpen(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- when the open document changes
   }, [documents.current])
   // The bar's computer button brings the teammate's panel back in front of a file or preview:
   // a click since this thread opened, not one made on another thread.

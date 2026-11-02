@@ -327,11 +327,13 @@ pnpm workspaces and Turborepo.
 | `packages/contracts`      | Zod schemas shared by everything: events, API payloads, socket messages.                                                  |
 | `packages/editor`         | The document editor's schema and lossless Markdown conversion.                                                            |
 | `packages/providers`      | The interface to cloud computer providers.                                                                                |
+| `packages/eslint-config`  | The dashboard's ESLint config: React's rules of hooks.                                                                    |
 
 ```bash
 pnpm dev          # everything, in watch mode
 pnpm build        # build all packages
 pnpm typecheck    # type-check all packages
+pnpm lint         # ESLint (the dashboard's rules of hooks)
 pnpm format       # Prettier
 ```
 
@@ -403,7 +405,7 @@ history.
 
 ## Contributing
 
-Issues and pull requests are welcome. Before opening one, run `pnpm typecheck` and `pnpm format:check`, and the
+Issues and pull requests are welcome. Before opening one, run `pnpm typecheck`, `pnpm lint` and `pnpm format:check`, and the
 tests of the packages you changed (`pnpm --filter <package> test`). Pull requests are squash-merged.
 
 <br/>

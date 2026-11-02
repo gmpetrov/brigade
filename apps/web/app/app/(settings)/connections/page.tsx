@@ -1,6 +1,6 @@
 'use client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { CircleCheck, ShieldCheck } from 'lucide-react'
 import { AppSheet } from '@/components/app-sheet'
 import { ConnectApps, type Open } from '@/components/connect-apps'
@@ -66,7 +66,7 @@ function AppsList() {
   const catalog = useApi<TriggerCatalog>('/triggers/catalog')
   const [open, setOpen] = useState<Open>()
 
-  const connections = data.data?.connections ?? []
+  const connections = useMemo(() => data.data?.connections ?? [], [data.data])
 
   // Back from a provider's sign-in: open the App the new account belongs to.
   const connected = params.get('connected')

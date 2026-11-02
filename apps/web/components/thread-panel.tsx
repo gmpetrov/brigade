@@ -770,6 +770,11 @@ function DetailsPill({
 const SPRING =
   'linear(0, 0.037, 0.129, 0.25, 0.382, 0.511, 0.63, 0.734, 0.821, 0.89, 0.943, 0.982, 1.008, 1.025, 1.034, 1.038, 1.038, 1.035, 1.031, 1.026, 1.021, 1.016, 1.012, 1.008, 1.005, 1.003, 1.001, 1, 1)'
 
+const center = (el: Element) => {
+  const r = el.getBoundingClientRect()
+  return r.left + r.width / 2
+}
+
 /**
  * Slides the element across when it moves sideways, from where it was to where it is: a
  * panel opening or closing beside the page narrows or widens what it is centered in.
@@ -781,10 +786,6 @@ function useSlideAcross<T extends HTMLElement>() {
   const last = useRef<number>(undefined)
   // A thread's preview opens or closes in a render of its own (components/kept-previews.tsx).
   useKeptPreviewShown()
-  const center = (el: T) => {
-    const r = el.getBoundingClientRect()
-    return r.left + r.width / 2
-  }
   // After each render: what opens a panel renders, and its room is taken in the same commit.
   useLayoutEffect(() => {
     const el = ref.current
