@@ -128,6 +128,8 @@ type Fake = {
   secret: string
   deletedWithKey: string[]
   tokens: string[]
+  /** How many times the server was asked for its tools. */
+  toolLists: number
   /** How many times the server lists the sign-in's accounts before it fails to. */
   lists?: number
 }
@@ -253,6 +255,11 @@ before(() => {
       params?: { name: string; arguments: Record<string, unknown> }
     }
     if (message.method === 'ping') return new Response(null, { status: 401 })
+    if (message.method === 'tools/list') {
+      fake.toolLists++
+      // A server's answer takes a moment: calls meanwhile wait on this one.
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    }
     if (message.method === 'tools/list')
       return json({ jsonrpc: '2.0', id: message.id, result: { tools: TOOLS } })
     if (message.method === 'initialize')
@@ -283,6 +290,7 @@ beforeEach(() => {
     secret: '[REDACTED]',
     deletedWithKey: [],
     tokens: [],
+    toolLists: 0,
   }
 })
 
@@ -936,5 +944,31 @@ test(
     const untouched = await db.connection.findFirstOrThrow({ where: { id: first.id } })
     assert.equal(untouched.externalAccount, 'First (live mode) +1')
     assert.equal(untouched.status, 'needs_reauth')
+  },
+)
+
+test(
+  "calls that need an account's tools at once wait on one listing of them",
+  { skip },
+  async () => {
+    const { forgetMcpTools, mcpOperationSpecs } = await import('../src/mcp-tools.js')
+    const { scoped } = await import('../src/db.js')
+    await removeAll()
+    const old = await keyRow('Sandbox Inc (acct_1Sandbox, test mode)')
+    fake.accounts = [{ stripe_context: 'acct_1Sandbox', livemode: false, name: 'Sandbox' }]
+    assert.deepEqual(await signIn('listing'), { connected: old.id, error: null })
+    const row = await db.connection.findFirstOrThrow({ where: { id: old.id } })
+    forgetMcpTools(row.id)
+    const before = fake.toolLists
+    const specs = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        mcpOperationSpecs(scoped(scope), scope, row, 'read_write', []),
+      ),
+    )
+    assert.equal(fake.toolLists - before, 1)
+    assert.ok(specs.every((s) => s.length === specs[0]!.length && s.length > 0))
+    // Kept a while: the next call lists nothing.
+    await mcpOperationSpecs(scoped(scope), scope, row, 'read', [])
+    assert.equal(fake.toolLists - before, 1)
   },
 )
