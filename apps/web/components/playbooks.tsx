@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   BookOpenCheck,
   EllipsisVertical,
+  LibraryBig,
   MoreHorizontal,
   Pause,
   Play,
@@ -27,7 +28,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
 import { isAdmin, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { AppLogos, AppRowBody } from '@/components/playbook-apps'
-import { ProjectTag } from '@/components/projects'
+import { ProjectFilter, ProjectTag } from '@/components/projects'
 import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
 import { describeCron, scheduleTime, zoneName } from '@/components/schedules'
 import { StatusDot } from '@/components/status-badge'
@@ -56,7 +57,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Hint } from '@/components/ui/tooltip'
-import { api, projectQuery, useApi } from '@/lib/api'
+import { api, useApi } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -108,7 +109,7 @@ function PlaybookRow({
   return (
     <li>
       <Link
-        href={`/app/routines/playbooks/${p.id}`}
+        href={`/app/playbooks/${p.id}`}
         className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted"
       >
         <AppLogos apps={p.apps} />
@@ -129,43 +130,71 @@ function PlaybookRow({
   )
 }
 
-/** Playbooks: whole jobs installed in the workspace, above the schedules. In a project, its own. */
-export function PlaybookList({ projectId, filter }: { projectId?: string; filter?: string }) {
-  const playbooks = useApi<PlaybookInstallationView[]>(
-    `/playbooks${projectQuery(projectId ?? filter)}`,
-  )
+/**
+ * The Playbooks page: whole jobs installed in the workspace, then the catalog of those still
+ * to install. Opens filtered on `initialFilter` (`?project=`).
+ */
+export function PlaybookList({ initialFilter = '' }: { initialFilter?: string }) {
+  const [filter, setFilter] = useState(initialFilter)
+  // All of them, filtered here: the catalog leaves out what is installed in any project.
+  const playbooks = useApi<PlaybookInstallationView[]>('/playbooks')
   const catalog = useApi<PlaybookTemplate[]>('/playbooks/catalog')
   const reload = playbooks.reload
   useLive((message) => {
     if (message.type === 'thread.updated' || message.type === 'schedule.updated') void reload()
   })
   const [installing, setInstalling] = useState<PlaybookTemplate>()
-  const list = playbooks.data ?? []
-  const available = (catalog.data ?? []).filter((t) => !list.some((p) => p.playbookKey === t.id))
+  const all = playbooks.data ?? []
+  const list = all.filter((p) =>
+    !filter ? true : filter === 'none' ? !p.project : p.project?.id === filter,
+  )
+  const available = (catalog.data ?? []).filter((t) => !all.some((p) => p.playbookKey === t.id))
 
   return (
-    <section aria-labelledby="playbooks" className="flex flex-col gap-3">
-      <h2 id="playbooks" className="flex items-center gap-2 text-sm font-bold">
-        <BookOpenCheck className="size-4 text-muted-foreground" aria-hidden />
-        Playbooks
-      </h2>
-      {!playbooks.data ? (
-        <Skeleton className="h-16 w-full" />
-      ) : list.length > 0 ? (
-        <ul className="flex flex-col divide-y overflow-hidden rounded-xl bg-muted/60">
-          {list.map((p) => (
-            <PlaybookRow key={p.id} playbook={p} showProject={!projectId} />
-          ))}
-        </ul>
-      ) : (
-        <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-          No playbooks yet. A playbook is a whole job (support, releases…) a teammate runs on its
-          own.
-        </p>
-      )}
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-extrabold tracking-tight">Playbooks</h1>
+          <p className="max-w-prose text-muted-foreground">
+            Whole jobs, such as support, that a teammate runs on its own: what starts them, their
+            steps, the Apps they need and what they may do without asking.
+          </p>
+        </div>
+        <div className="ml-auto flex flex-wrap gap-2">
+          <ProjectFilter value={filter} onChange={setFilter} />
+        </div>
+      </header>
+
+      <section aria-labelledby="installed" className="flex flex-col gap-3">
+        <h2 id="installed" className="flex items-center gap-2 text-sm font-bold">
+          <BookOpenCheck className="size-4 text-muted-foreground" aria-hidden />
+          Installed
+        </h2>
+        {!playbooks.data ? (
+          <Skeleton className="h-16 w-full" />
+        ) : list.length > 0 ? (
+          <ul className="flex flex-col divide-y overflow-hidden rounded-xl bg-muted/60">
+            {list.map((p) => (
+              <PlaybookRow key={p.id} playbook={p} showProject />
+            ))}
+          </ul>
+        ) : (
+          <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+            No playbooks installed{filter ? ' here' : ''} yet.
+            {available.length > 0 && ' Install one from the catalog below.'}
+          </p>
+        )}
+        {playbooks.error && (
+          <p className="text-sm text-destructive-text">{playbooks.error.message}</p>
+        )}
+      </section>
+
       {available.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <h3 className="px-1 text-sm font-medium text-muted-foreground">Catalog</h3>
+        <section aria-labelledby="catalog" className="flex flex-col gap-3">
+          <h2 id="catalog" className="flex items-center gap-2 text-sm font-bold">
+            <LibraryBig className="size-4 text-muted-foreground" aria-hidden />
+            Catalog
+          </h2>
           <ul className="flex flex-col divide-y rounded-xl border">
             {available.map((t) => (
               <li key={t.id} className="flex items-center gap-3 px-4 py-3">
@@ -182,19 +211,16 @@ export function PlaybookList({ projectId, filter }: { projectId?: string; filter
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
       {installing && (
         <InstallDialog
           template={installing}
-          projectId={projectId ?? (filter && filter !== 'none' ? filter : undefined)}
+          projectId={filter && filter !== 'none' ? filter : undefined}
           onClose={() => setInstalling(undefined)}
         />
       )}
-      {playbooks.error && (
-        <p className="text-sm text-destructive-text">{playbooks.error.message}</p>
-      )}
-    </section>
+    </div>
   )
 }
 
@@ -768,7 +794,7 @@ export function PlaybookSheet({ id }: { id: string }) {
     setError(undefined)
     try {
       await api(`/playbooks/${id}`, init)
-      if (init.method === 'DELETE') router.push('/app/routines')
+      if (init.method === 'DELETE') router.push('/app/playbooks')
       else await reload()
     } catch (e) {
       setError((e as Error).message)
@@ -819,11 +845,11 @@ export function PlaybookSheet({ id }: { id: string }) {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <Link
-        href="/app/routines"
+        href="/app/playbooks"
         className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" aria-hidden />
-        Routines
+        Playbooks
       </Link>
 
       <header className="flex items-start gap-4">

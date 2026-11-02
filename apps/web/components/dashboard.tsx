@@ -3,6 +3,7 @@ import {
   Bell,
   BookOpenText,
   Building2,
+  BookOpenCheck,
   CalendarClock,
   ChartColumn,
   ChevronDown,
@@ -161,6 +162,7 @@ const WORK_NAV = [
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },
+  { href: '/app/playbooks', label: 'Playbooks', icon: BookOpenCheck },
   { href: '/app/routines', label: 'Routines', icon: CalendarClock },
 ]
 

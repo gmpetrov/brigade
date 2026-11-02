@@ -1236,7 +1236,7 @@ function MailboxRules({
               </span>
               {rule.playbook && (
                 <Link
-                  href={`/app/routines/playbooks/${rule.playbook.id}`}
+                  href={`/app/playbooks/${rule.playbook.id}`}
                   className="w-fit text-xs font-medium text-primary hover:underline"
                 >
                   Change it in the playbook

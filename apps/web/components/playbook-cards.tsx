@@ -317,7 +317,7 @@ export function ActivationCard({
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       {active ? (
         <Link
-          href={`/app/routines/playbooks/${p.id}`}
+          href={`/app/playbooks/${p.id}`}
           className="text-sm font-medium underline-offset-2 hover:underline"
         >
           Open its sheet

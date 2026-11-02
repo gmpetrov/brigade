@@ -103,7 +103,7 @@ export function TicketRow({
             Keep asking first
           </Button>
           <Link
-            href={`/app/routines/playbooks/${promotion.installationId}`}
+            href={`/app/playbooks/${promotion.installationId}`}
             className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
             Open the playbook
