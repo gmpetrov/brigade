@@ -103,8 +103,12 @@ async function tell(notice: Notice) {
   }
 }
 
-/** The problem is there now. Safe to call on every run of a check. */
-export async function raise(alert: Alert, now = new Date()) {
+/**
+ * The problem is there now. Safe to call on every run of a check. `lastAt`: when it was last
+ * seen, for a problem counted from failures (the newest one's time, never the check's); by
+ * default, now.
+ */
+export async function raise(alert: Alert, now = new Date(), lastAt = now) {
   const detail = (alert.detail ?? '').slice(0, 4000)
   const row = await prisma.opsAlert.findUnique({ where: { key: alert.key } })
   const step = onRaise(row, alert.severity, now)
@@ -123,7 +127,8 @@ export async function raise(alert: Alert, now = new Date()) {
     severity: step.severity,
     title: alert.title,
     detail,
-    lastAt: now,
+    // Never back: a failure written since (src/ops/checks.ts, noteSeen) may be newer.
+    lastAt: row && row.lastAt > lastAt ? row.lastAt : lastAt,
     firstAt: step.firstAt,
     ...(step.reopen ? { resolvedAt: null } : {}),
     // Not sent: tried again on the next run.

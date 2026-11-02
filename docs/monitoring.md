@@ -90,8 +90,12 @@ Computers of a workspace without a plan are meant to be off and are not checked.
 
 The counts are in the Api object's memory (`src/ops/failures.ts`). A restart forgets them,
 which only delays an alert. An open alert's end does not depend on them: its row keeps when
-its failures were last seen (`lastAt`, moved on by failures too few to raise it), and it ends
-once none came for the quiet time since then, however often the object restarts meanwhile.
+its last failure came (`lastAt`, the failure's own time, never the check's), and it ends once
+none came for the quiet time since then, however often the object restarts meanwhile. A
+failure of an open alert's kind is written to its row as it comes, in the background (the
+request never waits for it), at most once a minute per kind, so that a restart before the
+next check does not lose it; a failure within a minute of the last one written may end the
+alert up to a minute early.
 Before, the quiet time counted from the object's start too: on 2026-11-01 the `api` alert
 stayed open 10 hours after its last failure, until one start of the object lasted 15 minutes.
 

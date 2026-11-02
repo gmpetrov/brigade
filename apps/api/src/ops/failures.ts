@@ -28,6 +28,14 @@ const errorListeners: ((kind: string, error: Error, workspaceId?: string) => voi
 export const onFailureError = (hear: (kind: string, error: Error, workspaceId?: string) => void) =>
   void errorListeners.push(hear)
 
+/** Who hears of each failure counted here: the checks (src/ops/checks.ts), one at a time. */
+let watcher: ((failure: Failure) => void) | null = null
+
+/** Hear of each failure counted here, in place of whoever did before. */
+export const watchFailures = (watch: (failure: Failure) => void) => {
+  watcher = watch
+}
+
 /** Run `fn` with its failures sent to `sink` rather than counted here. */
 export const withFailureSink = <T>(sink: (failure: Failure) => void, fn: () => T): T =>
   sinks.run(sink, fn)
@@ -64,6 +72,11 @@ export function keepFailure(failure: Failure) {
   failures.push(failure)
   while (failures.length > MAX || (failures.length && failure.at - failures[0]!.at > KEEP_MS))
     failures.shift()
+  try {
+    watcher?.(failure)
+  } catch {
+    // Hearing of a failure never fails the code that had it.
+  }
 }
 
 /** The failures of a kind (or of every kind under `prefix:`) in the last `ms`. */

@@ -394,10 +394,14 @@ describe('alerts in the database', { skip }, () => {
         .map((p) => JSON.parse(p.body))
         .filter((n) => n.key === key)
         .map((n) => n.kind)
-    const fail = (n: number, when: number) => {
+    // Failures, and their writes to an open alert's row (noteSeen), done.
+    const fail = async (n: number, when: number, kind = 'api') => {
       for (let i = 0; i < n; i++)
-        noteFailure('api', new Error('Failed to get session'), { at: when })
+        noteFailure(kind, new Error('Failed to get session'), { at: when })
+      await running.seenWritesDone()
     }
+    const resolvedAt = async (key: string) =>
+      (await prisma.opsAlert.findUnique({ where: { key } }))?.resolvedAt ?? null
     // A restart: the failures counted are forgotten, and the checks' module starts afresh.
     let restarts = 0
     let running = checks
@@ -405,11 +409,68 @@ describe('alerts in the database', { skip }, () => {
       clearFailures()
       running = await import(`../src/ops/checks.js?restart=${++restarts}`)
     }
-    beforeEach(() => prisma.opsAlert.deleteMany({ where: { key: 'api' } }))
+    beforeEach(async () => {
+      await prisma.opsAlert.deleteMany({ where: { key: { in: ['api', 'catalog-size'] } } })
+      await restart()
+    })
+    after(() => prisma.opsAlert.deleteMany({ where: { key: 'catalog-size' } }))
+
+    test('checked each minute, it ends its quiet time after its last failure, not its last check', async () => {
+      const start = t0.getTime()
+      await fail(10, start)
+      for (let minute = 0; minute < 15; minute++) await running.runChecks(start + minute * MIN)
+      assert.equal(await resolvedAt('api'), null)
+      await running.runChecks(start + 15 * MIN)
+      assert.deepEqual(await resolvedAt('api'), at(15 * MIN))
+    })
+
+    test('a catalog too large once ends 12 hours after, though raised for 6 of them', async () => {
+      const start = t0.getTime()
+      await fail(1, start, 'catalog-size')
+      for (let minute = 0; minute < 12 * 60; minute++) await running.runChecks(start + minute * MIN)
+      assert.equal(await resolvedAt('catalog-size'), null)
+      await running.runChecks(start + 12 * 60 * MIN)
+      assert.deepEqual(await resolvedAt('catalog-size'), at(12 * 60 * MIN))
+    })
+
+    test('a failure is kept as soon as it comes, however soon a restart follows', async () => {
+      const start = t0.getTime()
+      await fail(10, start)
+      await running.runChecks(start)
+      for (let minute = 1; minute < 15; minute++) {
+        await restart()
+        await running.runChecks(start + minute * MIN)
+      }
+      await fail(1, start + 14.5 * MIN)
+      await restart()
+      await running.runChecks(start + 15 * MIN)
+      assert.equal(await resolvedAt('api'), null)
+      await restart()
+      await running.runChecks(start + 29 * MIN)
+      assert.equal(await resolvedAt('api'), null)
+      await running.runChecks(start + 30 * MIN)
+      assert.deepEqual(await resolvedAt('api'), at(30 * MIN))
+    })
+
+    test('a burst writes once a minute, and a failure before the first check after a start too', async () => {
+      const start = t0.getTime()
+      await fail(10, start)
+      await running.runChecks(start)
+      await restart()
+      // No check yet since this start: the open alerts are read for it.
+      await fail(1, start + 2 * MIN)
+      const written = async () =>
+        (await prisma.opsAlert.findUniqueOrThrow({ where: { key: 'api' } })).lastAt
+      assert.deepEqual(await written(), at(2 * MIN))
+      await fail(5, start + 2.5 * MIN)
+      assert.deepEqual(await written(), at(2 * MIN))
+      await fail(1, start + 3 * MIN)
+      assert.deepEqual(await written(), at(3 * MIN))
+    })
 
     test('an alert ends its quiet time after its last failure, restarts or not', async () => {
       const start = t0.getTime()
-      fail(10, start)
+      await fail(10, start)
       await running.runChecks(start)
       assert.deepEqual(told('api'), ['firing'])
       for (let minute = 1; minute < 15; minute++) {
@@ -426,9 +487,9 @@ describe('alerts in the database', { skip }, () => {
 
     test('fewer failures than raise it keep it open, past a restart too', async () => {
       const start = t0.getTime()
-      fail(10, start)
+      await fail(10, start)
       await running.runChecks(start)
-      fail(1, start + 10 * MIN)
+      await fail(1, start + 10 * MIN)
       await running.runChecks(start + 10 * MIN)
       await restart()
       await running.runChecks(start + 16 * MIN)
