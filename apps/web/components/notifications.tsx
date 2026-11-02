@@ -1,5 +1,5 @@
 'use client'
-// Notifications: the panel in Settings > Preferences (NotificationsPanel), where they
+// Notifications: the panel in Settings > Notifications (NotificationsPanel), where they
 // turn them on for this device and pick a preset, and what the dashboard does for
 // them while open (useAppNotifications). The API decides what to send and when
 // (apps/api/src/notifications.ts); public/sw.js shows it.

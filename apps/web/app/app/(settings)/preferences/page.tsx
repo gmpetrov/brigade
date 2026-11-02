@@ -1,12 +1,11 @@
 'use client'
 // Preferences: what each member sets for themselves, never for the workspace: next-message
 // suggestions, auto-merge of their threads' pull requests (owners and admins, who may merge),
-// notifications (theirs), and deleting their own account. The theme is
+// and deleting their own account. Notifications have their own section; the theme is
 // picked in the member's menu, in the sidebar.
 import { useEffect, useState, type ReactNode } from 'react'
 import { DeleteAccount } from '@/components/danger-zone'
 import { useDashboard } from '@/components/dashboard'
-import { NotificationsPanel } from '@/components/notifications'
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -92,13 +91,6 @@ export default function PreferencesPage() {
           </div>
         </Section>
       )}
-
-      <Section
-        title="Notifications"
-        detail="Brigade tells you when something needs you, and otherwise stays quiet."
-      >
-        <NotificationsPanel />
-      </Section>
 
       <DeleteAccount />
     </div>

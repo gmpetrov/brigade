@@ -7,7 +7,7 @@ in the dashboard.
 
 ## Decisions
 
-- **Presets, not a grid of checkboxes.** In Settings, Preferences, Notifications:
+- **Presets, not a grid of checkboxes.** In Settings, Notifications:
   - _Only when I'm needed_ (default): the Needs you items that are theirs.
   - _Needed + finished work_: also each task done and pull request merged, as
     soon as it is (its own push; a merge whose task is done is said once).
@@ -76,5 +76,5 @@ says notifications are not set up. Keep the pair once set: a new one
 unsubscribes every device. `scripts/preview/setup.sh` adds one locally.
 
 On iPhone (iOS 16.4 or later): open the dashboard in Safari, Share, Add to
-Home Screen, open Brigade from there, then Settings, Preferences, Notifications,
+Home Screen, open Brigade from there, then Settings, Notifications,
 Turn on. Push needs HTTPS: localhost works on a computer, not from a phone.
