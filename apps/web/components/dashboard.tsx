@@ -1,5 +1,4 @@
 'use client'
-import { workspaceLogoPath } from '@brigade/contracts'
 import {
   Bell,
   BookOpenText,
@@ -117,7 +116,7 @@ import {
 } from '@/lib/api'
 import { setLiveWorkspace } from '@/lib/live-socket'
 import { DESKTOP_SIGN_IN, inCaptureWindow } from '@/lib/brigade-app'
-import { API_URL } from '@/lib/config'
+import { WorkspaceMark, WorkspaceMenuContent } from '@/components/workspace-switcher'
 import { authClient } from '@/lib/auth-client'
 import { DEMO, signUp } from '@/lib/demo/flag'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
@@ -151,6 +150,7 @@ export function useDashboard() {
 export const useMaybeDashboard = () => useContext(DashboardContext)
 
 export { isAdmin }
+export { WorkspaceMark }
 
 /** The work: what projects group. */
 const WORK_NAV = [
@@ -213,43 +213,6 @@ const THEMES = [
 ] as const
 
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
-
-/** A workspace's logo, or its first letter on a square of colour. */
-export function WorkspaceMark({
-  workspace,
-  className,
-}: {
-  workspace: { id: string; name: string; logo?: string | null } | undefined
-  className?: string
-}) {
-  const logo = workspace?.logo
-    ? workspaceLogoPath({ id: workspace.id, logo: workspace.logo })
-    : null
-  const [failed, setFailed] = useState<string | null>(null)
-  const shown = logo && failed !== logo
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        'flex shrink-0 items-center justify-center overflow-hidden rounded-sm font-bold',
-        className,
-        shown && 'bg-transparent',
-      )}
-    >
-      {shown ? (
-        // eslint-disable-next-line @next/next/no-img-element -- a stored logo, through the API
-        <img
-          src={`${API_URL}/api${logo}`}
-          alt=""
-          className="size-full object-cover"
-          onError={() => setFailed(logo)}
-        />
-      ) : (
-        initial(workspace?.name ?? '')
-      )}
-    </span>
-  )
-}
 
 /** A teammate's pebble, drawn from its id so it is the same everywhere; a teammate not
  * created yet (a proposal) has no id, and takes its name instead. The chief wears a
@@ -452,18 +415,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       badge.add(t.thread.id)
     }
 
-  async function switchWorkspace(workspaceId: string) {
-    await api('/workspaces/switch', { body: { workspaceId } })
-    window.location.href = '/app'
-  }
-
-  /** To another organization the member belongs to (one they were invited to, say). */
-  async function switchOrganization(organizationId: string) {
-    await api('/organizations/switch', { body: { organizationId } })
-    window.location.href = '/app'
-  }
-  const otherOrganizations = data.organizations.filter((o) => o.id !== data.activeOrganizationId)
-
   async function signOut() {
     // The demo has no account to leave: the way out is signing up for real.
     if (DEMO) return signUp()
@@ -517,41 +468,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                           <ChevronDown className="text-muted-foreground size-3.5! group-data-[collapsible=icon]:hidden" />
                         </SidebarMenuButton>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="min-w-56">
-                        <DropdownMenuLabel className="text-muted-foreground text-xs">
-                          {organization?.name ?? 'Workspaces'}
-                        </DropdownMenuLabel>
-                        {data.workspaces.map((w) => (
-                          <DropdownMenuItem key={w.id} onSelect={() => void switchWorkspace(w.id)}>
-                            <WorkspaceMark workspace={w} className="bg-secondary size-6 text-xs" />
-                            {w.name}
-                          </DropdownMenuItem>
-                        ))}
-                        {isAdmin(data) && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => router.push('/onboarding')}>
-                              <Plus /> New workspace
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                        {otherOrganizations.length > 0 && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuLabel className="text-muted-foreground text-xs">
-                              Other organizations
-                            </DropdownMenuLabel>
-                            {otherOrganizations.map((o) => (
-                              <DropdownMenuItem
-                                key={o.id}
-                                onSelect={() => void switchOrganization(o.id)}
-                              >
-                                <Building2 /> {o.name}
-                              </DropdownMenuItem>
-                            ))}
-                          </>
-                        )}
-                      </DropdownMenuContent>
+                      <WorkspaceMenuContent
+                        me={data}
+                        onNewWorkspace={
+                          isAdmin(data) ? () => router.push('/onboarding') : undefined
+                        }
+                      />
                     </DropdownMenu>
                     <RoundButton
                       label={`Search (${mac ? '⌘K' : 'Ctrl+K'})`}
