@@ -500,7 +500,8 @@ const DONE =
   'message reopens it. A change that was asked and you only proposed is not delivered, nor is a reply that ends ' +
   'on choices you need picked: leave those open. Brigade refuses it while ' +
   'something is still open here (a ticket or question, a pull request not yet merged or closed, a child thread ' +
-  'you wait for that has not reported, a review included, a wake-up you set, a list item not ticked) and says what: deal with each, or say in your reply what remains. A ' +
+  'you wait for that has not reported, a review included, a wake-up you set, a list item not ticked) and says ' +
+  'what: deal with each, or say in your reply what remains. A ' +
   "new message from a person reopens the thread. A merge of this thread's pull request wakes you here to do " +
   'this. Not in a scheduled run (a thread that starts with "Scheduled run of"): it ends with its turn.'
 

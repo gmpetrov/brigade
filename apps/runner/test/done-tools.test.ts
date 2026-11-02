@@ -19,6 +19,8 @@ test('complete_thread is only in a thread at the top, not in a child or a playbo
   assert.deepEqual(doneTools(nothing, { child: true, playbook: false }), {})
   assert.deepEqual(doneTools(nothing, { child: false, playbook: true }), {})
   assert.deepEqual(doneTools(nothing, { child: true, playbook: true }), {})
+  // A schedule's run ends with its turn: the API refuses it there.
+  assert.deepEqual(doneTools(nothing, { child: false, playbook: false, scheduled: true }), {})
 })
 
 test('complete_thread is the thread’s own: refused to its sub-agents', () => {

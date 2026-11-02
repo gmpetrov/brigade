@@ -169,9 +169,10 @@ export const OPEN_TICKET_TOOL = 'open_ticket'
 
 export const openTicketTool = tool({
   description:
-    'Open a ticket for a person and wait until they answer it. Brigade asks a person itself only where a tool ' +
-    'says so (an App write that says a person may need to approve it, saving a credential, a trigger): do not open a ticket for those. ' +
-    'Elsewhere nothing waits for a person, so open one when you judge a person should decide first: sign-off on a draft or plan before you send or apply it ' +
+    'Open a ticket for a person and wait until they answer it. Brigade asks a person by itself only where a ' +
+    "tool says so (an App write that may need a person's approval, saving a credential, a trigger), and never " +
+    'needs a ticket of yours to approve that same call. Elsewhere nothing waits for a person, so open one when ' +
+    'you judge a person should decide first: sign-off on a draft or plan before you send or apply it ' +
     '(approval), a choice (decision), a connection or credential you lack (access), something only a person can do ' +
     'such as a phone call (action), or information only they have (input). Put several asks in one ticket rather than ' +
     'opening several. When a website stops you with a human check (a CAPTCHA, a "verify you are human" box, a ' +
