@@ -111,8 +111,8 @@ export function CaptureDraft() {
   if (!app)
     return (
       <p className="m-auto max-w-sm p-6 text-center text-sm text-muted-foreground">
-        This page is Brigade.app&apos;s screenshot window. On your Mac, press its shortcut (⌘⇧2
-        unless changed in Brigade&apos;s menu) to send a screenshot to a teammate.
+        This page is Brigade.app&apos;s new thread window. On your Mac, press ⌘⇧1 to write to a
+        teammate, or ⌘⇧2 to send them a screenshot (unless changed in Brigade&apos;s menu).
       </p>
     )
   if (!teammate) return null
