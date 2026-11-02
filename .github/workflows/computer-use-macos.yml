@@ -1,0 +1,38 @@
+# Builds Brigade Computer Use (apps/computer-use-macos) as a desktop release does, on the same
+# runner, and runs its tests, on each pull request that changes it: a change that breaks its
+# build shows on the pull request rather than in a release. Compiler errors become annotations.
+name: Brigade Computer Use
+
+on:
+  pull_request:
+    paths: ['apps/computer-use-macos/**', '.github/workflows/computer-use-macos.yml']
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/computer-use-macos
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Toolchain
+        run: echo "::notice title=Toolchain::$(swift --version 2>&1 | head -1)"
+
+      - name: Build as a release does
+        run: |
+          set -o pipefail
+          scripts/build.sh 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Test
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee "$RUNNER_TEMP/test.log"
+
+      - name: Errors as annotations
+        if: failure()
+        run: |
+          cat "$RUNNER_TEMP"/*.log 2>/dev/null | grep -E ': (error|fatal error): |error: ' | sort -u | head -30 |
+            sed -E -e "s#^$PWD/##" \
+              -e 's#^([^: ]+):([0-9]+):([0-9]+): (fatal )?error: (.*)$#::error file=apps/computer-use-macos/\1,line=\2,col=\3::\5#' \
+              -e t -e 's#^#::error ::#'
