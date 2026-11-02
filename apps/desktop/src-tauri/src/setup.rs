@@ -14,14 +14,13 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_opener::OpenerExt;
 
+use crate::accessibility::{self, SETTINGS as ACCESSIBILITY_SETTINGS};
 use crate::runner::{self, Status, Supervisor};
 use crate::{dashboard, Items};
 
 const WINDOW: &str = "setup";
 const SCREEN_SETTINGS: &str =
     "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture";
-const ACCESSIBILITY_SETTINGS: &str =
-    "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
 
 /// The helper's permissions, as it reports them; None while it can't be asked.
 #[derive(Clone, Copy)]
@@ -157,6 +156,12 @@ fn step(id: &str, title: &str, detail: String, done: Option<bool>, action: Optio
     })
 }
 
+/// A row Brigade works without: shown, never counted as missing nor opening the checklist.
+fn optional(mut step: Value) -> Value {
+    step["optional"] = json!(true);
+    step
+}
+
 fn steps(app: &AppHandle) -> Vec<Value> {
     let mut steps = Vec::new();
 
@@ -237,6 +242,20 @@ fn steps(app: &AppHandle) -> Vec<Value> {
         matches!(permissions, Some(p) if !p.accessibility).then_some(("accessibility", "Allow…")),
     ));
 
+    // Brigade's own, for the commands teammates run: only when one needs it, so optional.
+    let trusted = accessibility::trusted();
+    steps.push(optional(step(
+        "commands",
+        "Accessibility for teammates' commands",
+        if trusted {
+            "Commands teammates run here, such as agent-desktop, can click and type in your apps. Turn Brigade off in Privacy & Security → Accessibility to stop it.".into()
+        } else {
+            "Optional: when a teammate's command needs to click and type in your apps, turn on Brigade in the list that opens.".into()
+        },
+        Some(trusted),
+        (!trusted).then_some(("commands", "Allow…")),
+    )));
+
     let login = app.autolaunch().is_enabled().unwrap_or(false);
     steps.push(step(
         "login",
@@ -256,7 +275,7 @@ fn steps(app: &AppHandle) -> Vec<Value> {
 fn missing(steps: &[Value]) -> Vec<String> {
     steps
         .iter()
-        .filter(|s| s["done"] != true)
+        .filter(|s| s["done"] != true && s["optional"] != true)
         .filter_map(|s| s["id"].as_str().map(str::to_owned))
         .collect()
 }
@@ -288,6 +307,10 @@ pub fn setup_action(app: AppHandle, id: String) -> Result<(), String> {
             // The helper asks macOS for its permissions when it starts; the list is where they're turned on.
             app.state::<Helper>().launch();
             open(if id == "screen" { SCREEN_SETTINGS } else { ACCESSIBILITY_SETTINGS })
+        }
+        "commands" => {
+            accessibility::request(&app);
+            Ok(())
         }
         "login" => {
             app.autolaunch().enable().map_err(|e| e.to_string())?;

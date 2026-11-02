@@ -2,6 +2,7 @@
 // running the Brigade runner (runner.rs), ships Brigade Computer Use.app for
 // teammates to use this Mac's apps, starts at login and updates itself. Its
 // windows are the setup checklist (setup.rs) and the screenshot draft (capture.rs).
+mod accessibility;
 mod capture;
 mod drag;
 mod escape;
@@ -121,8 +122,14 @@ fn alert(app: &AppHandle, title: &str, message: &str, kind: MessageDialogKind) {
 
 /// brigade://link?code=…&api=…[&dashboard=…], from "Open in Brigade" in the dashboard.
 /// brigade://sign-in?code=…, from the dashboard's page that signs the screenshot window in.
+/// brigade://accessibility, from the runner when a teammate asks for Accessibility (accessibility.rs).
 fn open_link(app: &AppHandle, link: &Url) {
     if link.scheme() != "brigade" {
+        return;
+    }
+    if link.host_str() == Some("accessibility") {
+        // macOS's own request: only the person can turn it on, so any page may open this.
+        accessibility::request(app);
         return;
     }
     let query = |key: &str| {

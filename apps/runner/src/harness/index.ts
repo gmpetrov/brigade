@@ -39,6 +39,7 @@ import {
   threadTabsFile,
   touchBrowser,
 } from '../browsers.js'
+import { accessibility, accessibilityDeps } from '../accessibility.js'
 import { ComputerUseError, computerUseClient } from '../computer-use.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import {
@@ -103,6 +104,7 @@ import {
   ASK_USER_TOOL,
   appTools,
   askUserTool,
+  accessibilityTools,
   computerUseTools,
   connectorTools,
   credentialTools,
@@ -330,6 +332,8 @@ function createAgent(
     ...previewTools(preview, credentials),
     ...(makeImage ? imageTools(makeImage) : {}),
     ...(computer ? computerUseTools(computer) : {}),
+    // Accessibility for its own commands, where computer use is: on a member's Mac.
+    ...(computer ? accessibilityTools((request) => accessibility(accessibilityDeps, request)) : {}),
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,

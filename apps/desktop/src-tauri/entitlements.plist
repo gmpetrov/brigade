@@ -2,6 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <!-- Brigade.app asks for nothing: Screen Recording and Accessibility belong to the helper it contains. -->
+  <!-- No entitlement needed: Accessibility (src/accessibility.rs) is a privacy setting the person turns on; Screen Recording belongs to the helper Brigade.app contains. -->
 </dict>
 </plist>

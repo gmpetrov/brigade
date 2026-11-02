@@ -256,6 +256,11 @@ impl Supervisor {
                 if let Some(helper) = &self.helper {
                     command.env("BRIGADE_COMPUTER_USE_APP", helper);
                 }
+                // The runner's commands get Accessibility from this app, which asks for it when
+                // the runner opens brigade://accessibility (accessibility.rs).
+                if let Ok(exe) = std::env::current_exe() {
+                    command.env("BRIGADE_DESKTOP_APP", exe);
+                }
                 // Its own process group, so stop() reaches node behind the wrapper.
                 command.arg("start").process_group(0).spawn()
             });

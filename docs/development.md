@@ -49,6 +49,14 @@ so macOS gives Screen Recording and Accessibility to it, not to Brigade.app or a
 token-checked socket in `~/.brigade/computer-use`. While a teammate acts, a pill shows its name with a Stop button
 (no Esc shortcut); Stop ends computer use for that turn.
 
+Commands a teammate runs in its shell (agent-desktop, `osascript` with System Events, a desktop recorder) are not
+Brigade Computer Use: macOS asks the app responsible for them, Brigade.app, which starts the runner
+(`src-tauri/src/accessibility.rs`). The `accessibility_permission` tool (`apps/runner/src/accessibility.ts`) checks
+it with `AXIsProcessTrusted` from a child of the runner, and with `request: true` opens `brigade://accessibility`:
+Brigade.app calls `AXIsProcessTrustedWithOptions` with the prompt, which adds Brigade to Privacy & Security →
+Accessibility, and opens that list. The setup checklist shows it as an optional step. A runner started in a terminal
+gets the terminal's permission instead.
+
 ```bash
 pnpm --filter @brigade/computer-use-macos install:app   # helper only, into ~/Applications (runner finds it there)
 pnpm --filter @brigade/desktop build:app                 # Brigade.app and its .dmg, with the helper inside

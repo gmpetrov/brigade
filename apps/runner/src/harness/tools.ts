@@ -3140,3 +3140,34 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
     }),
   }
 }
+
+/**
+ * accessibility_permission: on a member's Mac, whether the commands a teammate runs there have
+ * macOS Accessibility, and asking the person for it (../accessibility.ts).
+ */
+export function accessibilityTools(
+  check: (request: boolean) => Promise<unknown>,
+): Record<string, Tool> {
+  return {
+    accessibility_permission: tool({
+      description:
+        'Whether the commands you run on this Mac (the person’s own) have macOS Accessibility, which a ' +
+        'command needs to click, type or read other apps’ windows: agent-desktop, osascript with System ' +
+        'Events, a desktop recorder. They get it from Brigade.app. Check before such a command, or when one ' +
+        'fails for lack of it. With request: true, when it is missing, Brigade.app shows macOS’s request and ' +
+        'opens System Settings with Brigade in the list; open a ticket with the line it returns, then check ' +
+        'again. Only ask when a command needs it. The computer_* tools do not need it: Brigade Computer Use ' +
+        'has its own.',
+      inputSchema: jsonSchema<{ request?: boolean }>({
+        type: 'object',
+        properties: {
+          request: {
+            type: 'boolean',
+            description: 'Ask the person for it when it is missing (default false: only check)',
+          },
+        },
+      }),
+      execute: (input) => check(input.request === true),
+    }),
+  }
+}

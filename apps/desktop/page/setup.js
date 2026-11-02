@@ -10,14 +10,16 @@ const errors = new Map()
 let busy = null
 
 function render({ steps, done }) {
-  const count = steps.filter((s) => s.done === true).length
+  // Optional steps (Accessibility for teammates' commands) aren't counted: Brigade works without them.
+  const required = steps.filter((s) => !s.optional)
+  const count = required.filter((s) => s.done === true).length
   summary.textContent = done
     ? 'All set: your teammates can work on this Mac.'
-    : `${count} of ${steps.length} done. Each step updates as soon as it's done.`
+    : `${count} of ${required.length} done. Each step updates as soon as it's done.`
   close.hidden = !done
   later.hidden = done
   // The first step not done gets the violet button: what to do next.
-  const next = steps.find((s) => s.done === false && s.action)
+  const next = required.find((s) => s.done === false && s.action)
   list.replaceChildren(
     ...steps.map((s) => {
       const item = document.createElement('li')
