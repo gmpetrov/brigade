@@ -4,8 +4,9 @@
 //
 // A teammate that ends its reply on a choices card (OFFER_CHOICES_TOOL, written as a `choices`
 // block) offered alternatives for a person to pick from: the thread stops there until someone
-// does. It waits while the thread is idle, until a person writes in it (a pick is a message, as
-// the card in the thread reads it), and only while recent: a choice nobody made in CHOICE_DAYS
+// does. It waits while the thread is idle, until a message comes in it: a person's (a pick is
+// one) or one Brigade writes there (a wake-up, a child's report), as the card in the thread
+// reads it: any message after the card closes it. And only while recent: a choice nobody made in CHOICE_DAYS
 // closes as a stopped thread does (docs/board.md). Not in a child thread (it reports to its
 // parent's teammate), a routine's run, a playbook's run nobody joined, nor once the thread is
 // archived or done. It waits on whoever started the thread, unless they put it away for later;

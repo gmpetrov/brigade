@@ -33,7 +33,8 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
   choices card offered alternatives for someone to pick, and the thread stops there: without
   this, it showed as Stopped among every other quiet thread, and the reply was lost there. Its
   card says "Pick one", with the card's question as its note. It waits while the thread is idle,
-  until a person writes in it (a pick is a message), and on whoever started it, as a failed
+  until a message comes in it (a pick is one; so is a wake-up, which closes the card in the
+  thread too), and on whoever started it, as a failed
   thread does. A choice nobody made in 7 days closes with its thread, as Stopped does. Reply
   buttons ("Build it", "Not yet") do not wait: they offer a next step a person may leave, and
   almost every reply ends on some; Home lists those it left as loose ends.

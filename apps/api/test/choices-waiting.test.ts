@@ -102,8 +102,15 @@ const choices = {
 }
 const replies = { replies: ['Build it', 'Not yet'] }
 
-/** What happens in a thread, in order: a person writes, a teammate ends a turn on a card. */
-type Step = { person: string } | { offers: 'choices' | 'replies'; ago?: number } | { reply: string }
+/**
+ * What happens in a thread, in order: a person writes, Brigade writes (a wake-up), a teammate
+ * ends a turn on a card or on a reply.
+ */
+type Step =
+  | { person: string }
+  | { brigade: string }
+  | { offers: 'choices' | 'replies'; ago?: number }
+  | { reply: string }
 
 let titles = 0
 /** A thread of member 0's, idle unless said otherwise, with what happened in it. */
@@ -145,6 +152,10 @@ async function thread(
       await event('message.user', { text: step.person, memberId: ids.members[0] })
       continue
     }
+    if ('brigade' in step) {
+      await event('message.user', { text: step.brigade, memberId: null })
+      continue
+    }
     if ('reply' in step) {
       await event('message.done', { id: `m${seq}`, text: step.reply })
       await event('turn.completed', {})
@@ -179,8 +190,13 @@ test('choices nobody picked wait on a person, until someone writes', { skip }, a
     { person: 'Something shorter' },
     { offers: 'choices' },
   ])
-  // A later turn of its own (a wake-up) leaves the card open, as the thread shows it.
-  const woken = await thread([{ person: 'Rename Home' }, { offers: 'choices' }, { reply: 'Hm.' }])
+  // Any message after the card closes it, as the thread shows it: a wake-up's too.
+  const woken = await thread([
+    { person: 'Rename Home' },
+    { offers: 'choices' },
+    { brigade: 'Wake-up: check the deploy' },
+    { reply: 'Deployed.' },
+  ])
   // Reply buttons offer a next step a person may leave: they never wait.
   const buttons = await thread([{ person: 'Fix it' }, { offers: 'replies' }])
   const none = await thread([{ person: 'Hello' }, { reply: 'Hi' }])
@@ -195,7 +211,7 @@ test('choices nobody picked wait on a person, until someone writes', { skip }, a
     none.id,
     old.id,
   ])
-  assert.deepEqual([...waiting.keys()].sort(), [offered.id, again.id, woken.id].sort())
+  assert.deepEqual([...waiting.keys()].sort(), [offered.id, again.id].sort())
   assert.equal(waiting.get(offered.id)?.question, QUESTION)
   assert.equal(waiting.get(offered.id)?.choices.options.length, 2)
 })
