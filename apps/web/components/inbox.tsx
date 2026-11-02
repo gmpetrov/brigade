@@ -90,7 +90,7 @@ type StatusFilter = InboxStatus | 'scheduled' | 'all'
 /** Its tabs, by what comes next: to do (nobody on it, or a reply to approve), and the rest. */
 const STATUSES: { value: StatusFilter; label: string }[] = [
   { value: 'waiting', label: 'To do' },
-  { value: 'handled', label: 'With teammates' },
+  { value: 'handled', label: 'In progress' },
   { value: 'scheduled', label: 'Scheduled' },
   { value: 'done', label: 'Done' },
   { value: 'all', label: 'All' },

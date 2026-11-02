@@ -215,7 +215,7 @@ has to keep its messages there.
   `email_send` ticket of its thread answering one of its mails), else the next reply set to leave
   later (sent, `scheduled`, past the 30 seconds to cancel any mail).
 - **Tabs**: To do (`waiting`: nobody took it, its thread chose not to reply, or a reply waits for
-  this member's approval: they started its thread, or are an admin, as `decide.ts` says), With teammates (`handled`, but those),
+  this member's approval: they started its thread, or are an admin, as `decide.ts` says), In progress (`handled`, but those),
   Scheduled (a reply set for later), Done, All. The sidebar counts the To do, last 30 days.
 - **Filters**: source, agent, project, words; a conversation shows when any of its mails matches
   (words: its senders, or the words of its mails received or sent).
