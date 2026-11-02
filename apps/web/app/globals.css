@@ -1072,6 +1072,32 @@
   font-size: 0.9em;
   cursor: pointer;
 }
+/* Whole lines selected (components/document-block-select.ts): tinted violet, with their
+ * sub-lines; the text selection under them is not drawn, nor the caret. */
+.document-editor .bn-line-selected > .bn-block {
+  border-radius: 4px;
+  background-color: color-mix(in oklab, var(--primary) 14%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary) 22%, transparent);
+}
+.document-editor .bn-line-selected .bn-line-selected > .bn-block {
+  background-color: transparent;
+  box-shadow: none;
+}
+.document-editor .bn-lines-selected {
+  caret-color: transparent;
+}
+.document-editor .bn-lines-selected *::selection {
+  background: transparent;
+}
+/* The box a drag beside the lines draws to select them. */
+.block-select-box {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  border: 1px solid color-mix(in oklab, var(--primary) 55%, transparent);
+  border-radius: 2px;
+  background-color: color-mix(in oklab, var(--primary) 12%, transparent);
+}
 @media (prefers-reduced-motion: reduce) {
   .document-editor .bn-fold {
     transition: none;

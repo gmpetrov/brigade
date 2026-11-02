@@ -15,6 +15,7 @@ import {
 } from '@/components/document-blocks'
 import type { DocumentEditorProps } from '@/components/document-editor'
 import { blockDropCursor, blockDropExtension } from '@/components/document-block-drop'
+import { blockSelectExtension } from '@/components/document-block-select'
 import { checkboxTapExtension } from '@/components/document-checkbox'
 import { checklistLookExtension } from '@/components/document-checklist'
 import { agentTyping, typeNextUpdate, type Writer } from '@/components/document-typing'
@@ -130,6 +131,7 @@ function LiveEditor({
         checklistLookExtension(),
         checkboxTapExtension(),
         blockDropExtension(),
+        blockSelectExtension(),
       ],
       collaboration: {
         provider,
@@ -290,7 +292,12 @@ function SavedDocument({
     schema: editorSchema,
     ...editorFiles(session.documentId, self),
     dropCursor: blockDropCursor(),
-    extensions: [checklistLookExtension(), checkboxTapExtension(), blockDropExtension()],
+    extensions: [
+      checklistLookExtension(),
+      checkboxTapExtension(),
+      blockDropExtension(),
+      blockSelectExtension(),
+    ],
   })
   self.current = editor
   const [saved, setSaved] = useState(session.text)

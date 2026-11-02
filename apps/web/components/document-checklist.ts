@@ -4,11 +4,18 @@
 // A line opens with its caret or a click on its details, and while the cursor is in it, so
 // nothing is ever edited unseen; it folds again from its caret, or once the cursor leaves
 // it. A selection opens only the line it starts in: one dragged or extended across folded
-// lines leaves them folded, so the page does not jump under the pointer. Decorations only: the document, its Markdown and what teammates read keep the line as
+// lines leaves them folded, so the page does not jump under the pointer, and so do whole lines
+// selected (document-block-select). Decorations only: the document, its Markdown and what teammates read keep the line as
 // it is.
 import { createExtension } from '@blocknote/core'
 import type { Node } from '@tiptap/pm/model'
-import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state'
+import {
+  Plugin,
+  PluginKey,
+  TextSelection,
+  type EditorState,
+  type Transaction,
+} from '@tiptap/pm/state'
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view'
 import { checklistLook, type Piece } from '@/lib/checklist-look'
 
@@ -86,9 +93,14 @@ function read(doc: Node) {
   return { notes, lines }
 }
 
-/** Whether the cursor is in the line: the caret, or where a selection starts. */
+/**
+ * Whether the cursor is in the line: the caret, or where a selection of text starts. Whole
+ * lines selected (document-block-select) or dragged by their handle open none of them.
+ */
 const holds = (line: Foldable, state: EditorState) =>
-  state.selection.anchor >= line.pos && state.selection.anchor <= line.pos + line.size
+  state.selection instanceof TextSelection &&
+  state.selection.anchor >= line.pos &&
+  state.selection.anchor <= line.pos + line.size
 
 /** Whether a line shows its details: opened, or the cursor is in it. */
 const isOpen = (line: Foldable, s: Pick<State, 'open' | 'focused'>, state: EditorState) =>
