@@ -32,7 +32,6 @@ import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -413,20 +412,13 @@ function AddMailbox({
 // One mailbox
 // ---------------------------------------------------------------------------
 
-function Section({ step, title, children }: { step: number; title: string; children: ReactNode }) {
+/** One line of a mailbox's settings: what it is on the left, its value and controls on the right. */
+function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <Card className="gap-3 px-5 py-5">
-      <h2 className="flex items-center gap-2 text-base font-bold">
-        <span
-          aria-hidden
-          className="flex size-6 flex-none items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary"
-        >
-          {step}
-        </span>
-        {title}
-      </h2>
-      {children}
-    </Card>
+    <div className="grid gap-2 py-4 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:gap-4">
+      <h2 className="text-sm leading-6 text-muted-foreground">{label}</h2>
+      <div className="flex min-w-0 flex-col gap-2 text-sm">{children}</div>
+    </div>
   )
 }
 
@@ -450,67 +442,62 @@ export function MailboxView({ id }: { id: string }) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6 md:px-6">
       <Back href="/app/inbox/mailboxes">Mailboxes</Back>
-      <header className="flex items-start gap-3">
-        <MailboxIcon kind={m.kind} />
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <h1 className="text-2xl font-extrabold tracking-tight wrap-anywhere">{m.name}</h1>
-          <Address value={m.address} />
+      <header className="flex flex-col gap-1">
+        <div className="flex items-center gap-3">
+          <MailboxIcon kind={m.kind} />
+          <h1 className="min-w-0 text-2xl font-extrabold tracking-tight wrap-anywhere">{m.name}</h1>
+        </div>
+        <div className="flex flex-col gap-0.5 pl-8">
+          {m.name !== m.address && <Address value={m.address} />}
           <span className="text-sm text-muted-foreground">
             {KIND[m.kind]}
             {m.visibility === 'you' && ' · Only you see it'}
           </span>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/app/inbox?source=${encodeURIComponent(m.id)}&status=all`}>Its mail</Link>
-        </Button>
       </header>
 
-      <Section step={1} title="Where its mail arrives">
-        {m.kind === 'gmail' ? (
-          <GmailArrival mailbox={m} reload={mailbox.reload} />
-        ) : (
-          <MailboxArrival
-            mailbox={m}
-            reload={mailbox.reload}
-            onTurnedOff={() => router.push('/app/inbox/mailboxes')}
-          />
-        )}
-      </Section>
-
-      <Section step={2} title="Who handles it">
-        <MailboxRules mailbox={m} reload={mailbox.reload} />
-      </Section>
-
-      <Section step={3} title="Who reads and replies">
-        {m.readers.length > 0 ? (
-          <ul className="flex flex-wrap gap-2">
-            {m.readers.map((t) => (
-              <li key={t.id}>
-                <Link
-                  href={`/app/teammates/${t.id}`}
-                  className="rounded-full bg-secondary px-2.5 py-1 text-sm hover:bg-secondary/70"
-                >
-                  {t.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground">No teammate has it yet.</p>
-        )}
-        <p className="text-sm text-muted-foreground">
-          {m.kind === 'agent'
-            ? `Only ${m.teammate?.name ?? 'its agent'} reads and sends from it.`
-            : 'The teammates given it read its mail and reply from it; give it to one on their page, under Access.'}{' '}
-          {m.visibility === 'you'
-            ? 'In the Inbox, only you see its mail.'
-            : 'In the Inbox, everyone in the workspace sees its mail.'}
-        </p>
-      </Section>
-
-      <Section step={4} title="How its replies go">
-        <MailboxSending mailbox={m} reload={mailbox.reload} />
-      </Section>
+      <Card className="gap-0 divide-y px-5 py-5">
+        <Row label="Arrives">
+          {m.kind === 'gmail' ? (
+            <GmailArrival mailbox={m} reload={mailbox.reload} />
+          ) : (
+            <MailboxArrival
+              mailbox={m}
+              reload={mailbox.reload}
+              onTurnedOff={() => router.push('/app/inbox/mailboxes')}
+            />
+          )}
+        </Row>
+        <Row label="New mail goes to">
+          <MailboxRules mailbox={m} reload={mailbox.reload} />
+        </Row>
+        <Row label="Access">
+          {m.readers.length > 0 ? (
+            <ul className="flex flex-wrap gap-1.5">
+              {m.readers.map((t) => (
+                <li key={t.id}>
+                  <Link
+                    href={`/app/teammates/${t.id}`}
+                    className="rounded-full bg-secondary px-2.5 py-1 hover:bg-secondary/70"
+                  >
+                    {t.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="text-muted-foreground">No teammate yet.</span>
+          )}
+          <p className="text-muted-foreground">
+            {m.kind === 'agent'
+              ? `Only ${m.teammate?.name ?? 'its agent'} reads and sends from it.`
+              : 'Can read and send from it when asked. Give it to a teammate on their page, under Access.'}
+          </p>
+        </Row>
+        <Row label="Replies">
+          <MailboxSending mailbox={m} reload={mailbox.reload} />
+        </Row>
+      </Card>
 
       {m.addressId && (
         <Card className="gap-3 px-5 py-5">
@@ -594,14 +581,11 @@ function MailboxArrival({
 
   return (
     <div className="flex flex-col gap-4 text-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <Address value={m.address} />
-        {m.manages && !changing && (
-          <Button variant="ghost" size="xs" onClick={() => setChanging(true)}>
-            Change
-          </Button>
-        )}
-      </div>
+      {m.manages && !changing && (
+        <Button variant="outline" size="xs" className="w-fit" onClick={() => setChanging(true)}>
+          Change address
+        </Button>
+      )}
       {changing && (
         <ChangeAddress
           mailbox={m}
@@ -1093,33 +1077,31 @@ function MailboxSending({
         api(`/connections/${m.connectionId}`, { method: 'PATCH', body: { sendPolicy: value } }),
       )
       .then(() => reload())
+  const chosen = SENDING.find((o) => o.value === m.sendPolicy)
   return (
-    <div className="flex flex-col gap-3 text-sm">
-      <RadioGroup
-        value={m.sendPolicy}
-        onValueChange={choose}
-        disabled={!m.setsSending || save.busy}
-        className="gap-3"
-      >
-        {SENDING.map((o) => (
-          <div key={o.value} className="flex items-start gap-2.5">
-            <RadioGroupItem value={o.value} id={`sending-${o.value}`} className="mt-0.5" />
-            <Label htmlFor={`sending-${o.value}`} className="grid gap-0.5 font-normal">
-              <span className="font-medium">{o.label}</span>
-              <span className="text-muted-foreground">{o.detail}</span>
-            </Label>
-          </div>
-        ))}
-      </RadioGroup>
+    <>
+      <Select value={m.sendPolicy} onValueChange={choose} disabled={!m.setsSending || save.busy}>
+        <SelectTrigger aria-label="Replies" className="w-fit">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {SENDING.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <p className="text-muted-foreground">
-        Every email leaves 30 seconds after it is sent or approved, and can be cancelled until then.
+        {chosen?.detail} Each email leaves 30 seconds after it is sent or approved, and can be
+        cancelled until then.
         {!m.setsSending &&
           (m.kind === 'gmail'
             ? ' Only the member who connected it, or an owner or admin, changes this.'
             : ' Only an owner or admin changes this.')}
       </p>
       <ErrorLine error={save.error} />
-    </div>
+    </>
   )
 }
 
@@ -1133,44 +1115,43 @@ function GmailArrival({
   const save = useAction()
   const shared = m.reach === 'workspace'
   return (
-    <div className="flex flex-col gap-3 text-sm">
-      <Address value={m.address} />
-      <p className="text-muted-foreground">
-        {shared
-          ? 'A Gmail account shared with every thread.'
-          : 'Your own Gmail account: its mail is never shown to anyone else.'}{' '}
-        Brigade keeps the mail its rules and playbooks take; the rest stays in Gmail.
-      </p>
-      <label className="flex items-start gap-2">
-        <Checkbox
-          checked={m.showAll}
-          disabled={!(m.manages || m.accountOwner) || !shared || save.busy}
-          onCheckedChange={(checked) =>
-            void save
-              .run(() =>
-                api(`/connections/${m.connectionId}`, {
-                  method: 'PATCH',
-                  body: { inbox: checked === true },
-                }),
-              )
-              .then(() => reload())
-          }
-          className="mt-0.5"
-        />
-        <span className="flex flex-col gap-0.5">
-          <span className="font-medium">Show all its mail in the Inbox</span>
-          <span className="text-muted-foreground">
-            {shared
-              ? 'For everyone in the workspace, not only what its rules take.'
-              : 'Share it with every thread first, in Settings › Apps.'}
-          </span>
+    <>
+      <p>
+        {shared ? 'A Gmail account shared with every thread.' : 'Your own Gmail account.'}{' '}
+        <span className="text-muted-foreground">
+          Brigade keeps only the mail a rule takes; the rest stays in Gmail.
         </span>
-      </label>
+      </p>
+      {shared && (
+        <label className="flex items-start gap-2">
+          <Checkbox
+            checked={m.showAll}
+            disabled={!(m.manages || m.accountOwner) || save.busy}
+            onCheckedChange={(checked) =>
+              void save
+                .run(() =>
+                  api(`/connections/${m.connectionId}`, {
+                    method: 'PATCH',
+                    body: { inbox: checked === true },
+                  }),
+                )
+                .then(() => reload())
+            }
+            className="mt-0.5"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="font-medium">Show all its mail in the Inbox</span>
+            <span className="text-muted-foreground">
+              For everyone in the workspace, not only what its rules take.
+            </span>
+          </span>
+        </label>
+      )}
       <ErrorLine error={save.error} />
       <Link href="/app/connections" className="w-fit font-medium text-primary hover:underline">
         Manage the account in Settings › Apps
       </Link>
-    </div>
+    </>
   )
 }
 
@@ -1211,22 +1192,22 @@ function MailboxRules({
       : 'Otherwise it waits in the Inbox, unassigned, for 30 days.'
 
   return (
-    <div className="flex flex-col gap-3">
-      <ol className="flex flex-col divide-y rounded-md border">
+    <>
+      <ol className="flex flex-col gap-3">
         {shown.map((rule, index) => (
-          <li key={rule.id} className="flex items-start gap-3 px-3 py-2 text-sm">
-            <span className="w-4 flex-none text-right text-muted-foreground tabular-nums">
+          <li key={rule.id} className="flex items-start gap-2.5">
+            <span className="mt-0.5 flex size-5 flex-none items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground tabular-nums">
               {index + 1}
             </span>
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span>
-                <span className="font-semibold">
+                <span className="font-medium">
                   {rule.playbook ? `Playbook ${rule.playbook.name}` : rule.label}
                 </span>{' '}
                 <span className="text-muted-foreground">→ {rule.teammate.name}</span>
                 {rule.playbook && rule.playbook.status !== 'active' && (
-                  <span className="ml-1.5 text-xs text-muted-foreground">
-                    ({rule.playbook.status})
+                  <span className="ml-1.5 rounded bg-muted px-1.5 py-px text-xs text-muted-foreground">
+                    {rule.playbook.status}
                   </span>
                 )}
               </span>
@@ -1243,30 +1224,34 @@ function MailboxRules({
                 </Link>
               )}
             </div>
-            {m.manages && (
+            {m.manages && (shown.length > 1 || !rule.playbook) && (
               <div className="flex flex-none items-center gap-0.5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={order.busy || index === 0}
-                  onClick={() => void move(index, -1)}
-                  aria-label={`Move "${rule.label}" up`}
-                  tooltip="Move up"
-                >
-                  <ArrowUp />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={order.busy || index === shown.length - 1}
-                  onClick={() => void move(index, 1)}
-                  aria-label={`Move "${rule.label}" down`}
-                  tooltip="Move down"
-                >
-                  <ArrowDown />
-                </Button>
+                {shown.length > 1 && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      disabled={order.busy || index === 0}
+                      onClick={() => void move(index, -1)}
+                      aria-label={`Move "${rule.label}" up`}
+                      tooltip="Move up"
+                    >
+                      <ArrowUp />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      disabled={order.busy || index === shown.length - 1}
+                      onClick={() => void move(index, 1)}
+                      aria-label={`Move "${rule.label}" down`}
+                      tooltip="Move down"
+                    >
+                      <ArrowDown />
+                    </Button>
+                  </>
+                )}
                 {!rule.playbook && (
                   <Button
                     type="button"
@@ -1284,25 +1269,26 @@ function MailboxRules({
             )}
           </li>
         ))}
-        <li className="px-3 py-2 text-sm text-muted-foreground">
+        <li className="flex items-start gap-2.5 text-muted-foreground">
+          <span
+            aria-hidden
+            className="mt-0.5 flex size-5 flex-none items-center justify-center rounded-full bg-muted text-[11px]"
+          >
+            –
+          </span>
           {shown.length > 0 ? rest : `No rule yet. ${rest}`}
         </li>
       </ol>
       <ErrorLine error={order.error} />
-      <p className="text-sm text-muted-foreground">
-        A reply to what a thread sent goes back to that thread first. Then each mail goes to the
-        first rule that matches it.
-      </p>
       {m.manages &&
         (m.kind === 'gmail' ? (
           adding ? (
             <GmailRule mailbox={m} onDone={() => setAdding(false)} reload={reload} />
           ) : (
-            <div>
-              <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
-                Add a rule
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" className="w-fit" onClick={() => setAdding(true)}>
+              <Plus />
+              Add a rule
+            </Button>
           )
         ) : (
           <AddRule
@@ -1312,7 +1298,7 @@ function MailboxRules({
             reload={reload}
           />
         ))}
-    </div>
+    </>
   )
 }
 
