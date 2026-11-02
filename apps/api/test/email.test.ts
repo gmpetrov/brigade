@@ -1372,6 +1372,72 @@ describe('offline computers', { skip }, () => {
   })
 })
 
+describe('a mail handed over as it arrives', { skip }, () => {
+  test('it is read for its thread, and its delivery leaves it with that thread', async () => {
+    const db = scoped(a)
+    const inbox = await import('../src/inbox.js')
+    // A stopped cloud computer: the hand-over's thread waits for it, as in production.
+    const cloud = await prisma.computer.create({
+      data: { ...a, kind: 'cloud', name: 'Cloud', status: 'stopped' },
+    })
+    await prisma.account.create({
+      data: {
+        ...a,
+        memberId: members[0]!,
+        computerId: cloud.id,
+        provider: 'claude_code',
+        label: 'Claude',
+        status: 'ready',
+      },
+    })
+    try {
+      const address = await db.mailAddress.findFirstOrThrow({ where: { teammateId: riley.id } })
+      const event = mail({
+        to: [`${base()}@mails.brigade.test`],
+        from: 'friend@outside.test',
+        subject: 'Fwd: Retouche Video',
+        text: 'Which model removes an object from a video?',
+      })
+      // Kept by the webhook, as received() does, and not read yet when a person hands it over.
+      const row = await prisma.mailMessage.create({
+        data: {
+          ...a,
+          addressId: address.id,
+          box: `${address.id}:-`,
+          direction: 'in',
+          status: 'pending',
+          resendId: event.email_id,
+          messageId: event.message_id,
+          conversationId: `pending:${event.email_id}`,
+          fromAddress: 'friend@outside.test',
+          to: event.to,
+          subject: event.subject,
+        } as never,
+      })
+      const shown = await inbox.readItem(db, ws(a), `mail:${row.id}`)
+      assert.equal(shown.messages[0]!.arriving, true)
+      const { threadId } = await inbox.handItem(db, ws(a), `mail:${row.id}`, {
+        teammateId: riley.id,
+      })
+      // The thread starts with its words, not an empty mail.
+      const sent = await prisma.runnerCommand.findMany({ where: { sessionId: threadId } })
+      assert.match(JSON.stringify(sent), /Which model removes an object from a video/)
+      const read = await prisma.mailMessage.findUniqueOrThrow({ where: { id: row.id } })
+      assert.equal(read.text, 'Which model removes an object from a video?')
+      assert.ok(!read.conversationId.startsWith('pending:'))
+      // Its delivery runs after: it stays with the thread it was handed to.
+      await inbound.processMail(row.id)
+      const delivered = await prisma.mailMessage.findUniqueOrThrow({ where: { id: row.id } })
+      assert.equal(delivered.status, 'done')
+      assert.equal(delivered.route, 'handed')
+      assert.equal(delivered.sessionId, threadId)
+      assert.equal((await inbox.readItem(db, ws(a), `mail:${row.id}`)).messages[0]!.arriving, false)
+    } finally {
+      await prisma.computer.delete({ where: { id: cloud.id } })
+    }
+  })
+})
+
 describe('rule preview privacy', { skip }, () => {
   test('a regular member must not preview someone elses personal Gmail', async () => {
     const db = scoped(a)

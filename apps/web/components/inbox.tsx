@@ -1350,7 +1350,9 @@ function Message({
       >
         {header}
         <span className="w-full truncate pl-12 text-left text-sm text-muted-foreground">
-          {m.hidden ? SIGN_UP : m.text.replace(/\s+/g, ' ') || 'No text.'}
+          {m.hidden
+            ? SIGN_UP
+            : m.text.replace(/\s+/g, ' ') || (m.arriving ? 'Arriving…' : 'No text.')}
         </span>
       </button>
     )
@@ -1395,6 +1397,8 @@ function Message({
         <p className="w-full text-[15px] leading-relaxed whitespace-pre-wrap wrap-anywhere">
           {m.text}
         </p>
+      ) : m.arriving ? (
+        <p className="text-sm text-muted-foreground">Arriving…</p>
       ) : (
         <p className="text-sm text-muted-foreground">No text.</p>
       )}
