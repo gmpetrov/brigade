@@ -11,7 +11,6 @@ import {
   CalendarClock,
   ChevronDown,
   CircleCheck,
-  CircleStop,
   CloudUpload,
   FolderKanban,
   Laptop,
@@ -1737,7 +1736,10 @@ export function ThreadConversation({
                               : `Stop ${answering.name}`
                         }
                       >
-                        <CircleStop aria-hidden />
+                        {/* A filled rounded square, as in other chat apps' stop button. */}
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                          <rect x="5" y="5" width="14" height="14" rx="3" />
+                        </svg>
                       </Button>
                     )}
                     {/* No Tab key on a touch screen: Use puts the suggestion in the box, the
