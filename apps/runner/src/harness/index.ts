@@ -171,7 +171,8 @@ export { stripApiKeys, usePersonPath } from './env.js'
 const execFileAsync = promisify(execFile)
 
 export type ThreadInput =
-  | { kind: 'prompt'; text: string }
+  /** `retry`: a turn that failed, tried again (threads.ts): told again the message it answered. */
+  | { kind: 'prompt'; text: string; retry?: boolean }
   /** The computer stopped during a turn: continue it. `text`: what was said since, if anything. */
   | { kind: 'resume'; text: string }
   | { kind: 'approval'; approvalId: string; approved: boolean; reason?: string }
@@ -200,6 +201,12 @@ type SavedState = {
   arrivedFrom?: string
   /** A turn was running when this was written: found on start, the process stopped without parking. */
   inTurn?: boolean
+  /**
+   * The latest message a turn started from, but for a failed turn's retries: told again when
+   * the turn that answered it comes back in a conversation that may not have it (a retry after
+   * its process died, a restart).
+   */
+  asked?: string
   /** Turns continued after a restart since one last finished, to stop when restarts keep cutting it off. */
   recoveries?: number
   /**
@@ -484,6 +491,12 @@ export class HarnessThread {
     // An answer to an ask set aside for a message: no turn waits on it, so it comes as a message.
     const later = this.laterAnswer(input)
     if (later !== undefined) input = { kind: 'prompt', text: later }
+    // A failed turn tried again: its process died with it, maybe before the harness kept the
+    // conversation (the first turn of a thread, killed by the memory guard), so the next session
+    // may start without the message it answered. It is told it again.
+    const retry = input.kind === 'prompt' && !!input.retry
+    if (retry && input.kind === 'prompt' && this.saved?.asked)
+      input = { kind: 'prompt', text: `${ASKED}\n\n${this.saved.asked}\n\n${input.text}` }
     // An approval, an answer or a ticket goes on with the turn it paused.
     if (input.kind === 'prompt') this.replies.start()
     else if (input.kind === 'resume') this.replies.resume()
@@ -519,6 +532,7 @@ export class HarnessThread {
       this.reasoning.clear()
     }
     this.saved ??= { accountId: spec.account.id, transcript: [] }
+    if (input.kind === 'prompt' && !retry) this.saved.asked = input.text.slice(0, TRANSCRIPT_CHARS)
     // Someone asked for this turn: restarts that cut off earlier ones no longer count.
     if (input.kind !== 'resume') this.saved.recoveries = 0
     // Found on disk after a stop without warning, this says the turn did not finish.
@@ -638,8 +652,8 @@ export class HarnessThread {
       saved.resume = resume
       // A turn cut off before the harness wrote its conversation comes back without the
       // message it answered (Claude Code then starts a new one): it is told it again.
-      const asked = saved.transcript.findLast((t) => t.role === 'user')
-      const again = asked && `${ASKED}\n\n${asked.text}`
+      const asked = saved.asked ?? saved.transcript.findLast((t) => t.role === 'user')?.text
+      const again = asked && `${ASKED}\n\n${asked}`
       return {
         input: { kind: 'resume', text: [RESTARTED, again, unseen].filter(Boolean).join('\n\n') },
       }
@@ -1826,6 +1840,14 @@ export class HarnessThread {
     await this.park().catch(async () => {
       await live?.session.destroy().catch(() => undefined)
       await live?.sandbox.destroy()
+      // Its process gone without a stop (the memory guard killed it, it crashed) before any
+      // stop kept the conversation: the next session continues what the harness wrote of it,
+      // as after a restart (recover), rather than start a new one without it.
+      const resume = this.saved?.resume ?? resumable(this.spec.teammate.harness, undefined)
+      if (this.saved && resume && this.saved.resume !== resume) {
+        this.saved.resume = resume
+        await this.persist()
+      }
     })
   }
 
