@@ -4,7 +4,7 @@
 // themselves are on the Routines page and Home.
 // The API computes it (GET /board); this page filters it by project, list and teammate.
 import type { Board, BoardCard, BoardColumn, BoardRoutine, BoardStopped } from '@brigade/contracts'
-import { ChevronDown, GitPullRequest, ListChecks, X } from 'lucide-react'
+import { AlarmClock, ChevronDown, GitPullRequest, ListChecks, X } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
+import { shortWakeTime, wakeTime } from '@/components/wakeup-icon'
 import { api, ApiError, useApi } from '@/lib/api'
 import { listen } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
@@ -206,6 +207,16 @@ function CardView({ card }: { card: BoardCard }) {
           </span>
         )}
         {byline.length > 0 && <span className="min-w-0 truncate">{byline.join(' · ')}</span>}
+        {card.wakeAt && card.column !== 'done' && (
+          <span
+            title={`Wake-up at ${wakeTime(card.wakeAt)}`}
+            className="flex shrink-0 items-center gap-1"
+          >
+            <AlarmClock aria-hidden className="size-3" />
+            <span className="sr-only">Wake-up at </span>
+            {shortWakeTime(card.wakeAt)}
+          </span>
+        )}
         <span className="ml-auto flex shrink-0 items-center gap-1.5">
           {card.reason !== 'pull' || card.column !== 'needs_you' ? (
             <PullChip pulls={card.pulls} />

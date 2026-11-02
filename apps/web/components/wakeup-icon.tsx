@@ -13,6 +13,18 @@ export const wakeTime = (at: string) => {
   })
 }
 
+/** Shorter, for a card's row: "14:30" today, "Tue 16:37" this week, else "3 Nov 16:37". */
+export const shortWakeTime = (at: string, now = new Date()) => {
+  const date = new Date(at)
+  const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  if (date.toDateString() === now.toDateString()) return time
+  const day =
+    date.getTime() - now.getTime() < 6 * 24 * 60 * 60 * 1000
+      ? date.toLocaleDateString(undefined, { weekday: 'short' })
+      : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  return `${day} ${time}`
+}
+
 export function WakeupIcon({ at }: { at: string }) {
   const label = `Wake-up at ${wakeTime(at)}`
   return (

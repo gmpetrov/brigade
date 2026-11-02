@@ -238,9 +238,11 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
   const itemThreadIds = [
     ...new Set(lists.flatMap((l) => l.items.flatMap((i) => i.threads.map((t) => t.id)))),
   ]
-  const itemThreads = new Map(
-    (itemThreadIds.length
-      ? await db.session.findMany({
+  // Every pending wake-up of a thread that may be a card or on one, the earliest first.
+  const allThreadIds = [...new Set([...itemThreadIds, ...rows.map((t) => t.id)])]
+  const [itemThreadRows, wakeups] = await Promise.all([
+    itemThreadIds.length
+      ? db.session.findMany({
           where: { id: { in: itemThreadIds } },
           select: {
             id: true,
@@ -257,9 +259,26 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
             teammate: { select: { id: true, name: true } },
           },
         })
-      : []
-    ).map((t) => [t.id, t]),
-  )
+      : [],
+    allThreadIds.length
+      ? db.wakeup.findMany({
+          where: { sessionId: { in: allThreadIds }, status: 'pending', kind: 'wakeup' },
+          select: { sessionId: true, wakeAt: true },
+          orderBy: { wakeAt: 'asc' },
+        })
+      : [],
+  ])
+  const itemThreads = new Map(itemThreadRows.map((t) => [t.id, t]))
+  const nextWake = new Map<string, Date>()
+  for (const w of wakeups) if (!nextWake.has(w.sessionId)) nextWake.set(w.sessionId, w.wakeAt)
+  /** The earliest wake-up among threads, for a card that is not done. */
+  const wakeAtOf = (threadIds: string[]) => {
+    const times = threadIds.flatMap((id) => {
+      const at = nextWake.get(id)
+      return at ? [at.getTime()] : []
+    })
+    return times.length ? new Date(Math.min(...times)).toISOString() : null
+  }
 
   const failedOnLines = await failedWaitingAmong(db, itemThreadIds, now)
   const mayClose = (t: {
@@ -337,6 +356,12 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
           place.column === 'done' && item.doneBy
             ? { at: item.doneBy.at, by: item.doneBy.name }
             : null,
+        wakeAt:
+          place.column === 'done'
+            ? null
+            : wakeAtOf(
+                item.threads.filter((t) => !itemThreads.get(t.id)?.archivedAt).map((t) => t.id),
+              ),
       })
     }
   }
@@ -345,43 +370,35 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
   // line left its list.
   const offList = rows.filter((t) => !represented.has(t.id))
   const ids = offList.map((t) => t.id)
-  const [failed, childTickets, childrenWorking, wakeups, routinesFailing, names] =
-    await Promise.all([
-      failedWaitingAmong(db, ids, now),
-      ids.length
-        ? db.ticket.findMany({
-            where: { status: 'open', session: { parentId: { in: ids } } },
-            select: { session: { select: { parentId: true } } },
-          })
-        : [],
-      ids.length
-        ? db.session.groupBy({
-            by: ['parentId'],
-            where: {
-              parentId: { in: ids },
-              awaited: true,
-              status: { in: ['starting', 'running'] },
-            },
-            _count: { _all: true },
-          })
-        : [],
-      ids.length
-        ? db.wakeup.findMany({
-            where: { sessionId: { in: ids }, status: 'pending', kind: 'wakeup' },
-            select: { sessionId: true },
-          })
-        : [],
-      failingRoutines(db, {}, now),
-      actorNames(
-        db,
-        offList.flatMap((t) =>
-          t.doneAt && t.doneByType && t.doneById ? [{ type: t.doneByType, id: t.doneById }] : [],
-        ),
+  const [failed, childTickets, childrenWorking, routinesFailing, names] = await Promise.all([
+    failedWaitingAmong(db, ids, now),
+    ids.length
+      ? db.ticket.findMany({
+          where: { status: 'open', session: { parentId: { in: ids } } },
+          select: { session: { select: { parentId: true } } },
+        })
+      : [],
+    ids.length
+      ? db.session.groupBy({
+          by: ['parentId'],
+          where: {
+            parentId: { in: ids },
+            awaited: true,
+            status: { in: ['starting', 'running'] },
+          },
+          _count: { _all: true },
+        })
+      : [],
+    failingRoutines(db, {}, now),
+    actorNames(
+      db,
+      offList.flatMap((t) =>
+        t.doneAt && t.doneByType && t.doneById ? [{ type: t.doneByType, id: t.doneById }] : [],
       ),
-    ])
+    ),
+  ])
   const ticketsOfChildren = new Set(childTickets.map((t) => t.session?.parentId))
   const working = new Set(childrenWorking.map((c) => c.parentId))
-  const waking = new Set(wakeups.map((w) => w.sessionId))
   // ---- Threads on no list ----
   for (const t of offList) {
     const doneAt = t.doneAt ?? t.task?.completedAt ?? null
@@ -400,6 +417,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
         state: p.state,
         url: pullUrl(p),
       })),
+      wakeAt: wakeAtOf([t.id]),
     }
     if (t.doneAt || t.task?.completedAt) {
       if (doneRecently)
@@ -407,6 +425,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
           ...base,
           column: 'done',
           reason: null,
+          wakeAt: null,
           note: oneLine(t.doneAt ? t.doneSummary : t.task?.summary),
           at: doneAt!.toISOString(),
           done: {
@@ -444,7 +463,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
     const moving: BoardReason | null =
       ACTIVE.includes(t.status) || working.has(t.id) || t.status === 'failed'
         ? 'working'
-        : waking.has(t.id)
+        : nextWake.has(t.id)
           ? 'wakeup'
           : t.pullRequests.some((p) => p.state === 'open')
             ? 'review'
@@ -582,6 +601,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
       note: oneLine(f.error),
       at: f.at.toISOString(),
       done: null,
+      wakeAt: null,
     })
   }
 
