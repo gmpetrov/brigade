@@ -16,7 +16,7 @@ use base64::Engine;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use tauri::ipc::{CapabilityBuilder, Response};
-use tauri::menu::{CheckMenuItem, MenuItem};
+use tauri::menu::{CheckMenuItem, Menu, MenuItem};
 use tauri::{
     AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent, Wry,
 };
@@ -70,6 +70,14 @@ impl Kind {
         }
     }
 
+    /// Its action at the top of the menu: menu id and label.
+    pub fn action(self) -> (&'static str, &'static str) {
+        match self {
+            Kind::Screenshot => ("capture", "Take a screenshot"),
+            Kind::NewThread => ("capture-draft", "New thread"),
+        }
+    }
+
     /// Its items' menu ids start with this, then the stored value.
     pub fn prefix(self) -> &'static str {
         match self {
@@ -103,8 +111,8 @@ pub struct Capture {
     taking: AtomicBool,
     /// The Shortcuts submenu's items, by kind and stored value.
     items: Vec<(Kind, &'static str, CheckMenuItem<Wry>)>,
-    /// The menu's actions, which show their shortcut while it is registered.
-    actions: Vec<(Kind, MenuItem<Wry>)>,
+    /// The menu-bar menu, whose actions show their shortcut while it is registered.
+    menu: Menu<Wry>,
     /// Dashboard origins whose page may call the commands below.
     allowed: Mutex<HashSet<String>>,
     /// The secret of the window's sign-in through the browser, once started (`capture_sign_in`).
@@ -112,14 +120,11 @@ pub struct Capture {
 }
 
 impl Capture {
-    pub fn new(
-        items: Vec<(Kind, &'static str, CheckMenuItem<Wry>)>,
-        actions: Vec<(Kind, MenuItem<Wry>)>,
-    ) -> Self {
+    pub fn new(items: Vec<(Kind, &'static str, CheckMenuItem<Wry>)>, menu: Menu<Wry>) -> Self {
         Self {
             taking: AtomicBool::new(false),
             items,
-            actions,
+            menu,
             allowed: Mutex::new(HashSet::new()),
             verifier: Mutex::new(None),
         }
@@ -174,9 +179,7 @@ pub fn apply_shortcuts(app: &AppHandle, report: &[Kind]) {
             && value
                 .parse::<Shortcut>()
                 .is_ok_and(|shortcut| shortcuts.register(shortcut).is_ok());
-        for (_, action) in capture.actions.iter().filter(|(k, _)| *k == kind) {
-            let _ = action.set_accelerator(registered.then_some(value));
-        }
+        show_key(app, &capture.menu, kind, registered.then_some(value));
         if value != "off" && !registered {
             for (_, _, item) in items() {
                 let _ = item.set_checked(false);
@@ -196,6 +199,23 @@ pub fn apply_shortcuts(app: &AppHandle, report: &[Kind]) {
                 );
             }
         }
+    }
+}
+
+/// The kind's action in the menu, shown with `key` or with none. The action is replaced rather
+/// than updated: muda's macOS `set_accelerator(None)` leaves the old key equivalent in place.
+fn show_key(app: &AppHandle, menu: &Menu<Wry>, kind: Kind, key: Option<&str>) {
+    let (id, label) = kind.action();
+    let Some(position) = menu
+        .items()
+        .ok()
+        .and_then(|items| items.iter().position(|item| item.id() == id))
+    else {
+        return;
+    };
+    if let Ok(item) = MenuItem::with_id(app, id, label, true, key) {
+        let _ = menu.remove_at(position);
+        let _ = menu.insert(&item, position);
     }
 }
 

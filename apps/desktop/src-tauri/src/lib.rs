@@ -446,8 +446,13 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             .map(|item| item.as_ref())
             .collect::<Vec<_>>(),
     )?;
-    let new_thread = MenuItem::with_id(app, "capture-draft", "New thread", true, None::<&str>)?;
-    let screenshot = MenuItem::with_id(app, "capture", "Take a screenshot", true, None::<&str>)?;
+    // The actions, given their shortcuts by apply_shortcuts once registered.
+    let action = |kind: capture::Kind| {
+        let (id, label) = kind.action();
+        MenuItem::with_id(app, id, label, true, None::<&str>)
+    };
+    let new_thread = action(capture::Kind::NewThread)?;
+    let screenshot = action(capture::Kind::Screenshot)?;
     // The actions first: what the menu is opened for. Then the dashboard, then settings.
     let menu = Menu::with_items(
         app,
@@ -494,13 +499,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     computer_use.restart();
     app.manage(computer_use);
     app.manage(Awake::default());
-    app.manage(capture::Capture::new(
-        shortcut_items,
-        vec![
-            (capture::Kind::NewThread, new_thread),
-            (capture::Kind::Screenshot, screenshot),
-        ],
-    ));
+    app.manage(capture::Capture::new(shortcut_items, menu.clone()));
     capture::apply_shortcuts(app.handle(), &capture::KINDS);
     capture::show_count(app.handle());
     if settings.keep_awake {
