@@ -1063,9 +1063,11 @@
 .document-editor .bn-detail {
   display: none;
 }
-.document-editor .bn-detail-peek {
+.document-editor .bn-inline-content .bn-detail-peek {
   @apply truncate;
   display: block;
+  /* Over ProseMirror's own rule for what is not editable (white-space: normal). */
+  white-space: nowrap;
   color: var(--muted-foreground);
   font-size: 0.9em;
   cursor: pointer;

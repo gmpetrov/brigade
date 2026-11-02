@@ -140,6 +140,15 @@ mission; threads stay where the work happens.
   its threads (state dot, teammate, title, "needs you"), pull requests (what remains after one,
   in its tooltip) and "Stopped, still open" when stalled (`components/list-items.tsx`); the same
   chips show wherever the file opens, such as the document panel.
+- **Long lines fold** (`lib/checklist-look.ts`, `components/document-checklist.ts`), wherever the
+  file opens in the document editor: a line that starts with a title (`Title: details…`, the
+  title ending at its first colon followed by a space, outside code, or at its `Done when:`)
+  and goes on for 40 characters or more shows its title, a caret before it, and its details on
+  one grey line that fades out. Its caret or a click on its details opens it; so does the
+  cursor, so nothing is edited unseen; its caret folds it again (the cursor leaves the editor),
+  as does the cursor leaving it. Decorations only: the file, its Markdown and what teammates
+  read keep the whole line. A line is open or folded for whoever looks, not saved. Write a
+  long line as `Short title: evidence, code, Done when…` to read well folded.
 - **Recently done**: above the Done filter's lines, the items Brigade ticked in the last 14 days
   (a merged pull request, `complete_item`, a tick from a thread's card), newest first, by day,
   each with who ticked it and its pull requests and threads (`lib/recently-done.ts`). Only those
