@@ -29,7 +29,10 @@ enum Permissions {
       askedScreen = true
       CGRequestScreenCaptureAccess()
     }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { exit(0) }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+      Run.shutdown()
+      exit(0)
+    }
     throw HelperError(
       "permission_missing",
       "Screen Recording is off for Brigade Computer Use. Ask the person to turn it on in System Settings → Privacy & Security → Screen Recording, then try again: the app restarts by itself to pick it up."
@@ -109,9 +112,14 @@ enum Capture {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
     process.arguments = ["-i", path]
+    // The person's own screenshot, not a teammate's command: a command ending doesn't sweep it.
+    defer { Run.unspare(process.processIdentifier) }
     try await withCheckedThrowingContinuation { (done: CheckedContinuation<Void, Error>) in
       process.terminationHandler = { _ in done.resume() }
-      do { try process.run() } catch { done.resume(throwing: error) }
+      do {
+        try process.run()
+        Run.spare(process.processIdentifier)
+      } catch { done.resume(throwing: error) }
     }
     // Esc during the selection leaves no file.
     guard FileManager.default.fileExists(atPath: path) else { return ["cancelled": true] }
