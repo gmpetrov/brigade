@@ -33,7 +33,7 @@ gives every thread every App, on the teammate it is installed for.
 ## Versions and updates
 
 Raise `version` (semver) with every change to a template. An installation keeps the manifest it
-was installed with; when its template is newer, its sheet on Routines shows "Version 1.0.0 · 1.3.0
+was installed with; when its template is newer, its page on Playbooks shows "Version 1.0.0 · 1.3.0
 available" and an Update button (its owner, an owner or an admin), and a person can also ask the
 chief in a chat (`update_playbook`). `src/playbook-updates.ts` compares the two versions and moves
 it in place (`POST /playbooks/:id/update`):

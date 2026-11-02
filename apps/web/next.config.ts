@@ -129,6 +129,12 @@ const nextConfig = async (phase: string): Promise<NextConfig> => ({
         destination: '/app/projects/:id/routines',
         permanent: false,
       },
+      // Playbooks left Routines for a page of their own.
+      {
+        source: '/app/routines/playbooks/:id',
+        destination: '/app/playbooks/:id',
+        permanent: false,
+      },
     ]
   },
   // The public docs (apps/docs), built and hosted by Mintlify, served at www.brigade.lol/docs

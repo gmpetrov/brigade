@@ -3,7 +3,6 @@ import { CalendarClock, MoreHorizontal, Pencil, Play, Plus, Trash2 } from 'lucid
 import Link from 'next/link'
 import { useState } from 'react'
 import { isAdmin, StatusBadge, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
-import { PlaybookList } from '@/components/playbooks'
 import { ProjectFilter, ProjectTag } from '@/components/projects'
 import { describeCron, ScheduleDialog, scheduleTime, zoneName } from '@/components/schedules'
 import { Button } from '@/components/ui/button'
@@ -156,8 +155,8 @@ function ScheduleRow({
 }
 
 /**
- * Routines: the playbooks installed, then schedules that prompt a teammate at set times. In a
- * project, its own.
+ * Routines: schedules that prompt a teammate at set times. In a project, its own. Playbooks
+ * have their own page.
  */
 export function ScheduleList({
   projectId,
@@ -186,8 +185,8 @@ export function ScheduleList({
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-extrabold tracking-tight">Routines</h1>
             <p className="max-w-prose text-muted-foreground">
-              Work your teammates do on their own: playbooks, and schedules that run in a fresh
-              thread each time. Ask a teammate in a thread, or add a schedule yourself.
+              Work your teammates do on a schedule, in a fresh thread each time. Ask a teammate in a
+              thread, or add a schedule yourself.
             </p>
           </div>
         )}
@@ -199,8 +198,6 @@ export function ScheduleList({
           </Button>
         </div>
       </header>
-
-      <PlaybookList projectId={projectId} filter={filter} />
 
       <section aria-labelledby="schedules" className="flex flex-col gap-3">
         <h2 id="schedules" className="flex items-center gap-2 text-sm font-bold">
