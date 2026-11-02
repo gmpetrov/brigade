@@ -2,11 +2,17 @@
 // A received mail's words in the Inbox, two ways: its text made readable (paragraphs, the
 // forwarded message's header block, links), the default; or its HTML as it was made, in a
 // sandboxed frame (lib/mail-html.ts says what it lets through).
-import { ImageIcon } from 'lucide-react'
+import { ChevronRight, ImageIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { cidOf, followHeight, type MailFrameTheme, mailDocument } from '@/lib/mail-html'
-import { type MailText, readMailText, tokens } from '@/lib/mail-text'
+import {
+  type Forwarded,
+  forwardSummary,
+  type MailText,
+  readMailText,
+  tokens,
+} from '@/lib/mail-text'
 import { cn } from '@/lib/utils'
 
 export type MailView = 'text' | 'html'
@@ -57,29 +63,86 @@ function MailTextBlock({ mail, className }: { mail: MailText; className?: string
     <div className={cn('flex w-full flex-col gap-3', className)}>
       {mail.text && <Words text={mail.text} />}
       {mail.forwarded && (
-        <div className="flex flex-col gap-3 rounded-lg border bg-secondary/40 px-4 py-3">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-muted-foreground">
-              {mail.forwarded.label}
-            </span>
-            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-sm">
-              {mail.forwarded.headers.map(([label, value], i) => (
-                <Fragment key={`${label}-${i}`}>
-                  <dt className="text-muted-foreground">{label}</dt>
-                  <dd className="wrap-anywhere">
-                    <Words text={value} inline />
-                  </dd>
-                </Fragment>
-              ))}
-            </dl>
-          </div>
-          {(mail.forwarded.body.text || mail.forwarded.body.forwarded) && (
-            <MailTextBlock mail={mail.forwarded.body} className="border-t pt-3" />
-          )}
-        </div>
+        // Folded when the mail has words of its own above it, so they stay what one reads first;
+        // a mail that only forwards shows it open, having nothing else to read.
+        <ForwardedBlock forwarded={mail.forwarded} folded={Boolean(mail.text)} />
       )}
     </div>
   )
+}
+
+function ForwardedBlock({ forwarded, folded }: { forwarded: Forwarded; folded: boolean }) {
+  const [open, setOpen] = useState(!folded)
+  if (!open) {
+    const { from, subject, date } = forwardSummary(forwarded)
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-expanded={false}
+        aria-label={`Show the forwarded message${from ? ` from ${from}` : ''}`}
+        className="flex w-full min-w-0 items-center gap-2 rounded-lg border bg-secondary/40 px-4 py-2.5 text-left text-sm hover:bg-secondary/70"
+      >
+        <ChevronRight className="size-3.5 flex-none text-muted-foreground" aria-hidden />
+        <span className="flex-none text-xs font-semibold text-muted-foreground">Forwarded</span>
+        <span className="min-w-0 flex-1 truncate">
+          {from && <span className="font-medium">{from}</span>}
+          {from && subject && <span className="text-muted-foreground"> · </span>}
+          {subject && <span className="text-muted-foreground">{subject}</span>}
+        </span>
+        {date && (
+          <time
+            dateTime={date.toISOString()}
+            className="flex-none text-xs text-muted-foreground tabular-nums"
+          >
+            {shortDate(date)}
+          </time>
+        )}
+      </button>
+    )
+  }
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border bg-secondary/40 px-4 py-3">
+      <div className="flex flex-col gap-1.5">
+        {folded ? (
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-expanded
+            className="flex items-center gap-1 self-start text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            <ChevronRight className="size-3.5 rotate-90" aria-hidden />
+            {forwarded.label}
+          </button>
+        ) : (
+          <span className="text-xs font-semibold text-muted-foreground">{forwarded.label}</span>
+        )}
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-sm">
+          {forwarded.headers.map(([label, value], i) => (
+            <Fragment key={`${label}-${i}`}>
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="wrap-anywhere">
+                <Words text={value} inline />
+              </dd>
+            </Fragment>
+          ))}
+        </dl>
+      </div>
+      {(forwarded.body.text || forwarded.body.forwarded) && (
+        <MailTextBlock mail={forwarded.body} className="border-t pt-3" />
+      )}
+    </div>
+  )
+}
+
+/** "Oct 30", with its year when not this year's. */
+function shortDate(date: Date) {
+  const thisYear = date.getFullYear() === new Date().getFullYear()
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(thisYear ? {} : { year: 'numeric' }),
+  })
 }
 
 function Words({ text, inline }: { text: string; inline?: boolean }) {
