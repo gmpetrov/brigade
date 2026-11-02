@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { PrismaPg } from '@prisma/adapter-pg'
+import pg from 'pg'
 import { Prisma, PrismaClient } from './generated/prisma/client.js'
 import { env } from './config.js'
 import { countQuery } from './timing.js'
@@ -14,12 +15,58 @@ export function newPrismaClient(
   connectionString: string,
   pool: { max?: number; idleTimeoutMillis?: number } = {},
 ) {
+  const connections = new pg.Pool({ connectionString, ...pool })
+  retryReads(connections)
   const client = new PrismaClient({
-    adapter: new PrismaPg({ connectionString, ...pool }),
+    adapter: new PrismaPg(connections, { disposeExternalPool: true }),
     log: [{ emit: 'event', level: 'query' }],
   })
   client.$on('query', (event) => countQuery(event.duration))
   return client
+}
+
+/**
+ * An error of a connection the database (or Hyperdrive in front of it) closed, rather than of
+ * the query: Postgres's connection exceptions (class 08, as Hyperdrive's 08006 "Connection to the
+ * origin database was lost"), an administrator's shutdown (57P01), a reset socket, or node-postgres
+ * finding the socket gone ("Connection terminated unexpectedly").
+ */
+export function isDeadConnection(error: unknown) {
+  if (!(error instanceof Error)) return false
+  const code = (error as { code?: unknown }).code
+  if (
+    typeof code === 'string' &&
+    (/^08/.test(code) || ['57P01', 'ECONNRESET', 'EPIPE'].includes(code))
+  )
+    return true
+  return /connection terminated|not queryable|client was closed|connection to the origin database was lost/i.test(
+    error.message,
+  )
+}
+
+/** A query that only reads: run twice, it does nothing twice. */
+const READ = /^\s*select\b/i
+
+/**
+ * A read outside a transaction that meets a connection the database closed (one dropped
+ * connection failed 10 requests at once on 2026-11-01) is run once more: the pool has
+ * dropped that connection by then (node-postgres releases it with its error), so it gets
+ * another. Writes are not: one may have been applied before its answer was lost. Transactions
+ * take their own connection (pool.connect) and are not either.
+ */
+export function retryReads(pool: pg.Pool) {
+  const query = pool.query.bind(pool) as (...args: unknown[]) => Promise<unknown>
+  pool.query = ((...args: unknown[]) => {
+    const first = args[0] as string | { text?: unknown } | undefined
+    const text = typeof first === 'string' ? first : first?.text
+    if (args.some((a) => typeof a === 'function') || typeof text !== 'string' || !READ.test(text))
+      return query(...args)
+    return query(...args).catch((error: unknown) => {
+      if (!isDeadConnection(error)) throw error
+      console.warn(`db: a read met a closed connection, run again on another: ${String(error)}`)
+      return query(...args)
+    })
+  }) as typeof pool.query
 }
 
 /** The process's client: the API's on Node, the Api object's on Cloudflare. */

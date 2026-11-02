@@ -30,6 +30,10 @@ const ALLOWED: Record<string, string> = {
   'src/subscriptions/common.ts:running':
     "subscriptions' readers, one at a time: jobs and webhooks, never a hub",
   'src/ops/failures.ts:failures': 'failures counted for the checks of the process that runs them',
+  'src/ops/failures.ts:seenWrites':
+    "the writes of open alerts' last failures under way, in the process that counted them",
+  'src/ops/last-seen.ts:seenWritten':
+    "when each kind's last failure was last written, to write a burst once a minute: a limit per process",
   'src/ops/checks.ts:reported':
     "what hub objects last said of their threads' events: the checks' own memory, renewed each tick",
   'src/ops/checks.ts:offlineSince': "the checks' own memory, in the process that runs them",

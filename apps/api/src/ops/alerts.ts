@@ -103,8 +103,12 @@ async function tell(notice: Notice) {
   }
 }
 
-/** The problem is there now. Safe to call on every run of a check. */
-export async function raise(alert: Alert, now = new Date()) {
+/**
+ * The problem is there now. Safe to call on every run of a check. `lastAt`: when it was last
+ * seen, for a problem counted from failures (the newest one's time, never the check's); by
+ * default, now.
+ */
+export async function raise(alert: Alert, now = new Date(), lastAt = now) {
   const detail = (alert.detail ?? '').slice(0, 4000)
   const row = await prisma.opsAlert.findUnique({ where: { key: alert.key } })
   const step = onRaise(row, alert.severity, now)
@@ -119,26 +123,54 @@ export async function raise(alert: Alert, now = new Date()) {
       firstAt: step.firstAt,
       at: now,
     }))
-  const data = {
-    severity: step.severity,
-    title: alert.title,
-    detail,
-    lastAt: now,
-    firstAt: step.firstAt,
-    ...(step.reopen ? { resolvedAt: null } : {}),
-    // Not sent: tried again on the next run.
-    ...(notified
-      ? { notifiedAt: now, notifiedSeverity: step.severity }
-      : step.reopen && step.notify
-        ? { notifiedAt: null, notifiedSeverity: null }
-        : {}),
-  }
-  await prisma.opsAlert.upsert({
-    where: { key: alert.key },
-    create: { key: alert.key, ...data },
-    update: data,
-  })
+  const notifiedAt = notified ? now : null
+  const notifiedSeverity = notified ? step.severity : null
+  // One statement, decided on the row as it is when it applies, never on the one read above:
+  // a statement sent may wait in Postgres and apply after others wrote, even after the process
+  // that sent it died. So `lastAt` only moves on (a failure written meanwhile, by
+  // src/ops/last-seen.ts or by another raise, may be newer), and what this raise read only
+  // decides what it writes when the row is still as it read it: resolved, for a reopening.
+  //  - severity: as bad as it got while it lasts (onRaise), the row's own if still open;
+  //  - firstAt: the row's while open, this one's when this raise opens it again;
+  //  - resolvedAt: open again only when this raise reopens it, else as the row is;
+  //  - notifiedAt/notifiedSeverity: this notice's when it was sent and is not older than the
+  //    row's; owed (null) when this raise opens it again without having told it; else the row's.
+  await prisma.$executeRaw`
+    INSERT INTO "OpsAlert" ("key", "severity", "title", "detail", "firstAt", "lastAt", "notifiedAt", "notifiedSeverity", "resolvedAt")
+    VALUES (${alert.key}, ${step.severity}, ${alert.title}, ${detail}, ${step.firstAt}, ${lastAt}, ${notifiedAt}::timestamp(3), ${notifiedSeverity}::text, NULL)
+    ON CONFLICT ("key") DO UPDATE SET
+      "title" = EXCLUDED."title",
+      "detail" = EXCLUDED."detail",
+      "severity" = CASE
+        WHEN "OpsAlert"."resolvedAt" IS NULL AND "OpsAlert"."severity" = 'critical' THEN 'critical'
+        ELSE EXCLUDED."severity" END,
+      "firstAt" = CASE
+        WHEN ${step.reopen}::boolean AND "OpsAlert"."resolvedAt" IS NOT NULL THEN EXCLUDED."firstAt"
+        ELSE "OpsAlert"."firstAt" END,
+      "resolvedAt" = CASE WHEN ${step.reopen}::boolean THEN NULL ELSE "OpsAlert"."resolvedAt" END,
+      "lastAt" = GREATEST("OpsAlert"."lastAt", EXCLUDED."lastAt"),
+      "notifiedAt" = CASE
+        WHEN EXCLUDED."notifiedAt" IS NOT NULL
+          AND ("OpsAlert"."notifiedAt" IS NULL OR "OpsAlert"."resolvedAt" IS NOT NULL OR "OpsAlert"."notifiedAt" <= EXCLUDED."notifiedAt")
+          THEN EXCLUDED."notifiedAt"
+        WHEN ${step.reopen}::boolean AND "OpsAlert"."resolvedAt" IS NOT NULL THEN NULL
+        ELSE "OpsAlert"."notifiedAt" END,
+      "notifiedSeverity" = CASE
+        WHEN EXCLUDED."notifiedAt" IS NOT NULL
+          AND ("OpsAlert"."notifiedAt" IS NULL OR "OpsAlert"."resolvedAt" IS NOT NULL OR "OpsAlert"."notifiedAt" <= EXCLUDED."notifiedAt")
+          THEN EXCLUDED."notifiedSeverity"
+        WHEN ${step.reopen}::boolean AND "OpsAlert"."resolvedAt" IS NOT NULL THEN NULL
+        ELSE "OpsAlert"."notifiedSeverity" END`
 }
+
+/**
+ * Move an alert's `lastAt` on to `at`, never back, in one statement: its writers (the checks,
+ * each failure as it comes) may race. `openOnly`: not once it is resolved.
+ */
+export const seenAt = (key: string, at: Date, { openOnly = false } = {}) =>
+  openOnly
+    ? prisma.$executeRaw`UPDATE "OpsAlert" SET "lastAt" = GREATEST("lastAt", ${at}) WHERE "key" = ${key} AND "resolvedAt" IS NULL`
+    : prisma.$executeRaw`UPDATE "OpsAlert" SET "lastAt" = GREATEST("lastAt", ${at}) WHERE "key" = ${key}`
 
 /**
  * The problem is gone. Operators who were told it started are told it ended; until that is

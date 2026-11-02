@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { after, beforeEach, describe, test } from 'node:test'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import pg from 'pg'
 
 // Operators' alerts (src/ops/): the rules, without a database; raising and resolving, against
@@ -45,12 +47,15 @@ const { onRaise, REMIND_MS, FLAP_MS, raise, resolve, settle } = await import('..
 const checks = await import('../src/ops/checks.js')
 const { judge, RULES, computerProblem, workerProblems, objectResetProblems, STUCK_MS, OFFLINE_MS } =
   checks
-const { noteFailure, failuresOf, summary, clearFailures } = await import('../src/ops/failures.js')
+const { noteFailure, failuresOf, summary, clearFailures, seenWritesDone } =
+  await import('../src/ops/failures.js')
+const { forgetSeen } = await import('../src/ops/last-seen.js')
 const { sendNotice, noticeText } = await import('../src/ops/send.js')
 const { diagnose, watchdog, STALLED_MS } = await import('../src/ops/watchdog.js')
 const { prisma } = await import('../src/db.js')
 
 const MIN = 60_000
+const run = promisify(execFile)
 const t0 = new Date('2026-10-26T12:00:00Z')
 const at = (ms: number) => new Date(t0.getTime() + ms)
 
@@ -159,12 +164,14 @@ describe('rules over failures', () => {
     assert.equal(typeof worse === 'object' && worse.alert.severity, 'critical')
   })
 
-  test('over once none came for its quiet time, unless the count only just started', () => {
+  test('over once none came for its quiet time, as its alert last saw them too', () => {
     noteFailure('api', 'boom', { at: now - 10 * MIN })
     assert.equal(judge(api, failuresOf('api', 15 * MIN, now), now), 'keep')
     assert.equal(judge(api, [], now), 'resolve')
-    // The API restarted 5 minutes ago: what came before is forgotten, not over.
+    // Its alert saw one 5 minutes ago, which a restart since forgot: not over yet.
     assert.equal(judge(api, [], now, now - 5 * MIN), 'keep')
+    // However recently the API restarted, 15 minutes after the last one it is over.
+    assert.equal(judge(api, [], now, now - 15 * MIN), 'resolve')
   })
 
   test("turns failing in one workspace are its own trouble; in several, Brigade's", () => {
@@ -379,8 +386,288 @@ describe('alerts in the database', { skip }, () => {
   const prefix = `test-ops-${Date.now()}:`
   after(async () => {
     await prisma.opsAlert.deleteMany({ where: { key: { startsWith: prefix } } })
+    await prisma.opsAlert.deleteMany({ where: { key: 'api' } })
   })
   const kinds = () => posted.map((p) => JSON.parse(p.body).kind as string)
+
+  // The checks run each minute in the Api object, which restarts often (an eviction, a deploy,
+  // its isolate reset), forgetting the failures it counted: on 2026-11-01 an alert stayed open
+  // 10 hours after its last failure, until one start lasted its 15 minutes of quiet.
+  describe('failures over restarts, as the checks run in production', () => {
+    const told = (key: string) =>
+      posted
+        .map((p) => JSON.parse(p.body))
+        .filter((n) => n.key === key)
+        .map((n) => n.kind)
+    // Failures, and their writes to an open alert's row (noteSeen), done.
+    const fail = async (n: number, when: number, kind = 'api') => {
+      for (let i = 0; i < n; i++)
+        noteFailure(kind, new Error('Failed to get session'), { at: when })
+      await seenWritesDone()
+    }
+    const resolvedAt = async (key: string) =>
+      (await prisma.opsAlert.findUnique({ where: { key } }))?.resolvedAt ?? null
+    // A restart: the failures counted are forgotten, and the checks' module starts afresh.
+    let restarts = 0
+    let running = checks
+    const restart = async () => {
+      clearFailures()
+      forgetSeen()
+      running = await import(`../src/ops/checks.js?restart=${++restarts}`)
+    }
+    beforeEach(async () => {
+      await prisma.opsAlert.deleteMany({ where: { key: { in: ['api', 'catalog-size'] } } })
+      await restart()
+    })
+    after(() => prisma.opsAlert.deleteMany({ where: { key: 'catalog-size' } }))
+
+    test('checked each minute, it ends its quiet time after its last failure, not its last check', async () => {
+      const start = t0.getTime()
+      await fail(10, start)
+      for (let minute = 0; minute < 15; minute++) await running.runChecks(start + minute * MIN)
+      assert.equal(await resolvedAt('api'), null)
+      await running.runChecks(start + 15 * MIN)
+      assert.deepEqual(await resolvedAt('api'), at(15 * MIN))
+    })
+
+    test('a catalog too large once ends 12 hours after, though raised for 6 of them', async () => {
+      const start = t0.getTime()
+      await fail(1, start, 'catalog-size')
+      for (let minute = 0; minute < 12 * 60; minute++) await running.runChecks(start + minute * MIN)
+      assert.equal(await resolvedAt('catalog-size'), null)
+      await running.runChecks(start + 12 * 60 * MIN)
+      assert.deepEqual(await resolvedAt('catalog-size'), at(12 * 60 * MIN))
+    })
+
+    test('a failure is kept as soon as it comes, however soon a restart follows', async () => {
+      const start = t0.getTime()
+      await fail(10, start)
+      await running.runChecks(start)
+      for (let minute = 1; minute < 15; minute++) {
+        await restart()
+        await running.runChecks(start + minute * MIN)
+      }
+      // A process that just started, as the Api object after an eviction: the failure comes
+      // through failures.ts alone (Api.noteFailures), before any check loaded checks.ts.
+      const { stdout } = await run(
+        process.execPath,
+        [
+          '--import',
+          'tsx',
+          '--input-type=module',
+          '-e',
+          `const { noteFailure, seenWritesDone } = await import('./src/ops/failures.ts')
+          noteFailure('api', new Error('Failed to get session'), { at: ${start + 14.5 * MIN} })
+          await seenWritesDone()
+          console.log(JSON.stringify({ written: true }))
+          const { prisma } = await import('./src/db.ts')
+          await prisma.$disconnect()`,
+        ],
+        { cwd: new URL('..', import.meta.url).pathname, env: process.env },
+      )
+      assert.match(stdout, /"written":true/)
+      await restart()
+      await running.runChecks(start + 15 * MIN)
+      assert.equal(await resolvedAt('api'), null)
+      await restart()
+      await running.runChecks(start + 29 * MIN)
+      assert.equal(await resolvedAt('api'), null)
+      await running.runChecks(start + 30 * MIN)
+      assert.deepEqual(await resolvedAt('api'), at(30 * MIN))
+    })
+
+    test('a burst writes once a minute, and a failure before the first check after a start too', async () => {
+      const start = t0.getTime()
+      await fail(10, start)
+      await running.runChecks(start)
+      await restart()
+      // No check yet since this start: the open alerts are read for it.
+      await fail(1, start + 2 * MIN)
+      const written = async () =>
+        (await prisma.opsAlert.findUniqueOrThrow({ where: { key: 'api' } })).lastAt
+      assert.deepEqual(await written(), at(2 * MIN))
+      await fail(5, start + 2.5 * MIN)
+      assert.deepEqual(await written(), at(2 * MIN))
+      await fail(1, start + 3 * MIN)
+      assert.deepEqual(await written(), at(3 * MIN))
+    })
+
+    test('an alert opened again keeps its new incident, whatever fails after', async () => {
+      const start = t0.getTime()
+      // The last incident: resolved 45 minutes ago, its last failure an hour ago.
+      await prisma.opsAlert.create({
+        data: {
+          key: 'api',
+          severity: 'warning',
+          title: 'API requests failing (500)',
+          firstAt: at(-120 * MIN),
+          lastAt: at(-60 * MIN),
+          notifiedAt: at(-120 * MIN),
+          notifiedSeverity: 'warning',
+          resolvedAt: at(-45 * MIN),
+        },
+      })
+      // The next UPDATE of the open 'api' alert fails, as on a connection the database closed.
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TestFailNext" ("key" text)`)
+      await prisma.$executeRawUnsafe(`CREATE OR REPLACE FUNCTION test_fail_next() RETURNS trigger AS $$
+        BEGIN
+          IF OLD."resolvedAt" IS NULL AND EXISTS (SELECT 1 FROM "TestFailNext" WHERE "key" = OLD."key") THEN
+            DELETE FROM "TestFailNext" WHERE "key" = OLD."key";
+            RAISE EXCEPTION 'Connection to the origin database was lost.' USING ERRCODE = '08006';
+          END IF;
+          RETURN NEW;
+        END $$ LANGUAGE plpgsql`)
+      await prisma.$executeRawUnsafe(
+        `CREATE OR REPLACE TRIGGER test_fail_next BEFORE UPDATE ON "OpsAlert" FOR EACH ROW EXECUTE FUNCTION test_fail_next()`,
+      )
+      try {
+        await prisma.$executeRawUnsafe(`INSERT INTO "TestFailNext" VALUES ('api')`)
+        await fail(10, start)
+        await running.runChecks(start)
+        assert.deepEqual(told('api'), ['firing'])
+        await prisma.$executeRawUnsafe(`DELETE FROM "TestFailNext"`)
+        await restart()
+        await running.runChecks(start + MIN)
+        assert.equal(await resolvedAt('api'), null)
+        await running.runChecks(start + 14 * MIN)
+        assert.equal(await resolvedAt('api'), null)
+        await running.runChecks(start + 15 * MIN)
+        assert.deepEqual(await resolvedAt('api'), at(15 * MIN))
+      } finally {
+        await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS test_fail_next ON "OpsAlert"`)
+        await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS test_fail_next()`)
+        await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "TestFailNext"`)
+      }
+    })
+
+    test('a reopening that applies late does not undo a newer one', async () => {
+      const start = t0.getTime()
+      await prisma.opsAlert.create({
+        data: {
+          key: 'api',
+          severity: 'warning',
+          title: 'API requests failing (500)',
+          firstAt: at(-120 * MIN),
+          lastAt: at(-60 * MIN),
+          notifiedAt: at(-120 * MIN),
+          notifiedSeverity: 'warning',
+          resolvedAt: at(-45 * MIN),
+        },
+      })
+      // A statement writing `lastAt` = the held time waits, before it takes the row, for an
+      // advisory lock this test holds: as one sent by a process that died, applied later.
+      const admin = new pg.Client({ connectionString: process.env.DATABASE_URL })
+      await admin.connect()
+      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TestHold" ("at" timestamp(3))`)
+      await prisma.$executeRawUnsafe(`CREATE OR REPLACE FUNCTION test_hold() RETURNS trigger AS $$
+        BEGIN
+          IF NEW."key" = 'api' AND NEW."lastAt" IN (SELECT "at" FROM "TestHold") THEN
+            PERFORM pg_advisory_xact_lock(4242);
+          END IF;
+          RETURN NEW;
+        END $$ LANGUAGE plpgsql`)
+      for (const event of ['INSERT', 'UPDATE'])
+        await prisma.$executeRawUnsafe(
+          `CREATE OR REPLACE TRIGGER test_hold_${event.toLowerCase()} BEFORE ${event} ON "OpsAlert" FOR EACH ROW EXECUTE FUNCTION test_hold()`,
+        )
+      try {
+        await prisma.$executeRaw`INSERT INTO "TestHold" VALUES (${at(0)})`
+        await admin.query('SELECT pg_advisory_lock(4242)')
+        const alert = {
+          key: 'api',
+          severity: 'warning' as const,
+          title: 'API requests failing (500)',
+        }
+        // The late one: it read the alert resolved and reopens it from failures at t=0.
+        const late = raise(alert, at(4 * MIN), at(0))
+        for (let i = 0; ; i++) {
+          const { rows } = await admin.query(
+            `SELECT count(*)::int AS n FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`,
+          )
+          if (rows[0].n) break
+          assert.ok(i < 200, 'the late statement never waited')
+          await new Promise((r) => setTimeout(r, 10))
+        }
+        // Meanwhile its replacement reopens it, and a failure comes.
+        await raise(alert, at(4.1 * MIN), at(4.1 * MIN))
+        await fail(1, start + 4.2 * MIN)
+        await admin.query('SELECT pg_advisory_unlock(4242)')
+        await late
+        const row = await prisma.opsAlert.findUniqueOrThrow({ where: { key: 'api' } })
+        assert.deepEqual(row.lastAt, at(4.2 * MIN))
+        assert.equal(row.resolvedAt, null)
+        await restart()
+        await running.runChecks(start + 15 * MIN)
+        assert.equal(await resolvedAt('api'), null)
+        await running.runChecks(start + 19 * MIN)
+        assert.equal(await resolvedAt('api'), null)
+        await running.runChecks(start + 19.2 * MIN)
+        assert.deepEqual(await resolvedAt('api'), at(19.2 * MIN))
+      } finally {
+        await admin.query('SELECT pg_advisory_unlock_all()').catch(() => {})
+        await admin.end().catch(() => {})
+        for (const event of ['insert', 'update'])
+          await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS test_hold_${event} ON "OpsAlert"`)
+        await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS test_hold()`)
+        await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "TestHold"`)
+      }
+    })
+
+    test('a failure written while a raise tells operators is not undone by the raise', async () => {
+      const start = t0.getTime()
+      await fail(10, start)
+      await running.runChecks(start)
+      // A reminder is due: the raise reads the row, then tells operators, held here.
+      let release = () => {}
+      let asked = () => {}
+      const telling = new Promise<void>((r) => (asked = r))
+      answer = () => {
+        asked()
+        return new Promise<Response>((r) => (release = () => r(new Response('ok'))))
+      }
+      const raising = raise(
+        { key: 'api', severity: 'warning', title: 'API requests failing (500)' },
+        at(REMIND_MS),
+        at(0),
+      )
+      await telling
+      await fail(1, start + REMIND_MS + 1000)
+      release()
+      await raising
+      const row = await prisma.opsAlert.findUniqueOrThrow({ where: { key: 'api' } })
+      assert.deepEqual(row.lastAt, at(REMIND_MS + 1000))
+    })
+
+    test('an alert ends its quiet time after its last failure, restarts or not', async () => {
+      const start = t0.getTime()
+      await fail(10, start)
+      await running.runChecks(start)
+      assert.deepEqual(told('api'), ['firing'])
+      for (let minute = 1; minute < 15; minute++) {
+        await restart()
+        await running.runChecks(start + minute * MIN)
+      }
+      assert.deepEqual(told('api'), ['firing'])
+      await restart()
+      await running.runChecks(start + 15 * MIN)
+      assert.deepEqual(told('api'), ['firing', 'resolved'])
+      const row = await prisma.opsAlert.findUniqueOrThrow({ where: { key: 'api' } })
+      assert.deepEqual(row.resolvedAt, at(15 * MIN))
+    })
+
+    test('fewer failures than raise it keep it open, past a restart too', async () => {
+      const start = t0.getTime()
+      await fail(10, start)
+      await running.runChecks(start)
+      await fail(1, start + 10 * MIN)
+      await running.runChecks(start + 10 * MIN)
+      await restart()
+      await running.runChecks(start + 16 * MIN)
+      assert.deepEqual(told('api'), ['firing'])
+      await running.runChecks(start + 25 * MIN)
+      assert.deepEqual(told('api'), ['firing', 'resolved'])
+    })
+  })
 
   test('raised each minute, told once; resolved, told it is over', async () => {
     const key = `${prefix}a`

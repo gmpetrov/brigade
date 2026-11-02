@@ -88,10 +88,26 @@ told stays open until it is, and a turn for the worse that was not sent is tried
 A failure-count problem ends once none came for a while (15 minutes to 3 hours, by kind).
 Computers of a workspace without a plan are meant to be off and are not checked.
 
-The counts are in the Api object's memory (`src/ops/failures.ts`). A restart forgets them:
-it only delays an alert, and resolves nothing until the quiet time has passed since. What
-fails in a workspace's hub object, the cron or the jobs' consumer is counted there too, sent
-by RPC.
+The counts are in the Api object's memory (`src/ops/failures.ts`). A restart forgets them,
+which only delays an alert. An open alert's end does not depend on them: its row keeps when
+its last failure came (`lastAt`, the failure's own time, never the check's), and it ends once
+none came for the quiet time since then, however often the object restarts meanwhile. A
+failure of an open alert's kind is written to its row as it is counted (`src/ops/last-seen.ts`,
+loaded by `failures.ts` itself, so also in an object that has not run a check since it
+started), in the background (the request never waits for it), at most once a minute per
+kind, so that a restart before the next check does not lose it; a failure within a minute of
+the last one written may end the alert up to a minute early. Every write of `lastAt` is
+`GREATEST("lastAt", …)` in one statement, so writers that race never move it back.
+Before, the quiet time counted from the object's start too: on 2026-11-01 the `api` alert
+stayed open 10 hours after its last failure, until one start of the object lasted 15 minutes.
+What fails in a workspace's hub object, the cron or the jobs' consumer is counted there too,
+sent by RPC.
+
+A read (`SELECT`) outside a transaction that meets a connection the database closed
+(`Connection terminated unexpectedly`, Hyperdrive's 08006) is run once more on another
+connection (`retryReads`, `src/db.ts`), rather than answered 500: on 2026-11-01 one dropped
+connection failed 10 requests in the same second. Writes are not run again, as one may have
+been applied before its answer was lost.
 
 Each minute, the API logs what the hubs it holds hold (`hubs: hubs 3, runners 2, browsers 5,
 queued 0, …`), so a growth shows before it costs a restart. A workspace's hub object logs
