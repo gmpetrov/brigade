@@ -1405,7 +1405,7 @@ export class HarnessThread {
     if (this.runAs || process.platform !== 'darwin') return
     const client = computerUseClient()
     return {
-      request: (method, params, signal) =>
+      request: (method, params, signal, options) =>
         client
           ? client.request(
               method,
@@ -1414,6 +1414,7 @@ export class HarnessThread {
                 session: { id: `${this.key}:${this.prompts}`, label: this.spec.teammate.name },
               },
               signal,
+              options,
             )
           : Promise.reject(
               new ComputerUseError(
@@ -1422,6 +1423,8 @@ export class HarnessThread {
                   '(it includes it), then try again.',
               ),
             ),
+      workDir: this.workDir,
+      env: () => harnessEnv(),
       screenshotPath: () => {
         const path = `images/screen-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
         return { path, absolute: join(this.workDir, path) }

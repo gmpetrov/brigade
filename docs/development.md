@@ -44,10 +44,17 @@ GitHub Releases (`apps/desktop/release`). Logs: `~/.brigade/logs/runner.log`.
 
 Inside it, **Brigade Computer Use.app** (`apps/computer-use-macos`) gives teammates `computer_screenshot`,
 `computer_click`, `computer_type`, `computer_key`, `computer_scroll`, `computer_drag`, `computer_move`,
-`computer_apps`, `computer_open_app` and `computer_ui_tree` on the member's Mac. The runner starts it with `open`,
+`computer_apps`, `computer_open_app`, `computer_ui_tree` and `computer_run` on the member's Mac. The runner starts it with `open`,
 so macOS gives Screen Recording and Accessibility to it, not to Brigade.app or a terminal, and talks to it over a
 token-checked socket in `~/.brigade/computer-use`. While a teammate acts, a pill shows its name with a Stop button
 (no Esc shortcut); Stop ends computer use for that turn.
+
+Commands in a teammate's own shell don't get those permissions: macOS asks the app responsible for a process, the
+one that started it, and for the runner's commands that is Brigade.app, which holds neither. `computer_run` has the
+helper start the command instead (`Run.swift`), so a CLI that needs them (agent-desktop, `osascript` with System
+Events, a screen recorder) gets them, while the pill shows with Stop. It runs in its own process group, stopped as a
+whole when it ends, times out (120 seconds by default, 30 minutes at most) or the person presses Stop, and when the
+turn is interrupted (`cancel`). `swift test` in `apps/computer-use-macos` checks that.
 
 ```bash
 pnpm --filter @brigade/computer-use-macos install:app   # helper only, into ~/Applications (runner finds it there)

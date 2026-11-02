@@ -1,7 +1,8 @@
 // Computer use on a member's Mac, through Brigade Computer Use.app
 // (apps/computer-use-macos). The app holds Screen Recording and Accessibility
 // itself: started with `open`, macOS treats it as its own app, not as part of
-// the runner or the terminal that started it. It listens on a Unix socket in
+// the runner or the terminal that started it. A command it starts (run) gets
+// them too, which a command in a teammate's own shell does not. It listens on a Unix socket in
 // ~/.brigade/computer-use and checks the token it writes beside it.
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -45,9 +46,21 @@ export function computerUseApp(): string | undefined {
   return candidates.find((path) => path && existsSync(path))
 }
 
-/** Whether the app is not running (no socket, or nothing listening on it). */
-const notRunning = (error: unknown) =>
-  ['ENOENT', 'ECONNREFUSED', 'ECONNRESET'].includes((error as NodeJS.ErrnoException).code ?? '')
+/**
+ * Whether the app is not running (no socket, or nothing listening on it). A reset connection
+ * counts too, unless `once`: the request may have reached the app before it went away.
+ */
+const notRunning = (error: unknown, once = false) =>
+  ['ENOENT', 'ECONNREFUSED', ...(once ? [] : ['ECONNRESET'])].includes(
+    (error as NodeJS.ErrnoException).code ?? '',
+  )
+
+export type RequestOptions = {
+  /** The longest the reply may take, in ms, for a request that lasts (run). */
+  wait?: number
+  /** Never sent twice: for a request that must not be repeated (run). */
+  once?: boolean
+}
 
 export class ComputerUseClient {
   private launching: Promise<void> | undefined
@@ -59,13 +72,14 @@ export class ComputerUseClient {
     method: string,
     params: Record<string, unknown> = {},
     signal?: AbortSignal,
+    { wait = REQUEST_MS, once = false }: RequestOptions = {},
   ): Promise<unknown> {
     try {
-      return await this.send(method, params, signal)
+      return await this.send(method, params, signal, wait)
     } catch (error) {
-      if (!notRunning(error)) throw error
+      if (!notRunning(error, once)) throw error
       await this.launch()
-      return this.send(method, params, signal)
+      return this.send(method, params, signal, wait)
     }
   }
 
@@ -90,7 +104,12 @@ export class ComputerUseClient {
     return this.launching
   }
 
-  private async send(method: string, params: Record<string, unknown>, signal?: AbortSignal) {
+  private async send(
+    method: string,
+    params: Record<string, unknown>,
+    signal?: AbortSignal,
+    wait = REQUEST_MS,
+  ) {
     const token = (await readFile(join(DIR, 'token'), 'utf8')).trim()
     const id = this.nextId++
     return new Promise<unknown>((resolve, reject) => {
@@ -106,7 +125,7 @@ export class ComputerUseClient {
       const aborted = () => finish(new Error('aborted'))
       const timer = setTimeout(
         () => finish(new Error(`${COMPUTER_USE_APP} did not answer ${method} in time`)),
-        REQUEST_MS,
+        wait,
       )
       signal?.addEventListener('abort', aborted, { once: true })
       socket.on('error', (error) => finish(error))

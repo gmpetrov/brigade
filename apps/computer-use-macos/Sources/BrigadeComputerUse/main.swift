@@ -6,7 +6,7 @@
 import AppKit
 import Foundation
 
-let version = "1"
+let version = "2"
 
 /// Who is using the computer: one teammate turn at a time, which the person can stop.
 @MainActor
@@ -19,6 +19,8 @@ final class Sessions {
 
   private var active: Active?
   private var stopped: Set<String> = []
+  /// Turns the runner ended (the person interrupted the teammate): their command stops.
+  private var cancelled: Set<String> = []
   private lazy var indicator = Indicator { [weak self] in self?.stop() }
 
   /// Before each action: refuses a stopped turn, or another turn while one is acting.
@@ -37,6 +39,26 @@ final class Sessions {
     }
     active = Active(id: id, label: label, last: Date())
     indicator.show("\(label) is using your computer")
+  }
+
+  /// While a command runs (`run`): keeps its turn the one using the computer, and the pill up.
+  /// False once the person pressed Stop or the runner cancelled the turn: the command stops.
+  func hold(_ id: String) -> Bool {
+    guard let current = active, current.id == id, !stopped.contains(id), !cancelled.contains(id) else {
+      return false
+    }
+    active?.last = Date()
+    indicator.show("\(current.label) is using your computer")
+    return true
+  }
+
+  /// The runner ended this turn: its command stops, and the pill goes.
+  func cancel(_ id: String) {
+    cancelled.insert(id)
+    if active?.id == id {
+      active = nil
+      indicator.hide()
+    }
   }
 
   func stop() {
@@ -76,6 +98,13 @@ func makeHandler(_ sessions: Sessions) -> Handler {
         throw HelperError("invalid_argument", "an absolute path is required")
       }
       return try await Capture.interactive(to: path)
+    }
+    if method == "cancel" {
+      guard let id = (params["session"] as? [String: Any])?["id"] as? String else {
+        throw HelperError("invalid_request", "session.id is required")
+      }
+      await MainActor.run { sessions.cancel(id) }
+      return ["ok": true]
     }
     try await MainActor.run { try sessions.begin(params["session"] as? [String: Any]) }
     switch method {
@@ -126,6 +155,19 @@ func makeHandler(_ sessions: Sessions) -> Handler {
           maxNodes: Int(number(params["maxNodes"]) ?? 400),
           menus: params["menus"] as? Bool ?? false)
       }
+    case "run":
+      guard let command = params["command"] as? String, !command.isEmpty else {
+        throw HelperError("invalid_argument", "command is required")
+      }
+      // What the command is run here for; without it, it would fail further on with less to go by.
+      try Permissions.requireAccessibility()
+      let id = (params["session"] as? [String: Any])?["id"] as? String ?? ""
+      return try await Run.run(
+        command: command,
+        cwd: params["cwd"] as? String,
+        env: params["env"] as? [String: String] ?? [:],
+        timeout: number(params["timeout"]),
+        hold: { await MainActor.run { sessions.hold(id) } })
     default:
       throw HelperError("unknown_method", "unknown method \(method)")
     }

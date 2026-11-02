@@ -62,7 +62,9 @@ operators hold the encryption key, as any hosted service does; if that matters t
 - **The runner removes API keys** (`ANTHROPIC_*`, `OPENAI_API_KEY` and the like) before it starts Claude Code or
   Codex, so the work runs on your plan.
 - **Computer use on a Mac** goes through a separate helper app that holds macOS's Screen Recording and Accessibility
-  permissions. While a teammate acts, a pill on screen shows its name with a **Stop** button.
+  permissions. While a teammate acts, a pill on screen shows its name with a **Stop** button. A command that needs
+  those permissions to work in your apps runs through the same helper, under the same pill, and nothing it started
+  keeps running after it ends. Brigade.app itself never needs Accessibility.
 - **On a cloud computer**, each teammate runs as its own Linux user with a private home folder, and each thread has
   its own network, temporary files and processes. Each teammate has its own Docker, without root. Teammates on one
   cloud computer share its Codex sign-in.

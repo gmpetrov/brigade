@@ -1,5 +1,6 @@
 // Connector tools: AI SDK tools whose execute forwards the call to the API,
 // which checks the grant, asks for approval if needed, and makes the request.
+import { resolve } from 'node:path'
 import { jsonSchema, tool, type JSONSchema7, type Tool } from 'ai'
 import {
   ATTACHMENT_MAX,
@@ -45,6 +46,7 @@ import {
   type ScheduleOperation,
   type TaskOperation,
 } from '@brigade/contracts'
+import { ComputerUseError, type RequestOptions } from '../computer-use.js'
 import type { LibraryOperation, StagedFile } from '../uploads.js'
 import { errorMessage } from './events.js'
 import { WIDGET_GUIDE } from './widget-guide.js'
@@ -2940,12 +2942,22 @@ export type ComputerUse = {
     method: string,
     params: Record<string, unknown>,
     signal?: AbortSignal,
+    options?: RequestOptions,
   ) => Promise<unknown>
+  /** The working directory, where a command runs by default (computer_run). */
+  workDir: string
+  /** The environment a command gets: what the teammate's own shell gets, without its keys. */
+  env: () => Record<string, string>
   /** Where the next screenshot goes: relative to the working directory, and absolute. */
   screenshotPath: () => { path: string; absolute: string }
   /** Show a screenshot in the thread, like a generated image. */
   share: (path: string, toolCallId: string) => void
 }
+
+/** computer_run: the helper's own bounds (apps/computer-use-macos Run.swift). */
+const COMMAND_TIMEOUT_DEFAULT = 120
+const COMMAND_TIMEOUT_MAX = 1800
+const COMMAND_OUTPUT_MAX = 100_000
 
 const ABOUT_COMPUTER =
   "On the person's own Mac (this computer), through Brigade Computer Use. Coordinates are screen points " +
@@ -3113,6 +3125,62 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
         required: ['app'],
       }),
       execute: act('open_app'),
+    }),
+    computer_run: tool({
+      description:
+        'Run a shell command (zsh) through Brigade Computer Use, so that it gets the helper’s Accessibility and ' +
+        'Screen Recording: for a command that clicks, types in, reads or records other apps, such as ' +
+        'agent-desktop, osascript with System Events or a screen recorder. Commands in your own shell have ' +
+        'neither on this Mac, and fail for lack of them (agent-desktop: PERM_DENIED): run those here, and ' +
+        'everything else in your shell. While it runs, the pill shows your name with Stop; whatever it leaves ' +
+        'running in the background is stopped when it ends. Returns its output (stdout and stderr, the last ' +
+        `${COMMAND_OUTPUT_MAX / 1000} KB) and exit code. On the person's own Mac (this computer).`,
+      inputSchema: jsonSchema<{ command: string; cwd?: string; timeout?: number }>({
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: 'The command line, run with zsh -c' },
+          cwd: {
+            type: 'string',
+            description: 'Where it runs: relative to your working directory (default), or absolute',
+          },
+          timeout: {
+            type: 'number',
+            description: `Seconds before it is stopped (default ${COMMAND_TIMEOUT_DEFAULT}, at most ${COMMAND_TIMEOUT_MAX})`,
+          },
+        },
+        required: ['command'],
+      }),
+      execute: async (input, { abortSignal }) => {
+        const timeout = Math.min(
+          Math.max(Math.round(input.timeout ?? COMMAND_TIMEOUT_DEFAULT), 1),
+          COMMAND_TIMEOUT_MAX,
+        )
+        // An interrupted turn stops its command too, rather than leaving it to its timeout.
+        const cancel = () => void computer.request('cancel', {}).catch(() => undefined)
+        abortSignal?.addEventListener('abort', cancel, { once: true })
+        try {
+          return await computer.request(
+            'run',
+            {
+              command: input.command,
+              cwd: resolve(computer.workDir, input.cwd ?? '.'),
+              env: computer.env(),
+              timeout,
+            },
+            abortSignal,
+            { wait: (timeout + 30) * 1000, once: true },
+          )
+        } catch (error) {
+          if (error instanceof ComputerUseError && error.code === 'unknown_method')
+            throw new Error(
+              'The Brigade Computer Use on this Mac is too old to run commands: ask the person to update ' +
+                'Brigade.app (Check for Updates… in its menu), then try again.',
+            )
+          throw error
+        } finally {
+          abortSignal?.removeEventListener('abort', cancel)
+        }
+      },
     }),
     computer_ui_tree: tool({
       description:
