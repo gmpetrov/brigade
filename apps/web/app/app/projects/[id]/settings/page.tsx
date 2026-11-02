@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { useDocumentPanel } from '@/components/document-panel'
 import { ProjectMailboxes } from '@/components/mailboxes'
+import { ProjectRepositories } from '@/components/project-repositories'
 import { useProject } from '@/components/project-shell'
 import { ProjectLogoPreview, shrinkLogo, uploadLogo } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
@@ -357,6 +358,8 @@ export default function ProjectSettings() {
           {error && <span className="text-sm text-destructive-text">{error}</span>}
         </div>
       </form>
+
+      <ProjectRepositories />
 
       <ProjectMailboxes projectId={project.id} />
 

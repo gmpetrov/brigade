@@ -159,8 +159,15 @@ function ScheduleRow({
  * Routines: the playbooks installed, then schedules that prompt a teammate at set times. In a
  * project, its own.
  */
-export function ScheduleList({ projectId }: { projectId?: string }) {
-  const [filter, setFilter] = useState('')
+export function ScheduleList({
+  projectId,
+  initialFilter = '',
+}: {
+  projectId?: string
+  /** The project filter it opens with, e.g. from `?project=` (a project's page links there). */
+  initialFilter?: string
+}) {
+  const [filter, setFilter] = useState(initialFilter)
   const schedules = useApi<Schedule[]>(`/schedules${projectQuery(projectId ?? filter)}`)
   const [editing, setEditing] = useState<Schedule | 'new' | null>(null)
   const reload = schedules.reload

@@ -1,19 +1,7 @@
 'use client'
-import { useProject } from '@/components/project-shell'
-import { ThreadList } from '@/components/thread-list'
-import { useApi, type ThreadSummary } from '@/lib/api'
+import { ProjectRedirect } from '@/components/project-redirect'
 
+/** A project's threads are in the sidebar: a click on the project filters them. */
 export default function ProjectThreads() {
-  const { project } = useProject()
-  const threads = useApi<ThreadSummary[]>(`/threads?project=${project.id}`, [
-    'thread.updated',
-    'pulls.updated',
-  ])
-  return threads.data ? (
-    <ThreadList
-      threads={threads.data}
-      showProject={false}
-      empty="No threads in this project yet. Start one from the overview."
-    />
-  ) : null
+  return <ProjectRedirect to={(p) => `/app/projects/${p.id}`} />
 }
