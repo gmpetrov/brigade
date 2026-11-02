@@ -44,6 +44,7 @@ import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import {
   builtinSkills,
   instructions,
+  startedByPerson,
   writeInstructions,
   writeMemoryFiles,
 } from '../instructions.js'
@@ -301,8 +302,9 @@ function createAgent(
     ...(spec.git ? repoTools(checkoutRepo) : {}),
     // A playbook's run gets no tool that starts or prompts a thread outside the run (the API refuses them too).
     ...taskTools(callTask, spec.playbook ? { dryRun: spec.playbook.dryRun } : undefined),
-    // Nor a schedule, whose runs are threads outside it (wake-ups are for threads a person started).
-    ...(spec.playbook ? {} : scheduleTools(callSchedule)),
+    // Schedules, triggers and wake-ups: only in a thread a person started (the API refuses them
+    // elsewhere), never in a playbook's run, whose schedules' runs would be threads outside it.
+    ...(startedByPerson(spec) ? scheduleTools(callSchedule) : {}),
     // Nor the workspace's other Apps: it has only those the playbook declares.
     ...appTools(callSchedule, { playbook: !!spec.playbook }),
     // Lists' items (docs/lists.md): read, attach to this thread, tick, add.
@@ -319,7 +321,12 @@ function createAgent(
     // Elsewhere, a teammate may install one from the chat.
     ...(!spec.playbook && !spec.parent ? playbookInstallTools(callSchedule) : {}),
     // Declaring the thread done, in a thread a person talks to: a child reports, a playbook decides.
-    ...doneTools(callSchedule, { child: !!spec.parent, playbook: !!spec.playbook }),
+    // A schedule's run ends with its turn.
+    ...doneTools(callSchedule, {
+      child: !!spec.parent,
+      playbook: !!spec.playbook,
+      scheduled: spec.origin === 'schedule',
+    }),
     ...previewTools(preview, credentials),
     ...(makeImage ? imageTools(makeImage) : {}),
     ...(computer ? computerUseTools(computer) : {}),

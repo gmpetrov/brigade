@@ -295,6 +295,8 @@ export async function specFor(
     private: thread.private,
     // A child reports to it; older runners ignore it, and its last message stands for its report.
     parent: thread.parent,
+    // What the instructions and tools offer depends on it (schedules, wake-ups, a merge's wake-up).
+    origin: thread.origin,
     playbook: playbook
       ? {
           installationId: playbook.installationId,

@@ -169,8 +169,9 @@ export const OPEN_TICKET_TOOL = 'open_ticket'
 
 export const openTicketTool = tool({
   description:
-    'Open a ticket for a person and wait until they answer it. Brigade does not ask a person before your actions, ' +
-    'so open one when you judge a person should decide first: sign-off on a draft or plan before you send or apply it ' +
+    'Open a ticket for a person and wait until they answer it. Brigade asks a person itself only where a tool ' +
+    'says so (an App write that says a person may need to approve it, saving a credential, a trigger): do not open a ticket for those. ' +
+    'Elsewhere nothing waits for a person, so open one when you judge a person should decide first: sign-off on a draft or plan before you send or apply it ' +
     '(approval), a choice (decision), a connection or credential you lack (access), something only a person can do ' +
     'such as a phone call (action), or information only they have (input). Put several asks in one ticket rather than ' +
     'opening several. When a website stops you with a human check (a CAPTCHA, a "verify you are human" box, a ' +
@@ -1293,7 +1294,8 @@ function boardTools(call: TaskCaller): Record<string, Tool> {
             type: 'string',
             description:
               'The id of the mission it belongs to, from list_tasks or the create_task that made it. It takes the ' +
-              "mission's project. Unset: a task of its own.",
+              "mission's project. Unset: a task of its own. A mission groups tasks only when several teammates each " +
+              "own a delivery the person follows on its own; a goal's parts are never tasks of a mission.",
           },
           project: {
             type: 'string',
@@ -1928,20 +1930,15 @@ const COMPLETE_THREAD_UNKNOWN =
  */
 export function doneTools(
   call: ScheduleCaller,
-  options: { child: boolean; playbook: boolean },
+  options: { child: boolean; playbook: boolean; scheduled?: boolean },
 ): Record<string, Tool> {
-  if (options.child || options.playbook) return {}
+  if (options.child || options.playbook || options.scheduled) return {}
   return {
     [COMPLETE_THREAD_TOOL]: tool({
       description:
-        'Declare this thread done: the work asked here is delivered (merged, sent, saved, answered with a ' +
-        'result) and nothing is pending. Call it in the turn that delivers it, with one line on what was ' +
-        'delivered. A question answered is delivered, even when your reply ends on suggested replies; a ' +
-        'change you only proposed, or a reply ending on choices you need picked, is not. Brigade refuses ' +
-        'it while something is still open here, and lists what: a ticket or ' +
-        'question, a pull request not yet merged or closed, a child thread or a review that has not ' +
-        'reported, a wake-up you set, a list item not ticked. A new message from a person reopens the ' +
-        'thread. Not in a scheduled run: it ends with its turn.',
+        'Declare this thread done, when the Done section of your instructions says: the work asked here is ' +
+        'delivered and nothing is pending. Call it in the turn that delivers it, with one line on what was ' +
+        'delivered. Brigade refuses it while something is still open here, and lists what.',
       inputSchema: jsonSchema<{ summary: string }>({
         type: 'object',
         properties: {
@@ -2244,7 +2241,8 @@ export function reviewTools(call: ScheduleCaller): Record<string, Tool> {
         'Have another teammate review a pull request this thread (or one of its child threads) opened, in a ' +
         'child thread Brigade starts with a brief of its own: the pull request, how this thread started, and ' +
         'whether the repository runs checks. You are woken here with its report. Use it when the person asks ' +
-        'for a review, or when your instructions say you decide and the pull request deserves one.',
+        'for a review, or where the Code section of your instructions says to; for a pull request you open, ' +
+        "github_create_pull_request's `review` says whether it gets one.",
       inputSchema: jsonSchema<{ repository: string; number: number; reviewer?: string }>({
         type: 'object',
         properties: {
@@ -2291,8 +2289,8 @@ export function childTools(
         description:
           'Report to the thread that started this one, once, when your work is done, then end your turn. ' +
           'status: report when you have something to tell (what you found or did, with links), nothing when there is ' +
-          'nothing new (a scheduled check that found nothing: it wakes nobody), needs_person when you opened a ticket ' +
-          'and wait on a person, failed when you could not do it (say why). That thread cannot see your files, ' +
+          'nothing new (a scheduled check that found nothing: it wakes nobody), needs_person when the work cannot ' +
+          'go on without a person and you leave it to them (say what they must do), failed when you could not do it (say why). That thread cannot see your files, ' +
           '/tmp included: never point it to one. Put all it needs in the summary, and send the files it needs ' +
           '(reproduction scripts, logs, screenshots) in files: Brigade puts them in its working folder. Without a ' +
           'report, your last message stands for it.',
@@ -2642,7 +2640,7 @@ export function previewTools(
         'checkout; save yours with save_preview once its check passes. ' +
         'The app must listen on HOST and `port` (PORT), both set: HOST is 0.0.0.0 on a cloud computer and 127.0.0.1 ' +
         "on a member's own, where nobody else on its network should reach it. " +
-        'Write the command with $PORT (e.g. "pnpm dev --port $PORT"): when another preview has `port`, it gets a free one. ' +
+        'Write the command with $PORT and $HOST (e.g. "pnpm dev --port $PORT --host $HOST"): when another preview has `port`, it gets a free one. ' +
         'People reach it through a proxy at one public address, in BRIGADE_PREVIEW_URL; the other `ports` are paths on it ' +
         "(/__ports/<port>/), each port's address in BRIGADE_PREVIEW_URL_<port>. Put what the app needs in `env`, " +
         'where ${BRIGADE_PREVIEW_URL} and ${BRIGADE_PREVIEW_URL_<port>} become the addresses (e.g. NEXTAUTH_URL, ' +
@@ -2692,7 +2690,8 @@ export function previewTools(
             type: 'object',
             additionalProperties: { type: 'string' },
             description:
-              'Settings for setup and the app, not secrets: e.g. {"NEXTAUTH_URL": "${BRIGADE_PREVIEW_URL}", "DATABASE_URL": "postgres://…localhost…"}',
+              'Settings for setup and the app, e.g. {"NEXTAUTH_URL": "${BRIGADE_PREVIEW_URL}", "DATABASE_URL": "postgres://…localhost…"}. ' +
+              'A secret the app only needs locally may be a random value here; one only a person has is a preview variable, never here.',
           },
           envFile: {
             type: 'string',
@@ -2830,8 +2829,9 @@ export function previewTools(
         "Save how this thread's preview starts (setup, env, credentials, command, ports, pages to check, archive) as its " +
         "repository's preview, so a later thread starts it in one step with start_preview({ repository }). " +
         'Only once its check passes, unless what it found is expected: then look at the screenshots and give the ' +
-        '`reason` (e.g. "/admin redirects to sign-in"). Saving again replaces it. Secrets go in the repository\'s ' +
-        'preview variables (a variables ask in open_ticket), never in env: they are kept beside it, not in it. ' +
+        '`reason` (e.g. "/admin redirects to sign-in"). Saving again replaces it. Secrets only a person has go in ' +
+        "the repository's preview variables (a variables ask in open_ticket), never in env: they are kept beside it, " +
+        'not in it. A random value for a secret the app only needs locally may stay in env. ' +
         'It is saved in Brigade and written to .brigade/settings.toml in the checkout, so each branch has its own ' +
         "and people review it as code: commit it. When the repository's people want none of Brigade's files in it, " +
         'save with `inRepository: false`: kept in Brigade only, for later saves too.',

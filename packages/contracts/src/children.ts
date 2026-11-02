@@ -31,7 +31,7 @@ export const REPORT_FILES_MAX = ATTACHMENTS_PER_MESSAGE
 
 /**
  * nothing: nothing worth telling (a schedule's run with nothing new). report: something to say.
- * needs_person: it opened a ticket and waits on a person. failed: it could not do the work.
+ * needs_person: the work cannot go on without a person. failed: it could not do the work.
  * cancelled: its parent stopped it (set by Brigade, not by the child).
  */
 export const ChildReportStatus = z.enum([
@@ -112,7 +112,7 @@ const sentFiles = (report: ChildReport) =>
 const STATUS_WORDS: Record<ChildReportStatus, string> = {
   nothing: 'nothing new',
   report: 'reports',
-  needs_person: 'needs a person (a ticket is open in it)',
+  needs_person: 'needs a person',
   failed: 'failed',
   cancelled: 'cancelled',
 }

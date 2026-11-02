@@ -1324,7 +1324,7 @@ export async function seedWorkspace(users: Users) {
       ...turn(
         riley.id,
         adaAccount.id,
-        `2 child threads you were waiting for have finished:\n- Riley · “Bisect the Next.js versions” (${bisectId}): reports. It broke in 16.3.0-canary.34 (vercel/next.js#94062); 16.3.0-canary.33 works.\n- Riley · “Try Next 16.4.2 on acme/web” (${upgradeId}): needs a person (a ticket is open in it). The upgrade does not fix it.`,
+        `2 child threads you were waiting for have finished:\n- Riley · “Bisect the Next.js versions” (${bisectId}): reports. It broke in 16.3.0-canary.34 (vercel/next.js#94062); 16.3.0-canary.33 works.\n- Riley · “Try Next 16.4.2 on acme/web” (${upgradeId}): needs a person. The upgrade does not fix it.`,
         null,
         [],
         'Found it: live reload broke in Next 16.3.0-canary.34 (vercel/next.js#94062), and 16.4.2 does not fix it. Its upgrade thread asks you whether to keep 16.4.2 anyway.',
