@@ -36,6 +36,7 @@ import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { choicesWaitingAmong } from './choices-waiting.js'
 import { failedWaitingAmong } from './failed.js'
 import { hubs } from './hub.js'
+import { latersOf } from './later.js'
 import { teammateLibraryAccess } from './library-folders.js'
 import { actorNames } from './library-history.js'
 import { committedBytes, documentText, saveLibraryFile, withLibraryLock } from './library.js'
@@ -135,6 +136,7 @@ const itemInclude = {
       session: {
         select: {
           id: true,
+          parentId: true,
           title: true,
           status: true,
           archivedAt: true,
@@ -149,7 +151,16 @@ const itemInclude = {
     orderBy: { createdAt: 'asc' },
   },
   pulls: {
-    include: { pullRequest: { select: { repository: true, number: true, state: true } } },
+    include: {
+      pullRequest: {
+        select: {
+          repository: true,
+          number: true,
+          state: true,
+          session: { select: { id: true, parentId: true } },
+        },
+      },
+    },
     orderBy: { createdAt: 'asc' },
   },
 } as const
@@ -162,20 +173,32 @@ const itemRows = (
 ) => db.listItem.findMany({ where, include: itemInclude })
 
 /**
+ * A thread put away for later, or a child of one: Later is set on a top-level thread, and its
+ * children go with it (src/later.ts).
+ */
+export const isAside = (
+  thread: { id: string; parentId: string | null } | null,
+  aside: ReadonlySet<string>,
+) => !!thread && (aside.has(thread.id) || (!!thread.parentId && aside.has(thread.parentId)))
+
+/**
  * Where an item stands: ticked, else from its threads and pull requests. A thread needs you as
  * on Tasks and in the sidebar (columnOf): an open ticket, waiting, failed and waiting on a
  * person (`failing`: src/failed.ts, failedWaitingAmong), stopped at a pull request a person
  * merges, or on choices nobody picked (`choosing`: src/choices-waiting.ts). A failed thread's
- * pull requests wait with it, not on their own.
+ * pull requests wait with it, not on their own. A thread the member reading put away for later
+ * (`aside`: src/later.ts) counts as an archived one, its pull requests with it: it no longer
+ * waits on them.
  */
 export function stateOf(
   done: boolean,
   row: Pick<ItemRow, 'threads' | 'pulls'> | undefined,
   failing: { has(threadId: string): boolean },
+  aside: ReadonlySet<string> = new Set(),
   choosing: { has(threadId: string): boolean } = new Set<string>(),
 ): ItemState {
   if (done) return 'done'
-  const live = row?.threads.filter((t) => !t.session.archivedAt) ?? []
+  const live = row?.threads.filter((t) => !t.session.archivedAt && !isAside(t.session, aside)) ?? []
   if (
     live.some(
       ({ session: s }) =>
@@ -191,18 +214,22 @@ export function stateOf(
     return 'needs_you'
   if (
     live.some((t) => t.session.status === 'starting' || t.session.status === 'running') ||
-    row?.pulls.some((p) => p.pullRequest.state === 'open')
+    row?.pulls.some((p) => p.pullRequest.state === 'open' && !isAside(p.pullRequest.session, aside))
   )
     return 'in_progress'
   return 'open'
 }
 
-/** The items' views: those in the file in its order, then those gone from it. */
+/**
+ * The items' views: those in the file in its order, then those gone from it. For a member, the
+ * threads they put away for later (`aside`) no longer make an item wait on them or stall.
+ */
 async function views(
   db: ScopedDb,
   scope: Scope,
   rows: ItemRow[],
   lines: Map<string, ListLine>,
+  aside: ReadonlySet<string> = new Set(),
 ): Promise<ListItemView[]> {
   const threadIds = [...new Set(rows.flatMap((r) => r.threads.map((t) => t.session.id)))]
   const [waiting, who, remainders, failing, choosing] = await Promise.all([
@@ -245,7 +272,7 @@ async function views(
     // Gone from the file: Brigade's tick is all that is known of it.
     const done = line ? line.done : !!row.doneAt
     const by = who(row.doneByType, row.doneById)
-    const state = stateOf(done, row, failing, choosing)
+    const state = stateOf(done, row, failing, aside, choosing)
     return {
       id: row.id,
       text: line?.text ?? row.text,
@@ -256,7 +283,7 @@ async function views(
       stalled:
         !!line &&
         state === 'open' &&
-        row.threads.some((t) => !t.session.archivedAt) &&
+        row.threads.some((t) => !t.session.archivedAt && !isAside(t.session, aside)) &&
         !remaining.has(row.id),
       section: line?.section ?? null,
       doneBy: done && by && row.doneAt ? { name: by.name, at: row.doneAt.toISOString() } : null,
@@ -300,11 +327,16 @@ function counts(list: ParsedList, items: ListItemView[]) {
   }
 }
 
+/** The threads a member put away for later, which no longer make an item wait on them. */
+const asideFor = async (db: ScopedDb, memberId: string | undefined) =>
+  memberId ? new Set((await latersOf(db, memberId)).keys()) : new Set<string>()
+
 /**
  * Every list of the library with its items' views, last changed first: its Markdown files with a
  * checklist. One read of the files and one of the items for them all (the Lists page, the Board).
+ * As `memberId` sees them, when given: without the threads they put away for later.
  */
-export async function workspaceLists(db: ScopedDb, scope: Scope) {
+export async function workspaceLists(db: ScopedDb, scope: Scope, memberId?: string) {
   const files = await db.document.findMany({
     where: { ...LIST_FILE, OR: [{ text: { contains: '[ ]' } }, { text: { contains: '[x]' } }] },
     select: { id: true, path: true, text: true, updatedAt: true },
@@ -313,10 +345,17 @@ export async function workspaceLists(db: ScopedDb, scope: Scope) {
   const parsed = files
     .map((file) => ({ file, list: parseList(file.text) }))
     .filter((f) => f.list.lines.length > 0)
-  const rows = parsed.length
-    ? await itemRows(db, { documentId: { in: parsed.map((f) => f.file.id) } })
-    : []
-  const all = await views(db, scope, rows, new Map(parsed.flatMap((f) => [...byLine(f.list)])))
+  const [rows, aside] = await Promise.all([
+    parsed.length ? itemRows(db, { documentId: { in: parsed.map((f) => f.file.id) } }) : [],
+    asideFor(db, memberId),
+  ])
+  const all = await views(
+    db,
+    scope,
+    rows,
+    new Map(parsed.flatMap((f) => [...byLine(f.list)])),
+    aside,
+  )
   const projectOfPath = await projectFinder(db)
   const fileOf = new Map(rows.map((r) => [r.id, r.documentId]))
   return parsed.map(({ file, list }) => ({
@@ -329,40 +368,53 @@ export async function workspaceLists(db: ScopedDb, scope: Scope) {
   }))
 }
 
-/** Every list of the library: its Markdown files with a checklist, last changed first. */
-export async function listSummaries(db: ScopedDb, scope: Scope): Promise<ListSummary[]> {
-  return (await workspaceLists(db, scope)).map(({ file, list, lines, title, projectId, items }) => {
-    const inOrder = items
-      .filter((i) => !i.missing)
-      .sort((a, b) => lines.get(a.id)!.line - lines.get(b.id)!.line)
-    return {
-      documentId: file.id,
-      path: file.path,
-      title,
-      projectId,
-      ...counts(list, items),
-      updatedAt: file.updatedAt.toISOString(),
-      next: [
-        ...inOrder.filter((i) => i.state === 'needs_you'),
-        ...inOrder.filter((i) => i.state === 'in_progress'),
-      ]
-        .slice(0, 3)
-        .map((i) => ({ id: i.id, text: plainItemText(i.text), state: i.state })),
-    }
-  })
+/**
+ * Every list of the library: its Markdown files with a checklist, last changed first. As
+ * `memberId` sees them, when given (workspaceLists).
+ */
+export async function listSummaries(
+  db: ScopedDb,
+  scope: Scope,
+  memberId?: string,
+): Promise<ListSummary[]> {
+  return (await workspaceLists(db, scope, memberId)).map(
+    ({ file, list, lines, title, projectId, items }) => {
+      const inOrder = items
+        .filter((i) => !i.missing)
+        .sort((a, b) => lines.get(a.id)!.line - lines.get(b.id)!.line)
+      return {
+        documentId: file.id,
+        path: file.path,
+        title,
+        projectId,
+        ...counts(list, items),
+        updatedAt: file.updatedAt.toISOString(),
+        next: [
+          ...inOrder.filter((i) => i.state === 'needs_you'),
+          ...inOrder.filter((i) => i.state === 'in_progress'),
+        ]
+          .slice(0, 3)
+          .map((i) => ({ id: i.id, text: plainItemText(i.text), state: i.state })),
+      }
+    },
+  )
 }
 
-/** One list, with the items work is attached to. */
+/** One list, with the items work is attached to. As `memberId` sees it, when given. */
 export async function listDetail(
   db: ScopedDb,
   scope: Scope,
   documentId: string,
+  memberId?: string,
 ): Promise<ListDetail> {
   const file = await listFile(db, { id: documentId })
   const list = parseList(file.text)
   const lines = byLine(list)
-  const rows = ordered(await itemRows(db, { documentId: { in: [file.id] } }), lines)
-  const items = await views(db, scope, rows, lines)
+  const [rows, aside] = await Promise.all([
+    itemRows(db, { documentId: { in: [file.id] } }),
+    asideFor(db, memberId),
+  ])
+  const items = await views(db, scope, ordered(rows, lines), lines, aside)
   return {
     documentId: file.id,
     path: file.path,

@@ -80,6 +80,7 @@ import {
 } from 'lucide-react'
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { MediaPreview, MessageAttachments } from '@/components/attachments'
 import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
@@ -3802,6 +3803,10 @@ export function ChoicesCard({
   thread?: string
 }) {
   const links = useFileLinks()
+  const router = useRouter()
+  // Beside its thread, a design opens in the panel; out of it (Today's Needs you), in the library.
+  const openDesign = (path: string) =>
+    links ? links.open({ path }) : router.push(`/app/library?design=${encodeURIComponent(path)}`)
   const designs = choices.options.some((o) => o.design)
   const library = useApi<LibraryFile[]>(designs ? '/library' : null)
   const [sending, setSending] = useState<string>()
@@ -3875,7 +3880,7 @@ export function ChoicesCard({
                     type="button"
                     className="group relative flex aspect-[16/10] items-center justify-center overflow-hidden border-b bg-muted/50"
                     aria-label={`Open ${o.label}`}
-                    onClick={() => links?.open({ path: design })}
+                    onClick={() => openDesign(design)}
                   >
                     {thumbnail ? (
                       // eslint-disable-next-line @next/next/no-img-element -- a library file through the API

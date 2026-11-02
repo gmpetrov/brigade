@@ -21,7 +21,8 @@ const HandOff = HandOffItems.extend({ projectId: z.string().nullish() })
 export const lists = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
-  .get('/', async (c) => c.json(await listSummaries(c.var.db, c.var.scope)))
+  // As this member sees them: a thread they put away for later no longer waits on them.
+  .get('/', async (c) => c.json(await listSummaries(c.var.db, c.var.scope, c.var.scope.memberId)))
 
   /** The items a thread works on, for the card at its top. */
   .get('/threads/:sessionId', async (c) =>
@@ -53,7 +54,9 @@ export const lists = new Hono<AppEnv>()
   })
 
   .get('/:documentId', async (c) =>
-    c.json(await listDetail(c.var.db, c.var.scope, c.req.param('documentId'))),
+    c.json(
+      await listDetail(c.var.db, c.var.scope, c.req.param('documentId'), c.var.scope.memberId),
+    ),
   )
 
   /** Lines to a teammate: in one thread together, or a thread each. */

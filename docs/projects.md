@@ -148,7 +148,7 @@ A project is mentionable like a teammate or a repository: `@[Acme web](project:<
 Support · Acme            ⌄
 Search…
 Work
-  Home
+  Today
   Tickets
   Threads
   Tasks
@@ -176,7 +176,7 @@ Workspace settings
 `/app/projects/<id>` is one page, with no tabs (2 Nov 2026). It says what only the project
 can say, and leaves what the rest of the dashboard already shows: its threads are in the
 sidebar (clicking the project filters them), what needs a person is in the sidebar and on
-Home, and its pull requests, files and routines are the workspace's pages, filtered on it.
+Today, and its pull requests, files and routines are the workspace's pages, filtered on it.
 
 - **Header:** icon, name, brief on one line, and the library folder with its file count,
   which opens the library at that folder. A settings button (gear) opens `…/settings`; on

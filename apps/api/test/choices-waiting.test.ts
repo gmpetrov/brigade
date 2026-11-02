@@ -277,6 +277,26 @@ test(
   },
 )
 
+test('a choice still waits behind hundreds of newer quiet threads', { skip }, async () => {
+  const offered = await thread([{ person: 'Rename Home' }, { offers: 'choices' }])
+  await prisma.session.update({
+    where: { id: offered.id },
+    data: { updatedAt: new Date(Date.now() - MINUTE) },
+  })
+  await prisma.session.createMany({
+    data: Array.from({ length: 250 }, (_, i) => ({
+      ...scope,
+      teammateId,
+      computerId,
+      startedByMemberId: ids.members[0]!,
+      title: `Newer quiet thread ${i}`,
+      status: 'idle' as const,
+    })),
+  })
+  const waiting = await homeWaiting(db(), ids.members[0]!)
+  assert.ok(waiting.choices.some((c) => c.id === offered.id))
+})
+
 test('the Board: a thread stopped on choices is Needs you, "Pick one"', { skip }, async () => {
   const offered = await thread([{ person: 'Rename Home' }, { offers: 'choices' }])
   const answered = await thread([
@@ -323,9 +343,12 @@ test('a list item and a task whose thread stopped on choices need you', () => {
     pullRequests: [],
   }
   const row = { threads: [{ session }], pulls: [] }
-  assert.equal(stateOf(false, row as never, new Set(), new Set(['t1'])), 'needs_you')
-  assert.equal(stateOf(false, row as never, new Set(), new Set()), 'open')
-  assert.equal(stateOf(true, row as never, new Set(), new Set(['t1'])), 'done')
+  const none = new Set<string>()
+  assert.equal(stateOf(false, row as never, none, none, new Set(['t1'])), 'needs_you')
+  assert.equal(stateOf(false, row as never, none, none, none), 'open')
+  assert.equal(stateOf(true, row as never, none, none, new Set(['t1'])), 'done')
+  // Put away for later by the member reading: it no longer waits on them.
+  assert.equal(stateOf(false, row as never, none, new Set(['t1']), new Set(['t1'])), 'open')
   const task = { completedAt: null, session }
   assert.equal(columnOf(task, false, true), 'needs_you')
   assert.equal(columnOf(task, false), 'doing')

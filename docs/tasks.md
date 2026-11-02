@@ -43,11 +43,12 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
   across lists, threads and routines, computed from them: no task needed. The Tasks board stays
   at /app/tasks with its data meanwhile; a thread whose task was completed shows as done there.
 - **A thread to do later is put away, not made a task.** Its ⋮ menu's Do later
-  takes it out of the member's list and of what waits on them (Home, sidebar,
+  takes it out of the member's list and of what waits on them (Today, sidebar,
   app badge, notifications), for them only, like a pin; the sidebar filter's
   Later lists them, with how many. Anything new in it (a message, or a ticket
   or pull request in it or a child) brings it back (`src/later.ts`). On the
-  board, its task is in Doing rather than Needs you, for that member.
+  board, its task is in Doing rather than Needs you, for that member; on the Board and in a
+  list's counts, it is like an archived thread for them (docs/board.md, docs/lists.md).
 - **One goal, one deliverable.** A person's attention is what is scarce: a goal
   of days or several pull requests reaches them as one finished, checked result
   (for code, one pull request), with no plan to approve and no steps to review;
@@ -74,7 +75,7 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
 - **Column**, computed on the board from the mission and its tasks: Needs you
   while it or any of its tasks waits on a person; Done once it is done; Backlog
   while it has no thread and every task is in Backlog; else Doing. Each task
-  keeps its own column in the API, so the sidebar, Home and notifications count
+  keeps its own column in the API, so the sidebar, Today and notifications count
   the real items, never the mission on top.
 - **Done by itself**: the API marks a mission done when its last task is done,
   and reopens it (with its archived tasks) when one is reopened or added.

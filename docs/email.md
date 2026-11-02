@@ -126,7 +126,7 @@ sends as that address only, in every project, once its domain is verified, and r
 - no reply after someone already answered from the mailbox itself (`own_copy`).
 
 **One sending rule per mailbox, whatever its provider** (`Connection.sendPolicy`, set under Mail
-settings › a mailbox › How its replies go; Brigade's addresses by an owner or admin, a Gmail account
+settings › a mailbox › Replies; Brigade's addresses by an owner or admin, a Gmail account
 also by the member who connected it): `auto` (every mailbox's to start with) lets its teammates send
 on their own, `approve` makes each email (`email_send`, `gmail_send`, `MAIL_SENDS` in
 `connector-calls.ts`) wait for a person, a playbook's too. A teammate whose connector writes ask
@@ -177,7 +177,7 @@ approval or for a wake-up to bring it in, gets one Brigade message asking what i
 
 ## The Inbox
 
-`/app/inbox`, under Home in the sidebar (`apps/api/src/inbox.ts`, `routes/inbox.ts`): every mail
+`/app/inbox`, under Today in the sidebar (`apps/api/src/inbox.ts`, `routes/inbox.ts`): every mail
 the workspace's mailboxes received, across agents, projects and sources, in one list, one row per
 conversation (a box's `conversationId`, a Gmail thread). Every source keeps its mail in the same
 table, `MailMessage`, so one query lists, filters and pages them all; a new source (a chat) only
@@ -247,7 +247,7 @@ has to keep its messages there.
   next mail in its conversation goes there; a Gmail conversation's reply wakes it (`ReplyWatch`).
   The thread shows the note as the person's message and the mail as a card (`handedEmail`, trigger
   `Inbox`), whose header, sender and subject open the conversation here (`inboxItem` in the event).
-  Like a mailbox rule's, the thread stays out of the sidebar and Home (`Session.quiet`) until a person
+  Like a mailbox rule's, the thread stays out of the sidebar and Today (`Session.quiet`) until a person
   writes in it, pins it or a ticket opens; the Inbox links to it.
 
 ## Mailboxes
@@ -272,8 +272,9 @@ id is the Inbox's source id (`email:<address id>`, `gmail:<connection id>`).
   account's "Show all its mail in the Inbox"), who handles it
   (its rules and its playbooks' rules in one list, in the order they apply, reordered there, a
   playbook's changed in the playbook; then what happens to the rest), and who reads and replies (the
-  teammates given it, and who sees its mail in the Inbox). A Brigade mailbox's page also has its
-  journal (its latest mail both ways and where each went, never its text). Rules are an owner's or admin's to change; a Gmail account's own member
+  teammates given it, and who sees its mail in the Inbox; not shown for an agent's own address, which
+  only its agent uses). The page no longer shows the journal; the API still serves it, and Send a
+  test mail reads it to tell when the test arrived. Rules are an owner's or admin's to change; a Gmail account's own member
   chooses whether all its mail shows.
 - The other places only link here: a project's settings list its mailboxes, a teammate's Access card
   shows its address (or Give an address), the Email App's sheet turns it on, a Gmail account's menu

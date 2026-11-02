@@ -17,8 +17,8 @@ import type { Prisma, ScopedDb } from './db.js'
 const DAY = 24 * 60 * 60_000
 /** A choice nobody made waits this long, then closes with its thread, as Stopped does. */
 export const CHOICE_DAYS = STOPPED_DAYS
-/** The most threads read for a member at once, the latest first. */
-const LISTED = 100
+/** Threads whose events are read in one query: a few, so the query stays small. */
+const CHUNK = 200
 
 /** A thread whose choices may wait on a person, whoever started it. */
 export const CHOICE_THREAD = {
@@ -35,9 +35,17 @@ export type ChoiceWaiting = { at: Date; question: string; choices: Choices }
 
 /**
  * The choices card each of these threads ended on that nobody answered, if recent: the latest
- * one after the last message a person wrote in it.
+ * one after the last message in it. Every one of them, read a chunk at a time.
  */
 async function choicesOf(db: ScopedDb, sessionIds: string[], now: Date) {
+  const found = new Map<string, ChoiceWaiting>()
+  for (let i = 0; i < sessionIds.length; i += CHUNK)
+    for (const [id, choice] of await chunkChoices(db, sessionIds.slice(i, i + CHUNK), now))
+      found.set(id, choice)
+  return found
+}
+
+async function chunkChoices(db: ScopedDb, sessionIds: string[], now: Date) {
   const found = new Map<string, ChoiceWaiting>()
   if (!sessionIds.length) return found
   const written = await db.sessionEvent.groupBy({
@@ -95,7 +103,8 @@ export type ThreadChoice = ChoiceWaiting & {
 
 /**
  * The threads whose choices wait on this member: those they started, not put away for later,
- * active in the last CHOICE_DAYS; the latest first.
+ * active in the last CHOICE_DAYS; the latest first. Each idle one is read, however many: a
+ * cap before knowing which offered choices would lose an old one behind newer quiet threads.
  */
 export async function choicesWaitingOn(
   db: ScopedDb,
@@ -109,8 +118,6 @@ export async function choicesWaitingOn(
       laters: { none: { memberId } },
       updatedAt: { gte: new Date(now.getTime() - CHOICE_DAYS * DAY) },
     },
-    orderBy: { updatedAt: 'desc' },
-    take: LISTED,
     select: { id: true, title: true, teammate: { select: { id: true, name: true } } },
   })
   const choices = await choicesOf(
