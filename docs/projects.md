@@ -189,9 +189,21 @@ Home, and its pull requests, files and routines are the workspace's pages, filte
   and when it runs or last ran. "All" opens Routines filtered on the project.
 - Whichever of the two has something comes first.
 
-The settings (`…/settings`) hold the name, icon, website, logo, brief, library folder,
-preferred connections, code review, mailboxes, **repositories and their saved previews**
-(once a tab of their own), memory, and archive or delete.
+The settings (`…/settings`) are one page in sections, with a nav beside them that follows the
+scroll (a row above them on a phone): **General** (name, logo or letters, website, brief, library
+folder), **Repositories** and their saved previews (once a tab of their own), **Code review**,
+**Apps** (preferred accounts), **Email** (mailboxes), **Memory**, and **Archive or delete**
+(2 Nov 2026). Each change saves on its own, as the workspace's settings do: a text field when it
+loses focus, a choice at once; there is no Save button.
+
+- **Set up the project:** a checklist above the sections while something is missing: the brief, a
+  library folder, a repository, a saved preview. Each missing step scrolls to its field. It goes
+  once all four are done, or when someone hides it (for that project, in that browser, since a
+  project without code never links a repository).
+- **Preferred accounts:** one choice per App that has more than one account (grouped by App, so two
+  custom MCP servers are never offered as alternatives), "Let the teammate pick" by default. Apps
+  with a single account are only counted: there is nothing to choose. Picking an account replaces
+  any other preferred account of the same App; preferences on single-account Apps stay as they are.
 
 The old tabs' addresses still work: `…/threads` opens the project page, `…/pulls` the Pull
 requests page and `…/routines` the Routines page with `?project=<id>`, `…/library` the
