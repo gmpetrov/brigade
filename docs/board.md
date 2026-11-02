@@ -44,7 +44,12 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
   days without activity it leaves the Board as closed with no activity, listed under Done apart
   from what was done, and anything new in it brings it back. A list's line whose threads all
   stopped with it open (`stalled`) shows there too, until its last thread closes; it then is an
-  open line of its list again.
+  open line of its list again. "N stopped" in the summary at the top opens it and scrolls down
+  to it.
+- **A column is never taller than the window.** From a tablet's width up, each column stops at
+  the window's height, less the header above it and room for the Stopped bar below, and its
+  cards scroll inside it, their edges fading where more is hidden. A short column keeps its
+  height. The page itself still scrolls, down to Stopped.
 - **No routines section.** A healthy routine neither waits on a person nor moves, so its row
   only pushed the columns down. A failing one is already a card in Needs you; the routines and
   what their runs did are on the Routines page and Home (`GET /api/board` still returns them for

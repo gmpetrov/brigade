@@ -266,9 +266,12 @@ function Column({
   footer?: React.ReactNode
 }) {
   return (
+    // From md up, a column stops at the window's height (less the page's header above it, and
+    // room for the Stopped bar below) and its cards scroll inside it; the page still scrolls
+    // down to Stopped. On a phone, one column shows at a time and the page scrolls.
     <section
       aria-label={column.label}
-      className="flex min-w-0 flex-col gap-2 rounded-3xl bg-secondary p-2.5"
+      className="flex min-w-0 flex-col gap-2 rounded-3xl bg-secondary p-2.5 md:max-h-[max(24rem,calc(100dvh-16rem))]"
     >
       <h2 className="flex items-center gap-2 px-1.5 pt-1 text-[13.5px] font-bold">
         <span aria-hidden className={cn('size-1.5 rounded-full', column.dot)} />
@@ -278,22 +281,25 @@ function Column({
           <span className="ml-auto text-xs font-medium text-muted-foreground">{column.hint}</span>
         )}
       </h2>
-      {cards.length === 0 ? (
-        <p className="px-1.5 pb-1.5 text-xs text-muted-foreground">
-          {column.value === 'needs_you'
-            ? 'Nothing is waiting on you.'
-            : column.value === 'in_progress'
-              ? 'Nothing is moving.'
-              : 'Nothing done this week yet.'}
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {cards.map((c) => (
-            <CardView key={c.key} card={c} />
-          ))}
-        </ul>
-      )}
-      {footer}
+      {/* -m-1 p-1: room for a card's focus ring, which the scroll box would cut off. */}
+      <div className="-m-1 flex min-h-0 flex-col gap-2 p-1 scroll-fade-y md:overflow-y-auto">
+        {cards.length === 0 ? (
+          <p className="px-1.5 pb-1.5 text-xs text-muted-foreground">
+            {column.value === 'needs_you'
+              ? 'Nothing is waiting on you.'
+              : column.value === 'in_progress'
+                ? 'Nothing is moving.'
+                : 'Nothing done this week yet.'}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {cards.map((c) => (
+              <CardView key={c.key} card={c} />
+            ))}
+          </ul>
+        )}
+        {footer}
+      </div>
     </section>
   )
 }
@@ -423,11 +429,21 @@ function StoppedRow({ row, onChange }: { row: BoardStopped; onChange: () => void
   )
 }
 
-function Stopped({ rows, onChange }: { rows: BoardStopped[]; onChange: () => void }) {
-  const [open, setOpen] = useState(rows.length <= 5)
+function Stopped({
+  rows,
+  open,
+  setOpen,
+  onChange,
+}: {
+  rows: BoardStopped[]
+  open: boolean
+  setOpen: (open: boolean) => void
+  onChange: () => void
+}) {
   if (!rows.length) return null
   return (
     <section
+      id="stopped"
       aria-labelledby="board-stopped"
       className="overflow-hidden rounded-3xl border border-dashed"
     >
@@ -668,6 +684,8 @@ export function BoardPage() {
   const [column, setColumn] = useState<BoardColumn>('needs_you')
   const [allDone, setAllDone] = useState(false)
   const [showClosed, setShowClosed] = useState(false)
+  // Unset until someone opens or closes it: open by default when it is short.
+  const [stoppedOpen, setStoppedOpen] = useState<boolean>()
 
   const view = useMemo(() => {
     const data = board.data
@@ -732,7 +750,21 @@ export function BoardPage() {
       <span className="font-semibold text-foreground">{columns.in_progress.length}</span> in
       progress
     </span>,
-    view.stopped.length > 0 && <span key="s">{view.stopped.length} stopped</span>,
+    view.stopped.length > 0 && (
+      // The Stopped section is below the columns: this opens it and scrolls down to it.
+      <a
+        key="s"
+        href="#stopped"
+        onClick={(e) => {
+          e.preventDefault()
+          setStoppedOpen(true)
+          document.getElementById('stopped')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }}
+        className="underline-offset-2 hover:text-foreground hover:underline"
+      >
+        {view.stopped.length} stopped
+      </a>
+    ),
     <span key="d">{columns.done.length} done this week</span>,
   ].filter(Boolean)
 
@@ -824,7 +856,12 @@ export function BoardPage() {
         ))}
       </div>
 
-      <Stopped rows={view.stopped} onChange={() => void board.reload()} />
+      <Stopped
+        rows={view.stopped}
+        open={stoppedOpen ?? view.stopped.length <= 5}
+        setOpen={setStoppedOpen}
+        onChange={() => void board.reload()}
+      />
     </div>
   )
 }
