@@ -177,7 +177,7 @@ approval or for a wake-up to bring it in, gets one Brigade message asking what i
 
 ## The Inbox
 
-`/app/inbox`, under Home in the sidebar (`apps/api/src/inbox.ts`, `routes/inbox.ts`): every mail
+`/app/inbox`, under Today in the sidebar (`apps/api/src/inbox.ts`, `routes/inbox.ts`): every mail
 the workspace's mailboxes received, across agents, projects and sources, in one list, one row per
 conversation (a box's `conversationId`, a Gmail thread). Every source keeps its mail in the same
 table, `MailMessage`, so one query lists, filters and pages them all; a new source (a chat) only
@@ -247,7 +247,7 @@ has to keep its messages there.
   next mail in its conversation goes there; a Gmail conversation's reply wakes it (`ReplyWatch`).
   The thread shows the note as the person's message and the mail as a card (`handedEmail`, trigger
   `Inbox`), whose header, sender and subject open the conversation here (`inboxItem` in the event).
-  Like a mailbox rule's, the thread stays out of the sidebar and Home (`Session.quiet`) until a person
+  Like a mailbox rule's, the thread stays out of the sidebar and Today (`Session.quiet`) until a person
   writes in it, pins it or a ticket opens; the Inbox links to it.
 
 ## Mailboxes
