@@ -326,13 +326,18 @@ export const threads = new Hono<AppEnv>()
       // Where it runs: the sidebar marks a member's own machine.
       computer: { select: { kind: true, name: true } },
     }
-    // One thread, as the list has it: the sidebar shows the one open when it is not among
-    // those it loaded. Archived or quiet, it is still the one open; a child thread is not
-    // listed, its parent is, which shows it among its children.
-    const only = c.req.query('id')
+    // Some threads, as the list has it (?id=, repeated): the sidebar shows the one open, and
+    // those waiting on the member, when they are not among those it loaded. Archived or quiet,
+    // the one open is still the one open; a child thread is not listed, its parent is, which
+    // shows it among its children.
+    const ids = (c.req.queries('id') ?? []).filter(Boolean).slice(0, 100)
+    const only = ids.length > 0
     const rows = await c.var.db.session.findMany({
       where: only
-        ? { parentId: null, OR: [{ id: only }, { children: { some: { id: only } } }] }
+        ? {
+            parentId: null,
+            OR: [{ id: { in: ids } }, { children: { some: { id: { in: ids } } } }],
+          }
         : {
             // A teammate's threads: those it started and those it joined.
             ...(teammateId ? { teammates: { some: { teammateId } } } : {}),

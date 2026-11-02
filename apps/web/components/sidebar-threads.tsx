@@ -86,6 +86,7 @@ import {
   type Teammate,
   type ThreadSummary,
 } from '@/lib/api'
+import { fetchFar, keepFar, latestOnly } from '@/lib/far-threads'
 import { latestSave } from '@/lib/latest-save'
 import { groupByList, isListRow, listRowId } from '@/lib/list-groups'
 import { groupOf, groupWith, holds, subThreadRows, type Group } from '@/lib/sub-threads'
@@ -835,16 +836,41 @@ export function SidebarWork({
       }))
   }, [pathname])
 
+  // Threads waiting on this member that are older than those loaded (choices from last week, a
+  // ticket in an old thread): asked for by id, so the list shows them with the others waiting
+  // and agrees with the count beside Today.
+  const farIds = useMemo(() => {
+    const near = [...(threads ?? []), ...older]
+    return Object.keys(needsYou)
+      .filter((id) => !near.some((t) => holds(t, id)))
+      .sort()
+  }, [threads, older, needsYou])
+  const farKey = farIds.join('\n')
+  const [far, setFar] = useState<ThreadSummary[]>([])
+  // Only the latest answer lands: one asked for before and answering after never replaces it.
+  const deliverFar = useMemo(() => latestOnly<ThreadSummary[]>(setFar), [])
+  // Asked again as the list reloads (a thread changed), every id however many, by batches.
+  useEffect(() => {
+    if (!threads) return
+    const ids = farKey ? farKey.split('\n') : []
+    deliverFar(
+      ids.length ? fetchFar(ids, (path) => api<ThreadSummary[]>(path)) : Promise.resolve([]),
+    )
+  }, [threads, farKey, deliverFar])
+
   // Waiting on a person is more than the thread's own status: a ticket for this member, a task
   // in Needs you, or a pull request it opened that a person has to review or merge. Unless it is working: then
   // it shows as working, and waits once it stops. What each asks goes at the row's end.
-  const { all, asks } = useMemo(() => {
+  const { all, asks, farOnes } = useMemo(() => {
     const latestIds = new Set((threads ?? []).map((t) => t.id))
-    return withAsks(
-      archived ?? [...(threads ?? []), ...older.filter((t) => !latestIds.has(t.id))],
-      needsYou,
-    )
-  }, [threads, older, needsYou, archived])
+    const olderOnes = older.filter((t) => !latestIds.has(t.id))
+    const loadedIds = new Set([...latestIds, ...olderOnes.map((t) => t.id)])
+    // Only those still waiting: an answer from before may bring one that waits no more.
+    const farRows = keepFar(far, farIds, loadedIds)
+    const farOnes = new Set(farRows.map((t) => t.id))
+    const list = [...(threads ?? []), ...olderOnes, ...farRows]
+    return { ...withAsks(archived ?? list, needsYou), farOnes }
+  }, [threads, older, far, farIds, needsYou, archived])
   // The lists this member pinned: under Pinned, each with the threads on its items (those not
   // pinned themselves), which leave Threads.
   const pinnedLists = useApi<PinnedList[]>('/lists/pins', ['lists.updated'])
@@ -1015,8 +1041,10 @@ export function SidebarWork({
   const mayHaveOlder =
     !instead && !!threads && !exhausted.includes(query) && (!!query || threads.length >= 100)
   async function loadOlder() {
+    // From the end of the pages loaded: not from a thread asked for apart, which may be older.
     const matching = all.filter(
       (t) =>
+        !farOnes.has(t.id) &&
         (!filter.teammateId || inThread(t, filter.teammateId)) &&
         (!filter.projectId || t.projectId === filter.projectId),
     )
