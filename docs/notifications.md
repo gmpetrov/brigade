@@ -33,7 +33,8 @@ in the dashboard.
   (`apps/api/src/choices-waiting.ts`): a teammate's reply that ends on a
   choices card ("Riley needs you to pick one", with the card's question). It
   waits while the thread is idle, until a message comes in it, for 7 days at
-  most. Today's Needs you shows the card itself, picked there as in the thread.
+  most. Today's Needs you shows the card itself, picked or dismissed there as in
+  the thread.
 - **A routine waits on its owner** when its last firing could not start (unless
   the question ticket it opened is still open: that ticket is the item), or its
   latest run failed (with the same wait after a passing error), until it runs

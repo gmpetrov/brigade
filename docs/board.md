@@ -38,6 +38,13 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
   days closes with its thread, as Stopped does. Reply buttons ("Build it", "Not yet") do not
   wait: they offer a next step a person may leave, and almost every reply ends on some; Today
   lists those it left as loose ends.
+- **A choice can be dismissed** without picking: Dismiss on the card, in the thread or on
+  Today (`POST /api/threads/:id/choices/dismiss`, who may change the thread). The card shows
+  Dismissed, it waits on nobody, and the thread stops (Stopped, then closed after 7 days), with
+  no turn started. Its teammate reads a note at its next turn ("Ada dismissed the choices you
+  offered…"). Brigade keeps the card's place (`Session.choicesDismissedSeq`), not a message in
+  the thread, so it holds while the teammate's computer is off; choices offered after it wait
+  again. Chosen over Mark done, which ends the thread: a person may come back to it.
 - **What a member put away for later is not theirs to see here.** A thread they put away
   (Do later, `src/later.ts`) no longer waits on them anywhere, so on their Board it is like an
   archived one: no card in Needs you or In progress, not Stopped, and a list's line it alone

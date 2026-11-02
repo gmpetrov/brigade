@@ -546,6 +546,8 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   reportDueAt: string | null
   /** Who declared it done, by name, while it is. */
   doneBy?: string | null
+  /** The choices card a person dismissed without picking: it and those before it are closed. */
+  choicesDismissedSeq?: number | null
   teammate: { id: string; name: string; title: string; harness: string; model: string | null }
   teammates: {
     joinedAt: string

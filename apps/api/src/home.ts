@@ -87,6 +87,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
       lastSeq: true,
       updatedAt: true,
       workspaceId: true,
+      choicesDismissedSeq: true,
       teammate: { select: { id: true, name: true } },
     },
   })
@@ -187,6 +188,8 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
       notes.find((n) => n.sessionId === thread.id)?._max.seq ?? -1,
     )
     if (settled > event.seq) continue
+    // Choices a person dismissed, that card or a later one: settled too.
+    if ((thread.choicesDismissedSeq ?? -1) >= event.seq) continue
     const { toolName, input } = event.data as { toolName?: string; input?: unknown }
     const name = bareToolName(String(toolName ?? ''))
     const replies = name === SUGGEST_REPLIES_TOOL ? safeReplies(input) : null

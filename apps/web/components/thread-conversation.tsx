@@ -1492,6 +1492,15 @@ export function ThreadConversation({
                     onChoose={
                       t.mayPrompt && !deciding ? (text, pick) => deliver(text, [], pick) : undefined
                     }
+                    onDismissChoices={
+                      t.mayPrompt
+                        ? () =>
+                            api(`/threads/${id}/choices/dismiss`, { body: {} }).then(
+                              () => void thread.reload(),
+                            )
+                        : undefined
+                    }
+                    choicesDismissedSeq={t.choicesDismissedSeq}
                     onReply={t.mayPrompt && !t.controlledByMemberId ? replyToMessage : undefined}
                     onRetry={
                       t.mayPrompt && !t.controlledByMemberId ? () => call('/retry') : undefined

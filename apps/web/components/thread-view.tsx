@@ -202,6 +202,8 @@ export type Item =
   | {
       kind: 'tool'
       key: string
+      /** Its tool.started event: a choices card dismissed up to there is closed. */
+      seq?: number
       toolName: string
       input: unknown
       output?: unknown
@@ -456,6 +458,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           add({
             kind: 'tool',
             key: `t${e.teammateId ?? ''}:${e.toolCallId}`,
+            seq,
             toolName: e.toolName,
             input: e.input,
             finished: false,
@@ -2001,6 +2004,8 @@ export function ThreadItems({
   onAnswer,
   onTicket,
   onChoose,
+  onDismissChoices,
+  choicesDismissedSeq,
   onReply,
   canApprove,
   takeover,
@@ -2032,6 +2037,10 @@ export function ThreadItems({
   onTicket: (requestId: string, answer: TicketAnswer) => Promise<void>
   /** Sends a choice someone clicked as their message, with the option's design it picks. Unset when they cannot send one now. */
   onChoose?: (text: string, pick?: string) => Promise<void>
+  /** Closes the choices card open without picking one. Unset when they cannot. */
+  onDismissChoices?: () => Promise<void>
+  /** The choices card a person dismissed: it and those before it show closed. */
+  choicesDismissedSeq?: number | null
   /** Quotes a message in the composer, for the next one to reply to it. Unset when they cannot send one. */
   onReply?: (reply: ReplyTo) => void
   canApprove: boolean
@@ -2384,8 +2393,17 @@ export function ThreadItems({
           const reply = items
             .slice(i + 1)
             .find((it): it is Extract<Item, { kind: 'user' }> => it.kind === 'user')
+          const dismissed =
+            choicesDismissedSeq != null && item.seq != null && item.seq <= choicesDismissedSeq
           return (
-            <ChoicesCard key={item.key} choices={choices} reply={reply?.text} onChoose={onChoose} />
+            <ChoicesCard
+              key={item.key}
+              choices={choices}
+              reply={reply?.text}
+              dismissed={dismissed}
+              onChoose={onChoose}
+              onDismiss={onDismissChoices}
+            />
           )
         }
         const replies = suggestedReplies(item)
@@ -3792,13 +3810,19 @@ function AskView({
 export function ChoicesCard({
   choices,
   reply,
+  dismissed = false,
   onChoose,
+  onDismiss,
   thread,
 }: {
   choices: Choices
   /** The next message in the thread, if there is one. */
   reply?: string
+  /** A person closed it without picking (docs/board.md). */
+  dismissed?: boolean
   onChoose?: (text: string, pick?: string) => Promise<void>
+  /** Closes it without picking: the thread stops, no turn starts. */
+  onDismiss?: () => Promise<void>
   /** Its thread's address, when shown outside it. */
   thread?: string
 }) {
@@ -3811,8 +3835,24 @@ export function ChoicesCard({
   const library = useApi<LibraryFile[]>(designs ? '/library' : null)
   const [sending, setSending] = useState<string>()
   const [error, setError] = useState<string>()
+  // Dismissed here, until the thread says so too.
+  const [dismissing, setDismissing] = useState<'sending' | 'done'>()
+  const closed = dismissed || dismissing === 'done'
   const picked = reply === undefined ? undefined : pickedChoice(choices.options, reply)
-  const open = reply === undefined && !!onChoose && !sending
+  const open = reply === undefined && !closed && !!onChoose && !sending && !dismissing
+
+  async function dismiss() {
+    if (!onDismiss) return
+    setDismissing('sending')
+    setError(undefined)
+    try {
+      await onDismiss()
+      setDismissing('done')
+    } catch (e) {
+      setError((e as Error).message)
+      setDismissing(undefined)
+    }
+  }
 
   async function choose(option: Choices['options'][number]) {
     if (!onChoose) return
@@ -3837,12 +3877,14 @@ export function ChoicesCard({
         <div className="min-w-0 flex-1 font-semibold">
           <Markdown text={choices.question} className="[&>p]:inline" />
         </div>
-        {reply !== undefined && (
+        {reply !== undefined ? (
           <StatusBadge
             status={picked ? 'answered' : 'replied'}
             tone={picked ? 'success' : 'neutral'}
             label={picked ? 'Picked' : 'Replied'}
           />
+        ) : (
+          closed && <StatusBadge status="dismissed" tone="neutral" label="Dismissed" />
         )}
       </div>
       <ul className="grid gap-3 sm:grid-cols-2">
@@ -3919,20 +3961,35 @@ export function ChoicesCard({
           )
         })}
       </ul>
-      {open && (
-        <p className="text-xs text-muted-foreground">
-          {thread ? (
-            <>
-              Or write what you want instead{' '}
-              <Link href={thread} className="underline underline-offset-4 hover:text-foreground">
-                in the thread
-              </Link>
-              : mix two, or change one.
-            </>
-          ) : (
-            'Or write what you want instead: mix two, or change one.'
+      {(open || dismissing === 'sending') && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+            {thread ? (
+              <>
+                Or write what you want instead{' '}
+                <Link href={thread} className="underline underline-offset-4 hover:text-foreground">
+                  in the thread
+                </Link>
+                : mix two, or change one.
+              </>
+            ) : (
+              'Or write what you want instead: mix two, or change one.'
+            )}
+          </p>
+          {onDismiss && (
+            <Hint label="Close it without picking: the thread stops, and the teammate is told">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-none text-muted-foreground"
+                disabled={!!dismissing}
+                onClick={() => void dismiss()}
+              >
+                {dismissing === 'sending' ? 'Dismissing…' : 'Dismiss'}
+              </Button>
+            </Hint>
           )}
-        </p>
+        </div>
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </Card>

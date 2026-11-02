@@ -57,6 +57,7 @@ import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { toInfo } from '../attachments.js'
 import { audit } from '../audit.js'
+import { openChoices } from '../choices-waiting.js'
 import { attachmentKey, presignGet, streamObject, threadFileKey } from '../bucket.js'
 import {
   latestPreview,
@@ -1972,6 +1973,45 @@ export const threads = new Hono<AppEnv>()
     const thread = await loadThread(db, c.req.param('id'))
     mayChange(scope, thread)
     await markReopened(db, scope, thread)
+    return c.json({ ok: true })
+  })
+
+  /**
+   * Dismiss the choices card open in the thread without picking one (docs/board.md): it waits
+   * on nobody any more and the thread stops, with no turn started. Its teammate reads it at its
+   * next turn, as a note. Who may change the thread.
+   */
+  .post('/:id/choices/dismiss', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    mayChange(scope, thread)
+    const open = await openChoices(db, thread)
+    if (!open) throw new HTTPException(409, { message: 'No choices are open in this thread' })
+    // Only forward: a later card stays open, whatever was dismissed before it.
+    await db.session.updateMany({
+      where: {
+        id: thread.id,
+        OR: [{ choicesDismissedSeq: null }, { choicesDismissedSeq: { lt: open.seq } }],
+      },
+      data: { choicesDismissedSeq: open.seq, updatedAt: thread.updatedAt },
+    })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'thread.choices_dismissed',
+      target: { type: 'thread', id: thread.id },
+      data: { question: open.question },
+    })
+    const user = await prisma.user.findFirst({
+      where: { id: scope.userId },
+      select: { name: true },
+    })
+    await noteInThread(
+      db,
+      thread.id,
+      `${user?.name || 'A member'} dismissed the choices you offered ("${open.question}") without picking one.`,
+    )
+    void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, thread.status))
     return c.json({ ok: true })
   })
 

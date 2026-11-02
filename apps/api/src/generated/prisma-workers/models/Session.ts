@@ -27,11 +27,13 @@ export type AggregateSession = {
 }
 
 export type SessionAvgAggregateOutputType = {
+  choicesDismissedSeq: number | null
   lastSeq: number | null
   movedSeq: number | null
 }
 
 export type SessionSumAggregateOutputType = {
+  choicesDismissedSeq: number | null
   lastSeq: number | null
   movedSeq: number | null
 }
@@ -65,6 +67,7 @@ export type SessionMinAggregateOutputType = {
   doneSummary: string | null
   doneByType: $Enums.ActorType | null
   doneById: string | null
+  choicesDismissedSeq: number | null
   lastSeq: number | null
   movedAt: Date | null
   movedFrom: string | null
@@ -109,6 +112,7 @@ export type SessionMaxAggregateOutputType = {
   doneSummary: string | null
   doneByType: $Enums.ActorType | null
   doneById: string | null
+  choicesDismissedSeq: number | null
   lastSeq: number | null
   movedAt: Date | null
   movedFrom: string | null
@@ -154,6 +158,7 @@ export type SessionCountAggregateOutputType = {
   doneSummary: number
   doneByType: number
   doneById: number
+  choicesDismissedSeq: number
   lastSeq: number
   move: number
   movedAt: number
@@ -173,11 +178,13 @@ export type SessionCountAggregateOutputType = {
 
 
 export type SessionAvgAggregateInputType = {
+  choicesDismissedSeq?: true
   lastSeq?: true
   movedSeq?: true
 }
 
 export type SessionSumAggregateInputType = {
+  choicesDismissedSeq?: true
   lastSeq?: true
   movedSeq?: true
 }
@@ -211,6 +218,7 @@ export type SessionMinAggregateInputType = {
   doneSummary?: true
   doneByType?: true
   doneById?: true
+  choicesDismissedSeq?: true
   lastSeq?: true
   movedAt?: true
   movedFrom?: true
@@ -255,6 +263,7 @@ export type SessionMaxAggregateInputType = {
   doneSummary?: true
   doneByType?: true
   doneById?: true
+  choicesDismissedSeq?: true
   lastSeq?: true
   movedAt?: true
   movedFrom?: true
@@ -300,6 +309,7 @@ export type SessionCountAggregateInputType = {
   doneSummary?: true
   doneByType?: true
   doneById?: true
+  choicesDismissedSeq?: true
   lastSeq?: true
   move?: true
   movedAt?: true
@@ -433,6 +443,7 @@ export type SessionGroupByOutputType = {
   doneSummary: string | null
   doneByType: $Enums.ActorType | null
   doneById: string | null
+  choicesDismissedSeq: number | null
   lastSeq: number
   move: runtime.JsonValue | null
   movedAt: Date | null
@@ -502,6 +513,7 @@ export type SessionWhereInput = {
   doneSummary?: Prisma.StringNullableFilter<"Session"> | string | null
   doneByType?: Prisma.EnumActorTypeNullableFilter<"Session"> | $Enums.ActorType | null
   doneById?: Prisma.StringNullableFilter<"Session"> | string | null
+  choicesDismissedSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
   move?: Prisma.JsonNullableFilter<"Session">
   movedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
@@ -587,6 +599,7 @@ export type SessionOrderByWithRelationInput = {
   doneSummary?: Prisma.SortOrderInput | Prisma.SortOrder
   doneByType?: Prisma.SortOrderInput | Prisma.SortOrder
   doneById?: Prisma.SortOrderInput | Prisma.SortOrder
+  choicesDismissedSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   move?: Prisma.SortOrderInput | Prisma.SortOrder
   movedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -676,6 +689,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   doneSummary?: Prisma.StringNullableFilter<"Session"> | string | null
   doneByType?: Prisma.EnumActorTypeNullableFilter<"Session"> | $Enums.ActorType | null
   doneById?: Prisma.StringNullableFilter<"Session"> | string | null
+  choicesDismissedSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
   move?: Prisma.JsonNullableFilter<"Session">
   movedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
@@ -760,6 +774,7 @@ export type SessionOrderByWithAggregationInput = {
   doneSummary?: Prisma.SortOrderInput | Prisma.SortOrder
   doneByType?: Prisma.SortOrderInput | Prisma.SortOrder
   doneById?: Prisma.SortOrderInput | Prisma.SortOrder
+  choicesDismissedSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   move?: Prisma.SortOrderInput | Prisma.SortOrder
   movedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -814,6 +829,7 @@ export type SessionScalarWhereWithAggregatesInput = {
   doneSummary?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   doneByType?: Prisma.EnumActorTypeNullableWithAggregatesFilter<"Session"> | $Enums.ActorType | null
   doneById?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
+  choicesDismissedSeq?: Prisma.IntNullableWithAggregatesFilter<"Session"> | number | null
   lastSeq?: Prisma.IntWithAggregatesFilter<"Session"> | number
   move?: Prisma.JsonNullableWithAggregatesFilter<"Session">
   movedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
@@ -852,6 +868,7 @@ export type SessionCreateInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -934,6 +951,7 @@ export type SessionUncheckedCreateInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -1000,6 +1018,7 @@ export type SessionUpdateInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1082,6 +1101,7 @@ export type SessionUncheckedUpdateInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1156,6 +1176,7 @@ export type SessionCreateManyInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -1194,6 +1215,7 @@ export type SessionUpdateManyMutationInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1237,6 +1259,7 @@ export type SessionUncheckedUpdateManyInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1303,6 +1326,7 @@ export type SessionCountOrderByAggregateInput = {
   doneSummary?: Prisma.SortOrder
   doneByType?: Prisma.SortOrder
   doneById?: Prisma.SortOrder
+  choicesDismissedSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   move?: Prisma.SortOrder
   movedAt?: Prisma.SortOrder
@@ -1320,6 +1344,7 @@ export type SessionCountOrderByAggregateInput = {
 }
 
 export type SessionAvgOrderByAggregateInput = {
+  choicesDismissedSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   movedSeq?: Prisma.SortOrder
 }
@@ -1353,6 +1378,7 @@ export type SessionMaxOrderByAggregateInput = {
   doneSummary?: Prisma.SortOrder
   doneByType?: Prisma.SortOrder
   doneById?: Prisma.SortOrder
+  choicesDismissedSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   movedAt?: Prisma.SortOrder
   movedFrom?: Prisma.SortOrder
@@ -1397,6 +1423,7 @@ export type SessionMinOrderByAggregateInput = {
   doneSummary?: Prisma.SortOrder
   doneByType?: Prisma.SortOrder
   doneById?: Prisma.SortOrder
+  choicesDismissedSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   movedAt?: Prisma.SortOrder
   movedFrom?: Prisma.SortOrder
@@ -1413,6 +1440,7 @@ export type SessionMinOrderByAggregateInput = {
 }
 
 export type SessionSumOrderByAggregateInput = {
+  choicesDismissedSeq?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   movedSeq?: Prisma.SortOrder
 }
@@ -2321,6 +2349,7 @@ export type SessionCreateWithoutStartedByInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -2401,6 +2430,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -2504,6 +2534,7 @@ export type SessionScalarWhereInput = {
   doneSummary?: Prisma.StringNullableFilter<"Session"> | string | null
   doneByType?: Prisma.EnumActorTypeNullableFilter<"Session"> | $Enums.ActorType | null
   doneById?: Prisma.StringNullableFilter<"Session"> | string | null
+  choicesDismissedSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
   move?: Prisma.JsonNullableFilter<"Session">
   movedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
@@ -2542,6 +2573,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -2622,6 +2654,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -2714,6 +2747,7 @@ export type SessionCreateWithoutComputerInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -2794,6 +2828,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -2886,6 +2921,7 @@ export type SessionCreateWithoutTeammateInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -2966,6 +3002,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -3058,6 +3095,7 @@ export type SessionCreateWithoutReadsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -3139,6 +3177,7 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -3220,6 +3259,7 @@ export type SessionUpdateWithoutReadsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3301,6 +3341,7 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3366,6 +3407,7 @@ export type SessionCreateWithoutPinsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -3447,6 +3489,7 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -3528,6 +3571,7 @@ export type SessionUpdateWithoutPinsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3609,6 +3653,7 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3674,6 +3719,7 @@ export type SessionCreateWithoutLatersInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -3755,6 +3801,7 @@ export type SessionUncheckedCreateWithoutLatersInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -3836,6 +3883,7 @@ export type SessionUpdateWithoutLatersInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3917,6 +3965,7 @@ export type SessionUncheckedUpdateWithoutLatersInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3982,6 +4031,7 @@ export type SessionCreateWithoutChildrenInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -4063,6 +4113,7 @@ export type SessionUncheckedCreateWithoutChildrenInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -4133,6 +4184,7 @@ export type SessionCreateWithoutParentInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -4213,6 +4265,7 @@ export type SessionUncheckedCreateWithoutParentInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -4300,6 +4353,7 @@ export type SessionUpdateWithoutChildrenInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4381,6 +4435,7 @@ export type SessionUncheckedUpdateWithoutChildrenInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4462,6 +4517,7 @@ export type SessionCreateWithoutTaskInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -4543,6 +4599,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -4624,6 +4681,7 @@ export type SessionUpdateWithoutTaskInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4705,6 +4763,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4770,6 +4829,7 @@ export type SessionCreateWithoutReportingSchedulesInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -4851,6 +4911,7 @@ export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -4921,6 +4982,7 @@ export type SessionCreateWithoutScheduleInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -5001,6 +5063,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -5088,6 +5151,7 @@ export type SessionUpdateWithoutReportingSchedulesInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -5169,6 +5233,7 @@ export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -5250,6 +5315,7 @@ export type SessionCreateWithoutWakeupsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -5331,6 +5397,7 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -5412,6 +5479,7 @@ export type SessionUpdateWithoutWakeupsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -5493,6 +5561,7 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -5558,6 +5627,7 @@ export type SessionCreateWithoutReplyWatchesInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -5639,6 +5709,7 @@ export type SessionUncheckedCreateWithoutReplyWatchesInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -5720,6 +5791,7 @@ export type SessionUpdateWithoutReplyWatchesInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -5801,6 +5873,7 @@ export type SessionUncheckedUpdateWithoutReplyWatchesInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -5866,6 +5939,7 @@ export type SessionCreateWithoutTeammatesInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -5947,6 +6021,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -6028,6 +6103,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -6109,6 +6185,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -6174,6 +6251,7 @@ export type SessionCreateWithoutEventsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -6255,6 +6333,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -6336,6 +6415,7 @@ export type SessionUpdateWithoutEventsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -6417,6 +6497,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -6482,6 +6563,7 @@ export type SessionCreateWithoutTokenUsageInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -6563,6 +6645,7 @@ export type SessionUncheckedCreateWithoutTokenUsageInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -6644,6 +6727,7 @@ export type SessionUpdateWithoutTokenUsageInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -6725,6 +6809,7 @@ export type SessionUncheckedUpdateWithoutTokenUsageInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -6790,6 +6875,7 @@ export type SessionCreateWithoutAccountInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -6870,6 +6956,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -6962,6 +7049,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -7043,6 +7131,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -7113,6 +7202,7 @@ export type SessionCreateWithoutReviewsOfInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -7194,6 +7284,7 @@ export type SessionUncheckedCreateWithoutReviewsOfInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -7275,6 +7366,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7356,6 +7448,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7432,6 +7525,7 @@ export type SessionUpdateWithoutReviewsOfInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7513,6 +7607,7 @@ export type SessionUncheckedUpdateWithoutReviewsOfInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7578,6 +7673,7 @@ export type SessionCreateWithoutCommentsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -7659,6 +7755,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -7740,6 +7837,7 @@ export type SessionUpdateWithoutCommentsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7821,6 +7919,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7886,6 +7985,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -7967,6 +8067,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -8048,6 +8149,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -8129,6 +8231,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -8194,6 +8297,7 @@ export type SessionCreateWithoutTriggerInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -8274,6 +8378,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -8366,6 +8471,7 @@ export type SessionCreateWithoutTicketsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -8447,6 +8553,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -8528,6 +8635,7 @@ export type SessionUpdateWithoutTicketsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -8609,6 +8717,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -8674,6 +8783,7 @@ export type SessionCreateWithoutDocumentsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -8755,6 +8865,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -8836,6 +8947,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -8917,6 +9029,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -8982,6 +9095,7 @@ export type SessionCreateWithoutListItemsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -9063,6 +9177,7 @@ export type SessionUncheckedCreateWithoutListItemsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -9144,6 +9259,7 @@ export type SessionUpdateWithoutListItemsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9225,6 +9341,7 @@ export type SessionUncheckedUpdateWithoutListItemsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9290,6 +9407,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -9371,6 +9489,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -9452,6 +9571,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9533,6 +9653,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9598,6 +9719,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -9679,6 +9801,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -9760,6 +9883,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9841,6 +9965,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9906,6 +10031,7 @@ export type SessionCreateWithoutProjectInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -9987,6 +10113,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -10078,6 +10205,7 @@ export type SessionCreateWithoutRootOfPlaybookRunInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -10159,6 +10287,7 @@ export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -10229,6 +10358,7 @@ export type SessionCreateWithoutPlaybookRunInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -10310,6 +10440,7 @@ export type SessionUncheckedCreateWithoutPlaybookRunInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -10396,6 +10527,7 @@ export type SessionUpdateWithoutRootOfPlaybookRunInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -10477,6 +10609,7 @@ export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -10558,6 +10691,7 @@ export type SessionCreateWithoutPlaybookDryRunsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -10639,6 +10773,7 @@ export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -10720,6 +10855,7 @@ export type SessionUpdateWithoutPlaybookDryRunsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -10801,6 +10937,7 @@ export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -10866,6 +11003,7 @@ export type SessionCreateWithoutFollowersInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -10947,6 +11085,7 @@ export type SessionUncheckedCreateWithoutFollowersInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -11017,6 +11156,7 @@ export type SessionCreateWithoutFollowingInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -11098,6 +11238,7 @@ export type SessionUncheckedCreateWithoutFollowingInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -11179,6 +11320,7 @@ export type SessionUpdateWithoutFollowersInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -11260,6 +11402,7 @@ export type SessionUncheckedUpdateWithoutFollowersInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -11336,6 +11479,7 @@ export type SessionUpdateWithoutFollowingInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -11417,6 +11561,7 @@ export type SessionUncheckedUpdateWithoutFollowingInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -11482,6 +11627,7 @@ export type SessionCreateWithoutMailAliasesInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -11563,6 +11709,7 @@ export type SessionUncheckedCreateWithoutMailAliasesInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -11644,6 +11791,7 @@ export type SessionUpdateWithoutMailAliasesInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -11725,6 +11873,7 @@ export type SessionUncheckedUpdateWithoutMailAliasesInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -11790,6 +11939,7 @@ export type SessionCreateWithoutMailMessagesInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -11871,6 +12021,7 @@ export type SessionUncheckedCreateWithoutMailMessagesInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -11952,6 +12103,7 @@ export type SessionUpdateWithoutMailMessagesInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -12033,6 +12185,7 @@ export type SessionUncheckedUpdateWithoutMailMessagesInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -12098,6 +12251,7 @@ export type SessionCreateWithoutHeldCallsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -12179,6 +12333,7 @@ export type SessionUncheckedCreateWithoutHeldCallsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -12260,6 +12415,7 @@ export type SessionUpdateWithoutHeldCallsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -12341,6 +12497,7 @@ export type SessionUncheckedUpdateWithoutHeldCallsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -12406,6 +12563,7 @@ export type SessionCreateWithoutRunnerCommandsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -12487,6 +12645,7 @@ export type SessionUncheckedCreateWithoutRunnerCommandsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -12568,6 +12727,7 @@ export type SessionUpdateWithoutRunnerCommandsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -12649,6 +12809,7 @@ export type SessionUncheckedUpdateWithoutRunnerCommandsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -12714,6 +12875,7 @@ export type SessionCreateWithoutFolderBackupsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -12795,6 +12957,7 @@ export type SessionUncheckedCreateWithoutFolderBackupsInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -12876,6 +13039,7 @@ export type SessionUpdateWithoutFolderBackupsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -12957,6 +13121,7 @@ export type SessionUncheckedUpdateWithoutFolderBackupsInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13029,6 +13194,7 @@ export type SessionCreateManyStartedByInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -13067,6 +13233,7 @@ export type SessionUpdateWithoutStartedByInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13147,6 +13314,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13220,6 +13388,7 @@ export type SessionUncheckedUpdateManyWithoutStartedByInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13265,6 +13434,7 @@ export type SessionCreateManyWorkspaceInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -13303,6 +13473,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13383,6 +13554,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13456,6 +13628,7 @@ export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13501,6 +13674,7 @@ export type SessionCreateManyComputerInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -13539,6 +13713,7 @@ export type SessionUpdateWithoutComputerInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13619,6 +13794,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13692,6 +13868,7 @@ export type SessionUncheckedUpdateManyWithoutComputerInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13737,6 +13914,7 @@ export type SessionCreateManyTeammateInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -13775,6 +13953,7 @@ export type SessionUpdateWithoutTeammateInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13855,6 +14034,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13928,6 +14108,7 @@ export type SessionUncheckedUpdateManyWithoutTeammateInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13973,6 +14154,7 @@ export type SessionCreateManyParentInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -14011,6 +14193,7 @@ export type SessionUpdateWithoutParentInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14091,6 +14274,7 @@ export type SessionUncheckedUpdateWithoutParentInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14164,6 +14348,7 @@ export type SessionUncheckedUpdateManyWithoutParentInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14209,6 +14394,7 @@ export type SessionCreateManyScheduleInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -14247,6 +14433,7 @@ export type SessionUpdateWithoutScheduleInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14327,6 +14514,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14400,6 +14588,7 @@ export type SessionUncheckedUpdateManyWithoutScheduleInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14445,6 +14634,7 @@ export type SessionCreateManyAccountInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -14483,6 +14673,7 @@ export type SessionUpdateWithoutAccountInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14563,6 +14754,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14636,6 +14828,7 @@ export type SessionUncheckedUpdateManyWithoutAccountInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14681,6 +14874,7 @@ export type SessionCreateManyTriggerInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -14719,6 +14913,7 @@ export type SessionUpdateWithoutTriggerInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14799,6 +14994,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14872,6 +15068,7 @@ export type SessionUncheckedUpdateManyWithoutTriggerInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14918,6 +15115,7 @@ export type SessionCreateManyProjectInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -14955,6 +15153,7 @@ export type SessionUpdateWithoutProjectInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -15036,6 +15235,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -15109,6 +15309,7 @@ export type SessionUncheckedUpdateManyWithoutProjectInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -15154,6 +15355,7 @@ export type SessionCreateManyPlaybookRunInput = {
   doneSummary?: string | null
   doneByType?: $Enums.ActorType | null
   doneById?: string | null
+  choicesDismissedSeq?: number | null
   lastSeq?: number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Date | string | null
@@ -15191,6 +15393,7 @@ export type SessionUpdateWithoutPlaybookRunInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -15272,6 +15475,7 @@ export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -15345,6 +15549,7 @@ export type SessionUncheckedUpdateManyWithoutPlaybookRunInput = {
   doneSummary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   doneByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
   doneById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  choicesDismissedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -15655,6 +15860,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   doneSummary?: boolean
   doneByType?: boolean
   doneById?: boolean
+  choicesDismissedSeq?: boolean
   lastSeq?: boolean
   move?: boolean
   movedAt?: boolean
@@ -15741,6 +15947,7 @@ export type SessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   doneSummary?: boolean
   doneByType?: boolean
   doneById?: boolean
+  choicesDismissedSeq?: boolean
   lastSeq?: boolean
   move?: boolean
   movedAt?: boolean
@@ -15798,6 +16005,7 @@ export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   doneSummary?: boolean
   doneByType?: boolean
   doneById?: boolean
+  choicesDismissedSeq?: boolean
   lastSeq?: boolean
   move?: boolean
   movedAt?: boolean
@@ -15855,6 +16063,7 @@ export type SessionSelectScalar = {
   doneSummary?: boolean
   doneByType?: boolean
   doneById?: boolean
+  choicesDismissedSeq?: boolean
   lastSeq?: boolean
   move?: boolean
   movedAt?: boolean
@@ -15871,7 +16080,7 @@ export type SessionSelectScalar = {
   quiet?: boolean
 }
 
-export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "askedByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "doneAt" | "doneSummary" | "doneByType" | "doneById" | "lastSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "playbookTeammate" | "surfacedAt" | "quiet", ExtArgs["result"]["session"]>
+export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "askedByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "doneAt" | "doneSummary" | "doneByType" | "doneById" | "choicesDismissedSeq" | "lastSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "playbookTeammate" | "surfacedAt" | "quiet", ExtArgs["result"]["session"]>
 export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -16121,6 +16330,11 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     doneSummary: string | null
     doneByType: $Enums.ActorType | null
     doneById: string | null
+    /**
+     * The choices card a person dismissed without picking (its tool.started seq): it and those
+     * before it wait on nobody; choices offered after it do (src/choices-waiting.ts).
+     */
+    choicesDismissedSeq: number | null
     /**
      * Highest contiguous event sequence number stored.
      */
@@ -16659,6 +16873,7 @@ export interface SessionFieldRefs {
   readonly doneSummary: Prisma.FieldRef<"Session", 'String'>
   readonly doneByType: Prisma.FieldRef<"Session", 'ActorType'>
   readonly doneById: Prisma.FieldRef<"Session", 'String'>
+  readonly choicesDismissedSeq: Prisma.FieldRef<"Session", 'Int'>
   readonly lastSeq: Prisma.FieldRef<"Session", 'Int'>
   readonly move: Prisma.FieldRef<"Session", 'Json'>
   readonly movedAt: Prisma.FieldRef<"Session", 'DateTime'>
