@@ -126,7 +126,7 @@ sends as that address only, in every project, once its domain is verified, and r
 - no reply after someone already answered from the mailbox itself (`own_copy`).
 
 **One sending rule per mailbox, whatever its provider** (`Connection.sendPolicy`, set under Mail
-settings › a mailbox › How its replies go; Brigade's addresses by an owner or admin, a Gmail account
+settings › a mailbox › Replies; Brigade's addresses by an owner or admin, a Gmail account
 also by the member who connected it): `auto` (every mailbox's to start with) lets its teammates send
 on their own, `approve` makes each email (`email_send`, `gmail_send`, `MAIL_SENDS` in
 `connector-calls.ts`) wait for a person, a playbook's too. A teammate whose connector writes ask
