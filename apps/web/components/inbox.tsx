@@ -20,6 +20,7 @@ import {
   Check,
   Clock,
   FileText,
+  ListFilter,
   Mail,
   Search,
   Settings,
@@ -29,7 +30,15 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Fragment, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import {
+  Fragment,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { fileSize, type Media, MediaPreview, mediaKind, Thumbnail } from '@/components/attachments'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { type EditedEmail, EmailDraftEditor, emailDraft } from '@/components/email-cards'
@@ -38,15 +47,21 @@ import { ProjectIcon, ProjectSelect } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
 import { leavingLabel, SendLaterMenu } from '@/components/send-later'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -90,39 +105,209 @@ const EMPTY: Record<StatusFilter, string> = {
 }
 
 const ALL = '*'
-/** A filter picker under the tabs: plain text until it is set. */
-const FILTER =
-  'h-8 w-auto max-w-56 sm:w-auto border-transparent bg-transparent px-2.5 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground dark:bg-transparent dark:hover:bg-secondary'
-/** A filter that is set: its icon and short name in a chip, a × beside it to clear it. */
-const CHIP =
-  'h-7 w-auto max-w-44 border-0 bg-transparent py-0 pr-1 pl-2 text-foreground shadow-none sm:w-auto dark:bg-transparent dark:hover:bg-transparent [&>svg]:hidden'
-
-function FilterChip({
-  active,
-  what,
-  onClear,
-  children,
-}: {
-  active: boolean
+/** A filter that is set, as it shows in the search box: its icon, short name and a ×. */
+type Chip = {
+  param: 'source' | 'teammate' | 'project'
   what: string
-  onClear: () => void
-  children: ReactNode
+  icon: ReactNode
+  label: string
+}
+
+/**
+ * The search box, with the filters inside it: the ones set as chips before the words, and the
+ * menu that sets them behind the filter icon at its end (as the sidebar's thread filter). Two
+ * chips show at most (one on a phone) and the rest fold into a "+N" that opens the menu, so
+ * the words always keep room. Backspace in the empty box clears the last chip.
+ */
+function SearchFilters({
+  inputRef,
+  query,
+  onQuery,
+  chips,
+  sources,
+  source,
+  teammate,
+  project,
+  onPick,
+}: {
+  inputRef: RefObject<HTMLInputElement | null>
+  query: string
+  onQuery: (q: string) => void
+  chips: Chip[]
+  sources: InboxSourceView[]
+  source: string
+  teammate: string
+  project: string
+  onPick: (patch: Partial<Record<'source' | 'teammate' | 'project', string | null>>) => void
 }) {
-  if (!active) return children
+  const { teammates, projects } = useDashboard()
+  const [open, setOpen] = useState(false)
+  const brigade = sources.filter((s) => s.kind === 'email')
+  const gmail = sources.filter((s) => s.kind === 'gmail')
+  const filtered = !!(source || teammate || project)
+  // Past two chips, the second folds too on a phone: "+N" says how many each screen hides.
+  const folded = chips.length > 2
+  const pick = (param: Chip['param']) => (v: string) => onPick({ [param]: v === ALL ? null : v })
   return (
-    <span className="inline-flex max-w-full items-center rounded-full border bg-card pr-1 hover:border-ring">
-      {children}
-      <Hint label="Clear">
+    <div
+      // A click on the box's padding goes to the words, as in a plain field.
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault()
+          inputRef.current?.focus()
+        }
+      }}
+      className="flex h-9 w-full min-w-0 items-center gap-1 overflow-hidden rounded-md border border-input pr-1 pl-3 shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30"
+    >
+      <Search aria-hidden className="mr-1 size-4 flex-none text-muted-foreground" />
+      {chips.map((c, i) => (
+        <span
+          key={c.param}
+          className={cn(
+            'inline-flex h-6 max-w-32 min-w-0 flex-none items-center gap-1 rounded-full border bg-card pr-0.5 pl-1.5 text-xs',
+            folded && (i === 1 ? 'max-sm:hidden' : i > 1 && 'hidden'),
+          )}
+        >
+          {c.icon}
+          <span className="min-w-0 truncate">{c.label}</span>
+          <button
+            type="button"
+            aria-label={`Clear the ${c.what} filter`}
+            onClick={() => onPick({ [c.param]: null })}
+            className="flex size-5 flex-none items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-secondary hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            <X className="size-3" aria-hidden />
+          </button>
+        </span>
+      ))}
+      {folded && (
         <button
           type="button"
-          aria-label={`Clear the ${what} filter`}
-          onClick={onClear}
-          className="flex size-5 flex-none items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-secondary hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          onClick={() => setOpen(true)}
+          aria-label={`${chips.length - 1} more filters`}
+          className="h-6 flex-none rounded-full bg-secondary px-2 text-xs tabular-nums outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
-          <X className="size-3.5" aria-hidden />
+          <span className="sm:hidden">+{chips.length - 1}</span>
+          <span className="max-sm:hidden">+{chips.length - 2}</span>
         </button>
-      </Hint>
-    </span>
+      )}
+      <input
+        ref={inputRef}
+        type="search"
+        aria-label="Search"
+        placeholder={chips.length ? 'Search' : 'Search email'}
+        title="Search (/)"
+        value={query}
+        onChange={(e) => onQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onQuery('')
+          // Backspace with nothing left to erase clears the last filter, as in a field of tags.
+          else if (
+            e.key === 'Backspace' &&
+            chips.length &&
+            e.currentTarget.selectionStart === 0 &&
+            e.currentTarget.selectionEnd === 0
+          ) {
+            e.preventDefault()
+            onPick({ [chips[chips.length - 1]!.param]: null })
+          }
+        }}
+        className="h-full min-w-12 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground md:text-sm"
+      />
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Filter emails"
+            tooltip="Filter"
+            className="relative size-7 flex-none text-muted-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground"
+          >
+            <ListFilter />
+            {filtered && (
+              <span
+                aria-hidden
+                className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-primary"
+              />
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          className="w-72 max-w-[calc(100vw-2rem)] max-sm:[&_[role^=menuitem]]:py-2"
+        >
+          <DropdownMenuLabel className="text-xs text-muted-foreground">Source</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={source || ALL} onValueChange={pick('source')}>
+            <DropdownMenuRadioItem value={ALL}>All sources</DropdownMenuRadioItem>
+            {brigade.length > 0 && (
+              <>
+                <DropdownMenuLabel className="pl-8 text-xs font-normal text-muted-foreground">
+                  Brigade addresses
+                </DropdownMenuLabel>
+                {brigade.map((s) => (
+                  <SourceItem key={s.id} source={s} />
+                ))}
+              </>
+            )}
+            {gmail.length > 0 && (
+              <>
+                <DropdownMenuLabel className="pl-8 text-xs font-normal text-muted-foreground">
+                  Gmail
+                </DropdownMenuLabel>
+                {gmail.map((s) => (
+                  <SourceItem key={s.id} source={s} />
+                ))}
+              </>
+            )}
+          </DropdownMenuRadioGroup>
+          {teammates.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Agent</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={teammate || ALL} onValueChange={pick('teammate')}>
+                <DropdownMenuRadioItem value={ALL}>All agents</DropdownMenuRadioItem>
+                {teammates.map((t) => (
+                  <DropdownMenuRadioItem key={t.id} value={t.id}>
+                    <TeammateAvatar teammate={t} className="size-4" />
+                    <span className="min-w-0 truncate">{t.name}</span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </>
+          )}
+          {projects.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                Project
+              </DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={project || ALL} onValueChange={pick('project')}>
+                <DropdownMenuRadioItem value={ALL}>All projects</DropdownMenuRadioItem>
+                {projects
+                  .filter((p) => !p.archivedAt || p.id === project)
+                  .map((p) => (
+                    <DropdownMenuRadioItem key={p.id} value={p.id}>
+                      <ProjectIcon project={p} className="size-4 text-[0.625rem]" />
+                      <span className="min-w-0 truncate">{p.name}</span>
+                    </DropdownMenuRadioItem>
+                  ))}
+              </DropdownMenuRadioGroup>
+            </>
+          )}
+          {filtered && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => onPick({ source: null, teammate: null, project: null })}
+              >
+                <X />
+                Clear filters
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }
 const SIGN_UP = 'Mail to a sign-up address'
@@ -400,8 +585,32 @@ export function InboxView() {
   useEffect(() => {
     if (staleKey) router.replace(href(stale), { scroll: false })
   }, [staleKey]) // eslint-disable-line react-hooks/exhaustive-deps
-  const brigade = sources.filter((s) => s.kind === 'email')
-  const gmail = sources.filter((s) => s.kind === 'gmail')
+  const chips: Chip[] = []
+  if (chosenSource)
+    chips.push({
+      param: 'source',
+      what: 'source',
+      icon: chosenSource.teammate ? (
+        <TeammateAvatar teammate={chosenSource.teammate} className="size-4" />
+      ) : (
+        <ProviderLogo kind={chosenSource.kind} className="size-4" />
+      ),
+      label: chosenSource.label,
+    })
+  if (chosenTeammate)
+    chips.push({
+      param: 'teammate',
+      what: 'agent',
+      icon: <TeammateAvatar teammate={chosenTeammate} className="size-4" />,
+      label: chosenTeammate.name,
+    })
+  if (chosenProject)
+    chips.push({
+      param: 'project',
+      what: 'project',
+      icon: <ProjectIcon project={chosenProject} className="size-4 text-[0.625rem]" />,
+      label: chosenProject.name,
+    })
 
   return (
     // data-inbox: on a wide screen the page holds still behind its two columns (globals.css).
@@ -432,23 +641,17 @@ export function InboxView() {
               </Link>
             </Button>
           </div>
-          <div className="relative">
-            <Search
-              aria-hidden
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              ref={searchBox}
-              type="search"
-              aria-label="Search"
-              placeholder="Search email"
-              title="Search (/)"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Escape' && setQuery('')}
-              className="h-9 pl-9"
-            />
-          </div>
+          <SearchFilters
+            inputRef={searchBox}
+            query={query}
+            onQuery={setQuery}
+            chips={chips}
+            sources={sources}
+            source={source}
+            teammate={teammate}
+            project={project}
+            onPick={go}
+          />
           <div
             role="group"
             aria-label="Status"
@@ -474,120 +677,6 @@ export function InboxView() {
                 </button>
               )
             })}
-          </div>
-          <div className="-mx-1 flex flex-wrap items-center gap-1">
-            <Select
-              value={source || ALL}
-              onValueChange={(v) => go({ source: v === ALL ? null : v })}
-            >
-              <FilterChip active={!!source} what="source" onClear={() => go({ source: null })}>
-                <SelectTrigger aria-label="Source" className={source ? CHIP : FILTER}>
-                  <SelectValue>
-                    {chosenSource ? (
-                      <>
-                        {chosenSource.teammate ? (
-                          <TeammateAvatar teammate={chosenSource.teammate} className="size-4" />
-                        ) : (
-                          <ProviderLogo kind={chosenSource.kind} className="size-4" />
-                        )}
-                        <span className="truncate">{chosenSource.label}</span>
-                      </>
-                    ) : source ? undefined : (
-                      'Sources'
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-              </FilterChip>
-              <SelectContent>
-                <SelectItem value={ALL}>All sources</SelectItem>
-                {brigade.length > 0 && (
-                  <>
-                    <SelectSeparator />
-                    <SelectGroup>
-                      <SelectLabel>Brigade addresses</SelectLabel>
-                      {brigade.map((s) => (
-                        <SourceItem key={s.id} source={s} />
-                      ))}
-                    </SelectGroup>
-                  </>
-                )}
-                {gmail.length > 0 && (
-                  <>
-                    <SelectSeparator />
-                    <SelectGroup>
-                      <SelectLabel>Gmail</SelectLabel>
-                      {gmail.map((s) => (
-                        <SourceItem key={s.id} source={s} />
-                      ))}
-                    </SelectGroup>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-            {teammates.length > 0 && (
-              <Select
-                value={teammate || ALL}
-                onValueChange={(v) => go({ teammate: v === ALL ? null : v })}
-              >
-                <FilterChip active={!!teammate} what="agent" onClear={() => go({ teammate: null })}>
-                  <SelectTrigger aria-label="Agent" className={teammate ? CHIP : FILTER}>
-                    <SelectValue>
-                      {chosenTeammate ? (
-                        <>
-                          <TeammateAvatar teammate={chosenTeammate} className="size-4" />
-                          <span className="truncate">{chosenTeammate.name}</span>
-                        </>
-                      ) : teammate ? undefined : (
-                        'Agents'
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                </FilterChip>
-                <SelectContent>
-                  <SelectItem value={ALL}>All agents</SelectItem>
-                  <SelectSeparator />
-                  {teammates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      <TeammateAvatar teammate={t} className="size-4" />
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {projects.length > 0 && (
-              <Select
-                value={project || ALL}
-                onValueChange={(v) => go({ project: v === ALL ? null : v })}
-              >
-                <FilterChip active={!!project} what="project" onClear={() => go({ project: null })}>
-                  <SelectTrigger aria-label="Project" className={project ? CHIP : FILTER}>
-                    <SelectValue>
-                      {chosenProject ? (
-                        <>
-                          <ProjectIcon project={chosenProject} className="size-4 text-[0.625rem]" />
-                          <span className="truncate">{chosenProject.name}</span>
-                        </>
-                      ) : project ? undefined : (
-                        'Projects'
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                </FilterChip>
-                <SelectContent>
-                  <SelectItem value={ALL}>All projects</SelectItem>
-                  <SelectSeparator />
-                  {projects
-                    .filter((p) => !p.archivedAt || p.id === project)
-                    .map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        <ProjectIcon project={p} className="size-4 text-[0.625rem]" />
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            )}
           </div>
         </header>
 
@@ -661,10 +750,17 @@ export function InboxView() {
 
 function SourceItem({ source }: { source: InboxSourceView }) {
   return (
-    <SelectItem value={source.id}>
-      <span className="truncate">{source.label}</span>
-      <span className="truncate text-xs text-muted-foreground">{source.address}</span>
-    </SelectItem>
+    <DropdownMenuRadioItem value={source.id}>
+      {source.teammate ? (
+        <TeammateAvatar teammate={source.teammate} className="size-4" />
+      ) : (
+        <ProviderLogo kind={source.kind} className="size-4" />
+      )}
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate">{source.label}</span>
+        <span className="truncate text-xs text-muted-foreground">{source.address}</span>
+      </span>
+    </DropdownMenuRadioItem>
   )
 }
 
