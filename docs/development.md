@@ -54,8 +54,9 @@ one that started it, and for the runner's commands that is Brigade.app, which ho
 helper start the command instead (`Run.swift`), so a CLI that needs them (agent-desktop, `osascript` with System
 Events, a screen recorder) gets them, while the pill shows with Stop. One runs at a time. When it ends, times out (120
 seconds by default, 30 minutes at most), the person presses Stop or the turn is interrupted (`cancel`), the helper
-stops its process group and every other process macOS counts the helper responsible for, which a process keeps when
-it detaches (`setsid`, a double fork); it spares only its own direct children (`screencapture`). That happens before
+stops the command's shell (by pid, even if it left its group), its process group and every other process macOS counts
+the helper responsible for, which a process keeps when it detaches (`setsid`, a double fork); it spares only the
+children the helper registers as its own (`screencapture`). That happens before
 the reply, and when the helper quits. `swift test` in `apps/computer-use-macos` checks the command's life;
 `scripts/test-sweep.sh` checks the sweep in an app opened with `open`, as the helper is (a test process belongs to
 the terminal's app, so it has nothing to sweep).

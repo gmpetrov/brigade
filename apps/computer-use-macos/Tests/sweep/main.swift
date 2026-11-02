@@ -18,6 +18,7 @@ Task {
   direct.executableURL = URL(fileURLWithPath: "/bin/sleep")
   direct.arguments = ["300"]
   try? direct.run()
+  Run.spare(direct.processIdentifier)
   // A daemon that double-forks, calls setsid, is reparented to launchd and ignores SIGTERM.
   let pidFile = "\(directory)/daemon.pid"
   let daemon = """
@@ -45,6 +46,20 @@ Task {
     check("the daemon started", false)
   }
   check("the app's own direct child is spared", kill(direct.processIdentifier, 0) == 0)
+  // A command whose shell leaves its group for the app's: stopped by pid at its timeout.
+  let rootFile = "\(directory)/root.pid"
+  let started = Date()
+  let moved = try? await Run.run(
+    command: """
+      exec /usr/bin/python3 -c 'import os, time; open("\(rootFile)", "w").write(str(os.getpid())); \
+      os.setpgid(0, os.getpgid(os.getppid())); time.sleep(60)'
+      """,
+    cwd: nil, env: [:], timeout: 1, hold: { true })
+  check("a command that left its group times out", moved?["timedOut"] as? Bool == true && Date().timeIntervalSince(started) < 6)
+  if let text = try? String(contentsOfFile: rootFile, encoding: .utf8), let pid = pid_t(text) {
+    check("and is gone", kill(pid, 0) != 0)
+    kill(pid, SIGKILL)
+  }
   direct.terminate()
 }
 done.wait()

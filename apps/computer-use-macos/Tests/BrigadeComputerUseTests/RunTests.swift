@@ -92,6 +92,28 @@ final class RunTests: XCTestCase {
     XCTAssertFalse(left)
   }
 
+  /// The command's shell can leave its process group (here for this app's): it is stopped by pid.
+  static let leaveGroup =
+    "exec /usr/bin/python3 -c 'import os, time; os.setpgid(0, os.getpgid(os.getppid())); time.sleep(30)'"
+
+  func testACommandThatLeavesItsGroupStillTimesOut() async throws {
+    let started = Date()
+    let r = try await run(Self.leaveGroup, timeout: 1)
+    XCTAssertEqual(r["timedOut"] as? Bool, true)
+    XCTAssertLessThan(Date().timeIntervalSince(started), 6)
+  }
+
+  func testShutdownStopsACommandThatLeftItsGroup() async throws {
+    let started = Date()
+    async let r = run(Self.leaveGroup, timeout: 60)
+    try await Task.sleep(nanoseconds: 1_000_000_000)
+    Run.shutdown()
+    // run returns once it reaped the shell, which shutdown stopped.
+    let result = try await r
+    XCTAssertEqual(result["signal"] as? Int32, SIGTERM)
+    XCTAssertLessThan(Date().timeIntervalSince(started), 6)
+  }
+
   func testOneCommandAtATime() async throws {
     async let first = run("sleep 1")
     try await Task.sleep(nanoseconds: 300_000_000)
