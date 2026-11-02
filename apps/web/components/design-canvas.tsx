@@ -681,7 +681,7 @@ function DesignCanvasInner({
     }
     window.addEventListener('message', onWindowMessage)
     return () => window.removeEventListener('message', onWindowMessage)
-  }, [boardOf, post, wheel, panBy])
+  }, [boardOf, onWidth, post, wheel, panBy])
 
   const modeRef = useRef(mode)
   modeRef.current = mode

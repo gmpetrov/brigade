@@ -317,6 +317,7 @@ export function NewTaskDialog({
     setTeammateId(last.teammateId ?? NOBODY)
     setProjectId(initialProject ?? 'none')
     setError(undefined)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per opening, by the thread's title
   }, [open, from?.title, initialProject])
 
   const assignee =

@@ -87,6 +87,7 @@ export function McpServerCard({
       }
     }, 400)
     return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per address typed, not when the callback changes
   }, [url, app])
 
   // Once the new account shows up, it is connected.
@@ -105,6 +106,7 @@ export function McpServerCard({
       else void reload()
     }, 2000)
     return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- each time the accounts reload, not when the callbacks change
   }, [waiting, connections])
 
   const existing = app ?? (inspection?.app ? { id: inspection.app.id } : undefined)

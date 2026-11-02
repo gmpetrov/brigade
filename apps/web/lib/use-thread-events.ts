@@ -206,6 +206,7 @@ export function useThreadEvents(
       alive?.()
       socket?.close()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jumps is the same object for the hook's life (useState)
   }, [sessionId, add])
 
   /**
@@ -232,6 +233,7 @@ export function useThreadEvents(
         jumpWaiting()
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jumpWaiting only reads jumps, the same object for the hook's life
     [sessionId, add],
   )
 
@@ -327,6 +329,7 @@ export function useThreadEvents(
         jumpWaiting()
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jumpWaiting only reads jumps, the same object for the hook's life
     [sessionId, add],
   )
 

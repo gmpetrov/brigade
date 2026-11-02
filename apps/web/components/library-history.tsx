@@ -98,6 +98,7 @@ function TextChanges({
     return () => {
       live = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the previous version by its id
   }, [fileId, version.id, version.updatedAt, previous?.id])
   if (state.error) return <p className="p-4 text-sm text-destructive-text">{state.error}</p>
   if (!state.lines) return <p className="p-4 text-sm text-muted-foreground">Comparing…</p>
