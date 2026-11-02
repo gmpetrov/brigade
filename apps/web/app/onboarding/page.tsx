@@ -16,6 +16,7 @@ import { AccountCard, machineName } from '@/components/account-card'
 import { BrigadeMark } from '@/components/brigade-mark'
 import { HarnessLogo } from '@/components/harness-logo'
 import { StatusBadge } from '@/components/status-badge'
+import { SetupWorkspaceSwitcher } from '@/components/workspace-switcher'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -228,80 +229,46 @@ export default function Onboarding() {
 
   // Stays up once the account works, while the chief's thread starts.
   if (me.activeWorkspaceId && !adding)
-    return <ConnectAI onReady={reload} elsewhere={<OtherOrganizations me={me} />} />
+    return (
+      <>
+        <SetupWorkspaceSwitcher me={me} />
+        <ConnectAI onReady={reload} />
+      </>
+    )
 
   return (
-    <Shell
-      title="Create a workspace"
-      description="A workspace is one business or project. It has its own AI teammates, computer and run log."
-    >
-      <Card>
-        <CardContent>
-          <form action={createWorkspace} className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="name">Workspace name</Label>
-              <Input id="name" name="name" placeholder="Customer support" required />
-            </div>
-            {error && <p className="text-sm text-destructive-text">{error}</p>}
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full"
-              disabled={busy || (me.role !== 'owner' && me.role !== 'admin')}
-            >
-              Create workspace
-            </Button>
-            {me.role === 'member' && (
-              <p className="text-sm text-muted-foreground">
-                Ask an owner or admin to create a workspace.
-              </p>
-            )}
-          </form>
-        </CardContent>
-      </Card>
-      <OtherOrganizations me={me} />
-    </Shell>
-  )
-}
-
-/**
- * Back to another organization of theirs: someone who joined one keeps an AI account in their
- * first, and can return there without connecting one here.
- */
-function OtherOrganizations({ me }: { me: Me }) {
-  const others = me.organizations.filter((o) => o.id !== me.activeOrganizationId)
-  const [error, setError] = useState<string>()
-  if (others.length === 0) return null
-
-  async function switchTo(organizationId: string) {
-    setError(undefined)
-    try {
-      await api('/organizations/switch', { body: { organizationId } })
-      location.assign('/app')
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }
-
-  return (
-    <div className="flex flex-col items-center gap-1 text-center text-sm text-muted-foreground">
-      <p>
-        Or go back to{' '}
-        {others.map((o, i) => (
-          <span key={o.id}>
-            {i > 0 && ', '}
-            <button
-              type="button"
-              onClick={() => void switchTo(o.id)}
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {o.name}
-            </button>
-          </span>
-        ))}
-      </p>
-      {error && <p className="text-destructive-text">{error}</p>}
-    </div>
+    <>
+      <SetupWorkspaceSwitcher me={me} />
+      <Shell
+        title="Create a workspace"
+        description="A workspace is one business or project. It has its own AI teammates, computer and run log."
+      >
+        <Card>
+          <CardContent>
+            <form action={createWorkspace} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="name">Workspace name</Label>
+                <Input id="name" name="name" placeholder="Customer support" required />
+              </div>
+              {error && <p className="text-sm text-destructive-text">{error}</p>}
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={busy || (me.role !== 'owner' && me.role !== 'admin')}
+              >
+                Create workspace
+              </Button>
+              {me.role === 'member' && (
+                <p className="text-sm text-muted-foreground">
+                  Ask an owner or admin to create a workspace.
+                </p>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+      </Shell>
+    </>
   )
 }
 
@@ -401,14 +368,7 @@ const PRICE = (
  * be added later from Computers. Once an account works, the chief's setup
  * thread starts.
  */
-function ConnectAI({
-  onReady,
-  elsewhere,
-}: {
-  onReady: () => Promise<Me | undefined>
-  /** Below it: the way back to another organization of theirs. */
-  elsewhere?: React.ReactNode
-}) {
+function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
   const router = useRouter()
   const accounts = useApi<Account[]>('/accounts')
   const computers = useApi<ComputersResponse>('/computers')
@@ -940,7 +900,6 @@ function ConnectAI({
       )}
 
       {error && <p className="text-center text-sm text-destructive-text">{error}</p>}
-      {elsewhere}
     </Shell>
   )
 }
