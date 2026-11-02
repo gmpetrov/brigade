@@ -10,6 +10,7 @@ fn main() {
             "capture_remove",
             "capture_clear",
             "capture_hide",
+            "capture_drag",
             "capture_sign_in",
         ]),
     ))

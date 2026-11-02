@@ -3,6 +3,7 @@
 // teammates to use this Mac's apps, starts at login and updates itself. Its
 // windows are the setup checklist (setup.rs) and the screenshot draft (capture.rs).
 mod capture;
+mod drag;
 mod runner;
 mod setup;
 
@@ -494,6 +495,7 @@ pub fn run() {
             capture::capture_remove,
             capture::capture_clear,
             capture::capture_hide,
+            capture::capture_drag,
             capture::capture_sign_in,
         ])
         .menu(app_menu)

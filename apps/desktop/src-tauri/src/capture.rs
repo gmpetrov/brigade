@@ -212,7 +212,9 @@ fn allow(app: &AppHandle, origin: &str) {
         .permission("allow-capture-clear")
         .permission("allow-capture-hide")
         .permission("allow-capture-sign-in")
-        // The header drags the window (`data-tauri-drag-region`): it has no title bar.
+        // The header moves the window (drag.rs): it has no title bar. Tauri's own drag stays
+        // allowed, for a page from before capture_drag.
+        .permission("allow-capture-drag")
         .permission("core:window:allow-start-dragging")
         .permission("core:event:allow-listen")
         .permission("core:event:allow-unlisten");
@@ -253,6 +255,7 @@ pub fn show(app: &AppHandle) {
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         .hidden_title(true)
         .traffic_light_position(tauri::LogicalPosition::new(16.0, 26.0));
+    crate::drag::watch();
     let window = builder.build();
     if let Ok(window) = window {
         let handle = window.clone();
@@ -307,6 +310,13 @@ pub fn capture_clear(app: AppHandle) {
 #[tauri::command]
 pub fn capture_hide(window: WebviewWindow) {
     let _ = window.hide();
+}
+
+/// A press on the page's top row: the window follows the mouse until it is released (drag.rs).
+/// Without async, so on the main thread, where the mouse's events are.
+#[tauri::command]
+pub fn capture_drag(window: WebviewWindow) {
+    crate::drag::arm(&window);
 }
 
 /// The window signs in through the browser, where the member likely is already: its WebKit
