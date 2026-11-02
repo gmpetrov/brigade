@@ -1,6 +1,6 @@
 // Connector tools: AI SDK tools whose execute forwards the call to the API,
 // which checks the grant, asks for approval if needed, and makes the request.
-import { jsonSchema, tool, type Tool } from 'ai'
+import { jsonSchema, tool, type JSONSchema7, type Tool } from 'ai'
 import {
   ATTACHMENT_MAX,
   CHILD_WAIT_MAX_MINUTES,
@@ -90,9 +90,9 @@ export function connectorTools(
       tools[name] = tool({
         description: `${operation.description} [${grant.label}: ${account}${operation.write ? '; makes a change, a person may need to approve it' : ''}]`,
         inputSchema: jsonSchema({
-          ...(operation.inputSchema as Parameters<typeof jsonSchema>[0] & object),
+          ...(operation.inputSchema as JSONSchema7),
           ...(options.defer ? { [NAMESPACE]: namespace } : {}),
-        }),
+        } as JSONSchema7),
         execute: (input, { toolCallId }) =>
           call({
             connectionId: grant.connectionId,
@@ -1255,7 +1255,7 @@ export function taskTools(call: TaskCaller, playbook?: { dryRun: boolean }): Rec
 function boardTools(call: TaskCaller): Record<string, Tool> {
   const send = (toolName: string, operation: TaskOperation, input: unknown, toolCallId: string) =>
     call({ operation, toolCallId, toolName, input })
-  const priority = { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] } as const
+  const priority: JSONSchema7 = { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] }
   const taskId = { type: 'string', description: 'The task id, from list_tasks' } as const
   return {
     create_task: tool({
