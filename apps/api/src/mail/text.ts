@@ -33,6 +33,18 @@ export function decodeEntities(text: string) {
   })
 }
 
+/** The longest HTML the Inbox keeps: a longer one is left out whole, never cut mid-tag. */
+export const HTML_MAX = 1_000_000
+
+/** A received mail's HTML as the Inbox keeps it: none when empty or too long. */
+export function keptHtml(html: string | null | undefined) {
+  return html?.trim() && html.length <= HTML_MAX ? html : null
+}
+
+/** A Content-ID without its angle brackets, as an HTML body's cid: link names it. */
+export const contentIdOf = (value: string | null | undefined) =>
+  value?.trim().replace(/^<|>$/g, '').trim() || undefined
+
 /** HTML as plain text: blocks on their own lines, each link as "text (url)", no styles or scripts. */
 export function htmlToText(html: string | null | undefined) {
   if (!html) return ''

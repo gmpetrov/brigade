@@ -94,6 +94,13 @@ export type InboxMessage = {
   /** Its own words; the earlier messages it quotes apart. */
   text: string
   quoted: string
+  /**
+   * Received mail's HTML as it came, quote included, for the Inbox's HTML view (in a sandboxed
+   * frame); null when it had none or before Brigade kept it.
+   */
+  html: string | null
+  /** The files its HTML shows in place (cid: links), opened like attachments. */
+  inlineFiles: { id: string; cid: string }[]
   /** Received and kept, its words still being read: not an empty mail. */
   arriving: boolean
   /** Its files: a received one opens at the API's /inbox/items/<its id>/files/<file id>. */

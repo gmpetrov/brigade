@@ -45,6 +45,7 @@ import { type EditedEmail, EmailDraftEditor, emailDraft } from '@/components/ema
 import { AddRule } from '@/components/project-email'
 import { ProjectIcon, ProjectSelect } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
+import { MailHtmlFrame, MailTextView, type MailView, MailViewSwitch } from '@/components/mail-body'
 import { leavingLabel, SendLaterMenu } from '@/components/send-later'
 import { Button } from '@/components/ui/button'
 import {
@@ -1279,6 +1280,9 @@ function Message({
 }) {
   const { teammates } = useDashboard()
   const [quoteOpen, setQuoteOpen] = useState(false)
+  // Text by default; its HTML as it was made, on demand.
+  const [view, setView] = useState<MailView>('text')
+  const asHtml = view === 'html' && !!m.html && !m.hidden
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string>()
   const date = new Date(m.at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
@@ -1333,6 +1337,7 @@ function Message({
           {sent}
         </span>
       )}
+      {open && m.html && !m.hidden && <MailViewSwitch view={view} onChange={setView} />}
       <Hint label={date}>
         <time dateTime={m.at} className="flex-none text-xs text-muted-foreground">
           {when}
@@ -1393,21 +1398,27 @@ function Message({
         <p className="text-sm text-muted-foreground">
           Mail to a sign-up address is for its thread: only its starter and admins can read it.
         </p>
+      ) : asHtml ? (
+        <MailHtmlFrame
+          html={m.html!}
+          inline={m.inlineFiles.map((f) => ({ cid: f.cid, url: fileUrl(m, f.id) }))}
+          title={m.subject || 'Mail'}
+        />
       ) : m.text ? (
-        <p className="w-full text-[15px] leading-relaxed whitespace-pre-wrap wrap-anywhere">
-          {m.text}
-        </p>
+        <MailTextView text={m.text} />
       ) : m.arriving ? (
         <p className="text-sm text-muted-foreground">Arriving…</p>
       ) : (
         <p className="text-sm text-muted-foreground">No text.</p>
       )}
       {!m.hidden &&
+        !asHtml &&
         m.quoted &&
         (quoteOpen ? (
-          <p className="w-full border-l-2 pl-3 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground wrap-anywhere">
-            {m.quoted}
-          </p>
+          <MailTextView
+            text={m.quoted}
+            className="border-l-2 pl-3 text-sm text-muted-foreground [&_p]:text-sm"
+          />
         ) : (
           <button
             type="button"

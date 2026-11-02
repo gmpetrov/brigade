@@ -32,8 +32,10 @@ import {
   addressesIn,
   automaticHeaders,
   bounceOf,
+  contentIdOf,
   headerOf,
   htmlToText,
+  keptHtml,
   KEPT_HEADERS,
   messageIds,
 } from './text.js'
@@ -292,6 +294,8 @@ async function readMail(db: ScopedDb, scope: Scope, row: Row): Promise<Row> {
     (a.content_id && a.content_disposition !== 'attachment')
       ? { inline: true }
       : {}),
+    // What the HTML's cid: links name, for the Inbox to show it in place.
+    ...(contentIdOf(a.content_id) ? { cid: contentIdOf(a.content_id) } : {}),
   }))
   await db.mailMessage.updateMany({
     where: { id: row.id },
@@ -317,6 +321,13 @@ async function readMail(db: ScopedDb, scope: Scope, row: Row): Promise<Row> {
       attachments,
     } as never,
   })
+  const html = keptHtml(email.html)
+  if (html)
+    await db.mailHtml.upsert({
+      where: { mailId: row.id },
+      create: { mailId: row.id, html },
+      update: { html },
+    } as never)
   const read = (await loadRow(row.id)) as Row
   return Object.assign(read, { senderLine: sender.line, senderInfo: sender })
 }

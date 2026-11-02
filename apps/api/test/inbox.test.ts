@@ -1144,6 +1144,63 @@ describe('a hand-over takes the replies, on its project', { skip }, () => {
     )
   })
 
+  test("a mail's HTML is kept apart and shown with the files its cid: links name", async () => {
+    const db = scoped(scope)
+    const connection = await db.connection.findFirstOrThrow({ where: { id: gmailShared } })
+    const { keepGmail } = await import('../src/mail/gmail-inbox.js')
+    const payload = (n: string) => ({
+      id: `html-${n}-${id}`,
+      threadId: `html-${n}-conv-${id}`,
+      from: 'Studio <studio@outside.test>',
+      to: connection.externalAccount ?? '',
+      subject: 'With HTML',
+      date: new Date().toUTCString(),
+      snippet: 'Hello',
+      labels: ['INBOX'],
+      cc: undefined,
+      body: 'Hello',
+      attachments: [
+        { partId: '1.2', filename: 'logo.png', mimeType: 'image/png', size: 10, inline: true },
+        { partId: '1.3', filename: 'brief.pdf', mimeType: 'application/pdf', size: 20 },
+      ],
+      automatic: false,
+    })
+    const html = '<div dir="ltr">Hello <img src="cid:logo@studio"></div>'
+    await keepGmail(
+      connection,
+      payload('kept'),
+      { route: 'box' },
+      {
+        html,
+        contentIds: { '1.2': 'logo@studio' },
+      },
+    )
+    // Too long to keep whole: none, rather than cut mid-tag.
+    await keepGmail(
+      connection,
+      payload('long'),
+      { route: 'box' },
+      {
+        html: `<p>${'x'.repeat(1_000_001)}</p>`,
+      },
+    )
+    const kept = await db.mailMessage.findFirstOrThrow({ where: { sourceId: `html-kept-${id}` } })
+    const long = await db.mailMessage.findFirstOrThrow({ where: { sourceId: `html-long-${id}` } })
+    const [shown] = (await inbox.readItem(db, as(0), `mail:${kept.id}`)).messages
+    assert.equal(shown!.html, html)
+    assert.equal(shown!.text, 'Hello')
+    assert.deepEqual(shown!.inlineFiles, [{ id: '1.2', cid: 'logo@studio' }])
+    assert.deepEqual(
+      shown!.attachments.map((a) => a.name),
+      ['brief.pdf'],
+    )
+    const [none] = (await inbox.readItem(db, as(0), `mail:${long.id}`)).messages
+    assert.equal(none!.html, null)
+    // Lists never carry it.
+    const list = await inbox.listInbox(db, as(0), { status: 'all' })
+    assert.ok(!JSON.stringify(list).includes('cid:logo@studio'))
+  })
+
   test('Gmail reader records the thread actually woken after handover', async () => {
     const db = scoped(scope)
     const connection = await db.connection.findFirstOrThrow({ where: { id: gmailShared } })

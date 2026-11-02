@@ -521,6 +521,13 @@ export type MailAlias = Prisma.MailAliasModel
  */
 export type MailMessage = Prisma.MailMessageModel
 /**
+ * Model MailHtml
+ * A received mail's HTML as it came (up to 1 000 000 characters, else none), for the Inbox's
+ * HTML view in a sandboxed frame. Apart from MailMessage so that lists never load it; teammates
+ * read the text.
+ */
+export type MailHtml = Prisma.MailHtmlModel
+/**
  * Model MailDomain
  * A domain of the workspace's own (lovarank.com) that its project inboxes send as, once its DNS
  * records are in place. One workspace per domain across Brigade.

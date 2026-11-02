@@ -664,12 +664,20 @@ type MailFile = {
   contentType: string
   size?: number
   inline?: boolean
+  /** Its Content-ID: what the HTML's cid: links name. */
+  cid?: string
 }
 
 const filesOf = (m: Row) =>
   ((m.attachments ?? []) as MailFile[])
     .filter((a) => !a.inline)
     .map((a) => ({ id: a.id, name: a.filename, contentType: a.contentType, size: a.size ?? 0 }))
+
+/** The files its HTML shows in place: those its cid: links name. */
+const inlineFilesOf = (m: Row) =>
+  ((m.attachments ?? []) as MailFile[]).flatMap((a) =>
+    a.cid && !PROGRAM.test(a.filename) ? [{ id: a.id, cid: a.cid }] : [],
+  )
 
 /**
  * A received mail's file, for a person to open, never held whole by Brigade: Brigade's address's
@@ -731,6 +739,15 @@ export async function readItem(
   itemId: string,
 ): Promise<InboxDetail> {
   const { head, mails, sources } = await conversationOf(db, scope, itemId)
+  // Its received mails' HTML, kept apart (lists never load it).
+  const htmls = new Map(
+    (
+      await db.mailHtml.findMany({
+        where: { mailId: { in: mails.filter((m) => m.direction === 'in').map((m) => m.id) } },
+        select: { mailId: true, html: true },
+      })
+    ).map((h) => [h.mailId, h.html]),
+  )
   const [item] = await toItems(db, scope, [head], sources)
   const mailbox = head.address?.connectionId ?? head.connectionId
   // Brigade's rules are per project variant of the address; Gmail's, the account's.
@@ -771,6 +788,8 @@ export async function readItem(
         at: m.receivedAt.toISOString(),
         text,
         quoted,
+        html: masked ? null : (htmls.get(m.id) ?? null),
+        inlineFiles: masked || m.direction !== 'in' ? [] : inlineFilesOf(m),
         // Kept as it came in, its words still being read: a moment, not an empty mail.
         arriving: m.direction === 'in' && !!m.address && unread(m),
         attachments: masked ? [] : filesOf(m),

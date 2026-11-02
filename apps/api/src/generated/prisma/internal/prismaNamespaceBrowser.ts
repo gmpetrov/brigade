@@ -133,6 +133,7 @@ export const ModelName = {
   MailProject: 'MailProject',
   MailAlias: 'MailAlias',
   MailMessage: 'MailMessage',
+  MailHtml: 'MailHtml',
   MailDomain: 'MailDomain',
   Contact: 'Contact',
   ContactHandle: 'ContactHandle',
@@ -1596,6 +1597,17 @@ export const MailMessageScalarFieldEnum = {
 } as const
 
 export type MailMessageScalarFieldEnum = (typeof MailMessageScalarFieldEnum)[keyof typeof MailMessageScalarFieldEnum]
+
+
+export const MailHtmlScalarFieldEnum = {
+  mailId: 'mailId',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  html: 'html',
+  createdAt: 'createdAt'
+} as const
+
+export type MailHtmlScalarFieldEnum = (typeof MailHtmlScalarFieldEnum)[keyof typeof MailHtmlScalarFieldEnum]
 
 
 export const MailDomainScalarFieldEnum = {

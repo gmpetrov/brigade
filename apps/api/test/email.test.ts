@@ -330,6 +330,8 @@ function mail(input: {
   headers?: Record<string, string>
   dkim?: string
   messageId?: string
+  html?: string
+  attachments?: unknown[]
 }) {
   const emailId = randomUUID()
   const messageId = input.messageId ?? `<${randomUUID()}@sender.test>`
@@ -339,12 +341,12 @@ function mail(input: {
     from: input.from ?? 'stranger@outside.test',
     created_at: new Date().toISOString(),
     subject: input.subject ?? 'Hello',
-    html: null,
+    html: input.html ?? null,
     text: input.text ?? 'Hi there',
     headers: { from: input.from ?? 'Stranger <stranger@outside.test>', ...input.headers },
     authentication: { spf: 'pass', dkim: input.dkim ?? 'gray', dmarc: 'gray' },
     message_id: messageId,
-    attachments: [],
+    attachments: input.attachments ?? [],
   })
   return {
     email_id: emailId,
@@ -441,6 +443,42 @@ describe('receiving', { skip }, () => {
     assert.equal(row!.route, 'box')
     assert.equal(row!.sender, 'unknown')
     assert.ok(row!.expiresAt && row!.expiresAt.getTime() > Date.now() + 29 * 86_400_000)
+  })
+
+  test('its HTML is kept apart, with the Content-ID of each file it shows in place', async () => {
+    const html = '<p>Hi <img src="cid:logo@sender"></p>'
+    const [row] = await arrive(
+      mail({
+        to: [to(base())],
+        text: 'Hi',
+        html,
+        attachments: [
+          {
+            id: 'att-1',
+            filename: 'logo.png',
+            content_type: 'image/png',
+            content_disposition: 'inline',
+            content_id: '<logo@sender>',
+            size: 10,
+          },
+        ],
+      }),
+    )
+    assert.equal(row!.text, 'Hi')
+    assert.equal((await prisma.mailHtml.findUnique({ where: { mailId: row!.id } }))?.html, html)
+    assert.deepEqual(row!.attachments, [
+      {
+        id: 'att-1',
+        filename: 'logo.png',
+        contentType: 'image/png',
+        size: 10,
+        inline: true,
+        cid: 'logo@sender',
+      },
+    ])
+    // Read again (a retry): kept once.
+    await inbound.processMail(row!.id).catch(() => undefined)
+    assert.equal(await prisma.mailHtml.count({ where: { mailId: row!.id } }), 1)
   })
 
   test('a forwarded mail shows who it was written to, not the box it was forwarded to', async () => {
