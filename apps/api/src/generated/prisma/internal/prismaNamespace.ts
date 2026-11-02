@@ -7899,6 +7899,7 @@ export const SessionScalarFieldEnum = {
   doneSummary: 'doneSummary',
   doneByType: 'doneByType',
   doneById: 'doneById',
+  choicesDismissedSeq: 'choicesDismissedSeq',
   lastSeq: 'lastSeq',
   move: 'move',
   movedAt: 'movedAt',

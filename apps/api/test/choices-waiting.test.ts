@@ -277,6 +277,35 @@ test(
   },
 )
 
+test(
+  'a dismissed choice waits on nobody, and leaves no loose end; a later one waits',
+  { skip },
+  async () => {
+    const dismissed = await thread([
+      { person: 'Rename Home' },
+      { offers: 'choices', ago: 40 * MINUTE },
+    ])
+    const offer = await prisma.sessionEvent.findFirst({
+      where: { sessionId: dismissed.id, type: 'tool.started' },
+      orderBy: { seq: 'desc' },
+    })
+    await prisma.session.update({
+      where: { id: dismissed.id },
+      data: { choicesDismissedSeq: offer!.seq },
+    })
+    const again = await thread([{ person: 'Rename Home' }, { offers: 'choices' }])
+    await prisma.session.update({ where: { id: again.id }, data: { choicesDismissedSeq: 1 } })
+    const waiting = await choicesWaitingAmong(db(), [dismissed.id, again.id])
+    assert.deepEqual([...waiting.keys()], [again.id])
+    assert.ok(
+      !(await homeWaiting(db(), ids.members[0]!)).choices.some((c) => c.id === dismissed.id),
+    )
+    // Today's loose ends do not offer it again as a proposal nobody answered.
+    const feed = await homeFor(db(), ids.members[0]!)
+    assert.ok(!feed.looseEnds.some((l) => l.thread.id === dismissed.id))
+  },
+)
+
 test('a choice still waits behind hundreds of newer quiet threads', { skip }, async () => {
   const offered = await thread([{ person: 'Rename Home' }, { offers: 'choices' }])
   await prisma.session.update({

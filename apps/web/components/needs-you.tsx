@@ -285,7 +285,10 @@ function FailureCard({
   )
 }
 
-/** Choices a teammate's reply ended on, picked here as in its thread: the pick is a message. */
+/**
+ * Choices a teammate's reply ended on, picked here as in its thread (the pick is a message), or
+ * dismissed without picking.
+ */
 function ChoiceToMake({
   choice,
   onDone,
@@ -303,6 +306,10 @@ function ChoiceToMake({
           // With the design it makes, when the option is one in an options folder.
           await api(`/threads/${choice.id}/messages`, { body: { text, ...(pick ? { pick } : {}) } })
           await onDone(`Sent to ${choice.teammate.name}`)
+        }}
+        onDismiss={async () => {
+          await api(`/threads/${choice.id}/choices/dismiss`, { body: { seq: choice.seq } })
+          await onDone('Dismissed')
         }}
       />
     </div>

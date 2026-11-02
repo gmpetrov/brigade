@@ -27,6 +27,7 @@ import {
   InterruptThread,
   inParallel,
   MarkThreadDone,
+  DismissChoices,
   mayChangeQueued,
   mentionsToText,
   MESSAGE_COMMANDS,
@@ -57,6 +58,7 @@ import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { toInfo } from '../attachments.js'
 import { audit } from '../audit.js'
+import { openChoices } from '../choices-waiting.js'
 import { attachmentKey, presignGet, streamObject, threadFileKey } from '../bucket.js'
 import {
   latestPreview,
@@ -1972,6 +1974,48 @@ export const threads = new Hono<AppEnv>()
     const thread = await loadThread(db, c.req.param('id'))
     mayChange(scope, thread)
     await markReopened(db, scope, thread)
+    return c.json({ ok: true })
+  })
+
+  /**
+   * Dismiss the choices card a person sees in the thread without picking one (docs/board.md),
+   * named by its event (`seq`): it waits on nobody any more and the thread stops, with no turn
+   * started. A card answered or offered since is not theirs to dismiss: refused. Its teammate
+   * reads it at its next turn, as a note. Who may change the thread.
+   */
+  .post('/:id/choices/dismiss', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    mayChange(scope, thread)
+    const { seq } = await parseBody(c.req.raw, DismissChoices)
+    const open = await openChoices(db, thread)
+    if (!open || open.seq !== seq)
+      throw new HTTPException(409, {
+        message: 'These choices were answered or replaced: open the thread to see the latest',
+      })
+    // Only forward, and in the database's own time: a person's dismissal is the thread's latest
+    // activity, its Stopped clock starts then, and activity written meanwhile is never rewound.
+    await prisma.$executeRaw`
+      UPDATE "Session" SET "choicesDismissedSeq" = ${seq}, "updatedAt" = now()
+      WHERE id = ${thread.id} AND "workspaceId" = ${scope.workspaceId}
+        AND ("choicesDismissedSeq" IS NULL OR "choicesDismissedSeq" < ${seq})`
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'thread.choices_dismissed',
+      target: { type: 'thread', id: thread.id },
+      data: { question: open.question },
+    })
+    const user = await prisma.user.findFirst({
+      where: { id: scope.userId },
+      select: { name: true },
+    })
+    await noteInThread(
+      db,
+      thread.id,
+      `${user?.name || 'A member'} dismissed the choices you offered ("${open.question}") without picking one.`,
+    )
+    void hubs.get(scope.workspaceId).broadcast(threadUpdated(thread.id, thread.status))
     return c.json({ ok: true })
   })
 

@@ -626,6 +626,9 @@ model Session {
   doneSummary          String?
   doneByType           ActorType?
   doneById             String?
+  /// The choices card a person dismissed without picking (its tool.started seq): it and those
+  /// before it wait on nobody; choices offered after it do (src/choices-waiting.ts).
+  choicesDismissedSeq  Int?
   /// Highest contiguous event sequence number stored.
   lastSeq              Int                @default(0)
   /// While it moves to another computer: where to, how far it got and the message that goes with it (src/move.ts).
