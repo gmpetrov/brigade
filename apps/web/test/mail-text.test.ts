@@ -1,7 +1,7 @@
 // A received mail's text as the Inbox shows it (lib/mail-text): paragraphs, forwards, links.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { readMailText, tokens, unwrap } from '../lib/mail-text'
+import { forwardSummary, readMailText, tokens, unwrap } from '../lib/mail-text'
 
 // Gmail's plain text of a forward, as it came in (cut at its width, blank lines kept).
 const FORWARD = `Test
@@ -108,4 +108,24 @@ test('links, addresses and *bold* are found; punctuation after a link stays out 
     },
     { kind: 'text', text: ' 2 * 3' },
   ])
+})
+
+test("a forward's one-line summary: the sender's name, its subject and its date", () => {
+  const summary = forwardSummary(readMailText(FORWARD).forwarded!)
+  assert.equal(summary.from, 'Agence Deblieux')
+  assert.equal(summary.subject, 'Retouche Video')
+  assert.equal(summary.date?.getFullYear(), 2026)
+  assert.equal(summary.date?.getMonth(), 10)
+  assert.equal(summary.date?.getDate(), 2)
+})
+
+test("a forward's summary takes the address when there is no name, and no date it cannot read", () => {
+  const mail = readMailText(
+    'Look\n\n-------- Message transféré --------\nDe : <ada@example.com>\nDate : demain\nObjet : Bonjour\n\nSalut',
+  )
+  assert.deepEqual(forwardSummary(mail.forwarded!), {
+    from: 'ada@example.com',
+    subject: 'Bonjour',
+    date: null,
+  })
 })

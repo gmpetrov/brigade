@@ -51,6 +51,36 @@ export function readMailText(raw: string): MailText {
   }
 }
 
+const FROM_HEADER = /^(From|De|Von|Da)$/i
+const SUBJECT_HEADER = /^(Subject|Objet|Betreff|Asunto|Oggetto)$/i
+const DATE_HEADER = /^(Date|Sent|Envoyé|Datum|Fecha|Data)$/i
+
+/**
+ * A forwarded message in one line, for its folded row: who sent it (the name, else the address),
+ * its subject and when, each empty when its header is missing or unreadable.
+ */
+export function forwardSummary(forwarded: Forwarded): {
+  from: string
+  subject: string
+  date: Date | null
+} {
+  const value = (name: RegExp) => forwarded.headers.find(([label]) => name.test(label))?.[1] ?? ''
+  const fromValue = value(FROM_HEADER)
+  const name = fromValue
+    .replace(/<[^>]*>/g, '')
+    .replace(/^["'\s]+|["'\s]+$/g, '')
+    .trim()
+  const address = /<([^>]+)>/.exec(fromValue)?.[1] ?? fromValue
+  // Gmail writes "Fri, Oct 30, 2026 at 11:09 AM", which Date reads without its "at".
+  const dateValue = value(DATE_HEADER).replace(/\s+at\s+/i, ' ')
+  const time = dateValue ? Date.parse(dateValue) : NaN
+  return {
+    from: name || address.trim(),
+    subject: value(SUBJECT_HEADER),
+    date: Number.isNaN(time) ? null : new Date(time),
+  }
+}
+
 /** Lines cut by a mail program joined back, at most one blank line in a row, no blank ends. */
 function tidy(lines: string[]) {
   const joined = unwrap(lines)
