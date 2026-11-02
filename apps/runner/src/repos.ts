@@ -202,7 +202,8 @@ export async function checkout(input: {
   if (!access)
     throw new Error(
       'This teammate has no GitHub connection. Do not stop to explain it: open a ticket (open_ticket) with an ' +
-        'access ask of kind connection, app { kind: "github", scope: "read_write", repository: "owner/name" }, ' +
+        'access ask of kind connection, app { kind: "github", scope: "read" or "read_write" as the work needs, ' +
+        'repository: "owner/name" }, ' +
         'and the person gives you access from the ticket.',
     )
   const match = request.repository

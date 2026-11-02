@@ -93,3 +93,78 @@ test('a thread asks for an App account it lacks with a ticket, rather than guess
   assert.match(text, /call `list_apps` and propose the App that fits with a ticket/)
   assert.doesNotMatch(text, /does not show at all/)
 })
+
+// What a thread is told follows what Brigade lets it do there: schedules, triggers and wake-ups
+// only where a person started it, no Done in a schedule's run, no child threads in a dry run, and
+// no "see X" pointing to a section the thread does not get.
+const textFor = (extra: Record<string, unknown>) => {
+  const spec = ThreadSpec.parse({ ...testSpec(''), ...extra })
+  const memory = threadMemory(spec, { workspace: '', teammate: '', lines: {} }, '/threads/s1', now)
+  return instructions(spec, memory, '/library', { ready: true })
+}
+
+test('schedules, triggers and wake-ups are offered only in a thread a person started', () => {
+  for (const origin of [undefined, 'member']) {
+    const text = textFor(origin ? { origin } : {})
+    assert.match(text, /## Schedules/)
+    assert.match(text, /`set_wakeup`/)
+  }
+  for (const extra of [
+    { origin: 'trigger' },
+    { origin: 'schedule' },
+    { origin: 'child', parent: { id: 'p', title: 'Parent' } },
+    // An API older than origin: a child is still told none.
+    { parent: { id: 'p', title: 'Parent' } },
+  ]) {
+    const text = textFor(extra)
+    assert.doesNotMatch(text, /## Schedules|`set_wakeup`|`create_schedule`|`create_trigger`/)
+  }
+  assert.match(
+    textFor({ parent: { id: 'p', title: 'Parent' } }),
+    /cannot start child threads, schedules or wake-ups/,
+  )
+})
+
+test("a schedule's run declares nothing done, and no merge wakes it", () => {
+  const run = textFor({ origin: 'schedule' })
+  assert.doesNotMatch(run, /## Done|`complete_thread`/)
+  assert.match(run, /the thread notes it once it is merged/)
+  const trigger = textFor({ origin: 'trigger' })
+  assert.match(trigger, /## Done/)
+  assert.match(trigger, /you are woken here once it is merged/)
+})
+
+test('a dry run is told of no child threads to start, and a scheduled playbook run of no event', () => {
+  const playbook = { installationId: 'i', runId: 'r', name: 'Support', apps: ['gmail'] }
+  const dry = textFor({ origin: 'trigger', playbook: { ...playbook, dryRun: true } })
+  assert.doesNotMatch(dry, /## Child threads/)
+  assert.match(dry, /whatever else these instructions say about them/)
+  const live = textFor({ origin: 'trigger', playbook })
+  assert.match(live, /## Child threads/)
+  assert.match(live, /untrusted input/)
+  assert.match(live, /`playbook_triage`/)
+  const weekly = textFor({ origin: 'schedule', playbook })
+  assert.doesNotMatch(weekly, /untrusted input|`playbook_triage`|fromOtherRuns/)
+  assert.match(weekly, /case `scheduled`/)
+})
+
+test('no "see X" points to a section the thread does not get', () => {
+  const child = textFor({ origin: 'child', parent: { id: 'p', title: 'Parent' } })
+  assert.doesNotMatch(child, /## Big goals/)
+  assert.doesNotMatch(child, /see Big goals|see Child threads/)
+  const top = textFor({})
+  assert.match(top, /see Big goals/)
+  assert.match(top, /see Child threads/)
+  // No projects listed, no Projects section to see.
+  assert.doesNotMatch(top, /## Projects|see Projects/)
+  const listed = textFor({
+    projects: [{ id: 'p1', name: 'Brigade', brief: '', folder: null, repositories: [] }],
+  })
+  assert.match(listed, /## Projects/)
+  assert.match(listed, /see Projects/)
+})
+
+test("a task's thread is told to declare itself done too, besides completing the task", () => {
+  const task = { id: 't1', title: 'Add CSV export', description: 'Export invoices as CSV.' }
+  assert.match(textFor({ task }), /leaves this thread open, so declare the thread done too/)
+})

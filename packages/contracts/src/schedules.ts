@@ -145,7 +145,7 @@ export function scheduledRunMessage(run: {
       (run.parentTitle !== undefined
         ? ` It reports to the thread “${run.parentTitle}”: when you are done, call \`report\` once, with ` +
           'status nothing when there is nothing new (that wakes nobody), report when there is something to tell, ' +
-          'needs_person when you opened a ticket, or failed.'
+          'needs_person when the work cannot go on without a person, or failed.'
         : ''),
     '',
     run.instructions,

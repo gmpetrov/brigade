@@ -40,6 +40,7 @@ export const THREAD_TOOLS = [
   // back to the thread, not to the sub-agent that asked.
   'start_child',
   'cancel_child',
+  'follow_thread',
   'set_wakeup',
   'cancel_wakeup',
   'request_review',
@@ -52,6 +53,7 @@ export const THREAD_TOOLS = [
   // (opening, readying, reviewing and merging one are its decisions: a review a sub-agent posted
   // would stand as the thread's verdict).
   'create_task',
+  'assign_task',
   'create_schedule',
   'update_schedule',
   'create_trigger',

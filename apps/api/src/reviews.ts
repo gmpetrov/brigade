@@ -87,9 +87,9 @@ const startedNote = (reviewer: string) =>
   'report: fix what it rightly found and push, then ask it to look at what changed with ' +
   'message_thread, and again while each look finds fewer problems that block the merge ' +
   `(${REVIEW_LOOKS} looks at most). When it goes in circles (a fixed problem comes back, or a ` +
-  'disagreement outlasts telling it why once), stop and tell the person what is open and what you ' +
-  'recommend. Until ' +
-  'then, do not offer to merge it. Tell the person in a line that it is in review, then end your ' +
+  'disagreement outlasts telling it why once), stop and tell the person what is open, both sides of ' +
+  'a disagreement in a line each, and what you recommend. Do not offer to merge it while the review ' +
+  'runs: only once it approves, or once you stopped it as above. Tell the person in a line that it is in review, then end your ' +
   'turn: do not wait or poll.'
 
 /** GitHub's filter glob: `*` within a path segment, `**` across them, the rest as it is. */

@@ -204,6 +204,12 @@ export const ThreadSpec = z.object({
   playbook: ThreadPlaybook.nullish(),
   /** Set in a child thread: the thread it was started from, which its report goes to. */
   parent: z.object({ id: z.string(), title: z.string() }).nullish(),
+  /**
+   * What started the thread: a person, a trigger's event, a schedule's run or another thread.
+   * Schedules, triggers and wake-ups are set up only where a person started it, and a merge wakes
+   * only a thread a person or a trigger started. Older APIs leave it out: read as a person's.
+   */
+  origin: z.enum(['member', 'trigger', 'schedule', 'child']).nullish(),
   /** Set when the teammate is granted a GitHub connection: its repositories through git. */
   git: GitAccess.optional(),
   /** Every file given to the thread so far: each is put in the teammate's working folder before its turn. */
