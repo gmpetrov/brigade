@@ -69,6 +69,8 @@ export const BoardCard = z.object({
   at: z.string(),
   /** Who declared or ticked it done, and when: in the Done column only. */
   done: z.object({ at: z.string(), by: z.string().nullable() }).nullable(),
+  /** When its teammate wakes up next on its own (the earliest pending wake-up of its threads). */
+  wakeAt: z.string().nullable(),
 })
 export type BoardCard = z.infer<typeof BoardCard>
 

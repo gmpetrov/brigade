@@ -182,6 +182,8 @@ describe('the Board', { skip: !database && 'no database answers' }, () => {
     assert.equal(card(working)?.reason, 'working')
     assert.equal(card(waking)?.column, 'in_progress')
     assert.equal(card(waking)?.reason, 'wakeup')
+    assert.equal(card(waking)?.wakeAt, new Date(now.getTime() + DAY).toISOString())
+    assert.equal(card(asking)?.wakeAt, null)
     assert.equal(card(done)?.column, 'done')
     assert.equal(card(done)?.note, 'The panel shows Wake up instead of the error.')
     assert.equal(card(done)?.done?.by, `Riley ${suffix}`)

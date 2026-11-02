@@ -32,6 +32,9 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
 - **In progress** is a thread at work (or its children it waits for), one waiting on a wake-up it
   set, or one whose pull request is being reviewed or fixed. A thread that failed on an error the
   runner tries again by itself stays here until those tries are over (src/failed.ts).
+- **A card shows its next wake-up**: an alarm and the time of the earliest pending wake-up of its
+  threads (the full date on hover), in any column but Done, so it says when its teammate comes
+  back on its own.
 - **Done** is a line ticked through Brigade (a teammate's `complete_item`, a merged pull request
   that closes it) or a thread declared done (below), in the last 7 days. A line a person ticks in
   the file has no date, so it shows only in its list. A thread whose task was completed on the
