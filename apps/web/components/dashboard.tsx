@@ -1,6 +1,7 @@
 'use client'
 import { workspaceLogoPath } from '@brigade/contracts'
 import {
+  Bell,
   BookOpenText,
   Building2,
   CalendarClock,
@@ -173,6 +174,7 @@ export const SETTINGS_GROUPS: {
     label: 'You',
     items: [
       { href: '/app/preferences', label: 'Preferences', icon: SlidersHorizontal },
+      { href: '/app/notifications', label: 'Notifications', icon: Bell },
       { href: '/app/accounts', label: 'AI Accounts', icon: UserRound },
     ],
   },
