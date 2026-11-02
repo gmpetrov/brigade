@@ -169,8 +169,11 @@ export function judge(
   rule: Rule,
   failures: Failure[],
   now: number,
-  /** Since when failures have been counted: a restart forgets them, which is not their end. */
-  countingSince = 0,
+  /**
+   * When one was last seen, as its open alert's row keeps it (`lastAt`): the failures above are
+   * only in memory, and a restart of the API, which forgets them, is not their end.
+   */
+  lastSeenAt = 0,
 ): { alert: Alert } | 'resolve' | 'keep' {
   const recent = failures.filter((f) => now - f.at < rule.windowMs)
   const spread = new Set(recent.map((f) => f.workspaceId).filter(Boolean)).size
@@ -193,7 +196,7 @@ export function judge(
       },
     }
   }
-  if (now - countingSince >= rule.quietMs && !failures.some((f) => now - f.at < rule.quietMs))
+  if (now - lastSeenAt >= rule.quietMs && !failures.some((f) => now - f.at < rule.quietMs))
     return 'resolve'
   return 'keep'
 }
@@ -203,13 +206,19 @@ const RETIRED = ['api-reset']
 
 async function checkFailures(now: number) {
   const rules: Rule[] = [...RULES]
+  // The alerts still open, with when their failures were last seen: the quiet time counts from
+  // there, not from when this object started (it restarts more often than a quiet time lasts).
+  const open = new Map(
+    (
+      await prisma.opsAlert.findMany({
+        where: { resolvedAt: null },
+        select: { key: true, lastAt: true },
+      })
+    ).map((row) => [row.key, row.lastAt.getTime()]),
+  )
   // Each job seen failing lately, and each still alerted on.
   const jobs = new Set(failuresOf('job:', 3 * 60 * MINUTE, now).map((f) => f.kind))
-  const open = await prisma.opsAlert.findMany({
-    where: { key: { startsWith: 'job:' }, resolvedAt: null },
-    select: { key: true },
-  })
-  for (const { key } of open) jobs.add(key)
+  for (const key of open.keys()) if (key.startsWith('job:')) jobs.add(key)
   for (const kind of jobs)
     rules.push({
       kind,
@@ -218,9 +227,20 @@ async function checkFailures(now: number) {
     })
   for (const rule of rules) {
     const seen = failuresOf(rule.kind, Math.max(rule.windowMs, rule.quietMs), now)
-    const verdict = judge(rule, seen, now, countingSince)
-    if (verdict === 'resolve') await resolve(rule.kind, new Date(now))
-    else if (verdict !== 'keep') await raise(verdict.alert, new Date(now))
+    const lastSeenAt = open.get(rule.kind)
+    const verdict = judge(rule, seen, now, lastSeenAt)
+    if (verdict === 'resolve') {
+      if (lastSeenAt !== undefined) await resolve(rule.kind, new Date(now))
+    } else if (verdict !== 'keep') await raise(verdict.alert, new Date(now))
+    else if (lastSeenAt !== undefined) {
+      // Open, with fewer failures than raise it: they keep it open, past a restart too.
+      const newest = Math.max(...seen.map((f) => f.at))
+      if (newest > lastSeenAt)
+        await prisma.opsAlert.update({
+          where: { key: rule.kind },
+          data: { lastAt: new Date(newest) },
+        })
+    }
   }
   for (const kind of RETIRED) await resolve(kind, new Date(now))
 }
@@ -634,14 +654,11 @@ export let lastCheckError: string | null = null
 
 let runs = 0
 let running = false
-/** When the checks started: a restart of the API forgets the failures counted before. */
-let countingSince = 0
 
 /** Each check on its own: one that fails is logged, and the others still run. */
 export async function runChecks(now = Date.now()) {
   if (running) return
   running = true
-  countingSince ||= now
   try {
     // The first four need only the database; the others, Cloudflare's and Stripe's APIs too.
     const steps: [string, () => Promise<unknown>][] = [
@@ -706,7 +723,6 @@ async function checkJobQueues(now: number) {
 
 /** Every minute, from the API's jobs (src/jobs.ts). */
 export const watchOps = () => {
-  countingSince = Date.now()
   setTimeout(() => void runChecks(), 30_000)
   setInterval(() => void runChecks(), MINUTE)
 }

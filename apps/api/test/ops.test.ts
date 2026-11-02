@@ -159,12 +159,14 @@ describe('rules over failures', () => {
     assert.equal(typeof worse === 'object' && worse.alert.severity, 'critical')
   })
 
-  test('over once none came for its quiet time, unless the count only just started', () => {
+  test('over once none came for its quiet time, as its alert last saw them too', () => {
     noteFailure('api', 'boom', { at: now - 10 * MIN })
     assert.equal(judge(api, failuresOf('api', 15 * MIN, now), now), 'keep')
     assert.equal(judge(api, [], now), 'resolve')
-    // The API restarted 5 minutes ago: what came before is forgotten, not over.
+    // Its alert saw one 5 minutes ago, which a restart since forgot: not over yet.
     assert.equal(judge(api, [], now, now - 5 * MIN), 'keep')
+    // However recently the API restarted, 15 minutes after the last one it is over.
+    assert.equal(judge(api, [], now, now - 15 * MIN), 'resolve')
   })
 
   test("turns failing in one workspace are its own trouble; in several, Brigade's", () => {
@@ -379,8 +381,62 @@ describe('alerts in the database', { skip }, () => {
   const prefix = `test-ops-${Date.now()}:`
   after(async () => {
     await prisma.opsAlert.deleteMany({ where: { key: { startsWith: prefix } } })
+    await prisma.opsAlert.deleteMany({ where: { key: 'api' } })
   })
   const kinds = () => posted.map((p) => JSON.parse(p.body).kind as string)
+
+  // The checks run each minute in the Api object, which restarts often (an eviction, a deploy,
+  // its isolate reset), forgetting the failures it counted: on 2026-11-01 an alert stayed open
+  // 10 hours after its last failure, until one start lasted its 15 minutes of quiet.
+  describe('failures over restarts, as the checks run in production', () => {
+    const told = (key: string) =>
+      posted
+        .map((p) => JSON.parse(p.body))
+        .filter((n) => n.key === key)
+        .map((n) => n.kind)
+    const fail = (n: number, when: number) => {
+      for (let i = 0; i < n; i++)
+        noteFailure('api', new Error('Failed to get session'), { at: when })
+    }
+    // A restart: the failures counted are forgotten, and the checks' module starts afresh.
+    let restarts = 0
+    let running = checks
+    const restart = async () => {
+      clearFailures()
+      running = await import(`../src/ops/checks.js?restart=${++restarts}`)
+    }
+    beforeEach(() => prisma.opsAlert.deleteMany({ where: { key: 'api' } }))
+
+    test('an alert ends its quiet time after its last failure, restarts or not', async () => {
+      const start = t0.getTime()
+      fail(10, start)
+      await running.runChecks(start)
+      assert.deepEqual(told('api'), ['firing'])
+      for (let minute = 1; minute < 15; minute++) {
+        await restart()
+        await running.runChecks(start + minute * MIN)
+      }
+      assert.deepEqual(told('api'), ['firing'])
+      await restart()
+      await running.runChecks(start + 15 * MIN)
+      assert.deepEqual(told('api'), ['firing', 'resolved'])
+      const row = await prisma.opsAlert.findUniqueOrThrow({ where: { key: 'api' } })
+      assert.deepEqual(row.resolvedAt, at(15 * MIN))
+    })
+
+    test('fewer failures than raise it keep it open, past a restart too', async () => {
+      const start = t0.getTime()
+      fail(10, start)
+      await running.runChecks(start)
+      fail(1, start + 10 * MIN)
+      await running.runChecks(start + 10 * MIN)
+      await restart()
+      await running.runChecks(start + 16 * MIN)
+      assert.deepEqual(told('api'), ['firing'])
+      await running.runChecks(start + 25 * MIN)
+      assert.deepEqual(told('api'), ['firing', 'resolved'])
+    })
+  })
 
   test('raised each minute, told once; resolved, told it is over', async () => {
     const key = `${prefix}a`

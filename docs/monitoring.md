@@ -88,8 +88,18 @@ told stays open until it is, and a turn for the worse that was not sent is tried
 A failure-count problem ends once none came for a while (15 minutes to 3 hours, by kind).
 Computers of a workspace without a plan are meant to be off and are not checked.
 
-The counts are in the Api object's memory (`src/ops/failures.ts`). A restart forgets them:
-it only delays an alert, and resolves nothing until the quiet time has passed since. What
+The counts are in the Api object's memory (`src/ops/failures.ts`). A restart forgets them,
+which only delays an alert. An open alert's end does not depend on them: its row keeps when
+its failures were last seen (`lastAt`, moved on by failures too few to raise it), and it ends
+once none came for the quiet time since then, however often the object restarts meanwhile.
+Before, the quiet time counted from the object's start too: on 2026-11-01 the `api` alert
+stayed open 10 hours after its last failure, until one start of the object lasted 15 minutes.
+
+A read (`SELECT`) outside a transaction that meets a connection the database closed
+(`Connection terminated unexpectedly`, Hyperdrive's 08006) is run once more on another
+connection (`retryReads`, `src/db.ts`), rather than answered 500: on 2026-11-01 one dropped
+connection failed 10 requests in the same second. Writes are not run again, as one may have
+been applied before its answer was lost. What
 fails in a workspace's hub object, the cron or the jobs' consumer is counted there too, sent
 by RPC.
 
