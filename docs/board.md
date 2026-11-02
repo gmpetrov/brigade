@@ -2,7 +2,7 @@
 
 The **Board** (`/app/board`, between Inbox and Lists in the sidebar) shows what moves across a
 workspace: the lines of its lists that have work on them, its threads on no list, and its
-failing routines. It answers "where is everything?", where Home answers "what changed since I looked?".
+failing routines. It answers "where is everything?", where Today answers "what changed since I looked?".
 Its design is `Projects/Brigade/designs/board.design` in the library; how competitors handle the
 same question is `Projects/Brigade/investigations/agent-work-tracking-competitors.md`.
 
@@ -20,14 +20,14 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
     of their own. Its state is the list's (`stateOf`, docs/lists.md).
   - A thread on no list, top-level (a child thread shows in its parent), not archived, active in
     the last 14 days or done this week.
-  - A routine's run threads are never cards: the Routines page and Home say what they did, and a
+  - A routine's run threads are never cards: the Routines page and Today say what they did, and a
     line they work on is its card. A routine that fails is one card in Needs you, the routine and not
     its run (`failingRoutines`, src/failed.ts).
 - **Needs you is the same everywhere**: an open ticket or question in the thread or its
   children, a teammate waiting on an answer (or a person who took the thread over), a pull
   request ready for a person to merge or decide, a failed thread or routine (src/failed.ts). The
-  sidebar, Home, the app badge, notifications, the Tasks board and a list's Needs you tab count
-  the same things. The Board is the workspace's, like a list's tab; Home and the badge are the
+  sidebar, Today, the app badge, notifications, the Tasks board and a list's Needs you tab count
+  the same things. The Board is the workspace's, like a list's tab; Today and the badge are the
   member's own.
 - **In progress** is a thread at work (or its children it waits for), one waiting on a wake-up it
   set, or one whose pull request is being reviewed or fixed. A thread that failed on an error the
@@ -52,8 +52,8 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
   height. The page itself still scrolls, down to Stopped.
 - **No routines section.** A healthy routine neither waits on a person nor moves, so its row
   only pushed the columns down. A failing one is already a card in Needs you; the routines and
-  what their runs did are on the Routines page and Home (`GET /api/board` still returns them for
-  Home).
+  what their runs did are on the Routines page and Today (`GET /api/board` still returns them for
+  Today).
 - **Cards say little.** The title; the list and section only for a list's line (nothing for a
   thread on no list); a note on one line (two for an error); the teammate's avatar and name. In
   Needs you, what to do, on the right ("Merge #15, #16", "Answer ticket", "Reply", "Failed").

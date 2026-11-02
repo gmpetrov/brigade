@@ -9,7 +9,6 @@ import {
   ChevronDown,
   CreditCard,
   GitPullRequest,
-  House,
   Inbox,
   Keyboard,
   KeyRound,
@@ -155,7 +154,7 @@ export { WorkspaceMark }
 
 /** The work: what projects group. */
 const WORK_NAV = [
-  { href: '/app', label: 'Home', icon: House },
+  { href: '/app', label: 'Today', icon: Sun },
   { href: '/app/inbox', label: 'Inbox', icon: Mail },
   { href: '/app/board', label: 'Board', icon: SquareKanban },
   { href: '/app/lists', label: 'Lists', icon: ListChecks },
@@ -499,14 +498,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               </SidebarHeader>
 
               <SidebarContent className="scroll-fade-y">
-                {/* Home, first: what waits and what runs. It scrolls with the threads below. */}
+                {/* Today (the Home page), first: what waits and what runs. It scrolls with the threads below. */}
                 <SidebarGroup className="py-0">
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild tooltip="Home" isActive={pathname === '/app'}>
+                      <SidebarMenuButton asChild tooltip="Today" isActive={pathname === '/app'}>
                         <Link href="/app">
-                          <House />
-                          <span>Home</span>
+                          <Sun />
+                          <span>Today</span>
                           {waitingOnYou > 0 && (
                             <Hint label={`${waitingOnYou} waiting on you`}>
                               <span className="bg-warning/15 text-warning ml-auto shrink-0 rounded-full px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums">

@@ -35,12 +35,12 @@ request leaves the browser; a reload starts over.
 - **A calm first visit.** The sample workspace has more than a newcomer should meet (a failed
   upgrade, a stalled thread, App writes waiting in their raw form). On load, `calm()` in
   `lib/demo/server.ts` keeps three threads in the lists (`SHOWN_THREADS`), hides Kai, empties
-  Tickets and the pull requests that wait, and drops Home's loose ends. A hidden thread's own
+  Tickets and the pull requests that wait, and drops Today's loose ends. A hidden thread's own
   page stays, should a link lead there.
 - **Four walkthroughs.** `/app?tour=<story>` plays one (`STORIES` in `lib/demo/tour.ts`): `bug`
   (fix a customer's bug, the default), `feature` (ship a requested feature and announce it),
   `call` (prep a sales call) and `payment` (chase a failed payment). Each asks a teammate from
-  Home, then presses what waits for a person (a merge, an email) until the teammate's last
+  Today, then presses what waits for a person (a merge, an email) until the teammate's last
   reply. The landing page picks one with the buttons above its window
   (`components/landing/live-demo.tsx`).
 - **What needs a computer** (the app preview, a teammate's screen, a terminal) shows
@@ -48,7 +48,7 @@ request leaves the browser; a reload starts over.
 - **The sign.** A card at the foot of the sidebar (a strip atop the page on a phone) says
   it is a demo, with "Sign up free" to www.brigade.lol/sign-up
   (`components/demo-banner.tsx`). Signing out goes there too; `/`, `/sign-in` and
-  `/onboarding` open Home, and the pages are `noindex` (`next.config.ts`). In the landing
+  `/onboarding` open Today, and the pages are `noindex` (`next.config.ts`). In the landing
   page's frame, the sign hides (below).
 
 The scripted replies only show what Brigade does: approvals follow each teammate's
@@ -107,14 +107,14 @@ opens (`components/landing/live-demo.tsx`), as squad.so and x.ai/bot do. A pictu
 button that opens the demo on its own. The demo allows only www.brigade.lol (and localhost) to
 frame it (`frame-ancestors`, `next.config.ts`); in the frame, its own sign hides, the page
 around it being the sign, and "Sign up free" opens in the whole window. Take the
-pictures again after a visible change to Home, without the demo's sign.
+pictures again after a visible change to Today, without the demo's sign.
 
 ## The walkthrough
 
 In the landing page's frame, the demo opens on `/app?tour=<story>`, the story the buttons above
 the window picked, and plays a walkthrough on its own once most of the frame is in view
 (`lib/demo/tour.ts`, `components/demo-tour.tsx`), as x.ai/bot does: a cursor marked "You" (the
-visitor, signed in as Ada) asks a teammate from Home, the teammate's side plays as scripted in
+visitor, signed in as Ada) asks a teammate from Today, the teammate's side plays as scripted in
 `lib/demo/scripts.ts`, and the cursor presses what waits for a person until it is done:
 
 - `bug`: Riley fixes the export button a customer reported; the cursor merges #153, then
@@ -129,9 +129,9 @@ visitor, signed in as Ada) asks a teammate from Home, the teammate's side plays 
 Each takes 15 to 35 seconds.
 
 It drives the real dashboard with events no person made: the visitor's first click, key,
-scroll or touch in the frame stops it, and a violet "Your turn · click around" pill offers a replay (Home
+scroll or touch in the frame stops it, and a violet "Your turn · click around" pill offers a replay (Today
 again, `/app?tour=<story>`, which starts the demo over). A thread the visitor started lives in memory:
-reloaded on its address, the demo opens Home instead (`lib/demo/install.ts`). It finds what to click by what the page shows (the teammate menu,
+reloaded on its address, the demo opens Today instead (`lib/demo/install.ts`). It finds what to click by what the page shows (the teammate menu,
 "Merge #153", "Merge #154", "Allow"): a change to those labels needs the same change in `lib/demo/tour.ts`.
 `pnpm test` plays every story against the demo's server; the clicks themselves are checked
 by running it in a browser.

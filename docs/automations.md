@@ -252,7 +252,7 @@ These are worth doing when someone asks for them:
 - **Triggers on the Automations page**, and one run history for both kinds, with
   skipped and failed runs as rows (`AutomationRun`).
 - **Behavior:**
-  - "Notify me" for results: on Home, then email.
+  - "Notify me" for results: on Today, then email.
   - A `finish_run` tool, so the teammate can say "nothing to do".
   - Pause a schedule after repeated failures.
   - A time limit per run.
