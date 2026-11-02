@@ -25,6 +25,7 @@ import {
   type PlaybookManifest,
   type PushMessage,
 } from '@brigade/contracts'
+import { CHOICE_DAYS, CHOICE_THREAD, choicesWaitingAmong } from './choices-waiting.js'
 import { env } from './config.js'
 import { prisma, scoped, type Scope } from './db.js'
 import { FAILED_THREAD, failedWaitingAmong, failingRoutines, RECENT_FAILURES } from './failed.js'
@@ -273,9 +274,10 @@ export async function workspaceItems(scope: Scope, members: Recipient[], now: Da
         })
       : [],
   ])
-  // Failed threads that may wait on whoever started them (src/failed.ts), lately active, and
-  // routines waiting on their owner.
-  const [failed, routines] = await Promise.all([
+  // Failed threads that may wait on whoever started them (src/failed.ts), lately active,
+  // routines waiting on their owner, and threads that may stop on choices nobody picked
+  // (src/choices-waiting.ts).
+  const [failed, routines, idle] = await Promise.all([
     prisma.session.findMany({
       where: {
         workspaceId,
@@ -285,18 +287,33 @@ export async function workspaceItems(scope: Scope, members: Recipient[], now: Da
       select: thread.select,
     }),
     failingRoutines(db, {}, now),
+    prisma.session.findMany({
+      where: {
+        workspaceId,
+        ...CHOICE_THREAD,
+        updatedAt: { gte: new Date(now.getTime() - CHOICE_DAYS * 24 * 60 * 60_000) },
+      },
+      select: thread.select,
+    }),
   ])
   // Which of those failed threads wait on a person, and which of the tasks' (whenever active).
-  const failing = await failedWaitingAmong(
-    db,
-    [
-      ...new Set([
-        ...failed.map((t) => t.id),
-        ...tasks.flatMap((t) => (t.session!.status === 'failed' ? [t.session!.id] : [])),
-      ]),
-    ],
-    now,
-  )
+  const [failing, choosing] = await Promise.all([
+    failedWaitingAmong(
+      db,
+      [
+        ...new Set([
+          ...failed.map((t) => t.id),
+          ...tasks.flatMap((t) => (t.session!.status === 'failed' ? [t.session!.id] : [])),
+        ]),
+      ],
+      now,
+    ),
+    choicesWaitingAmong(
+      db,
+      idle.map((t) => t.id),
+      now,
+    ),
+  ])
 
   const items = new Map<string, Item[]>(members.map((m) => [m.id, []]))
   /** The member put the thread away for later: nothing in it waits on them (src/later.ts). */
@@ -382,6 +399,26 @@ export async function workspaceItems(scope: Scope, members: Recipient[], now: Da
       needs: true,
       title: `${s.teammate.name}'s thread failed`,
       body: s.title,
+      url: threadUrl(workspaceId, s.id),
+      tag: s.id,
+    })
+  }
+
+  // Choices nobody picked: their thread's starter's, as Home and the sidebar count them; told to
+  // them, with what the choices ask. A ticket open in the thread was added first, by the same
+  // key: it says whose it is.
+  for (const s of idle) {
+    const choice = choosing.get(s.id)
+    if (!choice || !items.has(s.startedByMemberId)) continue
+    if (putAway({ id: s.startedByMemberId }, s)) continue
+    const key = `needs:${s.id}`
+    counted.get(s.startedByMemberId)!.add(key)
+    add(s.startedByMemberId, {
+      key,
+      workspaceId,
+      needs: true,
+      title: `${s.teammate.name} needs you to pick one`,
+      body: choice.question,
       url: threadUrl(workspaceId, s.id),
       tag: s.id,
     })

@@ -9,6 +9,7 @@ import {
 import type {
   ApiToBrowser,
   ChildReport,
+  Choices,
   ProjectSummary,
   AssetTicket,
   AttachmentInfo,
@@ -1192,8 +1193,26 @@ export type FailingRoutine = {
   error: string | null
 }
 
-/** What failed and waits on this member, beside their tickets and pull requests (/home/waiting). */
+/**
+ * Choices a teammate's reply ended on that this member has to pick from (apps/api/src/
+ * choices-waiting.ts, from /home/waiting).
+ */
+export type ChoiceWaiting = {
+  /** Its thread. */
+  id: string
+  title: string
+  teammate: { id: string; name: string }
+  /** When they were offered. */
+  at: string
+  choices: Choices
+}
+
+/**
+ * What waits on this member beside their tickets and pull requests (/home/waiting): what failed,
+ * and choices to pick from.
+ */
 export type HomeWaiting = {
+  choices: ChoiceWaiting[]
   threads: FailedThread[]
   routines: FailingRoutine[]
   /** When one that a retry of its own may still mend starts waiting: ask again then. */
@@ -1210,6 +1229,22 @@ export function failuresWaiting(waiting: HomeWaiting | undefined, tickets: Ticke
     threads: (waiting?.threads ?? []).filter((t) => !ticketed.has(t.id)),
     routines: waiting?.routines ?? [],
   }
+}
+
+/**
+ * The choices waiting on this member, as Home lists and the sidebar counts them: a thread with a
+ * ticket or a pull request waiting on them is that item, not one more (as on the Board).
+ */
+export function choicesWaiting(
+  waiting: HomeWaiting | undefined,
+  tickets: Ticket[],
+  pulls: PullWaiting[],
+) {
+  const held = new Set([
+    ...tickets.flatMap((t) => (t.session ? [t.session.id] : [])),
+    ...pulls.flatMap((p) => (p.session ? [p.session.id] : [])),
+  ])
+  return (waiting?.choices ?? []).filter((c) => !held.has(c.id))
 }
 
 /** A thread with a teammate's reply the member has not read (apps/api/src/home.ts). */

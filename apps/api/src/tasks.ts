@@ -18,6 +18,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
+import { choicesWaitingAmong } from './choices-waiting.js'
 import { failedWaitingAmong } from './failed.js'
 import { messageChild } from './children.js'
 import { prisma, scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
@@ -79,10 +80,10 @@ const ACTIVE = ['starting', 'running']
 
 /**
  * No thread: backlog. An open ticket, a waiting thread, a thread that failed and waits on a
- * person (`failedWaits`: src/failed.ts, failedWaitingAmong), or an open pull request the
- * teammate opened and stopped at, once its review is done (for the person to merge): needs
- * you, as Home and the sidebar say (pullWaitsOnPerson). Its merge marks the task done (see
- * settleOnMerge).
+ * person (`failedWaits`: src/failed.ts, failedWaitingAmong), an open pull request the
+ * teammate opened and stopped at, once its review is done (for the person to merge), or choices
+ * nobody picked (`choiceWaits`: src/choices-waiting.ts): needs you, as Home and the sidebar say
+ * (pullWaitsOnPerson). Its merge marks the task done (see settleOnMerge).
  */
 export function columnOf(
   task: {
@@ -94,6 +95,7 @@ export function columnOf(
     } | null
   },
   failedWaits: boolean,
+  choiceWaits = false,
 ): TaskColumn {
   if (task.completedAt) return 'done'
   if (!task.session) return 'backlog'
@@ -104,21 +106,29 @@ export function columnOf(
   // Only an open one waits on a person: once merged or closed, a reopened task is Doing.
   if (task.session.pullRequests.some(pullWaitsOnPerson) && !ACTIVE.includes(task.session.status))
     return 'needs_you'
-  return 'doing'
+  return choiceWaits ? 'needs_you' : 'doing'
 }
 
-/** The board's views of these tasks, their failed threads read once for them all. */
+/** The board's views of these tasks, their failed threads and choices read once for them all. */
 async function viewsOf(db: ScopedDb, rows: BoardRow[]) {
-  const failing = await failedWaitingAmong(
-    db,
-    rows.flatMap((r) => (r.session?.status === 'failed' ? [r.session.id] : [])),
+  const [failing, choosing] = await Promise.all([
+    failedWaitingAmong(
+      db,
+      rows.flatMap((r) => (r.session?.status === 'failed' ? [r.session.id] : [])),
+    ),
+    choicesWaitingAmong(
+      db,
+      rows.flatMap((r) => (r.session?.status === 'idle' ? [r.session.id] : [])),
+    ),
+  ])
+  return rows.map((row) =>
+    view(row, failing.has(row.session?.id ?? ''), choosing.has(row.session?.id ?? '')),
   )
-  return rows.map((row) => view(row, failing.has(row.session?.id ?? '')))
 }
 
-const view = ({ session, ...task }: BoardRow, failedWaits: boolean) => ({
+const view = ({ session, ...task }: BoardRow, failedWaits: boolean, choiceWaits: boolean) => ({
   ...task,
-  column: columnOf({ completedAt: task.completedAt, session }, failedWaits),
+  column: columnOf({ completedAt: task.completedAt, session }, failedWaits, choiceWaits),
   thread: session
     ? {
         id: session.id,

@@ -99,6 +99,7 @@ import {
 } from '@/components/ui/sidebar'
 import {
   api,
+  choicesWaiting,
   failuresWaiting,
   isAdmin,
   isViewer,
@@ -374,11 +375,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // what waits on this member (folded sections show none). A playbook's approvals are one.
   const waitingTickets = (tickets.data ?? []).filter((t) => waitsOn(t, data))
   const failing = failuresWaiting(failedWaiting.data, waitingTickets)
+  const choosing = choicesWaiting(failedWaiting.data, waitingTickets, pulls.data?.pulls ?? [])
   const waitingOnYou =
     new Set(waitingTickets.map(waitingItemKey)).size +
     (pulls.data?.pulls.length ?? 0) +
     failing.threads.length +
-    failing.routines.length
+    failing.routines.length +
+    choosing.length
   // Threads with a ticket waiting on this member, and what the ticket asks of them.
   const needsYou: Record<string, string> = {}
   // What the app icon badge counts: those threads, but a playbook's approvals once, whichever
@@ -404,6 +407,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     if (r.runId) needsYou[r.runId] ??= 'failed'
     if (r.runParentId) needsYou[r.runParentId] ??= 'routine failed'
     badge.add(`routine:${r.scheduleId}`)
+  }
+  // Threads whose teammate offered choices nobody picked (apps/api/src/choices-waiting.ts).
+  for (const c of choosing) {
+    needsYou[c.id] ??= 'pick one'
+    badge.add(c.id)
   }
   // And threads whose task is in Needs you, so the list agrees with the board.
   for (const t of tasks.data ?? [])

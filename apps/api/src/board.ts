@@ -362,9 +362,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
           place.reason === 'failed'
             ? error
             : place.reason === 'choice'
-              ? oneLine(
-                  item.threads.map((t) => choicesOnLines.get(t.id)?.question).find(Boolean),
-                )
+              ? oneLine(item.threads.map((t) => choicesOnLines.get(t.id)?.question).find(Boolean))
               : null,
         at: place.at.toISOString(),
         done:
@@ -385,34 +383,35 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
   // line left its list.
   const offList = rows.filter((t) => !represented.has(t.id))
   const ids = offList.map((t) => t.id)
-  const [failed, choices, childTickets, childrenWorking, routinesFailing, names] = await Promise.all([
-    failedWaitingAmong(db, ids, now),
-    choicesWaitingAmong(db, ids, now),
-    ids.length
-      ? db.ticket.findMany({
-          where: { status: 'open', session: { parentId: { in: ids } } },
-          select: { session: { select: { parentId: true } } },
-        })
-      : [],
-    ids.length
-      ? db.session.groupBy({
-          by: ['parentId'],
-          where: {
-            parentId: { in: ids },
-            awaited: true,
-            status: { in: ['starting', 'running'] },
-          },
-          _count: { _all: true },
-        })
-      : [],
-    failingRoutines(db, {}, now),
-    actorNames(
-      db,
-      offList.flatMap((t) =>
-        t.doneAt && t.doneByType && t.doneById ? [{ type: t.doneByType, id: t.doneById }] : [],
+  const [failed, choices, childTickets, childrenWorking, routinesFailing, names] =
+    await Promise.all([
+      failedWaitingAmong(db, ids, now),
+      choicesWaitingAmong(db, ids, now),
+      ids.length
+        ? db.ticket.findMany({
+            where: { status: 'open', session: { parentId: { in: ids } } },
+            select: { session: { select: { parentId: true } } },
+          })
+        : [],
+      ids.length
+        ? db.session.groupBy({
+            by: ['parentId'],
+            where: {
+              parentId: { in: ids },
+              awaited: true,
+              status: { in: ['starting', 'running'] },
+            },
+            _count: { _all: true },
+          })
+        : [],
+      failingRoutines(db, {}, now),
+      actorNames(
+        db,
+        offList.flatMap((t) =>
+          t.doneAt && t.doneByType && t.doneById ? [{ type: t.doneByType, id: t.doneById }] : [],
+        ),
       ),
-    ),
-  ])
+    ])
   const ticketsOfChildren = new Set(childTickets.map((t) => t.session?.parentId))
   const working = new Set(childrenWorking.map((c) => c.parentId))
   // ---- Threads on no list ----
@@ -480,7 +479,12 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
             : needs === 'choice'
               ? oneLine(choice!.question)
               : null,
-        at: (needs === 'failed' ? fail!.at : needs === 'choice' ? choice!.at : t.updatedAt).toISOString(),
+        at: (needs === 'failed'
+          ? fail!.at
+          : needs === 'choice'
+            ? choice!.at
+            : t.updatedAt
+        ).toISOString(),
         done: null,
       })
       continue

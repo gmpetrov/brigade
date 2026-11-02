@@ -94,11 +94,12 @@ mission; threads stay where the work happens.
   with a "Tick it" reply.
 - **Where a line stands comes from its threads**: done when ticked; needs you when one of its
   threads waits on a person (a failed one too, once its runner's own retries are over:
-  `src/failed.ts`; one whose choices nobody picked: `src/choices-waiting.ts`); in progress when one works or a pull request on it is open; else
-  open. The list's counts and filters read the same. An open line with threads, none of them
-  working or waiting, no open pull request and no open remaining line, is **stalled**: nothing
-  will tick it, so it shows "Stopped, still open" for someone to tick it or say what remains.
-  It is the net for work done without a pull request, where no merge shows on the line.
+  `src/failed.ts`; one whose choices nobody picked: `src/choices-waiting.ts`); in progress
+  when one works or a pull request on it is open; else open. The list's counts and filters
+  read the same. An open line with threads, none of them working or waiting, no open pull
+  request and no open remaining line, is **stalled**: nothing will tick it, so it shows
+  "Stopped, still open" for someone to tick it or say what remains. It is the net for work
+  done without a pull request, where no merge shows on the line.
 - **Within the library's access.** Members read every list. A teammate reads and changes a list
   only as its folder's access lets it (`teammateLibraryAccess`); marking a line counts as
   changing the file. A thread's items reach its teammate (spec, `list_items`) only from lists it

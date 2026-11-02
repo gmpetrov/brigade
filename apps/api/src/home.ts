@@ -130,7 +130,10 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
   ])
   const max = (id: string, type: string) =>
     latest.find((l) => l.sessionId === id && l.type === type)?._max
-  const held = new Set([...[...tickets, ...pullsWaiting].map((t) => t.sessionId), ...choices.keys()])
+  const held = new Set([
+    ...[...tickets, ...pullsWaiting].map((t) => t.sessionId),
+    ...choices.keys(),
+  ])
   const gone = new Set(dismissed.map((d) => d.key))
 
   // The buttons or choices each idle thread ended on. The runner takes them out of the
