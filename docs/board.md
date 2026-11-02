@@ -101,6 +101,16 @@ A thread's done is a fact someone declares, never one read from its silence (`Se
   delivered, in the turn that delivers it. Only in a top-level thread a person or a trigger
   started: a child reports, a playbook's run ends with `playbook_report`, a schedule's run with
   its turn. Audited as `thread.done`.
+- **A question is done once answered** (2026-11-02). The teammate closes it in the turn that
+  answers, even when its reply ends on suggested replies: they are a next step a person may
+  leave, not pending work, and a click is a message that reopens the thread. A change that was
+  asked and only proposed is not delivered, nor is a reply ending on choices the teammate needs
+  picked (closing it would take them out of Needs you): those stay open. On the first day of
+  `complete_thread`, teammates closed 26 of 32 threads that made something and none of 7
+  answered questions, even one that offered no next step, so Stopped filled with answers. Chosen
+  over sorting threads into work and questions from what they made (a request nobody followed up
+  looks like a question) and over leaving it to Mark done. The check: how often a person reopens
+  a thread within the hour after its teammate closed it.
 - **Brigade refuses it while anything is open**, and says what (`openWork`): a ticket or question
   in the thread or its children; a pull request opened from them still open; a child it waits for
   that has not reported (a review is one); a wake-up the teammate set; a person's queued message;
