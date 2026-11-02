@@ -182,7 +182,9 @@ fn open_link(app: &AppHandle, link: &Url) {
     });
 }
 
-/// Checks GitHub Releases; installs a newer Brigade.app, which applies on restart.
+/// Checks GitHub Releases; installs a newer Brigade.app, which applies on restart. From the
+/// menu (`manual`), every outcome shows: the menu closes on the click, so the item's own text
+/// would go unseen. A newer version found then asks to restart now.
 async fn check_for_update(app: AppHandle, manual: bool) {
     let items = app.state::<Arc<Items>>();
     if *items.update_ready.lock().unwrap() {
@@ -195,20 +197,32 @@ async fn check_for_update(app: AppHandle, manual: bool) {
     match found {
         Ok(Some(update)) => {
             let version = update.version.clone();
-            match update.download_and_install(|_, _| {}, || {}).await {
+            // While it downloads, the item says so, and a second click can't start another.
+            let _ = items.update.set_text(format!("Downloading {version}…"));
+            let _ = items.update.set_enabled(false);
+            let installed = update.download_and_install(|_, _| {}, || {}).await;
+            let _ = items.update.set_enabled(true);
+            match installed {
                 Ok(()) => {
                     *items.update_ready.lock().unwrap() = true;
                     let _ = items
                         .update
                         .set_text(format!("Restart to update to {version}"));
+                    if manual {
+                        ask_restart(&app, &version);
+                    }
                 }
-                Err(error) if manual => alert(
-                    &app,
-                    "Update failed",
-                    &error.to_string(),
-                    MessageDialogKind::Error,
-                ),
-                Err(_) => {}
+                Err(error) => {
+                    let _ = items.update.set_text("Check for updates…");
+                    if manual {
+                        alert(
+                            &app,
+                            "Update failed",
+                            &error.to_string(),
+                            MessageDialogKind::Error,
+                        );
+                    }
+                }
             }
         }
         Ok(None) if manual => alert(
@@ -225,6 +239,31 @@ async fn check_for_update(app: AppHandle, manual: bool) {
         ),
         _ => {}
     }
+}
+
+/// The new version is installed: restart now, or later from the menu's "Restart to update".
+fn ask_restart(app: &AppHandle, version: &str) {
+    let handle = app.clone();
+    app.dialog()
+        .message(format!(
+            "Brigade {version} is installed. Restart Brigade to use it, now or later from its menu."
+        ))
+        .title("Update ready")
+        .kind(MessageDialogKind::Info)
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            "Restart".into(),
+            "Later".into(),
+        ))
+        .show(move |restart| {
+            if restart {
+                restart_to_update(&handle);
+            }
+        });
+}
+
+fn restart_to_update(app: &AppHandle) {
+    app.state::<Arc<Supervisor>>().stop();
+    app.restart();
 }
 
 fn on_menu(app: &AppHandle, id: &str) {
@@ -261,8 +300,7 @@ fn on_menu(app: &AppHandle, id: &str) {
         }
         "update" => {
             if *app.state::<Arc<Items>>().update_ready.lock().unwrap() {
-                app.state::<Arc<Supervisor>>().stop();
-                app.restart();
+                restart_to_update(app);
             }
             tauri::async_runtime::spawn(check_for_update(app.clone(), true));
         }

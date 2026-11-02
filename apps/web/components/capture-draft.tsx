@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { NewThread, useLastTeammate, useThreadDraft } from '@/components/new-thread'
+import { OPEN_LAYER } from '@/components/side-panel'
 import { newerBuild } from '@/components/update-pill'
 import { captures, inCaptureWindow } from '@/lib/brigade-app'
 
@@ -92,17 +93,19 @@ export function CaptureDraft() {
     return () => off.forEach((o) => void o.then((unlisten) => unlisten()))
   }, [app, add])
 
-  // Esc closes the window, unless a menu or the image preview is open: Esc closes that first.
+  // Esc closes the window, unless a menu, the `@` or `/` suggestions or the image preview is
+  // open: Esc closes that first. Heard on the way down (capture), before the message box:
+  // its editor (ProseMirror) takes every Esc, so it would never reach the window otherwise.
   // When the page does not have the keyboard, Brigade.app closes it itself (escape.rs).
   useEffect(() => {
     if (!app) return
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== 'Escape' || e.defaultPrevented) return
-      if (document.querySelector('[data-radix-popper-content-wrapper], [role=dialog]')) return
+      if (e.key !== 'Escape' || e.isComposing || e.defaultPrevented) return
+      if (document.querySelector(`${OPEN_LAYER}, [data-radix-popper-content-wrapper]`)) return
       void captures.hide()
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    window.addEventListener('keydown', onKeyDown, { capture: true })
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true })
   }, [app])
 
   if (!app)
