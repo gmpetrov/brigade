@@ -360,6 +360,98 @@ describe('the Board', { skip: !database && 'no database answers' }, () => {
     assert.equal(b.cards.find((c) => c.key === `thread:${deleted}`)?.column, 'in_progress')
   })
 
+  test('a thread this member put away for later is no card for them, except in Done', async () => {
+    const pull = (sessionId: string, number: number) =>
+      db.pullRequest.create({
+        data: {
+          repository: 'acme/app',
+          number,
+          title: 'Ready',
+          headRef: `ready-${number}`,
+          baseRef: 'main',
+          sessionId,
+          authorTeammateId: ids.riley,
+        },
+      } as never)
+    const later = (sessionId: string) =>
+      db.threadLater.create({
+        data: {
+          organizationId: ids.org,
+          workspaceId: ids.workspace,
+          memberId: ids.member,
+          sessionId,
+        },
+      } as never)
+    const toMerge = await thread('Videopal V2')
+    await pull(toMerge, 15)
+    // Its child waits on a person: it goes with its parent.
+    const child = await thread('Which voice?', {
+      parentId: toMerge,
+      origin: 'child',
+      status: 'waiting',
+    })
+    const asking = await thread('Remote computer use')
+    await db.ticket.create({
+      data: { sessionId: asking, type: 'question', title: 'Which screen?' },
+    } as never)
+    const idle = await thread('Quiet', {}, DAY)
+    const done = await thread('Shipped', {
+      doneAt: new Date(now.getTime() - DAY),
+      doneByType: 'teammate',
+      doneById: ids.riley,
+    })
+    let b = await board(db, scope, now)
+    const card = (id: string) => b.cards.find((c) => c.key === `thread:${id}`)
+    assert.equal(card(toMerge)?.column, 'needs_you')
+    assert.equal(card(asking)?.column, 'needs_you')
+    for (const id of [toMerge, asking, idle, done]) await later(id)
+
+    // A list's line whose only thread is put away: no card, not stopped.
+    const library = await import('../src/library.js')
+    const file = await library.saveLibraryFile(
+      db,
+      { organizationId: ids.org, workspaceId: ids.workspace },
+      { type: 'member', id: ids.member },
+      {
+        path: 'Projects/Acme/later.md',
+        bytes: new TextEncoder().encode(
+          '# Later\n\n* [ ] Merge it <!-- item:ffffffffffffffff -->\n',
+        ),
+      },
+    )
+    const onLine = await thread('Merge it')
+    await pull(onLine, 16)
+    await db.listItem.create({
+      data: { id: 'ffffffffffffffff', documentId: file.id, text: 'Merge it' },
+    } as never)
+    await db.listItemThread.create({
+      data: { itemId: 'ffffffffffffffff', sessionId: onLine },
+    } as never)
+    await db.listItemThread.create({
+      data: { itemId: 'ffffffffffffffff', sessionId: child },
+    } as never)
+    b = await board(db, scope, now)
+    assert.equal(b.cards.find((c) => c.key === 'item:ffffffffffffffff')?.column, 'needs_you')
+    await later(onLine)
+
+    b = await board(db, scope, now)
+    assert.equal(card(toMerge), undefined, 'its pull request no longer waits on them')
+    assert.equal(card(asking), undefined, 'nor its ticket')
+    assert.ok(!b.stopped.some((s) => s.threadId === idle), 'nor is it stopped')
+    assert.equal(card(done)?.column, 'done', 'what it did this week stays')
+    assert.equal(
+      b.cards.find((c) => c.key === 'item:ffffffffffffffff'),
+      undefined,
+    )
+    assert.ok(!b.stopped.some((s) => s.key === 'item:ffffffffffffffff'))
+
+    // Another member still sees them wait.
+    const other = await board(db, { ...scope, memberId: 'another-member' }, now)
+    assert.equal(other.cards.find((c) => c.key === `thread:${toMerge}`)?.column, 'needs_you')
+    assert.equal(other.cards.find((c) => c.key === 'item:ffffffffffffffff')?.column, 'needs_you')
+    await db.threadLater.deleteMany({ where: { memberId: ids.member } })
+  })
+
   test('a line whose thread stopped shows as stopped, until that thread is marked done', async () => {
     const library = await import('../src/library.js')
     const file = await library.saveLibraryFile(
