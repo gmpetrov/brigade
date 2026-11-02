@@ -287,6 +287,9 @@ function indent(view: EditorView, editor: Editor, out: boolean) {
   }
   const { from, to } = view.state.selection
   const lines = selectedLines(doc, from, to)
+  // With lines a list's filter hides among them, Tab would move those too, unseen: it waits
+  // for the filter to be lifted.
+  if (chosen(view).length < lines.length) return
   const start = Selection.near(doc.resolve(from + 1))
   const end = endOf(doc, lines.at(-1)!.pos)
   view.dispatch(view.state.tr.setSelection(TextSelection.between(start.$from, end.$to)))
@@ -654,12 +657,20 @@ const extension = (editor: Editor) => ({
           if (e.type === 'cut' && view.editable) remove(view, editor)
         }
         const paste = () => onPaste(view)
+        // Text that comes without a key press (an input method, dictation, a keyboard's
+        // suggestion): it goes on at the end of the last line, as typing does.
+        const input = (e: Event) => {
+          if (e.type === 'beforeinput' && (e as InputEvent).inputType.startsWith('delete')) return
+          release(view)
+        }
         const dom = view.dom
         // Before ProseMirror's and BlockNote's own handling of the same events.
         dom.addEventListener('keydown', keydown, true)
         dom.addEventListener('copy', copy, true)
         dom.addEventListener('cut', copy, true)
         dom.addEventListener('paste', paste, true)
+        dom.addEventListener('beforeinput', input, true)
+        dom.addEventListener('compositionstart', input, true)
         document.addEventListener('mousedown', mousedown, true)
         return {
           destroy: () => {
@@ -667,6 +678,8 @@ const extension = (editor: Editor) => ({
             dom.removeEventListener('copy', copy, true)
             dom.removeEventListener('cut', copy, true)
             dom.removeEventListener('paste', paste, true)
+            dom.removeEventListener('beforeinput', input, true)
+            dom.removeEventListener('compositionstart', input, true)
             document.removeEventListener('mousedown', mousedown, true)
           },
         }
@@ -675,8 +688,10 @@ const extension = (editor: Editor) => ({
         decorations,
         // The browser's own selection, read back as it settles (or as it lands on the lines'
         // edges), would turn the lines into text: they stay, unless the pointer is at work.
-        createSelectionBetween: (view) =>
+        // Only for a selection read alone: one read with typed text belongs to the new document.
+        createSelectionBetween: (view, $anchor) =>
           isBlockSelection(view.state.selection) &&
+          $anchor.doc === view.state.doc &&
           !(view as EditorView & { input?: { mouseDown?: unknown } }).input?.mouseDown
             ? view.state.selection
             : null,

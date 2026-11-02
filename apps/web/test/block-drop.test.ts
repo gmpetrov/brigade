@@ -212,3 +212,10 @@ test('lines selected together move together, and stay selected where they land',
   alone.drop(LEFT + 50, 50)
   assert.equal(alone.selected(), undefined)
 })
+
+test('lines selected together with hidden ones between them: the hidden ones stay', () => {
+  // A, C and D selected (rows A 0, C 30, D 60, E 90), ~hidden between A and C: below E.
+  const editor = dragging([line('A'), line('~hidden'), line('C'), line('D'), line('E')], 0, 4)
+  assert.equal(editor.drop(LEFT + 50, 110), '~hidden, E, A, C, D')
+  assert.equal(editor.selected(), 'A, C, D')
+})
