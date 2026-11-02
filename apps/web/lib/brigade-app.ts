@@ -4,8 +4,11 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import type { MouseEvent } from 'react'
 
 type Internals = { __TAURI_INTERNALS__?: unknown }
+
+const CONTROLS = 'a, button, input, select, textarea, label, [role], [contenteditable="true"]'
 
 /** Whether this page is in Brigade.app's screenshot window. */
 export function inCaptureWindow() {
@@ -33,6 +36,18 @@ export const captures = {
   /** A capture was added (its name), and the window came up for it. */
   onAdded: (handle: (name: string) => void) =>
     listen<string>('capture-added', (e) => handle(e.payload)),
+  /**
+   * A press on the window's top row: the window follows the mouse until it is released, unless
+   * the press is on a control in the row. Brigade.app moves it itself (drag.rs): Tauri's own
+   * drag does nothing on macOS 27. An app from before capture_drag gets Tauri's drag.
+   */
+  drag: (e: MouseEvent<HTMLElement>) => {
+    if (e.button !== 0 || e.detail !== 1) return
+    const control = (e.target as Element).closest(CONTROLS)
+    if (control && e.currentTarget.contains(control)) return
+    e.preventDefault()
+    invoke<void>('capture_drag').catch(() => getCurrentWindow().startDragging())
+  },
   /** The window came up again, from the menu. */
   onShown: (handle: () => void) => listen('capture-shown', () => handle()),
 }

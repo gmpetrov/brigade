@@ -63,6 +63,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { newThreadId, pendingThreads } from '@/lib/pending-threads'
 import { preloadThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
+import { captures } from '@/lib/brigade-app'
 
 const quietSelect =
   'h-8 border-transparent bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent/50'
@@ -822,8 +823,8 @@ export function NewThread({
       >
         <div
           // A whole window has no title bar: its macOS buttons sit at the start of this row
-          // (capture.rs), and the row drags the window, its pickers aside.
-          data-tauri-drag-region={fill ? 'deep' : undefined}
+          // (capture.rs), and the row moves the window, its pickers aside.
+          onMouseDown={fill ? captures.drag : undefined}
           className={cn(
             'flex min-w-0 flex-wrap items-center gap-1 px-3 py-2 text-sm text-muted-foreground',
             fill && 'min-h-[52px] pl-[78px] select-none',
