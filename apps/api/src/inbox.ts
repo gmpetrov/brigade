@@ -30,6 +30,7 @@ import { attachmentLink } from './connectors/email.js'
 import { gmailFile } from './connectors/gmail.js'
 import { addressOf } from './mail/names.js'
 import { holdGmail } from './mail/gmail-outbound.js'
+import { readReceived, unread } from './mail/inbound.js'
 import { whenToReply } from './mail/guidance.js'
 import { clearOutcome } from './mail/outcomes.js'
 import { sendDraft, UNDO_SECONDS } from './mail/outbound.js'
@@ -770,6 +771,8 @@ export async function readItem(
         at: m.receivedAt.toISOString(),
         text,
         quoted,
+        // Kept as it came in, its words still being read: a moment, not an empty mail.
+        arriving: m.direction === 'in' && !!m.address && unread(m),
         attachments: masked ? [] : filesOf(m),
         authentication:
           m.direction === 'in'
@@ -950,6 +953,16 @@ export async function handItem(
   itemId: string,
   input: { teammateId: string; note?: string; projectId?: string | null },
 ) {
+  // A mail handed over as it arrives is read first, or its thread would start with no words.
+  const arriving = (await conversationOf(db, scope, itemId)).mails.filter(
+    (x) => x.direction === 'in' && x.address && unread(x),
+  )
+  try {
+    for (const x of arriving) await readReceived(x.id)
+  } catch (error) {
+    console.warn(`inbox: ${itemId} not read yet`, error)
+    throw new HTTPException(503, { message: 'This mail is still arriving: try again in a moment' })
+  }
   // The conversation goes, from its latest mail, with the earlier ones for context.
   const { head: m } = await conversationOf(db, scope, itemId)
   const detail = await readItem(db, scope, itemId)

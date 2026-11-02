@@ -94,6 +94,8 @@ export type InboxMessage = {
   /** Its own words; the earlier messages it quotes apart. */
   text: string
   quoted: string
+  /** Received and kept, its words still being read: not an empty mail. */
+  arriving: boolean
   /** Its files: a received one opens at the API's /inbox/items/<its id>/files/<file id>. */
   attachments: { id: string; name: string; contentType: string; size: number }[]
   authentication: { spf?: string; dkim?: string; dmarc?: string } | null

@@ -165,6 +165,23 @@ const loadRow = (id: string) =>
     include: { address: { include: { connection: true } }, alias: true },
   })
 
+/** Not read from Resend yet: its conversation is a placeholder until then (received above). */
+export const unread = (row: { conversationId: string }) => row.conversationId.startsWith('pending:')
+
+/**
+ * Read a kept mail from Resend now, without delivering it: for a person who hands it to a teammate
+ * from the Inbox before its delivery ran, so the thread gets its words. Its delivery then leaves it
+ * with that thread (processMail).
+ */
+export const readReceived = (id: string) =>
+  serially(`mail:${id}`, async () => {
+    const loaded = await loadRow(id)
+    if (!loaded?.address || loaded.direction !== 'in' || !unread(loaded)) return
+    const row = loaded as Row
+    const scope: Scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
+    await readMail(scoped(scope), scope, row)
+  })
+
 /** Read a kept mail from Resend and deliver it. Never twice at once for the same mail. */
 export const processMail = (id: string) =>
   serially(`mail:${id}`, async () => {
@@ -174,15 +191,26 @@ export const processMail = (id: string) =>
     const scope: Scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
     const db = scoped(scope)
     try {
-      const read = row.text || row.route ? row : await readMail(db, scope, row)
+      // Read whatever else happened to it first: a hand-over before this ran left it unread.
+      const read = unread(row) ? await readMail(db, scope, row) : row
+      // A person handed it to a teammate from the Inbox before it was delivered: it is that
+      // thread's already, with nowhere else to go.
+      if (read.handedAt) {
+        await db.mailMessage.updateMany({
+          where: { id: row.id },
+          data: { status: 'done', error: null },
+        })
+        return
+      }
       // Copies of one mail (the same Message-ID to two addresses) are delivered one after the
       // other, so the second sees the first went somewhere and is a duplicate.
       const outcome = await (read.messageId
         ? serially(`mail-id:${row.workspaceId}:${read.messageId}`, () =>
             deliverMail(db, scope, read).then(async (o) => {
               // Written before the next copy looks.
+              // Never over a hand-over made meanwhile: the next try sees it (above).
               await db.mailMessage.updateMany({
-                where: { id: row.id },
+                where: { id: row.id, handedAt: null },
                 data: { route: o.route, sessionId: o.sessionId ?? null, status: 'done' },
               })
               return o
@@ -190,7 +218,7 @@ export const processMail = (id: string) =>
           )
         : deliverMail(db, scope, read))
       await db.mailMessage.updateMany({
-        where: { id: row.id },
+        where: { id: row.id, handedAt: null },
         data: {
           status: 'done',
           route: outcome.route,
