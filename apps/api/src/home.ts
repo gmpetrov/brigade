@@ -2,7 +2,7 @@
 // nothing moves on its own) and what came back since they last looked. Only what
 // Brigade knows for sure: a reply ending on buttons nobody clicked, a running thread
 // with no event for a while. Pull requests, tickets, failed threads and failing routines that
-// wait on a person are Waiting on you, not here (failuresWaitingOn, src/failed.ts). With the
+// wait on a person are Needs you, not here (failuresWaitingOn, src/failed.ts). With the
 // results, a line per active playbook that ran this week (playbook-metrics.ts).
 import {
   bareToolName,
@@ -106,7 +106,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
           select: { sessionId: true, seenAt: true },
         })
       : [],
-    // A thread held by an open ticket is Waiting on you, not here.
+    // A thread held by an open ticket is Needs you, not here.
     ids.length
       ? db.ticket.findMany({
           where: { sessionId: { in: ids }, status: 'open' },
@@ -236,7 +236,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
 
   // What came back: threads with a teammate's reply they have not read. Not their own
   // decisions: they made them; what came of one is the reply that follows. Not a failed one
-  // either: its last turn did not come back, and once it waits on them it is Waiting on you.
+  // either: its last turn did not come back, and once it waits on them it is Needs you.
   const looseThreads = new Set(loose.map((l) => l.thread.id))
   const unread = threads.filter((t) => {
     if (looseThreads.has(t.id) || held.has(t.id)) return false
@@ -307,7 +307,7 @@ export async function dismissLooseEnd(
 }
 
 /**
- * Home's Waiting on you beside its tickets and pull requests: the failed threads and failing
+ * Home's Needs you beside its tickets and pull requests: the failed threads and failing
  * routines waiting on this member (src/failed.ts), and when to ask again.
  */
 export async function homeWaiting(db: ScopedDb, memberId: string, now = new Date()) {

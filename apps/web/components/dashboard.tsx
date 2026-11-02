@@ -302,7 +302,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // open tickets.
   const tasks = useApi<Task[]>('/tasks', ['task.updated', 'thread.updated', 'tickets.updated'])
   const reloadTasks = tasks.reload
-  // Pull requests waiting on a person: with the tickets, what Home's Waiting on you counts.
+  // Pull requests waiting on a person: with the tickets, what Home's Needs you counts.
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention', ['pulls.updated'])
   const reloadPulls = pulls.reload
   // Failed threads and routines waiting on this member (apps/api/src/failed.ts): a thread's
@@ -405,7 +405,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const data = me.data
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
-  // What Home's Waiting on you holds, counted beside Home in the sidebar: the one count of
+  // What Home's Needs you holds, counted beside Home in the sidebar: the one count of
   // what waits on this member (folded sections show none). A playbook's approvals are one.
   const waitingTickets = (tickets.data ?? []).filter((t) => waitsOn(t, data))
   const failing = failuresWaiting(failedWaiting.data, waitingTickets)

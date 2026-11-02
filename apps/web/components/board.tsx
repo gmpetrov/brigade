@@ -84,8 +84,8 @@ function useFilters(): [Filters, (next: Partial<Filters>) => void] {
   return [filters, change]
 }
 
-/** The Board, reloaded once a burst of changes settles. */
-function useBoard() {
+/** The Board, reloaded once a burst of changes settles. Home reads it too. */
+export function useBoard() {
   const board = useApi<Board>('/board')
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const { reload } = board
@@ -294,7 +294,7 @@ const HEALTH: Record<BoardRoutine['health'], { label: string; tone: string }> = 
 }
 
 /** What a routine did today, or last: what it produced first, the runs that found nothing counted. */
-function RoutineLast({ routine }: { routine: BoardRoutine }) {
+export function RoutineLast({ routine }: { routine: BoardRoutine }) {
   const parts: React.ReactNode[] = []
   if (routine.running)
     parts.push(

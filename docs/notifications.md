@@ -18,7 +18,7 @@ in the dashboard.
   you without a ticket (waiting, failed, or a pull request to review) notifies
   its thread's starter.
 - **A failed thread waits on whoever started it**, everywhere at once: Home's
-  Waiting on you and the count beside Home, the sidebar (where its dot stays
+  Needs you and the count beside Home, the sidebar (where its dot stays
   red), the app badge, pushes ("Riley's thread failed"), Tasks' Needs you, a
   list line's state and the Board. One rule, `apps/api/src/failed.ts`: a
   thread of the last 14 days, not a child (its parent's teammate hears of it),
