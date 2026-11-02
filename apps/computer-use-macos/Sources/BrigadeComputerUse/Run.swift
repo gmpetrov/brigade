@@ -238,8 +238,11 @@ enum Run {
     sigfillset(&all)
     posix_spawnattr_setsigdefault(&attributes, &all)
 
-    let argv = ["/bin/zsh", "-c", command].map { strdup($0) } + [nil]
-    let envp = env.map { strdup("\($0.key)=\($0.value)") } + [nil]
+    // Typed step by step: Swift 6.1 (the release runner's) can't infer the literal's type through strdup.
+    let arguments: [String] = ["/bin/zsh", "-c", command]
+    let variables: [String] = env.map { "\($0.key)=\($0.value)" }
+    let argv: [UnsafeMutablePointer<CChar>?] = arguments.map { strdup($0) } + [nil]
+    let envp: [UnsafeMutablePointer<CChar>?] = variables.map { strdup($0) } + [nil]
     defer {
       argv.forEach { free($0) }
       envp.forEach { free($0) }
