@@ -4,6 +4,7 @@
 // windows are the setup checklist (setup.rs) and the screenshot draft (capture.rs).
 mod capture;
 mod drag;
+mod escape;
 mod runner;
 mod setup;
 

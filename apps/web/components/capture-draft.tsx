@@ -93,6 +93,7 @@ export function CaptureDraft() {
   }, [app, add])
 
   // Esc closes the window, unless a menu or the image preview is open: Esc closes that first.
+  // When the page does not have the keyboard, Brigade.app closes it itself (escape.rs).
   useEffect(() => {
     if (!app) return
     function onKeyDown(e: KeyboardEvent) {
