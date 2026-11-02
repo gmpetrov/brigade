@@ -1936,7 +1936,9 @@ export function doneTools(
       description:
         'Declare this thread done: the work asked here is delivered (merged, sent, saved, answered with a ' +
         'result) and nothing is pending. Call it in the turn that delivers it, with one line on what was ' +
-        'delivered. Brigade refuses it while something is still open here, and lists what: a ticket or ' +
+        'delivered. A question answered is delivered, even when your reply ends on suggested replies; a ' +
+        'change you only proposed, or a reply ending on choices you need picked, is not. Brigade refuses ' +
+        'it while something is still open here, and lists what: a ticket or ' +
         'question, a pull request not yet merged or closed, a child thread or a review that has not ' +
         'reported, a wake-up you set, a list item not ticked. A new message from a person reopens the ' +
         'thread. Not in a scheduled run: it ends with its turn.',

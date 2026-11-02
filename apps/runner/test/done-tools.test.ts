@@ -92,6 +92,9 @@ test('a thread at the top is told to declare its work done, and that a merge wak
   const top = told(spec({}))
   assert.match(top, /## Done\n\nWhen the work asked in this thread is delivered/)
   assert.match(top, /call `complete_thread` in the same turn/)
+  // An answered question closes too, even on suggested replies; choices it needs picked do not.
+  assert.match(top, /A question is delivered by your answer/)
+  assert.match(top, /nor is a reply that ends on choices you need picked/)
   assert.match(top, /you are woken here once it is merged/)
   assert.doesNotMatch(top, /the thread tells you once it is merged/)
   // A child reports: no such section, and a merge only leaves a note there.
