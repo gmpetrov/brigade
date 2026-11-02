@@ -100,14 +100,14 @@ the last one written may end the alert up to a minute early. Every write of `las
 `GREATEST("lastAt", …)` in one statement, so writers that race never move it back.
 Before, the quiet time counted from the object's start too: on 2026-11-01 the `api` alert
 stayed open 10 hours after its last failure, until one start of the object lasted 15 minutes.
+What fails in a workspace's hub object, the cron or the jobs' consumer is counted there too,
+sent by RPC.
 
 A read (`SELECT`) outside a transaction that meets a connection the database closed
 (`Connection terminated unexpectedly`, Hyperdrive's 08006) is run once more on another
 connection (`retryReads`, `src/db.ts`), rather than answered 500: on 2026-11-01 one dropped
 connection failed 10 requests in the same second. Writes are not run again, as one may have
-been applied before its answer was lost. What
-fails in a workspace's hub object, the cron or the jobs' consumer is counted there too, sent
-by RPC.
+been applied before its answer was lost.
 
 Each minute, the API logs what the hubs it holds hold (`hubs: hubs 3, runners 2, browsers 5,
 queued 0, …`), so a growth shows before it costs a restart. A workspace's hub object logs
