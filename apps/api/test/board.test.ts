@@ -384,6 +384,12 @@ describe('the Board', { skip: !database && 'no database answers' }, () => {
       } as never)
     const toMerge = await thread('Videopal V2')
     await pull(toMerge, 15)
+    // Its child waits on a person: it goes with its parent.
+    const child = await thread('Which voice?', {
+      parentId: toMerge,
+      origin: 'child',
+      status: 'waiting',
+    })
     const asking = await thread('Remote computer use')
     await db.ticket.create({
       data: { sessionId: asking, type: 'question', title: 'Which screen?' },
@@ -420,6 +426,9 @@ describe('the Board', { skip: !database && 'no database answers' }, () => {
     } as never)
     await db.listItemThread.create({
       data: { itemId: 'ffffffffffffffff', sessionId: onLine },
+    } as never)
+    await db.listItemThread.create({
+      data: { itemId: 'ffffffffffffffff', sessionId: child },
     } as never)
     b = await board(db, scope, now)
     assert.equal(b.cards.find((c) => c.key === 'item:ffffffffffffffff')?.column, 'needs_you')

@@ -29,7 +29,7 @@ import type { Prisma, ScopedDb } from './db.js'
 import { failedWaitingAmong, failingRoutines } from './failed.js'
 import { latersOf } from './later.js'
 import { actorNames } from './library-history.js'
-import { workspaceLists } from './lists.js'
+import { isAside, workspaceLists } from './lists.js'
 import { REVIEW_THREAD, pullWaitsOnPerson } from './review-state.js'
 import type { WorkspaceScope } from './scope.js'
 
@@ -181,12 +181,24 @@ const boardThread = (t: {
 /** Where a list's line stands on the Board, from its state (lists.ts stateOf) and its threads. */
 function itemPlace(
   item: ListItemView,
-  threads: Map<string, { status: string; updatedAt: Date; archivedAt: Date | null }>,
+  threads: Map<
+    string,
+    {
+      id: string
+      parentId: string | null
+      status: string
+      updatedAt: Date
+      archivedAt: Date | null
+    }
+  >,
   failed: Map<string, { at: Date; error: string | null }>,
   aside: ReadonlySet<string>,
   now: Date,
 ): { column: BoardCard['column']; reason: BoardReason | null; at: Date } | 'stopped' | null {
-  const live = item.threads.filter((t) => !threads.get(t.id)?.archivedAt && !aside.has(t.id))
+  const live = item.threads.filter((t) => {
+    const row = threads.get(t.id)
+    return !row?.archivedAt && !isAside(row ?? { id: t.id, parentId: null }, aside)
+  })
   const latest = new Date(
     Math.max(0, ...live.map((t) => threads.get(t.id)?.updatedAt.getTime() ?? 0)),
   )
@@ -253,6 +265,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
           where: { id: { in: itemThreadIds } },
           select: {
             id: true,
+            parentId: true,
             status: true,
             updatedAt: true,
             createdAt: true,
@@ -316,7 +329,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
       if (place === 'stopped') {
         const last = [...item.threads]
           .map((t) => itemThreads.get(t.id))
-          .filter((t) => t && !t.archivedAt && !aside.has(t.id))
+          .filter((t) => t && !t.archivedAt && !isAside(t, aside))
           .sort((a, b) => b!.updatedAt.getTime() - a!.updatedAt.getTime())[0]
         // Its last thread was marked done, the line left open: the list holds it now.
         if (!last || last.doneAt) continue

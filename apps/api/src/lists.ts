@@ -135,6 +135,7 @@ const itemInclude = {
       session: {
         select: {
           id: true,
+          parentId: true,
           title: true,
           status: true,
           archivedAt: true,
@@ -170,11 +171,14 @@ const itemRows = (
   where: { documentId: { in: string[] } } | { id: { in: string[] } },
 ) => db.listItem.findMany({ where, include: itemInclude })
 
-/** A pull request opened in a thread put away for later, or in one of its children. */
-const isAside = (
-  pull: { session: { id: string; parentId: string | null } | null },
+/**
+ * A thread put away for later, or a child of one: Later is set on a top-level thread, and its
+ * children go with it (src/later.ts).
+ */
+export const isAside = (
+  thread: { id: string; parentId: string | null } | null,
   aside: ReadonlySet<string>,
-) => !!pull.session && (aside.has(pull.session.id) || aside.has(pull.session.parentId ?? ''))
+) => !!thread && (aside.has(thread.id) || (!!thread.parentId && aside.has(thread.parentId)))
 
 /**
  * Where an item stands: ticked, else from its threads and pull requests. A thread needs you as
@@ -191,7 +195,7 @@ export function stateOf(
   aside: ReadonlySet<string> = new Set(),
 ): ItemState {
   if (done) return 'done'
-  const live = row?.threads.filter((t) => !t.session.archivedAt && !aside.has(t.session.id)) ?? []
+  const live = row?.threads.filter((t) => !t.session.archivedAt && !isAside(t.session, aside)) ?? []
   if (
     live.some(
       ({ session: s }) =>
@@ -206,7 +210,7 @@ export function stateOf(
     return 'needs_you'
   if (
     live.some((t) => t.session.status === 'starting' || t.session.status === 'running') ||
-    row?.pulls.some((p) => p.pullRequest.state === 'open' && !isAside(p.pullRequest, aside))
+    row?.pulls.some((p) => p.pullRequest.state === 'open' && !isAside(p.pullRequest.session, aside))
   )
     return 'in_progress'
   return 'open'
@@ -268,7 +272,7 @@ async function views(
       stalled:
         !!line &&
         state === 'open' &&
-        row.threads.some((t) => !t.session.archivedAt && !aside.has(t.session.id)) &&
+        row.threads.some((t) => !t.session.archivedAt && !isAside(t.session, aside)) &&
         !remaining.has(row.id),
       section: line?.section ?? null,
       doneBy: done && by && row.doneAt ? { name: by.name, at: row.doneAt.toISOString() } : null,
