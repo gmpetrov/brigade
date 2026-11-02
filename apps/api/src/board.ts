@@ -7,7 +7,9 @@
 // routine's run threads never are cards: the routine's row says what they did, and a line they
 // work on is its card. What waits on a person is the same as everywhere else: an open ticket or
 // question, a teammate waiting on an answer, a pull request ready to merge, a failed thread or
-// routine (src/failed.ts).
+// routine (src/failed.ts). A thread the member reading put away for later (src/later.ts) no
+// longer waits on them: like an archived one, it is no card for them until something new brings
+// it back, but what it did this week stays in Done.
 import {
   type Board,
   type BoardCard,
@@ -25,6 +27,7 @@ import { mayWrite } from './account-sharing.js'
 import { reportOf } from './children.js'
 import type { Prisma, ScopedDb } from './db.js'
 import { failedWaitingAmong, failingRoutines } from './failed.js'
+import { latersOf } from './later.js'
 import { actorNames } from './library-history.js'
 import { workspaceLists } from './lists.js'
 import { REVIEW_THREAD, pullWaitsOnPerson } from './review-state.js'
@@ -180,9 +183,10 @@ function itemPlace(
   item: ListItemView,
   threads: Map<string, { status: string; updatedAt: Date; archivedAt: Date | null }>,
   failed: Map<string, { at: Date; error: string | null }>,
+  aside: ReadonlySet<string>,
   now: Date,
 ): { column: BoardCard['column']; reason: BoardReason | null; at: Date } | 'stopped' | null {
-  const live = item.threads.filter((t) => !threads.get(t.id)?.archivedAt)
+  const live = item.threads.filter((t) => !threads.get(t.id)?.archivedAt && !aside.has(t.id))
   const latest = new Date(
     Math.max(0, ...live.map((t) => threads.get(t.id)?.updatedAt.getTime() ?? 0)),
   )
@@ -213,8 +217,8 @@ function itemPlace(
 
 /** The Board for a member: every card, routine and stopped thread of the workspace. */
 export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date()): Promise<Board> {
-  const [lists, rows, schedules] = await Promise.all([
-    workspaceLists(db, scope),
+  const [lists, rows, schedules, laters] = await Promise.all([
+    workspaceLists(db, scope, scope.memberId),
     threadRows(db, now),
     db.schedule.findMany({
       where: { playbookInstallationId: null },
@@ -232,7 +236,10 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
       },
       orderBy: { createdAt: 'asc' },
     }),
+    latersOf(db, scope.memberId),
   ])
+  /** Put away for later by this member: they no longer wait on them. */
+  const aside: ReadonlySet<string> = new Set(laters.keys())
 
   // The threads on lines: their routine (a run), when they last moved, who may close them.
   const itemThreadIds = [
@@ -298,7 +305,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
   for (const l of lists) {
     for (const item of l.items) {
       if (item.missing || (!item.threads.length && !item.pulls.length)) continue
-      const place = itemPlace(item, itemThreads, failedOnLines, now)
+      const place = itemPlace(item, itemThreads, failedOnLines, aside, now)
       if (!place) continue
       const threads = item.threads.flatMap((t) => {
         const row = itemThreads.get(t.id)
@@ -309,7 +316,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
       if (place === 'stopped') {
         const last = [...item.threads]
           .map((t) => itemThreads.get(t.id))
-          .filter((t) => t && !t.archivedAt)
+          .filter((t) => t && !t.archivedAt && !aside.has(t.id))
           .sort((a, b) => b!.updatedAt.getTime() - a!.updatedAt.getTime())[0]
         // Its last thread was marked done, the line left open: the list holds it now.
         if (!last || last.doneAt) continue
@@ -435,7 +442,7 @@ export async function board(db: ScopedDb, scope: WorkspaceScope, now = new Date(
         })
       continue
     }
-    if (t.archivedAt) continue
+    if (t.archivedAt || aside.has(t.id)) continue
     const fail = failed.get(t.id)
     const needs: BoardReason | null =
       t._count.tickets > 0 || ticketsOfChildren.has(t.id)

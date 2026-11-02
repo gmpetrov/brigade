@@ -307,6 +307,23 @@ describe('lists', { skip: !database && 'no database answers' }, () => {
       toMerge.items.map((i) => i.state),
       ['needs_you', 'needs_you'],
     )
+    // Put away for later by this member, it no longer waits on them, nor its pull request; the
+    // others still see it.
+    await db.threadLater.create({
+      data: { ...scope, memberId: ids.member, sessionId: threadId },
+    } as never)
+    const later = await lists.listDetail(db, scope, ids.file, ids.member)
+    assert.deepEqual(
+      later.items.map((i) => [i.state, i.stalled]),
+      [
+        ['open', false],
+        ['open', false],
+      ],
+    )
+    assert.equal(later.needsYou, 0)
+    assert.equal((await lists.listSummaries(db, scope, ids.member))[0]?.needsYou, 0)
+    assert.equal((await lists.listDetail(db, scope, ids.file, 'another-member')).needsYou, 2)
+    await db.threadLater.deleteMany({ where: { sessionId: threadId } })
     await db.session.updateMany({ where: { id: threadId }, data: { status: 'running' } })
     const atWork = await lists.listDetail(db, scope, ids.file)
     assert.equal(atWork.needsYou, 0)

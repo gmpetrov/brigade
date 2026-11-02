@@ -29,6 +29,11 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
   sidebar, Home, the app badge, notifications, the Tasks board and a list's Needs you tab count
   the same things. The Board is the workspace's, like a list's tab; Home and the badge are the
   member's own.
+- **What a member put away for later is not theirs to see here.** A thread they put away
+  (Do later, `src/later.ts`) no longer waits on them anywhere, so on their Board it is like an
+  archived one: no card in Needs you or In progress, not Stopped, and a list's line it alone
+  carries leaves the Board too. What it did this week stays in Done. Other members still see it,
+  and anything new in it brings it back for everyone.
 - **In progress** is a thread at work (or its children it waits for), one waiting on a wake-up it
   set, or one whose pull request is being reviewed or fixed. A thread that failed on an error the
   runner tries again by itself stays here until those tries are over (src/failed.ts).
