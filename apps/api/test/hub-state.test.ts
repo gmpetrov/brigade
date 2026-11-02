@@ -13,7 +13,6 @@ const ALLOWED: Record<string, string> = {
   'src/inbound.ts:handlers': 'webhook handlers, registered as modules load',
   'src/held-calls.ts:executors': 'how each kind of held call is made, registered as modules load',
   'src/db.ts:writeListeners': 'listeners registered as modules load',
-  'src/mcp-tools.ts:listed': "a cache of MCP servers' tool lists: data, by connection",
   'src/git.ts:repoLists': "a cache of GitHub installations' repositories: data",
   'src/git.ts:publicRepos': 'a cache of public repositories: data',
   'src/connectors/github-app.ts:tokens': "a cache of the GitHub App's installation tokens: data",

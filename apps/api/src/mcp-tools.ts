@@ -7,10 +7,17 @@ import { connectors, mcpToolName } from './connectors/index.js'
 import { callMcpTool, listMcpTools, mcpWrites, type McpTool } from './connectors/mcp.js'
 import { op, type ConnectorKind, type McpServer, type Operation } from './connectors/types.js'
 import type { Scope, ScopedDb } from './db.js'
+import { perHub } from './hub/context.js'
 import { catalogTools, serverOf } from './mcp-servers.js'
+import { ToolLists } from './tool-lists.js'
 
-const LIST_MS = 5 * 60_000
-const listed = new Map<string, { at: number; tools: McpTool[] }>()
+/** Each connection's tools lately listed, by connection: bounded, as they are the isolate's. */
+const listed = new ToolLists<McpTool[]>()
+/**
+ * Lists under way, by connection: calls that need the same list at once wait on one listing
+ * rather than each holding a copy. A hub's own, as a promise cannot cross objects.
+ */
+const listing = perHub('mcp-listing', () => new Map<string, Promise<McpTool[]>>())
 
 type McpConnection = {
   id: string
@@ -63,9 +70,23 @@ async function toolsOf(
   found: Awaited<ReturnType<typeof serverFor>>,
 ) {
   const hit = listed.get(connection.id)
-  if (hit && Date.now() - hit.at < LIST_MS) return hit.tools
+  if (hit) return hit
+  const under = listing()
+  const pending = under.get(connection.id)
+  if (pending) return pending
+  const list = listTools(db, scope, connection, found).finally(() => under.delete(connection.id))
+  under.set(connection.id, list)
+  return list
+}
+
+async function listTools(
+  db: ScopedDb,
+  scope: Scope,
+  connection: McpConnection,
+  found: Awaited<ReturnType<typeof serverFor>>,
+) {
   const tools = await listMcpTools(await authorisedFetch(db, scope, connection), found.server)
-  listed.set(connection.id, { at: Date.now(), tools })
+  listed.set(connection.id, tools, JSON.stringify(tools).length)
   // A server added by its URL: its App's tool switches follow what it lists.
   if (found.app) {
     const now = catalogTools(found.prefix, tools)
