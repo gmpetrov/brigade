@@ -1,6 +1,6 @@
 'use client'
 // A playbook's approvals, opened from the one item they are wherever something waits on a
-// person (Home's Waiting on you, the Tickets page, a push). Each shows what it will do (the
+// person (Home's Needs you, the Tickets page, a push). Each shows what it will do (the
 // whole mail, the amount, the pull request) and is approved or denied on its own, through the
 // same route as anywhere; or all of one action at once, once confirmed. Those approved
 // together do not count when Brigade measures whether an action may run on its own.

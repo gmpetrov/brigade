@@ -1,5 +1,5 @@
 // What failed and waits on a person: one rule for everything that counts what waits on someone
-// (Home's Waiting on you and its count beside Home, the sidebar, the app badge, pushes, Tasks'
+// (Home's Needs you and its count beside Home, the sidebar, the app badge, pushes, Tasks'
 // Needs you, a list item's state, the Board), so they all agree.
 //
 // A thread that failed waits on a person: until someone writes in it or tries it again, nothing

@@ -13,7 +13,7 @@ export const home = new Hono<AppEnv>()
   .get('/', async (c) => c.json(await homeFor(c.var.db, c.var.scope.memberId)))
 
   /**
-   * Failed threads and routines waiting on the member, for Waiting on you, the count beside Home,
+   * Failed threads and routines waiting on the member, for Needs you, the count beside Home,
    * the sidebar and the app badge. `recheckAt`: when one a retry may still mend starts waiting.
    */
   .get('/waiting', async (c) => c.json(await homeWaiting(c.var.db, c.var.scope.memberId)))

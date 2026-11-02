@@ -1,5 +1,5 @@
 'use client'
-// Home under Waiting on you: loose ends, shown as Needs a nudge (nobody is blocked, but
+// Home under Needs you: loose ends, shown as Needs a nudge (nobody is blocked, but
 // nothing moves on its own), then what came back since the member last looked, led by a line
 // per playbook that ran this week. Each section shows only when it has something, so a quiet
 // day leaves the composer alone on the page.
@@ -184,7 +184,7 @@ function LooseEndRow({ item, onChange }: { item: LooseEnd; onChange: () => Promi
     )
   }
 
-  // A kind this page does not know (failed threads and routines moved to Waiting on you).
+  // A kind this page does not know (failed threads and routines moved to Needs you).
   return null
 }
 

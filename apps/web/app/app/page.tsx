@@ -1,10 +1,13 @@
 'use client'
 import { UserPlus } from 'lucide-react'
 import Link from 'next/link'
+import { useBoard } from '@/components/board'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { GettingStarted } from '@/components/getting-started'
 import { LooseEnds, SinceAway } from '@/components/home-feed'
+import { TeamSummary, TodaysRoutines } from '@/components/home-today'
 import { NeedsYou } from '@/components/needs-you'
+import { doneToday } from '@/lib/home-day'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
 import {
@@ -42,6 +45,8 @@ export default function Home() {
   const tickets = useApi<Ticket[]>('/tickets')
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention')
   const feed = useApi<HomeFeed>('/home')
+  // What the team finished today and the day's routines: the Board's, so they agree with it.
+  const board = useBoard()
   // Failed threads and routines waiting on the member (apps/api/src/failed.ts).
   const failures = useApi<HomeWaiting>('/home/waiting')
   useRecheck(failures.data?.recheckAt, failures.reload)
@@ -72,23 +77,26 @@ export default function Home() {
     (pulls.data?.pulls.length ?? 0) +
     failed.threads.length +
     failed.routines.length
-  // Only when nothing waits: then Waiting on you is hidden, and this line says so.
-  const calm =
-    tickets.data && pulls.data && feed.data && waitingCount === 0
-      ? feed.data.looseEnds.length
-        ? 'Nothing is waiting on you'
-        : 'Nothing is waiting on you, and nothing needs a nudge'
-      : null
+  // The teammates at work now, each once.
+  const working = [
+    ...new Set(
+      (threads.data ?? [])
+        .filter((t) => t.status === 'running' || t.status === 'starting')
+        .map((t) => t.teammate.name),
+    ),
+  ]
+  const summaryReady = threads.data && tickets.data && pulls.data && failures.data
 
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-3xl font-extrabold tracking-tight">{greeting(me.user.name)}</h1>
-        {calm && (
-          <p className="flex items-center gap-2 text-muted-foreground">
-            <span aria-hidden className="size-2 flex-none rounded-full bg-success" />
-            {calm}
-          </p>
+        {summaryReady && (
+          <TeamSummary
+            working={working}
+            waiting={waitingCount}
+            done={board.data ? doneToday(board.data) : null}
+          />
         )}
       </header>
 
@@ -146,6 +154,8 @@ export default function Home() {
           <SinceAway feed={feed.data} />
         </>
       )}
+
+      {board.data && <TodaysRoutines routines={board.data.routines} />}
     </div>
   )
 }

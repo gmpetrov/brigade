@@ -505,7 +505,7 @@ export function NeedsYou({
       <div className="flex items-center gap-2">
         <h2 id="needs-you" className="flex items-center gap-2 text-lg font-bold">
           <span aria-hidden className="size-2 rounded-full bg-warning" />
-          Waiting on you
+          Needs you
         </h2>
         {items.length > 1 && !sent && (
           // Which one of how many: the card's own count is its asks.
