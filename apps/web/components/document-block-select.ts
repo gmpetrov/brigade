@@ -203,9 +203,14 @@ function select(view: EditorView, anchor: number, head: number) {
 
 /** Lets go of the lines: the cursor at the end of the last one moved to, the editor's focus as it is. */
 function release(view: EditorView) {
+  const { selection, doc } = view.state
+  if (!isBlockSelection(selection)) return
   const ends = endsOf(view.state)
-  if (!ends) return
-  view.dispatch(view.state.tr.setSelection(endOf(view.state.doc, ends.head)))
+  view.dispatch(
+    view.state.tr.setSelection(
+      ends ? endOf(doc, ends.head) : Selection.near(doc.resolve(selection.from)),
+    ),
+  )
 }
 
 /** Whether a line is on screen (a list's filter hides some). */
@@ -314,6 +319,9 @@ const layerOpen = (view: EditorView) =>
 
 function onKeyDown(view: EditorView, editor: Editor, event: KeyboardEvent) {
   if (event.isComposing || !view.editable) return
+  // A selection the browser has just made (a click) and ProseMirror not yet read: read it now.
+  const observer = (view as EditorView & { domObserver?: { flush?: () => void } }).domObserver
+  observer?.flush?.()
   const take = () => {
     event.preventDefault()
     event.stopImmediatePropagation()
@@ -370,8 +378,16 @@ function onKeyDown(view: EditorView, editor: Editor, event: KeyboardEvent) {
   }
 }
 
-/** Where a press starts a box rather than text: not on a line's text, a control or a menu. */
-function inMargin(view: EditorView, area: Element, target: Element) {
+/**
+ * Where a press starts a box rather than text: not on a line's text, a control or a menu. Beside
+ * the editor too, on the page or panel around it, level with it: its own margin holds the
+ * lines' handles.
+ */
+function inMargin(view: EditorView, area: Element, target: Element, y: number) {
+  if (target !== area && target.contains(area)) {
+    const rect = area.getBoundingClientRect()
+    return y >= rect.top && y <= rect.bottom
+  }
   if (!area.contains(target)) return false
   if (target.closest('.bn-block-content, button, a, input, textarea, select, [role="button"]'))
     return false
@@ -439,18 +455,20 @@ function onMouseDown(view: EditorView, event: MouseEvent) {
   if (event.button !== 0 || !view.editable) return
   const area = view.dom.closest('[data-block-select]') ?? view.dom
   const target = event.target as Element | null
-  if (!target || !area.contains(target)) {
+  if (!target) return
+  const margin = inMargin(view, area, target, event.clientY)
+  const blocks = isBlockSelection(view.state.selection)
+  if (!margin && !area.contains(target)) {
     // A press elsewhere lets go of the lines, unless on the editor's menus or a dialog.
     if (
-      isBlockSelection(view.state.selection) &&
-      !target?.closest(`.bn-container, [data-radix-popper-content-wrapper], ${OPEN_LAYER}`)
+      blocks &&
+      !target.closest(`.bn-container, [data-radix-popper-content-wrapper], ${OPEN_LAYER}`)
     )
       release(view)
     return
   }
-  const blocks = isBlockSelection(view.state.selection)
   // Shift+click extends the lines selected to the line clicked.
-  if (blocks && event.shiftKey && (view.dom.contains(target) || inMargin(view, area, target))) {
+  if (blocks && event.shiftKey && (margin || view.dom.contains(target))) {
     const ends = endsOf(view.state)
     const head = lineAt(view, event.clientY)
     if (ends && head !== undefined) {
@@ -460,7 +478,11 @@ function onMouseDown(view: EditorView, event: MouseEvent) {
       return
     }
   }
-  if (!inMargin(view, area, target)) return
+  if (!margin) {
+    // A press on a line's text lets go of the lines first, for the editor to place its cursor.
+    if (blocks && view.dom.contains(target)) release(view)
+    return
+  }
   event.preventDefault()
   event.stopPropagation()
   const scrolling = scroller(area)
@@ -552,7 +574,14 @@ function onMouseDown(view: EditorView, event: MouseEvent) {
 function onPaste(view: EditorView) {
   const { selection, doc } = view.state
   if (!isBlockSelection(selection)) return
-  view.dispatch(view.state.tr.setSelection(blockSelection(doc, selection.to, selection.to)))
+  const before = view.state.doc
+  const gap = blockSelection(doc, selection.to, selection.to)
+  view.dispatch(view.state.tr.setSelection(gap))
+  // Nothing pasted (an empty clipboard, or one BlockNote takes no part of): the lines again.
+  setTimeout(() => {
+    if (view.isDestroyed || view.state.doc !== before || !view.state.selection.eq(gap)) return
+    view.dispatch(view.state.tr.setSelection(blockSelection(before, selection.from, selection.to)))
+  })
 }
 
 function decorations(state: EditorState) {
@@ -566,7 +595,29 @@ function decorations(state: EditorState) {
   )
 }
 
-export const blockSelectExtension = createExtension(({ editor }: { editor: Editor }) => ({
+/**
+ * BlockNote's selected blocks, for its toolbar and menus (and Hand to): over lines selected
+ * whole, those on screen. Its own reading takes the line after the last one too, as the
+ * selection ends past it.
+ */
+function selectedBlocks(editor: Editor) {
+  const original = editor.getSelection.bind(editor)
+  editor.getSelection = () => {
+    const view = editor.prosemirrorView
+    if (!view || !isBlockSelection(view.state.selection)) return original()
+    const blocks = chosen(view)
+      .map((l) => editor.getBlock(l.node.attrs.id as string))
+      .filter((b) => !!b)
+    return blocks.length ? { blocks } : original()
+  }
+}
+
+export const blockSelectExtension = createExtension(({ editor }: { editor: Editor }) => {
+  selectedBlocks(editor)
+  return extension(editor)
+})
+
+const extension = (editor: Editor) => ({
   key: 'blockSelect',
   prosemirrorPlugins: [
     new Plugin<Ends | null>({
@@ -622,9 +673,16 @@ export const blockSelectExtension = createExtension(({ editor }: { editor: Edito
       },
       props: {
         decorations,
+        // The browser's own selection, read back as it settles (or as it lands on the lines'
+        // edges), would turn the lines into text: they stay, unless the pointer is at work.
+        createSelectionBetween: (view) =>
+          isBlockSelection(view.state.selection) &&
+          !(view as EditorView & { input?: { mouseDown?: unknown } }).input?.mouseDown
+            ? view.state.selection
+            : null,
         attributes: (state): Record<string, string> =>
           isBlockSelection(state.selection) ? { class: 'bn-lines-selected' } : {},
       },
     }),
   ],
-}))
+})
