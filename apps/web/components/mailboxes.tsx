@@ -11,11 +11,11 @@ import type {
   MailForwarding,
   MailProvider,
 } from '@brigade/contracts'
-import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { timeAgo, useDashboard } from '@/components/dashboard'
+import { useDashboard } from '@/components/dashboard'
 import { MailSettingsHeader } from '@/components/mail-domains'
 import {
   AddRule,
@@ -471,39 +471,34 @@ export function MailboxView({ id }: { id: string }) {
         <Row label="New mail goes to">
           <MailboxRules mailbox={m} reload={mailbox.reload} />
         </Row>
-        <Row label="Access">
-          {m.readers.length > 0 ? (
-            <ul className="flex flex-wrap gap-1.5">
-              {m.readers.map((t) => (
-                <li key={t.id}>
-                  <Link
-                    href={`/app/teammates/${t.id}`}
-                    className="rounded-full bg-secondary px-2.5 py-1 hover:bg-secondary/70"
-                  >
-                    {t.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <span className="text-muted-foreground">No teammate yet.</span>
-          )}
-          <p className="text-muted-foreground">
-            {m.kind === 'agent'
-              ? `Only ${m.teammate?.name ?? 'its agent'} reads and sends from it.`
-              : 'Can read and send from it when asked. Give it to a teammate on their page, under Access.'}
-          </p>
-        </Row>
+        {m.kind !== 'agent' && (
+          <Row label="Access">
+            {m.readers.length > 0 ? (
+              <ul className="flex flex-wrap gap-1.5">
+                {m.readers.map((t) => (
+                  <li key={t.id}>
+                    <Link
+                      href={`/app/teammates/${t.id}`}
+                      className="rounded-full bg-secondary px-2.5 py-1 hover:bg-secondary/70"
+                    >
+                      {t.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="text-muted-foreground">No teammate yet.</span>
+            )}
+            <p className="text-muted-foreground">
+              Can read and send from it when asked. Give it to a teammate on their page, under
+              Access.
+            </p>
+          </Row>
+        )}
         <Row label="Replies">
           <MailboxSending mailbox={m} reload={mailbox.reload} />
         </Row>
       </Card>
-
-      {m.addressId && (
-        <Card className="gap-3 px-5 py-5">
-          <MailboxJournal mailbox={m} />
-        </Card>
-      )}
     </div>
   )
 }
@@ -568,7 +563,7 @@ function MailboxArrival({
       ),
     )
     if (!done) return
-    setNote(`Test mail sent to ${done.to}. It shows in the journal once it arrives.`)
+    setNote(`Test mail sent to ${done.to}.`)
     setTestAt(Date.now())
     setLate(false)
     for (const delay of [5000, 15000, 40000, 60000])
@@ -705,7 +700,11 @@ function MailboxArrival({
           </Button>
         </div>
       )}
-      {note && <p className="text-muted-foreground">{note}</p>}
+      {note && (
+        <p className="text-muted-foreground">
+          {note} {arrived ? 'It arrived.' : late ? '' : 'Waiting for it to arrive…'}
+        </p>
+      )}
       <ErrorLine error={test.error ?? off.error} />
     </div>
   )
@@ -847,7 +846,7 @@ function ForwardingGuide({
           {steps.map((step, i) => (
             <li key={i}>{step}</li>
           ))}
-          <li>Send a test mail: it shows in the journal once it comes through.</li>
+          <li>Send a test mail: Receives turns green once it comes through.</li>
         </ol>
       )}
       {late && (
@@ -942,106 +941,6 @@ function ChangeAddress({
         </Button>
       </div>
     </form>
-  )
-}
-
-/** Where a received mail went, in plain words. */
-function destination(e: MailJournalEntry) {
-  switch (e.route) {
-    case 'awaited':
-      return 'To the thread waiting for it'
-    case 'conversation':
-      return "To its conversation's thread"
-    case 'member':
-      return "A member's request"
-    case 'rule':
-      return e.rule ? `Rule "${e.rule.label}"` : 'A rule'
-    case 'handed':
-      return 'Handed to a teammate from the Inbox'
-    case 'read':
-      return 'Taken by the thread that read it'
-    case 'box':
-      return 'Left in the mailbox'
-    case 'duplicate':
-      return 'Already delivered from another address'
-    case 'loop':
-      return 'Stopped: looks like a loop'
-    case 'cap':
-      return 'Rule over its daily limit'
-    case 'own_copy':
-      return 'A reply sent from the mailbox itself'
-    case 'bounce':
-      return 'Delivery failure'
-    case 'test':
-      return 'Test mail'
-    default:
-      return 'Being delivered'
-  }
-}
-
-/**
- * A Brigade mailbox's journal: its latest mail both ways (sent, bounced, looped, duplicated too),
- * and where each went; never its text. With a test mail for an agent's address.
- */
-function MailboxJournal({ mailbox: m }: { mailbox: MailboxDetail }) {
-  const entries = useApi<MailJournalEntry[]>(`/email/addresses/${m.addressId}/journal?limit=50`, [
-    'mail.updated',
-  ])
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-bold">Journal</h2>
-      </div>
-      {!entries.data ? (
-        <p className="text-sm text-muted-foreground">{entries.error?.message ?? 'Loading…'}</p>
-      ) : entries.data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No mail yet.</p>
-      ) : (
-        <ul className="flex flex-col divide-y rounded-md border text-[13px]">
-          {entries.data.map((e) => {
-            const out = e.direction === 'out'
-            return (
-              <li key={e.id} className="flex flex-col gap-0.5 px-3 py-2">
-                <div className="flex items-baseline gap-2">
-                  {out && (
-                    <span className="inline-flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground">
-                      <ArrowUpRight className="size-3" aria-hidden />
-                      Sent
-                    </span>
-                  )}
-                  <span className="min-w-0 flex-1 truncate font-medium">
-                    {e.subject || '(no subject)'}
-                  </span>
-                  <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
-                    {timeAgo(e.at)}
-                  </span>
-                </div>
-                <span className="truncate text-xs text-muted-foreground">
-                  {out ? `To ${e.to.join(', ')}` : `From ${e.from}`}
-                  {out && e.status !== 'sent' && e.status !== 'delivered' && ` · ${e.status}`}
-                </span>
-                {(!out || e.thread) && (
-                  <span className="truncate text-xs">
-                    {!out && destination(e)}
-                    {e.thread && (
-                      <>
-                        {!out && ' · '}
-                        <Link
-                          href={`/app/threads/${e.thread.id}`}
-                          className="font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          {e.thread.title || 'Untitled thread'}
-                        </Link>
-                      </>
-                    )}
-                  </span>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </div>
   )
 }
 
