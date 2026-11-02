@@ -2037,8 +2037,8 @@ export function ThreadItems({
   onTicket: (requestId: string, answer: TicketAnswer) => Promise<void>
   /** Sends a choice someone clicked as their message, with the option's design it picks. Unset when they cannot send one now. */
   onChoose?: (text: string, pick?: string) => Promise<void>
-  /** Closes the choices card open without picking one. Unset when they cannot. */
-  onDismissChoices?: () => Promise<void>
+  /** Closes the choices card shown, by its event, without picking one. Unset when they cannot. */
+  onDismissChoices?: (seq: number) => Promise<void>
   /** The choices card a person dismissed: it and those before it show closed. */
   choicesDismissedSeq?: number | null
   /** Quotes a message in the composer, for the next one to reply to it. Unset when they cannot send one. */
@@ -2402,7 +2402,9 @@ export function ThreadItems({
               reply={reply?.text}
               dismissed={dismissed}
               onChoose={onChoose}
-              onDismiss={onDismissChoices}
+              onDismiss={
+                onDismissChoices && item.seq != null ? () => onDismissChoices(item.seq!) : undefined
+              }
             />
           )
         }

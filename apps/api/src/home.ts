@@ -331,6 +331,8 @@ export async function homeWaiting(db: ScopedDb, memberId: string, now = new Date
       id: c.id,
       title: c.title,
       teammate: c.teammate,
+      // Its card's event: what a Dismiss names.
+      seq: c.seq,
       at: c.at.toISOString(),
       choices: c.choices,
     })),

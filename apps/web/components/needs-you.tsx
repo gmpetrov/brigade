@@ -308,7 +308,7 @@ function ChoiceToMake({
           await onDone(`Sent to ${choice.teammate.name}`)
         }}
         onDismiss={async () => {
-          await api(`/threads/${choice.id}/choices/dismiss`, { body: {} })
+          await api(`/threads/${choice.id}/choices/dismiss`, { body: { seq: choice.seq } })
           await onDone('Dismissed')
         }}
       />

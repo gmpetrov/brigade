@@ -24,3 +24,9 @@ export const DoneOperations = [
 
 /** POST /api/threads/:id/done: a person marks it done, with a line or none. */
 export const MarkThreadDone = z.object({ summary: DoneSummary.optional() })
+
+/**
+ * Dismiss the choices card a person sees, by its event (POST /threads/:id/choices/dismiss): a
+ * later card, which they have not seen, stays open.
+ */
+export const DismissChoices = z.object({ seq: z.number().int().min(0) })

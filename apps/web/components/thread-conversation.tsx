@@ -1494,8 +1494,8 @@ export function ThreadConversation({
                     }
                     onDismissChoices={
                       t.mayPrompt
-                        ? () =>
-                            api(`/threads/${id}/choices/dismiss`, { body: {} }).then(
+                        ? (seq) =>
+                            api(`/threads/${id}/choices/dismiss`, { body: { seq } }).then(
                               () => void thread.reload(),
                             )
                         : undefined

@@ -1204,6 +1204,8 @@ export type ChoiceWaiting = {
   id: string
   title: string
   teammate: { id: string; name: string }
+  /** Its card's event: what dismissing it names. */
+  seq: number
   /** When they were offered. */
   at: string
   choices: Choices

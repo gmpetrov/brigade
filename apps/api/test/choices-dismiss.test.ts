@@ -118,29 +118,33 @@ describe('dismissing choices', { skip: !database && 'no database answers' }, () 
     return { id: t.id as string, offer: 2, event }
   }
 
-  const dismiss = (id: string) =>
+  const dismiss = (id: string, seq: number) =>
     app.request(`/api/threads/${id}/choices/dismiss`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: '{}',
+      body: JSON.stringify({ seq }),
     })
 
   test('it closes the card, which waits on nobody; no turn starts; a later one waits', async () => {
     const { choicesWaitingAmong } = await import('../src/choices-waiting.js')
     const t = await offered('Which name for Home?')
     assert.ok((await choicesWaitingAmong(db, [t.id])).has(t.id))
-    const before = await db.session.findFirst({ where: { id: t.id } })
+    // Quiet for six days: the dismissal is its latest activity, its Stopped clock starts again.
+    const old = new Date(Date.now() - 6 * 24 * 60 * 60_000)
+    await prisma.session.update({ where: { id: t.id }, data: { updatedAt: old } })
+    const asked = Date.now()
 
-    const res = await dismiss(t.id)
+    const res = await dismiss(t.id, t.offer)
     assert.equal(res.status, 200, await res.clone().text())
     const after = await db.session.findFirst({ where: { id: t.id } })
     assert.equal(after?.choicesDismissedSeq, t.offer)
     assert.equal(after?.status, 'idle', 'no turn started')
-    assert.equal(after?.updatedAt.getTime(), before?.updatedAt.getTime(), 'its stopped clock')
+    // The database's own time, never a snapshot read before: activity meanwhile is not rewound.
+    assert.ok(after!.updatedAt.getTime() >= asked - 1000, 'its clock starts at the dismissal')
     assert.equal((await choicesWaitingAmong(db, [t.id])).size, 0)
 
     // Nothing open any more: refused.
-    assert.equal((await dismiss(t.id)).status, 409)
+    assert.equal((await dismiss(t.id, t.offer)).status, 409)
 
     // The teammate offers again: that card waits, and is dismissed in its turn.
     await t.event('message.user', { text: 'Wake-up', memberId: null })
@@ -153,9 +157,39 @@ describe('dismissing choices', { skip: !database && 'no database answers' }, () 
     assert.equal((await choicesWaitingAmong(db, [t.id])).get(t.id)?.question, 'Which icon?')
   })
 
+  test('a page showing an older card cannot dismiss one offered since', async () => {
+    const { choicesWaitingAmong } = await import('../src/choices-waiting.js')
+    const t = await offered('Card A: which name?')
+    // A wake-up answers A and the teammate ends on card B before the page showing A dismisses.
+    await t.event('message.user', { text: 'Wake-up', memberId: null })
+    await t.event('tool.started', {
+      toolCallId: 'm2:offer_choices',
+      toolName: 'offer_choices',
+      input: choices('Card B: which icon?'),
+    })
+    await t.event('turn.completed', {})
+    assert.equal((await dismiss(t.id, t.offer)).status, 409)
+    const b = (await choicesWaitingAmong(db, [t.id])).get(t.id)
+    assert.equal(b?.question, 'Card B: which icon?', 'the card nobody saw still waits')
+    assert.equal((await db.session.findFirst({ where: { id: t.id } }))?.choicesDismissedSeq, null)
+    // Dismissed by its own event, it closes.
+    assert.equal((await dismiss(t.id, b!.seq)).status, 200)
+    assert.equal((await choicesWaitingAmong(db, [t.id])).size, 0)
+  })
+
+  test('a dismissal names a card: a request without one is refused', async () => {
+    const t = await offered('Which size?')
+    const res = await app.request(`/api/threads/${t.id}/choices/dismiss`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    })
+    assert.equal(res.status, 400)
+  })
+
   test('a thread whose card was answered has nothing to dismiss', async () => {
     const t = await offered('Which color?')
     await t.event('message.user', { text: 'Go with A · Today', memberId: ids.member })
-    assert.equal((await dismiss(t.id)).status, 409)
+    assert.equal((await dismiss(t.id, t.offer)).status, 409)
   })
 })

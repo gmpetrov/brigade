@@ -27,6 +27,7 @@ import {
   InterruptThread,
   inParallel,
   MarkThreadDone,
+  DismissChoices,
   mayChangeQueued,
   mentionsToText,
   MESSAGE_COMMANDS,
@@ -1977,24 +1978,27 @@ export const threads = new Hono<AppEnv>()
   })
 
   /**
-   * Dismiss the choices card open in the thread without picking one (docs/board.md): it waits
-   * on nobody any more and the thread stops, with no turn started. Its teammate reads it at its
-   * next turn, as a note. Who may change the thread.
+   * Dismiss the choices card a person sees in the thread without picking one (docs/board.md),
+   * named by its event (`seq`): it waits on nobody any more and the thread stops, with no turn
+   * started. A card answered or offered since is not theirs to dismiss: refused. Its teammate
+   * reads it at its next turn, as a note. Who may change the thread.
    */
   .post('/:id/choices/dismiss', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     mayChange(scope, thread)
+    const { seq } = await parseBody(c.req.raw, DismissChoices)
     const open = await openChoices(db, thread)
-    if (!open) throw new HTTPException(409, { message: 'No choices are open in this thread' })
-    // Only forward: a later card stays open, whatever was dismissed before it.
-    await db.session.updateMany({
-      where: {
-        id: thread.id,
-        OR: [{ choicesDismissedSeq: null }, { choicesDismissedSeq: { lt: open.seq } }],
-      },
-      data: { choicesDismissedSeq: open.seq, updatedAt: thread.updatedAt },
-    })
+    if (!open || open.seq !== seq)
+      throw new HTTPException(409, {
+        message: 'These choices were answered or replaced: open the thread to see the latest',
+      })
+    // Only forward, and in the database's own time: a person's dismissal is the thread's latest
+    // activity, its Stopped clock starts then, and activity written meanwhile is never rewound.
+    await prisma.$executeRaw`
+      UPDATE "Session" SET "choicesDismissedSeq" = ${seq}, "updatedAt" = now()
+      WHERE id = ${thread.id} AND "workspaceId" = ${scope.workspaceId}
+        AND ("choicesDismissedSeq" IS NULL OR "choicesDismissedSeq" < ${seq})`
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
