@@ -18,6 +18,7 @@ import { Terminal } from '@/components/terminal'
 import { ThreadMenu } from '@/components/thread-menu'
 import { ThreadOutputs, type ChangedFiles, type ThreadOutput } from '@/components/thread-outputs'
 import { ProviderLogo } from '@/components/provider-logo'
+import { wakeTime } from '@/components/wakeup-icon'
 import { PanelResizeHandle, useEscapeToClose, usePanelStack } from '@/components/side-panel'
 import { ChildrenList } from '@/components/thread-children'
 import { Button } from '@/components/ui/button'
@@ -261,17 +262,6 @@ function useControl(thread: Thread, memberId: string, onChange: () => void) {
     openBrowser: () =>
       void act(() => api(`/teammates/${thread.teammate.id}/browser`, { body: {} })),
   }
-}
-
-/** "14:30" today, else with its day: "Fri 16 Oct, 09:00". */
-const wakeTime = (at: string) => {
-  const date = new Date(at)
-  const today = date.toDateString() === new Date().toDateString()
-  return date.toLocaleString(undefined, {
-    ...(today ? {} : { weekday: 'short', day: 'numeric', month: 'short' }),
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 /** When the thread's teammates will be prompted here again, to check on something. */

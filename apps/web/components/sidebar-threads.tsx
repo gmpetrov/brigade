@@ -53,6 +53,7 @@ import { useThreadPanel } from '@/components/thread-panel'
 import { FadeText } from '@/components/fade-text'
 import { ListGroupRow } from '@/components/list-group-row'
 import { ThreadRow } from '@/components/thread-row'
+import { WakeupIcon } from '@/components/wakeup-icon'
 import { StreamedTitle } from '@/components/streamed-title'
 import {
   DropdownMenu,
@@ -338,6 +339,7 @@ function SubThreadList({
                       <span className="sr-only">Preview running</span>
                     </span>
                   )}
+                  {c.wakeAt && <WakeupIcon at={c.wakeAt} />}
                   {state ? (
                     <ThreadStatusIcon {...status} />
                   ) : (
