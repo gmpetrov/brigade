@@ -1,7 +1,7 @@
 'use client'
-// Home's "waiting on you": one ticket, pull request, failed thread or failing routine at a time,
-// with the card that decides it, the same as in its thread, so a person with enough context
-// answers without opening it.
+// Home's "waiting on you": one ticket, pull request, choice to make, failed thread or failing
+// routine at a time, with the card that decides it, the same as in its thread, so a person with
+// enough context answers without opening it.
 // Answering stops on what was sent; the next one comes when they ask for it, so a ticket's
 // second ask is never mistaken for another ticket. A playbook's approvals are one item,
 // opened to decide each (PlaybookApprovals); a push about them opens Home on it (?approvals=).
@@ -19,7 +19,12 @@ import { useEffect, useState } from 'react'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { PlaybookApprovals } from '@/components/playbook-approvals'
 import { PullCard } from '@/components/pull-card'
-import { QuestionCard, TicketCard, type TicketTakeover } from '@/components/thread-view'
+import {
+  ChoicesCard,
+  QuestionCard,
+  TicketCard,
+  type TicketTakeover,
+} from '@/components/thread-view'
 import { useThreadPanel } from '@/components/thread-panel'
 import { TicketRow } from '@/components/ticket-row'
 import { Button } from '@/components/ui/button'
@@ -29,6 +34,7 @@ import { cn } from '@/lib/utils'
 import {
   api,
   waitingItemKey,
+  type ChoiceWaiting,
   type FailedThread,
   type FailingRoutine,
   type PullWaiting,
@@ -207,35 +213,24 @@ type Queue = {
   teammate: { id: string; name: string } | null
 }
 
+/** What one thing waiting can be: exactly one of these. */
+type Kinds = {
+  ticket: Ticket
+  pull: PullWaiting
+  queue: Queue
+  choice: ChoiceWaiting
+  failed: FailedThread
+  routine: FailingRoutine
+}
+type OneOf<T> = {
+  [K in keyof T]: { [P in K]: T[P] } & { [P in Exclude<keyof T, K>]?: undefined }
+}[keyof T]
+
 /**
  * One thing waiting: a ticket answered here, a ticket's row, a playbook's approvals, a pull
- * request, a failed thread or a failing routine.
+ * request, choices to pick from, a failed thread or a failing routine.
  */
-type Waiting = { key: string; title: string; from?: string } & (
-  | { ticket: Ticket; pull?: undefined; queue?: undefined; failed?: undefined; routine?: undefined }
-  | {
-      ticket?: undefined
-      pull: PullWaiting
-      queue?: undefined
-      failed?: undefined
-      routine?: undefined
-    }
-  | { ticket?: undefined; pull?: undefined; queue: Queue; failed?: undefined; routine?: undefined }
-  | {
-      ticket?: undefined
-      pull?: undefined
-      queue?: undefined
-      failed: FailedThread
-      routine?: undefined
-    }
-  | {
-      ticket?: undefined
-      pull?: undefined
-      queue?: undefined
-      failed?: undefined
-      routine: FailingRoutine
-    }
-)
+type Waiting = { key: string; title: string; from?: string } & OneOf<Kinds>
 
 /**
  * A failure as one card: what it said, where to look, and the button that starts it again: Try
@@ -290,6 +285,30 @@ function FailureCard({
   )
 }
 
+/** Choices a teammate's reply ended on, picked here as in its thread: the pick is a message. */
+function ChoiceToMake({
+  choice,
+  onDone,
+}: {
+  choice: ChoiceWaiting
+  onDone: (sent: string) => Promise<void>
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <From teammate={choice.teammate} thread={choice} note="pick one" />
+      <ChoicesCard
+        choices={choice.choices}
+        thread={`/app/threads/${choice.id}`}
+        onChoose={async (text, pick) => {
+          // With the design it makes, when the option is one in an options folder.
+          await api(`/threads/${choice.id}/messages`, { body: { text, ...(pick ? { pick } : {}) } })
+          await onDone(`Sent to ${choice.teammate.name}`)
+        }}
+      />
+    </div>
+  )
+}
+
 /**
  * Shown in place of the one just answered, until the person moves on: what was done, to
  * what, and its thread, to follow the teammate picking up.
@@ -328,6 +347,7 @@ export function NeedsYou({
   tickets,
   pulls,
   failed,
+  choices,
   onChange,
 }: {
   /** Open tickets waiting on this member. */
@@ -335,6 +355,8 @@ export function NeedsYou({
   pulls: PullWaiting[]
   /** Failed threads and routines waiting on this member (failuresWaiting). */
   failed: { threads: FailedThread[]; routines: FailingRoutine[] }
+  /** Choices this member has to pick from (choicesWaiting). */
+  choices: ChoiceWaiting[]
   onChange: () => Promise<void>
 }) {
   const { me, teammates } = useDashboard()
@@ -395,6 +417,12 @@ export function NeedsYou({
       from: p.authorTeammate?.name,
       pull: p,
     })),
+    ...choices.map((c) => ({
+      key: `choice:${c.id}`,
+      title: c.title,
+      from: c.teammate.name,
+      choice: c,
+    })),
     ...failed.threads.map((t) => ({
       key: `failed:${t.id}`,
       title: t.title,
@@ -424,6 +452,7 @@ export function NeedsYou({
       thread:
         current?.ticket?.session?.id ??
         current?.pull?.session?.id ??
+        current?.choice?.id ??
         current?.failed?.id ??
         current?.routine?.runId ??
         undefined,
@@ -494,7 +523,8 @@ export function NeedsYou({
   const rest = others.slice(LISTED)
   const moreTickets = rest.filter((i) => i.ticket || i.queue).length
   const morePulls = rest.filter((i) => i.pull).length
-  const moreFailed = rest.length - moreTickets - morePulls
+  const moreChoices = rest.filter((i) => i.choice).length
+  const moreFailed = rest.length - moreTickets - morePulls - moreChoices
 
   return (
     // Yellow, as needs-you is in the sidebar: what blocks a teammate comes first.
@@ -581,6 +611,8 @@ export function NeedsYou({
             onEmptied={done}
           />
         </div>
+      ) : current?.choice ? (
+        <ChoiceToMake key={current.key} choice={current.choice} onDone={done} />
       ) : current?.failed ? (
         <div className="flex flex-col gap-1.5">
           <From teammate={current.failed.teammate} thread={current.failed} note="failed" />
@@ -676,7 +708,12 @@ export function NeedsYou({
               {morePulls} more pull {morePulls === 1 ? 'request' : 'requests'}
             </Link>
           )}
-          {/* Failed ones have no page of their own: the arrows above go through them. */}
+          {/* Choices and failed ones have no page of their own: the arrows above go through them. */}
+          {moreChoices > 0 && (
+            <span className="text-muted-foreground">
+              {moreChoices} more {moreChoices === 1 ? 'choice' : 'choices'} to make
+            </span>
+          )}
           {moreFailed > 0 && (
             <span className="text-muted-foreground">{moreFailed} more failed</span>
           )}

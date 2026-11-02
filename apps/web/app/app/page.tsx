@@ -11,6 +11,7 @@ import { doneToday } from '@/lib/home-day'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
 import {
+  choicesWaiting,
   failuresWaiting,
   isViewer,
   useApi,
@@ -47,7 +48,8 @@ export default function Home() {
   const feed = useApi<HomeFeed>('/home')
   // What the team finished today and the day's routines: the Board's, so they agree with it.
   const board = useBoard()
-  // Failed threads and routines waiting on the member (apps/api/src/failed.ts).
+  // Failed threads and routines waiting on the member (apps/api/src/failed.ts), and choices
+  // to pick from (apps/api/src/choices-waiting.ts).
   const failures = useApi<HomeWaiting>('/home/waiting')
   useRecheck(failures.data?.recheckAt, failures.reload)
   const [chosen, choose] = useLastTeammate()
@@ -71,12 +73,14 @@ export default function Home() {
 
   const waiting = (tickets.data ?? []).filter((t) => waitsOn(t, me))
   const failed = failuresWaiting(failures.data, waiting)
+  const choices = choicesWaiting(failures.data, waiting, pulls.data?.pulls ?? [])
   // A playbook's approvals are one item, as the sidebar counts them.
   const waitingCount =
     new Set(waiting.map(waitingItemKey)).size +
     (pulls.data?.pulls.length ?? 0) +
     failed.threads.length +
-    failed.routines.length
+    failed.routines.length +
+    choices.length
   // The teammates at work now, each once.
   const working = [
     ...new Set(
@@ -142,6 +146,7 @@ export default function Home() {
           tickets={waiting}
           pulls={pulls.data.pulls}
           failed={failed}
+          choices={choices}
           onChange={async () => {
             await Promise.all([tickets.reload(), pulls.reload(), feed.reload(), failures.reload()])
           }}

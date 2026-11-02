@@ -15,6 +15,8 @@ export const BoardReason = z.enum([
   'waiting',
   /** A pull request is ready for a person to merge or decide. */
   'pull',
+  /** The teammate's reply ended on choices nobody picked yet (apps/api/src/choices-waiting.ts). */
+  'choice',
   /** The thread failed and a person tries it again or writes (src/failed.ts). */
   'failed',
   /** A routine's run failed, or the routine could not start one. */

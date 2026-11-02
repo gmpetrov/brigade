@@ -1,8 +1,9 @@
 // Home under the composer, for one member: their loose ends (nobody is blocked, but
 // nothing moves on its own) and what came back since they last looked. Only what
 // Brigade knows for sure: a reply ending on buttons nobody clicked, a running thread
-// with no event for a while. Pull requests, tickets, failed threads and failing routines that
-// wait on a person are Needs you, not here (failuresWaitingOn, src/failed.ts). With the
+// with no event for a while. Pull requests, tickets, choices nobody picked, failed threads and
+// failing routines that wait on a person are Needs you, not here (failuresWaitingOn,
+// src/failed.ts; choicesWaitingOn, src/choices-waiting.ts). With the
 // results, a line per active playbook that ran this week (playbook-metrics.ts).
 import {
   bareToolName,
@@ -12,6 +13,7 @@ import {
   SUGGEST_REPLIES_TOOL,
   THREAD_NOTE_SOURCE,
 } from '@brigade/contracts'
+import { choicesWaitingAmong, choicesWaitingOn } from './choices-waiting.js'
 import type { ScopedDb } from './db.js'
 import { failuresWaitingOn } from './failed.js'
 import { hubs } from './hub.js'
@@ -89,7 +91,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
     },
   })
   const ids = threads.map((t) => t.id)
-  const [latest, reads, tickets, pullsWaiting, dismissed, lines] = await Promise.all([
+  const [latest, reads, tickets, pullsWaiting, choices, dismissed, lines] = await Promise.all([
     ids.length
       ? db.sessionEvent.groupBy({
           by: ['sessionId', 'type'],
@@ -120,13 +122,18 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
           select: { sessionId: true },
         })
       : [],
+    // And one whose choices nobody picked yet (src/choices-waiting.ts).
+    choicesWaitingAmong(db, ids, now),
     db.homeDismissal.findMany({ where: { memberId }, select: { key: true } }),
     // A line per active playbook that ran this week, shown with the results.
     playbookLines(db, memberId, now),
   ])
   const max = (id: string, type: string) =>
     latest.find((l) => l.sessionId === id && l.type === type)?._max
-  const held = new Set([...tickets, ...pullsWaiting].map((t) => t.sessionId))
+  const held = new Set([
+    ...[...tickets, ...pullsWaiting].map((t) => t.sessionId),
+    ...choices.keys(),
+  ])
   const gone = new Set(dismissed.map((d) => d.key))
 
   // The buttons or choices each idle thread ended on. The runner takes them out of the
@@ -308,11 +315,22 @@ export async function dismissLooseEnd(
 
 /**
  * Home's Needs you beside its tickets and pull requests: the failed threads and failing
- * routines waiting on this member (src/failed.ts), and when to ask again.
+ * routines waiting on this member (src/failed.ts), the choices they have to pick from
+ * (src/choices-waiting.ts), and when to ask again.
  */
 export async function homeWaiting(db: ScopedDb, memberId: string, now = new Date()) {
-  const { threads, routines, recheckAt } = await failuresWaitingOn(db, memberId, now)
+  const [{ threads, routines, recheckAt }, choices] = await Promise.all([
+    failuresWaitingOn(db, memberId, now),
+    choicesWaitingOn(db, memberId, now),
+  ])
   return {
+    choices: choices.map((c) => ({
+      id: c.id,
+      title: c.title,
+      teammate: c.teammate,
+      at: c.at.toISOString(),
+      choices: c.choices,
+    })),
     threads: threads.map((t) => ({
       id: t.id,
       title: t.title,

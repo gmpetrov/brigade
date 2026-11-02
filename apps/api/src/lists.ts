@@ -33,6 +33,7 @@ import { HTTPException } from 'hono/http-exception'
 import type { z } from 'zod'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { choicesWaitingAmong } from './choices-waiting.js'
 import { failedWaitingAmong } from './failed.js'
 import { hubs } from './hub.js'
 import { latersOf } from './later.js'
@@ -183,16 +184,18 @@ export const isAside = (
 /**
  * Where an item stands: ticked, else from its threads and pull requests. A thread needs you as
  * on Tasks and in the sidebar (columnOf): an open ticket, waiting, failed and waiting on a
- * person (`failing`: src/failed.ts, failedWaitingAmong), or stopped at a pull request a person
- * merges. A failed thread's pull requests wait with it, not on their own. A thread the member
- * reading put away for later (`aside`: src/later.ts) counts as an archived one, its pull
- * requests with it: it no longer waits on them.
+ * person (`failing`: src/failed.ts, failedWaitingAmong), stopped at a pull request a person
+ * merges, or on choices nobody picked (`choosing`: src/choices-waiting.ts). A failed thread's
+ * pull requests wait with it, not on their own. A thread the member reading put away for later
+ * (`aside`: src/later.ts) counts as an archived one, its pull requests with it: it no longer
+ * waits on them.
  */
 export function stateOf(
   done: boolean,
   row: Pick<ItemRow, 'threads' | 'pulls'> | undefined,
   failing: { has(threadId: string): boolean },
   aside: ReadonlySet<string> = new Set(),
+  choosing: { has(threadId: string): boolean } = new Set<string>(),
 ): ItemState {
   if (done) return 'done'
   const live = row?.threads.filter((t) => !t.session.archivedAt && !isAside(t.session, aside)) ?? []
@@ -204,7 +207,8 @@ export function stateOf(
         s.status === 'paused' ||
         (s.status === 'failed' && failing.has(s.id)) ||
         (!['starting', 'running', 'failed'].includes(s.status) &&
-          s.pullRequests.some(pullWaitsOnPerson)),
+          s.pullRequests.some(pullWaitsOnPerson)) ||
+        choosing.has(s.id),
     )
   )
     return 'needs_you'
@@ -228,7 +232,7 @@ async function views(
   aside: ReadonlySet<string> = new Set(),
 ): Promise<ListItemView[]> {
   const threadIds = [...new Set(rows.flatMap((r) => r.threads.map((t) => t.session.id)))]
-  const [waiting, who, remainders, failing] = await Promise.all([
+  const [waiting, who, remainders, failing, choosing] = await Promise.all([
     threadIds.length
       ? hubs.get(scope.workspaceId).eventsWaitingSince(threadIds)
       : ({} as Record<string, unknown>),
@@ -251,6 +255,13 @@ async function views(
         ),
       ),
     ]),
+    choicesWaitingAmong(db, [
+      ...new Set(
+        rows.flatMap((r) =>
+          r.threads.flatMap((t) => (t.session.status === 'idle' ? [t.session.id] : [])),
+        ),
+      ),
+    ]),
   ])
   // Items with a line of what remains of them still open in their file: that line carries it.
   const remaining = new Set(
@@ -261,7 +272,7 @@ async function views(
     // Gone from the file: Brigade's tick is all that is known of it.
     const done = line ? line.done : !!row.doneAt
     const by = who(row.doneByType, row.doneById)
-    const state = stateOf(done, row, failing, aside)
+    const state = stateOf(done, row, failing, aside, choosing)
     return {
       id: row.id,
       text: line?.text ?? row.text,

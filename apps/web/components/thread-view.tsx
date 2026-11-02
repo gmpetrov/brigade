@@ -79,6 +79,8 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { MediaPreview, MessageAttachments } from '@/components/attachments'
 import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
@@ -3784,19 +3786,27 @@ function AskView({
 /**
  * Alternatives a teammate offers: a card each, with the design's picture when
  * the option is one (it opens beside the thread). Picking sends the choice as a
- * message; any message after it closes the offer.
+ * message; any message after it closes the offer. Home's Needs you shows it too,
+ * out of its thread (`thread`: where to write instead).
  */
-function ChoicesCard({
+export function ChoicesCard({
   choices,
   reply,
   onChoose,
+  thread,
 }: {
   choices: Choices
   /** The next message in the thread, if there is one. */
   reply?: string
   onChoose?: (text: string, pick?: string) => Promise<void>
+  /** Its thread's address, when shown outside it. */
+  thread?: string
 }) {
   const links = useFileLinks()
+  const router = useRouter()
+  // Beside its thread, a design opens in the panel; out of it (Today's Needs you), in the library.
+  const openDesign = (path: string) =>
+    links ? links.open({ path }) : router.push(`/app/library?design=${encodeURIComponent(path)}`)
   const designs = choices.options.some((o) => o.design)
   const library = useApi<LibraryFile[]>(designs ? '/library' : null)
   const [sending, setSending] = useState<string>()
@@ -3870,7 +3880,7 @@ function ChoicesCard({
                     type="button"
                     className="group relative flex aspect-[16/10] items-center justify-center overflow-hidden border-b bg-muted/50"
                     aria-label={`Open ${o.label}`}
-                    onClick={() => links?.open({ path: design })}
+                    onClick={() => openDesign(design)}
                   >
                     {thumbnail ? (
                       // eslint-disable-next-line @next/next/no-img-element -- a library file through the API
@@ -3911,7 +3921,17 @@ function ChoicesCard({
       </ul>
       {open && (
         <p className="text-xs text-muted-foreground">
-          Or write what you want instead: mix two, or change one.
+          {thread ? (
+            <>
+              Or write what you want instead{' '}
+              <Link href={thread} className="underline underline-offset-4 hover:text-foreground">
+                in the thread
+              </Link>
+              : mix two, or change one.
+            </>
+          ) : (
+            'Or write what you want instead: mix two, or change one.'
+          )}
         </p>
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}
