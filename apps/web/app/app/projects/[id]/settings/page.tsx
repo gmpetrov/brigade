@@ -28,6 +28,16 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { api, useApi, type ConnectionsResponse, type ReviewPolicy } from '@/lib/api'
 import { API_URL } from '@/lib/config'
+import {
+  fieldError,
+  idle,
+  preferAccount,
+  saveFailed,
+  saveMessage,
+  saveStarted,
+  saveSucceeded,
+  type SaveState,
+} from '@/lib/project-settings'
 import { cn } from '@/lib/utils'
 
 /** The page's sections, in order, as the nav lists them. */
@@ -69,24 +79,23 @@ type ProjectChange = {
   reviewPolicy?: ReviewPolicy
 }
 
-type Status = { saving: true } | { saved: true } | { error: string } | null
-
 /** Saves changes to the project one at a time, in the order they were made, and says how it went. */
 function useProjectSave() {
   const { project, reload } = useProject()
   const { reloadProjects } = useDashboard()
-  const [status, setStatus] = useState<Status>(null)
+  const [state, setState] = useState<SaveState>(idle)
   const queue = useRef<Promise<unknown>>(Promise.resolve())
 
   // "Saved" shows for a moment, then goes.
   useEffect(() => {
-    if (!status || !('saved' in status)) return
-    const timer = setTimeout(() => setStatus(null), 2500)
+    if (!state.saved) return
+    const timer = setTimeout(() => setState((s) => ({ ...s, saved: false })), 2500)
     return () => clearTimeout(timer)
-  }, [status])
+  }, [state.saved])
 
   function save(change: ProjectChange) {
-    setStatus({ saving: true })
+    const fields = Object.keys(change)
+    setState(saveStarted)
     const run = queue.current.then(async () => {
       try {
         // A new logo goes to the bucket first; null removes it.
@@ -96,10 +105,10 @@ function useProjectSave() {
           body: change.logo === undefined ? change : { ...change, logo },
         })
         await Promise.all([reload(), reloadProjects()])
-        setStatus({ saved: true })
+        setState((s) => saveSucceeded(s, fields))
         return true
       } catch (e) {
-        setStatus({ error: (e as Error).message })
+        setState((s) => saveFailed(s, fields, (e as Error).message))
         return false
       }
     })
@@ -107,20 +116,22 @@ function useProjectSave() {
     return run
   }
 
-  return { save, status, setStatus }
+  /** An error found before saving, kept with its field until it saves; null clears it. */
+  const setError = (field: string, message: string | null) =>
+    setState((s) => fieldError(s, field, message))
+
+  return { save, state, setError }
 }
 
-function SaveStatus({ status }: { status: Status }) {
-  if (!status) return null
+function SaveStatus({ state }: { state: SaveState }) {
+  const message = saveMessage(state)
+  if (!message) return null
   return (
     <p
       role="status"
-      className={cn(
-        'text-sm',
-        'error' in status ? 'text-destructive-text' : 'text-muted-foreground',
-      )}
+      className={cn('text-sm', message.error ? 'text-destructive-text' : 'text-muted-foreground')}
     >
-      {'error' in status ? status.error : 'saving' in status ? 'Saving…' : 'Saved'}
+      {message.text}
     </p>
   )
 }
@@ -379,7 +390,7 @@ function SetupChecklist() {
 
 function GeneralSection() {
   const { project } = useProject()
-  const { save, status, setStatus } = useProjectSave()
+  const { save, state, setError } = useProjectSave()
   const file = useRef<HTMLInputElement>(null)
   /** A new logo while it saves. */
   const [pending, setPending] = useState<string>()
@@ -397,7 +408,8 @@ function GeneralSection() {
     reader.onload = async () => {
       const shrunk = await shrinkLogo(String(reader.result)).catch(() => null)
       if (!shrunk)
-        return setStatus({ error: 'That image cannot be a logo: try a PNG or an SVG under 256 KB' })
+        return setError('logo', 'That image cannot be a logo: try a PNG or an SVG under 256 KB')
+      setError('logo', null)
       void saveLogo(shrunk)
     }
     reader.readAsDataURL(picked)
@@ -406,14 +418,14 @@ function GeneralSection() {
   async function logoFromSite() {
     if (!project.url) return
     setFetchingLogo(true)
-    setStatus(null)
+    setError('logo', null)
     try {
       const info = await api<SiteInfo>('/projects/site', { body: { url: project.url } })
       const shrunk = info.logo ? await shrinkLogo(info.logo).catch(() => null) : null
       if (shrunk) void saveLogo(shrunk)
-      else setStatus({ error: `${new URL(info.url).hostname} shows no logo` })
+      else setError('logo', `${new URL(info.url).hostname} shows no logo`)
     } catch (e) {
-      setStatus({ error: (e as Error).message })
+      setError('logo', (e as Error).message)
     } finally {
       setFetchingLogo(false)
     }
@@ -533,14 +545,14 @@ function GeneralSection() {
           linked.
         </p>
       </div>
-      <SaveStatus status={status} />
+      <SaveStatus state={state} />
     </Section>
   )
 }
 
 function CodeReviewSection() {
   const { project } = useProject()
-  const { save, status } = useProjectSave()
+  const { save, state } = useProjectSave()
   return (
     <Section
       id="code-review"
@@ -565,7 +577,7 @@ function CodeReviewSection() {
           </div>
         ))}
       </RadioGroup>
-      <SaveStatus status={status} />
+      <SaveStatus state={state} />
     </Section>
   )
 }
@@ -578,9 +590,12 @@ const NO_PREFERENCE = 'none'
  */
 function AppsSection() {
   const { project } = useProject()
-  const { save, status } = useProjectSave()
+  const { save, state } = useProjectSave()
   const connections = useApi<ConnectionsResponse>('/connections', ['connections.updated'])
-  const preferred = project.preferredConnections.map((c) => c.id)
+  /** The list as the last pick left it, while its save is on its way. */
+  const picked = useRef<string[] | null>(null)
+  const [, setPicked] = useState<string[] | null>(null)
+  const preferred = picked.current ?? project.preferredConnections.map((c) => c.id)
 
   const usable = (connections.data?.connections ?? []).filter(
     (c) => c.status !== 'removed' && c.kind !== 'webhook',
@@ -598,9 +613,19 @@ function AppsSection() {
   const single = byApp.size - choices.length
 
   function choose(accounts: typeof usable, id: string) {
-    const ids = new Set(accounts.map((a) => a.id))
-    const next = preferred.filter((p) => !ids.has(p))
-    void save({ preferredConnectionIds: id === NO_PREFERENCE ? next : [...next, id] })
+    const next = preferAccount(
+      preferred,
+      accounts.map((a) => a.id),
+      id === NO_PREFERENCE ? null : id,
+    )
+    picked.current = next
+    setPicked(next)
+    void save({ preferredConnectionIds: next }).then(() => {
+      // The project as reloaded shows it from now on, unless another pick came since.
+      if (picked.current !== next) return
+      picked.current = null
+      setPicked(null)
+    })
   }
 
   return (
@@ -661,7 +686,7 @@ function AppsSection() {
           {single} other App{single === 1 ? ' has' : 's have'} one account: threads use it.
         </p>
       )}
-      <SaveStatus status={status} />
+      <SaveStatus state={state} />
     </Section>
   )
 }
