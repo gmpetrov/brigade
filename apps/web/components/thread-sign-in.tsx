@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AccountLoginSteps, machineName } from '@/components/account-card'
 import { Button } from '@/components/ui/button'
 import { api, harnessLabel, useApi, type Account, type AccountLogin } from '@/lib/api'
+import { caughtUp, shownLogin, underWay } from '@/lib/thread-sign-in'
 import { useLive } from '@/lib/use-live'
 
 /**
@@ -28,10 +29,18 @@ export function SignedOutError({
   onRetry?: () => void
   retrying: boolean
 }) {
-  const [phase, setPhase] = useState<'idle' | 'signing_in' | 'done'>('idle')
-  const accounts = useApi<Account[]>(latest || phase !== 'idle' ? '/accounts' : null)
+  // Its sign-in as last heard: on the socket, or caught up from the list after it reconnected.
+  const [live, setLive] = useState<AccountLogin | null>(null)
+  const [done, setDone] = useState(false)
+  // A sign-in this card followed ended while the socket was down, and the account is not ready.
+  const [interrupted, setInterrupted] = useState(false)
+  const followed = useRef(false)
+  const accounts = useApi<Account[]>(latest || live || done ? '/accounts' : null)
   const account = accounts.data?.find((a) => a.id === accountId)
-  const [login, setLogin] = useState<AccountLogin | null>(null)
+  // Whoever signs in sees its progress, wherever they started it (here, or on Accounts).
+  const login = shownLogin(live, account)
+  const going = underWay(login)
+  if (going) followed.current = true
   const [error, setError] = useState<string>()
   // The retry once signed in, called once: the card stays mounted while the turn runs again.
   const retried = useRef(false)
@@ -39,26 +48,37 @@ export function SignedOutError({
   const retry = useRef(onRetry)
   retry.current = onRetry
 
-  useLive((m) => {
-    if (m.type !== 'account.login' || m.accountId !== accountId) return
-    setLogin(m)
-    if (m.state === 'done') setPhase('done')
-  })
+  useLive(
+    (m) => {
+      if (m.type !== 'account.login' || m.accountId !== accountId) return
+      setLive(m)
+      setInterrupted(false)
+      if (m.state === 'done') setDone(true)
+    },
+    () => {
+      // What the socket said while it was down is lost: catch up from the list.
+      void accounts.reload()
+      void api<Account[]>('/accounts')
+        .then((list) => {
+          const next = caughtUp(
+            list.find((x) => x.id === accountId),
+            followed.current,
+          )
+          if (!next) return
+          setLive(next.live)
+          if (next.done) setDone(true)
+          if (next.interrupted) setInterrupted(true)
+        })
+        .catch(() => {})
+    },
+  )
 
-  // A sign-in already under way (started from the Accounts page, or before a reload) shows here.
   useEffect(() => {
-    if (phase !== 'idle' || !account?.mine || !account.login) return
-    if (account.login.state === 'done' || account.login.state === 'failed') return
-    setLogin(account.login)
-    setPhase('signing_in')
-  }, [account, phase])
-
-  useEffect(() => {
-    if (phase !== 'done' || retried.current || !retry.current) return
+    if (!done || retried.current || !retry.current) return
     retried.current = true
     setResent(true)
     retry.current()
-  }, [phase])
+  }, [done])
 
   const provider = account ? harnessLabel(account.provider) : undefined
   const card = (body: React.ReactNode, action?: React.ReactNode, below?: React.ReactNode) => (
@@ -89,7 +109,7 @@ export function SignedOutError({
     <span className="wrap-anywhere whitespace-pre-wrap text-xs opacity-80">{message}</span>
   )
 
-  if (phase === 'done')
+  if (done)
     return (
       <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm">
         <span aria-hidden className="size-2 shrink-0 rounded-full bg-success" />
@@ -101,7 +121,7 @@ export function SignedOutError({
     )
 
   // Not the latest turn, or an account they cannot see: the error as the harness said it.
-  if (!account || (!latest && phase === 'idle'))
+  if (!account || (!latest && !going))
     return card(
       <span className="wrap-anywhere whitespace-pre-wrap">{message}</span>,
       latest && tryAgain,
@@ -135,13 +155,12 @@ export function SignedOutError({
 
   const start = async () => {
     setError(undefined)
-    setLogin({ state: 'starting' })
-    setPhase('signing_in')
+    setInterrupted(false)
+    setLive({ state: 'starting' })
     try {
       await api(`/accounts/${account.id}/sign-in`, { method: 'POST' })
     } catch (e) {
-      setPhase('idle')
-      setLogin(null)
+      setLive(null)
       setError((e as Error).message)
     }
   }
@@ -154,13 +173,13 @@ export function SignedOutError({
       </span>
       {said}
     </>,
-    (phase === 'idle' || failed) && (
+    !going && (
       <Button type="button" size="xs" className="shrink-0" onClick={() => void start()}>
-        {failed ? 'Try signing in again' : `Sign in to ${provider}`}
+        {failed || interrupted ? 'Try signing in again' : `Sign in to ${provider}`}
       </Button>
     ),
     <>
-      {phase === 'signing_in' && login && !failed && (
+      {going && login && (
         <AccountLoginSteps
           account={account}
           login={login}
@@ -176,6 +195,7 @@ export function SignedOutError({
         />
       )}
       {failed && <span>Sign-in failed: {login.error}</span>}
+      {interrupted && <span>The sign-in did not finish. Try again.</span>}
       {error && <span>{error}</span>}
     </>,
   )
