@@ -37,6 +37,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   runner holds them), 50 MB in all. Without R2 uploads go through the API, up to 25 MB. Unfinished uploads go after an hour, unsent ones after a day. `ThreadAttachment` puts it in a thread at
   `attachments/<name>` (`-2` on a clash). The thread's spec lists all of them; before each turn the runner copies the
   ones a teammate's folder lacks, once (its edits stay), never executable, and the prompt says where they are.
+  A folder brought from another computer (a moved thread) already holds them: a file found there with its SHA-256
+  is kept, not fetched again. While a turn fetches its folder or files before it starts, the thread says
+  "<teammate> is getting this thread's files ready on this computer" (a `turn.preparing` raw event, which
+  `turn.started` ends), even when no message made the thread busy.
   Programs and installers are not taken from outside, and small inline images (signatures) are left out; a file not
   kept is still named to the teammate, with why. Connector calls can bring files in (`gmail_read_attachment`) and send
   them (`gmail_send`'s `attachments`: paths the runner uploads first). Runners need protocol 7.

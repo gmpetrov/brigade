@@ -83,7 +83,14 @@ test('a folder handed over comes back whole on arrival, in place of what was the
   await writeFile(join(workDir, 'stale.txt'), 'from before\n')
   await rm(join(workDir, 'notes.md'))
 
-  await folders.arrive(name, { at: '2026-10-16T10:00:00.000Z', from: 'the cloud computer' })
+  // The turn is told its folder is fetched: the thread shows it getting its files ready.
+  let fetching = 0
+  await folders.arrive(
+    name,
+    { at: '2026-10-16T10:00:00.000Z', from: 'the cloud computer' },
+    () => fetching++,
+  )
+  assert.equal(fetching, 1)
   assert.equal(await readFile(join(workDir, 'notes.md'), 'utf8'), 'what I was doing\n')
   assert.equal(await readFile(join(repo, 'untracked.txt'), 'utf8'), 'work in progress\n')
   assert.equal(git(repo, 'log', '--format=%s').toString().trim(), 'first')
@@ -97,8 +104,13 @@ test('a folder handed over comes back whole on arrival, in place of what was the
 
   // The same arrival again (a second message, a restart) changes nothing.
   await writeFile(join(workDir, 'later.txt'), 'written here since\n')
-  await folders.arrive(name, { at: '2026-10-16T10:00:00.000Z', from: 'the cloud computer' })
+  await folders.arrive(
+    name,
+    { at: '2026-10-16T10:00:00.000Z', from: 'the cloud computer' },
+    () => fetching++,
+  )
   assert.ok(await exists(join(workDir, 'later.txt')))
+  assert.equal(fetching, 1, 'nothing to fetch: not told again')
 
   // Back from a computer that was offline: nothing handed over, what is here stays.
   await folders.arrive(name, { at: '2026-10-16T11:00:00.000Z', from: 'MacBook' })

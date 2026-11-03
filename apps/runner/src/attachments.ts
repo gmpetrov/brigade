@@ -1,8 +1,10 @@
 // A thread's files on this computer. The API keeps them; before a teammate's
 // turn the runner fetches the ones its working folder lacks and puts them
 // there, as the teammate's user on a cloud computer. Each is put once: a
-// teammate that edits or removes its copy keeps that. Skills' files are
-// fetched the same way, by their SHA-256, and cached alike.
+// teammate that edits or removes its copy keeps that. A folder that came from
+// another computer (a move) already holds them: those found as they are stay,
+// without being fetched again. Skills' files are fetched the same way, by
+// their SHA-256, and cached alike.
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
@@ -42,7 +44,12 @@ export class Attachments {
    * Put the thread's files in a teammate's working folder, those not put there
    * before. Returns what could not be, for the thread to say.
    */
-  async deliver(refs: ThreadAttachmentRef[], folder: Folder): Promise<string[]> {
+  async deliver(
+    refs: ThreadAttachmentRef[],
+    folder: Folder,
+    /** Told once, before the first file is fetched: the turn waits for it. */
+    fetching?: () => void,
+  ): Promise<string[]> {
     const ready = refs.filter((r) => r.status === 'ready')
     if (ready.length === 0) return []
     const indexFile = join(paths.state, 'attachments', `${folder.key}.json`)
@@ -55,6 +62,7 @@ export class Attachments {
     const missing = ready.filter((ref) => index[ref.path] !== ref.id)
     // A teammate's first turn places its files before its harness starts: its user comes first.
     if (missing.length > 0 && folder.runAs) await ensureUser(folder.runAs)
+    let told = false
     for (const ref of missing) {
       const target = inside(folder.workDir, ref.path)
       if (!target || !SAFE_ID.test(ref.id)) {
@@ -62,7 +70,12 @@ export class Attachments {
         continue
       }
       try {
-        await writeAs(target, await this.cached(ref), folder.runAs)
+        // There already, as it is (the folder came from the computer it left): put, without a download.
+        if ((await sha256As(target, folder.runAs)) !== ref.sha256) {
+          if (!told) fetching?.()
+          told = true
+          await writeAs(target, await this.cached(ref), folder.runAs)
+        }
         index[ref.path] = ref.id
         changed = true
       } catch (error) {
@@ -188,6 +201,21 @@ async function fileSha256(file: string) {
     return null
   }
   return hash.digest('hex')
+}
+
+/** A file's SHA-256, read as `runAs` when given; null when it is missing or unreadable. */
+async function sha256As(file: string, runAs?: string) {
+  if (!runAs) return fileSha256(file)
+  return new Promise<string | null>((done) => {
+    const hash = createHash('sha256')
+    const child = spawn('sudo', ['-n', '-u', runAs, '--', 'cat', '--', file], {
+      cwd: '/',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    child.stdout.on('data', (chunk: Buffer) => hash.update(chunk))
+    child.once('error', () => done(null))
+    child.once('close', (code) => done(code === 0 ? hash.digest('hex') : null))
+  })
 }
 
 /** The path inside the working folder's attachments folder, or undefined if it would leave it. */

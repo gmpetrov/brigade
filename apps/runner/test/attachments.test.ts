@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash, randomBytes } from 'node:crypto'
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -91,4 +91,77 @@ test('a file that does not match its SHA-256 is neither kept nor put in the fold
   await assert.rejects(stat(join(home, 'attachments', 'att2')))
   await assert.rejects(stat(join(home, 'attachments', 'att2.part')))
   await assert.rejects(stat(join(workDir, ref.path)))
+})
+
+test('a file the folder already holds as it is (a moved thread) is not fetched again', async () => {
+  const bytes = Buffer.from('a screenshot, brought over with the folder')
+  const sha256 = createHash('sha256').update(bytes).digest('hex')
+  let asked = 0
+  const api = createServer((_req, res) => {
+    asked++
+    res.end(bytes)
+  })
+  servers.push(api)
+  const attachments = new Attachments({ apiUrl: await listen(api), token: 't' } as never)
+  const ref = {
+    id: 'att3',
+    path: 'attachments/shot.png',
+    name: 'shot.png',
+    contentType: 'image/png',
+    size: bytes.length,
+    sha256,
+    status: 'ready',
+    source: 'upload',
+  } as const
+  // The folder came with it; this computer never put it there (no index for it).
+  const workDir = await mkdtemp(join(home, 'work-'))
+  await mkdir(join(workDir, 'attachments'), { recursive: true })
+  await writeFile(join(workDir, ref.path), bytes)
+  let fetching = 0
+  assert.deepEqual(
+    await attachments.deliver([ref], { key: 'moved', workDir }, () => fetching++),
+    [],
+  )
+  assert.equal(asked, 0)
+  assert.equal(fetching, 0)
+  // Put once: the teammate's own changes after it stay.
+  await writeFile(join(workDir, ref.path), 'edited by the teammate')
+  assert.deepEqual(await attachments.deliver([ref], { key: 'moved', workDir }), [])
+  assert.equal(await readFile(join(workDir, ref.path), 'utf8'), 'edited by the teammate')
+  assert.equal(asked, 0)
+})
+
+test('a file that differs, or is missing, is fetched, and the turn is told once', async () => {
+  const files = { a: Buffer.from('first file'), b: Buffer.from('second file') }
+  let asked = 0
+  const api = createServer((req, res) => {
+    asked++
+    res.end(req.url!.endsWith('att4') ? files.a : files.b)
+  })
+  servers.push(api)
+  const attachments = new Attachments({ apiUrl: await listen(api), token: 't' } as never)
+  const ref = (id: string, name: string, bytes: Buffer) =>
+    ({
+      id,
+      path: `attachments/${name}`,
+      name,
+      contentType: 'text/plain',
+      size: bytes.length,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      status: 'ready',
+      source: 'upload',
+    }) as const
+  const refs = [ref('att4', 'a.txt', files.a), ref('att5', 'b.txt', files.b)]
+  const workDir = await mkdtemp(join(home, 'work-'))
+  await mkdir(join(workDir, 'attachments'), { recursive: true })
+  await writeFile(join(workDir, 'attachments/a.txt'), 'another file at the same path')
+  let fetching = 0
+  assert.deepEqual(
+    await attachments.deliver(refs, { key: 'differs', workDir }, () => fetching++),
+    [],
+  )
+  assert.equal(asked, 2)
+  assert.equal(fetching, 1)
+  assert.ok((await readFile(join(workDir, 'attachments/a.txt'))).equals(files.a))
+  assert.ok((await readFile(join(workDir, 'attachments/b.txt'))).equals(files.b))
 })

@@ -339,12 +339,17 @@ export class Folders {
    * The folder is on disk: put back from its archive when it was archived.
    * Throws when it could not be: working in an empty folder would lose it.
    */
-  async ready(name: FolderName) {
+  async ready(
+    name: FolderName,
+    /** Told when it is fetched and unpacked here: the turn waits for it. */
+    fetching?: () => void,
+  ) {
     this.touch(name)
     if (!CLOUD) return
     const { workDir, runAs } = threadFolder(name.teammateId, name.sessionId)
     await this.exclusive(workDir, async () => {
       if (await exists(workDir, runAs)) return
+      fetching?.()
       const file = await this.tempFile()
       try {
         if (!(await this.options.archives.get(name, file))) {
@@ -382,7 +387,12 @@ export class Folders {
    * whatever this computer had of it from before. With no archive (that
    * computer was offline), what is here stays. On any computer.
    */
-  async arrive(name: FolderName, moved: { at: string; from: string }) {
+  async arrive(
+    name: FolderName,
+    moved: { at: string; from: string },
+    /** Told when its archive is fetched and unpacked here: the turn waits for it. */
+    fetching?: () => void,
+  ) {
     await this.loaded
     const { workDir, runAs } = threadFolder(name.teammateId, name.sessionId)
     if (this.state.arrived[workDir] === moved.at) return
@@ -398,6 +408,7 @@ export class Folders {
         this.save()
         return
       }
+      fetching?.()
       const file = await this.tempFile()
       let restored = false
       let backup: FolderBackupInfo | null = null

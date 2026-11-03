@@ -25,7 +25,9 @@ import {
   STORED_FILE_NAME,
   SUGGEST_REPLIES_TOOL,
   THREAD_NOTE_SOURCE,
+  TURN_PREPARING_SOURCE,
   TURN_WAITING_SOURCE,
+  type TurnPreparing,
   type TurnWaiting,
   hasVisibleText,
   SuggestedReplies,
@@ -149,7 +151,7 @@ import {
   type ThreadChild,
 } from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
-import { slotWait } from '@/lib/slot-wait'
+import { turnWait } from '@/lib/turn-wait'
 import { inGap, type EventGap } from '@/lib/use-thread-events'
 import { messageRuns, type RunEntry } from '@/lib/message-runs'
 import { pauseLabel, pauses } from '@/lib/thread-times'
@@ -249,6 +251,10 @@ export type Item =
   | { kind: 'woke'; key: string; at: number }
   /** A turn waits for a free slot on its computer, all of them taken by other turns. */
   | { kind: 'slot'; key: string; at: number; teammateId: string; running: number }
+  /** Its turn gets the thread's files ready on its computer (after a move, say) before it starts. */
+  | { kind: 'preparing'; key: string; at: number; teammateId: string }
+  /** Its files are ready and no turn followed (a thread taken back that waits on a person). */
+  | { kind: 'prepared'; key: string }
   | { kind: 'turn'; key: string; finishReason: string; startedAt?: number; at: number }
   /** Events not loaded here, after the timeline jumped past them: they load as it comes near. */
   | { kind: 'gap'; key: string; gap: EventGap }
@@ -557,6 +563,11 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           else if (e.source === TURN_WAITING_SOURCE) {
             const { teammateId, running } = e.value as TurnWaiting
             add({ kind: 'slot', key: `q${seq}`, at: Date.parse(e.at), teammateId, running })
+          } else if (e.source === TURN_PREPARING_SOURCE) {
+            const { teammateId, done } = e.value as TurnPreparing
+            // Ready, and no turn followed: the wait is over all the same.
+            if (done) add({ kind: 'prepared', key: `q${seq}` })
+            else add({ kind: 'preparing', key: `q${seq}`, at: Date.parse(e.at), teammateId })
           } else if (e.source === 'harness') {
             background = backgroundTasks(background, e.value)
             const waiting = backgroundWait(e.value)
@@ -1970,7 +1981,8 @@ export function Answering({
 }: {
   teammate: { name: string }
   /** slot: its turn waits for one of that many turns running on its computer to end. */
-  phase: 'starting' | 'reading' | 'thinking' | { slot: number }
+  /** preparing: its turn gets the thread's files ready on its computer before it starts. */
+  phase: 'starting' | 'reading' | 'thinking' | 'preparing' | { slot: number }
   since?: number
 }) {
   const [now, setNow] = useState(() => Date.now())
@@ -1983,9 +1995,12 @@ export function Answering({
   const doing =
     typeof phase === 'object'
       ? `is waiting for ${phase.slot === 1 ? 'the turn' : `one of the ${phase.slot} turns`} running on this computer to end`
-      : { starting: 'is starting up', reading: 'is reading your message', thinking: 'is thinking' }[
-          phase
-        ]
+      : {
+          starting: 'is starting up',
+          reading: 'is reading your message',
+          thinking: 'is thinking',
+          preparing: "is getting this thread's files ready on this computer",
+        }[phase]
   return (
     // Fading in is an animation too: on the line itself it would replace the shimmer.
     <div role="status" className="animate-in self-start text-sm duration-300 fade-in">
@@ -2671,6 +2686,8 @@ export function ThreadItems({
       case 'start':
       case 'woke':
       case 'slot':
+      case 'preparing':
+      case 'prepared':
         return null
     }
   }
@@ -2678,16 +2695,21 @@ export function ThreadItems({
   // Messages after a pause: their time above them.
   const marks = pauses(items)
   // Working, and nothing from the teammate since the last message (or only its turn waiting
-  // for a slot, then starting).
+  // for a slot or its files, then starting).
   const lastUser = items.findLastIndex((it) => it.kind === 'user' && !it.steeredTo)
   const since = items.slice(lastUser + 1)
   const waiting =
-    working && lastUser >= 0 && since.every((it) => it.kind === 'start' || it.kind === 'slot')
-      ? (since.at(-1) as Extract<Item, { kind: 'start' | 'slot' }> | undefined)
+    working &&
+    lastUser >= 0 &&
+    since.every((it) => it.kind === 'start' || it.kind === 'slot' || it.kind === 'preparing')
+      ? (since.at(-1) as Extract<Item, { kind: 'start' | 'slot' | 'preparing' }> | undefined)
       : false
   const waitingFor = waiting !== false && (byId.get(waiting?.teammateId ?? '') ?? teammate)
-  // A turn waiting for a slot, even after output of its own (resumed) or another's reply.
-  const slot = working ? slotWait(items) : undefined
+  // A turn waiting for a slot, even after output of its own (resumed) or another's reply. One
+  // getting its files ready shows while the thread is idle too: a moved thread's first turn
+  // runs before anyone writes, and no message made the thread busy.
+  const wait = turnWait(items)
+  const slot = wait && (working || wait.kind === 'preparing') ? wait : undefined
   const slotTeammate = slot && (byId.get(slot.teammateId) ?? teammate)
   // Counted from its turn starting, else from the message.
   const from = waiting
@@ -2705,6 +2727,8 @@ export function ThreadItems({
       item.kind === 'start' ||
       item.kind === 'woke' ||
       item.kind === 'slot' ||
+      item.kind === 'preparing' ||
+      item.kind === 'prepared' ||
       (item.kind === 'turn' && item.finishReason !== 'interrupted')
       ? 'step'
       : 'break'
@@ -2768,7 +2792,11 @@ export function ThreadItems({
       ) : working && computerDown ? (
         <ComputerAway computer={computerDown} teammate={waitingFor || teammate} />
       ) : slot && slotTeammate ? (
-        <Answering teammate={slotTeammate} phase={{ slot: slot.running }} since={slot.at} />
+        <Answering
+          teammate={slotTeammate}
+          phase={slot.kind === 'slot' ? { slot: slot.running } : 'preparing'}
+          since={slot.at}
+        />
       ) : waitingFor ? (
         <Answering
           teammate={waitingFor}
