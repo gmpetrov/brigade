@@ -13,11 +13,13 @@ import { appCatalog, connectors } from './connectors/index.js'
 import type { ConnectorKind } from './connectors/types.js'
 import type { ScopedDb } from './db.js'
 import { availableApps } from './routes/connections.js'
+import { appOpen, featuresOfMember } from './features.js'
 import { shownAccounts, teammateGrants, usableGrants } from './thread-spec.js'
 
 type Operation = Extract<ScheduleOperation, { name: 'list_apps' }>
 type Session = {
   id: string
+  workspaceId: string
   playbookRunId: string | null
   startedByMemberId: string
   projectId: string | null
@@ -100,6 +102,9 @@ export async function handleAppCall(
   const kinds = new Set(accounts.map((c) => c.kind))
   const apps = new Set(accounts.map((c) => c.appId))
   const available = availableApps()
+  // Apps behind a feature (src/features.ts): offered only when the person the thread works for
+  // has it (its starter, when several people ask in it), who connects it from the ticket.
+  const features = await featuresOfMember(person ?? session.startedByMemberId, session.workspaceId)
 
   const lines = ['Your accounts, whose tools you have here:']
   lines.push(...listed(yours.map((g) => `- ${account(g.connection)}: ${g.scope}`)))
@@ -130,7 +135,7 @@ export async function handleAppCall(
       'the ticket.',
   )
   for (const kind of askable)
-    if (kind !== 'mcp' && available[kind] && !kinds.has(kind))
+    if (kind !== 'mcp' && available[kind] && appOpen(kind, features) && !kinds.has(kind))
       lines.push(`- ${appCatalog[kind].name} (app.kind ${kind}): ${appCatalog[kind].description}`)
   for (const { id } of servers)
     if (!apps.has(id))

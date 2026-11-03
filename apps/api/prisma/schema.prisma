@@ -3098,3 +3098,19 @@ model ComputerReplacement {
 
   @@index([computerId, phase])
 }
+
+/// A feature hidden until it is ready (packages/contracts/src/features.ts, docs/feature-flags.md),
+/// opened to some people. Without a row, a feature is its declared default for everyone.
+model FeatureFlag {
+  /// A key of FEATURES, e.g. gmail.
+  key          String   @id
+  /// On for every person.
+  everyone     Boolean  @default(false)
+  /// Sign-in addresses, lowercase, or whole domains as @example.com.
+  emails       String[] @default([])
+  /// Workspaces whose every member has it.
+  workspaceIds String[] @default([])
+  /// Why, or who asked: for the people who read the table.
+  note         String   @default("")
+  updatedAt    DateTime @default(now()) @updatedAt
+}

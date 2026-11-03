@@ -281,7 +281,9 @@ export function AppSheet({
         )}
         {waiting && kind === 'atlassian' && <AtlassianDomainHint />}
         {waiting && kind === 'mixpanel' && <MixpanelMcpHint />}
-        {!email && !data.available[kind] && <Unavailable kind={kind} />}
+        {!email && !data.available[kind] && (
+          <Unavailable kind={kind} hidden={data.hidden.includes(kind)} />
+        )}
         {email && <EmailApp reload={reload} />}
         {kind === 'google_cloud' && data.available[kind] && (
           <p className="text-sm text-muted-foreground">
@@ -788,7 +790,10 @@ function CustomAppForm({ onSubmit }: { onSubmit: (form: FormData) => void }) {
 }
 
 /** What the server is missing for an App that needs its own setup. */
-function Unavailable({ kind }: { kind: Kind }) {
+function Unavailable({ kind, hidden }: { kind: Kind; hidden: boolean }) {
+  // Behind a feature this member lacks (docs/feature-flags.md).
+  if (hidden)
+    return <p className="text-sm text-muted-foreground">Not available to your account yet.</p>
   if (
     kind === 'gmail' ||
     kind === 'google_calendar' ||
