@@ -84,3 +84,19 @@ test('an answer kept while the teammate waits on an approval leaves the thread w
   assert.equal(fold([requested, answered(true)], 'running'), 'waiting')
   assert.equal(fold([answered()], 'waiting'), 'running')
 })
+
+test('a message settled by its side reply leaves the thread as its turn left it', () => {
+  const side: AgentEvent = {
+    at,
+    type: 'message.user',
+    text: 'Where was the bug?',
+    memberId: 'm1',
+    messageId: 'msg1',
+    side: true,
+  }
+  // The turn it came during ended first: the thread stays done, and does not look busy.
+  assert.equal(fold([side], 'idle'), 'idle')
+  assert.equal(fold([side], 'running'), 'running')
+  // A message the teammate reads starts work, as before.
+  assert.equal(fold([{ ...side, side: undefined }], 'idle'), 'running')
+})

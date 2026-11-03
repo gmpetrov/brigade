@@ -132,7 +132,9 @@ export async function noteTurnsEnded(
 export function statusAfter(current: SessionStatus, event: AgentEvent): SessionStatus {
   switch (event.type) {
     // Noted while the teammate waits on a person (a hand back's note): no turn starts.
+    // Settled by its side reply: none either, and the turn it came during says how things are.
     case 'message.user':
+      if (event.side) return current
       return event.waiting ? 'waiting' : 'running'
     case 'approval.resolved':
       return 'running'

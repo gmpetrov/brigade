@@ -3,6 +3,7 @@ import { mayWrite, openToOthers } from '../account-sharing.js'
 import { randomUUID } from 'node:crypto'
 import {
   ASIDE_PROTOCOL,
+  SIDE_REPLY_PROTOCOL,
   clipReport,
   CODE_CHANGES_PROTOCOL,
   CODE_EDIT_PROTOCOL,
@@ -1301,7 +1302,8 @@ export const threads = new Hono<AppEnv>()
 
   /**
    * A message still queued: steer it into the running turn, or cancel, edit or send to run in
-   * parallel one a person wrote.
+   * parallel one a person wrote. One answered on the side (message.side): keep it for after the
+   * turn rather than have it passed on, or queue one its side reply settled after all.
    */
   .post('/:id/messages/:messageId', async (c) => {
     const { scope, db } = c.var
@@ -1346,7 +1348,16 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(409, {
         message: "This computer's runner is too old to change queued messages. Update it.",
       })
-    const command = (action: 'cancel' | 'edit' | 'steer', text?: string) =>
+    // Only a runner that answers on the side sends what these act on.
+    if (
+      (input.action === 'keep' || input.action === 'queue') &&
+      protocol !== undefined &&
+      protocol < SIDE_REPLY_PROTOCOL
+    )
+      throw new HTTPException(409, {
+        message: "This computer's runner is too old for asides. Update it.",
+      })
+    const command = (action: 'cancel' | 'edit' | 'steer' | 'keep' | 'queue', text?: string) =>
       deliver(thread.computer, {
         type: 'thread.queued',
         commandId: randomUUID(),
@@ -1364,7 +1375,7 @@ export const threads = new Hono<AppEnv>()
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
-      action: `thread.message_${{ cancel: 'cancelled', edit: 'edited', steer: 'steered', parallel: 'sent_in_parallel' }[input.action]}`,
+      action: `thread.message_${{ cancel: 'cancelled', edit: 'edited', steer: 'steered', parallel: 'sent_in_parallel', keep: 'kept', queue: 'queued_again' }[input.action]}`,
       target: { type: 'thread', id: thread.id },
       data: { messageId },
     })
