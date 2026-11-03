@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { Account, AccountLogin } from '../lib/api'
-import { catchUpAfterReconnect, caughtUp, shownLogin, underWay } from '../lib/thread-sign-in'
+import {
+  catchUpAfterReconnect,
+  caughtUp,
+  shownLogin,
+  signInCards,
+  underWay,
+} from '../lib/thread-sign-in'
 
 const account = (over: Partial<Account> = {}) =>
   ({
@@ -73,4 +79,17 @@ test('with nothing heard meanwhile, the catch-up applies', async () => {
     () => 0,
   )
   assert.deepEqual(next, { live: prompt })
+})
+
+test('a turn tried again and failed again signs in once, from its latest error', () => {
+  const at = signInCards([
+    { kind: 'user', key: 'u1' },
+    { kind: 'error', key: 'e2', signedOutAccountId: 'a' },
+    { kind: 'error', key: 'e5', signedOutAccountId: 'a' },
+    { kind: 'error', key: 'e7', signedOutAccountId: 'b' },
+    { kind: 'error', key: 'e8' },
+  ])
+  assert.equal(at.get('a'), 'e5')
+  assert.equal(at.get('b'), 'e7')
+  assert.equal(at.size, 2)
 })
