@@ -134,6 +134,12 @@ export default function Privacy() {
         ask us to for support, for security, or when the law requires it.
       </p>
       <p>
+        When a Gmail account is shared with your workspace and put in the Inbox, Brigade also keeps
+        a copy of the mail it receives, so your team can see it there. Mail that no thread took is
+        deleted after 30 days; mail a thread took stays with that thread. For any other Gmail
+        account, Brigade keeps only the mail a thread took, never the rest of the mailbox.
+      </p>
+      <p>
         Brigade&apos;s use and transfer of information received from Google APIs adheres to the{' '}
         <a href="https://developers.google.com/terms/api-services-user-data-policy">
           Google API Services User Data Policy
