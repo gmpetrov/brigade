@@ -301,3 +301,84 @@ test("shared bridges turned off: a teammate's link is taken away, and its turn i
   await prepareAs(home)
   assert.ok(lstatSync(bridgeLink(home, 'claude-code')).isDirectory())
 })
+
+/** Shared copies under a root of the test's own: an older one, superseded two days ago, and the current one. */
+async function copies(t: { after: (fn: () => Promise<void>) => void }) {
+  const base = await mkdtemp(join(tmpdir(), 'shared-bridges-moves-'))
+  t.after(() => rm(base, { recursive: true, force: true }))
+  const root = join(base, 'bridges')
+  const older = join(root, 'claude-code-99999999')
+  const newer = bridgeLink(join(root, 'claude-code-0123abcd'), 'claude-code')
+  await mkdir(bridgeLink(older, 'claude-code'), { recursive: true })
+  await mkdir(newer, { recursive: true })
+  await writeFile(join(older, '.superseded'), '')
+  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60_000)
+  await utimes(join(older, '.superseded'), twoDaysAgo, twoDaysAgo)
+  /** A teammate's folder linked to the older copy. */
+  const teammate = async (name: string) => {
+    const folder = bridgeLink(join(base, name), 'claude-code')
+    await mkdir(join(folder, '..'), { recursive: true })
+    await symlink(bridgeLink(older, 'claude-code'), folder)
+    return folder
+  }
+  /** The tidy as the runner does it: where the folders point now, and what runs now. */
+  const tidy = async (folders: string[]) =>
+    removeSuperseded({
+      root,
+      current: new Set(['claude-code-0123abcd']),
+      linked: folders.map((folder) => readlinkSync(folder)),
+      processes: spawnSync('ps', ['-A', '-o', 'args='], { encoding: 'utf8' }).stdout,
+      now: Date.now(),
+    })
+  return { root, older, newer, teammate, tidy }
+}
+
+test('teammates leaving the same copy at once are all noted as holding it', async (t) => {
+  const { root, older, newer, teammate, tidy } = await copies(t)
+  const folders = await Promise.all(['bt-ada', 'bt-bob', 'bt-cyd'].map(teammate))
+  const bridges = await Promise.all(folders.map((folder) => bridgeFrom(folder, t)))
+  // Each script returns only once all have run: their notes are then written together.
+  const gates = new Map<string, { count: number; open: () => void; opened: Promise<void> }>()
+  const together: typeof exec = async (script, args) => {
+    const out = await exec(script, args)
+    let gate = gates.get(script)
+    if (!gate) {
+      let open = () => {}
+      const opened = new Promise<void>((resolve) => (open = resolve))
+      gate = { count: 0, open, opened }
+      gates.set(script, gate)
+    }
+    if (++gate.count === folders.length) gate.open()
+    await gate.opened
+    return out
+  }
+  await Promise.all(folders.map((folder) => linkTeammate(folder, newer, true, together, root)))
+  const held = JSON.parse(await readFile(join(older, '.holders'), 'utf8')) as { pid: number }[]
+  assert.deepEqual(held.map((h) => h.pid).sort(), bridges.map((b) => b.pid).sort())
+  // Any one of them still running keeps it.
+  await bridges[0]!.stop()
+  await bridges[1]!.stop()
+  await tidy(folders)
+  assert.ok(existsSync(older))
+  await bridges[2]!.stop()
+  await tidy(folders)
+  assert.ok(!existsSync(older))
+})
+
+test('a tidy right after a link moved on keeps the copy its bridge still runs from', async (t) => {
+  const { root, older, newer, teammate, tidy } = await copies(t)
+  const folder = await teammate('bt-ada')
+  const bridge = await bridgeFrom(folder, t)
+  // The tidy runs once the link has moved, before what the script printed is noted.
+  const thenTidy: typeof exec = async (script, args) => {
+    const out = await exec(script, args)
+    if (script === LINK_SCRIPT) await tidy([folder])
+    return out
+  }
+  await linkTeammate(folder, newer, true, thenTidy, root)
+  assert.equal(readlinkSync(folder), newer)
+  assert.ok(existsSync(older), 'kept: noted before the link moved')
+  await bridge.stop()
+  await tidy([folder])
+  assert.ok(!existsSync(older))
+})

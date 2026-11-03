@@ -17,7 +17,7 @@
 // runs from them: a bridge started through a link keeps the copy it started from when the
 // link moves on, so the runner keeps, beside that copy, which processes still hold it.
 import { existsSync } from 'node:fs'
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHarnessSandboxTemplate } from '@ai-sdk/harness/agent'
@@ -107,6 +107,18 @@ ${HOLDERS}
 O=$(readlink -- "$L" 2>/dev/null) || exit 0
 H=$(holders); [ -z "$H" ] || echo "held $O $H"
 rm -f -- "$L"
+`
+/**
+ * As the teammate, before its link moves on or goes: who runs through it now, as with
+ * LINK_SCRIPT ("held <copy> <pid>…"), so that the copy it leaves is kept from the start.
+ * $2: the copy it is to point to; nothing printed when it points there already.
+ */
+export const HOLDERS_SCRIPT = `
+L=$1
+${HOLDERS}
+O=$(readlink -- "$L" 2>/dev/null) || exit 0
+[ "$O" = "$2" ] && exit 0
+H=$(holders); [ -z "$H" ] || echo "held $O $H"
 `
 
 type Shared = { identity: string; dir: string }
@@ -214,6 +226,9 @@ export async function linkTeammate(
   exec: Exec,
   root = ROOT,
 ): Promise<'linked' | 'own'> {
+  // Noted before the link moves, so that a cleanup in between, or a runner stopped there,
+  // never finds the copy it leaves unheld; and again after, for a bridge started meanwhile.
+  await recordHolders(await exec(HOLDERS_SCRIPT, [folder, shared ?? '']), root)
   try {
     const out = shared
       ? await exec(LINK_SCRIPT, [folder, shared, convert ? 'convert' : ''])
@@ -336,25 +351,40 @@ async function readHolders(copy: string): Promise<Holder[]> {
   }
 }
 
+/** The holders being noted (recordHolders), in turn. */
+let noting: Promise<unknown> = Promise.resolve()
+
 /**
  * From what LINK_SCRIPT or UNLINK_SCRIPT printed ("held <copy> <pid>…"): beside each copy a
  * link left, the processes still running from it, which keep it (removeSuperseded).
  */
-export async function recordHolders(out: string, root = ROOT) {
-  for (const line of out.split('\n')) {
-    const match = /^held (\S+) ([\d ]+)$/.exec(line.trim())
-    const copy = match && copyOf(match[1]!, root)
-    if (!copy || !existsSync(copy)) continue
-    const holders = await readHolders(copy)
-    for (const pid of match[2]!.trim().split(/\s+/).map(Number)) {
-      const start = await startOf(pid)
-      if (start && !holders.some((h) => h.pid === pid && h.start === start))
-        holders.push({ pid, start })
+export function recordHolders(out: string, root = ROOT) {
+  const lines = out.split('\n').filter((line) => line.startsWith('held '))
+  if (lines.length === 0) return Promise.resolve()
+  // One at a time, whichever teammate: two leaving the same copy would each write it whole.
+  const next = noting.then(async () => {
+    for (const line of lines) {
+      const match = /^held (\S+) ([\d ]+)$/.exec(line.trim())
+      const copy = match && copyOf(match[1]!, root)
+      if (!copy || !existsSync(copy)) continue
+      const holders = await readHolders(copy)
+      for (const pid of match[2]!.trim().split(/\s+/).map(Number)) {
+        const start = await startOf(pid)
+        if (start && !holders.some((h) => h.pid === pid && h.start === start))
+          holders.push({ pid, start })
+      }
+      // Whole or not at all: read half written, it would say no process holds the copy.
+      const file = holdersFile(copy)
+      const temporary = `${file}.${process.pid}-${Date.now()}`
+      await writeFile(temporary, JSON.stringify(holders))
+        .then(() => rename(temporary, file))
+        .catch((error: unknown) =>
+          console.warn(`could not note what runs from ${copy}: ${String(error)}`),
+        )
     }
-    await writeFile(holdersFile(copy), JSON.stringify(holders)).catch((error: unknown) =>
-      console.warn(`could not note what runs from ${copy}: ${String(error)}`),
-    )
-  }
+  })
+  noting = next.catch(() => undefined)
+  return next
 }
 
 /**
