@@ -1443,7 +1443,8 @@ export class Threads {
     if (!mayChangeQueued(message.memberId, command.action)) return
     if (message.state === 'answered') {
       if (command.action !== 'queue' && command.action !== 'steer') return
-      this.requeue(thread, message, command.action)
+      // Queued again, it shows as any queued message; steered, it goes in from there (or stays).
+      this.requeue(thread, message)
       if (command.action === 'steer') void this.steer(thread, message)
       return
     }
@@ -1609,12 +1610,12 @@ export class Threads {
   }
 
   /** A message its side reply settled, which a person wants run after all: queued anew. */
-  private requeue(thread: Thread, message: Message, route: 'queue' | 'steer') {
+  private requeue(thread: Thread, message: Message) {
     message.state = 'queued'
     thread.answered.delete(message.id)
     thread.messages.set(message.id, message)
     if (message.reply) {
-      message.reply.route = route
+      message.reply.route = 'queue'
       this.emitSide(message, { status: 'answered', ...message.reply })
     }
     this.emitQueued(message.specs[0]!.sessionId, message)

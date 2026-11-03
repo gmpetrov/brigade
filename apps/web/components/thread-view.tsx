@@ -142,6 +142,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Hint } from '@/components/ui/tooltip'
 import { WidgetFrame } from '@/components/widget-frame'
 import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
+import { SideReply, type SideAction, type SideState } from '@/components/side-reply'
 import {
   attachmentUrl,
   storedFileUrl,
@@ -189,6 +190,8 @@ export type Item =
       note?: BrigadeNote
       /** A person handed the thread back: their note and what they did, as a card rather than the teammate's prompt. */
       handback?: Handback & { commands: string[] }
+      /** Written during its teammate's turn and answered on the side (message.side): that answer, under it. */
+      side?: SideState
     }
   | {
       kind: 'assistant'
@@ -329,6 +332,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
     // Messages still queued, and every message id the thread has seen (queued, read or cancelled).
     const queued = new Map<string, QueuedMessage>()
     const seen = new Set<string>()
+    // Messages answered on the side, by id (message.side), and what each said while queued.
+    const sides = new Map<string, SideState>()
+    const asked = new Map<string, Extract<AgentEvent, { type: 'message.queued' }>>()
     let turnTeammate: string | undefined
     let turnStartedAt: number | undefined
     let lastPreview: { previewId: string; status: string } | undefined
@@ -357,10 +363,19 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
       }
       shown = seq >= firstSeq && !inGap(gaps, seq)
       switch (e.type) {
-        case 'message.user':
+        case 'message.user': {
           if (e.messageId) {
             seen.add(e.messageId)
             queued.delete(e.messageId)
+          }
+          // Answered on the side, it shows where that began: settled there, or steered from there.
+          const side = e.messageId ? sides.get(e.messageId) : undefined
+          if (side && side.status !== 'failed' && (e.side || e.steered)) {
+            if (e.steered) {
+              side.steered = true
+              if (idle) idle = 'steered'
+            }
+            break
           }
           // Not steered into a turn: one still open never ended.
           if (!e.steered) turnStartedAt = undefined
@@ -391,8 +406,10 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           })
           handed = undefined
           break
+        }
         case 'message.queued':
           seen.add(e.messageId)
+          asked.set(e.messageId, e)
           queued.set(e.messageId, {
             messageId: e.messageId,
             text: e.text,
@@ -402,6 +419,36 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             ...(e.note ? { note: e.note } : {}),
           })
           break
+        case 'message.side': {
+          seen.add(e.messageId)
+          let side = sides.get(e.messageId)
+          if (!side) {
+            const message = asked.get(e.messageId)
+            if (!message || e.status === 'failed') break
+            side = { messageId: e.messageId, status: e.status }
+            sides.set(e.messageId, side)
+            // The person's message, where its side reply began: it came during the turn, as a
+            // steered message does.
+            add({
+              kind: 'user',
+              key: `s${seq}`,
+              seq,
+              text: message.text,
+              memberId: message.memberId,
+              attachments: message.attachments ?? [],
+              at: Date.parse(e.at),
+              ...(message.replyTo ? { replyTo: message.replyTo } : {}),
+              ...(turnTeammate ? { steeredTo: turnTeammate } : {}),
+              side,
+            })
+          }
+          side.status = e.status
+          side.teammateId = e.teammateId
+          side.text = e.text
+          side.route = e.route
+          side.steerAt = e.steerAt
+          break
+        }
         case 'message.cancelled': {
           seen.add(e.messageId)
           const message = queued.get(e.messageId)
@@ -661,10 +708,24 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
     )?.event
     const turnId = lastTurn?.type === 'turn.started' ? lastTurn.turnId : undefined
     return {
-      // A message of only zero-width characters shows nothing: no empty bubble for it.
-      items: items.filter((i) => i.kind !== 'assistant' || hasVisibleText(i.text)),
+      // A message of only zero-width characters shows nothing: no empty bubble for it. One whose
+      // side reply never came waits in the queue, as any message does.
+      items: items.filter(
+        (i) =>
+          (i.kind !== 'assistant' || hasVisibleText(i.text)) &&
+          !(i.kind === 'user' && i.side?.status === 'failed'),
+      ),
       limits,
-      queued: [...queued.values()],
+      // While its side reply is under way, or about to give it to the turn, it shows in the
+      // conversation instead.
+      queued: [...queued.values()].filter((q) => {
+        const side = sides.get(q.messageId)
+        return (
+          !side ||
+          side.status === 'failed' ||
+          (side.status === 'answered' && side.route !== 'steer')
+        )
+      }),
       seen,
       turnId,
       background: [...background.values()],
@@ -2038,6 +2099,7 @@ export function ThreadItems({
   onRetry,
   admin = false,
   gapLine,
+  onSideAction,
 }: {
   threadId: string
   items: Item[]
@@ -2089,6 +2151,8 @@ export function ThreadItems({
   admin?: boolean
   /** Where events are not loaded: what loads them. */
   gapLine?: (gap: EventGap) => React.ReactNode
+  /** Changes what becomes of a message answered on the side. Unset when they cannot write in the thread. */
+  onSideAction?: (messageId: string, action: SideAction) => Promise<void>
 }) {
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
@@ -2262,7 +2326,8 @@ export function ThreadItems({
               </div>
             )}
             {files.length > 0 && <MessageAttachments attachments={files} className="justify-end" />}
-            {item.steeredTo && asksParallel(item.text) ? (
+            {/* Answered on the side: its aside says what became of it. */}
+            {item.side ? null : item.steeredTo && asksParallel(item.text) ? (
               <span className="text-xs text-muted-foreground">Sent to a sub-thread</span>
             ) : item.steeredTo ? (
               <span className="text-xs text-muted-foreground">
@@ -2275,6 +2340,25 @@ export function ThreadItems({
             ) : null}
           </div>
         )
+        // Written during the turn: the teammate's aside under it.
+        if (item.side) {
+          const side = item.side
+          const author = (side.teammateId && byId.get(side.teammateId)) || teammate
+          return (
+            <div key={item.key} className="flex min-w-0 flex-col gap-3">
+              {bubble}
+              <SideReply
+                side={side}
+                {...(author ? { teammate: author } : {})}
+                working={working}
+                mayChange={item.memberId === me.memberId}
+                {...(onSideAction
+                  ? { onAction: (action: SideAction) => onSideAction(side.messageId, action) }
+                  : {})}
+              />
+            </div>
+          )
+        }
         // Handed over from the Inbox: their note, then the mail, which opens its conversation there.
         if (item.handed)
           return (

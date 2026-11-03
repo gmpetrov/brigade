@@ -77,6 +77,7 @@ import type { PickHandlers } from '@/components/preview-panel'
 import { usePreviewStart } from '@/components/preview-start'
 import { ThreadProjectMenu } from '@/components/projects'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
+import type { SideAction } from '@/components/side-reply'
 import { Takeover } from '@/components/takeover'
 import {
   ChildrenWaiting,
@@ -1470,6 +1471,12 @@ export function ThreadConversation({
                       />
                     )}
                     childThreads={t.children}
+                    {...(t.mayPrompt
+                      ? {
+                          onSideAction: (messageId: string, action: SideAction) =>
+                            queueAction(messageId, { action }),
+                        }
+                      : {})}
                     onOpenPreview={previewLive(preview) ? openPreview : undefined}
                     previewStart={{
                       live,
