@@ -90,13 +90,13 @@ function within<T>(promise: Promise<T>, what: string, ms = 10_000) {
 }
 
 /** One turn's connection: the harness's side of the relay. */
-function turn(setup: Awaited<ReturnType<typeof setUp>>) {
+function turn(setup: Awaited<ReturnType<typeof setUp>>, env: Record<string, string> = {}) {
   const relay = spawn(
     process.execPath,
     ['--import', 'tsx', RELAY, '1', join(setup.home, '.browser-tabs', 'thread.json'), setup.server],
     {
       cwd: runnerDir,
-      env: { ...process.env, HOME: setup.home, FAKE_MCP_LOG: setup.log },
+      env: { ...process.env, HOME: setup.home, FAKE_MCP_LOG: setup.log, ...env },
       stdio: ['pipe', 'pipe', 'inherit'],
     },
   )
@@ -324,6 +324,53 @@ test(
       await broken.end()
       assert.equal(await started(), 4)
       assert.ok(existsSync(file))
+    } finally {
+      await setup.cleanUp()
+    }
+  },
+)
+
+test(
+  "the server's settings are part of what its answers are kept for, and a config file keeps none",
+  { timeout: 30_000 },
+  async () => {
+    const setup = await setUp()
+    const started = async () => (await setup.entries()).filter((entry) => entry.started).length
+    try {
+      const first = turn(setup)
+      await handshake(first)
+      await waitFor(() => keptFile(setup.kept))
+      await first.end()
+
+      // Other settings (more tools): the server answers, started at once.
+      const caps = turn(setup, { PLAYWRIGHT_MCP_CAPS: 'pdf' })
+      await handshake(caps)
+      assert.equal(caps.serving(), true)
+      await caps.end()
+      assert.equal(await started(), 2)
+      // And the next turn with the same settings is answered from what that one kept.
+      await waitFor(async () =>
+        (await readdir(setup.kept)).filter((name) => name.endsWith('.json')).length === 2
+          ? true
+          : undefined,
+      )
+      const again = turn(setup, { PLAYWRIGHT_MCP_CAPS: 'pdf' })
+      await handshake(again)
+      assert.equal(again.serving(), false)
+      await again.end()
+      assert.equal(await started(), 2)
+
+      // A config file can change under the same name: nothing is kept, the server answers.
+      const config = join(setup.home, 'playwright.json')
+      await writeFile(config, '{}')
+      for (const round of [1, 2]) {
+        const configured = turn(setup, { PLAYWRIGHT_MCP_CONFIG: config })
+        await handshake(configured)
+        assert.equal(configured.serving(), true, `round ${round}`)
+        await configured.end()
+      }
+      assert.equal(await started(), 4)
+      assert.equal((await readdir(setup.kept)).filter((name) => name.endsWith('.json')).length, 2)
     } finally {
       await setup.cleanUp()
     }

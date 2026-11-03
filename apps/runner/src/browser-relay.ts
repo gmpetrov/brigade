@@ -259,11 +259,19 @@ async function main() {
   const { port } = server.address() as { port: number }
 
   // The MCP server speaks to the harness on stdio, through the relay until the browser is needed.
+  // Its tools depend on its settings (PLAYWRIGHT_MCP_CAPS adds some), and on a config file's
+  // contents, which can change under the same name: with one, nothing is kept.
+  const settings = Object.entries(process.env)
+    .filter(([name]) => name.startsWith('PLAYWRIGHT_MCP_'))
+    .sort(([a], [b]) => a.localeCompare(b))
+  const configured =
+    process.env.PLAYWRIGHT_MCP_CONFIG !== undefined ||
+    cliArgs.some((arg) => arg === '--config' || arg.startsWith('--config='))
   const mcp = serveMcpLazily({
     command: process.execPath,
     args: [cli!, ...cliArgs, '--cdp-endpoint', `ws://127.0.0.1:${port}/${token}`],
-    identity: [cli, cliArgs],
-    dir: join(dirname(tabsFile!), '.mcp'),
+    identity: [cli, cliArgs, settings],
+    dir: configured ? undefined : join(dirname(tabsFile!), '.mcp'),
     onExit: (code) => {
       server.close()
       process.exit(code)

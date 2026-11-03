@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { mkdir, mkdtemp, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises'
+import {
+  appendFile,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  utimes,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { jsonSchema, tool, type ToolSet } from 'ai'
@@ -298,5 +308,31 @@ test('schemas no turn used for 30 days, and old files of other bridge versions, 
       (await readdir(schemasDir(home))).sort(),
       ['1111111111111111.json', file.split('/').pop()].sort(),
     )
+  })
+})
+
+test("another dependency lock means converting again, in a file of the new bridge's own", async () => {
+  await withHome(async (home) => {
+    await turn([], { home })
+    const before = await schemasFile(home)
+    const kept = await readSchemas(before)
+    for (const entry of Object.values(kept)) entry.s.description = 'from the file'
+    await writeFile(before, JSON.stringify(kept))
+    // The lock the bootstrap installed beside the bridge, as an update of its dependencies leaves it.
+    const lock = join(
+      home,
+      '.ai-sdk-harness',
+      '.harness-bootstrap',
+      'claude-code',
+      'pnpm-lock.yaml',
+    )
+    assert.ok((await stat(lock)).size > 0)
+    await appendFile(lock, '\n# another version of the converter\n')
+
+    const after = await turn([], { home })
+    for (const t of after.tools)
+      assert.equal((t.inputSchema as { description?: string }).description, undefined)
+    const names = (await readdir(schemasDir(home))).filter((name) => name.endsWith('.json'))
+    assert.equal(names.length, 2)
   })
 })

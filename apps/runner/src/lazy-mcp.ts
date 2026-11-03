@@ -99,10 +99,13 @@ function keepHandshake(dir: string, file: string, handshake: Handshake) {
 export function serveMcpLazily(options: {
   command: string
   args: string[]
-  /** What the server's answers depend on besides the harness's handshake: its program, its arguments. */
+  /** What the server's answers depend on besides the harness's handshake: its program, its settings. */
   identity: unknown
-  /** Where the answers are kept: a folder only this user can write to (they become tool descriptions). */
-  dir: string
+  /**
+   * Where the answers are kept: a folder only this user can write to (they become tool
+   * descriptions). Without one, nothing is kept or answered here: the server starts at once.
+   */
+  dir: string | undefined
   /** The server exited, or the harness left before it was needed. */
   onExit: (code: number) => void
   input?: NodeJS.ReadableStream
@@ -176,7 +179,7 @@ export function serveMcpLazily(options: {
       if (message?.id != null && message.id === keeping.listId && isObject(message.result))
         keeping.tools = message.result as Handshake['tools']
       if (keeping.initialize && keeping.tools && Array.isArray(keeping.tools.tools)) {
-        keepHandshake(options.dir, file!, { initialize: keeping.initialize, tools: keeping.tools })
+        keepHandshake(options.dir!, file!, { initialize: keeping.initialize, tools: keeping.tools })
         keeping = undefined
       }
     }
@@ -197,7 +200,7 @@ export function serveMcpLazily(options: {
     if (server) return void waiting.push(line)
     const message = parse(line)
     if (!initialize) {
-      if (message?.method === 'initialize' && message.id != null) {
+      if (options.dir && message?.method === 'initialize' && message.id != null) {
         initialize = message
         file = join(
           options.dir,

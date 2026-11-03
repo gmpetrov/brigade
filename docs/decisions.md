@@ -124,7 +124,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   tools/list did, and only a plain copy of the JSON is kept (the conversion's result holds its zod schema in a hidden
   `~standard` property); a tool's zod schema is built again when it is first called, to check the call's input as
   before. Converting them still took about 235 MB at each turn's start (a 384 MB peak with 883 tools), so the
-  converted schemas are kept in the user's home (`~/.ai-sdk-harness/.tool-schemas/<bridge version>.json`, each under
+  converted schemas are kept in the user's home (`~/.ai-sdk-harness/.tool-schemas/<bridge version>.json`, the version being a hash of the bridge, its `package.json` and
+  the dependencies' lock the bootstrap installed beside it, each under
   the SHA-256 of the schema it came from) and a later turn reads them (a 149 MB peak); a schema no turn used for 30
   days goes, and so does another bridge version's file left 3 days. In the home, not a shared folder: the schemas
   become tool descriptions, so another user must not be able to plant them. Tested in
@@ -347,7 +348,8 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
 - **The browser's MCP server starts at the first browser tool call** (`apps/runner/src/lazy-mcp.ts`). The harness
   starts its MCP servers with each turn, and Playwright's held about 130 MB in every running turn, browsing or not.
   The relay answers the harness's handshake and tool list itself with what the server answered that same handshake
-  (same program, arguments and client handshake) in an earlier turn, kept in `~/.browser-tabs/.mcp/`; at the first
+  (same program, arguments, `PLAYWRIGHT_MCP_*` settings and client handshake; nothing is kept when a config
+  file is named, since its contents can change under the same name) in an earlier turn, kept in `~/.browser-tabs/.mcp/`; at the first
   other request it starts the server, gives it the harness's handshake again and passes everything through. A
   handshake with no answers kept goes to the server, started at once, and its answers are kept if no tool was called
   before its tool list (a call can add a page's own tools). The first browser call of a turn waits for the server to
