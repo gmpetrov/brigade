@@ -41,6 +41,7 @@ export type PullRequestMinAggregateOutputType = {
   organizationId: string | null
   workspaceId: string | null
   repository: string | null
+  repositoryId: string | null
   number: number | null
   title: string | null
   headRef: string | null
@@ -68,6 +69,7 @@ export type PullRequestMaxAggregateOutputType = {
   organizationId: string | null
   workspaceId: string | null
   repository: string | null
+  repositoryId: string | null
   number: number | null
   title: string | null
   headRef: string | null
@@ -95,6 +97,7 @@ export type PullRequestCountAggregateOutputType = {
   organizationId: number
   workspaceId: number
   repository: number
+  repositoryId: number
   number: number
   title: number
   headRef: number
@@ -134,6 +137,7 @@ export type PullRequestMinAggregateInputType = {
   organizationId?: true
   workspaceId?: true
   repository?: true
+  repositoryId?: true
   number?: true
   title?: true
   headRef?: true
@@ -161,6 +165,7 @@ export type PullRequestMaxAggregateInputType = {
   organizationId?: true
   workspaceId?: true
   repository?: true
+  repositoryId?: true
   number?: true
   title?: true
   headRef?: true
@@ -188,6 +193,7 @@ export type PullRequestCountAggregateInputType = {
   organizationId?: true
   workspaceId?: true
   repository?: true
+  repositoryId?: true
   number?: true
   title?: true
   headRef?: true
@@ -302,6 +308,7 @@ export type PullRequestGroupByOutputType = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId: string | null
   number: number
   title: string
   headRef: string
@@ -352,6 +359,7 @@ export type PullRequestWhereInput = {
   organizationId?: Prisma.StringFilter<"PullRequest"> | string
   workspaceId?: Prisma.StringFilter<"PullRequest"> | string
   repository?: Prisma.StringFilter<"PullRequest"> | string
+  repositoryId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   number?: Prisma.IntFilter<"PullRequest"> | number
   title?: Prisma.StringFilter<"PullRequest"> | string
   headRef?: Prisma.StringFilter<"PullRequest"> | string
@@ -385,6 +393,7 @@ export type PullRequestOrderByWithRelationInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   repository?: Prisma.SortOrder
+  repositoryId?: Prisma.SortOrderInput | Prisma.SortOrder
   number?: Prisma.SortOrder
   title?: Prisma.SortOrder
   headRef?: Prisma.SortOrder
@@ -422,6 +431,7 @@ export type PullRequestWhereUniqueInput = Prisma.AtLeast<{
   organizationId?: Prisma.StringFilter<"PullRequest"> | string
   workspaceId?: Prisma.StringFilter<"PullRequest"> | string
   repository?: Prisma.StringFilter<"PullRequest"> | string
+  repositoryId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   number?: Prisma.IntFilter<"PullRequest"> | number
   title?: Prisma.StringFilter<"PullRequest"> | string
   headRef?: Prisma.StringFilter<"PullRequest"> | string
@@ -455,6 +465,7 @@ export type PullRequestOrderByWithAggregationInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   repository?: Prisma.SortOrder
+  repositoryId?: Prisma.SortOrderInput | Prisma.SortOrder
   number?: Prisma.SortOrder
   title?: Prisma.SortOrder
   headRef?: Prisma.SortOrder
@@ -490,6 +501,7 @@ export type PullRequestScalarWhereWithAggregatesInput = {
   organizationId?: Prisma.StringWithAggregatesFilter<"PullRequest"> | string
   workspaceId?: Prisma.StringWithAggregatesFilter<"PullRequest"> | string
   repository?: Prisma.StringWithAggregatesFilter<"PullRequest"> | string
+  repositoryId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   number?: Prisma.IntWithAggregatesFilter<"PullRequest"> | number
   title?: Prisma.StringWithAggregatesFilter<"PullRequest"> | string
   headRef?: Prisma.StringWithAggregatesFilter<"PullRequest"> | string
@@ -516,6 +528,7 @@ export type PullRequestCreateInput = {
   id?: string
   organizationId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -546,6 +559,7 @@ export type PullRequestUncheckedCreateInput = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -574,6 +588,7 @@ export type PullRequestUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -604,6 +619,7 @@ export type PullRequestUncheckedUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -633,6 +649,7 @@ export type PullRequestCreateManyInput = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -659,6 +676,7 @@ export type PullRequestUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -683,6 +701,7 @@ export type PullRequestUncheckedUpdateManyInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -726,6 +745,7 @@ export type PullRequestCountOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   repository?: Prisma.SortOrder
+  repositoryId?: Prisma.SortOrder
   number?: Prisma.SortOrder
   title?: Prisma.SortOrder
   headRef?: Prisma.SortOrder
@@ -758,6 +778,7 @@ export type PullRequestMaxOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   repository?: Prisma.SortOrder
+  repositoryId?: Prisma.SortOrder
   number?: Prisma.SortOrder
   title?: Prisma.SortOrder
   headRef?: Prisma.SortOrder
@@ -785,6 +806,7 @@ export type PullRequestMinOrderByAggregateInput = {
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   repository?: Prisma.SortOrder
+  repositoryId?: Prisma.SortOrder
   number?: Prisma.SortOrder
   title?: Prisma.SortOrder
   headRef?: Prisma.SortOrder
@@ -1021,6 +1043,7 @@ export type PullRequestCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1049,6 +1072,7 @@ export type PullRequestUncheckedCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1107,6 +1131,7 @@ export type PullRequestScalarWhereInput = {
   organizationId?: Prisma.StringFilter<"PullRequest"> | string
   workspaceId?: Prisma.StringFilter<"PullRequest"> | string
   repository?: Prisma.StringFilter<"PullRequest"> | string
+  repositoryId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   number?: Prisma.IntFilter<"PullRequest"> | number
   title?: Prisma.StringFilter<"PullRequest"> | string
   headRef?: Prisma.StringFilter<"PullRequest"> | string
@@ -1133,6 +1158,7 @@ export type PullRequestCreateWithoutAuthorTeammateInput = {
   id?: string
   organizationId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1162,6 +1188,7 @@ export type PullRequestUncheckedCreateWithoutAuthorTeammateInput = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1215,6 +1242,7 @@ export type PullRequestCreateWithoutSessionInput = {
   id?: string
   organizationId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1244,6 +1272,7 @@ export type PullRequestUncheckedCreateWithoutSessionInput = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1281,6 +1310,7 @@ export type PullRequestCreateWithoutReviewSessionInput = {
   id?: string
   organizationId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1310,6 +1340,7 @@ export type PullRequestUncheckedCreateWithoutReviewSessionInput = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1379,6 +1410,7 @@ export type PullRequestCreateWithoutReviewsInput = {
   id?: string
   organizationId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1408,6 +1440,7 @@ export type PullRequestUncheckedCreateWithoutReviewsInput = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1451,6 +1484,7 @@ export type PullRequestUpdateWithoutReviewsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1480,6 +1514,7 @@ export type PullRequestUncheckedUpdateWithoutReviewsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1507,6 +1542,7 @@ export type PullRequestCreateWithoutListItemsInput = {
   id?: string
   organizationId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1536,6 +1572,7 @@ export type PullRequestUncheckedCreateWithoutListItemsInput = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1579,6 +1616,7 @@ export type PullRequestUpdateWithoutListItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1608,6 +1646,7 @@ export type PullRequestUncheckedUpdateWithoutListItemsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1635,6 +1674,7 @@ export type PullRequestCreateManyWorkspaceInput = {
   id?: string
   organizationId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1661,6 +1701,7 @@ export type PullRequestUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1689,6 +1730,7 @@ export type PullRequestUncheckedUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1717,6 +1759,7 @@ export type PullRequestUncheckedUpdateManyWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1744,6 +1787,7 @@ export type PullRequestCreateManyAuthorTeammateInput = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1769,6 +1813,7 @@ export type PullRequestUpdateWithoutAuthorTeammateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1798,6 +1843,7 @@ export type PullRequestUncheckedUpdateWithoutAuthorTeammateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1826,6 +1872,7 @@ export type PullRequestUncheckedUpdateManyWithoutAuthorTeammateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1852,6 +1899,7 @@ export type PullRequestCreateManySessionInput = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1878,6 +1926,7 @@ export type PullRequestCreateManyReviewSessionInput = {
   organizationId: string
   workspaceId: string
   repository: string
+  repositoryId?: string | null
   number: number
   title: string
   headRef: string
@@ -1903,6 +1952,7 @@ export type PullRequestUpdateWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1932,6 +1982,7 @@ export type PullRequestUncheckedUpdateWithoutSessionInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1960,6 +2011,7 @@ export type PullRequestUncheckedUpdateManyWithoutSessionInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1985,6 +2037,7 @@ export type PullRequestUpdateWithoutReviewSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2014,6 +2067,7 @@ export type PullRequestUncheckedUpdateWithoutReviewSessionInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2042,6 +2096,7 @@ export type PullRequestUncheckedUpdateManyWithoutReviewSessionInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   repository?: Prisma.StringFieldUpdateOperationsInput | string
+  repositoryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   number?: Prisma.IntFieldUpdateOperationsInput | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2108,6 +2163,7 @@ export type PullRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   organizationId?: boolean
   workspaceId?: boolean
   repository?: boolean
+  repositoryId?: boolean
   number?: boolean
   title?: boolean
   headRef?: boolean
@@ -2142,6 +2198,7 @@ export type PullRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   organizationId?: boolean
   workspaceId?: boolean
   repository?: boolean
+  repositoryId?: boolean
   number?: boolean
   title?: boolean
   headRef?: boolean
@@ -2173,6 +2230,7 @@ export type PullRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   organizationId?: boolean
   workspaceId?: boolean
   repository?: boolean
+  repositoryId?: boolean
   number?: boolean
   title?: boolean
   headRef?: boolean
@@ -2204,6 +2262,7 @@ export type PullRequestSelectScalar = {
   organizationId?: boolean
   workspaceId?: boolean
   repository?: boolean
+  repositoryId?: boolean
   number?: boolean
   title?: boolean
   headRef?: boolean
@@ -2226,7 +2285,7 @@ export type PullRequestSelectScalar = {
   updatedAt?: boolean
 }
 
-export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewSessionId" | "noReviewReason" | "reviewClaimedAt" | "mergeStatus" | "mergeMethod" | "requestedByMemberId" | "round" | "resolveFromSha" | "note" | "autoMergeAt" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
+export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "repositoryId" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewSessionId" | "noReviewReason" | "reviewClaimedAt" | "mergeStatus" | "mergeMethod" | "requestedByMemberId" | "round" | "resolveFromSha" | "note" | "autoMergeAt" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
 export type PullRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
@@ -2267,9 +2326,15 @@ export type $PullRequestPayload<ExtArgs extends runtime.Types.Extensions.Interna
     organizationId: string
     workspaceId: string
     /**
-     * owner/name on GitHub, lowercase.
+     * owner/name on GitHub, lowercase: the repository's name as last seen, kept in step when it is
+     * renamed or transferred (src/pull-requests.ts, renameRepository).
      */
     repository: string
+    /**
+     * The repository's GitHub id, which a rename keeps: how an event under its new name finds a
+     * row kept under the old one. Unset on rows from before it was kept, until GitHub is read.
+     */
+    repositoryId: string | null
     number: number
     title: string
     headRef: string
@@ -2757,6 +2822,7 @@ export interface PullRequestFieldRefs {
   readonly organizationId: Prisma.FieldRef<"PullRequest", 'String'>
   readonly workspaceId: Prisma.FieldRef<"PullRequest", 'String'>
   readonly repository: Prisma.FieldRef<"PullRequest", 'String'>
+  readonly repositoryId: Prisma.FieldRef<"PullRequest", 'String'>
   readonly number: Prisma.FieldRef<"PullRequest", 'Int'>
   readonly title: Prisma.FieldRef<"PullRequest", 'String'>
   readonly headRef: Prisma.FieldRef<"PullRequest", 'String'>

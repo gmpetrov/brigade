@@ -30,7 +30,7 @@ import { GITHUB_API, githubHeaders, installationToken } from './connectors/githu
 import { ConnectorError, json } from './connectors/types.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { linkPullItems, settleItemsOnMerge, type PullItems } from './lists.js'
-import { teammateGitHub, workspaceGitHub } from './git.js'
+import { renamedRepository, teammateGitHub, workspaceGitHub } from './git.js'
 import { projectOfRepository } from './projects.js'
 import { REVIEW_DONE, REVIEW_THREAD, reviewUnderWay } from './review-state.js'
 import { cancelReview, REVIEW_CLAIM_MS } from './reviews.js'
@@ -57,7 +57,8 @@ export type GhPull = {
   updated_at: string
   user: { login: string; type?: string } | null
   head: { ref: string; sha: string }
-  base: { ref: string }
+  /** Its repository, under its name now, and its id, which a rename keeps. */
+  base: { ref: string; repo?: { id: number; full_name: string } | null }
   body?: string | null
   mergeable?: boolean | null
   mergeable_state?: string
@@ -75,24 +76,48 @@ export const repoPath = (repo: string) =>
   `/repos/${repo.split('/').map(encodeURIComponent).join('/')}`
 const key = (repo: string, number: number) => `${repo}#${number}`
 
-/** The workspace's GitHub, for a repository one of its connections reaches. */
+/**
+ * The workspace's GitHub, for a repository one of its connections reaches. One known by a name
+ * it no longer has (renamed or transferred, Brigade not told) is reached under its name now:
+ * paths under the old one are sent to the new one, so that what Brigade kept can be read again.
+ */
 export async function github(db: ScopedDb, scope: Scope, repo: string): Promise<GitHub> {
   const found = await workspaceGitHub(db, scope, repo)
-  if (!found)
+  const renamed = found ? null : await renamedRepository(db, scope, repo)
+  const reached = found ?? renamed
+  if (!reached)
     throw new HTTPException(404, {
       message: `No GitHub connection of this workspace reaches ${repo}`,
     })
+  const from = repoPath(repo)
+  const to = renamed && repoPath(renamed.repository)
   return {
     fetch: async (path, init = {}) =>
-      fetch(`${GITHUB_API}${path}`, {
-        ...init,
-        headers: {
-          ...githubHeaders,
-          authorization: `Bearer ${await installationToken(found.installationId)}`,
-          ...(init.body ? { 'content-type': 'application/json' } : {}),
+      fetch(
+        `${GITHUB_API}${to && path.toLowerCase().startsWith(`${from}/`) ? to + path.slice(from.length) : path}`,
+        {
+          ...init,
+          headers: {
+            ...githubHeaders,
+            authorization: `Bearer ${await installationToken(reached.installationId)}`,
+            ...(init.body ? { 'content-type': 'application/json' } : {}),
+          },
         },
-      }),
+      ),
   }
+}
+
+/**
+ * The name Brigade keeps a repository's pull requests under, for a name someone gives (a card
+ * or a teammate's call written before a rename): that name while rows are kept under it; else
+ * the name GitHub answers for it now, asked each time rather than from the installations'
+ * cached lists, which may still have the old name.
+ */
+export async function canonicalRepository(db: ScopedDb, scope: Scope, repo: string) {
+  repo = repo.toLowerCase()
+  if (await db.pullRequest.findFirst({ where: { repository: repo }, select: { id: true } }))
+    return repo
+  return (await renamedRepository(db, scope, repo).catch(() => null))?.repository ?? repo
 }
 
 async function call<T>(gh: GitHub, path: string, init?: RequestInit) {
@@ -225,6 +250,15 @@ function summary(repo: string, p: GhPull, row: Row | undefined): PullRequestSumm
 /** Keep Brigade's copy of what GitHub says in step. A merge can finish its thread's task. */
 async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull) {
   if (!row) return
+  // Its repository renamed or transferred: what Brigade kept under the old name follows it.
+  const repo = p.base.repo
+  // Another repository has its name now (a new one where it was renamed from): not this one.
+  if (repo && row.repositoryId && row.repositoryId !== String(repo.id)) return
+  if (
+    repo &&
+    (row.repository !== repo.full_name.toLowerCase() || row.repositoryId !== String(repo.id))
+  )
+    row = { ...row, ...(await renameRepository(db, row, repo)) }
   const state = stateOf(p)
   if (
     row.title === p.title &&
@@ -266,13 +300,109 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
 }
 
 /**
+ * A repository renamed or transferred on GitHub: the workspace's pull requests kept under its
+ * old name take its name now, and its id. One already kept under the new name as well (made
+ * there meanwhile) keeps its row, and the old one stays as it is: each is still read from GitHub.
+ * The row's repository and id after it.
+ */
+export async function renameRepository(
+  db: ScopedDb,
+  row: { id: string; repository: string },
+  to: { id: number; full_name: string },
+) {
+  const repository = to.full_name.toLowerCase()
+  const repositoryId = String(to.id)
+  // Kept under the old name (but none with another repository's id, made there since), or by
+  // the id under another name: the row among them, unless it is another repository's.
+  const kept = await db.pullRequest.findMany({
+    where: {
+      OR: [
+        { repository: row.repository, OR: [{ repositoryId: null }, { repositoryId }] },
+        { repositoryId },
+      ],
+    },
+    select: { id: true, repository: true },
+  })
+  let now = row.repository
+  for (const other of kept)
+    try {
+      await db.pullRequest.updateMany({
+        where: { id: other.id },
+        data: { repository, repositoryId },
+      })
+      if (other.id === row.id) now = repository
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'))
+        throw error
+      // Kept under the new name too: this one only learns the id.
+      await db.pullRequest.updateMany({ where: { id: other.id }, data: { repositoryId } })
+    }
+  return { repository: now, repositoryId }
+}
+
+/**
+ * GitHub's repository event, renamed or transferred: what the workspace kept under the old name
+ * takes the new one.
+ */
+export async function repositoryRenamed(
+  scope: Scope,
+  from: string,
+  to: { id: number; full_name: string },
+) {
+  const db = scoped(scope)
+  const repositoryId = String(to.id)
+  const row = await db.pullRequest.findFirst({
+    where: {
+      OR: [
+        { repository: from.toLowerCase(), OR: [{ repositoryId: null }, { repositoryId }] },
+        { repositoryId },
+      ],
+    },
+    select: { id: true, repository: true },
+  })
+  if (row) await renameRepository(db, row, to)
+}
+
+/**
+ * The thread's pull requests, and its children's, that Brigade still has open: read again on
+ * GitHub, so that a merge or close it missed (a repository renamed meanwhile, an event lost) is
+ * known before it is refused as still open. Best effort: one GitHub does not answer stays as kept.
+ */
+export async function refreshOpenPulls(db: ScopedDb, scope: Scope, sessionId: string) {
+  const rows = await db.pullRequest.findMany({
+    where: { state: 'open', OR: [{ sessionId }, { session: { parentId: sessionId } }] },
+    include: rowInclude,
+    take: 20,
+  })
+  await Promise.all(
+    rows.map(async (row) => {
+      try {
+        const gh = await github(db, scope, row.repository)
+        await sync(db, scope, row, await pullOf(gh, row.repository, row.number))
+      } catch (error) {
+        console.warn(`pull request ${row.id}: not read again: ${String(error)}`)
+      }
+    }),
+  )
+}
+
+/**
  * GitHub's pull_request event, for the workspaces tracking that pull request,
  * and for those listing its repository when it is a new open one.
  */
 export async function pullRequestEvent(scope: Scope, repo: string, p: GhPull) {
   const db = scoped(scope)
   repo = repo.toLowerCase()
-  const row = await findRow(db, repo, p.number)
+  // Under its name, or by its repository's id when that was renamed since (the event has the new name).
+  const id = p.base.repo?.id
+  const row =
+    (await findRow(db, repo, p.number)) ??
+    (id === undefined
+      ? null
+      : await db.pullRequest.findFirst({
+          where: { repositoryId: String(id), number: p.number },
+          include: rowInclude,
+        }))
   if (row) return sync(db, scope, row, p)
   if (await db.pullRequest.findFirst({ where: { repository: repo }, select: { id: true } }))
     await adopt(db, repo, p)
@@ -653,9 +783,16 @@ export async function notePullRequestCall(
     output: unknown
   },
 ) {
-  const repo = String(call.input.repository).toLowerCase()
+  const repo = await canonicalRepository(db, scope, String(call.input.repository))
   if (call.operation === 'github_create_pull_request') {
-    const out = call.output as { number: number; title: string; head: string; base: string }
+    const out = call.output as {
+      number: number
+      title: string
+      head: string
+      base: string
+      repositoryId?: number
+    }
+    const repositoryId = out.repositoryId === undefined ? null : String(out.repositoryId)
     const existing = await db.pullRequest.findFirst({
       where: { repository: repo, number: out.number },
     })
@@ -674,6 +811,8 @@ export async function notePullRequestCall(
         // Open in the thread now, as one made here would be: it is no longer done.
         if (count && existing.state === 'open') await reopenThread(scope, call.sessionId)
       }
+      if (repositoryId && !existing.repositoryId)
+        await db.pullRequest.updateMany({ where: { id: existing.id }, data: { repositoryId } })
     }
     const row =
       existing ??
@@ -684,6 +823,7 @@ export async function notePullRequestCall(
           title: out.title,
           headRef: out.head,
           baseRef: out.base,
+          repositoryId,
           sessionId: call.sessionId,
           authorTeammateId: call.teammateId,
         } as never,

@@ -43,7 +43,7 @@ type PullRequest = Issue & {
   draft?: boolean
   merged_at: string | null
   head: { ref: string; sha: string }
-  base: { ref: string }
+  base: { ref: string; repo?: { id: number } | null }
   mergeable?: boolean | null
   additions?: number
   deletions?: number
@@ -754,13 +754,14 @@ export const github: ConnectorDefinition = {
       }),
       target: (i) => `pull request ${i.head} → ${i.base ?? 'default branch'} in ${i.repository}`,
       // The review and the items are Brigade's (src/reviews.ts, src/lists.ts), not GitHub's.
-      run: async (ctx, { repository: r, review: _review, items: _items, ...fields }) =>
-        pull(
-          await send<PullRequest>(ctx, 'POST', `${repoPath(r)}/pulls`, {
-            ...fields,
-            base: fields.base ?? (await defaultBranch(ctx, r)),
-          }),
-        ),
+      // With its repository's id, which a rename keeps: how Brigade follows it (src/pull-requests.ts).
+      run: async (ctx, { repository: r, review: _review, items: _items, ...fields }) => {
+        const created = await send<PullRequest>(ctx, 'POST', `${repoPath(r)}/pulls`, {
+          ...fields,
+          base: fields.base ?? (await defaultBranch(ctx, r)),
+        })
+        return { ...pull(created), repositoryId: created.base.repo?.id }
+      },
     }),
     github_mark_ready_for_review: op({
       description:

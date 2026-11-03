@@ -11,6 +11,7 @@ import { audit } from './audit.js'
 import { reportOf } from './children.js'
 import { Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hubs, threadUpdated } from './hub.js'
+import { refreshOpenPulls } from './pull-requests.js'
 import type { WorkspaceScope } from './scope.js'
 import { fireNow, MERGE_SOURCE } from './wakeups.js'
 
@@ -256,6 +257,8 @@ export async function completeThread(
     where: { sessionId: session.id },
     _max: { seq: true },
   })
+  // A merge or close Brigade missed (a repository renamed meanwhile) is known before it refuses.
+  await refreshOpenPulls(db, scope, session.id)
   const open = await openWork(db, session.id)
   if (open.length) return { error: refusal(open) }
   const at = new Date()

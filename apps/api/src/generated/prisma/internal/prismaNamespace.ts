@@ -8159,6 +8159,7 @@ export const PullRequestScalarFieldEnum = {
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
   repository: 'repository',
+  repositoryId: 'repositoryId',
   number: 'number',
   title: 'title',
   headRef: 'headRef',
