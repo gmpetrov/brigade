@@ -51,6 +51,7 @@ import {
   type SequencedEvent,
   type TicketAnswer,
   handedEmail,
+  signedOut,
   triggerEmail,
   triggerEvent,
   type TriggerEmail,
@@ -91,6 +92,7 @@ import { notThrough, notThroughText, type Outgoing } from '@/components/queued-m
 import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
 import { CredentialForm } from '@/components/credential-form'
+import { SignedOutError } from '@/components/thread-sign-in'
 import {
   BrigadeNoteLine,
   brigadeNote,
@@ -267,7 +269,8 @@ export type Item =
   | { kind: 'turn'; key: string; finishReason: string; startedAt?: number; at: number }
   /** Events not loaded here, after the timeline jumped past them: they load as it comes near. */
   | { kind: 'gap'; key: string; gap: EventGap }
-  | { kind: 'error'; key: string; message: string }
+  /** signedOutAccountId: the failed turn's account, whose login is gone (signedOut). */
+  | { kind: 'error'; key: string; message: string; signedOutAccountId?: string }
   /** settles: something happened that the buttons asked before it no longer fit (thread.note). */
   | { kind: 'note'; key: string; text: string; settles?: true }
   /**
@@ -343,6 +346,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
     const sideItems = new Map<string, Item>()
     const asked = new Map<string, Extract<AgentEvent, { type: 'message.queued' }>>()
     let turnTeammate: string | undefined
+    // The account the turn under way runs on (turn.started, or a switch since).
+    let turnAccount: string | undefined
     let turnStartedAt: number | undefined
     let lastPreview: { previewId: string; status: string } | undefined
     // The running turn's background work, by task id: Claude Code sends every one still running at each change.
@@ -505,6 +510,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
         }
         case 'turn.started':
           turnTeammate = e.teammateId
+          turnAccount = e.accountId
           // A turn resumed (after a restart, say) starts again before it ends: still the same turn.
           turnStartedAt ??= Date.parse(e.at)
           idle = undefined
@@ -639,7 +645,12 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           idle = undefined
           break
         case 'error':
-          add({ kind: 'error', key: `e${seq}`, message: e.message })
+          add({
+            kind: 'error',
+            key: `e${seq}`,
+            message: e.message,
+            ...(turnAccount && signedOut(e.message) ? { signedOutAccountId: turnAccount } : {}),
+          })
           break
         case 'raw':
           if (e.source === 'reasoning' && typeof e.value === 'string')
@@ -665,6 +676,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
           }
           break
         case 'account.switched':
+          if (e.toAccountId) turnAccount = e.toAccountId
           add({
             kind: 'note',
             key: `n${seq}`,
@@ -2846,6 +2858,24 @@ export function ThreadItems({
           </div>
         ) : null
       case 'error':
+        if (item.signedOutAccountId)
+          return (
+            <SignedOutError
+              key={item.key}
+              accountId={item.signedOutAccountId}
+              message={item.message}
+              latest={!working && items.slice(i + 1).every((it) => it.kind === 'note')}
+              retrying={retrying === item.key}
+              onRetry={
+                retryable(i)
+                  ? () => {
+                      setRetrying(item.key)
+                      void onRetry!().catch(() => setRetrying(undefined))
+                    }
+                  : undefined
+              }
+            />
+          )
         return (
           <div
             key={item.key}
