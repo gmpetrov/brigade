@@ -393,7 +393,7 @@ export function AppAccessAsk({
                 Connect {name}
               </Button>
             </RegionMenu>
-            {data.data.hidden.includes(kind) && (
+            {data.data.hidden?.includes(kind) && (
               <span className="text-sm text-muted-foreground">
                 {name} is not available to your account yet.
               </span>

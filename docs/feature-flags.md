@@ -60,7 +60,7 @@ In the API (`apps/api/src/features.ts`):
   seem to exist.
 
 In the dashboard, `GET /api/me` gives the person's features (`Me.features`): hide a page, a menu
-entry or a button with `me.features.includes('x')`. The dashboard only hides; the API must refuse
+entry or a button with `me.features?.includes('x')`. The dashboard only hides; the API must refuse
 too.
 
 ## Apps behind a feature

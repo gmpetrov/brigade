@@ -282,7 +282,7 @@ export function AppSheet({
         {waiting && kind === 'atlassian' && <AtlassianDomainHint />}
         {waiting && kind === 'mixpanel' && <MixpanelMcpHint />}
         {!email && !data.available[kind] && (
-          <Unavailable kind={kind} hidden={data.hidden.includes(kind)} />
+          <Unavailable kind={kind} hidden={!!data.hidden?.includes(kind)} />
         )}
         {email && <EmailApp reload={reload} />}
         {kind === 'google_cloud' && data.available[kind] && (

@@ -339,8 +339,8 @@ export type Me = {
   suggestions: boolean
   /** Brigade merges what teammates open in their threads once it is ready (owners and admins). */
   autoMerge: boolean
-  /** Features hidden until ready that this person has (docs/feature-flags.md). */
-  features: Feature[]
+  /** Features hidden until ready that this person has (docs/feature-flags.md); absent in the demo. */
+  features?: Feature[]
 }
 
 /** Settings › Members (GET /api/members): invitations only for owners and admins. */
@@ -895,8 +895,11 @@ export type ConnectionsResponse = {
   /** Member names, by id: who connected each account. */
   members: Record<string, string>
   available: Record<Connection['kind'], boolean>
-  /** Apps behind a feature this member lacks (docs/feature-flags.md): not offered, not connectable. */
-  hidden: Connection['kind'][]
+  /**
+   * Apps behind a feature this member lacks (docs/feature-flags.md): not offered, not connectable.
+   * Absent from the demo's recording, made before it.
+   */
+  hidden?: Connection['kind'][]
   connections: Connection[]
 }
 
