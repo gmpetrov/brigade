@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
-import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test } from 'node:test'
+import { test, type TestContext } from 'node:test'
 
 // A pnpm of our own where the runner looks for its shim: it says where its store is and logs
 // what it is asked.
@@ -18,7 +18,7 @@ exit 0
 `,
   { mode: 0o755 },
 )
-const { freeCaches, installs, npxInUse, oldStores, reserveSize, tidyHome } =
+const { freeCaches, installs, npxInUse, oldStores, reserveSize, runsMintlify, tidyHome } =
   await import('../src/disk.js')
 const { diskReport } = await import('../src/folders.js')
 
@@ -32,13 +32,43 @@ test('stores other than the one pnpm uses now are old', () => {
   assert.deepEqual(oldStores(['v10'], 'v10'), [])
 })
 
-test("a teammate's caches go, its threads and the tools it runs stay", async (t) => {
+/** A home with these files in it, removed after the test. */
+async function homeWith(t: TestContext, paths: string[]) {
   const home = await mkdtemp(join(tmpdir(), 'disk-home-'))
-  t.after(() => rm(home, { recursive: true, force: true }))
-  const file = async (path: string) => {
+  t.after(async () => {
+    // A folder left read-only (Go's, when a test fails) would stop the removal.
+    await chmodTree(home)
+    await rm(home, { recursive: true, force: true })
+  })
+  for (const path of paths) {
     await mkdir(join(home, path, '..'), { recursive: true })
     await writeFile(join(home, path), 'x')
   }
+  return home
+}
+
+/** Make every folder under `dir` writable again. */
+async function chmodTree(dir: string) {
+  await chmod(dir, 0o755).catch(() => {})
+  for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => []))
+    if (entry.isDirectory()) await chmodTree(join(dir, entry.name))
+}
+
+/** As Go leaves its modules: files and folders read-only, from `dir` down. */
+async function readOnly(dir: string) {
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) await readOnly(path)
+    else await chmod(path, 0o444)
+  }
+  await chmod(dir, 0o555)
+}
+
+const GO_MODULE = 'go/pkg/mod/golang.org/x/text@v0.42.0/LICENSE'
+const GO_TOOLCHAIN = 'go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.10.linux-amd64/bin/go'
+const MINTLIFY_SITE = '.mintlify/previews/3333/mint/mint-version.txt'
+
+test("a teammate's caches go, its threads and the tools it runs stay", async (t) => {
   const kept = [
     '.local/share/pnpm/store/v10/files/00/abc',
     '.npm/_npx/1234/package.json',
@@ -46,6 +76,9 @@ test("a teammate's caches go, its threads and the tools it runs stay", async (t)
     '.cargo/bin/cargo-watch',
     '.cargo/registry/index/index.crates.io-6f17d22bba15001f/config.json',
     'threads/cmthread1/app/node_modules/is-number/index.js',
+    // What go install made, beside its modules.
+    'go/bin/gopls',
+    '.mintlify/preview-locks/.keep',
   ]
   const gone = [
     '.local/share/pnpm/store/v3/files/00/abc',
@@ -56,14 +89,50 @@ test("a teammate's caches go, its threads and the tools it runs stay", async (t)
     '.bun/install/cache/0019245d1f12eeb3.npm/package.json',
     '.cargo/registry/cache/index.crates.io-6f17d22bba15001f/serde-1.0.0.crate',
     '.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-1.0.0/lib.rs',
+    GO_MODULE,
+    GO_TOOLCHAIN,
+    MINTLIFY_SITE,
+    '.mintlify/previews/shared/mint/mint-version.txt',
   ]
-  for (const path of [...kept, ...gone]) await file(path)
+  const home = await homeWith(t, [...kept, ...gone])
+  await readOnly(join(home, 'go/pkg/mod'))
 
-  await freeCaches(home)
+  await freeCaches(home, undefined, ['node /usr/bin/next dev --port 3000', 'sh -c ls'])
 
   for (const path of kept) assert.ok(existsSync(join(home, path)), `${path} stays`)
   for (const path of gone) assert.ok(!existsSync(join(home, path)), `${path} goes`)
+  assert.ok(!existsSync(join(home, 'go/pkg/mod')), "Go's modules go, folder and all")
   assert.match(await readFile(join(home, 'pnpm.log'), 'utf8'), /^store prune$/m)
+})
+
+test("Mintlify's site stays while a mint command runs", async (t) => {
+  for (const processes of [
+    ['sh -c pnpm dlx mint@4.2.1167 dev --port 3333'],
+    ['node /home/bt-ada/.cache/pnpm/dlx/e331/1a1a-d25/node_modules/.bin/../mint/index.js dev'],
+  ]) {
+    const home = await homeWith(t, [MINTLIFY_SITE, GO_MODULE])
+    await freeCaches(home, undefined, processes)
+    assert.ok(existsSync(join(home, MINTLIFY_SITE)), `kept with ${processes[0]}`)
+    assert.ok(!existsSync(join(home, GO_MODULE)), 'the other caches go')
+  }
+})
+
+test("Mintlify's CLI is told from its command lines", () => {
+  for (const args of [
+    'mint dev',
+    'pnpm dlx mint@4.2.1167 dev --port 3333',
+    'npx mintlify dev',
+    'node /home/bt-ada/.npm/_npx/9f1c/node_modules/.bin/mint dev',
+    'node /home/bt-ada/.cache/pnpm/dlx/e331/pkg/node_modules/mint/index.js broken-links',
+  ])
+    assert.ok(runsMintlify(args), args)
+  for (const args of [
+    'node /usr/bin/next dev',
+    'pnpm dlx peppermint',
+    'node mintlify-scraper.js',
+    'cat docs/mint.json',
+  ])
+    assert.ok(!runsMintlify(args), args)
 })
 
 test('a package manager installing is told from one running something', () => {
