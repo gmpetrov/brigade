@@ -187,6 +187,9 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   newest in the thread's directory, the cut-off turn included; Codex: its saved thread, else a new session told the
   thread so far) and the teammate is told to check what is already done before carrying on. A turn cut off by three
   restarts in a row is closed instead. A cloud computer its provider stopped while a thread ran is started again.
+  A conversation Claude Code no longer has when resumed (it deletes those older than its `cleanupPeriodDays`, 30 days
+  by default) goes on in a new session in the same folder, told the thread so far from the runner's saved transcript,
+  as after a switch to another account, instead of failing on every message.
   A turn that failed on a passing error (a full disk, the network, Claude's API down or overloaded) is tried again
   on its own after 1, 5 and 15 minutes, a full disk only once 1 GB is free; a message, a stop or a person taking over
   cancels the next try. Any failed turn's error shows Try again, which runs the turn again (`thread.retry`, protocol

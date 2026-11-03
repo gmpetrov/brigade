@@ -67,7 +67,9 @@ import {
 import { answerLater, asideAfterRestart, asideResult } from './aside.js'
 import {
   answerAfterRestart,
+  answerInNewSession,
   approvalAfterRestart,
+  approvalInNewSession,
   closeTurn,
   sameCall,
   waitingOn,
@@ -185,6 +187,9 @@ export type ThreadInput =
 type AnswerInput = Extract<ThreadInput, { kind: 'answer' | 'ticket' }>
 const answerId = (input: AnswerInput) =>
   input.kind === 'answer' ? input.questionId : input.requestId
+
+/** A tool call as the thread keeps it: what was called, with what. */
+type Call = { toolName: string; input: unknown }
 
 /** How a turn ended: idle (done), waiting (for an approval), paused (no account has usage left), or failed. */
 export type TurnOutcome = { status: 'idle' | 'waiting' | 'paused' | 'failed'; error?: string }
@@ -550,9 +555,35 @@ export class HarnessThread {
 
     const fallbacks = [...spec.fallbacks]
     let result: TurnOutcome | undefined
+    // The harness no longer had the conversation it was to resume: the turn went on in a new one.
+    let anew = false
+    // What the person approved in the lost conversation, for the new session's turn.
+    let approved: Call | undefined
     try {
       for (;;) {
-        const outcome = await this.turn(handoff ? { kind: 'prompt', text: handoff } : input, signal)
+        const outcome = await this.turn(
+          handoff ? { kind: 'prompt', text: handoff } : input,
+          signal,
+          approved,
+        )
+        approved = undefined
+        if (outcome.kind === 'lost') {
+          // A new session resumes nothing: lost again, it is something else, and the turn fails.
+          if (anew) {
+            this.emit({ type: 'error', message: outcome.error })
+            return (result = { status: 'failed', error: outcome.error })
+          }
+          anew = true
+          // The person's message is in the conversation the new session is told; anything else
+          // the turn said (a restart, an answer and the call it is for) comes after it.
+          const said = outcome.said ?? (input.kind === 'resume' ? input.text : undefined)
+          handoff = await this.startAnew(
+            input.kind === 'prompt' && said === input.text ? undefined : said,
+          )
+          input = { kind: 'prompt', text: handoff }
+          approved = outcome.approved
+          continue
+        }
         if (outcome.kind !== 'exhausted') return (result = outcome.result)
         // Out of usage: continue on the member's next account, or pause.
         const next = fallbacks.shift()
@@ -1141,15 +1172,42 @@ export class HarnessThread {
   private async turn(
     input: ThreadInput,
     signal: AbortSignal,
+    /** A call the person approved in a conversation the harness lost: made again, it runs. */
+    approved?: Call,
   ): Promise<
-    { kind: 'done'; result: TurnOutcome } | { kind: 'exhausted'; resetsAt: string | null }
+    | { kind: 'done'; result: TurnOutcome }
+    | { kind: 'exhausted'; resetsAt: string | null }
+    /**
+     * The harness no longer has the conversation it resumed (EventMapper.sessionLost). `said`:
+     * what to tell a new session of this turn's input; `approved`: the call it approved.
+     */
+    | { kind: 'lost'; error: string; said: string | undefined; approved: Call | undefined }
   > {
     let attached: Live | undefined
+    // What the turn told the harness as a message (a restart, an aside), for a new session.
+    let said: string | undefined
+    const say = (prompt: string) => (said = prompt)
+    // The call an answer or an approval is for: the transcript has only what was written.
+    let asked: Call | undefined
+    // Lost, its conversation: what a new session is told of this turn's input.
+    const lost = (error: string) => ({
+      kind: 'lost' as const,
+      error,
+      said:
+        input.kind === 'answer'
+          ? answerInNewSession(asked, this.answerResult(input.questionId, input.answer, asked))
+          : input.kind === 'ticket'
+            ? answerInNewSession(asked, this.ticketResult(input.requestId, input.answer, asked))
+            : input.kind === 'approval'
+              ? approvalInNewSession(asked, input.approved, input.reason)
+              : said,
+      approved: input.kind === 'approval' && input.approved ? asked : undefined,
+    })
     // Parked during the turn: the runner is stopping, and the turn, frozen, goes on after the restart.
     // How its stream ends then is no failure of the teammate's.
     const frozenUnder = () => attached !== undefined && this.live !== attached
     // A call approved while its turn was lost, made again: approved without asking twice.
-    let approvedAgain: { toolName: string; input: unknown } | undefined
+    let approvedAgain: Call | undefined = approved
     const autoApproved: string[] = []
     // Ends the stream being read once the turn is answered and only Claude Code's guess is
     // left (drain): each stream gets a signal of its own, with the turn's.
@@ -1239,6 +1297,13 @@ export class HarnessThread {
       // Or nothing kept the turn at all (the process stopped without parking): the session has
       // no turn to continue, and the answer comes as a new message just the same.
       if (answer && !live.session.hasUnfinishedTurn()) closed = true
+      // Read now: answered, the call is forgotten below.
+      asked =
+        input.kind === 'answer' || input.kind === 'ticket'
+          ? this.toolCalls.get(answerId(input))
+          : input.kind === 'approval'
+            ? this.approvals.get(input.approvalId)
+            : undefined
       const consume = async (stream: TurnStream) => {
         for await (const part of stream) {
           mapper.map(part)
@@ -1337,7 +1402,7 @@ export class HarnessThread {
               : input.kind === 'prompt' || input.kind === 'resume'
                 ? await live.agent.stream({
                     session: live.session,
-                    prompt: text!,
+                    prompt: say(text!),
                     abortSignal: streamSignal(),
                   })
                 : input.kind === 'answer' || input.kind === 'ticket'
@@ -1430,6 +1495,8 @@ export class HarnessThread {
       // closed), so the session goes as after a throw, and the next message starts clean.
       if (mapper.error && !signal.aborted) {
         await this.drop()
+        // Its conversation gone from this computer: the thread goes on in a new session (run).
+        if (mapper.lost) return lost(mapper.error)
         return { kind: 'done', result: { status: 'failed', error: mapper.error } }
       }
       this.completed(signal.aborted ? 'interrupted' : mapper.finishReason)
@@ -1449,6 +1516,10 @@ export class HarnessThread {
       const message = errorMessage(error)
       const exhausted = EventMapper.exhaustedBy(message)
       if (exhausted) return { kind: 'exhausted', resetsAt: exhausted.resetsAt }
+      if (EventMapper.sessionLost(message)) {
+        await this.drop()
+        return lost(message)
+      }
       this.emit({ type: 'error', message })
       await this.drop()
       return { kind: 'done', result: { status: 'failed', error: message } }
@@ -1600,6 +1671,31 @@ export class HarnessThread {
       toolName: OPEN_TICKET_TOOL,
       output: { type: 'json' as const, value: ticketResult(asks, answer) as never },
     }
+  }
+
+  /**
+   * The harness no longer has the conversation it was to resume (EventMapper.sessionLost):
+   * the thread goes on in a new session on this computer, whose first message is what was said
+   * so far, then `said`, what the turn had to tell the lost one besides.
+   */
+  private async startAnew(said: string | undefined) {
+    const saved = (this.saved ??= { accountId: this.current.id, transcript: [] })
+    // Gone with that conversation: the turn it was in, and any harness it was handed over in.
+    delete saved.resume
+    delete saved.handedOver
+    // Still in this turn (parking said otherwise): a stop without warning continues it.
+    saved.inTurn = true
+    await this.persist()
+    const name = this.spec.teammate.name
+    this.emit({
+      type: 'raw',
+      source: 'runner',
+      value: `${name}'s previous session was no longer on this computer, so ${name} carries on in a new one, from the thread's conversation.`,
+    })
+    const handoff = this.handoff(
+      'This conversation continues in a new session because the previous one was no longer on this computer (Claude Code deletes old conversations).',
+    )
+    return said ? `${handoff}\n\n${said}` : handoff
   }
 
   /**

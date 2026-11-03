@@ -339,10 +339,20 @@ export class EventMapper {
   error: string | undefined
   /** Set when the account ran out of usage during this turn. */
   exhausted: { resetsAt: string | null } | undefined
+  /** The harness no longer has the conversation it was to resume (sessionLost); `error` says so. */
+  lost = false
   /** Calls of a pausing tool (open_ticket) with input nobody could answer. */
   rejected: { toolCallId: string; toolName: string; error: string }[] = []
   /** Calls already shown as started: one repeated after its result must not show twice. */
   private started = new Set<string>()
+
+  /**
+   * Recognise Claude Code's answer to resuming a conversation it no longer has: it deletes
+   * those older than its cleanupPeriodDays setting (30 days by default).
+   */
+  static sessionLost(message: string) {
+    return /No conversation found with session ID/i.test(message)
+  }
 
   /** Recognise an out-of-usage error from either harness. */
   static exhaustedBy(message: string): { resetsAt: string | null } | undefined {
@@ -549,6 +559,8 @@ export class EventMapper {
         const exhausted = EventMapper.exhaustedBy(message)
         if (exhausted) return void (this.exhausted = exhausted)
         this.error ??= message
+        // No failure of the teammate's: the thread goes on in a new session (HarnessThread.run).
+        if (EventMapper.sessionLost(message)) return void (this.lost = true)
         return this.emit({ at, type: 'error', message })
       }
       case 'raw': {
