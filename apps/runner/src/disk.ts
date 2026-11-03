@@ -28,7 +28,10 @@ const PRUNE_TIMEOUT_MS = 15 * 60_000
 /**
  * Caches under the home that tools fill again by themselves. ~/.npm/_npx is not one: MCP
  * servers run from it (tidyHome removes the packages no longer run); nor ~/.cargo/bin, the tools cargo installed. Bun links a project's
- * node_modules from its cache like pnpm: they keep their files.
+ * node_modules from its cache like pnpm: they keep their files. Nor ~/.cache/ms-playwright:
+ * Playwright downloads a browser only when told to (playwright install), and removes on its
+ * own those no install of it uses. pnpm dlx's packages (~/.cache/pnpm/dlx) go with the
+ * store's prune, a day after they were last fetched.
  */
 const TOOL_CACHES = [
   '.npm/_cacache',
@@ -41,6 +44,17 @@ const TOOL_CACHES = [
   '.cargo/git/checkouts',
   '.cargo/git/db',
 ]
+/**
+ * Go's modules, and the Go toolchains a go.mod asked for (go clean -modcache): go fetches
+ * them again as it builds. Go makes their folders read-only, which rm alone cannot remove.
+ */
+const GO_MODULES = 'go/pkg/mod'
+/**
+ * The site Mintlify's CLI downloads to preview docs (mint dev), a copy for each port it served
+ * on and one more for its other commands, about 250 MB each: it downloads it again when it is
+ * missing. Not while a mint command runs, which serves the site from there.
+ */
+const MINTLIFY_SITES = '.mintlify/previews'
 
 /**
  * After everything was freed, still this full: someone must act (a ticket in Needs you).
@@ -133,19 +147,36 @@ export function installs(args: string) {
   return rest.slice(0, 3).some((word) => commands.has(word))
 }
 
-/** Whether one of the teammate's processes is installing packages: its caches stay until it is done. */
-export async function installing(runAs: string) {
+/**
+ * Whether a command line runs Mintlify's CLI: mint or mintlify by name (mint@4.2.1167 with
+ * pnpm dlx), or the file node runs (…/node_modules/mint/index.js). Wrong only toward
+ * "runs", which only keeps its site.
+ */
+export const runsMintlify = (args: string) =>
+  args
+    .trim()
+    .split(/\s+/)
+    .some((word) => /(^|\/)mint(lify)?(@[\w.-]+)?(\/index\.js)?$/.test(word))
+
+/** The command lines of the teammate's processes; null when they could not be read. */
+async function commandsOf(runAs: string) {
   // Every process, by uid: `ps -u` fails when the teammate has none. The runner reads every
   // user's command lines; none of them is the teammate's to hide.
   const read = await Promise.all([run('id', ['-u', runAs]), run('ps', ['-A', '-o', 'uid=,args='])])
     .then(([uid, out]) => ({ uid: uid.toString().trim(), lines: out.toString().split('\n') }))
-    // Unknown: as if it were.
     .catch(() => null)
-  if (!read) return true
-  return read.lines.some((line) => {
+  if (!read) return null
+  return read.lines.flatMap((line) => {
     const [uid = '', ...args] = line.trim().split(/\s+/)
-    return uid === read.uid && installs(args.join(' '))
+    return uid === read.uid ? [args.join(' ')] : []
   })
+}
+
+/** Whether one of the teammate's processes is installing packages: its caches stay until it is done. */
+export async function installing(runAs: string) {
+  const commands = await commandsOf(runAs)
+  // Unknown: as if it were.
+  return !commands || commands.some(installs)
 }
 
 /** How much to set aside on a disk of this size. */
@@ -160,10 +191,16 @@ export function oldStores(entries: string[], current: string) {
 
 /**
  * Clear a teammate's tool caches: prune its pnpm store, remove the stores an
- * older pnpm left, and the caches of npm, yarn, pip and Go. Never its thread
- * folders. `home` is the teammate's home; runAs its user (none in tests).
+ * older pnpm left, the caches of npm, yarn, pip, Go and Cargo, Go's modules, and
+ * Mintlify's site unless a mint command runs. Never its thread folders. `home` is
+ * the teammate's home; runAs its user (none in tests).
  */
-export async function freeCaches(home: string, runAs?: string) {
+export async function freeCaches(
+  home: string,
+  runAs?: string,
+  /** Reads the teammate's command lines (tests): from ps unless given; null when unknown. */
+  readCommands: () => Promise<string[] | null> = async () => (runAs ? commandsOf(runAs) : []),
+) {
   const before = await free(home)
   // From the home: pnpm writes a probe file where it runs, and the runner runs commands from /.
   const pnpm = (...args: string[]) =>
@@ -193,6 +230,11 @@ export async function freeCaches(home: string, runAs?: string) {
       await remove(join(storeRoot, old), runAs)
   }
   for (const cache of TOOL_CACHES) await remove(join(home, cache), runAs)
+  await remove(join(home, GO_MODULES), runAs, true)
+  // Read last, just before: a mint command started during the prune (up to PRUNE_TIMEOUT_MS)
+  // keeps its site. Unknown: as if one ran.
+  const commands = await readCommands()
+  if (commands && !commands.some(runsMintlify)) await remove(join(home, MINTLIFY_SITES), runAs)
   const freed = (await free(home)) - before
   if (freed > 0) console.log(`cleared ${runAs ?? home}'s caches: ${gib(freed)} freed`)
   return freed
@@ -359,10 +401,19 @@ export async function tidyHome(
   return removed
 }
 
-const remove = (path: string, runAs?: string) =>
-  run('rm', ['-rf', '--', path], { runAs }).catch((error) =>
-    console.warn(`could not remove ${path}: ${String(error)}`),
-  )
+/** Remove a folder, as the teammate. `readOnly`: made writable first, as Go leaves its modules read-only. */
+const remove = (path: string, runAs?: string, readOnly = false) =>
+  (readOnly
+    ? run(
+        'sh',
+        ['-c', '[ -e "$1" ] || exit 0; chmod -R u+w -- "$1"; exec rm -rf -- "$1"', 'sh', path],
+        {
+          runAs,
+          timeout: PRUNE_TIMEOUT_MS,
+        },
+      )
+    : run('rm', ['-rf', '--', path], { runAs })
+  ).catch((error) => console.warn(`could not remove ${path}: ${String(error)}`))
 
 async function free(path: string) {
   const s = await statfs(path).catch(() => null)
