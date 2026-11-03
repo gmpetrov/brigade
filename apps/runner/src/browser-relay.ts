@@ -5,16 +5,19 @@
 // tabs. The harness restarts its MCP servers between turns, so a thread's tabs
 // are remembered in a file and kept; tabs of threads idle for a day are closed.
 // The browser starts at the thread's first browser tool call (browsers.ts): the
-// relay waits for it, and says why when it does not come up.
+// relay waits for it, and says why when it does not come up. The MCP server
+// itself starts then too (lazy-mcp.ts): until then the relay answers the
+// harness's handshake and tool list with the server's answers from an earlier
+// turn, kept beside the tabs files (in .mcp).
 //
 // Usage (as the MCP server command): browser-relay <chrome-port> <tabs-file> <mcp-cli> [args...]
 // Runs as the teammate's Linux user, the only user that can reach its browser.
-import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { WebSocket, WebSocketServer } from 'ws'
 import { chromeLog, chromeLogErrors } from './chrome-log.js'
+import { serveMcpLazily } from './lazy-mcp.js'
 
 type Message = {
   id?: number
@@ -255,19 +258,18 @@ async function main() {
   })
   const { port } = server.address() as { port: number }
 
-  // The MCP server speaks to the harness on stdio, inherited as is.
-  const child = spawn(
-    process.execPath,
-    [cli!, ...cliArgs, '--cdp-endpoint', `ws://127.0.0.1:${port}/${token}`],
-    {
-      stdio: 'inherit',
+  // The MCP server speaks to the harness on stdio, through the relay until the browser is needed.
+  const mcp = serveMcpLazily({
+    command: process.execPath,
+    args: [cli!, ...cliArgs, '--cdp-endpoint', `ws://127.0.0.1:${port}/${token}`],
+    identity: [cli, cliArgs],
+    dir: join(dirname(tabsFile!), '.mcp'),
+    onExit: (code) => {
+      server.close()
+      process.exit(code)
     },
-  )
-  child.on('exit', (code) => {
-    server.close()
-    process.exit(code ?? 0)
   })
-  for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => child.kill(signal))
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => mcp.stop(signal))
 }
 
 void main()
