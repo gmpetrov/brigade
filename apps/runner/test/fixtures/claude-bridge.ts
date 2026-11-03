@@ -31,9 +31,14 @@ async function fakeInstall(dir: string, sdk: string) {
   )
   await writeFile(join(modules, '@anthropic-ai', 'claude-agent-sdk', 'index.mjs'), sdk)
   await mkdir(join(modules, '@modelcontextprotocol'), { recursive: true })
-  await symlink(mcpSdkDir(), join(modules, '@modelcontextprotocol', 'sdk'))
-  await symlink(packageDir('ws'), join(modules, 'ws'))
-  await symlink(packageDir('zod'), join(modules, 'zod'))
+  // Again over an earlier turn's install, in a home kept from it.
+  const link = async (target: string, path: string) => {
+    await rm(path, { recursive: true, force: true })
+    await symlink(target, path)
+  }
+  await link(mcpSdkDir(), join(modules, '@modelcontextprotocol', 'sdk'))
+  await link(packageDir('ws'), join(modules, 'ws'))
+  await link(packageDir('zod'), join(modules, 'zod'))
 }
 
 /** One turn through the bridge: the stream's parts, and the stand-in's record, line by line. */
@@ -49,12 +54,15 @@ export async function bridgeTurn(
     /** The host's own tools (Brigade's), and how Claude Code should treat some of them. */
     tools?: ToolSet
     toolHints?: Record<string, { readOnly?: boolean; alwaysLoad?: boolean }>
+    /** A home kept from an earlier turn (the caller removes it), for what the bridge keeps there. */
+    home?: string
   },
 ): Promise<{ parts: { type: string; [key: string]: unknown }[]; record: any[] }> {
-  const home = await mkdtemp(join(tmpdir(), 'claude-bridge-'))
+  const home = options.home ?? (await mkdtemp(join(tmpdir(), 'claude-bridge-')))
   const record = join(home, 'record.jsonl')
   const work = join(home, 'work')
-  await mkdir(work)
+  await rm(record, { force: true })
+  await mkdir(work, { recursive: true })
   const sandbox = createLocalSandboxSession({
     id: 'bridge-test',
     workingDirectory: work,
@@ -109,6 +117,6 @@ export async function bridgeTurn(
     return { parts, record: lines.filter(Boolean).map((line) => JSON.parse(line)) }
   } finally {
     await sandbox.destroy()
-    await rm(home, { recursive: true, force: true })
+    if (!options.home) await rm(home, { recursive: true, force: true })
   }
 }

@@ -123,7 +123,13 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   serves them from a small MCP server of its own: each tool's schema is converted once, exactly as `McpServer`'s
   tools/list did, and only a plain copy of the JSON is kept (the conversion's result holds its zod schema in a hidden
   `~standard` property); a tool's zod schema is built again when it is first called, to check the call's input as
-  before. Tested in `apps/runner/test/claude-bridge-tools.test.ts`.
+  before. Converting them still took about 235 MB at each turn's start (a 384 MB peak with 883 tools), so the
+  converted schemas are kept in the user's home (`~/.ai-sdk-harness/.tool-schemas/<bridge version>.json`, the version being a hash of the bridge, its `package.json` and
+  the dependencies' lock the bootstrap installed beside it, each under
+  the SHA-256 of the schema it came from) and a later turn reads them (a 149 MB peak); a schema no turn used for 30
+  days goes, and so does another bridge version's file left 3 days. In the home, not a shared folder: the schemas
+  become tool descriptions, so another user must not be able to plant them. Tested in
+  `apps/runner/test/claude-bridge-tools.test.ts`.
 - **Background work holds the turn; sub-agents work for the thread.** A Claude Code teammate's background work
   (sub-agents started with the Agent tool, shells and Monitors run in the background) reports back in a turn Claude
   Code starts by itself, and dies with Claude Code's process. So the bridge patch keeps the turn open, and the process
@@ -342,6 +348,15 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   tabs in the same windows, so watching a thread's desktop brings the tab it opened last to the front
   (`browser-focus.ts`, `browser.focus`), unless a person is using the screen: in control of a thread, or recording a
   task. Chrome starts without its "Restore pages?" bubble, since a stopped computer cuts it off.
+- **The browser's MCP server starts at the first browser tool call** (`apps/runner/src/lazy-mcp.ts`). The harness
+  starts its MCP servers with each turn, and Playwright's held about 130 MB in every running turn, browsing or not.
+  The relay answers the harness's handshake and tool list itself with what the server answered that same handshake
+  (same program, arguments, `PLAYWRIGHT_MCP_*` settings and client handshake; nothing is kept when a config
+  file is named, since its contents can change under the same name) in an earlier turn, kept in `~/.browser-tabs/.mcp/`; at the first
+  other request it starts the server, gives it the harness's handshake again and passes everything through. A
+  handshake with no answers kept goes to the server, started at once, and its answers are kept if no tool was called
+  before its tool list (a call can add a page's own tools). The first browser call of a turn waits for the server to
+  start (about 0.3 s). Tested in `apps/runner/test/lazy-mcp.test.ts`.
 - **Sign-in through the dashboard.** "Open <teammate>'s browser" (teammate page, and the takeover panel) opens a
   window of that teammate's Chrome on the desktop, optionally at a URL, and shows the desktop. Whatever a person
   signs in to stays in that teammate's profile only.
