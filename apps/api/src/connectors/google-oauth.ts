@@ -11,7 +11,8 @@ export type GoogleKind =
   | 'google_search_console'
   | 'google_analytics'
 
-// Neither Search Console nor Analytics says whose account it is: the address comes from userinfo.
+// Neither Search Console nor Analytics says whose account it is, and Calendar's list can be left
+// unticked: the address comes from userinfo.
 const EMAIL = 'https://www.googleapis.com/auth/userinfo.email'
 
 export const GOOGLE_SCOPES: Record<GoogleKind, string[]> = {
@@ -23,6 +24,8 @@ export const GOOGLE_SCOPES: Record<GoogleKind, string[]> = {
     'https://www.googleapis.com/auth/calendar.events',
     'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
     'https://www.googleapis.com/auth/calendar.freebusy',
+    // The account's address, which the person cannot untick on Google's consent screen.
+    EMAIL,
   ],
   // Every file the account can open, to search, read and edit them.
   google_drive: ['https://www.googleapis.com/auth/drive'],
@@ -121,11 +124,15 @@ export async function revokeGoogle(credential: GoogleCredential) {
 /** The account a credential belongs to, to show which one a connection is. Never the credential. */
 export async function googleAccount(kind: GoogleKind, accessToken: string) {
   const headers = { authorization: `Bearer ${accessToken}` }
-  if (kind === 'google_search_console' || kind === 'google_analytics') {
+  if (
+    kind === 'google_search_console' ||
+    kind === 'google_analytics' ||
+    kind === 'google_calendar'
+  ) {
     const user = (await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
       headers,
     }).then((r) => r.json())) as { email?: string }
-    return user.email ?? null
+    if (user.email || kind !== 'google_calendar') return user.email ?? null
   }
   if (kind === 'gmail') {
     const profile = (await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
@@ -143,10 +150,58 @@ export async function googleAccount(kind: GoogleKind, accessToken: string) {
     ).then((r) => r.json())) as { user?: { emailAddress?: string } }
     return about.user?.emailAddress ?? null
   }
-  // The primary calendar's id is the account's address.
+  // A Calendar account connected before Brigade asked for its address: the primary calendar's
+  // id is the account's address (its title can be renamed, its id cannot). Null when the
+  // calendar list was not granted either.
   const primary = (await fetch(
     'https://www.googleapis.com/calendar/v3/users/me/calendarList/primary',
     { headers },
-  ).then((r) => r.json())) as { id?: string }
+  )
+    .then((r) => r.json())
+    .catch(() => ({}))) as { id?: string }
   return primary.id ?? null
+}
+
+/** The Apps that sign in with Brigade's Google client, and so share one grant per account. */
+export const GOOGLE_KINDS = Object.keys(GOOGLE_SCOPES) as GoogleKind[]
+
+/**
+ * Disconnect a Google account and revoke its grant unless another connection still uses it.
+ * The connection is marked removed before the others are counted, so two last connections
+ * removed at once cannot each count the other and both skip the revocation: whichever counts
+ * second sees none left. When the count fails, the grant is revoked, as before this check.
+ */
+export async function removeAndRevokeGoogle(steps: {
+  markRemoved: () => Promise<unknown>
+  usedElsewhere: () => Promise<boolean>
+  revoke: () => Promise<unknown>
+}) {
+  await steps.markRemoved()
+  // The row is removed already, so a retry would not find it: when the count fails, revoke as
+  // Brigade did before sharing was checked, rather than leave the grant live with nothing to
+  // retry from. revokeGoogle swallows its own errors, so the caller's cleanup always goes on.
+  const shared = await steps.usedElsewhere().catch((error: unknown) => {
+    console.error(
+      'google sharing check failed, revoking:',
+      error instanceof Error ? error.message : error,
+    )
+    return false
+  })
+  if (!shared) await steps.revoke()
+}
+
+/**
+ * Whether disconnecting an account may revoke its token at Google. Revoking any token of a grant
+ * revokes the whole grant: every Brigade App signed in to that Google account, in every
+ * workspace. So it is revoked only when no other active connection (Gmail, Drive, Docs…, here
+ * or in another workspace) uses the same account. An account whose address is unknown is revoked,
+ * as before: nothing says another connection shares it.
+ */
+export function mayRevokeGoogle(
+  account: string | null,
+  others: { externalAccount: string | null }[],
+) {
+  if (!account) return true
+  const same = account.trim().toLowerCase()
+  return !others.some((o) => o.externalAccount?.trim().toLowerCase() === same)
 }

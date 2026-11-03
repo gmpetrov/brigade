@@ -222,8 +222,10 @@ choices made where it is silent. The code and the other pages in [docs/](.) are 
   playbook declares. In Claude Code it stays deferred, like Brigade's other tools: its name is in the deferred list
   and the instructions name it, so it costs a tool search when a person needs an App rather than its description in
   every request. An API from before it cannot read the call; the runner says so instead of "try again differently".
-- **Connections** are kept as `removed` when disconnected, so their call log survives; the credential is revoked at
-  the provider (Google) and deleted from the vault. Gmail and Google Calendar connect through Google OAuth; Stripe
+- **Connections** are kept as `removed` when disconnected, so their call log survives; the credential is deleted
+  from the vault and revoked at the provider. A Google token is revoked only when no other active connection, in any
+  workspace, signs in to the same Google account: revoking one token revokes the whole grant, every Brigade Google App
+  of that account. Gmail and Google Calendar connect through Google OAuth; Stripe
   signs in on Stripe's MCP server (`mcp.stripe.com`, its own OAuth). Each call there names a Stripe account
   (`stripe_context`) and a mode (`livemode`); a Brigade account is one of each, as a key was: a sign-in that reaches
   several is refused, and Brigade adds both to every call (left out of the tools' schemas, a call naming others
