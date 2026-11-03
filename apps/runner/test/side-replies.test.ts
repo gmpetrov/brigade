@@ -154,12 +154,35 @@ const users = (sessionId: string, messageId: string) =>
 const turns = (sessionId: string) => of(sessionId).filter((e) => e.type === 'turn.started').length
 const end = (sessionId: string) => ends.get(sessionId)?.()
 
+/** Waits until `ready` holds, so a busy computer's timing changes nothing (3 s at most). */
+async function until(ready: () => boolean, what: string) {
+  const by = Date.now() + 3000
+  while (!ready()) {
+    if (Date.now() > by) assert.fail(`timed out waiting: ${what}`)
+    await sleep(5)
+  }
+}
+/** Waits until the thread has started `count` turns, its latest one running. */
+const started = (sessionId: string, count: number) =>
+  until(() => turns(sessionId) === count && ends.has(sessionId), `turn ${count} in ${sessionId}`)
+/** Ends the running turn, and waits for it to be over. */
+async function finish(sessionId: string) {
+  const completed = () => of(sessionId).filter((e) => e.type === 'turn.completed').length
+  const before = completed()
+  const ending = ends.get(sessionId)
+  ends.delete(sessionId)
+  ending?.()
+  await until(() => completed() > before, `the turn in ${sessionId} to end`)
+  await sleep(20)
+}
+const lastSide = (sessionId: string, messageId: string) => sides(sessionId, messageId).at(-1)
+
 test('a question during the turn is answered on the side, read, and runs no turn of its own', async () => {
   send('ask', 'Fix the CSV export')
-  await sleep(30)
+  await started('ask', 1)
   sideSays = 'It is in exportRows.\n\nROUTE: answer'
   const question = send('ask', 'Where was the bug?')
-  await sleep(50)
+  await until(() => users('ask', question).length === 1, 'the question read')
   assert.deepEqual(
     sides('ask', question).map((e) => [e.status, e.route ?? null, e.text ?? null]),
     [
@@ -168,118 +191,105 @@ test('a question during the turn is answered on the side, read, and runs no turn
     ],
   )
   assert.match(sideAsked.at(-1)!, /Where was the bug\?/)
-  const read = users('ask', question)
-  assert.equal(read.length, 1)
-  assert.equal(read[0]!.side, true)
+  assert.equal(users('ask', question)[0]!.side, true)
   // The turn ends: no turn comes for the settled question.
-  end('ask')
+  await finish('ask')
   await sleep(50)
   assert.equal(turns('ask'), 1)
   // The next one is told of the exchange.
   send('ask', 'Thanks, carry on')
-  await sleep(50)
-  assert.equal(turns('ask'), 2)
+  await started('ask', 2)
   const told = prompts.get('ask')!.at(-1)!
   assert.match(told, /Where was the bug\?/)
   assert.match(told, /It is in exportRows\./)
-  end('ask')
-  await sleep(30)
+  await finish('ask')
 })
 
 test('an instruction is passed to the running turn after a moment, unless its sender keeps it', async () => {
   send('steer', 'Fix the CSV export')
-  await sleep(30)
+  await started('steer', 1)
   sideSays = 'Noted, I pass it on.\nROUTE: steer'
   const instruction = send('steer', 'Use a semicolon instead')
-  await sleep(40)
-  const pending = sides('steer', instruction).at(-1)!
-  assert.equal(pending.route, 'steer')
-  assert.ok(pending.steerAt)
+  await until(() => lastSide('steer', instruction)?.status === 'answered', 'its side reply')
+  assert.equal(lastSide('steer', instruction)!.route, 'steer')
+  assert.ok(lastSide('steer', instruction)!.steerAt)
   assert.equal(users('steer', instruction).length, 0, 'not yet')
-  await sleep(200)
+  await until(() => users('steer', instruction).length === 1, 'it steered')
   assert.deepEqual(steered.get('steer'), ['Use a semicolon instead'])
-  assert.equal(users('steer', instruction)[0]?.steered, true)
+  assert.equal(users('steer', instruction)[0]!.steered, true)
 
   // Kept: it waits for the turn to end instead, and runs in a turn of its own.
   const other = send('steer', 'Also rename the file')
-  await sleep(40)
+  await until(() => lastSide('steer', other)?.route === 'steer', 'its side reply')
   act('steer', other, 'keep')
-  await sleep(250)
+  await until(() => lastSide('steer', other)?.route === 'queue', 'kept')
+  await sleep(300)
   assert.deepEqual(steered.get('steer'), ['Use a semicolon instead'])
-  assert.equal(sides('steer', other).at(-1)?.route, 'queue')
-  end('steer')
-  await sleep(50)
-  assert.equal(turns('steer'), 2)
+  await finish('steer')
+  await started('steer', 2)
   assert.equal(users('steer', other).length, 1)
-  end('steer')
-  await sleep(30)
+  await finish('steer')
 })
 
 test('new work waits for the turn, as any message would', async () => {
   send('queue', 'Fix the CSV export')
-  await sleep(30)
+  await started('queue', 1)
   sideSays = 'That is new work: after this one.\nROUTE: queue'
   const work = send('queue', 'Then add an Excel export')
-  await sleep(50)
-  assert.equal(sides('queue', work).at(-1)?.route, 'queue')
+  await until(() => lastSide('queue', work)?.status === 'answered', 'its side reply')
+  assert.equal(lastSide('queue', work)!.route, 'queue')
   assert.equal(users('queue', work).length, 0)
-  end('queue')
-  await sleep(50)
-  assert.equal(turns('queue'), 2)
+  await finish('queue')
+  await started('queue', 2)
   assert.equal(users('queue', work).length, 1)
-  end('queue')
-  await sleep(30)
+  await finish('queue')
 })
 
 test('a settled message its sender wants run after all gets its turn, even once the turn is over', async () => {
   send('requeue', 'Fix the CSV export')
-  await sleep(30)
+  await started('requeue', 1)
   sideSays = 'Yes.\nROUTE: answer'
   const message = send('requeue', 'Is it the date format?')
-  await sleep(50)
-  end('requeue')
+  await until(() => users('requeue', message).length === 1, 'settled')
+  await finish('requeue')
   await sleep(50)
   assert.equal(turns('requeue'), 1)
   act('requeue', message, 'queue')
-  await sleep(50)
-  assert.equal(turns('requeue'), 2)
-  assert.equal(sides('requeue', message).at(-1)?.route, 'queue')
+  await started('requeue', 2)
+  assert.equal(lastSide('requeue', message)!.route, 'queue')
   assert.equal(users('requeue', message).filter((e) => !e.side).length, 1)
-  end('requeue')
-  await sleep(30)
+  await finish('requeue')
 })
 
 test('when its turn comes first, the side reply stops and the teammate answers it itself', async () => {
   send('race', 'Fix the CSV export')
-  await sleep(30)
+  await started('race', 1)
   let release!: () => void
   hold = new Promise((resolve) => (release = resolve))
   sideSays = 'Late.\nROUTE: answer'
   const message = send('race', 'How long will it take?')
-  await sleep(30)
-  end('race')
-  await sleep(50)
-  assert.equal(sides('race', message).at(-1)?.status, 'failed')
-  assert.equal(turns('race'), 2)
+  await until(() => lastSide('race', message)?.status === 'answering', 'its side reply')
+  await finish('race')
+  await started('race', 2)
+  assert.equal(lastSide('race', message)!.status, 'failed')
   assert.equal(users('race', message).length, 1)
   assert.equal(users('race', message)[0]!.side, undefined)
   release()
   hold = undefined
-  end('race')
-  await sleep(30)
+  await finish('race')
 })
 
 test('no side reply for Brigade’s own messages, when memory is short, or when it fails', async () => {
   send('none', 'Fix the CSV export')
-  await sleep(30)
+  await started('none', 1)
   const note = send('none', 'A wake-up', null)
   room = false
   const short = send('none', 'Short of memory')
-  await sleep(40)
+  await sleep(60)
   room = true
   sideSays = new Error('bridge died')
   const failed = send('none', 'And this?')
-  await sleep(50)
+  await until(() => lastSide('none', failed)?.status === 'failed', 'its side reply to fail')
   assert.equal(sides('none', note).length, 0)
   assert.equal(sides('none', short).length, 0)
   assert.deepEqual(
@@ -287,28 +297,27 @@ test('no side reply for Brigade’s own messages, when memory is short, or when 
     ['answering', 'failed'],
   )
   // All three wait for the turn, as before: each in a turn of its own, in order.
-  for (let i = 0; i < 4; i++) {
-    end('none')
-    await sleep(40)
+  for (let count = 2; count <= 4; count++) {
+    await finish('none')
+    await started('none', count)
   }
+  await finish('none')
   for (const id of [note, short, failed]) assert.equal(users('none', id).length, 1)
-  assert.equal(turns('none'), 4)
   sideSays = 'ok\nROUTE: answer'
 })
 
 test('cancelled while it is answered, the message is neither read nor run', async () => {
   send('cancel', 'Fix the CSV export')
-  await sleep(30)
+  await started('cancel', 1)
   let release!: () => void
   hold = new Promise((resolve) => (release = resolve))
   const message = send('cancel', 'Never mind this')
-  await sleep(30)
+  await until(() => lastSide('cancel', message)?.status === 'answering', 'its side reply')
   act('cancel', message, 'cancel')
-  await sleep(50)
-  assert.equal(sides('cancel', message).at(-1)?.status, 'failed')
+  await until(() => lastSide('cancel', message)?.status === 'failed', 'it stopped')
   release()
   hold = undefined
-  end('cancel')
+  await finish('cancel')
   await sleep(50)
   assert.equal(users('cancel', message).length, 0)
   assert.equal(turns('cancel'), 1)
