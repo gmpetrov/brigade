@@ -321,12 +321,11 @@ export function AccountLoginSteps({
           {asksEmail && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={`email-${a.id}`}>
-                Account email{' '}
-                <span className="font-normal text-muted-foreground">(optional)</span>
+                Account email <span className="font-normal text-muted-foreground">(optional)</span>
               </Label>
               <p className="text-muted-foreground">
-                Claude doesn&apos;t tell Brigade which account this is. Add its email to tell
-                your accounts apart.
+                Claude doesn&apos;t tell Brigade which account this is. Add its email to tell your
+                accounts apart.
               </p>
               <Input
                 id={`email-${a.id}`}
@@ -355,9 +354,7 @@ export function AccountLoginSteps({
           </div>
         </form>
       )}
-      {login.state === 'verifying' && (
-        <p className="text-muted-foreground">Finishing sign-in…</p>
-      )}
+      {login.state === 'verifying' && <p className="text-muted-foreground">Finishing sign-in…</p>}
     </div>
   )
 }

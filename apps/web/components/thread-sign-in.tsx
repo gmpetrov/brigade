@@ -149,7 +149,9 @@ export function SignedOutError({
 
   return card(
     <>
-      <span>Your {provider} account on {where} is signed out, so this turn could not run.</span>
+      <span>
+        Your {provider} account on {where} is signed out, so this turn could not run.
+      </span>
       {said}
     </>,
     (phase === 'idle' || failed) && (
