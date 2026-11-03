@@ -100,10 +100,6 @@ export function AccountRow({
   /** An owner or admin: may remove a shared account another member added. */
   admin?: boolean
 }) {
-  const [code, setCode] = useState('')
-  const [email, setEmail] = useState(a.email ?? '')
-  // On the cloud computer a Claude account is a token, which cannot tell whose it is.
-  const asksEmail = a.provider === 'claude_code' && a.computer.kind === 'cloud'
   const exhausted = a.exhaustedUntil && new Date(a.exhaustedUntil) > new Date()
   const signingIn =
     a.status === 'signing_in' && login && login.state !== 'done' && login.state !== 'failed'
@@ -243,100 +239,122 @@ export function AccountRow({
       </div>
 
       {signingIn && (
-        <div className="mx-4 mb-4 flex flex-col gap-2 rounded-lg bg-muted p-4 text-sm">
-          {login.state === 'starting' && (
-            <p className="text-muted-foreground">
-              Starting {harnessLabel(a.provider)} sign-in on the computer…
-            </p>
-          )}
-          {login.state === 'open_url' && login.flow === 'device' && (
-            <>
-              <p>
-                1. Open{' '}
-                <a
-                  href={login.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  {login.url}
-                </a>{' '}
-                and sign in to ChatGPT.
-              </p>
-              <p>
-                2. Enter this code there:{' '}
-                <code className="font-mono text-lg font-semibold">{login.userCode}</code>
-              </p>
-              <p className="text-muted-foreground">This page updates when you are done.</p>
-            </>
-          )}
-          {login.state === 'open_url' && login.flow === 'paste' && (
-            <form
-              className="flex flex-col gap-3"
-              onSubmit={(e) => {
-                e.preventDefault()
-                const given = asksEmail ? email.trim() : ''
-                void onAct(
-                  api(`/accounts/${a.id}/code`, {
-                    body: { code, ...(given ? { email: given } : {}) },
-                  }),
-                )
-              }}
-            >
-              <p className="flex items-center gap-2">
-                1.{' '}
-                <Button asChild size="sm">
-                  <a href={login.url} target="_blank" rel="noreferrer">
-                    Open Claude sign-in
-                  </a>
-                </Button>
-              </p>
-              <p>2. Sign in to the Claude account you want to add. Claude then shows a code.</p>
-              {asksEmail && (
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor={`email-${a.id}`}>
-                    Account email{' '}
-                    <span className="font-normal text-muted-foreground">(optional)</span>
-                  </Label>
-                  <p className="text-muted-foreground">
-                    Claude doesn&apos;t tell Brigade which account this is. Add its email to tell
-                    your accounts apart.
-                  </p>
-                  <Input
-                    id={`email-${a.id}`}
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    autoComplete="off"
-                    className="bg-card"
-                  />
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Label htmlFor={`code-${a.id}`} className="sr-only">
-                  Sign-in code
-                </Label>
-                <Input
-                  id={`code-${a.id}`}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="3. Paste the code here"
-                  autoComplete="off"
-                  className="flex-1 bg-card"
-                />
-                <Button disabled={!code.trim()}>Finish</Button>
-              </div>
-            </form>
-          )}
-          {login.state === 'verifying' && (
-            <p className="text-muted-foreground">Finishing sign-in…</p>
-          )}
-        </div>
+        <AccountLoginSteps account={a} login={login} onAct={onAct} className="mx-4 mb-4" />
       )}
       {login?.state === 'failed' && (
         <p className="px-4 pb-3 text-sm text-destructive-text">Sign-in failed: {login.error}</p>
       )}
+    </div>
+  )
+}
+
+/**
+ * The steps of an account's sign-in under way, as its computer says them: open the vendor's page,
+ * then paste its code (Claude) or enter a code there (Codex). In its row on the Accounts page, and
+ * in a thread whose turn failed signed out.
+ */
+export function AccountLoginSteps({
+  account: a,
+  login,
+  onAct,
+  className,
+}: {
+  account: Account
+  login: AccountLogin
+  onAct: (p: Promise<unknown>) => Promise<void>
+  className?: string
+}) {
+  const [code, setCode] = useState('')
+  const [email, setEmail] = useState(a.email ?? '')
+  // On the cloud computer a Claude account is a token, which cannot tell whose it is.
+  const asksEmail = a.provider === 'claude_code' && a.computer.kind === 'cloud'
+  return (
+    <div className={cn('flex flex-col gap-2 rounded-lg bg-muted p-4 text-sm', className)}>
+      {login.state === 'starting' && (
+        <p className="text-muted-foreground">
+          Starting {harnessLabel(a.provider)} sign-in on the computer…
+        </p>
+      )}
+      {login.state === 'open_url' && login.flow === 'device' && (
+        <>
+          <p>
+            1. Open{' '}
+            <a
+              href={login.url}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {login.url}
+            </a>{' '}
+            and sign in to ChatGPT.
+          </p>
+          <p>
+            2. Enter this code there:{' '}
+            <code className="font-mono text-lg font-semibold">{login.userCode}</code>
+          </p>
+          <p className="text-muted-foreground">This page updates when you are done.</p>
+        </>
+      )}
+      {login.state === 'open_url' && login.flow === 'paste' && (
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const given = asksEmail ? email.trim() : ''
+            void onAct(
+              api(`/accounts/${a.id}/code`, {
+                body: { code, ...(given ? { email: given } : {}) },
+              }),
+            )
+          }}
+        >
+          <p className="flex items-center gap-2">
+            1.{' '}
+            <Button asChild size="sm">
+              <a href={login.url} target="_blank" rel="noreferrer">
+                Open Claude sign-in
+              </a>
+            </Button>
+          </p>
+          <p>2. Sign in to the Claude account you want to add. Claude then shows a code.</p>
+          {asksEmail && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`email-${a.id}`}>
+                Account email <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <p className="text-muted-foreground">
+                Claude doesn&apos;t tell Brigade which account this is. Add its email to tell your
+                accounts apart.
+              </p>
+              <Input
+                id={`email-${a.id}`}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                autoComplete="off"
+                className="bg-card"
+              />
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Label htmlFor={`code-${a.id}`} className="sr-only">
+              Sign-in code
+            </Label>
+            <Input
+              id={`code-${a.id}`}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="3. Paste the code here"
+              autoComplete="off"
+              className="flex-1 bg-card"
+            />
+            <Button disabled={!code.trim()}>Finish</Button>
+          </div>
+        </form>
+      )}
+      {login.state === 'verifying' && <p className="text-muted-foreground">Finishing sign-in…</p>}
     </div>
   )
 }
