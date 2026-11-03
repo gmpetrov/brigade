@@ -719,6 +719,10 @@ const SCHEDULES =
   'your own address) wakes you here by itself, with the reply, and so does mail to a sign-up address you made ' +
   'with email_new_address: no wake-up is needed to check for it.'
 
+/** What people call a child thread: Brigade shows them as sub-threads. */
+const SUB_THREAD =
+  'People see child threads as sub-threads: call them sub-threads when you write to people.'
+
 /** Child threads: in a child, how to report; elsewhere, when to start one. */
 const children = (spec: ThreadSpec) =>
   spec.parent
@@ -728,7 +732,9 @@ const children = (spec: ThreadSpec) =>
       '`report` once and end your turn: your report reaches the parent when your turn ends. If something you need ' +
       'is missing (a decision, an input), do not guess: report it as what you need, and the parent answers by ' +
       'writing here. When only a person can decide, open a ticket: your turn waits for their answer, then carry ' +
-      'on. You cannot start child threads, schedules or wake-ups of your own.\n\n' +
+      'on. You cannot start child threads, schedules or wake-ups of your own. ' +
+      SUB_THREAD +
+      '\n\n' +
       'When a person writes here, talk it through with them; your answers do not go to the parent. Once they ' +
       'decide (they pick an option, say go ahead), call `report` with what they decided and what is left to do, ' +
       'then end your turn: that is how the parent hears it, never `message_thread`. If they go quiet without ' +
@@ -744,7 +750,8 @@ const children = (spec: ThreadSpec) =>
       '. A child does not see this conversation, so its instructions must stand alone. Start every child you need, ' +
       'then end your turn: you are woken here once, with one note, when all those you wait for have reported. Then ' +
       '`read_child` for the details, `message_thread` with its threadId to tell one more (it carries on and reports ' +
-      'again), and tell the person where things stand.'
+      'again), and tell the person where things stand. ' +
+      SUB_THREAD
 
 /** Installing a playbook from the chat (show_playbook … activate_playbook). */
 const INSTALLING =

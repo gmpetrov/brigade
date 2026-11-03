@@ -274,7 +274,7 @@ export default function PullRequestPage() {
             <h2 className="font-semibold">Ask a teammate to review it</h2>
             <p className="text-sm text-muted-foreground">
               {t?.author
-                ? `It reviews in a child thread of the thread that opened it, from a brief of Brigade's, and posts its verdict on GitHub. ${t.author.name} fixes what it finds.`
+                ? `It reviews in a sub-thread of the thread that opened it, from a brief of Brigade's, and posts its verdict on GitHub. ${t.author.name} fixes what it finds.`
                 : 'It reviews in a thread of its own and posts its verdict on GitHub.'}
             </p>
           </div>

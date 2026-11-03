@@ -558,7 +558,7 @@ export function ComputerPanel({
       {thread.mailMessages?.length > 0 && <SentMail thread={thread} onChange={onChange} />}
 
       {thread.children.length > 0 && (
-        <Section title={`Child threads · ${thread.children.length}`}>
+        <Section title={`Sub-threads · ${thread.children.length}`}>
           <ChildrenList children={thread.children} />
         </Section>
       )}

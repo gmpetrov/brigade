@@ -168,3 +168,9 @@ test("a task's thread is told to declare itself done too, besides completing the
   const task = { id: 't1', title: 'Add CSV export', description: 'Export invoices as CSV.' }
   assert.match(textFor({ task }), /leaves this thread open, so declare the thread done too/)
 })
+
+test('a teammate calls child threads sub-threads, as people see them, in a parent and in a child', () => {
+  for (const extra of [{}, { origin: 'child', parent: { id: 'p', title: 'Parent' } }]) {
+    assert.match(textFor(extra), /call them sub-threads when you write to people/)
+  }
+})

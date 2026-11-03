@@ -1330,13 +1330,13 @@ export const threads = new Hono<AppEnv>()
     if (memberId !== undefined && !mayChangeQueued(memberId, input.action))
       throw new HTTPException(409, {
         message:
-          'Brigade sent this message, so it cannot be edited, cancelled or run in parallel. Steer it, or write your own.',
+          'Brigade sent this message, so it cannot be edited, cancelled or sent to a sub-thread. Steer it, or write your own.',
       })
     if (input.action === 'parallel') {
       // A child thread cannot start children of its own (src/children.ts).
       if (thread.parentId)
         throw new HTTPException(409, {
-          message: 'This is a child thread, so it cannot start another one. Steer it instead.',
+          message: 'This is a sub-thread, so it cannot start another one. Steer it instead.',
         })
       if (data?.text === undefined)
         throw new HTTPException(409, { message: 'This message was already read.' })
@@ -1925,7 +1925,7 @@ export const threads = new Hono<AppEnv>()
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     if (thread.parentId)
-      throw new HTTPException(409, { message: 'A child thread shows in its parent.' })
+      throw new HTTPException(409, { message: 'A sub-thread shows in its parent.' })
     if (thread.archivedAt) throw new HTTPException(409, { message: 'Unarchive the thread first.' })
     await setLater(db, scope, thread, true)
     return c.json({ ok: true })

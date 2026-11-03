@@ -111,7 +111,7 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
   })
   if (children.some((c) => BUSY.has(c.status)))
     throw new HTTPException(409, {
-      message: 'One of its child threads is at work. Stop it first, or wait for it to finish.',
+      message: 'One of its sub-threads is at work. Stop it first, or wait for it to finish.',
     })
   // A schedule whose runs report here only made sense for this thread: it goes too,
   // first, so no new run starts while its past runs are deleted below.

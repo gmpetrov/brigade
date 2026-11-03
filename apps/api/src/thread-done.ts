@@ -316,7 +316,7 @@ export async function markDone(
 ) {
   if (thread.parentId)
     throw new HTTPException(409, {
-      message: 'A child thread shows in its parent: mark that one done.',
+      message: 'A sub-thread shows in its parent: mark that one done.',
     })
   await db.session.updateMany({
     where: { id: thread.id },
