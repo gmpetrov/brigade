@@ -346,13 +346,17 @@ export const UpdateThread = z.object({
 export const MoveThread = z.object({ computerId: z.string().min(1).max(64) })
 /**
  * Cancel a queued message, change its text, or steer it into the running turn. parallel:
- * steer it with the ask to hand it to a child thread at once (inParallel).
+ * steer it with the ask to hand it to a child thread at once (inParallel). For a message
+ * answered on the side (message.side): keep leaves for after the turn one its side reply
+ * gives to the turn; queue has one its side reply settled run after the turn after all.
  */
 export const QueuedMessageAction = z.discriminatedUnion('action', [
   z.object({ action: z.literal('cancel') }),
   z.object({ action: z.literal('steer') }),
   z.object({ action: z.literal('parallel') }),
   z.object({ action: z.literal('edit'), text: z.string().trim().min(1).max(100_000) }),
+  z.object({ action: z.literal('keep') }),
+  z.object({ action: z.literal('queue') }),
 ])
 export type QueuedMessageAction = z.infer<typeof QueuedMessageAction>
 

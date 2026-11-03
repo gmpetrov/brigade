@@ -36,6 +36,7 @@ const SOURCES: Record<UsageSource, string> = {
   title: 'Thread titles',
   brief: 'Project briefs',
   image: 'Images',
+  side: 'Asides',
 }
 const sourceLabel = (id: string) => SOURCES[id as UsageSource] ?? id
 

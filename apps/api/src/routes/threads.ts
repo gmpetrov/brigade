@@ -3,6 +3,7 @@ import { mayWrite, openToOthers } from '../account-sharing.js'
 import { randomUUID } from 'node:crypto'
 import {
   ASIDE_PROTOCOL,
+  SIDE_REPLY_PROTOCOL,
   clipReport,
   CODE_CHANGES_PROTOCOL,
   CODE_EDIT_PROTOCOL,
@@ -98,6 +99,7 @@ import {
   startThread,
 } from '../work.js'
 import { waitingOnPerson } from '../pull-requests.js'
+import { messagesToRequeue } from '../recovery.js'
 import { reopenOnMessage } from '../tasks.js'
 import { recorder } from '../teaching.js'
 import { setThreadArchived } from '../thread-archive.js'
@@ -1301,7 +1303,8 @@ export const threads = new Hono<AppEnv>()
 
   /**
    * A message still queued: steer it into the running turn, or cancel, edit or send to run in
-   * parallel one a person wrote.
+   * parallel one a person wrote. One answered on the side (message.side): keep it for after the
+   * turn rather than have it passed on, or queue one its side reply settled after all.
    */
   .post('/:id/messages/:messageId', async (c) => {
     const { scope, db } = c.var
@@ -1346,7 +1349,69 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(409, {
         message: "This computer's runner is too old to change queued messages. Update it.",
       })
-    const command = (action: 'cancel' | 'edit' | 'steer', text?: string) =>
+    // Only a runner that answers on the side sends what these act on.
+    if (
+      (input.action === 'keep' || input.action === 'queue') &&
+      protocol !== undefined &&
+      protocol < SIDE_REPLY_PROTOCOL
+    )
+      throw new HTTPException(409, {
+        message: "This computer's runner is too old for asides. Update it.",
+      })
+    const audited = () =>
+      audit({
+        ...scope,
+        actor: { type: 'member', id: scope.memberId },
+        action: `thread.message_${{ cancel: 'cancelled', edit: 'edited', steer: 'steered', parallel: 'sent_in_parallel', keep: 'kept', queue: 'queued_again' }[input.action]}`,
+        target: { type: 'thread', id: thread.id },
+        data: { messageId },
+      })
+    // Settled on the side (its reading says so): it is queued no more, here or on the computer,
+    // which may have restarted since. To have it run after all, it is sent again as it was
+    // queued, with no side reply this time; steered, into the running turn if there is one.
+    if (input.action === 'queue' || input.action === 'steer') {
+      const latest = await db.sessionEvent.findFirst({
+        where: {
+          sessionId: thread.id,
+          type: { in: ['message.queued', 'message.user', 'message.cancelled'] },
+          data: { path: ['messageId'], equals: messageId },
+        },
+        orderBy: { seq: 'desc' },
+        select: { seq: true, type: true, data: true },
+      })
+      const side =
+        latest?.type === 'message.user'
+          ? (latest.data as { side?: { route?: string } } | null)?.side
+          : undefined
+      if (side?.route === 'answer' && queued) {
+        const [prompt] = await messagesToRequeue(
+          { organizationId: scope.organizationId, workspaceId: thread.workspaceId },
+          [
+            {
+              sessionId: thread.id,
+              messageId,
+              queued: queued.data as Extract<AgentEvent, { type: 'message.queued' }>,
+            },
+          ],
+        )
+        if (!prompt)
+          throw new HTTPException(409, { message: 'This message cannot run now. Write it again.' })
+        await deliver(thread.computer, {
+          ...prompt,
+          // One per reading: a second click, or a second request racing the first before the
+          // runner says it queued it, names the same command, which is kept once (its row's id)
+          // and taken once by the runner.
+          commandId: `side-${thread.id}-${latest!.seq}`,
+          settled: true,
+          ...(input.action === 'steer' ? { steer: true } : {}),
+        })
+        await audited()
+        return c.json({ ok: true })
+      }
+      // Still queued: it runs after the turn already.
+      if (input.action === 'queue') return c.json({ ok: true })
+    }
+    const command = (action: 'cancel' | 'edit' | 'steer' | 'keep' | 'queue', text?: string) =>
       deliver(thread.computer, {
         type: 'thread.queued',
         commandId: randomUUID(),
@@ -1361,13 +1426,7 @@ export const threads = new Hono<AppEnv>()
       await command('edit', inParallel(data!.text!))
       await command('steer')
     } else await command(input.action, input.action === 'edit' ? input.text : undefined)
-    await audit({
-      ...scope,
-      actor: { type: 'member', id: scope.memberId },
-      action: `thread.message_${{ cancel: 'cancelled', edit: 'edited', steer: 'steered', parallel: 'sent_in_parallel' }[input.action]}`,
-      target: { type: 'thread', id: thread.id },
-      data: { messageId },
-    })
+    await audited()
     return c.json({ ok: true })
   })
 

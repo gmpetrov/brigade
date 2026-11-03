@@ -196,10 +196,15 @@ export async function historyContext(sessionId: string, firstSeq: number) {
     : []
 
   const closed = new Set<string>()
+  // Where each message was last read or cancelled: one queued again after that (a message its
+  // side reply settled, sent again to run) is open again, under the same id.
+  const readAt = new Map<string, number>()
   for (const r of rows) {
     for (const [answer, id] of Object.values(ASKS))
       if (r.type === answer) closed.add(`${answer}:${field(r, id)}`)
     if (r.type === 'message.cancelled') closed.add(`message.user:${field(r, 'messageId')}`)
+    if (r.type === 'message.user' || r.type === 'message.cancelled')
+      readAt.set(String(field(r, 'messageId')), r.seq)
   }
   const last = (type: string, when: (r: Row) => boolean = () => true) =>
     rows.findLast((r) => r.type === type && when(r))
@@ -209,6 +214,8 @@ export async function historyContext(sessionId: string, firstSeq: number) {
       // Few, and each teammate's latest says what the thread has checked out.
       if (r.type === 'repositories.changed') return true
       if (r.type === 'message.done') return NAMES_DELIVERABLE.test(String(field(r, 'text')))
+      if (r.type === 'message.queued')
+        return r.seq > (readAt.get(String(field(r, 'messageId'))) ?? 0)
       if (r.type in ASKS) {
         const [answer, id] = ASKS[r.type as keyof typeof ASKS]
         return !closed.has(`${answer}:${field(r, id)}`)

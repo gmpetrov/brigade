@@ -26,8 +26,9 @@ export function query({ prompt, options }) {
 async function queryOptions(
   permissionMode: 'allow-all' | 'allow-reads',
   env: Record<string, string>,
+  more: { resumeFrom?: unknown; activeTools?: string[] } = {},
 ): Promise<Record<string, any>> {
-  const { record } = await bridgeTurn(FAKE_SDK, { permissionMode, env })
+  const { record } = await bridgeTurn(FAKE_SDK, { permissionMode, env, ...more })
   assert.equal(record.length, 1)
   return record[0]
 }
@@ -64,4 +65,31 @@ test('Claude Code guesses the next message where the thread wants it', async () 
   })
   assert.equal(options.promptSuggestions, true)
   assert.equal(options.settings.autoMemoryEnabled, false)
+})
+
+/** How the runner resumes a side reply's session (side-replies.ts): Claude Code continues. */
+const CONTINUE = {
+  type: 'resume-session',
+  specificationVersion: 'harness-v1',
+  harnessId: 'claude-code',
+  data: {},
+}
+
+test('a side reply forks the conversation it continues, writes none, and only reads', async () => {
+  const options = await queryOptions(
+    'allow-reads',
+    { ...claudeSettingsEnv(), BRIGADE_FORK_SESSION: '1' },
+    { resumeFrom: CONTINUE, activeTools: ['read', 'glob', 'grep'] },
+  )
+  assert.equal(options.continue, true)
+  assert.equal(options.forkSession, true)
+  assert.equal(options.persistSession, false)
+  assert.deepEqual([...options.tools].sort(), ['Glob', 'Grep', 'Read'])
+})
+
+test("a thread's own turn neither forks nor stops writing its conversation", async () => {
+  const options = await queryOptions('allow-reads', claudeSettingsEnv(), { resumeFrom: CONTINUE })
+  assert.equal(options.continue, true)
+  assert.equal('forkSession' in options, false)
+  assert.equal('persistSession' in options, false)
 })
