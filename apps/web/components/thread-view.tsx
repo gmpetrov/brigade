@@ -146,6 +146,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Hint } from '@/components/ui/tooltip'
 import { WidgetFrame } from '@/components/widget-frame'
 import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
+import { AsideGroup } from '@/components/aside-group'
 import { SideReply, type SideAction, type SideState } from '@/components/side-reply'
 import {
   attachmentUrl,
@@ -159,6 +160,7 @@ import { useTicketReplies } from '@/lib/ticket-replies'
 import { turnWait } from '@/lib/turn-wait'
 import { inGap, type EventGap } from '@/lib/use-thread-events'
 import { messageRuns, type RunEntry } from '@/lib/message-runs'
+import { revealSeq } from '@/lib/reveal'
 import { pauseLabel, pauses } from '@/lib/thread-times'
 import { useMemberNames } from '@/lib/member-names'
 import { cn } from '@/lib/utils'
@@ -870,9 +872,10 @@ const FOLDED_HEIGHT = 416
 
 /**
  * A person's message bubble: a long one (a pasted page, a log) folds to its first lines,
- * fading out, with Show more to unfold it in place.
+ * fading out, with Show more to unfold it in place. `side`: written on the side during a turn,
+ * in its Aside, paler than one to the turn.
  */
-export function MessageBubble({ text }: { text: string }) {
+export function MessageBubble({ text, side = false }: { text: string; side?: boolean }) {
   const [open, setOpen] = useState(false)
   // Fold only when there is clearly more to show than a few lines.
   const [long, setLong] = useState(false)
@@ -891,7 +894,12 @@ export function MessageBubble({ text }: { text: string }) {
   return (
     <div
       ref={bubble}
-      className="min-w-0 rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground"
+      className={cn(
+        'min-w-0 rounded-2xl rounded-br-md leading-relaxed wrap-anywhere whitespace-pre-wrap',
+        side
+          ? 'bg-primary/25 px-3.5 py-2 text-foreground'
+          : 'bg-primary px-4 py-2.5 text-primary-foreground',
+      )}
     >
       <div
         ref={body}
@@ -917,7 +925,12 @@ export function MessageBubble({ text }: { text: string }) {
             if (open && bubble.current && bubble.current.getBoundingClientRect().top < 0)
               bubble.current.scrollIntoView({ block: 'start' })
           }}
-          className="mt-1.5 flex items-center gap-1 text-xs font-medium whitespace-normal text-primary-foreground/80 hover:text-primary-foreground"
+          className={cn(
+            'mt-1.5 flex items-center gap-1 text-xs font-medium whitespace-normal',
+            side
+              ? 'text-muted-foreground hover:text-foreground'
+              : 'text-primary-foreground/80 hover:text-primary-foreground',
+          )}
         >
           {open ? 'Show less' : 'Show more'}
           <ChevronDown className={cn('size-3.5', open && 'rotate-180')} aria-hidden />
@@ -934,11 +947,13 @@ function ReplyQuote({ reply, author }: { reply: ReplyTo; author?: string }) {
       <button
         type="button"
         className="flex max-w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-        onClick={() =>
+        onClick={() => {
+          // Folded away (a turn's Aside), it opens where it is.
+          revealSeq(reply.seq)
           document
             .querySelector(`[data-seq="${reply.seq}"]`)
             ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
+        }}
       >
         <Reply className="size-3.5 shrink-0" aria-hidden />
         <span className="truncate">
@@ -1258,8 +1273,13 @@ const FOLDS = new Set<Item['kind']>(['thinking', 'tool', 'file', 'assistant', 'p
 /** A turn quicker than this just answers: its steps fold, without a "Worked for" line. */
 const QUICK_TURN_MS = 30_000
 
+/** A person's message answered on the side during a turn: it shows in its turn's Aside. */
+const isSide = (item: Item) => item.kind === 'user' && !!item.side
+
 type Node =
   | { type: 'item'; i: number }
+  /** The asides of one turn, together; `live` while that turn runs. */
+  | { type: 'asides'; is: number[]; live: boolean }
   | { type: 'activity'; is: number[]; live: boolean }
   | { type: 'control'; is: number[] }
   | { type: 'worked'; key: string; ms: number; inner: Node[] }
@@ -1270,6 +1290,7 @@ type Node =
  * must see (asks, pull requests, pictures, choices, team proposals, errors) stays out of the fold.
  * A message steered into a turn ends what came before it the same way, as a turn of its own,
  * and so does a report from its background work that sets the teammate going again.
+ * A turn's asides read together, in one Aside before its work, and never end it.
  * `running` is when the turn still running began, or the message steered into it last.
  */
 function layoutThread(items: Item[], working: boolean) {
@@ -1280,6 +1301,11 @@ function layoutThread(items: Item[], working: boolean) {
       // Taking over, handing back and shell commands in a row fold the same way.
       // A hand back is a card of its own.
       const item = items[i]!
+      if (isSide(item)) {
+        if (last?.type === 'asides') last.is.push(i)
+        else nodes.push({ type: 'asides', is: [i], live: false })
+        continue
+      }
       const type = isActivity(item)
         ? 'activity'
         : item.kind === 'control' && item.change !== 'handed'
@@ -1291,14 +1317,18 @@ function layoutThread(items: Item[], working: boolean) {
     }
     // A single step needs no line over it.
     return nodes.map((n) =>
-      n.type !== 'item' && n.type !== 'worked' && n.is.length === 1
+      n.type !== 'item' && n.type !== 'worked' && n.type !== 'asides' && n.is.length === 1
         ? { type: 'item', i: n.is[0]! }
         : n,
     )
   }
   /** A turn that worked for `ms`, keyed by the item it ends at; `steered` when that is a message steered into it. */
-  const fold = (turn: number[], ms: number, end: string, steered = false): Node[] => {
-    if (ms < QUICK_TURN_MS) return group(turn)
+  const fold = (all: number[], ms: number, end: string, steered = false): Node[] => {
+    // Its asides read together, before its work.
+    const sides = all.filter((i) => isSide(items[i]!))
+    const head = group(sides)
+    let turn = all.filter((i) => !isSide(items[i]!))
+    if (ms < QUICK_TURN_MS) return [...head, ...group(turn)]
     turn = actionsLast(items, turn)
     // The answer: every message after its last step, and a long one before that step when only a line follows.
     const { first: final, messages } = turnAnswer(
@@ -1321,11 +1351,12 @@ function layoutThread(items: Item[], working: boolean) {
         (item.kind !== 'tool' || isActivity(item))
       )
     })
-    if (!folded.some((i) => isActivity(items[i]!))) return group(turn)
+    if (!folded.some((i) => isActivity(items[i]!))) return [...head, ...group(turn)]
     const first = turn.indexOf(folded[0]!)
     const kept = (from: number, to: number) =>
       turn.slice(from, to).filter((i) => !folded.includes(i))
     return [
+      ...head,
       ...group(kept(0, first)),
       // Keyed by its end: an older page loading above does not close it.
       { type: 'worked', key: `w${end}`, ms, inner: group(folded) },
@@ -1334,6 +1365,8 @@ function layoutThread(items: Item[], working: boolean) {
   }
   const nodes: Node[] = []
   let running: number | undefined
+  // Where the running turn began.
+  let runningFrom = -1
   // When the last message steered into the running turn was given to it, or a report woke it.
   let steered: number | undefined
   // Since the last turn began or ended, or a message was steered into it, or a report woke it.
@@ -1347,11 +1380,17 @@ function layoutThread(items: Item[], working: boolean) {
       running = steered = undefined
       return
     }
+    // Answered on the side, it belongs to the turn it was written during, which goes on.
+    if (isSide(item)) {
+      since.push(i)
+      return
+    }
     // A turn starting again before it ended (resumed) goes on.
     if (item.kind === 'start' && running === undefined) {
       nodes.push(...group(since))
       since = [i]
       running = item.at
+      runningFrom = i
       steered = undefined
       return
     }
@@ -1381,6 +1420,9 @@ function layoutThread(items: Item[], working: boolean) {
   nodes.push(...group(live.length ? since.filter((i) => !live.includes(i)) : since))
   const last = nodes.at(-1)
   if (working && last?.type === 'activity') last.live = true
+  // The running turn's asides stay open.
+  if (working && running !== undefined)
+    for (const node of nodes) if (node.type === 'asides') node.live = node.is[0]! > runningFrom
   return Object.assign(nodes, { running: steered ?? running, live })
 }
 
@@ -2442,7 +2484,7 @@ export function ThreadItems({
                   text={text}
                   onReply={onReply && (() => onReply({ seq: item.seq, text: replyText(written) }))}
                 />
-                <MessageBubble text={text} />
+                <MessageBubble text={text} side={!!item.side} />
               </div>
             )}
             {files.length > 0 && <MessageAttachments attachments={files} className="justify-end" />}
@@ -2460,12 +2502,12 @@ export function ThreadItems({
             ) : null}
           </div>
         )
-        // Written during the turn: the teammate's aside under it.
+        // Written during the turn: the teammate's reply under it, in its turn's Aside.
         if (item.side) {
           const side = item.side
           const author = (side.teammateId && byId.get(side.teammateId)) || teammate
           return (
-            <div key={item.key} className="flex min-w-0 flex-col gap-3">
+            <div key={item.key} className="flex min-w-0 flex-col gap-2">
               {bubble}
               <SideReply
                 side={side}
@@ -2919,6 +2961,13 @@ export function ThreadItems({
     : lastUser >= 0
       ? (items[lastUser] as Extract<Item, { kind: 'user' }>).at
       : undefined
+  /** Who answered an Aside: the teammate of its first reply, else the thread's. */
+  const asideTeammate = (is: number[]) => {
+    const id = is
+      .map((i) => (items[i] as Extract<Item, { kind: 'user' }>).side?.teammateId)
+      .find(Boolean)
+    return (id && byId.get(id)) || teammate
+  }
   // What ends a run of one teammate's messages: anything shown but its steps.
   const runEntry = (node: Node): RunEntry => {
     if (node.type === 'activity') return 'step'
@@ -2960,6 +3009,23 @@ export function ThreadItems({
         >
           {node.is.map((i) => render(items[i]!, i))}
         </ActivityGroup>
+      ) : node.type === 'asides' ? (
+        <AsideGroup
+          key={items[node.is[0]!]!.key}
+          sides={node.is.map((i) => (items[i] as Extract<Item, { kind: 'user' }>).side!)}
+          seqs={node.is.map((i) => (items[i] as Extract<Item, { kind: 'user' }>).seq)}
+          {...(asideTeammate(node.is)
+            ? {
+                teammate: asideTeammate(node.is)!,
+                avatar: (
+                  <TeammateAvatar teammate={asideTeammate(node.is)!} className="size-5 flex-none" />
+                ),
+              }
+            : {})}
+          live={node.live}
+        >
+          {node.is.map((i) => render(items[i]!, i))}
+        </AsideGroup>
       ) : node.type === 'control' ? (
         <Fold
           key={items[node.is[0]!]!.key}

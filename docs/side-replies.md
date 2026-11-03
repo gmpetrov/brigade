@@ -39,11 +39,18 @@ teammate waits on its own ticket (`harness/aside.ts`, `ASIDE_PROTOCOL`).
   then), and only with memory to spare (`memoryRoom`). One at a time per thread: each waits for
   every one before it, even when one waiting is cancelled (`Thread.sides`). Its turn coming
   first, a cancel or an edit stops it; a failure leaves the message queued as before.
-- **The thread shows it where it began**: the person's bubble and the aside under it, which the
+- **The thread shows it where it began**: the person's bubble and the reply under it, which the
   queue above the composer leaves out while the aside is under way or about to pass it on. Its
   reading carries the reply and route (`message.user`'s `side`), so a page or a timeline jump
   that starts there still shows the aside. A settled reading does not change the thread's
   status (`statusAfter`), its work time (`caps.ts`) or its timeline.
+- **A turn's asides read as one.** They share one card, in the thread's card style: the person's
+  messages in pale bubbles (so they don't read as messages to the turn), the replies as plain
+  text, and what became of each as a caption. They never split the turn they were written
+  during. While it runs the card stays open, headed "Aside · while <teammate> works"; once it
+  ends, it folds to one line before the turn's "Worked for", "Aside · 2 messages", which opens it
+  (`layoutThread`, `AsideGroup`). One whose reply is coming or about to go into the turn stays
+  open.
 - **Its tokens** count as Asides in Settings › Usage (`UsageRunKind` side).
 - **Runners from protocol 50** (`SIDE_REPLY_PROTOCOL`) send side replies and take `keep` and
   `queue`; the API refuses those actions to older ones, which never send one.

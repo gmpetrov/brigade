@@ -85,6 +85,7 @@ import {
 } from '@/components/queued-messages'
 import type { SideAction } from '@/components/side-reply'
 import { expireAttempt, useOutgoing } from '@/lib/outgoing-messages'
+import { revealSeq } from '@/lib/reveal'
 import { Takeover } from '@/components/takeover'
 import {
   ChildrenWaiting,
@@ -718,6 +719,8 @@ export function ThreadConversation({
     if (!view || !node) return
     setJumping(undefined)
     following.current = false
+    // Folded away (a turn's Aside), it opens where it is.
+    revealSeq(jumping!)
     // Below the bar floating over the top of the conversation.
     const top = node.getBoundingClientRect().top - view.getBoundingClientRect().top
     view.scrollTo({ top: view.scrollTop + top - JUMP_MARGIN })
