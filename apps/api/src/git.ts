@@ -175,8 +175,9 @@ export async function workspaceGitHub(db: ScopedDb, scope: Scope, repo: string) 
 }
 
 /**
- * A repository Brigade knows by a name it no longer has (renamed or transferred on GitHub): the
- * connection reaching it under its name now. GitHub still answers the old name, redirecting to
+ * A repository Brigade knows by a name it no longer has (renamed or transferred on GitHub), or
+ * one the installations' cached lists do not have yet: the connection reaching it under its name
+ * now. GitHub still answers the old name, redirecting to
  * the repository's id; null when no connection's installation reaches what it answers.
  */
 export async function renamedRepository(db: ScopedDb, scope: Scope, repo: string) {
@@ -202,8 +203,9 @@ export async function renamedRepository(db: ScopedDb, scope: Scope, repo: string
       .then((r) => (r.ok ? (r.json() as Promise<{ id: number; full_name: string }>) : null))
       .catch(() => null)
     const now = answered?.full_name?.toLowerCase()
-    if (!now || now === repo) continue
-    // Listed again: the installation's list may still have the old name.
+    if (!now) continue
+    // Listed again: the installation's list may still have the old name (or, for the name it
+    // has now, not have it yet).
     forgetInstallation(installationId)
     const found = (await installationRepos(installationId).catch(() => null))?.get(now)
     if (found)

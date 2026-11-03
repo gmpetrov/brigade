@@ -109,14 +109,14 @@ export async function github(db: ScopedDb, scope: Scope, repo: string): Promise<
 
 /**
  * The name Brigade keeps a repository's pull requests under, for a name someone gives (a card
- * or a teammate's call written before a rename): that name while rows are kept under it or the
- * workspace reaches it; else the name GitHub answers for it now.
+ * or a teammate's call written before a rename): that name while rows are kept under it; else
+ * the name GitHub answers for it now, asked each time rather than from the installations'
+ * cached lists, which may still have the old name.
  */
 export async function canonicalRepository(db: ScopedDb, scope: Scope, repo: string) {
   repo = repo.toLowerCase()
   if (await db.pullRequest.findFirst({ where: { repository: repo }, select: { id: true } }))
     return repo
-  if (await workspaceGitHub(db, scope, repo)) return repo
   return (await renamedRepository(db, scope, repo).catch(() => null))?.repository ?? repo
 }
 

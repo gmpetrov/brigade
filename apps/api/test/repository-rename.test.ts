@@ -53,8 +53,10 @@ describe('a repository renamed', { skip: !database && 'no database answers' }, (
   /** Pull requests merged on GitHub, by repository id and number. */
   const merged = new Set<string>()
   let nextId = 7_000_000 + Math.floor(Math.random() * 1_000_000)
+  /** The repository with that name now, else the one that had it (GitHub redirects it there). */
   const repoNamed = (name: string) =>
-    [...repos.entries()].find(([, r]) => r.name === name || r.before.includes(name))
+    [...repos.entries()].find(([, r]) => r.name === name) ??
+    [...repos.entries()].find(([, r]) => r.before.includes(name))
   function rename(id: number, to: string) {
     const r = repos.get(id)!
     r.before.push(r.name)
@@ -110,8 +112,7 @@ describe('a repository renamed', { skip: !database && 'no database answers' }, (
     })
 
     // GitHub as it answers: the repositories under their names now, an old name redirected to
-    // the repository (only for the repository itself: a pull request must be asked for under
-    // its name now, so that Brigade is seen sending it there).
+    // the repository, as GitHub does.
     globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
       const { pathname } = new URL(String(url))
       if (pathname.endsWith('/access_tokens'))
@@ -130,7 +131,8 @@ describe('a repository renamed', { skip: !database && 'no database answers' }, (
       }
       const pr = pathname.match(/^\/repos\/([^/]+\/[^/]+)\/pulls\/(\d+)$/)
       if (pr) {
-        const found = [...repos.entries()].find(([, r]) => r.name === decodeURIComponent(pr[1]!))
+        // Under its name now, or an old one, which GitHub redirects.
+        const found = repoNamed(decodeURIComponent(pr[1]!))
         if (found) return Response.json(ghPull(found[0], Number(pr[2])))
       }
       return Response.json({ message: 'Not Found' }, { status: 404 })
@@ -245,7 +247,11 @@ describe('a repository renamed', { skip: !database && 'no database answers' }, (
     const refused = (await declare(session)) as { error?: string }
     assert.match(refused.error ?? '', /Pull request #4 in acme\/screenplay-.* is still open/)
 
-    // Renamed, and Brigade not told (no repository event): then both merged.
+    // Renamed, and Brigade not told (no repository event), its list of the installation's
+    // repositories cached before: then both merged.
+    const { forgetInstallation, workspaceGitHub } = await import('../src/git.js')
+    forgetInstallation(installationId)
+    assert.ok(await workspaceGitHub(db, scope, `acme/screenplay-${suffix}`))
     rename(id, `acme/agent-screenplay-${suffix}`)
     await mergedEvent(id, 4)
     await mergedEvent(id, 5)
@@ -267,6 +273,10 @@ describe('a repository renamed', { skip: !database && 'no database answers' }, (
     assert.deepEqual(await needsAttention(db), [], 'no card waits on a person')
     const done = (await declare(session)) as { done?: object; error?: string }
     assert.ok(done.done, done.error)
+    // Its card under the new name, with the list still cached from before: reached.
+    const { pullState } = await import('../src/pull-requests.js')
+    const card = await pullState(db, scope, `acme/agent-screenplay-${suffix}`, 5)
+    assert.equal(card.tracking?.sessionId, session.id)
   })
 
   test("GitHub's repository event moves what was kept under the old name", async () => {
@@ -354,6 +364,10 @@ describe('a repository renamed', { skip: !database && 'no database answers' }, (
       const id = repository(`acme/card-old-${suffix}`)
       const session = await thread()
       await opened(session.id, id, 31)
+      // The installation's list cached before the rename, as it is for five minutes.
+      const { forgetInstallation, workspaceGitHub } = await import('../src/git.js')
+      forgetInstallation(installationId)
+      assert.ok(await workspaceGitHub(db, scope, `acme/card-old-${suffix}`))
       rename(id, `acme/card-new-${suffix}`)
       // The card, as stored in the thread's messages, reads it twice under the old name.
       for (const read of ['first', 'second']) {
