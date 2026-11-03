@@ -76,14 +76,18 @@ import {
   LoaderCircle,
   Monitor,
   Plus,
+  Pencil,
   RefreshCw,
   Reply,
+  RotateCcw,
   ShieldAlert,
+  X,
 } from 'lucide-react'
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MediaPreview, MessageAttachments } from '@/components/attachments'
+import { MediaPreview, MessageAttachments, SentAttachments } from '@/components/attachments'
+import { notThrough, notThroughText, type Outgoing } from '@/components/queued-messages'
 import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
 import { CredentialForm } from '@/components/credential-form'
@@ -943,6 +947,87 @@ function ReplyQuote({ reply, author }: { reply: ReplyTo; author?: string }) {
         </span>
       </button>
     </Hint>
+  )
+}
+
+/**
+ * A message the person just sent, in the thread at once, as the thread will show it once its
+ * computer has it (the user item in ThreadItems): it then takes this one's place. One that did
+ * not get through stays, marked, to send again or edit.
+ */
+export function OutgoingMessage({
+  message: m,
+  teammates,
+  onRetry,
+  onEdit,
+  onDiscard,
+}: {
+  message: Outgoing
+  teammates: { id: string; name: string }[]
+  onRetry: () => void
+  onEdit: () => void
+  onDiscard: () => void
+}) {
+  const skillNames = useSkillCommands().map((s) => s.name)
+  const { text: written, elements } = splitPreviewElements(forPeople(m.text))
+  const pictureOf = (name?: string) => (name ? m.uploads.find((u) => u.name === name) : undefined)
+  const pictures = new Set(elements.flatMap((e) => pictureOf(e.image)?.key ?? []))
+  const files = m.uploads.filter((u) => !pictures.has(u.key))
+  const asked = startingCommand(written, skillNames)
+  const text = asked ? asked.rest : written
+  const failed = notThrough(m)
+  const replyTo = m.with.replyTo
+  return (
+    <div
+      data-outgoing={m.messageId}
+      className="flex max-w-[85%] animate-in flex-col items-end gap-1.5 self-end duration-150 ease-out fade-in slide-in-from-bottom-1 motion-reduce:animate-none"
+    >
+      {replyTo && (
+        <ReplyQuote
+          reply={replyTo}
+          author={
+            replyTo.teammateId
+              ? teammates.find((t) => t.id === replyTo.teammateId)?.name
+              : undefined
+          }
+        />
+      )}
+      {asked && <CommandChip command={asked.command} />}
+      <PreviewElementChips
+        elements={elements.map((element) => {
+          const picture = pictureOf(element.image)?.preview
+          return { element, ...(picture && { picture }) }
+        })}
+        className="justify-end"
+      />
+      {text && <MessageBubble text={text} />}
+      {files.length > 0 && <SentAttachments uploads={files} className="justify-end" />}
+      {failed && (
+        <div role="alert" className="flex flex-col items-end gap-1">
+          <span className="text-right text-xs text-destructive-text">{notThroughText(m)}</span>
+          <div className="flex items-center gap-1">
+            <Button type="button" variant="outline" size="xs" onClick={onRetry}>
+              <RotateCcw aria-hidden />
+              Retry
+            </Button>
+            <Button type="button" variant="ghost" size="xs" onClick={onEdit}>
+              <Pencil aria-hidden />
+              Edit
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={onDiscard}
+              aria-label="Discard message"
+              tooltip="Discard"
+            >
+              <X aria-hidden />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

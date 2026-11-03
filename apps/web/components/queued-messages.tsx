@@ -6,6 +6,7 @@ import {
   mayChangeQueued,
   mentionsToText,
   type QueuedMessageAction,
+  type ReplyTo,
 } from '@brigade/contracts'
 import {
   ChevronDown,
@@ -20,6 +21,9 @@ import {
 import { useState } from 'react'
 import { brigadeNote, handOffNote, notePreview } from '@/components/brigade-notes'
 import { useDashboard } from '@/components/dashboard'
+import type { MoveTarget, Upload } from '@/components/attachments'
+import type { Picked } from '@/components/thread-conversation'
+import type { DesignEdit } from '@/lib/pending-edits'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import {
@@ -38,16 +42,53 @@ export type Outgoing = {
   messageId: string
   text: string
   files: number
+  /** Its files as the composer had them: shown with it until the thread has it. */
+  uploads: Upload[]
   /** The thread's last event when it was sent: a message without an id after it may be this one. */
   afterSeq: number
   /**
-   * starting: the computer starts first. moving: the thread moves to another
-   * computer first (movingTo). failed: the computer never said it got it.
+   * sending: on its way to the API. sent: the API took it. starting: the computer starts first.
+   * moving: the thread moves to another computer first (movingTo). unsent: the API refused it
+   * (error). failed: the computer never said it got it.
    */
-  state: 'sending' | 'sent' | 'starting' | 'moving' | 'failed'
+  state: 'sending' | 'sent' | 'starting' | 'moving' | 'unsent' | 'failed'
+  /** Why the API refused it. */
+  error?: string
+  /**
+   * The teammate was working when it was sent: it waits in the queue, so it shows here rather
+   * than in the thread.
+   */
+  queues: boolean
+  /** When the API took it: this attempt's wait for the computer counts from then. */
+  sentAt?: number
   /** The computer it goes with the thread to, by name. */
   movingTo?: string
+  /** What sending it again takes. */
+  with: { attachmentIds: string[]; pick?: string; replyTo?: ReplyTo; moveTo?: MoveTarget }
+  /** What the composer held, to put back there on Edit: its files are `uploads`. */
+  draft?: OutgoingDraft
 }
+
+/** A composer's message as it was written: its text, quote, computer, picked elements and design edits. */
+export type OutgoingDraft = {
+  text: string
+  replyTo?: ReplyTo
+  moveTo?: MoveTarget
+  elements: Picked[]
+  designEdits: DesignEdit[]
+}
+
+/** Refused, or never confirmed: the person sends it again or edits it. */
+export const notThrough = (m: Outgoing) => m.state === 'unsent' || m.state === 'failed'
+
+/** Why it did not get through, for the person. */
+export const notThroughText = (m: Outgoing) =>
+  m.state === 'unsent'
+    ? `Not sent: ${m.error ?? 'Brigade could not take this message.'}`
+    : 'Not delivered: the computer did not confirm it got this message.'
+
+/** In the thread, as the person's message, rather than here: on its way, or not through. */
+export const inThread = (m: Outgoing) => !m.queues && !m.movingTo && m.state !== 'moving'
 
 /**
  * Messages waiting to be read, above the composer: queued behind the running
@@ -63,7 +104,8 @@ export function QueuedMessages({
   canSteer,
   canParallel,
   onAction,
-  onResend,
+  onRetry,
+  onEdit,
   onDiscard,
 }: {
   queued: QueuedMessage[]
@@ -75,8 +117,10 @@ export function QueuedMessages({
   /** The thread may start child threads: it is not one. */
   canParallel: boolean
   onAction: (messageId: string, action: QueuedMessageAction) => Promise<void>
-  /** Put a message that never arrived back in the composer. */
-  onResend: (message: Outgoing) => void
+  /** Send a message that did not get through again, as it was. */
+  onRetry: (message: Outgoing) => void
+  /** Put a message that did not get through back in the composer. */
+  onEdit: (message: Outgoing) => void
   onDiscard: (messageId: string) => void
 }) {
   const { me } = useDashboard()
@@ -88,7 +132,9 @@ export function QueuedMessages({
   const [editing, setEditing] = useState<{ messageId: string; text: string }>()
   const [busy, setBusy] = useState<string>()
   const [open, setOpen] = useState(true)
-  if (queued.length === 0 && outgoing.length === 0) return null
+  // The others show in the thread, as the person's messages.
+  const cards = outgoing.filter((m) => !inThread(m))
+  if (queued.length === 0 && cards.length === 0) return null
 
   const act = async (messageId: string, action: Parameters<typeof onAction>[1]) => {
     setBusy(messageId)
@@ -336,12 +382,12 @@ export function QueuedMessages({
         </section>
       )}
       <ul aria-label="Messages being sent" className="contents">
-        {outgoing.map((m) => (
+        {cards.map((m) => (
           <li
             key={m.messageId}
             className={cn(
               'flex items-start gap-2 rounded-lg border bg-card px-3 py-2 text-sm shadow-sm',
-              m.state === 'failed' && 'border-destructive/50',
+              notThrough(m) && 'border-destructive/50',
             )}
           >
             {m.state === 'moving' ? (
@@ -357,11 +403,11 @@ export function QueuedMessages({
               <span
                 className={cn(
                   'text-xs',
-                  m.state === 'failed' ? 'text-destructive-text' : 'text-muted-foreground',
+                  notThrough(m) ? 'text-destructive-text' : 'text-muted-foreground',
                 )}
               >
-                {m.state === 'failed'
-                  ? 'Not delivered: the computer did not confirm it got this message.'
+                {notThrough(m)
+                  ? notThroughText(m)
                   : m.state === 'starting'
                     ? 'Waiting for the computer to start…'
                     : m.state === 'moving'
@@ -369,11 +415,15 @@ export function QueuedMessages({
                       : 'Sending…'}
               </span>
             </div>
-            {m.state === 'failed' && (
+            {notThrough(m) && (
               <div className="flex shrink-0 items-center gap-1">
-                <Button type="button" variant="outline" size="sm" onClick={() => onResend(m)}>
+                <Button type="button" variant="outline" size="sm" onClick={() => onRetry(m)}>
                   <RotateCcw aria-hidden />
-                  Edit and resend
+                  Retry
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => onEdit(m)}>
+                  <Pencil aria-hidden />
+                  Edit
                 </Button>
                 <Button
                   type="button"

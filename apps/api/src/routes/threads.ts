@@ -58,6 +58,7 @@ import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { toInfo } from '../attachments.js'
+import { isKept } from '../runner-commands.js'
 import { audit } from '../audit.js'
 import { openChoices } from '../choices-waiting.js'
 import { attachmentKey, presignGet, streamObject, threadFileKey } from '../bucket.js'
@@ -1221,6 +1222,11 @@ export const threads = new Hono<AppEnv>()
       c.req.raw,
       SendMessage,
     )
+    // The sender's id names its command, so the same message sent again (Retry after a reply
+    // that never came back) reaches the computer once: kept already, it went.
+    const commandId = messageId && !moveTo ? `message:${thread.id}:${messageId}` : undefined
+    if (commandId && (await isKept(commandId)))
+      return c.json({ ok: true, paused: false, delivery: 'sent' })
     // A playbook's run a member writes in joins their Threads, and counts as stepping in.
     await surface(db, thread, true)
     // A design picked from the thread's options: checked first, copied once the message is sent.
@@ -1266,6 +1272,7 @@ export const threads = new Hono<AppEnv>()
         ...(replyTo ? { replyTo } : {}),
       },
       { memberId: scope.memberId },
+      commandId ? { commandId } : {},
     )
     if (outcome === 'offline')
       throw new HTTPException(409, {

@@ -203,5 +203,37 @@ describe(
         hub.dispatch = dispatch
       }
     })
+
+    // The dashboard's Retry sends the same message again with its id: the reply to the first
+    // send may have been lost after the message went.
+    test('the same message sent twice with its id reaches the runner once', async () => {
+      const res = await start('First')
+      assert.equal(res.status, 201, await res.clone().text())
+      const { id } = (await res.json()) as { id: string }
+      await until(() => prompts(sent, id).length === 1, 'the first message')
+      const messageId = `retry-${suffix}`
+      const send = () =>
+        app.request(`/api/threads/${id}/messages`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ text: 'Once', messageId }),
+        })
+      const first = await send()
+      assert.equal(first.status, 200, await first.clone().text())
+      await until(() => prompts(sent, id).length === 2, 'the message')
+      const again = await send()
+      assert.equal(again.status, 200, await again.clone().text())
+      assert.equal(((await again.json()) as { delivery?: string }).delivery, 'sent')
+      // A message sent after it still goes: only the same id is held back.
+      const other = await app.request(`/api/threads/${id}/messages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: 'Another', messageId: `other-${suffix}` }),
+      })
+      assert.equal(other.status, 200, await other.clone().text())
+      await until(() => prompts(sent, id).length === 3, 'the other message')
+      const texts = prompts(sent, id).map((m) => m.text)
+      assert.deepEqual(texts.slice(1), ['Once', 'Another'])
+    })
   },
 )

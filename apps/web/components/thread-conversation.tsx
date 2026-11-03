@@ -53,6 +53,7 @@ import {
   useFileDrop,
   useUploads,
   type MoveTarget,
+  type Upload,
 } from '@/components/attachments'
 import { EffortButton, type EffortPick } from '@/components/effort'
 import { Composer } from '@/components/composer'
@@ -76,8 +77,14 @@ import { PendingEdits, type PendingEditRow } from '@/components/pending-edits'
 import type { PickHandlers } from '@/components/preview-panel'
 import { usePreviewStart } from '@/components/preview-start'
 import { ThreadProjectMenu } from '@/components/projects'
-import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
+import {
+  inThread,
+  QueuedMessages,
+  type Outgoing,
+  type OutgoingDraft,
+} from '@/components/queued-messages'
 import type { SideAction } from '@/components/side-reply'
+import { expireAttempt, useOutgoing } from '@/lib/outgoing-messages'
 import { Takeover } from '@/components/takeover'
 import {
   ChildrenWaiting,
@@ -93,7 +100,9 @@ import { useThreadPanel } from '@/components/thread-panel'
 import { ThreadSkeleton } from '@/components/thread-skeleton'
 import { ThreadTimeline, useThreadPrompts } from '@/components/thread-timeline'
 import {
+  Answering,
   MessageBubble,
+  OutgoingMessage,
   ThreadItems,
   useThreadItems,
   type ComputerDown,
@@ -163,7 +172,7 @@ export type ThreadHeading = {
  * An element picked in the preview, by the id its page gave it, and the upload of its
  * picture; `drawing` while its page draws it, when the message waits for the picture.
  */
-type Picked = {
+export type Picked = {
   id: string
   element: PreviewElement
   upload?: string
@@ -610,7 +619,8 @@ export function ThreadConversation({
     focusComposer()
   }
   // Messages sent from here that the thread has not shown yet (queued, read or cancelled).
-  const [outgoing, setOutgoing] = useState<Outgoing[]>([])
+  // Kept per thread: one not through is still here after another thread opened.
+  const [outgoing, setOutgoing] = useOutgoing(id)
   const pendingOut = useMemo(() => {
     // A runner too old for message ids shows the message without one: matched by its text.
     const plain = events.filter((e) => e.event.type === 'message.user' && !e.event.messageId)
@@ -622,8 +632,15 @@ export function ThreadConversation({
         ),
     )
   }, [outgoing, seen, events])
-  const pendingRef = useRef(pendingOut)
-  pendingRef.current = pendingOut
+  const inThreadOut = pendingOut.filter(inThread)
+  const lastOut = inThreadOut.at(-1)
+  // Once the thread has them, they go, and their files' previews with them.
+  useEffect(() => {
+    const gone = outgoing.filter((o) => !pendingOut.includes(o))
+    if (gone.length === 0) return
+    for (const o of gone) for (const u of o.uploads) if (u.preview) URL.revokeObjectURL(u.preview)
+    setOutgoing((list) => list.filter((o) => !gone.some((g) => g.messageId === o.messageId)))
+  }, [outgoing, pendingOut, setOutgoing])
 
   // At the end, the thread follows what comes in, streamed words included. Scrolled up to
   // read, nothing moves: a button goes back down. An older page above does not move the view.
@@ -655,7 +672,7 @@ export function ThreadConversation({
   const lastSeq = events.at(-1)?.seq
   useEffect(() => {
     if (following.current) toEnd()
-  }, [lastKey, lastSeq, pendingOut.length, loaded])
+  }, [lastKey, lastSeq, pendingOut.length, lastOut?.state, loaded])
   // An older page goes in above what is on screen: keep that where it was.
   const anchor = useRef<number>(undefined)
   const loadEarlier = () =>
@@ -1007,24 +1024,25 @@ export function ThreadConversation({
     ]
       .filter(Boolean)
       .join('\n\n')
+    const attachmentIds = files.ids
+    // Its files leave the box with it, and show with it in the thread.
+    const taken = files.take()
     setText('')
     setReplyTo(undefined)
     setMoveTo(undefined)
     setElements([])
     setDesignEdits(id, [])
-    try {
-      await deliver(sending, files.ids, undefined, replying, moving)
-      files.clear()
-    } catch (err) {
-      // Not sent: back in the composer, as it was.
-      setText((current) => current || written)
-      setReplyTo((current) => current ?? replying)
-      setMoveTo((current) => current ?? moving)
-      // Edits added while it was on its way stay, after the ones it took.
-      setElements((current) => withUnsent(current, picked))
-      restoreDesignEdits(id, commented)
-      setError((err as Error).message)
-    }
+    await deliver(sending, attachmentIds, undefined, replying, moving, {
+      uploads: taken.uploads,
+      // Not through, and edited: back in the composer, as it was.
+      draft: {
+        text: written,
+        ...(replying ? { replyTo: replying } : {}),
+        ...(moving ? { moveTo: moving } : {}),
+        elements: picked,
+        designEdits: commented,
+      },
+    })
   }
 
   // The canvas of a design beside the thread adds its comments here while this composer can take
@@ -1042,27 +1060,42 @@ export function ThreadConversation({
     await thread.reload()
   }
 
-  /** Send a message to the thread: the composer's, or a choice someone clicked. Throws when it is not sent. */
+  /**
+   * Send a message to the thread: the composer's, or a choice someone clicked. It shows at once,
+   * in the thread or (the teammate working) above the composer. Refused, it throws, unless it can
+   * go back to the composer (`draft`): then it stays, marked, to send again or edit.
+   */
   async function deliver(
     sending: string,
     attachmentIds: string[] = [],
     pick?: string,
     replyTo?: ReplyTo,
     moveTo?: MoveTarget,
+    how: { messageId?: string; uploads?: Upload[]; draft?: OutgoingDraft } = {},
   ) {
     const message: Outgoing = {
-      messageId: newMessageId(),
+      messageId: how.messageId ?? newMessageId(),
       text: sending,
       files: attachmentIds.length,
+      uploads: how.uploads ?? [],
       afterSeq: events.at(-1)?.seq ?? 0,
       state: 'sending',
+      queues: busy,
+      with: {
+        attachmentIds,
+        ...(pick ? { pick } : {}),
+        ...(replyTo ? { replyTo } : {}),
+        ...(moveTo ? { moveTo } : {}),
+      },
       ...(moveTo ? { movingTo: moveTo.name } : {}),
+      ...(how.draft ? { draft: how.draft } : {}),
     }
-    const update = (state: Outgoing['state']) =>
+    const update = (patch: Partial<Outgoing>) =>
       setOutgoing((list) =>
-        list.map((o) => (o.messageId === message.messageId ? { ...o, state } : o)),
+        list.map((o) => (o.messageId === message.messageId ? { ...o, ...patch } : o)),
       )
-    setOutgoing((list) => [...list, message])
+    // Sent again, it takes the place of the one that did not get through.
+    setOutgoing((list) => [...list.filter((o) => o.messageId !== message.messageId), message])
     // Sending goes back to the end, to see the answer come.
     following.current = true
     try {
@@ -1079,20 +1112,50 @@ export function ThreadConversation({
       setError(undefined)
       const starting = sent.delivery === 'starting'
       const moving = sent.delivery === 'moving'
-      update(moving ? 'moving' : starting ? 'starting' : 'sent')
+      const sentAt = Date.now()
+      update({ state: moving ? 'moving' : starting ? 'starting' : 'sent', sentAt })
       if (moving) void thread.reload()
       // The computer says it got a message within seconds, or a few minutes when it starts
-      // first. A move waits for the turn, then for the files to be handed over: longer.
+      // first. A move waits for the turn, then for the files to be handed over: longer. Only
+      // this attempt: one sent again since waits its own time.
       setTimeout(
-        () => {
-          if (pendingRef.current.some((o) => o.messageId === message.messageId)) update('failed')
-        },
+        () => expireAttempt(id, message.messageId, sentAt),
         moving ? 30 * 60_000 : starting ? 10 * 60_000 : 20_000,
       )
     } catch (err) {
-      setOutgoing((list) => list.filter((o) => o.messageId !== message.messageId))
-      throw err
+      if (!how.draft) {
+        setOutgoing((list) => list.filter((o) => o.messageId !== message.messageId))
+        throw err
+      }
+      update({ state: 'unsent', error: (err as Error).message })
     }
+  }
+
+  /** The same message again, with its id: should the first have gone after all, it goes once. */
+  const retryOutgoing = (m: Outgoing) =>
+    void deliver(m.text, m.with.attachmentIds, m.with.pick, m.with.replyTo, m.with.moveTo, {
+      messageId: m.messageId,
+      uploads: m.uploads,
+      ...(m.draft ? { draft: m.draft } : {}),
+    }).catch((err: Error) => setError(err.message))
+  /** Back in the composer, to change and send as a new message. */
+  const editOutgoing = (m: Outgoing) => {
+    setOutgoing((list) => list.filter((o) => o.messageId !== m.messageId))
+    const draft = m.draft
+    if (draft) {
+      setText((current) => current || draft.text)
+      files.put(m.uploads)
+      setReplyTo((current) => current ?? draft.replyTo)
+      setMoveTo((current) => current ?? draft.moveTo)
+      // Edits added since stay, after the ones it took.
+      setElements((current) => withUnsent(current, draft.elements))
+      restoreDesignEdits(id, draft.designEdits)
+    } else setText((current) => current || m.text)
+    focusComposer()
+  }
+  const discardOutgoing = (m: Outgoing) => {
+    setOutgoing((list) => list.filter((o) => o.messageId !== m.messageId))
+    for (const u of m.uploads) if (u.preview) URL.revokeObjectURL(u.preview)
   }
 
   const queueAction = (messageId: string, action: QueuedMessageAction) =>
@@ -1533,6 +1596,28 @@ export function ThreadConversation({
                         : undefined
                     }
                   />
+                  {/* Sent from here: in the thread at once, until the thread has them. */}
+                  {inThreadOut.length > 0 && (
+                    <div className="mt-4 flex flex-col gap-4">
+                      {inThreadOut.map((m) => (
+                        <OutgoingMessage
+                          key={m.messageId}
+                          message={m}
+                          teammates={people}
+                          onRetry={() => retryOutgoing(m)}
+                          onEdit={() => editOutgoing(m)}
+                          onDiscard={() => discardOutgoing(m)}
+                        />
+                      ))}
+                      {(lastOut?.state === 'sent' || lastOut?.state === 'starting') && (
+                        <Answering
+                          teammate={answering}
+                          phase={lastOut.state === 'starting' ? 'starting' : 'reading'}
+                          {...(lastOut.sentAt !== undefined ? { since: lastOut.sentAt } : {})}
+                        />
+                      )}
+                    </div>
+                  )}
                   {t.mayPrompt && !t.controlledByMemberId && (
                     <QueuedReports
                       queued={queued}
@@ -1571,13 +1656,12 @@ export function ThreadConversation({
                 canSteer={busy}
                 canParallel={!t.parent}
                 onAction={queueAction}
-                onResend={(m) => {
-                  setOutgoing((list) => list.filter((o) => o.messageId !== m.messageId))
-                  setText((current) => current || m.text)
+                onRetry={retryOutgoing}
+                onEdit={editOutgoing}
+                onDiscard={(messageId) => {
+                  const m = outgoing.find((o) => o.messageId === messageId)
+                  if (m) discardOutgoing(m)
                 }}
-                onDiscard={(messageId) =>
-                  setOutgoing((list) => list.filter((o) => o.messageId !== messageId))
-                }
               />
               {offerCloud && (
                 <Card className="mb-2 gap-2 rounded-xl p-3 text-sm shadow-sm">
