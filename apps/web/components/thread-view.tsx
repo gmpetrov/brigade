@@ -150,6 +150,7 @@ import { Hint } from '@/components/ui/tooltip'
 import { WidgetFrame } from '@/components/widget-frame'
 import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
 import { AsideGroup } from '@/components/aside-group'
+import { runningAsides } from '@/lib/aside-layout'
 import { SideReply, type SideAction, type SideState } from '@/components/side-reply'
 import {
   attachmentUrl,
@@ -1297,8 +1298,11 @@ const isSide = (item: Item) => item.kind === 'user' && !!item.side
 
 type Node =
   | { type: 'item'; i: number }
-  /** The asides of one turn, together; `live` while that turn runs. */
-  | { type: 'asides'; is: number[]; live: boolean }
+  /**
+   * The asides of one turn, together; `live` while that turn runs, `quiet` once the turn wrote
+   * after the last of them.
+   */
+  | { type: 'asides'; is: number[]; live: boolean; quiet?: boolean }
   | { type: 'activity'; is: number[]; live: boolean }
   | { type: 'control'; is: number[] }
   | { type: 'worked'; key: string; ms: number; inner: Node[] }
@@ -1439,9 +1443,12 @@ function layoutThread(items: Item[], working: boolean) {
   nodes.push(...group(live.length ? since.filter((i) => !live.includes(i)) : since))
   const last = nodes.at(-1)
   if (working && last?.type === 'activity') last.live = true
-  // The running turn's asides stay open.
-  if (working && running !== undefined)
-    for (const node of nodes) if (node.type === 'asides') node.live = node.is[0]! > runningFrom
+  // The running turn's asides read as one card, at its end, above its Working line.
+  if (working && running !== undefined) {
+    const merged = runningAsides(nodes, items, runningFrom)
+    nodes.length = 0
+    nodes.push(...merged)
+  }
   return Object.assign(nodes, { running: steered ?? running, live })
 }
 
@@ -3061,6 +3068,7 @@ export function ThreadItems({
               }
             : {})}
           live={node.live}
+          quiet={!!node.quiet}
         >
           {node.is.map((i) => render(items[i]!, i))}
         </AsideGroup>
