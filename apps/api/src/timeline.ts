@@ -31,8 +31,10 @@ function transitionOf(type: string, data: Record<string, unknown>, at: Date): Tr
     case 'question.answered':
     case 'ticket.answered':
       return data.waiting ? null : { at, state: 'working' }
-    case 'turn.started':
+    // Settled on the side (message.side): the teammate's work does not start for it.
     case 'message.user':
+      return data.side ? null : { at, state: 'working' }
+    case 'turn.started':
     case 'approval.resolved':
       return { at, state: 'working' }
     case 'question.asked':
