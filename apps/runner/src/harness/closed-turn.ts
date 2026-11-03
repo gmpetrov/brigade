@@ -140,6 +140,53 @@ export const approvalAfterRestart = (
   )
 }
 
+/** A call's input as JSON, whether kept as an object or still as JSON text. */
+const shown = (input: unknown) => JSON.stringify(parsed(input))
+
+/**
+ * A person's answer to a call of a conversation the harness no longer has (HarnessThread's
+ * startAnew), as the new session's message. With the call: the answer alone does not say
+ * what it is for (a ticket's names its asks, not the draft or recipient they approve). Without
+ * it, the new session checks before acting on it.
+ */
+export const answerInNewSession = (
+  call: Pick<WaitingCall, 'toolName' | 'input'> | undefined,
+  result: { toolName: string; output: { value: unknown } },
+) =>
+  call
+    ? `In your previous session you made this ${call.toolName} call, which waited on the person:\n\n` +
+      `${shown(call.input)}\n\nThey answered it:\n\n${JSON.stringify(result.output.value)}\n\n` +
+      'Carry on from there, without asking again.'
+    : `In your previous session you asked the person something with ${result.toolName}, and they answered:\n\n` +
+      `${JSON.stringify(result.output.value)}\n\n` +
+      'What you asked is not known here: check the thread before acting on this answer, and ask again if it is unclear.'
+
+/**
+ * A person's decision on a built-in call of a conversation the harness no longer has, as the
+ * new session's message. Approved, the same call runs without asking twice (sameCall).
+ */
+export const approvalInNewSession = (
+  call: Pick<WaitingApproval, 'toolName' | 'input'> | undefined,
+  approved: boolean,
+  reason?: string,
+) => {
+  const declined = `They declined it${reason ? `: ${reason}` : ''}.`
+  if (!call)
+    return (
+      "In your previous session a call of yours waited for the person's approval and never ran; which one is not known here. " +
+      (approved
+        ? 'They approved it, but check the thread and ask again before making it.'
+        : declined)
+    )
+  return (
+    `In your previous session you asked to make this ${call.toolName} call, which waited for the person's approval and never ran:\n\n` +
+    `${shown(call.input)}\n\n` +
+    (approved
+      ? 'They approved it: make the same call now, unchanged, then carry on.'
+      : `${declined} Do not make it; carry on without it or stop.`)
+  )
+}
+
 /** The same call, whatever the order of its input's keys or whether it is still JSON text. */
 export const sameCall = (
   a: Pick<WaitingApproval, 'toolName' | 'input'>,

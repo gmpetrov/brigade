@@ -34,12 +34,21 @@ const RESUME = {
 /** Claude Code's own words (its CLI, through the bridge's terminal error). */
 const LOST = 'No conversation found with session ID: deleted-conversation'
 
+type Options = {
+  /** A new session fails the same way. */
+  always?: boolean
+  /** A new session makes the Bash call `publish` again, which asks to be approved. */
+  publishes?: boolean
+  /** What the runner kept of the thread, in place of the parked session below. */
+  state?: unknown
+}
+
 /**
  * Claude Code as a thread sees it. A session that resumes a conversation finds it deleted and
- * fails its turn, as Claude Code does; one started anew answers. `always`: a new one fails too.
- * What each session was given is kept, in order.
+ * fails its turn, as Claude Code does; one started anew answers. What each session was given
+ * is kept, in order, and an approval it was given as APPROVED.
  */
-function scriptedHarness(heard: string[], next: { resumes: boolean }, always = false) {
+function scriptedHarness(heard: string[], next: { resumes: boolean }, options: Options) {
   return {
     harnessId: 'scripted',
     specificationVersion: 'harness-v1',
@@ -53,9 +62,30 @@ function scriptedHarness(heard: string[], next: { resumes: boolean }, always = f
         doPromptTurn: async ({ emit, prompt }: { emit: Emit; prompt: unknown }) => {
           heard.push(typeof prompt === 'string' ? prompt : JSON.stringify(prompt))
           emit({ type: 'stream-start', modelId: 'scripted' })
-          if (resumes || always) {
+          if (resumes || options.always) {
             emit({ type: 'error', error: LOST })
             return { submitToolResult: async () => {}, done: Promise.resolve() }
+          }
+          if (options.publishes) {
+            emit({
+              type: 'tool-call',
+              toolCallId: 'publish-2',
+              toolName: 'bash',
+              input: '{"command":"publish"}',
+              providerExecuted: true,
+              dynamic: true,
+            })
+            emit({
+              type: 'tool-approval-request',
+              approvalId: 'approval-2',
+              toolCallId: 'publish-2',
+            })
+            emit({
+              type: 'finish-step',
+              finishReason: { unified: 'tool-calls', raw: 'host-input' },
+              usage,
+            })
+            return { submitToolResult: async () => {}, done: new Promise<void>(() => {}) }
           }
           emit({ type: 'text-start', id: 'r' })
           emit({ type: 'text-delta', id: 'r', delta: 'Done' })
@@ -63,7 +93,22 @@ function scriptedHarness(heard: string[], next: { resumes: boolean }, always = f
           emit({ type: 'finish-step', finishReason: { unified: 'stop', raw: 'stop' }, usage })
           return { submitToolResult: async () => {}, done: Promise.resolve() }
         },
-        doContinueTurn: async () => ({ submitToolResult: async () => {}, done: Promise.resolve() }),
+        doContinueTurn: async ({ emit }: { emit: Emit }) => {
+          let finish = () => {}
+          const done = new Promise<void>((resolve) => (finish = resolve))
+          return {
+            submitToolResult: async () => finish(),
+            done,
+            submitToolApproval: async () => {
+              heard.push('APPROVED')
+              emit({ type: 'text-start', id: 'ok' })
+              emit({ type: 'text-delta', id: 'ok', delta: 'Published' })
+              emit({ type: 'text-end', id: 'ok' })
+              emit({ type: 'finish-step', finishReason: { unified: 'stop', raw: 'stop' }, usage })
+              finish()
+            },
+          }
+        },
         // The adapter keeps naming the conversation it was given, found or not.
         doStop: async () => (resumes ? RESUME : { ...RESUME, data: { claudeSessionId: 'new' } }),
         doDestroy: async () => {},
@@ -72,19 +117,21 @@ function scriptedHarness(heard: string[], next: { resumes: boolean }, always = f
   }
 }
 
-async function setup(always = false) {
+async function setup(options: Options = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'brigade-lost-session-'))
   // Parked a month ago, after a turn, with what was said then.
   await writeFile(
     join(dir, 'lost-session.json'),
-    JSON.stringify({
-      accountId: 'acct',
-      resume: RESUME,
-      transcript: [
-        { role: 'user', text: 'Add the caches to the cleanup' },
-        { role: 'assistant', text: 'Opened PR #660.' },
-      ],
-    }),
+    JSON.stringify(
+      options.state ?? {
+        accountId: 'acct',
+        resume: RESUME,
+        transcript: [
+          { role: 'user', text: 'Add the caches to the cleanup' },
+          { role: 'assistant', text: 'Opened PR #660.' },
+        ],
+      },
+    ),
   )
   const heard: string[] = []
   const events: AgentEvent[] = []
@@ -108,7 +155,7 @@ async function setup(always = false) {
   const next = { resumes: false }
   const agent = new HarnessAgent({
     // The harness interface is the SDK's internal one; this plays only what a thread uses.
-    harness: scriptedHarness(heard, next, always) as never,
+    harness: scriptedHarness(heard, next, options) as never,
     tools: {},
     permissionMode: 'allow-all',
     sandboxConfig: { workDir: '.' },
@@ -226,7 +273,7 @@ test(
   'a new session that fails the same way fails the turn once, with the error',
   { timeout: 10_000 },
   async () => {
-    const t = await setup(true)
+    const t = await setup({ always: true })
     try {
       const outcome = await t.run({ kind: 'prompt', text: 'Fix the resume' })
       assert.deepEqual(outcome, { status: 'failed', error: LOST })
@@ -240,3 +287,92 @@ test(
     }
   },
 )
+
+/** Parked a month ago in a turn that waits on the person: a ticket, or a call to approve. */
+const waitingOn = (pending: Record<string, unknown>, said: string) => ({
+  accountId: 'acct',
+  transcript: [{ role: 'user', text: said }],
+  resume: {
+    type: 'resume-session',
+    harnessId: 'claude-code',
+    specificationVersion: 'harness-v1',
+    data: RESUME.data,
+    continueFrom: {
+      type: 'continue-turn',
+      harnessId: 'claude-code',
+      specificationVersion: 'harness-v1',
+      data: RESUME.data,
+      ...pending,
+    },
+  },
+})
+
+test('an answer to a ticket of the lost conversation goes to the new one with the ticket', async () => {
+  const ticket = {
+    title: 'Approve the reply',
+    asks: [
+      {
+        id: 'send',
+        type: 'approval',
+        title: 'Send the reply',
+        draft: 'To: pat@example.com\n\nHi Pat, your renewal will be $120.',
+      },
+    ],
+  }
+  const t = await setup({
+    state: waitingOn(
+      {
+        pendingToolResults: [
+          { toolCallId: 'ticket-1', toolName: 'open_ticket', input: JSON.stringify(ticket) },
+        ],
+      },
+      'Draft a reply to Pat for approval.',
+    ),
+  })
+  try {
+    const outcome = await t.run({
+      kind: 'ticket',
+      requestId: 'ticket-1',
+      answer: { action: 'answered', replies: { send: { type: 'approval', approved: true } } },
+    } as never)
+    assert.deepEqual(outcome, { status: 'idle' })
+    const handoff = t.heard[1] ?? ''
+    assert.match(handoff, /User: Draft a reply to Pat for approval\./)
+    // What was approved, and for whom: the answer alone names only the ask.
+    assert.match(handoff, /you made this open_ticket call, which waited on the person/)
+    assert.ok(handoff.includes('Hi Pat, your renewal will be $120.'), 'the draft')
+    assert.ok(handoff.includes('pat@example.com'), 'its recipient')
+    assert.ok(handoff.includes('"approved":true'), 'the answer')
+    assert.equal(t.heard.length, 2)
+  } finally {
+    await t.done()
+  }
+})
+
+test('a call approved for the lost conversation runs in the new one without asking again', async () => {
+  const t = await setup({
+    publishes: true,
+    state: waitingOn(
+      {
+        pendingToolApprovals: [
+          { approvalId: 'approval-1', toolName: 'bash', input: '{"command":"publish"}' },
+        ],
+      },
+      'Publish the package.',
+    ),
+  })
+  try {
+    const outcome = await t.run({ kind: 'approval', approvalId: 'approval-1', approved: true })
+    assert.deepEqual(outcome, { status: 'idle' })
+    assert.match(t.heard[1] ?? '', /They approved it: make the same call now, unchanged/)
+    assert.match(t.heard[1] ?? '', /\{"command":"publish"\}/)
+    assert.equal(t.heard[2], 'APPROVED')
+    assert.deepEqual(
+      t.events.filter((e) => e.type === 'approval.requested'),
+      [],
+      'the person is not asked twice',
+    )
+  } finally {
+    await t.done()
+  }
+})
