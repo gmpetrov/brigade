@@ -701,6 +701,11 @@ export class HarnessThread {
     return this.drain !== undefined
   }
 
+  /** A turn runs in a live session, whose conversation a side reply can fork (sideReply). */
+  get forkable() {
+    return this.live !== undefined
+  }
+
   /** The guess no longer matters (a new message, a stop): the answered turn's stream ends now. */
   async stopDrain() {
     const drain = this.drain
@@ -944,6 +949,92 @@ export class HarnessThread {
     await live.agent.experimental_steer({ session: live.session, text })
     this.remember('user', text)
     this.replies.steered()
+  }
+
+  /**
+   * A side reply (side-replies.ts): a copy of this teammate's conversation, forked while its
+   * turn runs, answers `prompt` and may only read. It runs in a process of its own, on the
+   * running turn's account and in the thread's folder, and nothing of it reaches the turn:
+   * Claude Code forks the newest conversation in the folder (the turn's) and writes none;
+   * Codex forks the thread its folder's turn runs in without saving it, and only reads.
+   * Resolves to the copy's last message.
+   */
+  async sideReply(prompt: string, signal: AbortSignal): Promise<string> {
+    const live = this.live
+    if (!live) throw new Error('No turn is running')
+    const spec = this.spec
+    const codex = spec.teammate.harness === 'codex'
+    const env = {
+      ...(await prepare(this.workDir, live.account, spec.sessionId, this.runAs)),
+      // Its prompt is read once, and its tools differ from the turn's: no cache to share.
+      CLAUDE_CODE_PROMPT_CACHE_TTL: '5m',
+      // The bridges' patches: fork, write nothing, only read.
+      BRIGADE_FORK_SESSION: '1',
+      ...(codex ? {} : claudeSettingsEnv()),
+    }
+    const agent = new HarnessAgent({
+      harness: codex
+        ? createCodex({
+            auth: {},
+            codexConfig: { ...CODEX_SETTINGS, project_doc_max_bytes: INSTRUCTIONS_MAX_BYTES },
+            reasoningEffort: 'low',
+          })
+        : createClaudeCode({ auth: {}, effort: 'low' }),
+      tools: {},
+      // Codex reads through its shell, which the bridge keeps read-only.
+      ...(codex ? {} : { activeTools: ['read', 'glob', 'grep'] as never }),
+      ...withModel(spec.teammate),
+      ...(spec.teammate.instructions ? { instructions: spec.teammate.instructions } : {}),
+      permissionMode: codex ? 'allow-all' : 'allow-reads',
+      sandboxConfig: { workDir: '.' },
+    })
+    const id = `${this.key}-side-${randomUUID().slice(0, 8)}`
+    const sandbox = createLocalSandboxSession({
+      id,
+      workingDirectory: this.workDir,
+      port: await freePort(),
+      env,
+      ...(this.runAs ? { runAs: this.runAs, thread: spec.sessionId } : {}),
+    })
+    try {
+      const session = await agent.createSession({
+        sessionId: id,
+        sandboxSession: sandbox,
+        // Claude Code continues the newest conversation in the folder; Codex finds its thread.
+        ...(codex
+          ? {}
+          : {
+              resumeFrom: {
+                type: 'resume-session',
+                specificationVersion: 'harness-v1',
+                harnessId: 'claude-code',
+                data: {},
+              } as never,
+            }),
+      })
+      try {
+        let text = ''
+        const mapper = new EventMapper((event) => {
+          if (event.type === 'message.done') text = event.text
+          reportRunUsage(event, {
+            kind: 'side',
+            accountId: live.account.id,
+            sessionId: spec.sessionId,
+            teammateId: spec.teammate.id,
+          })
+        })
+        const result = await agent.stream({ session, prompt, abortSignal: signal })
+        for await (const part of result.fullStream) mapper.map(part)
+        if (signal.aborted) throw new Error('The side reply was stopped')
+        if (mapper.exhausted) throw new Error('The account is out of usage')
+        if (mapper.error) throw new Error(mapper.error)
+        return text
+      } finally {
+        await session.destroy().catch(() => undefined)
+      }
+    } finally {
+      await sandbox.destroy()
+    }
   }
 
   /** Stop the harness and keep its saved state, so the next message resumes it. */

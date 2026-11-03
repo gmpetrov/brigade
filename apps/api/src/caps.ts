@@ -95,8 +95,13 @@ async function working(
       for (const [i, e] of list.entries()) {
         const pausedBySwitch =
           e.type === 'account.switched' && !(e.data as { toAccountId?: string | null }).toAccountId
-        if (STARTS.has(e.type)) startedAt ??= e.at.getTime()
-        else if (ENDS.has(e.type) || pausedBySwitch) {
+        // A message settled on the side (message.side) starts no work of the teammate's.
+        const settled =
+          e.type === 'message.user' &&
+          (e.data as { side?: { route?: string } } | null)?.side?.route === 'answer'
+        if (STARTS.has(e.type)) {
+          if (!settled) startedAt ??= e.at.getTime()
+        } else if (ENDS.has(e.type) || pausedBySwitch) {
           // A turn that began before `since` counts from `since`.
           const from = startedAt ?? (i === 0 ? since.getTime() : null)
           if (from !== null) total += e.at.getTime() - from

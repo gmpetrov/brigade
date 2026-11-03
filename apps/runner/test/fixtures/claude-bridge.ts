@@ -44,7 +44,14 @@ async function fakeInstall(dir: string, sdk: string) {
 /** One turn through the bridge: the stream's parts, and the stand-in's record, line by line. */
 export async function bridgeTurn(
   sdk: string,
-  options: { permissionMode: 'allow-all' | 'allow-reads'; env: Record<string, string> },
+  options: {
+    permissionMode: 'allow-all' | 'allow-reads'
+    env: Record<string, string>
+    /** The session it resumes, as the harness saved it (a side reply's: Claude Code continues). */
+    resumeFrom?: unknown
+    /** The built-in tools it may use, by the harness's names (read, glob…). */
+    activeTools?: string[]
+  },
 ): Promise<{ parts: { type: string; [key: string]: unknown }[]; record: any[] }> {
   const home = await mkdtemp(join(tmpdir(), 'claude-bridge-'))
   const record = join(home, 'record.jsonl')
@@ -78,9 +85,13 @@ export async function bridgeTurn(
     harness: createClaudeCode({ auth: {} }),
     permissionMode: options.permissionMode,
     sandboxConfig: { workDir: '.' },
+    ...(options.activeTools ? { activeTools: options.activeTools as never } : {}),
   })
   try {
-    const harnessSession = await agent.createSession({ sandboxSession: session })
+    const harnessSession = await agent.createSession({
+      sandboxSession: session,
+      ...(options.resumeFrom ? { resumeFrom: options.resumeFrom as never } : {}),
+    })
     const result = await agent.stream({ session: harnessSession, prompt: 'hello' })
     const parts: { type: string; [key: string]: unknown }[] = []
     for await (const part of result.fullStream) parts.push(part as never)

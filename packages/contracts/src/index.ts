@@ -31,6 +31,7 @@ export * from './repositories.js'
 export * from './reviews.js'
 export * from './runner.js'
 export * from './schedules.js'
+export * from './side-replies.js'
 export * from './wakeups.js'
 export * from './search.js'
 export * from './skills.js'
@@ -106,8 +107,16 @@ export * from './usage.js'
  *     keeps it while its version holds (CATALOG_PROTOCOL).
  * 49: a held call decided once its tool no longer waited shows decided in its thread
  *     (thread.settle, SETTLE_PROTOCOL).
+ * 50: a person's message sent during its teammate's turn gets a side reply (message.side), and
+ *     thread.queued takes keep and queue for it (SIDE_REPLY_PROTOCOL).
  */
-export const PROTOCOL_VERSION = 49
+export const PROTOCOL_VERSION = 50
+/**
+ * Runners from this version on answer a person's message sent during its teammate's turn on
+ * the side (message.side), and take keep and queue on it. The API refuses those actions to
+ * older ones, which never send a side reply.
+ */
+export const SIDE_REPLY_PROTOCOL = 50
 /**
  * Runners from this version on take thread.settle: a held call's decision no tool heard, which
  * shows its approval decided. Older ones are not sent it, and the approval stays as it was.

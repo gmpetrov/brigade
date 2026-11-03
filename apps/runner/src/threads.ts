@@ -21,8 +21,16 @@ import {
   MEMORY_STOPPED,
   mentionedIds,
   MessageAttachment,
+  parseSideReply,
   PASSING_ERROR,
   RETRY_AFTER_MS as RETRY_DEFAULTS,
+  SIDE_REPLY_TIMEOUT_MS,
+  sideNote,
+  sidePrompt,
+  STEER_DELAY_MS,
+  withSideContext,
+  type SideExchange,
+  type SideRoute,
   THREAD_NOTE_SOURCE,
   TURN_PREPARING_SOURCE,
   TURN_WAITING_SOURCE,
@@ -63,6 +71,17 @@ import {
 } from './harness/index.js'
 
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
+
+/** How long a message its side reply passes on waits for its sender to keep it (tests set less). */
+const STEER_DELAY = process.env.BRIGADE_SIDE_STEER_MS
+  ? Number(process.env.BRIGADE_SIDE_STEER_MS)
+  : STEER_DELAY_MS
+
+/** Resolves once the signal aborts. */
+const aborted = (signal: AbortSignal) =>
+  new Promise<void>((resolve) =>
+    signal.aborted ? resolve() : signal.addEventListener('abort', () => resolve(), { once: true }),
+  )
 /** Park an idle harness session after this long; the next message resumes it. */
 const PARK_AFTER_MS = 5 * 60_000
 /** How much of what others said a teammate is told at the start of its turn. */
@@ -225,7 +244,8 @@ const answerOf = (turn: Seat['turn']) =>
  * decision (an approval); it runs once they decide. A ticket or question the
  * teammate asked holds nothing: it reads the message now (harness/aside.ts).
  * steering: being given to the running turn. Then it is shown (its turn started),
- * steered or cancelled.
+ * steered or cancelled; or answered, when its side reply settled it (sideReply). A person who
+ * wants one settled run after all sends it again (ThreadPrompt's `settled`).
  */
 type Message = {
   id: string
@@ -236,9 +256,15 @@ type Message = {
   attachments: ThreadAttachmentRef[]
   /** The earlier message it replies to. */
   replyTo?: ReplyTo
-  state: 'queued' | 'held' | 'steering' | 'shown' | 'steered' | 'cancelled'
+  state: 'queued' | 'held' | 'steering' | 'shown' | 'steered' | 'cancelled' | 'answered'
   /** Settles when a steer in progress is done, either way. */
   steering?: Promise<void>
+  /** Its side reply under way (sideReply): `stop` ends it, `done` settles once it ended. */
+  side?: { stop: AbortController; done: Promise<void> }
+  /** What its side reply said, and the route it took or a person gave it since. */
+  reply?: { text: string; route: SideRoute }
+  /** Its side reply passes it to the running turn when this fires, unless its sender keeps it. */
+  steerTimer?: NodeJS.Timeout
   /** The log's end just after it, once shown. */
   upTo?: Promise<number>
   /** Held while a person had control: only the hand back releases it (releaseAllHeld). */
@@ -288,6 +314,14 @@ type Thread = {
   slotWait?: TurnWaiting
   /** Messages not yet read: queued, held or being steered, by id. */
   messages: Map<string, Message>
+  /** Side replies, one after another: each forks the conversation as the turn left it. */
+  sides: Promise<void>
+  /**
+   * Per teammate, what its side replies said during its running turn, which that turn has not
+   * heard: the next side reply, and a message passed to the turn, are told it. Its next turn
+   * starts with it as notes (sideNote), so it starts empty again.
+   */
+  sideLog: Map<string, (SideExchange & { messageId: string })[]>
   /** A memory run is queued or running: a new message waits for it. */
   memorizing: boolean
   /** Set while a person holds control: no teammate acts in the thread. */
@@ -460,6 +494,8 @@ export class Threads {
     }
     if (command.type === 'thread.prompt') {
       const thread = this.thread(spec.sessionId)
+      // Sent twice (a person's second click to run a settled message): it waits here already.
+      if (command.messageId && thread.messages.has(command.messageId)) return
       thread.handoffs = 0
       const message: Message = {
         id: command.messageId ?? randomUUID(),
@@ -484,6 +520,10 @@ export class Threads {
       if (message.state === 'queued') {
         if (command.steer) void this.steer(thread, message)
         else if (this.waiting(thread, message)) this.steerQueued(thread, spec.teammate.id)
+        // Its teammate is busy with its turn: a copy of its conversation answers now, unless
+        // one did already and its sender wants it run after all.
+        else if (!command.settled && this.sides(thread, message))
+          void this.sideReply(thread, message)
       }
       if (command.nameThread !== undefined) void this.name(spec, command.text, command.nameThread)
       return
@@ -980,6 +1020,8 @@ export class Threads {
         const controller = new AbortController()
         thread.controller = controller
         thread.running = { teammateId: me, turnId }
+        // What was said on the side during its last turn, it is told now: the next starts afresh.
+        thread.sideLog.delete(me)
         seat.waiting = false
         const name = { sessionId: spec.sessionId, teammateId: me }
         // Files to fetch before it starts (a move, a folder put away): the thread says so, once.
@@ -1286,6 +1328,9 @@ export class Threads {
     const sessionId = first!.sessionId
     this.enqueue(first!, 'prompt', async () => {
       await message.steering
+      // Its turn came: the teammate answers it itself, rather than a copy on the side.
+      await this.endSide(thread, message)
+      // Settled on the side: no turn of its own.
       if (message.state !== 'queued' && message.state !== 'shown') return null
       // Its teammate waits on a person's approval: the message runs once they decide
       // (releaseHeld). Waiting only on its own ticket or question, it reads the message now.
@@ -1330,6 +1375,10 @@ export class Threads {
       memberId: message.memberId,
       messageId: message.id,
       ...(steered ? { steered: true } : {}),
+      // Given to the turn from its side reply: a page of the thread starting here still shows it.
+      ...(steered && message.reply
+        ? { side: { text: message.reply.text, route: 'steer' as const } }
+        : {}),
       ...(message.replyTo ? { replyTo: message.replyTo } : {}),
       ...(message.attachments.length
         ? { attachments: message.attachments.map((a) => MessageAttachment.parse(a)) }
@@ -1380,6 +1429,7 @@ export class Threads {
   ) {
     message.state = 'cancelled'
     thread.messages.delete(message.id)
+    void this.endSide(thread, message)
     this.options.emit(sessionId, {
       at: new Date().toISOString(),
       type: 'message.cancelled',
@@ -1389,7 +1439,11 @@ export class Threads {
     })
   }
 
-  /** A person acts on a queued message: cancel it, change its text, or steer it. */
+  /**
+   * A person acts on a queued message: cancel it, change its text, or steer it. On one its
+   * side reply passes to the running turn, keep leaves it for after the turn. (One its side
+   * reply settled is no longer queued: the API sends it again to have it run.)
+   */
   private queued(command: Extract<Command, { type: 'thread.queued' }>) {
     const thread = this.threads.get(command.sessionId)
     const message = thread?.messages.get(command.messageId)
@@ -1397,14 +1451,195 @@ export class Threads {
     if (!thread || !message || message.state === 'steering') return
     // Brigade's own (a child's report, a wake-up) goes to the teammate as it was.
     if (!mayChangeQueued(message.memberId, command.action)) return
+    if (command.action === 'queue') return
+    if (command.action === 'keep') {
+      if (!message.steerTimer || !message.reply) return
+      clearTimeout(message.steerTimer)
+      message.steerTimer = undefined
+      message.reply.route = 'queue'
+      return this.emitSide(message, { status: 'answered', ...message.reply })
+    }
     if (command.action === 'cancel')
       return this.cancel(command.sessionId, thread, message, command.memberId)
     if (command.action === 'edit') {
       if (!command.text?.trim()) return
       message.text = command.text
+      // A side reply to what it said before no longer fits.
+      void this.endSide(thread, message)
       return this.emitQueued(command.sessionId, message)
     }
     void this.steer(thread, message)
+  }
+
+  /**
+   * Whether a message gets a side reply: a person's, to one teammate, written while that
+   * teammate's turn runs (one that only waits on its background work takes it at once), in a
+   * session a copy can be made of, on a computer with memory to spare.
+   */
+  private sides(thread: Thread, message: Message) {
+    const spec = message.specs[0]!
+    return (
+      message.memberId !== null &&
+      message.specs.length === 1 &&
+      !thread.takeover &&
+      thread.running?.teammateId === spec.teammate.id &&
+      thread.slotWait?.teammateId !== spec.teammate.id &&
+      this.harness(thread, spec).harness.forkable
+    )
+  }
+
+  /**
+   * A copy of the teammate's conversation answers a person's message during its turn, which
+   * goes on untouched, and says what becomes of the message (side-replies.ts). Short of memory,
+   * or if it fails, the message just waits its turn, as before.
+   */
+  private async sideReply(thread: Thread, message: Message) {
+    const spec = message.specs[0]!
+    const stop = new AbortController()
+    const timer = setTimeout(() => stop.abort(), SIDE_REPLY_TIMEOUT_MS)
+    timer.unref?.()
+    let settle!: () => void
+    const done = new Promise<void>((resolve) => (settle = resolve))
+    message.side = { stop, done }
+    // One at a time: each answers from the conversation as the turn has it by then. The next
+    // waits for this one and every one before it, even when this one stops before its turn.
+    const before = thread.sides
+    thread.sides = Promise.all([before, done]).then(() => undefined)
+    let reply: { text: string; route: SideRoute } | null = null
+    let started = false
+    try {
+      // Stopped while it waits (its turn came, it was cancelled): it does not keep its turn waiting.
+      await Promise.race([before, aborted(stop.signal)])
+      if (stop.signal.aborted) return
+      if (!(await (this.options.memoryRoom?.() ?? Promise.resolve(true)))) return
+      if (
+        stop.signal.aborted ||
+        message.state !== 'queued' ||
+        thread.running?.teammateId !== spec.teammate.id
+      )
+        return
+      // Its teammate's seat: the turn running in it is the one a copy is made of.
+      const seat = this.harness(thread, spec)
+      if (!seat.harness.forkable) return
+      this.emitSide(message, { status: 'answering' })
+      started = true
+      // The files that came with it are in the teammate's folder before the copy reads where they are.
+      await this.placeFiles(spec, seat.folder)
+      const text = await seat.harness.sideReply(
+        sidePrompt({
+          name: 'A member',
+          text: this.promptText(message, spec),
+          earlier: thread.sideLog.get(spec.teammate.id) ?? [],
+        }),
+        stop.signal,
+      )
+      const parsed = parseSideReply(text)
+      if (parsed.text && !stop.signal.aborted) reply = parsed
+    } catch (error) {
+      if (!stop.signal.aborted)
+        console.warn(`thread ${spec.sessionId}: no side reply: ${String(error)}`)
+    } finally {
+      clearTimeout(timer)
+      message.side = undefined
+      if (started) this.sideAnswered(thread, message, reply)
+      settle()
+    }
+  }
+
+  /** What a side reply said becomes of its message, or nothing when none came. */
+  private sideAnswered(
+    thread: Thread,
+    message: Message,
+    reply: { text: string; route: SideRoute } | null,
+  ) {
+    const spec = message.specs[0]!
+    // Cancelled, edited, or its turn came meanwhile: it is read as any message would be.
+    if (!reply || message.state !== 'queued') return this.emitSide(message, { status: 'failed' })
+    message.reply = reply
+    // What a later message may build on, until the turn hears it.
+    const teammateId = spec.teammate.id
+    thread.sideLog.set(teammateId, [
+      ...(thread.sideLog.get(teammateId) ?? []),
+      { messageId: message.id, text: message.text, reply: reply.text },
+    ])
+    if (reply.route === 'answer') {
+      message.state = 'answered'
+      thread.messages.delete(message.id)
+      this.emitSide(message, { status: 'answered', ...reply })
+      // Read: no turn of its own. The thread already shows it, with its side reply.
+      this.options.emit(spec.sessionId, {
+        at: new Date().toISOString(),
+        type: 'message.user',
+        text: message.text,
+        memberId: message.memberId,
+        messageId: message.id,
+        side: { text: reply.text, route: 'answer' },
+        ...(message.replyTo ? { replyTo: message.replyTo } : {}),
+        ...(message.attachments.length
+          ? { attachments: message.attachments.map((a) => MessageAttachment.parse(a)) }
+          : {}),
+      })
+      // The teammate hears of it when its next turn starts: what it was asked, and said.
+      const note = sideNote({ name: 'A member', text: message.text, reply: reply.text })
+      thread.log = thread.log.then((log) => {
+        push(log, { by: null, name: 'Brigade', text: note, note: true })
+        return log
+      })
+      void this.saveLog(spec.sessionId)
+      return
+    }
+    if (reply.route === 'steer') {
+      const at = Date.now() + STEER_DELAY
+      message.steerTimer = setTimeout(() => {
+        message.steerTimer = undefined
+        if (message.state === 'queued') void this.steer(thread, message)
+      }, STEER_DELAY)
+      return this.emitSide(message, {
+        status: 'answered',
+        ...reply,
+        steerAt: new Date(at).toISOString(),
+      })
+    }
+    this.emitSide(message, { status: 'answered', ...reply })
+  }
+
+  /** Its side reply, if one is under way or waits to pass it on, ends here: the message is read as is. */
+  private async endSide(thread: Thread, message: Message) {
+    if (message.steerTimer) {
+      clearTimeout(message.steerTimer)
+      message.steerTimer = undefined
+      // Its turn came, or a person steered it now: it is no longer to be passed on later.
+      if (message.reply?.route === 'steer' && message.state === 'queued') {
+        message.reply.route = 'queue'
+        this.emitSide(message, { status: 'answered', ...message.reply })
+      }
+    }
+    const side = message.side
+    if (!side) return
+    side.stop.abort()
+    await side.done
+  }
+
+  private emitSide(
+    message: Message,
+    side: {
+      status: 'answering' | 'answered' | 'failed'
+      text?: string
+      route?: SideRoute
+      steerAt?: string
+    },
+  ) {
+    const spec = message.specs[0]!
+    this.options.emit(spec.sessionId, {
+      at: new Date().toISOString(),
+      type: 'message.side',
+      teammateId: spec.teammate.id,
+      messageId: message.id,
+      status: side.status,
+      ...(side.text !== undefined ? { text: side.text } : {}),
+      ...(side.route ? { route: side.route } : {}),
+      ...(side.steerAt ? { steerAt: side.steerAt } : {}),
+    })
   }
 
   /**
@@ -1414,6 +1649,8 @@ export class Threads {
   private async steer(thread: Thread, message: Message) {
     const spec = message.specs[0]!
     const name = spec.teammate.name
+    // Given to the turn now: a side reply still under way has nothing left to answer.
+    if (message.side || message.steerTimer) await this.endSide(thread, message)
     if (message.state !== 'queued') {
       if (message.state === 'held' && !message.upTo)
         this.emitQueued(
@@ -1444,7 +1681,11 @@ export class Threads {
     try {
       // The files that came with it are in the teammate's folder before it reads where they are.
       await this.placeFiles(spec, seat.folder)
-      await seat.harness.steer(this.promptText(message, spec))
+      // What was said on the side before it, which the turn never heard: it may build on it.
+      const earlier = (thread.sideLog.get(spec.teammate.id) ?? []).filter(
+        (e) => e.messageId !== message.id,
+      )
+      await seat.harness.steer(withSideContext('A member', earlier, this.promptText(message, spec)))
       const end = await this.show(thread, message, true)
       // It read the message in this turn: its next turn does not tell it again.
       const log = await thread.log
@@ -1831,6 +2072,8 @@ export class Threads {
         queue: Promise.resolve(),
         controller: undefined,
         messages: new Map(),
+        sides: Promise.resolve(),
+        sideLog: new Map(),
         memorizing: false,
         waiting: new Map(),
         answers: new Map(),

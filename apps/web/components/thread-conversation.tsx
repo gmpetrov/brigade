@@ -83,6 +83,7 @@ import {
   type Outgoing,
   type OutgoingDraft,
 } from '@/components/queued-messages'
+import type { SideAction } from '@/components/side-reply'
 import { expireAttempt, useOutgoing } from '@/lib/outgoing-messages'
 import { Takeover } from '@/components/takeover'
 import {
@@ -1533,6 +1534,12 @@ export function ThreadConversation({
                       />
                     )}
                     childThreads={t.children}
+                    {...(t.mayPrompt
+                      ? {
+                          onSideAction: (messageId: string, action: SideAction) =>
+                            queueAction(messageId, { action }),
+                        }
+                      : {})}
                     onOpenPreview={previewLive(preview) ? openPreview : undefined}
                     previewStart={{
                       live,

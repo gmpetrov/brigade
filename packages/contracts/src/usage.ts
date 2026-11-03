@@ -4,9 +4,10 @@ import { z } from 'zod'
 /**
  * A harness run outside a teammate's turn: what Brigade itself asks of the account. memory and
  * tidy: a thread went quiet and its memory is taken, or a memory file laid out again. title: a new
- * thread is named. brief: a project's brief is drafted. image: a picture, through Codex.
+ * thread is named. brief: a project's brief is drafted. image: a picture, through Codex. side: a
+ * person's message answered during its teammate's turn (side-replies.ts).
  */
-export const UsageRunKind = z.enum(['memory', 'tidy', 'title', 'brief', 'image'])
+export const UsageRunKind = z.enum(['memory', 'tidy', 'title', 'brief', 'image', 'side'])
 export type UsageRunKind = z.infer<typeof UsageRunKind>
 
 /**
