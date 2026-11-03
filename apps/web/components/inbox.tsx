@@ -1001,6 +1001,8 @@ function Reader({
       </Button>
     )
   const sender = d.fromName || d.from
+  // What the teammate did with the mail reads after it, at the end of the conversation.
+  const outcomeAtEnd = !!d.outcome && !!d.thread && (!done || d.outcome.kind === 'handled')
   const reload = async () => {
     await Promise.all([detail.reload(), onChanged()])
   }
@@ -1054,9 +1056,7 @@ function Reader({
               )}
             </div>
           </div>
-        ) : d.outcome && d.thread && (!done || d.outcome.kind === 'handled') ? (
-          <OutcomeLine detail={d} about={about} onChanged={reload} />
-        ) : (
+        ) : outcomeAtEnd ? null : (
           <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
             <span
               aria-hidden
@@ -1112,6 +1112,11 @@ function Reader({
             <DraftCard draft={draft} thread={d.thread} onChanged={reload} />
           </li>
         ))}
+        {outcomeAtEnd && (
+          <li>
+            <OutcomeLine detail={d} about={about} onChanged={reload} />
+          </li>
+        )}
       </ol>
     </article>
   )
@@ -1507,7 +1512,8 @@ const mailMention = (d: InboxDetail) =>
 
 /**
  * What the thread did with a conversation it did not answer, in its own words, and what a person
- * can do about it: have it reply after all, talk it over in the thread, or reply themselves.
+ * can do about it: have it reply after all, talk it over in the thread, or reply themselves. It
+ * closes the conversation, after the mail it is about, where a reply would go.
  */
 function OutcomeLine({
   detail: d,
@@ -1552,62 +1558,59 @@ function OutcomeLine({
     <div className="flex flex-col gap-3">
       <div
         className={cn(
-          'flex flex-col gap-2 rounded-xl px-3.5 py-2.5',
-          declined ? 'border border-warning/30 bg-warning/10' : 'border bg-secondary/40',
+          'flex items-start gap-3 rounded-2xl border px-4 py-3',
+          declined ? 'border-warning/30 bg-warning/10' : 'bg-card',
         )}
       >
-        <p className="flex flex-wrap items-center gap-x-1.5 text-sm">
-          <span
-            aria-hidden
-            className={cn(
-              'size-1.5 flex-none rounded-full',
-              declined ? 'bg-warning' : 'bg-primary',
+        <span
+          aria-hidden
+          className={cn(
+            'mt-[7px] size-1.5 flex-none rounded-full',
+            declined ? 'bg-warning' : 'bg-primary',
+          )}
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="flex flex-wrap items-center gap-x-1.5 text-sm">
+            <span className="font-medium">
+              {declined ? `${who} needs you and didn’t reply` : `${who} handled it without a reply`}
+            </span>
+            <time dateTime={outcome.at} className="text-muted-foreground">
+              · {timeAgo(outcome.at)}
+            </time>
+            {about && <span className="text-muted-foreground">· {about}</span>}
+          </p>
+          {outcome.note && (
+            <p className="text-sm text-muted-foreground wrap-anywhere">{outcome.note}</p>
+          )}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {declined && d.mayPrompt && (
+              <Button size="sm" disabled={busy} onClick={() => void ask()}>
+                Ask {who} to reply
+              </Button>
             )}
-          />
-          <span className="font-medium">
-            {declined ? `${who} needs you and didn’t reply` : `${who} handled it without a reply`}
-          </span>
-          <time dateTime={outcome.at} className="text-muted-foreground">
-            · {timeAgo(outcome.at)}
-          </time>
-          {about && <span className="text-muted-foreground">· {about}</span>}
-        </p>
-        {outcome.note && (
-          <p className="text-sm text-muted-foreground wrap-anywhere">“{outcome.note}”</p>
-        )}
-        <div className="flex flex-wrap items-center gap-1.5">
-          {declined && d.mayPrompt && (
-            <Button size="sm" disabled={busy} onClick={() => void ask()}>
-              Ask {who} to reply
-            </Button>
-          )}
-          {d.mayPrompt ? (
-            <Button
-              size="sm"
-              variant={declined ? 'outline' : 'ghost'}
-              className={cn(!declined && 'h-7 px-2')}
-              onClick={discuss}
-            >
-              Discuss with {who}
-            </Button>
-          ) : (
-            <Button asChild size="sm" variant="ghost" className="h-7 px-2">
-              <Link href={`/app/threads/${thread.id}`}>
-                Open its thread
-                <ArrowUpRight aria-hidden />
-              </Link>
-            </Button>
-          )}
-          {declined && d.canReply && (
-            <Button
-              size="sm"
-              variant="outline"
-              aria-expanded={replying}
-              onClick={() => setReplying((r) => !r)}
-            >
-              Reply myself
-            </Button>
-          )}
+            {d.canReply && (
+              <Button
+                size="sm"
+                variant={declined && d.mayPrompt ? 'outline' : 'default'}
+                aria-expanded={replying}
+                onClick={() => setReplying((r) => !r)}
+              >
+                {declined ? 'Reply myself' : 'Reply anyway'}
+              </Button>
+            )}
+            {d.mayPrompt ? (
+              <Button size="sm" variant="outline" onClick={discuss}>
+                Discuss with {who}
+              </Button>
+            ) : (
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/app/threads/${thread.id}`}>
+                  Open its thread
+                  <ArrowUpRight aria-hidden />
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
