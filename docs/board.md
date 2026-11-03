@@ -85,12 +85,14 @@ same question is `Projects/Brigade/investigations/agent-work-tracking-competitor
   "+N" for the others. Done adds who ticked it, when it isn't the teammate, and when.
 - **Filters**: project, lists (several at once, plus Not on a list) and teammate, kept in the
   address (`?project=`, `?list=` repeated, `?teammate=`). A list's page links to the Board on that
-  list. A Filter button offers the filters not set yet; each one set shows as a pill after it
+  list. This browser remembers the last filters per workspace: the Board opened with none in its
+  address shows them again; one opened with filters in its address (a list's link) takes those. A Filter button offers the filters not set yet; each one set shows as a pill after it
   ("Project Brigade", "List Backlog +1") that reopens its choices, with an × to remove it, and
   Clear appears once two are set. The list choices show their counts and stay open while ticked.
 - **Live**, reloaded once a burst of changes settles (threads, tickets, pull requests, lists,
   schedules, tasks), not on each one.
-- **On a phone**, one column at a time, chosen like a list's tabs.
+- **On a phone**, one column at a time, chosen like a list's tabs; this browser remembers the last
+  one chosen, per workspace.
 
 ## Done
 
