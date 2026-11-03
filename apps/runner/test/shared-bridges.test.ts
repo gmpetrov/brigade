@@ -382,3 +382,37 @@ test('a tidy right after a link moved on keeps the copy its bridge still runs fr
   await tidy([folder])
   assert.ok(!existsSync(older))
 })
+
+test('a link stays where it is when what runs through it cannot be noted', async (t) => {
+  const { root, older, newer, teammate, tidy } = await copies(t)
+  const folder = await teammate('bt-ada')
+  await bridgeFrom(folder, t)
+  // Its note cannot be written there, as on a full disk.
+  spawnSync('chmod', ['a-w', older])
+  t.after(() => void spawnSync('chmod', ['u+w', older]))
+  await assert.rejects(linkTeammate(folder, newer, true, exec, root), /could not note/)
+  assert.equal(readlinkSync(folder), bridgeLink(older, 'claude-code'))
+  // So a tidy finds the link still pointing there.
+  spawnSync('chmod', ['u+w', older])
+  await tidy([folder])
+  assert.ok(existsSync(older))
+})
+
+test('a copy whose note of what runs from it cannot be read stays', async (t) => {
+  const { older, tidy } = await copies(t)
+  await writeFile(join(older, '.holders'), '[{"pid": 1, "sta')
+  await tidy([])
+  assert.ok(existsSync(older))
+  await writeFile(join(older, '.holders'), '[]')
+  await tidy([])
+  assert.ok(!existsSync(older))
+})
+
+test('a link stays where it is when the note it would add to cannot be read', async (t) => {
+  const { root, older, newer, teammate } = await copies(t)
+  const folder = await teammate('bt-ada')
+  await bridgeFrom(folder, t)
+  await writeFile(join(older, '.holders'), 'not JSON')
+  await assert.rejects(linkTeammate(folder, newer, true, exec, root), /cannot be read/)
+  assert.equal(readlinkSync(folder), bridgeLink(older, 'claude-code'))
+})

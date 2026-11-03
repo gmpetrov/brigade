@@ -227,17 +227,20 @@ export async function linkTeammate(
   root = ROOT,
 ): Promise<'linked' | 'own'> {
   // Noted before the link moves, so that a cleanup in between, or a runner stopped there,
-  // never finds the copy it leaves unheld; and again after, for a bridge started meanwhile.
+  // never finds the copy it leaves unheld. When that fails, the link stays where it is.
   await recordHolders(await exec(HOLDERS_SCRIPT, [folder, shared ?? '']), root)
+  // And again after, for a bridge started meanwhile: the link has moved by then.
+  const again = (out: unknown) =>
+    recordHolders(String(out ?? ''), root).catch((error: unknown) => console.warn(String(error)))
   try {
     const out = shared
       ? await exec(LINK_SCRIPT, [folder, shared, convert ? 'convert' : ''])
       : await exec(UNLINK_SCRIPT, [folder])
-    await recordHolders(out, root)
+    await again(out)
     return shared ? 'linked' : 'own'
   } catch (error) {
     // It may have said which processes hold the copy before it failed.
-    await recordHolders(String((error as { stdout?: unknown }).stdout ?? ''), root)
+    await again((error as { stdout?: unknown }).stdout)
     throw error
   }
 }
@@ -342,12 +345,20 @@ function copyOf(path: string, root: string) {
 
 const holdersFile = (copy: string) => join(copy, '.holders')
 
-async function readHolders(copy: string): Promise<Holder[]> {
-  const text = await readFile(holdersFile(copy), 'utf8').catch(() => '[]')
+/** The processes noted as holding a copy: none without a file, null when it cannot be read. */
+async function readHolders(copy: string): Promise<Holder[] | null> {
+  const text = await readFile(holdersFile(copy), 'utf8').catch((error: NodeJS.ErrnoException) =>
+    error.code === 'ENOENT' ? '[]' : null,
+  )
+  if (text === null) return null
   try {
-    return JSON.parse(text) as Holder[]
+    const holders = JSON.parse(text) as unknown
+    return Array.isArray(holders) &&
+      holders.every((h) => typeof h?.pid === 'number' && typeof h?.start === 'string')
+      ? (holders as Holder[])
+      : null
   } catch {
-    return []
+    return null
   }
 }
 
@@ -368,19 +379,23 @@ export function recordHolders(out: string, root = ROOT) {
       const copy = match && copyOf(match[1]!, root)
       if (!copy || !existsSync(copy)) continue
       const holders = await readHolders(copy)
+      if (!holders) throw new Error(`what runs from ${copy} cannot be read`)
       for (const pid of match[2]!.trim().split(/\s+/).map(Number)) {
         const start = await startOf(pid)
         if (start && !holders.some((h) => h.pid === pid && h.start === start))
           holders.push({ pid, start })
       }
-      // Whole or not at all: read half written, it would say no process holds the copy.
+      // Whole or not at all: read half written, it would say no process holds the copy. Not
+      // written (a full disk), it fails: the link that would leave the copy then stays.
       const file = holdersFile(copy)
       const temporary = `${file}.${process.pid}-${Date.now()}`
-      await writeFile(temporary, JSON.stringify(holders))
-        .then(() => rename(temporary, file))
-        .catch((error: unknown) =>
-          console.warn(`could not note what runs from ${copy}: ${String(error)}`),
-        )
+      try {
+        await writeFile(temporary, JSON.stringify(holders))
+        await rename(temporary, file)
+      } catch (error) {
+        await rm(temporary, { force: true }).catch(() => undefined)
+        throw new Error(`could not note what runs from ${copy}: ${String(error)}`)
+      }
     }
   })
   noting = next.catch(() => undefined)
@@ -414,9 +429,11 @@ export async function removeSuperseded(options: {
     if (now - since < SUPERSEDED_KEEP_MS) continue
     if (processes.includes(copy)) continue
     if (linked.some((target) => copyOf(target, root) === copy)) continue
+    // What runs from it unknown: it stays.
+    const holders = await readHolders(copy)
+    if (!holders) continue
     let held = false
-    for (const holder of await readHolders(copy))
-      if ((await startOf(holder.pid)) === holder.start) held = true
+    for (const holder of holders) if ((await startOf(holder.pid)) === holder.start) held = true
     if (held) continue
     await rm(copy, { recursive: true, force: true }).then(
       () => console.log(`removed the shared bridge ${name}, replaced by a newer one`),
