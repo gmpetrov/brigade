@@ -24,6 +24,7 @@ import {
   PASSING_ERROR,
   RETRY_AFTER_MS as RETRY_DEFAULTS,
   THREAD_NOTE_SOURCE,
+  TURN_PREPARING_SOURCE,
   TURN_WAITING_SOURCE,
   turnAnswer,
   visibleChars,
@@ -36,6 +37,7 @@ import {
   type ThreadPrompt,
   type ThreadSpec,
   type TurnEntry,
+  type TurnPreparing,
   type TurnWaiting,
 } from '@brigade/contracts'
 import type { Attachments, Folder } from './attachments.js'
@@ -977,10 +979,22 @@ export class Threads {
         thread.running = { teammateId: me, turnId }
         seat.waiting = false
         const name = { sessionId: spec.sessionId, teammateId: me }
+        // Files to fetch before it starts (a move, a folder put away): the thread says so, once.
+        let told = false
+        const preparing = () => {
+          if (told) return
+          told = true
+          this.options.emit(spec.sessionId, {
+            at: new Date().toISOString(),
+            type: 'raw',
+            source: TURN_PREPARING_SOURCE,
+            value: { teammateId: me } satisfies TurnPreparing,
+          })
+        }
         try {
           await this.options.restored?.ready()
-          if (spec.moved) await this.options.folders.arrive(name, spec.moved)
-          await this.options.folders.ready(name)
+          if (spec.moved) await this.options.folders.arrive(name, spec.moved, preparing)
+          await this.options.folders.ready(name, preparing)
           // A frozen preview, and the containers it paused: the turn may use them.
           await this.options.previews.threadBusy(spec.sessionId)
         } catch (error) {
@@ -992,7 +1006,7 @@ export class Threads {
           })
           return
         }
-        await this.placeFiles(spec, seat.folder)
+        await this.placeFiles(spec, seat.folder, preparing)
         const turn =
           input === 'prompt'
             ? {
@@ -1496,9 +1510,9 @@ export class Threads {
   }
 
   /** Put the thread's files in the teammate's folder; say in the thread which could not be. */
-  private async placeFiles(spec: ThreadSpec, folder: Folder) {
+  private async placeFiles(spec: ThreadSpec, folder: Folder, fetching?: () => void) {
     const failed = await this.options.attachments
-      .deliver(spec.attachments, folder)
+      .deliver(spec.attachments, folder, fetching)
       .catch((error: unknown) => [String(error)])
     if (failed.length === 0) return
     this.options.emit(spec.sessionId, {

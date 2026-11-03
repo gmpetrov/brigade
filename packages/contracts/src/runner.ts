@@ -748,6 +748,14 @@ export const THREAD_NOTE_SOURCE = 'note'
 export const TURN_WAITING_SOURCE = 'turn.waiting'
 export type TurnWaiting = { teammateId: string; running: number }
 
+/**
+ * A raw event's source for a turn that gets its thread's files ready before it starts: the
+ * folder it brings from the computer the thread left, the files attached to the thread. Its
+ * value is a TurnPreparing; its turn.started ends it.
+ */
+export const TURN_PREPARING_SOURCE = 'turn.preparing'
+export type TurnPreparing = { teammateId: string }
+
 export const ApiToRunner = z.discriminatedUnion('type', [
   /** The answer to a keepalive (RunnerToApi), from a hub object that did not wake for it. */
   z.object({ type: z.literal('keepalive') }),
