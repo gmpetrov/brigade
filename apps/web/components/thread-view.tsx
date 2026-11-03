@@ -905,7 +905,7 @@ function startedChild(item: { toolName: string; input: unknown; output?: unknown
   const found = json(item.output ?? '').match(/"threadId"\s*:\s*"([^"\\]+)"/)
   if (!found) return null
   const title = (item.input as { title?: unknown } | null)?.title
-  return { threadId: found[1]!, title: typeof title === 'string' ? title : 'Child thread' }
+  return { threadId: found[1]!, title: typeof title === 'string' ? title : 'Sub-thread' }
 }
 
 /** The team a propose_team call put up, once it went through. */
@@ -2185,7 +2185,7 @@ export function ThreadItems({
                 {parent
                   ? `${parent.from} wrote from the parent thread “${parent.parentTitle}”`
                   : item.brigade === 'report'
-                    ? 'Reports from child threads'
+                    ? 'Reports from sub-threads'
                     : item.brigade === 'follow'
                       ? 'Report from a thread this one follows'
                       : item.brigade === 'dry_run'
@@ -2263,9 +2263,7 @@ export function ThreadItems({
             )}
             {files.length > 0 && <MessageAttachments attachments={files} className="justify-end" />}
             {item.steeredTo && asksParallel(item.text) ? (
-              <span className="text-xs text-muted-foreground">
-                Sent to run in parallel, in a child thread
-              </span>
+              <span className="text-xs text-muted-foreground">Sent to a sub-thread</span>
             ) : item.steeredTo ? (
               <span className="text-xs text-muted-foreground">
                 Steered into{' '}

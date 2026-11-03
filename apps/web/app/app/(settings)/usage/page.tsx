@@ -28,7 +28,7 @@ const SOURCES: Record<UsageSource, string> = {
   member: 'Messages from people',
   trigger: 'Triggers',
   schedule: 'Routines',
-  child: 'Child threads',
+  child: 'Sub-threads',
   review: 'Pull request reviews',
   playbook: 'Playbooks',
   memory: 'Memory from quiet threads',

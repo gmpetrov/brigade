@@ -5168,7 +5168,7 @@
         "status": "done",
         "case": "bug",
         "outcome": "resolved",
-        "summary": "Would have acknowledged Lucas, fixed the Slack posts in a child thread (kept on the computer) and told him once merged.",
+        "summary": "Would have acknowledged Lucas, fixed the Slack posts in a sub-thread (kept on the computer) and told him once merged.",
         "at": "2026-09-25T16:27:29.665Z",
         "minutes": 6.616666666666666,
         "writes": [
@@ -5927,7 +5927,7 @@
         "status": "done",
         "case": "bug",
         "outcome": "resolved",
-        "summary": "Would have acknowledged Lucas, fixed the Slack posts in a child thread (kept on the computer) and told him once merged.",
+        "summary": "Would have acknowledged Lucas, fixed the Slack posts in a sub-thread (kept on the computer) and told him once merged.",
         "at": "2026-09-25T16:27:29.665Z",
         "minutes": 6.616666666666666,
         "writes": [
@@ -7100,7 +7100,7 @@
        "status": "done",
        "case": "bug",
        "outcome": "resolved",
-       "summary": "Would have acknowledged Lucas, fixed the Slack posts in a child thread (kept on the computer) and told him once merged.",
+       "summary": "Would have acknowledged Lucas, fixed the Slack posts in a sub-thread (kept on the computer) and told him once merged.",
        "at": "2026-09-25T16:27:29.665Z",
        "minutes": 6.616666666666666,
        "writes": [
@@ -7299,7 +7299,7 @@
       "status": "done",
       "case": "bug",
       "outcome": "resolved",
-      "summary": "Would have acknowledged Lucas, fixed the Slack posts in a child thread (kept on the computer) and told him once merged.",
+      "summary": "Would have acknowledged Lucas, fixed the Slack posts in a sub-thread (kept on the computer) and told him once merged.",
       "at": "2026-09-25T16:27:29.665Z",
       "minutes": 6.616666666666666,
       "writes": [
@@ -13620,7 +13620,7 @@
       "event": {
        "at": "2026-10-16T06:38:58.356Z",
        "id": "18919602af9b28f0",
-       "text": "Acknowledged Priya's report and started a fix in a child thread; I'll tell her once it's merged.",
+       "text": "Acknowledged Priya's report and started a fix in a sub-thread; I'll tell her once it's merged.",
        "type": "message.done",
        "teammateId": "cmvjgibyv0008e1lw48m4l690"
       }
@@ -15839,7 +15839,7 @@
       "event": {
        "at": "2026-09-28T07:38:21.539Z",
        "id": "c105fcbcac418e30",
-       "text": "Acknowledged and started a fix in a child thread.",
+       "text": "Acknowledged and started a fix in a sub-thread.",
        "type": "message.done",
        "teammateId": "cmvjgibyv0008e1lw48m4l690"
       }
@@ -15884,7 +15884,7 @@
        "input": {
         "case": "bug",
         "outcome": "resolved",
-        "summary": "Would have acknowledged Lucas, fixed the Slack posts in a child thread (kept on the computer) and told him once merged."
+        "summary": "Would have acknowledged Lucas, fixed the Slack posts in a sub-thread (kept on the computer) and told him once merged."
        },
        "toolName": "mcp__harness-tools__playbook_report",
        "teammateId": "cmvjgibyv0008e1lw48m4l690",
@@ -19395,7 +19395,7 @@
       "event": {
        "at": "2026-10-21T14:28:16.357Z",
        "id": "ef2afbbf2ee7f184",
-       "text": "Told Elena we are on it, with a way to add people meanwhile, and started a fix in a child thread.",
+       "text": "Told Elena we are on it, with a way to add people meanwhile, and started a fix in a sub-thread.",
        "type": "message.done",
        "teammateId": "cmvjgibyv0008e1lw48m4l690"
       }

@@ -557,7 +557,7 @@ function CodeReviewSection() {
     <Section
       id="code-review"
       title="Code review"
-      description="Whether its pull requests get a review by another teammate before they reach you. The reviewer reads one in a child thread, and the teammate that wrote it fixes what it finds."
+      description="Whether its pull requests get a review by another teammate before they reach you. The reviewer reads one in a sub-thread, and the teammate that wrote it fixes what it finds."
     >
       <RadioGroup
         value={project.reviewPolicy}

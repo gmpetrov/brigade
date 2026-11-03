@@ -157,7 +157,7 @@ export function QueuedMessages({
                     ? (names.get(m.memberId) ?? 'Another member')
                     : m.memberId === null &&
                       (childNote(m.text) === 'report'
-                        ? 'Reports from child threads'
+                        ? 'Reports from sub-threads'
                         : childNote(m.text) === 'task' || childNote(m.text) === 'parent'
                           ? 'From the parent thread'
                           : (brigadeNote(m.text, true)?.label ?? 'From Brigade'))
@@ -271,13 +271,13 @@ export function QueuedMessages({
                                 {parallel && (
                                   <Hint
                                     side="left"
-                                    label={`${teammateName} starts a child thread for it now and carries on with this turn`}
+                                    label={`${teammateName} starts a sub-thread for it now and carries on with this turn. Its report comes back here.`}
                                   >
                                     <DropdownMenuItem
                                       onSelect={() => void act(m.messageId, { action: 'parallel' })}
                                     >
                                       <Split aria-hidden />
-                                      Run in parallel
+                                      Send to a sub-thread
                                     </DropdownMenuItem>
                                   </Hint>
                                 )}

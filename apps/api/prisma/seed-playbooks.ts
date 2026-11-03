@@ -1174,7 +1174,7 @@ export async function seedPlaybooks(input: PlaybookSeed) {
       'Fix Slack posts after a channel is renamed',
       'Acme stops posting to a Slack channel once the channel is renamed; reconnecting Slack does not help. Find the cause in acme/web, fix it with a test and open a pull request.',
     )
-    bug.tl.say('Acknowledged and started a fix in a child thread.')
+    bug.tl.say('Acknowledged and started a fix in a sub-thread.')
     bug.tl.end()
     slack.fix(
       'brigade/sam-slack-rename',
@@ -1198,7 +1198,7 @@ export async function seedPlaybooks(input: PlaybookSeed) {
     bug.report(
       'bug',
       'resolved',
-      'Would have acknowledged Lucas, fixed the Slack posts in a child thread (kept on the computer) and told him once merged.',
+      'Would have acknowledged Lucas, fixed the Slack posts in a sub-thread (kept on the computer) and told him once merged.',
     )
     bug.tl.say('The fix is ready; I would tell Lucas once it is merged.')
     bug.tl.end()
@@ -1856,7 +1856,7 @@ export async function seedPlaybooks(input: PlaybookSeed) {
     'Exporting invoices to CSV from /billing returns a 500 for some workspaces since this morning; the PDF export works. Find the cause in acme/web, fix it with a test, open a pull request and merge it once its checks pass.',
   )
   csv.tl.say(
-    "Acknowledged Priya's report and started a fix in a child thread; I'll tell her once it's merged.",
+    "Acknowledged Priya's report and started a fix in a sub-thread; I'll tell her once it's merged.",
   )
   csv.tl.end()
   csvFix.fix(
@@ -2393,7 +2393,7 @@ export async function seedPlaybooks(input: PlaybookSeed) {
       'New invite links say "This invite has expired" as soon as they are opened, even right after they are sent. Find the cause in acme/web, fix it with a test, open a pull request and merge it once its checks pass.',
     )
     invites.tl.say(
-      'Told Elena we are on it, with a way to add people meanwhile, and started a fix in a child thread.',
+      'Told Elena we are on it, with a way to add people meanwhile, and started a fix in a sub-thread.',
     )
     invites.tl.end()
     fix.fix(

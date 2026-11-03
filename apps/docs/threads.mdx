@@ -25,8 +25,8 @@ A pick other than the default shows as a chip in the composer; its × goes back 
 ## Write to a teammate
 
 **Enter** sends, **Shift+Enter** adds a line. While the teammate works, Enter queues your message for after its turn.
-A queued message has **Steer**, to give it to the teammate now, during the turn, and a menu with **Run in parallel**
-(the teammate starts a child thread for it), **Edit** and **Remove**.
+A queued message has **Steer**, to give it to the teammate now, during the turn, and a menu with **Send to a sub-thread**
+(the teammate starts a sub-thread for it and carries on), **Edit** and **Remove**.
 
 ### Attach files
 
@@ -59,11 +59,11 @@ Type **/** at the start of a message for commands: **/visual**, **/design**, and
   **Worked for** its duration. While it works, the thread shows how many steps and how long.
 - **Background work.** When a teammate runs sub-agents or commands in the background, the thread lists them and
   stays **Working** until they finish and the teammate has read their results. You can still send a message meanwhile.
-- **Cards.** Plans, approvals, questions, pull requests, and a line for each child thread started.
+- **Cards.** Plans, approvals, questions, pull requests, and a line for each sub-thread started.
 - **Tickets.** What the teammate is waiting on shows in a card above the conversation, and under
   [Needs you](/needs-you).
 - **Details.** Choose the title at the top to open the details panel: the computer's live screen (cloud computer
-  only), the thread's menu, its child threads, and its **Outputs**, including the changed files. Choose a changed
+  only), the thread's menu, its sub-threads, and its **Outputs**, including the changed files. Choose a changed
   file to see the diff.
 - **Preview.** The eye button at top right starts or opens the preview of an app the teammate builds. See
   [Code and previews](/code-and-previews).
@@ -105,13 +105,13 @@ your message. Two buttons do more:
 When a teammate offers options, it shows a card with 2 to 6 of them. Choose **Pick this one**, or write what you want
 instead.
 
-## Child threads
+## Sub-threads
 
-A teammate can hand part of the work to a child thread, for another teammate or to work in parallel. **Run in
-parallel** on a queued message makes one too. Child threads sit folded under their parent in the
-sidebar; open them with the arrow after its title. The parent shows when a child needs you, and the child's last
-message goes back to the parent. A child reports to its parent once all its own work is done, its background work
-included. If its run is stopped and tried again (for example when the computer runs short of memory), the report waits
+A teammate can hand part of the work to a sub-thread, for another teammate or to work in parallel. **Send to a
+sub-thread** on a queued message makes one too. Sub-threads sit folded under their parent in the
+sidebar; open them with the arrow after its title. The parent shows when a sub-thread needs you, and the sub-thread's
+last message goes back to the parent. A sub-thread reports to its parent once all its own work is done, its background
+work included. If its run is stopped and tried again (for example when the computer runs short of memory), the report waits
 for the new try.
 
 ## Move a thread to another computer
