@@ -55,30 +55,105 @@ type Filters = { project: string; lists: string[]; teammate: string }
 const projectMatches = (project: string, projectId: string | null) =>
   !project || (project === 'none' ? !projectId : projectId === project)
 
-/** The filters in the address, so a list's page can link to the Board on its list. */
-function useFilters(): [Filters, (next: Partial<Filters>) => void] {
+/** Where this browser remembers the Board's filters and phone column, per workspace. */
+const boardKey = (workspace: string) => `brigade:board:${workspace}`
+type SavedBoard = { filters?: Filters; column?: BoardColumn }
+
+function readBoard(key: string): SavedBoard {
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) ?? 'null') as Partial<{
+      filters: Partial<Filters>
+      column: string
+    }> | null
+    if (!saved) return {}
+    const f = saved.filters
+    return {
+      filters: f && {
+        project: typeof f.project === 'string' ? f.project : '',
+        lists: Array.isArray(f.lists) ? f.lists.filter((l) => typeof l === 'string') : [],
+        teammate: typeof f.teammate === 'string' ? f.teammate : '',
+      },
+      column: COLUMNS.some((c) => c.value === saved.column)
+        ? (saved.column as BoardColumn)
+        : undefined,
+    }
+  } catch {
+    // Nothing saved, or not readable: the defaults.
+    return {}
+  }
+}
+
+function saveBoard(key: string, next: SavedBoard) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ ...readBoard(key), ...next }))
+  } catch {
+    // Private mode or full: the choice lasts until the page reloads.
+  }
+}
+
+function writeAddress(filters: Filters) {
+  const url = new URL(window.location.href)
+  url.search = ''
+  if (filters.project) url.searchParams.set('project', filters.project)
+  for (const l of filters.lists) url.searchParams.append('list', l)
+  if (filters.teammate) url.searchParams.set('teammate', filters.teammate)
+  window.history.replaceState(null, '', url)
+}
+
+/**
+ * The filters, in the address so a list's page can link to the Board on its list, and remembered
+ * in this browser: the Board opened with none in its address shows the last ones set.
+ */
+function useFilters(key: string): [Filters, (next: Partial<Filters>) => void] {
   const [filters, setFilters] = useState<Filters>({ project: '', lists: [], teammate: '' })
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    setFilters({
-      project: params.get('project') ?? '',
-      lists: params.getAll('list'),
-      teammate: params.get('teammate') ?? '',
-    })
-  }, [])
-  const change = useCallback((next: Partial<Filters>) => {
-    setFilters((current) => {
-      const merged = { ...current, ...next }
-      const url = new URL(window.location.href)
-      url.search = ''
-      if (merged.project) url.searchParams.set('project', merged.project)
-      for (const l of merged.lists) url.searchParams.append('list', l)
-      if (merged.teammate) url.searchParams.set('teammate', merged.teammate)
-      window.history.replaceState(null, '', url)
-      return merged
-    })
-  }, [])
+    const fromAddress = ['project', 'list', 'teammate'].some((k) => params.has(k))
+    if (fromAddress) {
+      const next = {
+        project: params.get('project') ?? '',
+        lists: params.getAll('list'),
+        teammate: params.get('teammate') ?? '',
+      }
+      setFilters(next)
+      saveBoard(key, { filters: next })
+      return
+    }
+    const saved = readBoard(key).filters
+    if (saved) {
+      setFilters(saved)
+      writeAddress(saved)
+    }
+  }, [key])
+  const change = useCallback(
+    (next: Partial<Filters>) => {
+      setFilters((current) => {
+        const merged = { ...current, ...next }
+        writeAddress(merged)
+        saveBoard(key, { filters: merged })
+        return merged
+      })
+    },
+    [key],
+  )
   return [filters, change]
+}
+
+/** The column shown on a phone, remembered in this browser. */
+function useColumn(key: string): [BoardColumn, (next: BoardColumn) => void] {
+  const [column, setColumn] = useState<BoardColumn>('needs_you')
+  useEffect(() => {
+    const saved = readBoard(key).column
+    if (saved) setColumn(saved)
+  }, [key])
+  const change = useCallback(
+    (next: BoardColumn) => {
+      setColumn(next)
+      saveBoard(key, { column: next })
+    },
+    [key],
+  )
+  return [column, change]
 }
 
 /** The Board, reloaded once a burst of changes settles. Home reads it too. */
@@ -683,8 +758,10 @@ function FilterBar({
 
 export function BoardPage() {
   const board = useBoard()
-  const [filters, setFilters] = useFilters()
-  const [column, setColumn] = useState<BoardColumn>('needs_you')
+  const { me } = useDashboard()
+  const key = boardKey(me.activeWorkspaceId ?? me.activeOrganizationId ?? '')
+  const [filters, setFilters] = useFilters(key)
+  const [column, setColumn] = useColumn(key)
   const [allDone, setAllDone] = useState(false)
   const [showClosed, setShowClosed] = useState(false)
   // Unset until someone opens or closes it: open by default when it is short.
