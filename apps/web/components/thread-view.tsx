@@ -253,6 +253,8 @@ export type Item =
   | { kind: 'slot'; key: string; at: number; teammateId: string; running: number }
   /** Its turn gets the thread's files ready on its computer (after a move, say) before it starts. */
   | { kind: 'preparing'; key: string; at: number; teammateId: string }
+  /** Its files are ready and no turn followed (a thread taken back that waits on a person). */
+  | { kind: 'prepared'; key: string }
   | { kind: 'turn'; key: string; finishReason: string; startedAt?: number; at: number }
   /** Events not loaded here, after the timeline jumped past them: they load as it comes near. */
   | { kind: 'gap'; key: string; gap: EventGap }
@@ -562,8 +564,10 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1, gaps: Eve
             const { teammateId, running } = e.value as TurnWaiting
             add({ kind: 'slot', key: `q${seq}`, at: Date.parse(e.at), teammateId, running })
           } else if (e.source === TURN_PREPARING_SOURCE) {
-            const { teammateId } = e.value as TurnPreparing
-            add({ kind: 'preparing', key: `q${seq}`, at: Date.parse(e.at), teammateId })
+            const { teammateId, done } = e.value as TurnPreparing
+            // Ready, and no turn followed: the wait is over all the same.
+            if (done) add({ kind: 'prepared', key: `q${seq}` })
+            else add({ kind: 'preparing', key: `q${seq}`, at: Date.parse(e.at), teammateId })
           } else if (e.source === 'harness') {
             background = backgroundTasks(background, e.value)
             const waiting = backgroundWait(e.value)
@@ -2683,6 +2687,7 @@ export function ThreadItems({
       case 'woke':
       case 'slot':
       case 'preparing':
+      case 'prepared':
         return null
     }
   }
@@ -2723,6 +2728,7 @@ export function ThreadItems({
       item.kind === 'woke' ||
       item.kind === 'slot' ||
       item.kind === 'preparing' ||
+      item.kind === 'prepared' ||
       (item.kind === 'turn' && item.finishReason !== 'interrupted')
       ? 'step'
       : 'break'

@@ -36,3 +36,8 @@ test('files that could not be put back end the preparing, not a slot wait', () =
   assert.equal(turnWait([preparing, { kind: 'note' }]), undefined)
   assert.equal(turnWait([slot, { kind: 'note' }]), slot)
 })
+
+test('files ready with no turn after them (a thread taken back that waits on a person)', () => {
+  assert.equal(turnWait([preparing, { kind: 'prepared' }]), undefined)
+  assert.equal(turnWait([slot, { kind: 'prepared' }]), slot)
+})

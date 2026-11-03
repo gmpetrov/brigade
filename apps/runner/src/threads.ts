@@ -948,6 +948,9 @@ export class Threads {
       let acquired = false
       let counted = false
       const turnId = randomUUID()
+      // Told it gets its files ready (preparing, below), and whether a turn followed.
+      let told = false
+      let turnStarted = false
       try {
         // Taken over while waiting in the queue: the turn does not happen.
         if (thread.takeover) return
@@ -980,7 +983,6 @@ export class Threads {
         seat.waiting = false
         const name = { sessionId: spec.sessionId, teammateId: me }
         // Files to fetch before it starts (a move, a folder put away): the thread says so, once.
-        let told = false
         const preparing = () => {
           if (told) return
           told = true
@@ -1048,6 +1050,7 @@ export class Threads {
           (await seat.harness.keepsAnswer(turn))
         )
           return
+        turnStarted = true
         this.options.emit(spec.sessionId, {
           at: new Date().toISOString(),
           type: 'turn.started',
@@ -1105,6 +1108,15 @@ export class Threads {
         console.error(`thread ${spec.sessionId}: turn failed`, error)
       } finally {
         started()
+        // Its files are ready, and no turn follows (a thread taken back after a restart that
+        // waits on a person, say): the thread stops showing them got ready.
+        if (told && !turnStarted)
+          this.options.emit(spec.sessionId, {
+            at: new Date().toISOString(),
+            type: 'raw',
+            source: TURN_PREPARING_SOURCE,
+            value: { teammateId: me, done: true } satisfies TurnPreparing,
+          })
         this.options.folders.touch({ sessionId: spec.sessionId, teammateId: me })
         if (thread.running?.turnId === turnId) {
           thread.running = undefined

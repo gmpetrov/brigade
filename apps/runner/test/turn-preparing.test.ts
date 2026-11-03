@@ -22,7 +22,7 @@ const threads = new Threads({
   folders: {
     arrive: async () => undefined,
     ready: async (name: { sessionId: string }, fetching?: () => void) => {
-      if (name.sessionId === 'far') fetching?.()
+      if (name.sessionId.startsWith('far')) fetching?.()
     },
     takeNote: async () => '',
     touch: () => undefined,
@@ -31,7 +31,7 @@ const threads = new Threads({
   // Its attached files are fetched too: the thread is told once all the same.
   attachments: {
     deliver: async (_refs: unknown, folder: { workDir: string }, fetching?: () => void) => {
-      if (folder.workDir.endsWith('far')) fetching?.()
+      if (folder.workDir.endsWith('/far')) fetching?.()
       return []
     },
   },
@@ -62,6 +62,7 @@ const seats: { parkTimer?: NodeJS.Timeout }[] = []
       holdsMessages: async () => false,
       decidesNothing: () => false,
       awaitsApproval: async () => true,
+      cutOff: async () => false,
       holdsAnswer: () => false,
       keepsAnswer: async () => false,
       answersToGive: async () => [],
@@ -129,6 +130,14 @@ test('a turn that fetches its files says so once, before it starts', async () =>
   assert.ok(started > preparing[0]!, 'before its turn starts')
   end()
   await sleep(50)
+  assert.equal(
+    of('far').some(
+      (e) =>
+        e.type === 'raw' && e.source === TURN_PREPARING_SOURCE && 'done' in (e.value as object),
+    ),
+    false,
+    'its turn started: nothing more to say',
+  )
 })
 
 test('a turn with its files already here says nothing of them', async () => {
@@ -141,4 +150,21 @@ test('a turn with its files already here says nothing of them', async () => {
   )
   end()
   await sleep(50)
+})
+
+test('a thread taken back after a restart, with no turn to run, says its files are ready', async () => {
+  // Waiting on a person when the runner stopped: its folder comes back, and no turn follows.
+  threads.resumeLost([spec('far-waiting')], [], () => undefined)
+  for (let i = 0; i < 100 && of('far-waiting').length < 2; i++) await sleep(20)
+  const said = of('far-waiting').filter(
+    (e) => e.type === 'raw' && e.source === TURN_PREPARING_SOURCE,
+  )
+  assert.deepEqual(
+    said.map((e) => e.type === 'raw' && e.value),
+    [{ teammateId: 'mark' }, { teammateId: 'mark', done: true }],
+  )
+  assert.equal(
+    of('far-waiting').some((e) => e.type === 'turn.started'),
+    false,
+  )
 })
