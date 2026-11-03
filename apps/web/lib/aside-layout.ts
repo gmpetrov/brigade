@@ -30,7 +30,8 @@ export function runningAsides<N extends { type: string }>(
       return [node]
     })
   const rest = take(nodes)
-  if (mine.length === 0) return nodes
+  // A new list always: the caller may still change its own.
+  if (mine.length === 0) return rest
   const is = mine.flatMap((node) => node.is).sort((a, b) => a - b)
   const quiet = items.slice(is.at(-1)! + 1).some((item) => item.kind === 'assistant')
   return [...rest, { type: 'asides', is, live: true, quiet }]

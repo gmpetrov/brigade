@@ -1444,12 +1444,8 @@ function layoutThread(items: Item[], working: boolean) {
   const last = nodes.at(-1)
   if (working && last?.type === 'activity') last.live = true
   // The running turn's asides read as one card, at its end, above its Working line.
-  if (working && running !== undefined) {
-    const merged = runningAsides(nodes, items, runningFrom)
-    nodes.length = 0
-    nodes.push(...merged)
-  }
-  return Object.assign(nodes, { running: steered ?? running, live })
+  const laid = working && running !== undefined ? runningAsides(nodes, items, runningFrom) : nodes
+  return Object.assign(laid, { running: steered ?? running, live })
 }
 
 /** "45s", "1m 52s", "2h 5m". */
