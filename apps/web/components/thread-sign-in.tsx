@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AccountLoginSteps, machineName } from '@/components/account-card'
 import { Button } from '@/components/ui/button'
 import { api, harnessLabel, useApi, type Account, type AccountLogin } from '@/lib/api'
-import { caughtUp, shownLogin, underWay } from '@/lib/thread-sign-in'
+import { catchUpAfterReconnect, shownLogin, underWay } from '@/lib/thread-sign-in'
 import { useLive } from '@/lib/use-live'
 
 /**
@@ -35,6 +35,8 @@ export function SignedOutError({
   // A sign-in this card followed ended while the socket was down, and the account is not ready.
   const [interrupted, setInterrupted] = useState(false)
   const followed = useRef(false)
+  // The sign-in's messages heard on the socket: a catch-up that loaded meanwhile is older.
+  const heard = useRef(0)
   const accounts = useApi<Account[]>(latest || live || done ? '/accounts' : null)
   const account = accounts.data?.find((a) => a.id === accountId)
   // Whoever signs in sees its progress, wherever they started it (here, or on Accounts).
@@ -51,19 +53,23 @@ export function SignedOutError({
   useLive(
     (m) => {
       if (m.type !== 'account.login' || m.accountId !== accountId) return
+      heard.current++
       setLive(m)
       setInterrupted(false)
       if (m.state === 'done') setDone(true)
     },
     () => {
-      // What the socket said while it was down is lost: catch up from the list.
+      // What the socket said while it was down is lost: catch up from the list. A later
+      // reconnect's catch-up makes this one's older, as a message heard meanwhile does.
+      heard.current++
       void accounts.reload()
-      void api<Account[]>('/accounts')
-        .then((list) => {
-          const next = caughtUp(
-            list.find((x) => x.id === accountId),
-            followed.current,
-          )
+      void catchUpAfterReconnect(
+        () => api<Account[]>('/accounts'),
+        accountId,
+        () => followed.current,
+        () => heard.current,
+      )
+        .then((next) => {
           if (!next) return
           setLive(next.live)
           if (next.done) setDone(true)

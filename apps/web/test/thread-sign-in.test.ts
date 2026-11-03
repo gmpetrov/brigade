@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { Account, AccountLogin } from '../lib/api'
-import { caughtUp, shownLogin, underWay } from '../lib/thread-sign-in'
+import { catchUpAfterReconnect, caughtUp, shownLogin, underWay } from '../lib/thread-sign-in'
 
 const account = (over: Partial<Account> = {}) =>
   ({
@@ -48,4 +48,29 @@ test('after a reconnect, a followed sign-in that ended without it is interrupted
 test('after a reconnect, nothing changes for a sign-in the card never followed', () => {
   assert.equal(caughtUp(account({ status: 'ready' }), false), null)
   assert.equal(caughtUp(account({ mine: false, login: prompt }), true), null)
+})
+
+test('a prompt heard while the catch-up loads is not replaced by the older list', async () => {
+  let heard = 0
+  let resolve!: (list: Account[]) => void
+  const pending = catchUpAfterReconnect(
+    () => new Promise<Account[]>((r) => (resolve = r)),
+    'a',
+    () => true,
+    () => heard,
+  )
+  // The socket says open_url, then the list taken before it answers with starting.
+  heard++
+  resolve([account({ login: { state: 'starting' } })])
+  assert.equal(await pending, null)
+})
+
+test('with nothing heard meanwhile, the catch-up applies', async () => {
+  const next = await catchUpAfterReconnect(
+    async () => [account({ login: prompt })],
+    'a',
+    () => true,
+    () => 0,
+  )
+  assert.deepEqual(next, { live: prompt })
 })

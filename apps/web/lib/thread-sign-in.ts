@@ -30,3 +30,23 @@ export function caughtUp(
   if (!followed) return null
   return account.status === 'ready' ? { live: null, done: true } : { live: null, interrupted: true }
 }
+
+/**
+ * The catch-up after a reconnect, from the account list (load). The socket may say more while the
+ * list loads: then what it said is newer than the list, which is dropped. heard counts the
+ * sign-in's messages heard on the socket.
+ */
+export async function catchUpAfterReconnect(
+  load: () => Promise<Account[]>,
+  accountId: string,
+  followed: () => boolean,
+  heard: () => number,
+) {
+  const before = heard()
+  const list = await load()
+  if (heard() !== before) return null
+  return caughtUp(
+    list.find((a) => a.id === accountId),
+    followed(),
+  )
+}
